@@ -669,7 +669,7 @@ try {
     assert.ok(m.notes <= 3600 - 100, `Cluck box fits the window (${m.notes}px; BIG PLAN V1: it fills the column, the old 800px notes cap is for the diet pad)`);
     assert.ok(Math.abs(m.handle - Math.round(3600 / 2 - 24)) <= 1, `divider handle mid-window, no 16rem cap (${m.handle}px)`);
     assert.equal(m.hscroll, false, "no sideways scroll");
-    assert.ok(m.above > 300 && Math.abs(m.above - m.below) <= 4, `snug in the middle up-down too (Tony, Oct 6 sketch): ${m.above}px above the bar, ${m.below}px below the page`);
+    assert.ok(Math.abs(m.above - m.below) <= 4,   /* BIG PLAN V1: the box fills the column down to the foot, so the page fills the window: no spare above (was > 300) */ `snug in the middle up-down too (Tony, Oct 6 sketch): ${m.above}px above the bar, ${m.below}px below the page`);
   });
 
   /* bug 5 (owner, Oct 6, zoomed out): bar + question + explain/Cluck form one block, centred: the gap left of the whole block

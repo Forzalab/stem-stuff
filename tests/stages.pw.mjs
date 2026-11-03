@@ -137,6 +137,7 @@ for (const w of WIDTHS) {
     await page.context().close();
   });
   await step(`${tag}: /explain with the sheet CLOSED while it runs: the finished state is carried in when it opens`, async () => {
+    if (w >= 720) return;   // BIG PLAN V1 (Tony Nov 2): desktop sugar has no closed sheet (the box is open from load; its stage UI is the always-visible case: V4)
     const page = await mk(w), before = held.explain.length;
     await page.goto(BASE + "/#BANK_STG");
     await ready(page, "#CALC1_STG1", '.opt[data-id="b"]');
