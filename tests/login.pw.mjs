@@ -49,6 +49,10 @@ async function fresh(browser, share = "none", keep = "ok", { motion = "no-prefer
   });
   return { ctx, page, reqs, errs, release, keeps: () => reqs.filter(r => new URL(r.url).pathname === "/acct/keep") };
 }
+/* the login screen loads jsQR, the QR lib and mycluck.mjs lazily and in parallel: wait for ALL of them (jsQR loaded + my Cluck drawn, Save enabled).
+   Waiting for jsQR alone left the QR script / mycluck.mjs request in flight, so it landed after the step's `before` snapshot ("sends nothing" got
+   [GET /mycluck.mjs]) and drawCluck threw "qrcode is not a function" in the restore steps; a slow vendor script reproduces it every run. */
+const ready = page => page.waitForFunction(() => typeof window.jsQR === "function" && !document.querySelector("#lgSave")?.disabled, null, { timeout: 5000 });
 const status = page => page.textContent("#lgStatus");
 const SECRET = "Keep your key secret, like your private story on Snapchat.", FAILED = "Oops, save didn't work! Try again!";
 const isSaved = () => !!document.querySelector("dialog.lg .lg-saved");
@@ -98,7 +102,7 @@ try {
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
-    await page.waitForFunction(() => typeof window.jsQR === "function", null, { timeout: 5000 });   // the login screen loads jsQR, lazily
+    await ready(page);
     const png = await page.evaluate(async tok => {                                  // the other phone's Cluck, as a PNG
       const { drawCluck } = await import("../mycluck.mjs");
       const img = drawCluck(location.origin + "/?k=" + tok, tok), c = document.createElement("canvas");
@@ -130,7 +134,7 @@ try {
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
-    await page.waitForFunction(() => typeof window.jsQR === "function");
+    await ready(page);
     const png = await page.evaluate(async () => { const c = document.createElement("canvas"); c.width = c.height = 64;
       const x = c.getContext("2d"); x.fillStyle = "#c33"; x.fillRect(0, 0, 64, 64);
       return [...new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer())]; });
@@ -261,7 +265,7 @@ try {
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
-    await page.waitForFunction(() => typeof window.jsQR === "function", null, { timeout: 5000 });
+    await ready(page);
     const png = await page.evaluate(async tok => {
       const { drawCluck } = await import("../mycluck.mjs");
       const img = drawCluck(location.origin + "/?k=" + tok, tok), c = document.createElement("canvas");
