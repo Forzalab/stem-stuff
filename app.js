@@ -1499,7 +1499,7 @@ function saveDone(r) {
 function doneExit(mine) {
   setTimeout(() => {
     if (S !== mine) return;                                                      // moved on already
-    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx") && !a.closest("#cluck, #q .vdrawer, #ff .vk")) a.blur();   // Next in the Check slot keeps focus (T17b-1); so does Cluck's sheet (opened in the beat), and the strip: its verdict icon / drawer take focus on purpose (a close inside the beat returns it to the icon)
+    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx") && !a.closest("#cluck, #q .vdrawer, #q .vk, #q .vkb")) a.blur();   // Next in the Check slot keeps focus (T17b-1); so does Cluck's sheet (opened in the beat), and the strip: its verdict icon / drawer take focus on purpose (a close inside the beat returns it to the icon)
     if (mtOpen) closeMT(false);
     if (swapOn) setSwap(false);
     root.classList.remove("dock-away", "bar-off");
