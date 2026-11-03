@@ -73,7 +73,8 @@ let asked = 0, gate = null, release = () => {};   // gate: a promise the next st
 let hold = null, unhold = () => {};               // hold: the next stream waits on it after its first piece (one stream only), so "no typing" reads the stream mid-way, not on a clock
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
-  if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }   // the gate
+  let j; try { j = JSON.parse(body); } catch { res.writeHead(400); res.end(); return; }   // a request cut off by a reload (the centred step now reloads into diet)
+  if (!j.stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }   // the gate
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   const g = gate, h = hold; gate = hold = null; await g;
