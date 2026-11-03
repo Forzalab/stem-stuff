@@ -38,7 +38,7 @@ section.wl .rp-ghost .rp-check { border-width: var(--bw); }
 section.wl .rp-ghost .rp-q { color: var(--help-muted); }
 section.wl .rp-locked .rp-chip { color: var(--help-muted); opacity: .55; }
 section.wl .rp-locked .rp-chip.rp-picked { opacity: 1; color: var(--help-on); background: color-mix(in srgb, var(--help) 22%, var(--help-sheet)); }
-section.wl .rp-locked .rp-in { color: var(--help-on); opacity: 1; }
+section.wl .rp-locked .rp-in { color: var(--help-on); border-color: var(--help-line); opacity: 1; }   /* the done box keeps no --edge: a theme's blue line must not leak into the warm sheet */
 section.wl .rp-locked .rp-check { visibility: hidden; }
 section.wl .rp-locked .rp-q { color: var(--help-muted); }
 section.wl .rp-ghost .katex, section.wl .rp-locked .katex { color: inherit; }

@@ -39,14 +39,14 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 
 | token | hex | role |
 |---|---|---|
-| `--page` | #000 | page, bars, the dock, wells (older names on it: `--paper`, `--field`) |
-| `--card` | #000 | the SURFACE: the question box and its kin (`--qbox`). Black like the page: surfaces are outlined by a 1px inset `--line`, not a lighter slab |
-| `--sheet` | #161616 | the CONTROL fill: buttons, every choice, the list card. Its own token, one step above the black surface, so fill-first buttons keep their shape (PROPOSAL value: the mock had no control fill) |
-| `--float` | #1a1a1a | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
-| `--line` | #666666 | the one line colour: dividers, control edges, the 1px row edge (`--edge`) |
-| `--ink` | #fff | body text, icons in buttons |
-| `--muted` | #a3a3a3 | secondary text, placeholders, locked state (`--hint`) |
-| `--action` / `--focus` | #3b9eff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` black letter; hover `--action-on` #70b8ff), focus ring, caret |
+| `--page` | #02060c | page, bars, the dock, wells (older names on it: `--paper`, `--field`) |
+| `--card` | #0b1422 | the SURFACE: the question box and its kin (`--qbox`). Only 1.10:1 above the page, so surfaces are also outlined by a 1px inset `--line`, not left to the slab step |
+| `--sheet` | #14233a | the CONTROL fill: buttons, every choice, the list card. Its own token, one step above the surface, so fill-first buttons keep their shape (PROPOSAL value) |
+| `--float` | #1b2b40 | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
+| `--line` | #5e7899 | the one line colour: dividers, control edges, the 1px row edge (`--edge`) |
+| `--ink` | #f3f7fc | body text, icons in buttons |
+| `--muted` | #a9b8cc | secondary text, placeholders, locked state (`--hint`) |
+| `--action` / `--focus` | #5aa9ff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` #031428 letter; hover `--action-on` #8cc2ff), focus ring, caret |
 | `--c1`, `--c1-hi`, `--grid` | #92c0ff, #c9e0ff, #394a61 | figures only (the locked force blue, its hover, the decorative grid). Own values: they do not follow `--action` or `--line`, so a theme can retune the UI without recolouring every figure. UI uses `--action` / `--action-on` |
 | `--c2`, `--c3` | #ffb86b, #ff8fc8 | figure series only. Not for UI state |
 
@@ -62,7 +62,7 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 
 **Soft verdict fills** (Tony, Nov 2: "less red saturation for the fill, the green too"): `--wrong-fill` #28191a and `--correct-fill` #14221c (OKLCH lightness kept, chroma halved). The only fills under a box or row: the answer bar's verdict wash (strip PR-B) and the sugar kept row. Never under text that needs more than their 10:1, never on a large area.
 
-**Ink is the site theme** (strip ship spec, Tony Nov 2: "ink whole site"): one black ground (page and surface), `--sheet` a step lighter so buttons keep their shape, `--line` #666666 (3.7:1 on black, 3.2:1 on `--sheet`: control edges need 3:1, WCAG 1.4.11), `--ink` white, `--action` #3b9eff with a black label, figures keep their own `--c1` / `--grid`. Ink replaces the navy ladder (page #050c16, card #101c2c, line #394a61, action #92c0ff); contrast of text on `--page` is 21:1 (white), `--muted` 8.3:1, `--wrong` 6.2:1, `--correct` 13.3:1 (NOTES Round 3 table, to re-measure in §7). There is no theme switch. Greyscale and Impeccable (§7) still apply.
+**Deep navy is the site theme** (Tony, Nov 2: "i dont like that, lets do a dark navy instead"; replaces Ink, which had replaced the older navy ladder): page #02060c, surface `--card` #0b1422, control fill `--sheet` #14233a, `--line` #5e7899 (4.5:1 on page, 4.1:1 on card, 3.5:1 on `--sheet`, 3.2:1 on `--float`, 3.4:1 on `--action-fill`: control edges need 3:1, WCAG 1.4.11), `--ink` #f3f7fc, `--action` #5aa9ff with a #031428 label (a lighter, more saturated sky than the old #92c0ff, so it stands apart from the navy ground), `--action-fill` #102542, `--wrong-fill` #2a1a24, `--correct-fill` #10261f (soft, hue-shifted off the navy). Figures keep their own `--c1` #92c0ff / `--grid` #394a61 (the grid stays decorative, not the shared `--line`). Text: `--ink` 17.2:1 on the card, `--muted` 9.2:1, `--wrong` 5.4:1, `--correct` 11.7:1 (full pair table in the PR that set it). There is no theme switch. Greyscale and Impeccable (§7) still apply.
 
 There is no warning color. The warm family is never a warning and never a figure series on the page; the one exception is a live figure inside Cluck (below). `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
 
