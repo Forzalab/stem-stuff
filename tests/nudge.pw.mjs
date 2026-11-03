@@ -1,6 +1,6 @@
 // J5 Cluck nudge, Tier 0 (intent.js → peek.js stemDuck.say; brain cluck-nudge.md 🔒): Jev on by default (art. 11, no flag), the first item idle past 45 s (W96) with
 // no pick (Q) → Cluck's peek rises carrying a Q line from copy/nudge-lines.js. Any input puts it away (a dismiss: Jev's gap doubles); a tap
-// counts as taken. ?jev=0 (this device off) = no nudge. The roll is pinned (__stemJevRand = 0) so it always fires. Phone 390 + desktop 1280, shots.
+// on the duck is only a dismiss too (B3 PR-B1: the duck is a status nudge, Cluck opens from the verdict drawer). ?jev=0 (this device off) = no nudge. The roll is pinned (__stemJevRand = 0) so it always fires. Phone 390 + desktop 1280, shots.
 //   node tests/nudge.pw.mjs <port> [shots dir]      (starts its own serve.py on that port)
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -103,7 +103,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
     await settle(page);
     const L = await look(page), N = await jev(page);
     assert.ok(LINES.Q.includes(L.say), "a Q line: " + L.say);
-    assert.equal(L.label, "Cluck: " + L.say);
+    assert.equal(L.label, "Dismiss Cluck: " + L.say);
     assert.equal(L.sayOp, 1, "the line shows");
     assert.ok(L.oneLine, "one line");
     assert.deepEqual(L.over, [], "the duck and its line rest on no control");
@@ -122,14 +122,15 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
   });
 }
 
-await step("a tap on the nudge = taken (no back-off)", async () => {
+await step("a tap on the nudge only dismisses it (B3 PR-B1: a status nudge: no Cluck, the gap doubles like any other input)", async () => {
   const page = await open({ vp: { width: 1280, height: 800 } });
   await idle(page, 90000);
   assert.equal(await up(page), true);
   await settle(page);
   await page.click(".ck-peek");
   const N = await jev(page);
-  assert.equal(N.taps, 1); assert.equal(N.dismissed, 0); assert.equal(N.gap, 90);
+  assert.equal(N.taps, 0); assert.equal(N.dismissed, 1); assert.equal(N.gap, 180);
+  assert.equal(await page.evaluate(() => window.stemCluckOpen()), false, "the duck must not open Cluck");
   assert.deepEqual(page.errs, [], "no console errors");
   await page.context().close();
 });

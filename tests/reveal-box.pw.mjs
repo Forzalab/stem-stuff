@@ -1,6 +1,6 @@
 // Todo 114 / W114f (Tony Nov 2: 114r v1f WINNER, "build + ship"): the typed-answer reveal box. After Check (right, or wrong and out of tries) in sugar:
 //   (a) nothing jumps: Next sits where Check was (y-shift <= 1 px, field and card too), at 390 and 1280
-//   (b) Ask Cluck is the field's flush right segment: its top / right / bottom edges are the field's, brown Cluck colours in every state, the simple inline-SVG duck, small and inline (no overflow above the field)
+//   (b) Ask Cluck is in the verdict drawer under the bar (B3 PR-B1 replaced the flush right segment): a sibling of the field, solid Cluck colours, the simple inline-SVG duck, small and inline
 //   (c) Next is OUTSIDE the field box, beside it
 //   (d) the line under the field is a plain sentence: wrong "Not it. The answer is 3.03 s" + the copy icon, right "That's it! The answer is ..."
 // Starts its own serve.py (static files); the bank and /check are routed.   node tests/reveal-box.pw.mjs [port] [shotDir]
@@ -75,22 +75,22 @@ for (const [W, H] of [[390, 844], [1280, 800]]) for (const outcome of ["right", 
     assert.ok(after.fz.height - before.fz.height <= 1, `the block under the field grew ${after.fz.height - before.fz.height}px: nothing may be added after Check`);
     assert.ok(Math.abs(after.nx.top + after.nx.height / 2 - before.chk.top - before.chk.height / 2) <= 1 && Math.abs(dy) <= 1, `Next moved: centre ${after.nx.top + after.nx.height / 2} vs Check ${before.chk.top + before.chk.height / 2}`);
   });
-  await step(`${T}: Ask Cluck is the field's flush right segment (brown, inline SVG duck); Next is outside`, async () => {
-    const g = await page.evaluate(`(() => { const R = ${R}; const ff = document.querySelector("#ff"), chip = ff.querySelector(".cue-chip"), nx = document.querySelector("#q .nx");
+  await step(`${T}: Ask Cluck is in the verdict drawer under the bar (a sibling, solid Cluck colours, inline SVG duck); Next is outside the field`, async () => {
+    // B3 PR-B1 (Tony "ship it", Nov 2) replaced the 114r v1f flush right segment: the chip is docked in the drawer (strip.js), layer order bar > drawer > later content
+    const g = await page.evaluate(`(() => { const R = ${R}; const ff = document.querySelector("#ff"), dr = document.querySelector("#q .vdrawer"), chip = dr && dr.querySelector(".cue-chip"), nx = document.querySelector("#q .nx");
       const cs = chip && getComputedStyle(chip), tok = n => { const d = document.createElement("i"); d.style.color = "var(--" + n + ")"; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; };
-      return { ff: R(ff), chip: R(chip), nx: R(nx), inside: !!chip, nxIn: ff.contains(nx), svg: !!chip?.querySelector("svg.dk"), img: !!chip?.querySelector("img"),
-        bg: cs?.backgroundColor, fill: tok("help-fill"), line: tok("help-line"), on: tok("help-on"), col: cs?.color, bt: cs?.borderTopColor, br: cs?.borderRightColor, bb: cs?.borderBottomColor, bl: cs?.borderLeftColor,
-        dk: R(chip?.querySelector(".dk")) }; })()`);
-    assert.ok(g.inside, "Ask Cluck is not inside the field box");
-    assert.ok(Math.abs(g.chip.right - g.ff.right) <= 1.5, `right edges ${g.chip.right} vs ${g.ff.right}`);
-    assert.ok(Math.abs(g.chip.top - g.ff.top) <= 1.5 && Math.abs(g.chip.bottom - g.ff.bottom) <= 1.5, `top/bottom ${g.chip.top}/${g.chip.bottom} vs ${g.ff.top}/${g.ff.bottom}`);
+      return { ff: R(ff), dr: dr && R(dr), chip: chip && R(chip), nx: R(nx), inside: !!chip, inField: !!ff.querySelector(".wchip"), sib: !!dr && dr.parentElement === ff.parentElement && !ff.contains(dr), svg: !!chip?.querySelector("svg.dk"), img: !!chip?.querySelector("img"),
+        bg: cs?.backgroundColor, help: tok("help"), ink: tok("help-ink"), col: cs?.color, label: chip?.querySelector("span")?.textContent,
+        dk: chip && R(chip.querySelector(".dk")) }; })()`);
+    assert.ok(g.inside && g.sib, "Ask Cluck is not in a drawer that is the field's sibling"); assert.equal(g.inField, false, "no chip left in the field");
+    assert.ok(g.chip.left >= g.dr.left - 0.5 && g.chip.right <= g.dr.right + 0.5, "the chip is inside the drawer");
+    assert.ok(Math.abs(g.dr.right - g.ff.right) <= 1, `drawer and field share the right edge ${g.dr.right} vs ${g.ff.right}`);
     assert.ok(g.nx.left >= g.ff.right - 0.5, `Next is not outside the field (nx.left ${g.nx.left}, field.right ${g.ff.right})`);
     assert.ok(g.nx.left - g.ff.right <= 10, "Next is not beside the field");
     assert.ok(g.svg && !g.img, "the duck is not the inline SVG");
-    assert.equal(g.bg, g.fill, "brown fill"); assert.equal(g.col, g.on, "brown text");
-    for (const k of ["bt", "br", "bb", "bl"]) assert.equal(g[k], g.line, "brown border " + k);
-    assert.ok(g.dk.top >= g.ff.top && g.dk.bottom <= g.ff.bottom && g.dk.height <= 24, `the duck must be a small inline icon inside the segment (top ${g.dk.top} vs field ${g.ff.top}, h ${g.dk.height})`);
-    if (W < 600) assert.ok(g.chip.width <= 64, `390 fallback is duck-only (${g.chip.width})`);
+    assert.equal(g.bg, g.help, "solid Cluck fill"); assert.equal(g.col, g.ink, "Cluck ink label");
+    assert.equal(g.label, outcome === "right" ? "See steps" : "Ask Cluck");
+    assert.ok(g.dk.height <= 24 && g.dk.height > 0, `the duck must be a small inline icon (h ${g.dk.height})`);
   });
   await step(`${T}: the line under the field is a plain sentence with the copy icon`, async () => {
     const g = await page.evaluate(`(() => { const l = document.querySelector("#q .ansl"); const c = l?.querySelector(".mcopy"), b = l?.querySelector("b");

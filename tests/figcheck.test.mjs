@@ -356,3 +356,25 @@ test("place(): opts.clear keeps a label that clear from every stroke when there 
   assert.ok(gap(F.place(q(), segs, [], R, null, { LH: 18 })[0].box) < 10);
   assert.ok(gap(F.place(q(), segs, [], R, null, { LH: 18, clear: 10 })[0].box) >= 10);
 });
+
+// ─── I-LBL-1 against strokes (todo 124, W124): dashed lines count; a label whose background hides a solid mark is a finding ───
+test("I-LBL-1 strokes: a label sitting on a DASHED axis line is a finding (the dashed x-axis, 5TF 2b); knocked out = accepted; its own mark = the design", () => {
+  const R = { x: 0, y: 0, w: 200, h: 100 }, dashed = [{ id: "axis", dash: true, pts: [[0, 50], [200, 50]] }];
+  const on = { id: "t", box: [80, 42, 24, 16] };
+  const f = F.checkAll({ labels: [on], R, strokes: dashed });
+  assert.deepEqual(f.map(x => [x.id, x.kind, x.ids]), [["I-LBL-1", "stroke", ["t", "axis"]]]);
+  assert.deepEqual(F.checkAll({ labels: [{ ...on, knock: true }], R, strokes: dashed }), [], "the placer knocked it out");
+  assert.deepEqual(F.checkAll({ labels: [{ ...on, id: "axis" }], R, strokes: dashed }), [], "a label on its own mark's stroke");
+  assert.deepEqual(F.checkAll({ labels: [{ id: "t", box: [80, 20, 24, 16] }], R, strokes: dashed }), [], "clear of the line");
+  assert.deepEqual(F.checkAll({ labels: [on], R }), [], "no strokes given: nothing to judge (older callers)");
+});
+test("I-LBL-1 strokes: a label background that hides a solid bar and its caps is a finding even knocked out (rod figs, Q19)", () => {
+  const R = { x: 0, y: 0, w: 300, h: 100 };
+  const bar = [{ id: "rod", pts: [[100, 50], [140, 50]] }, { id: "rod", pts: [[100, 44], [100, 56]] }, { id: "rod", pts: [[140, 44], [140, 56]] }];
+  const long = [{ id: "ax", pts: [[0, 50], [300, 50]] }];
+  const lab = { id: "L", box: [92, 38, 56, 24], knock: true };
+  const f = F.checkLabelStrokes([lab], [...bar, ...long]);
+  assert.deepEqual(f.map(x => [x.kind, x.ids]), [["mask", ["L", "rod"]]], "the rod is wiped; the long axis only crosses (knocked: fine)");
+  assert.deepEqual(F.checkLabelStrokes([{ ...lab, box: [92, 8, 56, 24] }], bar), [], "above the rod: clear");
+  assert.deepEqual(F.checkLabelStrokes([{ ...lab, box: [150, 38, 56, 24] }], bar), [], "beside the rod: clear");
+});

@@ -1,5 +1,5 @@
-// B7 (ii) (Tony, Oct 18): a wrong answer never opens Cluck by itself, on desktop too: the duck's sunrise comes (peek.js), and Cluck opens
-// when the student taps the duck. Cluck's reply already streams in the background from the wrong answer (if the hourly auto budget allows,
+// B7 (ii) (Tony, Oct 18): a wrong answer never opens Cluck by itself, on desktop too: the duck's sunrise comes (peek.js). Since B3 PR-B1 (Tony,
+// Nov 2) the duck is a status nudge: a tap only dismisses it, and Cluck opens from the chip / the hint card's CTA (the same request as before). Cluck's reply already streams in the background from the wrong answer (if the hourly auto budget allows,
 // app.js shouldPrefetch: the first 2 questions this session, WISH_AUTO), so the duck opens it with the text there: ONE request, reused.
 // No prefetch (budget spent, Q3+) = no request, the duck still rises, and its tap asks once (Tony, Oct 19, pick b). A right answer and diet
 // ask nothing. No control overlaps another (360 / 390 / 393x852 / 393x659 / 1280). On a fake clock (as idle-peek); own serve.py + a stub OpenRouter.
@@ -112,9 +112,12 @@ for (const [tag, vp] of VPS) {
     assert.ok(duck.op === 1 && duck.top < vp.height && duck.bottom > 0, "the duck is up, on screen: " + JSON.stringify(duck));
     assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "the hint card already shows the start of Cluck's text");
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
-    await page.click(".ck-peek");
+    await page.click(".ck-peek");                                       // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
-    assert.equal(await cluckOpen(page), true, "the duck opens Cluck");
+    assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
+    await page.click(".cl-peek .cl-cta");                               // the way in is the hint card's "okay, but how?" (what the duck tap used to open)
+    await page.clock.runFor(300);
+    assert.equal(await cluckOpen(page), true, "the hint card CTA opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});                  // a tap skips the typing
     await page.clock.runFor(2000);
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 4000 });
@@ -142,9 +145,12 @@ for (const [tag, vp] of VPS) {
     await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForTimeout(600);
     assert.equal(asked, 0, "no Cluck request"); assert.equal(page.ai, 0, "no /explain");
-    await page.click(".ck-peek");                                       // Tony, Oct 19 (pick b): an explicit duck tap asks, as the chip does
+    await page.click(".ck-peek");                                       // B3 PR-B1: the duck only dismisses; the chip asks (it did the same request as the duck, Oct 19 pick b)
     await page.clock.runFor(300);
-    assert.equal(await cluckOpen(page), true, "the duck opens Cluck");
+    assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
+    await page.click("#wish .wchip");
+    await page.clock.runFor(300);
+    assert.equal(await cluckOpen(page), true, "the chip opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});
     await page.clock.runFor(2000);
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000, polling: 100 });
@@ -180,9 +186,12 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
   assert.equal(await up(page), true, "Q3: the duck rises");
-  await page.click(".ck-peek");                                         // Tony, Oct 19 (pick b): the duck opens Cluck right away, a fresh request
+  await page.click(".ck-peek");                                         // B3 PR-B1: the duck only dismisses (no Cluck, no request); the chip asks (the same fresh request)
   await page.clock.runFor(300);
-  assert.equal(await cluckOpen(page), true, "the duck opens Cluck");
+  assert.equal(await cluckOpen(page), false, "Q3: the duck no longer opens Cluck");
+  await page.click("#wish .wchip");
+  await page.clock.runFor(300);
+  assert.equal(await cluckOpen(page), true, "the chip opens Cluck");
   await page.click("#cluck .wtext").catch(() => {});
   await page.clock.runFor(2000);
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000, polling: 100 });
@@ -225,6 +234,7 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
     const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     if (e.matches(".ck-say") || x < 0 || x >= W || y < 0 || y >= H) continue;   // the line is not a target (pointer-events: none)
     const h = document.elementFromPoint(x, y);
+    if (scrollY > 0 && h && stuck(h) && !stuck(e)) continue;                                  // a row SCROLLED under a sticky bar (the HUD): scrolling, not a layout clash (same rule as the pair check below). At scrollY 0 it is still a clash. 1px of page height flips this at 393x659 (Ink, one line weight: state rows no longer shrink 1px)
     if (!h || !(h === e || e.contains(h))) out.push(`${nm(e)} covered at its centre by ${h ? nm(h) : "nothing"}`);
   }
   for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
@@ -238,6 +248,16 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
   return out;
 }, [CTL, scope]);
 const OVPS = [["360x780", { width: 360, height: 780 }], ["390x844", { width: 390, height: 844 }], ["393x852", { width: 393, height: 852 }], ["393x659", { width: 393, height: 659 }], ["1280x900", { width: 1280, height: 900 }]];
+await step("the cover check still fails a row under a sticky bar at scroll 0 (only a scrolled page is exempt)", async () => {
+  const page = await open({ width: 393, height: 659 });
+  await page.evaluate(() => { scrollTo(0, 0); const r = document.querySelector("#q .opt").getBoundingClientRect();
+    const d = document.createElement("div"); d.style.cssText = "position:sticky;top:0;height:0;z-index:99999";
+    d.innerHTML = `<button style="position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px">x</button>`; document.body.prepend(d); });
+  assert.equal(await page.evaluate(() => scrollY), 0);
+  const hit = await clash(page, "body");
+  assert.ok(hit.some(m => /covered at its centre/.test(m)), "a row under the HUD at rest must be reported: " + JSON.stringify(hit));
+  await page.context().close();
+});
 const riseDone = async page => { await settle(page); await page.clock.runFor(1000); await settle(page); };
 for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the duck up after a miss, out of tries (Next), and Cluck open`, async () => {
   const phone = vp.width < 500, bad = [];
@@ -249,7 +269,8 @@ for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the d
   await riseDone(page);
   bad.push(...(await clash(page, "body")).map(s => "miss, duck up: " + s));
   await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}-v2.png`) });
-  await page.click(".ck-peek");
+  await page.click(".ck-peek");                                         // B3 PR-B1: the duck only dismisses; Cluck opens from the hint card's CTA
+  await page.click(".cl-peek .cl-cta");
   await page.clock.runFor(600);
   await page.click("#cluck .wtext").catch(() => {});
   await page.clock.runFor(2000);

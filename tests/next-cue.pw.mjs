@@ -167,7 +167,7 @@ async function close(page, type, outcome, { code } = {}) {
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const CASES = [["num", "PHYS_TNM"], ["text", "PHYS_TTX"], ["expr", "PHYS_TEX"], ["mc", "PHYS_TMC"], ["mc-pill", "PHYS_TTF"], ["multi", "PHYS_TMU"], ["pick-all", "PHYS_TPA"]];
-const field = "rgb(5, 12, 22)";   // --field = --page (unified v5)
+const field = "rgb(2, 6, 12)";   // --field = --page (Deep navy, Nov 2)
 for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
   const O = { mode, W, H };
   for (const [type, code] of CASES) for (const outcome of ["right", "out"]) {
@@ -211,7 +211,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
       } else assert.equal(got.ring, "none", "a ring outside the sugar right row: " + got.ring);
       if (outcome === "right" && !got.all) {   // V1 thin light, both modes: a 1px --correct ring, no fill (the row keeps its rest surface)
         assert.match(got.rim, /^1px rgb\(78, 230, 175\)/, "right ring (1px --correct): " + got.rim);
-        assert.ok(["rgb(16, 28, 44)", "rgb(5, 12, 22)"].includes(got.wash), "a fill on the right row/box: " + got.wash);
+        assert.ok(["rgb(20, 35, 58)", "rgb(11, 20, 34)", "rgb(2, 6, 12)"].includes(got.wash), "a fill on the right row/box: " + got.wash);
       }
       assert.equal(got.face, outcome === "right" ? "rgb(78, 230, 175)" : "rgb(27, 43, 64)", "Next face: --correct after right, --raised out of tries (PALETTE-v3 §6)");
       if (outcome === "out") {
@@ -267,7 +267,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       });
       if (mode === "diet") { assert.equal(g.any, false, "diet shows the chip / a duck / a nod"); return; }
       assert.ok(g.has, "no duck chip");
-      assert.equal(g.label, outcome === "right" ? "See Cluck's steps" : "Ask Cluck");
+      assert.equal(g.label, outcome === "right" ? (type === "num" ? "See steps" : "See Cluck's steps") : "Ask Cluck");   // B3 PR-B1: a typed answer's chip lives in the verdict drawer, with the spec's short label (STYLE §5)
       assert.equal(g.sh, 1, "the label wraps"); assert.equal(g.clip, false, "the label is cut");
       assert.ok(g.r.l >= 16 - 0.5 && g.r.r <= g.vw - 16 + 0.5, `chip outside the 16px gutter: ${g.r.l}-${g.r.r}`);
       assert.ok(g.r.h >= 44, `chip ${g.r.h} tall`);
@@ -311,7 +311,7 @@ for (const mode of MODES) {
       await close(page, type, "right", { code });
       await page.waitForSelector("#q .nx"); await page.waitForTimeout(900);
       const [names, fx] = await page.evaluate(() => { clearInterval(window.__rmt); return [[...window.__rm], [...window.__fx]]; });
-      assert.deepEqual(names.filter(n => n !== "g-next-fade"), [], "motion besides the fade: " + names);
+      assert.deepEqual(names.filter(n => n !== "g-next-fade" && n !== "vd-fade"), [], "motion besides the fade: " + names);
       assert.ok(names.includes("g-next-fade"), "no g-next-fade: " + names);
       assert.ok(fx.every(n => /\[opacity\]$/.test(n)), "reduced motion: a reward overlay moves (B2): " + fx);
       if (fx.length) console.log("      note (B2): reward drop overlay faded in under reduced motion: " + fx.join(" "));

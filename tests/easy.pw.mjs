@@ -147,7 +147,7 @@ try {
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
         frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
         tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (design/mockups/formula-use.html ?v=7)
-      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(146, 192, 255) 1px", tinted: true, tex: true, old: false });
+      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(90, 169, 255) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src || f.dataset.src));   // 4-6: their src waits for the row to scroll to them
     assert.equal(srcs.length, 5);
@@ -221,7 +221,7 @@ try {
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
         frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
         tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),
-      { role: "note", label: "Key formulas", notch: "Key formulas", onBorder: true, n: 1, arrows: 0, centred: true, frame: "rgb(146, 192, 255) 1px", tinted: true, tex: true, old: false }, "one formula: the same box, no arrow");
+      { role: "note", label: "Key formulas", notch: "Key formulas", onBorder: true, n: 1, arrows: 0, centred: true, frame: "rgb(90, 169, 255) 1px", tinted: true, tex: true, old: false }, "one formula: the same box, no arrow");
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
@@ -879,7 +879,7 @@ try {
       await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(400);
       const post = await g();
       assert.ok(Math.abs(post.ff - pre.ff) <= 1, `Check moved the answer box: ${pre.ff} -> ${post.ff}`);
-      const cmp = p.locator("#wish .cue-ok");
+      const cmp = p.locator(":is(#wish, .rbox) .cue-ok");   // B3 PR-B1: on a typed question the chip lives in the verdict drawer (class rbox)
       if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await p.waitForTimeout(400); }
       const z = await g();
       assert.equal(z.wish, false, "the sheet is open: #wish hides (W90's rule)");

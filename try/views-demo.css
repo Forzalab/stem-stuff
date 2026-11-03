@@ -13,7 +13,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .dp { max-width: 65ch; margin: 0; }
 .dchoices { display: grid; gap: var(--s2); margin-top: var(--s3); }
 .dopt { position: relative; display: flex; align-items: center; gap: var(--s3); min-height: calc(var(--btn) + 4px); padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3);
-  border: var(--bw-hair) solid var(--line); border-radius: 8px; background: var(--sheet); }
+  border: var(--bw) solid var(--line); border-radius: 8px; background: var(--sheet); }
 .dopt .bd { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border: var(--bw) solid var(--line); border-radius: 50%; color: var(--muted); font-weight: var(--w-em); line-height: 1; }
 .dopt.right { border: var(--bw) solid var(--correct); }
 .dopt.wrong { border: var(--bw) solid var(--wrong); }
@@ -23,7 +23,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .dopt.right .dvg { color: var(--correct); }
 .dopt.wrong .dvg { color: var(--wrong); }
 .dcl { margin-top: var(--s4); padding: var(--s4) 20px var(--s5); border-radius: 12px; }
-.dcl-bar { display: flex; align-items: center; gap: var(--s3); padding-bottom: var(--s3); border-bottom: var(--bw-hair) solid var(--help-rule); }
+.dcl-bar { display: flex; align-items: center; gap: var(--s3); padding-bottom: var(--s3); border-bottom: var(--bw) solid var(--help-rule); }
 .dcl-av { display: grid; place-items: center; width: var(--btn); height: var(--btn); border-radius: 50%; background: var(--ai-tint); color: var(--help); }
 .dcl-av svg { width: 1.75rem; height: 1.75rem; fill: currentColor; }
 .dcl-title { color: var(--help-on); font-size: var(--t-lg); font-weight: var(--w-em); }

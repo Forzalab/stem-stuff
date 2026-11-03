@@ -197,7 +197,7 @@ try {
     });
     await c2.close();
   }
-  /* sugar kept rows (look B, Tony Oct 20): a miss whose ticks are all right keeps those rows green and fixed; unticked right rows stay
+  /* sugar kept rows (look B, Tony Oct 20; 1px since Nov 2, one line weight): a miss whose ticks are all right keeps those rows green and fixed; unticked right rows stay
      plain; a tap toasts once; arrows skip them; a reload keeps them. Diet, a struck try and ?keep=0 never keep. A7K: a, c are right */
   const replies = page => { const log = []; page.on("response", async r => { if (/\/check$/.test(r.url())) log.push(await r.json().catch(() => null)); }); return log; };
   const look = (page, id) => page.$eval(`#q .opt[data-id="${id}"]`, o => { const c = getComputedStyle(o), b = getComputedStyle(o.querySelector(".badge")), lt = getComputedStyle(o.querySelector(".lt"));
@@ -215,7 +215,7 @@ try {
       assert.deepEqual(log.at(-1).kept, ["c"], "the server sends the ticked right ids only");
       const c = await look(page, "c"), a = await look(page, "a"), [green, fill, on] = await Promise.all(["--correct", "--correct-fill", "--correct-on"].map(n => tok(page, n)));
       assert.deepEqual([c.kept, c.on, c.ad, c.dis, c.ok], [true, "true", "true", false, true]);
-      assert.deepEqual([c.ring, c.bw, c.bg, c.ink, c.lt, c.badge], [green, "2px", fill, on, green, green]);
+      assert.deepEqual([c.ring, c.bw, c.bg, c.ink, c.lt, c.badge], [green, "1px", fill, on, green, green]);
       assert.equal(c.badgeBg, "rgba(0, 0, 0, 0)", "no blue fill in the square");
       assert.match(c.label, /, right, kept$/);
       assert.deepEqual(a, plain, "the unticked right row looks like any empty row");

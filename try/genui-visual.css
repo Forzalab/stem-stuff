@@ -47,7 +47,7 @@ html.home-sticky.vcl-open .figwrap { position: sticky; top: 0; z-index: 3; backg
 .vopt[aria-checked="true"] { border-color: var(--focus); background: var(--sheet); }
 .vopt.mine { border-style: dashed; border-color: var(--muted); }
 .vopt.mine::after { content: "your pick"; margin-left: auto; font-size: var(--t-xs); color: var(--muted); }
-.vopt.right { border: var(--bw-alarm) solid var(--correct); padding: calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
+.vopt.right { border: var(--bw) solid var(--correct); padding: calc(var(--s2)) calc(var(--s3)); }
 .vopt:disabled { cursor: default; }
 .sure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-height: 44px; font-size: var(--t-sm); cursor: pointer; }
 .sure input { width: 22px; height: 22px; accent-color: var(--mark); margin: 0; }

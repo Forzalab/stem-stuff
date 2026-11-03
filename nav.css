@@ -69,7 +69,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qlist .qn { flex: none; min-width: 2ch; text-align: right; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
 .qlist .qt { min-width: 0; overflow-wrap: anywhere; }
 .qlist a[aria-current] { background: var(--raised); }
-.qlist a[aria-current] .qn { color: var(--c1); }
+.qlist a[aria-current] .qn { color: var(--action); }
 
 /* done marks (design/DONE.md, variant A): icons at the row's right edge; crossed + greyed = can't be answered any more */
 .qlist .mk { flex: none; display: inline-flex; gap: 2px; align-self: center; margin-left: auto; padding-left: var(--s2); }
@@ -81,7 +81,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qlist a.gone .mk { opacity: 0.8; }
 .qlist .mk-again .mk-x { opacity: 0.4; }   /* a re-showing: the old misses stay, faded; the history glyph leads */
 .qlist .mk-back { color: var(--muted); }
-.qlist a.gone[aria-current] .qn { color: var(--c1); }
+.qlist a.gone[aria-current] .qn { color: var(--action); }
 
 /* the open list dims everything behind it, the top bar and its XP strip too: one even scrim (Tony, Oct 7 bug shot: an undimmed
    bar over a dimmed page plus the strip's own dim read as three shades and a black strip). Layers: page < FAB 40 < Cluck 45 <
