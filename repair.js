@@ -144,7 +144,7 @@
       if (i === w.ok) { s.why = i; if (welcome) s.missGone = true; else s.miss = ""; }
       else {
         whyOk = false; s.whyTried.add(i); missed = true; s.missGone = false;
-        s.miss = welcome ? hint() : L().miss || "";
+        s.miss = (w.miss && w.miss[i]) || (welcome ? hint() : L().miss || "");   // the chip's own line (todo 76), else the generic one
         if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
       }
       settle();

@@ -1083,6 +1083,9 @@ def repair_check(p, u, sid, body):
     own = t is p and "ok" in step
     if own and step.get("kind") != "num":
         ok = value.strip() == step["ok"]
+        line = (step.get("miss") or {}).get(value.strip())      # todo 76: the step's own line for THIS wrong option (never the key: it names what was done)
+        if not ok and isinstance(line, str):
+            fam = {"hint": line}
     else:
         g = {**u, "type": "num", "answer": step["ok"], **({"tol": step["tol"]} if "tol" in step else {})} if own else u
         if g["type"] == "mc":
