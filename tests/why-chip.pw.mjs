@@ -123,20 +123,21 @@ await step("118c: the chip is the last child of the last reply bubble, no fill, 
   await page.context().close();
 });
 
-await step("multi (the Oct 28 path): finished, 'See Cluck\'s steps' asks /explain with the last try's part; the chip asks /chat with it", async () => {
+await step("multi (the Oct 28 path): finished, 'See Cluck\'s steps' asks /explain with the newest wrong try's part; a follow-up asks /chat with the same part", async () => {
   const page = await open("CALC1_WHY2");
   await part(page, 0, "5");
   await part(page, 0, "6");
   await part(page, 1, "10");
   await page.click(":is(#wish, .rbox) .cue-ok");
   for (let i = 0; i < 50 && !page.sent.explain.length; i++) await page.waitForTimeout(100);
-  assert.deepEqual([page.sent.explain.at(-1)?.answer, page.sent.explain.at(-1)?.part], ["10", 1], "the pick names its part");
+  assert.deepEqual([page.sent.explain.at(-1)?.answer, page.sent.explain.at(-1)?.part], ["5", 0], "the pick names the newest wrong part");
   await page.click("#cluck .wtext").catch(() => {});                    // a tap skips the typing
-  await page.waitForSelector("#cluck .cl-why", { state: "visible", timeout: 6000 });
-  await page.click("#cluck .cl-why");
+  assert.equal(await page.locator("#cluck .cl-why").count(), 0, "the reply explains a miss, so no 'why does this work' chip");
+  await page.fill("#cluck textarea", "Why does this work?"); await page.click("#cluck .send");   // the follow-up goes through the ask field
   await page.waitForFunction(() => /splits the work/.test(document.querySelector("#cluck .cl-thread")?.textContent || ""), null, { timeout: 6000 });
   const c = page.sent.chat.at(-1);
-  assert.deepEqual([c.answer, c.part, c.history.at(-1).content], ["10", 1, "Why does this work?"], "the chat turn carries the part");
+  assert.deepEqual([c.answer, c.part, c.history.at(-1).content], ["5", 0, "Why does this work?"], "the chat turn carries the part");
+  assert.deepEqual([c.answer, c.part], [page.sent.explain.at(-1).answer, page.sent.explain.at(-1).part], "/explain and /chat name the same part");
   assert.deepEqual(page.errs, []);
   await page.context().close();
 });

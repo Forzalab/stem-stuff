@@ -1917,8 +1917,9 @@ function wishOnWrong() {
   if (w.started) { wishStart(true); auto(); }                             // the reply streams now, in the background: one request, reused on open
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
+const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
 async function wishStart(auto) {
-  const w = wish, t = (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {}, key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
+  const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
   w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
@@ -2612,7 +2613,7 @@ async function clCompare(w) {
   w.busy = false; clAsk();
 }
 async function clSend(msg) {
-  const w = wish, t = S.tries.at(-1) || {};
+  const w = wish, t = askTry();
   if (!w || w.busy || !wishTyped(w)) return;
   const th = cl.el.querySelector(".cl-thread");
   const me = document.createElement("div"); me.className = "msg me"; me.innerHTML = clWho(true) + '<p class="md"></p>'; me.lastChild.textContent = msg;
