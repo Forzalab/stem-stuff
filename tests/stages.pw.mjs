@@ -12,6 +12,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } fro
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { freeze } from "./lib/clock.mjs";   // playwright-clock-race: pause the page clock around a jump
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -62,14 +63,6 @@ const mk = async (w, reduced) => {
   page.on("pageerror", e => page.errs.push(String(e)));
   await page.clock.install({ time: new Date("2026-11-03T12:00:00Z") });
   return page;
-};
-/* pause the page clock a little ahead of its own Date.now(); on a loaded runner that moment can already be past, so retry with a wider margin */
-const freeze = async page => {
-  for (let m = 300; ; m *= 2) {
-    const now = await page.evaluate(() => Date.now());
-    try { await page.clock.pauseAt(now + m); } catch (e) { if (m > 10000 || !/past/.test(e.message)) throw e; continue; }
-    await new Promise(r => setTimeout(r, m + 200)); return;
-  }
 };
 const ready = (page, hash, sel) => page.waitForFunction(([h, s]) => !document.getElementById("splash") && location.hash === h && !document.getElementById("freeze").hidden && !!document.querySelector(s), [hash, sel], { timeout: 10000 });
 const noScroll = async page => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "horizontal scroll");

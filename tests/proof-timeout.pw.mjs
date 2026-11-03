@@ -8,6 +8,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { freeze } from "./lib/clock.mjs";   // playwright-clock-race: pause the page clock around a jump
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -36,16 +37,6 @@ async function open() {
   await page.fill("#ans", "Base case: n = 1.\nAssume it for k.\nAdd 3k+2 and factor."); await page.click("#ansGo");
   await page.waitForFunction(() => document.querySelector("#ansGo") !== null);
   return { ctx, page, held };
-}
-/* Playwright's clock races itself: while time flows, a real-time tick (runTo) can still be running when fastForward lands, and its _advanceNow(old) then
-   rewinds the page clock, so the jump is lost and the 25 s abort never fires (CI-only red, W164; any busy page with many timers raises the odds).
-   Pause the clock a little ahead of its own Date.now() first (no real-time tick left to race), jump, then let time flow again. Same freeze as stages.pw. */
-async function freeze(page) {
-  for (let m = 300; ; m *= 2) {
-    const now = await page.evaluate(() => Date.now());
-    try { await page.clock.pauseAt(now + m); } catch (e) { if (m > 10000 || !/past/.test(e.message)) throw e; continue; }
-    await new Promise(r => setTimeout(r, m + 200)); return;
-  }
 }
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
 try {
