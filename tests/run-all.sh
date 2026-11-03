@@ -127,7 +127,7 @@ tags() {
     minicluck) echo "@layout @real-time" ;;
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
-    repair-gap) echo "@layout" ;;
+    repair-gap) echo "@layout @real-time" ;;
     mock) echo "@logic @real-time" ;;   # W103b; waits out the ~0.7 s wrong-answer peek for real
     twin-first) echo "@logic @real-time" ;;   # todo 121; waits out the real 2 s spam gate before its miss
     repair) echo "@layout @fast-time" ;;   # C2 repair ladder lab; installs page.clock for the 10 s study gate
