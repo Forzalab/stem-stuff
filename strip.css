@@ -57,11 +57,12 @@
 .vdrawer > .vd-x:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .vdrawer > .vd-x .ico { width: var(--ico); height: var(--ico); transform: rotate(180deg); }   /* i-down turned: the tuck-away chevron points up */
 
-/* PR-B2: mc / pick-all reopen target. The rows' own buttons are disabled once closed, so a transparent 44px button sits over the mark (single: the right-hand check / cross; pick-all: the square) */
-.vkb { position: absolute; top: 50%; margin-top: calc(var(--btn) / -2); width: var(--btn); height: var(--btn); padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; z-index: 1; }
+/* PR-B2: mc / pick-all reopen target. The rows' own buttons are disabled once closed, so a transparent button (44 tall; never wider than the half of the row short of its centre, so a tap at a row's centre is the row's) sits over the mark (single: the right-hand check / cross; pick-all: the square) */
+.vkb { position: absolute; top: 50%; margin-top: calc(var(--btn) / -2); width: min(var(--btn), calc(50% - 8px)); height: var(--btn); padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; z-index: 1; }
 .vkb-r { right: calc(26px - var(--btn) / 2); }
 .ch.cue .vkb-r { right: calc(var(--nxw) + 20px - var(--btn) / 2); }
 .vkb-l { left: 6px; }
+.choices.inline .ch.cue .vkb-r { right: auto; left: 6px; }   /* an inline pill has no glyph beside Next (.vg is hidden): the badge takes the pill's left end, never its middle or Next's face */
 .vkb:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
 .vkb:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -3px; }
 /* single mc: the drawer spans its row: [Ask Cluck][Skip | Next][^]. Skip = quiet while a try is left; Next = the one filled --action control once the question is closed */

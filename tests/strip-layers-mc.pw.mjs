@@ -194,6 +194,17 @@ for (const [kind, widths, states] of CASES) {
   }
 }
 
+/* ux Tony Nov 2 (d) / cluck-rise "covered at its centre by button.vkb.vkb-r": the badge sits over the row's mark only, never over the middle of a pill (a tap there is the pill's own) */
+for (const W of [360, 390]) await step(`${W}: inline pills: the badge never covers a pill's centre (the pill is what a tap at its centre hits), a try left and out of tries`, async () => {
+  const pg = await pageFor(browser, W, 844);
+  const hits = () => pg.evaluate(() => [...document.querySelectorAll("#q .ch:has(.vkb)")].map(ch => { const o = ch.querySelector(".opt"), r = o.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return [ch.dataset.id, Math.round(r.width), !!e && !e.closest(".vkb"), e && e.className]; }));   // Next's own face (the cue pill) may sit there by design; the badge may not
+  await reach(pg, "inl", "wrong");
+  let h = await hits(); assert.ok(h.length >= 1, "a badge on the picked pill"); assert.deepEqual(h.filter(x => !x[2]), [], "a try left: a badge covers a pill's centre " + JSON.stringify(h));
+  await reach(pg, "inl", "out");
+  h = await hits(); assert.ok(h.length >= 1, "a badge on the picked pill"); assert.deepEqual(h.filter(x => !x[2]), [], "out of tries (Next in the pill): a badge covers a pill's centre " + JSON.stringify(h));
+  await pg.ctx.close();
+});
+
 await step("inline pills: the drawer follows the whole group (a sibling after .choices), not a row", async () => {
   const pg = await pageFor(browser, 390, 844);
   await goTo(pg, "STM_INL"); const inl = await pg.evaluate(() => document.querySelector("#q .choices").classList.contains("inline"));
@@ -279,6 +290,20 @@ await step("phone: a tap inside Cluck's sheet is not a tap outside the drawer (u
   assert.equal(await pg.evaluate(() => { const c = document.querySelector("#q .vdrawer .wchip"), r = c.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!e && c.contains(e); }), true, "the chip is tappable");
   await pg.click("#q .vdrawer .wchip");
   await opened().catch(() => { throw new Error("the chip did nothing after the sheet closed"); });
+  await pg.ctx.close();
+});
+
+/* Tony Nov 2 (e): on a multi, the drawer's Ask Cluck asks about the part that was missed, not simply the newest try (here a right part b, after part a ran out of tries) */
+await step("multi: Ask Cluck asks about the part that was missed (part a out of tries, part b right: the newest try is b's)", async () => {
+  const pg = await pageFor(browser, 390, 844);
+  const asked = []; await pg.route("**/explain", r => { asked.push(r.request().postDataJSON().part); r.fulfill({ status: 200, contentType: "text/plain", body: "1. Step one" }); });
+  await goTo(pg, "STM_MUL");
+  await part(pg, 0, "9"); await verdictCount(pg, 1); await pg.fill('#q .part[data-i="0"] .ans', "8"); await pg.click("#go0"); await verdictCount(pg, 2);   // part a: out of tries (locked)
+  await pg.waitForTimeout(SETTLE);
+  await part(pg, 1, "4"); await pg.waitForSelector("#q.closed"); await pg.waitForTimeout(SETTLE + 300);   // part b right: the item closes, Cluck's chip comes
+  await pg.click("#q .vdrawer .wchip"); await pg.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 4000 });
+  await pg.waitForTimeout(300);
+  assert.deepEqual(asked, [0], "Ask Cluck asked about part " + JSON.stringify(asked) + " (part a = 0 was the miss)");
   await pg.ctx.close();
 });
 

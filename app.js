@@ -1918,7 +1918,7 @@ function wishOnWrong() {
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
-  const w = wish, t = S.tries.at(-1) || {}, key = ckKey(w.code, t);
+  const w = wish, t = (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {}, key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
   w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
