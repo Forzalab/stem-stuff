@@ -13,10 +13,11 @@
 .stg-r.done .stg-ic::after, .stg-ok::after { content: ""; position: absolute; left: 4px; top: 0; width: 5px; height: 10px; border: solid var(--correct); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .stg-r.bad .stg-ic { border: 2px dashed var(--wrong-rim); border-radius: 50%; }   /* no tick: an open ring */
 .stg-r.bad { color: var(--wrong-on); }
-.stg-sum { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: 44px; padding: 0; background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.stg-sum { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: 28px; padding: 0; background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; }
 .stg-sum > span { flex: 1; }
 .stg-chev { flex: none; width: .5rem; height: .5rem; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform var(--d-move, .2s); }
 .stg-sum.open .stg-chev { transform: rotate(45deg); }
 .stg-sum.open + .stg-l { padding-inline-start: var(--s5); }
+@media (pointer: coarse) { .stg-sum { min-height: 44px; } }   /* a finger needs 44; a mouse does not, and the desktop sheet is short */
 @keyframes stg-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .stg-r.run .stg-ic { animation: none; } .stg-chev { transition: none; } }

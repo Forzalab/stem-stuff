@@ -112,7 +112,7 @@ for (const w of WIDTHS) {
     assert.match(t, /Base case: clean/); assert.doesNotMatch(t + (await text(page, "#cluck")), /\x1e|"stage"|"at"/, "no event line in the reply");
     await noScroll(page);
     const h = await page.$eval("#cluck .stg-sum", b => b.getBoundingClientRect().height);
-    assert.ok(h >= 44, "the summary is a 44px tap target: " + h);
+    assert.ok(h >= (w < 500 ? 44 : 28), "the summary is a tap target (44px on a phone): " + h);
     await page.click("#cluck .stg-sum");
     assert.equal(await page.locator("#cluck .stg .stg-r").count(), 2, "a tap opens the rows");
     assert.match(await text(page, "#cluck .stg"), /Fluffed feathers/); assert.match(await text(page, "#cluck .stg"), /Drafted the wish/);
@@ -187,7 +187,7 @@ for (const w of WIDTHS) {
     assert.match(await text(page, "#q .stg .stg-sum"), /Thought for 3s/);
     assert.equal(await page.evaluate(() => window.__drill.state.tries.length), 1);
     const h = await page.$eval("#q .stg-sum", b => b.getBoundingClientRect().height);
-    assert.ok(h >= 44, "the summary is a 44px tap target: " + h);
+    assert.ok(h >= (w < 500 ? 44 : 28), "the summary is a tap target (44px on a phone): " + h);
     await noScroll(page);
     assert.deepEqual(page.errs, []);
     await page.context().close();
