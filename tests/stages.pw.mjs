@@ -63,7 +63,14 @@ const mk = async (w, reduced) => {
   await page.clock.install({ time: new Date("2026-11-03T12:00:00Z") });
   return page;
 };
-const freeze = async page => { const now = await page.evaluate(() => Date.now()); await page.clock.pauseAt(now + 200); await new Promise(r => setTimeout(r, 400)); };
+/* pause the page clock a little ahead of its own Date.now(); on a loaded runner that moment can already be past, so retry with a wider margin */
+const freeze = async page => {
+  for (let m = 300; ; m *= 2) {
+    const now = await page.evaluate(() => Date.now());
+    try { await page.clock.pauseAt(now + m); } catch (e) { if (m > 10000 || !/past/.test(e.message)) throw e; continue; }
+    await new Promise(r => setTimeout(r, m + 200)); return;
+  }
+};
 const ready = (page, hash, sel) => page.waitForFunction(([h, s]) => !document.getElementById("splash") && location.hash === h && !document.getElementById("freeze").hidden && !!document.querySelector(s), [hash, sel], { timeout: 10000 });
 const noScroll = async page => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "horizontal scroll");
 

@@ -1967,7 +1967,7 @@ async function wishStart(auto) {
         if (wish === w) peekText();
       }
       fr.e(bytes);
-      if (err) { w.failed = 1; w.inc = err.error; }
+      if (err) { w.failed = 1; w.inc = inc({ why: err.why, server: err.error, status: err.why === "budget_cap" ? 503 : 502, phase: w.text ? "stream" : "headers", bytes }); }   // the in-band error = the unstaged 503/502 (X-Incident): the same incident, its reason and the server's code
       else if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
     }
   } catch (e) { fr.x(e); if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
