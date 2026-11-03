@@ -231,7 +231,7 @@
   D.addEventListener("pointerdown", function (e) {            // a tap outside closes it (POPOVER rule); the drawer and the verdict icons are inside
     if (!drawer || drawer.hidden || drawer.classList.contains("vd-shut")) return;
     var t = e.target; if (!t || !t.closest) return;
-    if (drawer.contains(t) || t.closest("#q .ff .vk, #q .vkb")) return;
+    if (drawer.contains(t) || t.closest("#q .ff .vk, #q .vkb, #cluck")) return;   // Cluck's sheet is the drawer's own family: at phone width it floats over the drawer (#wish stays shown), and a tap in it (Try again) must not close the drawer for good
     close(false);
   }, true);
   D.addEventListener("input", function (e) {                  // editing the box starts a new try: the old verdict's drawer goes

@@ -261,6 +261,27 @@ await step("the drawer's chip stays live across Cluck's sheet (PR 385 CI): /expl
   await pg.ctx.close();
 });
 
+await step("phone: a tap inside Cluck's sheet is not a tap outside the drawer (ux-flows@phone 23 cluck-errors, PR 385 CI): tap Try again in the sheet, close it, the drawer and its chip are back", async () => {
+  const pg = await pageFor(browser, 390, 844);
+  await pg.route("**/explain", r => r.fulfill({ status: 500, body: "" }));
+  await goTo(pg, "STM_MCQ"); await pickMC(pg, "a");
+  await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE);
+  const opened = () => pg.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 4000 });
+  await pg.click("#q .vdrawer .wchip"); await opened();
+  await pg.waitForSelector("#cluck .wtext .wretry", { timeout: 6000 });
+  await pg.waitForTimeout(SETTLE);
+  await pg.click("#cluck .wtext .wretry");                                    // a tap in the sheet (the sheet floats over the drawer at phone width: #wish stays shown)
+  await pg.waitForTimeout(SETTLE);
+  await pg.keyboard.press("Escape");
+  await pg.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
+  await pg.waitForTimeout(SETTLE);
+  assert.equal(await drawerOpen(pg), true, "the sheet tap closed the drawer for good (it counted as a tap outside)");
+  assert.equal(await pg.evaluate(() => { const c = document.querySelector("#q .vdrawer .wchip"), r = c.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!e && c.contains(e); }), true, "the chip is tappable");
+  await pg.click("#q .vdrawer .wchip");
+  await opened().catch(() => { throw new Error("the chip did nothing after the sheet closed"); });
+  await pg.ctx.close();
+});
+
 await browser.close();
 srv.kill();
 console.log(failures ? `${failures} FAIL` : "all ok");
