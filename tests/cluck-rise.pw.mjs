@@ -56,7 +56,8 @@ async function step(name, fn) {
 }
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const VPS = [["1280", { width: 1280, height: 900 }], ["390", { width: 390, height: 844 }]];
+const DESK = { width: 1280, height: 900 };
+const VPS = [["390", { width: 390, height: 844 }]];   // BIG PLAN V1 (Tony Nov 2): desktop sugar has Cluck open from load and no close, so there is no "closed, then the duck" flow there: phones only (cluck-permanent.pw.mjs covers desktop)
 
 /* a page on a fake clock (idle-peek's open()); /explain counted at the page too */
 async function open(vp, o = {}) {
@@ -252,7 +253,7 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
   }
   return out;
 }, [CTL, scope]);
-const OVPS = [["360x780", { width: 360, height: 780 }], ["390x844", { width: 390, height: 844 }], ["393x852", { width: 393, height: 852 }], ["393x659", { width: 393, height: 659 }], ["1280x900", { width: 1280, height: 900 }]];
+const OVPS = [["360x780", { width: 360, height: 780 }], ["390x844", { width: 390, height: 844 }], ["393x852", { width: 393, height: 852 }], ["393x659", { width: 393, height: 659 }]];
 await step("the cover check still fails a row under a sticky bar at scroll 0 (only a scrolled page is exempt)", async () => {
   const page = await open({ width: 393, height: 659 });
   await page.evaluate(() => { scrollTo(0, 0); const r = document.querySelector("#q .opt").getBoundingClientRect();
@@ -297,13 +298,13 @@ for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the d
   assert.deepEqual(bad, [], "overlaps");
 });
 
-await step("1280: a right answer and diet ask Cluck nothing", async () => {
-  const page = await open(VPS[0][1]);
+await step("1280: a right answer and diet ask Cluck nothing (desktop sugar: its box is open from load, diet has none)", async () => {
+  const page = await open(DESK);
   await pick(page, "a");
   await page.clock.runFor(1500); await page.waitForTimeout(600);
-  assert.equal(page.ai, 0, "right: no /explain"); assert.equal(await cluckOpen(page), false);
+  assert.equal(page.ai, 0, "right: no /explain"); assert.equal(await cluckOpen(page), true);
   await page.context().close();
-  const d = await open(VPS[0][1], { diet: true });
+  const d = await open(DESK, { diet: true });
   await pick(d, "b");
   await d.clock.runFor(1500); await d.waitForTimeout(600);
   assert.equal(d.ai, 0, "diet: no /explain"); assert.equal(asked, 0); assert.equal(await cluckOpen(d), false);

@@ -16,6 +16,7 @@ const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
+const WIDE = { width: 700, height: 900 };   // BIG PLAN V1 (Tony Nov 2): the duck never rises on desktop sugar (>= 720: Cluck is open for good), so its mouse flows run at 700, a mouse just under the side-by-side breakpoint
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8876", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "j6-")), banks = join(tmp, "banks"), shots = process.argv[3] || tmp;
@@ -111,7 +112,7 @@ const look = page => page.evaluate(() => {
 });
 const jev = page => page.evaluate(() => window.stemJev());
 
-for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1280, height: 800 }]]) {
+for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", WIDE]]) {
   await step(`${name}: wrong, wrong, right → after the green row the peek rises with a line for the last wrong family; a hollow tap puts it away and no second one comes`, async () => {
     const page = await open({ vp, touch: name === "phone" });
     await earned(page);
@@ -153,7 +154,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
 /* trap_beaten, live on a served bank: /check sends the item's distractor families with a RIGHT pick. M1: fell for negation + sign, then right; M2 (3 min later):
    right first try, and sign is one of its distractor families. Also: the family list never reaches PostHog's call (stemT's props are the only thing telemetry.js sees) */
 await step("trap_beaten: a served item's families (sent with the right pick only) → `seen  trap_beaten` on a later first-try item", async () => {
-  const page = await open({ vp: { width: 1280, height: 800 } });
+  const page = await open({ vp: WIDE });
   const checks = [];
   page.on("response", async r => { if (r.url().endsWith("/check")) { try { checks.push(await r.json()); } catch { /* ignore */ } } });
   await earned(page);
@@ -173,7 +174,7 @@ await step("trap_beaten: a served item's families (sent with the right pick only
    first-try 0 0 1 1 1, fed through stemT as the page would) and a first wrong 10 s in → the spot text shows, S.hints kind "spot", the done
    record keeps it. A cold session (nothing finished) → the plain hint. The why line stays on device and carries no family */
 for (const warm of [true, false]) await step(`spot gate: ${warm ? "an improving session → the spot text" : "a cold session → the plain hint"}`, async () => {
-  const page = await open({ vp: { width: 1280, height: 800 } });
+  const page = await open({ vp: WIDE });
   const SPOT = "QUACK. Look at the second term of the bottom.";
   await page.route("**/check", async r => {
     const res = await r.fetch(), j = await res.json();
@@ -220,7 +221,7 @@ await step("?jev=0 (off on this device): the same item, no peek, no stemJev", as
 
 /* J6 streak signals (log lines only). 1: a bank item (the page's own bank): w= ch=, copy inside the stem only, away via=blur. */
 await step("streak signals: q_open w= ch= (bank item), copy stem (not a choice), away via=blur; nothing reaches stemT with a new prop", async () => {
-  const page = await open({ vp: { width: 1280, height: 800 } });
+  const page = await open({ vp: WIDE });
   await page.evaluate(() => { window.__t = []; const o = window.stemT; window.stemT = (n, p) => { window.__t.push([n, JSON.stringify(p || {})]); return o && o(n, p); }; });
   const L = async () => (await jev(page)).lines;
   assert.match((await L())[0], /q_open {2}CALC1_T96M\d mc w=4 ch=4$/, "w= ch=: " + (await L())[0]);
@@ -241,7 +242,7 @@ await step("streak signals: q_open w= ch= (bank item), copy stem (not a choice),
 await step("streak signals: xmark only for the student's own X, not the None-of-these auto-X; no w= ch= for a non-bank item", async () => {
   const PV = { code: "CSCI26_J6S", type: "mc", pick: "all", shuffle: false, tries: 2, fix: { how: "a number" }, body: txt("Which of these squares is false here?"),
     choices: [{ id: "a", md: "$2^2=4$" }, { id: "b", md: "$3^2=8$" }, { id: "c", md: "$4^2=16$" }, { id: "d", md: "None of these", lock: true }] };
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }), page = await ctx.newPage();
+  const ctx = await browser.newContext({ viewport: WIDE }), page = await ctx.newPage();
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
   await page.route(`**/p/${PV.code}.json`, r => r.fulfill({ json: PV }));
   await page.goto(BASE + "/?jev=1#" + PV.code);

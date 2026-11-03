@@ -227,7 +227,7 @@
   D.addEventListener("keydown", function (e) {
     var vk = e.target.closest && e.target.closest("#q .ff .vk[role=button]");
     if (vk && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(vk); return; }
-    if (e.key === "Escape" && drawer && !drawer.hidden && !(window.stemCluckOpen && window.stemCluckOpen())) close(true);
+    if (e.key === "Escape" && drawer && !drawer.hidden && !(window.stemCluckModal && window.stemCluckModal())) close(true);
   });
   D.addEventListener("pointerdown", function (e) {            // a tap outside closes it (POPOVER rule); the drawer and the verdict icons are inside
     if (!drawer || drawer.hidden || drawer.classList.contains("vd-shut")) return;

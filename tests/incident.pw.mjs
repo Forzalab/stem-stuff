@@ -15,6 +15,7 @@ const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
+// BIG PLAN V1 (Tony Nov 2): this spec drives the error CHIP, which desktop sugar no longer shows (its open box takes the error), so it runs on the phone profile
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8877", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "inc-")), banks = join(tmp, "banks"), SHOTS = process.argv[3] || tmp;
@@ -70,7 +71,7 @@ const REASONS = /upstream|http|network|budget|credit|stream|timeout|empty|cap|ex
 
 /* the bank's question, a wrong pick: Cluck's reply is asked for in the background (the first question this session) */
 async function wrong({ explain, debug = false, off = false } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   if (explain) await ctx.route("**/explain", explain);
@@ -170,7 +171,7 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
 });
 
 await step("/check times out twice in a row (P2): the 2nd is its own incident, timeout_x2, with its own snapshot (not a dup of the 1st)", async () => {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   await ctx.route("**/check", () => {});                               // never answers: net() aborts it after 8 s

@@ -65,7 +65,7 @@ async function open({ explain, chat, debug = false } = {}) {
 }
 /* typing (answer field + notes, real key events), a scroll and a resize on question 1; then question 2, notes again, a wrong pick */
 async function busyThenWrong(page) {
-  await page.addStyleTag({ content: "#xb { visibility: visible !important; }" });   // sugar-hides-notes: this flow needs Explain (sugar only), where desktop hides #xb; un-hide it so the notes field still gets real keys (its kb report entries are the point)
+  await page.addStyleTag({ content: "#xb { visibility: visible !important; } html.side #work.cl-on > #xb { display: block !important; }" });   // (BIG PLAN V1: Cluck's open box hides #xb with display:none, so force it back)   // sugar-hides-notes: this flow needs Explain (sugar only), where desktop hides #xb; un-hide it so the notes field still gets real keys (its kb report entries are the point)
   await page.type("#ans", SENTINEL);
   await page.keyboard.press("Backspace"); await page.keyboard.press("ArrowLeft");
   await page.type("#scratch", SENTINEL + " x");
@@ -146,7 +146,7 @@ await step("debug mode (?debug=1): the error card shows the diag line; a retry i
   const page = await open({ explain: r => r.fulfill({ status: 504, body: "" }), debug: true });
   await busyThenWrong(page);
   await waitFor(page, x => x.where === "explain");
-  await page.click(":is(#wish, .rbox) .wchip");                                          // try again: the same failure, the sheet opens
+  await page.click(":is(#wish, .rbox) .wchip:visible, #cluck .wretry");                  // try again: the same failure, the sheet opens (desktop sugar: the box is open and carries its own Try again, BIG PLAN V1)
   await page.waitForFunction(() => document.querySelector("#cluck .wl .inc-diag"), null, { timeout: 8000 });
   const d = await page.evaluate(() => document.querySelector("#cluck .wl .inc-diag").textContent);
   assert.match(d, /^v.+ · explain 504 · \d+\.\d s · AI: (ok|err|cap|\?)$/, d);

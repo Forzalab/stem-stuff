@@ -11,7 +11,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -50,7 +50,9 @@ declare -A PART_ENV=(
   [stages@phone]="WIDTHS=393"       # 160 PR-B: one width each (own front server + serve.py per part)
   [stages@desk]="WIDTHS=1280"
   [dot1@phone]="DOT_W=393"          # DOT-1 status dot: by width (each width opens its own pages)
-  [dot1@desk]="DOT_W=1280"
+  [dot1@desk]="DOT_W=700"   # BIG PLAN V1: 700, not 1280 (no dot on desktop sugar: the box is always open)
+  [cluck-permanent@desk]="CP_W=1280,721"   # BIG PLAN V1: by width class
+  [cluck-permanent@phone]="CP_W=393"
   [next-cue@1]="NC_MODE=sugar"      # by mode; the sugar-only restore check rides with sugar
   [next-cue@2]="NC_MODE=diet"
   [upload-replace@1]="UR_ONLY=^393:"   # by width (every step opens its own context); no spaces: the env is split on whitespace
@@ -82,6 +84,7 @@ weight() {
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font) echo 1 ;;
     geomarks) echo 12 ;;  # wgeo U1: + the ramp contact check on chromium/firefox/webkit at 1440 + 390; U3: + labels at 1440/390/360 (graph.js + Geometry); local run ~12.5 s (CI has chromium only: ~5 s)
     reveal-box) echo 12 ;;   # W114f: own server, 4 pages (390 + 1280, right + out), local run ~12 s
+    cluck-permanent@desk) echo 30 ;; cluck-permanent@phone) echo 8 ;;   # BIG PLAN V1: Cluck always open on desktop sugar, own server (estimate until CI timing)
     dot1@phone) echo 35 ;; dot1@desk) echo 35 ;;   # DOT-1: the status dot, own server, 4 kinds x states at one width + fade; local ~30 s (estimate until CI timing)
     strip-layers-mc) echo 110 ;;   # B3 PR-B2: the drawer under mc / pick-all / multi, own server; mc x 360/390/1280, pick-all + multi 390 only; local ~110 s (estimate until CI timing)
     strip-layers) echo 170 ;;   # B3 PR-B1: the verdict drawer under a typed answer, own server, 4 kinds x 3 states x 360/390/1280 + motion + duck; local run ~165 s (estimate until CI timing)
@@ -123,7 +126,7 @@ tags() {
   case "$1" in
     blur|fab|flow|font|katex-wrap|measure-slots|overscroll|polish|reload|swap) echo "@engine @real-time" ;;
     axis-cross|bar|blink-fx|reveal-box|cluck-more|codeblock|disabled|dismiss|geomarks|layers|livefig|popover|privacy-reach|render|strip-layers|strip-layers-mc|views|views-oui|views-static) echo "@layout @real-time" ;;
-    ux-flows@phone|ux-flows@desk|next-cue@1|next-cue@2|dot1@phone|dot1@desk) echo "@layout @real-time" ;;
+    ux-flows@phone|ux-flows@desk|next-cue@1|next-cue@2|dot1@phone|dot1@desk|cluck-permanent@phone|cluck-permanent@desk) echo "@layout @real-time" ;;
     stages@phone|stages@desk) echo "@logic @fast-time" ;;   # 160 PR-B: the page clock is paused and moved by hand (clock.runFor)
     autosave|bank|blind|choose-all|choose-all-spam|done|easy|flight|incident|mcclick|mode-reset|nav-stable|next-dead|prefix) echo "@logic @real-time" ;;
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
@@ -279,7 +282,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

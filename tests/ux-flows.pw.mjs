@@ -196,9 +196,8 @@ async function cluckOpen(page, w) {
   if (w === 393) {
     await page.waitForFunction(() => /okay, but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 6000 });   // Lane 2: Q3 = C peek + the E1 CTA
     await page.click(".cl-peek .cl-cta");
-  } else {                                                          // desktop: a wrong answer never opens the sheet by itself either (B7 ii, Tony Oct 18)
-    assert.ok(!(await vis(page, "#cluck")), "desktop: no auto-open after a wrong answer");
-    await page.click(".cl-peek .cl-cta, :is(#wish:not([hidden]), .rbox) .wchip");
+  } else {                                                          // desktop sugar: the box is open from load (BIG PLAN V1, Tony Nov 2); nothing to click
+    assert.ok(await vis(page, "#cluck"), "desktop: Cluck's box is already open");
   }
   await page.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 6000 });
   await page.click("#cluck .wtext").catch(() => {});             // a tap skips the typing
@@ -263,8 +262,7 @@ flow(20, "cluck-explain", async (page, w) => {
   assert.equal(parent, w === 393 ? "BODY" : "work", "phone: over the page; desktop: the notes column");
   assert.ok(await vis(page, "#cluck .cl-verify"), "verify line");
   /* a manual open moves focus into the sheet (W90 r2 item 4): desktop, the ask field once Cluck's text is typed (phone: row 57; the tap on the text above blurs it here) */
-  if (w !== 393) await page.waitForFunction(() => document.activeElement?.matches("#cluck .ask textarea"), null, { timeout: 4000 })
-    .catch(async () => { throw new Error("manual open: focus not in the ask field: " + await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 80))); });
+  /* (desktop sugar has no manual open now: its box is open from load, auto, without focus: BIG PLAN V1) */
   return `stubbed /explain; sheet in ${parent}, text typed, verify line shown${w !== 393 ? ", focus in the ask field" : ""}`;
 });
 
@@ -277,6 +275,12 @@ flow(21, "cluck-sheet", async (page, w) => {
   if (w === 393) assert.ok(r.l === 0 && r.w >= 390 && r.h >= 400 && r.cls, `phone: popup K1 (full width, docked under the question's first lines), html.cl-open: ${JSON.stringify(r)}`);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no sideways scroll with the sheet open");
   await page.screenshot({ path: join(OUT, `21-cluck-sheet-${w}-chromium.png`) });
+  if (w !== 393) {                                                   // desktop sugar (BIG PLAN V1, Tony Nov 2): the box is a permanent fixture: no X, Escape leaves it open; the close / reopen flow below is phone-only
+    assert.ok(!(await vis(page, "#cluck .cl-bar .cl-x")), "desktop: no X");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(300);
+    assert.ok(await vis(page, "#cluck"), "desktop: Escape leaves the box open");
+    return "desktop: the box is open from load, no X, Escape leaves it open (the phone row covers close / reopen / fold)";
+  }
   /* Esc closes (focus goes back to the chip), the chip reopens, the X closes */
   await page.keyboard.press("Escape"); await closed().catch(() => { throw new Error("Escape did not close the sheet"); });
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-open")), false, "html.cl-open cleared on close");
@@ -310,6 +314,7 @@ flow(21, "cluck-sheet", async (page, w) => {
 });
 
 flow(23, "cluck-errors", async (page, w) => {
+  if (w !== 393) skip("desktop sugar: Cluck's box is open from load (BIG PLAN V1), the chip this flow drives is hidden there; its error lines are V2/V4 (hint / CTA swap, miss streams into the box)");
   const out = [];
   const wishTxt = () => page.evaluate(() => ([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")).trim());
   const sheetTxt = () => page.evaluate(() => (document.querySelector("#cluck .wtext")?.textContent || "").trim());
@@ -323,7 +328,7 @@ flow(23, "cluck-errors", async (page, w) => {
   assert.equal(await answerKey(page, C.single, false), "wrong");
   await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 6000 });
   assert.ok(await vis(page, ":is(#wish, .rbox) .wchip"), "'Explain my mistake' chip visible past the cap");
-  assert.ok(!(await vis(page, "#cluck")), "no auto-open past the cap");
+  assert.ok(page.viewportSize().width >= 720 || !(await vis(page, "#cluck")), "no auto-open past the cap (desktop sugar: the box is open from load)");
   assert.equal(asks, 0, "no auto /explain past the cap");
   out.push("local cap: chip 'Explain my mistake', no auto-open, no request");
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-cap-chromium.png`) });
@@ -353,7 +358,7 @@ flow(23, "cluck-errors", async (page, w) => {
   // (d) /chat 429 (hourly): the reply bubble says the same
   await page.unroute("**/explain");
   await stubCluck(page, { chat: 429, chatBody: "{}" });
-  if (await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
+  if (w === 393 && await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }   // desktop sugar: the box stays open (BIG PLAN V1)
   await page.click(":is(#wish, .rbox) .wchip");                       // started=false after a 429: this asks again, now stubbed ok
   await page.waitForFunction(() => !document.querySelector("#cluck").hidden, null, { timeout: 4000 });
   await page.click("#cluck .wtext").catch(() => {});
@@ -364,7 +369,7 @@ flow(23, "cluck-errors", async (page, w) => {
   // (e) no key on the server (a preview deploy has none, Oct 26): the real keyless /explain answers a plain 503. The press is never silent:
   //     the sheet stays open and says Cluck is off, the chip goes; the next miss on this page load shows no Cluck entry at all
   await page.unroute("**/explain"); await page.unroute("**/chat");
-  if (await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
+  if (w === 393 && await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }   // desktop sugar: the box stays open (BIG PLAN V1)
   await go(page, "CALC1_UX05");
   assert.equal(await answerKey(page, "CALC1_UX05", false), "wrong");
   await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 6000 });
@@ -379,7 +384,7 @@ flow(23, "cluck-errors", async (page, w) => {
   assert.ok(!(await vis(page, "#cluck .wretry")), "keyless 503: no Try again (it would 503 again)");
   assert.ok(!(await vis(page, "#cluck .ask")), "keyless 503: no ask field (/chat has no key either)");
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-explain503-chromium.png`) });
-  await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
+  if (w === 393) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
   await go(page, "CALC1_UX06");
   assert.equal(await answerKey(page, "CALC1_UX06", false), "wrong");
   await page.waitForTimeout(800);
@@ -965,6 +970,7 @@ flow(55, "bfcache-resume", async (page, w) => {
    and the manual open moves focus into the sheet (W90 r2 item 4: desktop, the ask field once the text is typed) */
 const STUB_OK = "SOLUTION-RIGHT full steps.\nAnswer: a.";
 flow(57, "cluck-compare", async (page, w) => {
+  if (w !== 393) skip("desktop sugar: Cluck's box is always open (BIG PLAN V1, Tony Nov 2), so there is no close to come back from; the Compare entry on desktop is V2 (hint / CTA swap)");
   const asks = [];
   await page.route("**/explain", r => { const b = JSON.parse(r.request().postData() || "{}"); asks.push(b.answer);
     r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: b.answer === "a" ? STUB_OK : STUB_EX }); });

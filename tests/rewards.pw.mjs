@@ -221,17 +221,8 @@ try {
     assert.equal(await d.isHidden("#clTabEP"), true, "no wish yet: only the steps");
     assert.equal(await d.$$eval("#cluck [role=tab]", e => e.length), 0, "no tabs");
     await d.keyboard.press("Escape");
-    assert.equal(await d.isHidden("#cluck"), true, "Escape closes it");
-    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "asked for while open: still shown after");
-    assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
-    assert.equal(await d.isHidden("#xb"), true, "the hint card is there: still no scratchpad");
-    await d.click("#origHd");                                                 // a tap opens it again, focus on the fold
-    assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
-    assert.equal(await d.evaluate(() => document.activeElement.id), "clFold");
-    await d.keyboard.press("Escape");
-    assert.equal(await d.evaluate(() => document.activeElement.id), "origHd", "focus goes back to its opener");
-    assert.equal(await d.isVisible("#rot"), true);
-    await d.click("#origHd");
+    assert.equal(await d.isVisible("#cluck"), true, "Escape leaves Cluck's box open (BIG PLAN V1, Tony Nov 2: desktop sugar has no close, so no reopen / focus-back-to-opener here either)");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "still shown");
     await pick(d, "b"); await rig(d, [0.99]); await pick(d, "a");             // not a first-try correct: the original stays unsolved
     await go(d, "CALC1_S02");
     assert.equal(await d.getAttribute("#clFold", "aria-expanded"), "true", "a new question re-applies the default: open on the steps");
@@ -245,7 +236,6 @@ try {
     assert.equal(await xp(d) - x0, 2, "a peeked snack pays 2");
     await go(d, "CALC1_S01");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "false", "level 3: folded after a first-try correct on Q7");
-    assert.equal(await d.isHidden("#cluck"), true, "level 3: no auto-open (a look is a peek)");
     assert.equal(await d.$$eval("#orig .rw-free", f => f.length), 0, "no FREE at level 3: looking again before answering is a peek");
     await dc.close();
     const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });

@@ -51,7 +51,8 @@ const R = `(e => e && (({ left, top, right, bottom, width, height }) => ({ left,
 const pos = page => page.evaluate(`(() => { const R = ${R}, y = window.scrollY; const g = s => R(document.querySelector(s));
   return { chk: g("#ansGo"), nx: g("#q .nx"), ff: g("#ff"), card: g("#q"), fz: g("#freezeIn"), y }; })()`);
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-for (const [W, H] of [[390, 844], [1280, 800]]) for (const outcome of ["right", "out"]) {
+// BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) shows no drawer chip (its box is open and carries Cluck), so the wide pass runs at 700
+for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "out"]) {
   const T = `${W}x${H} ${outcome}`;
   const page = await pageFor(browser, W, H);
   const go = async v => { await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };

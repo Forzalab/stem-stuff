@@ -22,8 +22,8 @@
   var X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   var reduced = function () { try { return g.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
   var busy = function () { return d.documentElement.classList.contains('fx-busy') || !!d.querySelector('.fx-ov'); };
-  /* Cluck's duck (peek.js window.stemDuck) or Cluck himself (app.js window.stemCluckOpen) owns the moment: the toast yields */
-  var yields = function () { try { return !!(g.stemDuck && g.stemDuck.up) || !!(g.stemCluckOpen && g.stemCluckOpen()); } catch (e) { return false; } };
+  /* Cluck's duck (peek.js window.stemDuck) or Cluck himself (app.js window.stemCluckModal) owns the moment: the toast yields */
+  var yields = function () { try { return !!(g.stemDuck && g.stemDuck.up) || !!(g.stemCluckModal && g.stemCluckModal()); } catch (e) { return false; } };
 
   function mount() {
     if (el && el.isConnected) return el;

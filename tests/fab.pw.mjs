@@ -244,9 +244,9 @@ for (const [W, H, phone] of [[360, 740, true], [1280, 800, false]]) {
       await page.evaluate(() => document.documentElement.classList.remove("swap", "swap-problem"));
     });
   } else {
-    await step(`${W}x${H} desktop sugar, plain question: the pad is still there`, async () => {
+    await step(`${W}x${H} desktop sugar, plain question: the notes column is Cluck's box, no pad`, async () => {
       const r = await g();
-      assert.equal(r.scratch, true, "no pad on desktop sugar");
+      assert.deepEqual({ scratch: r.scratch, work: r.work }, { scratch: false, work: true }, "BIG PLAN V1 (Tony Nov 2, Q3): even a question with no Cluck key keeps Cluck's box in the notes column, so no pad on desktop sugar");
     });
   }
   await step(`${W}x${H} sugar: no page errors`, async () => assert.deepEqual(errors, []));

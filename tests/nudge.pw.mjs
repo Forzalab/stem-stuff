@@ -14,6 +14,7 @@ const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
+const WIDE = { width: 700, height: 900 };   // BIG PLAN V1 (Tony Nov 2): the duck never rises on desktop sugar (>= 720: Cluck is open for good), so its mouse flows run at 700, a mouse just under the side-by-side breakpoint
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8875", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "j5-")), banks = join(tmp, "banks"), shots = process.argv[3] || tmp;
@@ -93,7 +94,7 @@ const look = page => page.evaluate(() => {
 });
 const jev = page => page.evaluate(() => window.stemJev().nudge);
 
-for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1280, height: 800 }]]) {
+for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", WIDE]]) {
   await step(`${name}: default on (no flag), first item idle past 45 s (W96 80→45) with no pick → the peek rises with a Q line; a key puts it away and the gap doubles`, async () => {
     const page = await open({ vp, touch: name === "phone" });
     await idle(page, 40000);
@@ -123,7 +124,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
 }
 
 await step("a tap on the nudge only dismisses it (B3 PR-B1: a status nudge: no Cluck, the gap doubles like any other input)", async () => {
-  const page = await open({ vp: { width: 1280, height: 800 } });
+  const page = await open({ vp: WIDE });
   await idle(page, 90000);
   assert.equal(await up(page), true);
   await settle(page);
@@ -136,7 +137,7 @@ await step("a tap on the nudge only dismisses it (B3 PR-B1: a status nudge: no C
 });
 
 await step("lane 4: a held pick past 20 s (no samples yet) pops one ladder piece + a hold_mid line; no input, the 2nd still fires", async () => {
-  const page = await open({ vp: { width: 1280, height: 800 }, bank: "BANK_T95L" });
+  const page = await open({ vp: WIDE, bank: "BANK_T95L" });
   const mids = () => page.$$eval("#fcard li.f.mid", ms => ms.filter(m => !m.hidden).length);
   assert.equal(await mids(), 0, "the ladder starts as the big pieces");
   await page.click("#q .opt[data-id=b]");

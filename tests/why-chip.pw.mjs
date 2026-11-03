@@ -39,7 +39,7 @@ async function step(name, fn) {
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 
 async function open(code) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });   // BIG PLAN V1 (Tony Nov 2): on desktop sugar Cluck's box is open from load, so "See Cluck's steps" never shows there; the flow runs on the phone, 118c then resizes to 1366
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
