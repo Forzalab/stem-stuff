@@ -103,7 +103,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
     await settle(page);
     const L = await look(page), N = await jev(page);
     assert.ok(LINES.Q.includes(L.say), "a Q line: " + L.say);
-    assert.equal(L.label, "Cluck: " + L.say + " (dismiss)");
+    assert.equal(L.label, "Dismiss Cluck: " + L.say);
     assert.equal(L.sayOp, 1, "the line shows");
     assert.ok(L.oneLine, "one line");
     assert.deepEqual(L.over, [], "the duck and its line rest on no control");

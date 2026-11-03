@@ -43,7 +43,7 @@
     build(); clearTimeout(outT);
     onDismiss = o.onDismiss || null; onHollow = null; box.querySelector(".ck-hollow").hidden = true;   // only say() shows the hollow tap
     box.querySelector(".ck-say").textContent = o.line || "";
-    box.querySelector(".ck-peek").setAttribute("aria-label", (o.label || "Cluck") + " (dismiss)");
+    box.querySelector(".ck-peek").setAttribute("aria-label", "Dismiss " + (o.label || "Cluck"));
     box.classList.remove("on", "out"); box.hidden = false; place();
     void box.offsetWidth;                                                   // restart: every rise plays the sunrise from the top
     box.classList.add("on");
@@ -94,7 +94,7 @@
     if (idle < wait()) return arm(wait() - idle);                           // input came since: wait out the rest
     if (!ok()) { last = performance.now(); return arm(wait()); }           // busy elsewhere (e.g. Cluck open): a fresh wait from now
     mine = true; n++; lastRise = performance.now();
-    rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
+    rise({ line: "Cluck is here if you get stuck.", label: "Cluck",
       onDismiss: function () { mine = false; arm(wait()); } });
   }
   /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
@@ -109,7 +109,7 @@
       wt = 0;
       if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
       mine = true; lastRise = performance.now();
-      rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
+      rise({ line: "Cluck is here if you get stuck.", label: "Cluck",
         onDismiss: function () { mine = false; arm(wait()); } });
     }, WRONG_MS);
   }

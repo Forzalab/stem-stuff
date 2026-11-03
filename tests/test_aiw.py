@@ -66,7 +66,7 @@ BANK, BANK_DOCS = bank_items()
 UI_COPY = [   # human UI copy (design/STYLE.md and the app)
     "Correct.", "Not quite. One more try.", "Out of tries.", "Open a problem file", "Show the scratchpad", "Next question",
     "Upload or type code to start.", "Got it wrong first time? Keep your progress.", "Compare with Cluck's steps",
-    "Paste GPT answer here, but me be sad...", "Exit redo", "Ask Cluck", "Saved", "3 / 12", "Stuck? Tap me.",
+    "Paste GPT answer here, but me be sad...", "Exit redo", "Ask Cluck", "Saved", "3 / 12", "Cluck is here if you get stuck.",
     "One more try, so choose wisely.", "QUACK. Which edge did the walk skip?", "Next hint", "Copy", "Questions",
     "The queue holds B and C. Which one leaves first?", "Step 3 of 8: visit D, then add its neighbours.",
     "Points always go up and never let you down.", "Third time's the charm.", "Solution locked until you answer.",

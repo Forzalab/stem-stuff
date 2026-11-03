@@ -123,9 +123,10 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
       assert.ok(Math.abs(L.sky.l - (L.col.l - 48)) < 1 && Math.abs(L.sky.r - (L.col.r + 48)) < 1, "desktop: the sky = the column + a soft bleed");
     }
     assert.ok(L.duck.b <= vp.height + 1 && L.duck.w >= 44 && L.duck.h >= 44, "a 44px+ target on screen");
-    assert.equal(L.say, name === "phone" ? "Need help? Tap me." : "Stuck? Click me.");
+    assert.equal(L.say, "Cluck is here if you get stuck.");
+    assert.ok(!/\b(tap|click) me\b|want a hint/i.test(L.say), "a status line: no invitation to tap (the duck only dismisses)");
     assert.equal(L.sayOp, 1, "the line shows");
-    assert.equal(L.label, "Cluck: want a hint? (dismiss)");
+    assert.equal(L.label, "Dismiss Cluck");
     assert.deepEqual(L.over, [], "the duck and its line rest on no control");
     assert.ok(L.scrollW <= L.W, "no sideways scroll");
     assert.deepEqual(L.skyOp, [1, 1, 1], "sunrise done");
@@ -280,7 +281,7 @@ for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["d
     await settle(page);
     const L = await look(page);
     assert.ok(Math.abs(L.sunX - L.cx) < 1, "sun core under the duck");
-    assert.equal(L.label, "Cluck: want a hint? (dismiss)");
+    assert.equal(L.label, "Dismiss Cluck");
     if (rm) assert.equal(L.duckTf, "none", "reduce: the duck never moves");
     assert.equal(await page.evaluate(() => document.querySelectorAll(".ck-rise").length), 1, "one duck");
     await nudge(page);                                                  // input puts him away

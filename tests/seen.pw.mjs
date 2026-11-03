@@ -122,7 +122,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
     await settle(page);
     const L = await look(page), S = (await jev(page)).seen;
     assert.ok(LINES.fam.sign.filter(l => l.kind === "short").some(l => l.text === L.say), "a sign/short line, not the trigger: " + L.say);
-    assert.equal(L.label, "Cluck: " + L.say + " (dismiss)"); assert.equal(L.sayOp, 1, "the line shows");
+    assert.equal(L.label, "Dismiss Cluck: " + L.say); assert.equal(L.sayOp, 1, "the line shows");
     assert.equal(L.hol.hidden, false); assert.equal(L.hol.label, "Felt hollow"); assert.ok(L.hol.w >= 24 && L.hol.h >= 24, "24 px min: " + L.hol.w);
     assert.equal(L.hol.op, 1); assert.ok(L.hol.r <= L.W, "the hollow tap is on screen");
     assert.ok(L.sayBox.l >= 0 && L.sayBox.r <= L.W, "the line fits the screen: " + JSON.stringify(L.sayBox));
