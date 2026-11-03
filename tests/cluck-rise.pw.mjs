@@ -47,6 +47,9 @@ const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
+/* Tony, Nov 2 (d): the drawer is a dismissable popup (tap-outside rule), so a tap on the duck peek closes it. A student who wants Cluck again taps the badge on the row's mark (.vkb), then the chip. */
+const drawerOpen = page => page.evaluate(() => !!document.querySelector(".vdrawer:not([hidden]):not(.vd-shut) .wchip"));
+const reopen = async page => { assert.equal(await drawerOpen(page), false, "the duck tap closed the drawer (tap-outside)"); await page.click("#q .vkb, #q .ff .vk[role=button]"); await page.waitForFunction(() => !!document.querySelector(".vdrawer:not([hidden]):not(.vd-shut) .wchip"), null, { timeout: 4000 }); };
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
@@ -142,13 +145,14 @@ for (const [tag, vp] of VPS) {
     await page.clock.runFor(1500);
     assert.equal(await up(page), true, "the duck rises");
     assert.equal(await cluckOpen(page), false, "Cluck stays closed");
-    await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
     await page.waitForTimeout(600);
     assert.equal(asked, 0, "no Cluck request"); assert.equal(page.ai, 0, "no /explain");
     await page.click(".ck-peek");                                       // B3 PR-B1: the duck only dismisses; the chip asks (it did the same request as the duck, Oct 19 pick b)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
-    await page.click("#wish .wchip");
+    await reopen(page);
+    await page.click(":is(#wish, .rbox) .wchip");
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the chip opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});
@@ -181,7 +185,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await pick(page, "b");
   await page.clock.runFor(1500);                                        // Q3's rise timer has fired: real time may tick again (Cluck's typing below)
   await page.clock.resume();
-  await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+  await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
   await page.waitForTimeout(800);
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
@@ -189,7 +193,8 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await page.click(".ck-peek");                                         // B3 PR-B1: the duck only dismisses (no Cluck, no request); the chip asks (the same fresh request)
   await page.clock.runFor(300);
   assert.equal(await cluckOpen(page), false, "Q3: the duck no longer opens Cluck");
-  await page.click("#wish .wchip");
+  await reopen(page);
+  await page.click(":is(#wish, .rbox) .wchip");
   await page.clock.runFor(300);
   assert.equal(await cluckOpen(page), true, "the chip opens Cluck");
   await page.click("#cluck .wtext").catch(() => {});
@@ -204,10 +209,10 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   const f2 = await p2.textContent("#pcode"), o2 = [f2, ...["CALC1_B7R1", "CALC1_B7R2", "CALC1_B7R3"].filter(c => c !== f2)];
   await go(p2, o2[1]); await go(p2, o2[2]);
   await pick(p2, "b");
-  await p2.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+  await p2.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
   await p2.waitForTimeout(600);
   assert.equal(asked, 0, "Q3 via the chip: nothing yet");
-  await p2.click("#wish .wchip");
+  await p2.click(":is(#wish, .rbox) .wchip");
   await p2.clock.runFor(300);
   assert.equal(await cluckOpen(p2), true, "the chip opens Cluck");
   await p2.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 8000, polling: 100 });

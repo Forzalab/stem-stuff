@@ -89,7 +89,7 @@ const pick = async (page, id) => {
 };
 /* B7: the desktop turns Cluck's sheet to its text by itself, which keeps every peek down (peek.js ok()). Close it as the student would. */
 const closeCluck = async page => {
-  if (await page.evaluate(() => !!window.stemCluckOpen?.())) { await page.keyboard.press("Escape"); await page.evaluate(() => window.stemCluckOpen?.() && document.querySelector("#wish .wchip, .cl-x, [aria-label='Close Cluck']")?.click()); }
+  if (await page.evaluate(() => !!window.stemCluckOpen?.())) { await page.keyboard.press("Escape"); await page.evaluate(() => window.stemCluckOpen?.() && document.querySelector(":is(#wish, .rbox) .wchip, .cl-x, [aria-label='Close Cluck']")?.click()); }
 };
 /* wrong (negation), wrong (sign), right: ten seconds apart so nothing reads as a guess; the rolls for the seen moment are armed before the right pick */
 async function earned(page) {

@@ -202,7 +202,7 @@ for (const [W, H] of VPS) {
 }
 
 /* motion: the live drawer's computed animation (read mid-flight, so the class is on) */
-await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced motion = a fade", async () => {
+await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced motion = none (Tony Nov 2: no fade at all)", async () => {
   for (const reduced of [false, true]) {
     const pg = await pageFor(browser, 390, 844, { reduced });
     await goTo(pg, "STP_NUM"); await submit(pg, "2");
@@ -215,11 +215,23 @@ await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced m
       assert.equal(open.d, "0.38s"); assert.equal(open.f, "cubic-bezier(0.32, 0.72, 0, 1)"); assert.match(open.n, /vd-out/);
       assert.equal(shut.d, "0.24s"); assert.match(shut.n, /vd-in/);
     } else {
-      assert.match(open.n, /vd-fade/, "reduced motion: a fade, no slide: " + JSON.stringify(open));
+      assert.equal(open.n, "none", "reduced motion: no fade, no slide, the drawer just appears: " + JSON.stringify(open));
       assert.ok(!/vd-out|vd-in/.test(shut.n), "reduced motion close must not slide: " + JSON.stringify(shut));
     }
     await pg.ctx.close();
   }
+});
+
+await step("a reward overlay still playing (a level-up burst): the drawer opens at rest, no slide (one animation group at a time, blink-fx)", async () => {
+  const pg = await pageFor(browser, 390, 844);
+  await goTo(pg, "STP_NUM");
+  await pg.evaluate(() => { const o = document.createElement("div"); o.className = "fx-ov fx-levelup"; o.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;pointer-events:none"; document.body.append(o); });
+  await submit(pg, "2");
+  await pg.waitForSelector("#q .vdrawer");
+  const n = await pg.evaluate(() => getComputedStyle(document.querySelector("#q .vdrawer")).animationName);
+  assert.equal(n, "none", "the drawer slid while an overlay played: " + n);
+  await pg.evaluate(() => document.querySelector(".fx-ov").remove());
+  await pg.ctx.close();
 });
 
 /* doneExit's 900 ms beat blurs the active element after a right answer; it must leave the strip's own focus (verdict icon, drawer) alone.

@@ -81,16 +81,21 @@ async function wrong({ explain, debug = false, off = false } = {}) {
   await page.goto(BASE + (debug ? "/?debug=1" : "/") + "#BANK_INC");
   await page.waitForFunction(() => !document.getElementById("splash") && /^#CALC1_INC1/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
-  await page.waitForFunction(() => /Send Tony this code/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 10000 });
+  await page.waitForFunction(() => /Send Tony this code/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 10000 });
   return page;
 }
-const chip = page => page.evaluate(() => document.querySelector("#wish").innerText.replace(/\s+/g, " ").trim());
+/* what the student SEES on the chip; and the incident line the chip carries. Tony (Nov 2, 22:08): the drawer's chip keeps "Send Tony this code" hidden (strip.css `.vdrawer > .wchip .inc`), so the code is read
+   from the .inc node (the beacon and the sheet carry it too) and the drawer's visible words are only the old ones. Tony will say later where errors go. */
+const chip = page => page.evaluate(() => [...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.innerText).join(" ").replace(/\s+/g, " ").trim());
+const inc = page => page.evaluate(() => [...document.querySelectorAll("#wish .inc, .rbox .wchip .inc")].map(e => e.textContent).join(" ").replace(/\s+/g, " ").trim());
+const SEEN = /^Oops, didn't load\. Tap to try again\.$/;
 const beacon = async (page, n = 1) => { for (let i = 0; i < 30 && page.beacons.length < n; i++) await page.waitForTimeout(100); return page.beacons; };
 
 await step("/explain 502 + X-Incident: the old words + the server's code; no reason for a student; one beacon with that code", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 502, headers: { "X-Incident": "S-7K3QX upstream" }, body: "" }) });
-  const t = await chip(page);
-  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: S-7K3QX$/, t);
+  const t = await chip(page), ic = await inc(page);
+  assert.match(t, SEEN, t);
+  assert.match(ic, /^Send Tony this code: S-7K3QX$/, ic);
   assert.ok(!REASONS.test(t), "no reason words: " + t);
   const [b] = await beacon(page);
   assert.deepEqual([b.code, b.where, b.reason, b.status, b.phase, b.path, b.q], ["S-7K3QX", "explain", "upstream", 502, "headers", "/explain", "CALC1_INC1"]);
@@ -101,10 +106,11 @@ await step("/explain 502 + X-Incident: the old words + the server's code; no rea
 
 await step("a plain 500 (no header): the page's own E- code; the sheet says \"Couldn't load Cluck.\" + the code", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 500, body: "" }) });
-  const t = await chip(page);
-  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
-  const code = t.match(CODE)[0];
-  await page.click("#wish .wchip");                                    // a tap = Try again (still 500): a new code
+  const t = await chip(page), ic = await inc(page);
+  assert.match(t, SEEN, t);
+  assert.match(ic, /^Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, ic);
+  const code = ic.match(CODE)[0];
+  await page.click(":is(#wish, .rbox) .wchip");                                    // a tap = Try again (still 500): a new code
   await page.waitForFunction(c => { const x = document.querySelector("#cluck .wtext")?.innerText || ""; return /Couldn't load Cluck\./.test(x) && /Send Tony this code: E-/.test(x) && !x.includes(c); }, code, { timeout: 8000 });
   const sheet = await page.evaluate(() => document.querySelector("#cluck .wtext").innerText.replace(/\s+/g, " ").trim());
   assert.match(sheet, /^Couldn't load Cluck\. Try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, sheet);
@@ -123,10 +129,11 @@ await step("a plain 500 (no header): the page's own E- code; the sheet says \"Co
 
 await step("headers, then the connection drops: a code shows, the beacon says phase=stream", async () => {
   const page = await wrong({ explain: r => r.continue({ url: `http://127.0.0.1:${drop.address().port}/explain` }) });
-  const t = await chip(page);
-  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
+  const t = await chip(page), ic = await inc(page);
+  assert.match(t, SEEN, t);
+  assert.match(ic, /^Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, ic);
   const [b] = await beacon(page);
-  assert.equal(b.code, t.match(CODE)[0]);
+  assert.equal(b.code, ic.match(CODE)[0]);
   assert.deepEqual([b.where, b.phase, b.status, b.bytes], ["explain", "stream", 200, 0]);
   assert.match(b.err || "", /Error/);
   await page.context().close();
@@ -135,10 +142,11 @@ await step("headers, then the connection drops: a code shows, the beacon says ph
 await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident budget_cap; the student sees the old words + the code only", async () => {
   broke = true; orCalls = 0; logs.length = 0;
   const page = await wrong();
-  const t = await chip(page);
-  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: S-[2-9A-HJ-NP-Z]{5}$/, t);
-  assert.ok(!REASONS.test(t), "no 'credit' / budget words: " + t);
-  const code = t.match(CODE)[0];
+  const t = await chip(page), ic = await inc(page);
+  assert.match(t, SEEN, t);
+  assert.match(ic, /^Send Tony this code: S-[2-9A-HJ-NP-Z]{5}$/, ic);
+  assert.ok(!REASONS.test(t + " " + ic), "no 'credit' / budget words: " + t + " " + ic);
+  const code = ic.match(CODE)[0];
   assert.equal(orCalls, 0, "no Cluck model tried once the NOTE call said out of credit");
   const [b] = await beacon(page);
   assert.deepEqual([b.code, b.reason, b.status], [code, "budget_cap", 503]);
@@ -185,7 +193,8 @@ await step("/check times out twice in a row (P2): the 2nd is its own incident, t
 
 await step("tracking off (privacy.html \"Don't record me\"): the code still shows, with a note; no report is sent", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 500, body: "" }), off: true });
-  assert.match(await chip(page), /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking turned off\.$/);
+  assert.match(await chip(page), SEEN);
+  assert.match(await inc(page), /^Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking turned off\.$/);
   await page.waitForTimeout(800);
   assert.deepEqual(page.beacons, [], "no /log/incident");
   await page.context().close();
@@ -194,7 +203,8 @@ await step("tracking off (privacy.html \"Don't record me\"): the code still show
 await step("debug mode (?debug=1, Tony only): the code AND its reason; ?debug=0 turns it off", async () => {
   broke = true;
   let page = await wrong({ debug: true });
-  assert.match(await chip(page), /Send Tony this code: S-[2-9A-HJ-NP-Z]{5} budget_cap$/);
+  assert.match(await chip(page), SEEN);
+  assert.match(await inc(page), /Send Tony this code: S-[2-9A-HJ-NP-Z]{5} budget_cap$/);
   assert.equal(await page.evaluate(() => localStorage.getItem("stem-debug")), "1");
   await page.goto(BASE + "/?debug=0#CALC1_INC1");
   assert.equal(await page.evaluate(() => localStorage.getItem("stem-debug")), null);
