@@ -162,7 +162,7 @@ try {
     const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
       return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 5 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
     assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
-    assert.ok(await page.$eval("#xb", e => e.getClientRects().length > 0), "no original, no wrong pick yet: the scratchpad is the default (Tony, Oct 5)");
+    assert.ok(await page.$eval("#cluck", e => e.getClientRects().length > 0), "no original, no wrong pick yet: Cluck's box is there from load, in the notes column (BIG PLAN V1: no scratchpad on desktop sugar)");
     const head = await page.evaluate(() => {                            // video-bar.html ?v=1 (Tony, Oct 5): "Cluck" level with "Question"
       scrollTo(0, 0);                                                    // at rest: scrolled, both sticky columns clamp and hide an offset
       const t = s => document.querySelector(s).getBoundingClientRect().top;
@@ -227,9 +227,7 @@ try {
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
-    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector(":is(#wish, .rbox) .cue-chip")?.textContent || "") && document.querySelector(":is(#wish, .rbox) .cue-chip").getAttribute("aria-expanded") === "false", null, { timeout: 6000 });   // a row has Cluck too. Closed out of tries = the T17b-1 duck chip "Ask Cluck"
-    assert.equal(await page.evaluate(() => !!window.stemCluckOpen && window.stemCluckOpen()), false, "a wrong answer never opens Cluck by itself, desktop too (B7 ii, Tony Oct 18)");
-    await page.click(":is(#wish, .rbox) .cue-chip");
+    /* BIG PLAN V1: the box is open from load and the miss streams into it: no chip to tap */
     assert.equal(await page.isVisible("#cluck #clTabEP"), true, "Cluck's text shows");
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
     assert.equal(await page.evaluate(() => window.__said.length), 0, "Cluck types the text but stays quiet (Tony, Oct 5)");
@@ -359,11 +357,8 @@ try {
 
   await step("easy: an item with a narration still streams /explain (the narration is never the box text); a lone caret, then typed; reopening goes on where it was; no voice", async () => {
     const said = () => page.evaluate(() => window.__said);
-    await page.waitForSelector(".cl-peek .cl-cta", { timeout: 6000 });     // B7 ii (Tony, Oct 18): the sheet stays closed, the reply streams in the background
-    assert.equal(await page.isHidden("#cluck"), true, "a wrong answer never opens Cluck by itself");
+    await page.waitForSelector("#cluck .wtext .wcaret", { timeout: 6000 });   // BIG PLAN V1 (Tony Nov 2): desktop sugar has Cluck open from load, so the miss streams straight into the box (no peek, no CTA, no close)
     assert.equal(asked, 1, "the first wrong answer asks /explain, narration or not");
-    await page.evaluate(() => { document.querySelector(".cl-peek .cl-cta").dataset.w141 = "1"; });   // W141: marks the CTA from before the sheet opened; the 44px assert below says whether the CTA after the X is this node
-    await page.click(".cl-peek .cl-cta");
     await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) #clTabEP:not([hidden])"), null, { timeout: 6000 });
     assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone: " + await page.innerHTML("#cluck .wtext"));
     release();
@@ -373,36 +368,9 @@ try {
     unhold();
     assert.equal(await page.isHidden("#wish"), true, "desktop, sheet open: no chip (Tony, Oct 5: variant a)");
     assert.equal(await page.$(".cl-peek"), null, "desktop, sheet open: no peek, no CTA");
-    assert.equal(await page.isVisible("#cluck .cl-bar"), true, "B5 (Tony, Oct 18): bar visible at 1280, the Cluck / TUTOR header with its X");
-    assert.equal(await page.isHidden("#cluck .cl-x2"), true, "B5: no corner X");
-    await page.click("#cluck .cl-x");                                        // closed: the peek + CTA are the way back, then open again from the top
-    assert.equal((await page.textContent(".cl-peek .cl-cta")).trim(), "okay, but how?", "E1 = T2, wording b (Tony, Oct 13)");
-    assert.equal(await page.isVisible(".cl-peek .cl-cta"), true);
-    // W141 r3: the peek is rebuilt on every streamed piece (renderWish removes + re-inserts .cl-peek), so a handle taken by page.$eval can be detached by the time it
-    // is measured under load (CI 41398626028: isConnected false, rect 0x0). One page.evaluate looks the CTA up and measures it in the same task: nothing can redraw between.
-    { const info = await page.evaluate(() => { const b = document.querySelector(".cl-peek .cl-cta");
-        const chain = []; for (let e = b; e; e = e.parentElement) { const c = getComputedStyle(e), r = e.getBoundingClientRect();
-          chain.push({ el: e.tagName.toLowerCase() + "." + e.className, display: c.display, visibility: c.visibility, transform: c.transform, opacity: c.opacity, height: c.height, rectH: r.height }); if (e.matches(".cl-peek")) break; }
-        const r = b.getBoundingClientRect();
-        return { rect: [r.x, r.y, r.width, r.height].map(Math.round), sameNodeAsBeforeSheetOpened: b.dataset.w141 === "1", isConnected: b.isConnected, chain };
-      });
-      assert.ok(info.rect[3] >= 44, "the CTA is a 44px target: " + JSON.stringify(info)); }
-    assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "Q3 = C: Cluck's steps inline, under the hint");
-    // the stub is still streaming (a piece every 150 ms) and only its 3rd piece (the $$ block) overflows 3 lines: wait for the whole reply
-    // in the peek (its last piece), then check the fade (todo 94: read after piece 1 only, a 2-line peek, no overflow yet)
-    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector(".cl-peek .cl-steps")?.textContent || ""), null, { timeout: 6000 });
-    // W113: under 3-lane load the peek is redrawn a frame later (peekText: one draw a frame) and its fonts settle late, so one read right
-    // after the text shows was red on main and branch alike (1 in 6 each, 6 parallel runs): wait for the overflow itself, then assert
-    const fade = () => page.evaluate(() => { const s = document.querySelector(".cl-peek .cl-steps"); return !!s && s.scrollHeight > s.clientHeight && getComputedStyle(s, "::after").backgroundImage.includes("gradient"); });   // W141 r3: look up + read in one task (the peek is rebuilt per piece)
-    const diag = () => page.evaluate(() => { const s = document.querySelector(".cl-peek .cl-steps"); return s ? `${s.scrollHeight}/${s.clientHeight} fonts=${document.fonts.status} katex=${!!s.querySelector(".katex")}` : "no peek"; });
-    try {
-      await page.waitForFunction(() => { const s = document.querySelector(".cl-peek .cl-steps"); return !!s && s.scrollHeight > s.clientHeight; }, null, { timeout: 6000 });
-    } catch (e) { throw new Error("the peek never overflowed: " + await diag()); }
-    assert.equal(await fade(), true, "the rest fades under a gradient: " + await diag());
+    assert.equal(await page.isVisible("#cluck .cl-bar"), true, "B5 (Tony, Oct 18): bar visible at 1280, the Cluck / TUTOR header");
+    assert.equal(await page.isVisible("#cluck .cl-x"), false, "V1: no X on desktop sugar");
     await page.evaluate(() => { window.__said = []; });
-    await page.click(".cl-peek .cl-cta");
-    assert.equal(await page.$(".cl-peek"), null, "open again: the peek steps aside");
-    assert.equal((await said()).length, 0, "spoken before the text is out");
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
     assert.ok(!(await page.textContent("#cluck .wtext")).includes(P.all.saccharine.narration), "the narration is not the box text");
     assert.equal(asked, 1, "one stream: reopening reuses it");
@@ -431,10 +399,10 @@ try {
     };
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
-    if (await page.isHidden("#cluck")) await page.click(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, .cue-chip");
+    { const c = page.locator(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, .cue-chip").first(); if (await c.isVisible()) await c.click(); }   // the box is open from load: only a restored question still has its chip
     await whole("away and back");
     await page.reload(); await opened(page, "CALC1_E01");
-    if (await page.isHidden("#cluck")) await page.click(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, .cue-chip");
+    { const c = page.locator(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, .cue-chip").first(); if (await c.isVisible()) await c.click(); }   // the box is open from load: only a restored question still has its chip
     await whole("after a reload");
     await page.evaluate(() => { const o = JSON.parse(localStorage.getItem("stem-cluck")); for (const k of Object.keys(o)) o[k].t = Date.now() - 8 * 864e5; localStorage.setItem("stem-cluck", JSON.stringify(o)); });
     await page.reload(); await opened(page, "CALC1_E01");
@@ -538,9 +506,7 @@ try {
     }
     assert.ok(!(await page.$("#cluck .ask")) && /wound down at 5\./.test(await page.textContent("#cluck .done-row")), "5 asked: the field is done");
     await page.keyboard.press("Escape");
-    assert.equal(await page.isHidden("#cluck"), true);
-    assert.equal(await page.evaluate(() => document.activeElement.matches(".wchip, .cl-cta")), true, "focus goes back to the chip / CTA");
-    assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "the sheet is shut: the players come back");
+    assert.equal(await page.isVisible("#cluck"), true, "BIG PLAN V1: Escape leaves the box open on desktop sugar (the phone sheet keeps the Escape / focus-back flow: ux-flows row 21)");
   });
 
   await step("easy: prove-mode question has no fix boxes; a tick-only set is graded", async () => {
@@ -692,7 +658,7 @@ try {
     await zp.goto(BASE + "/#CALC1_E01");
     await zp.waitForSelector("#rot.docked", { timeout: 6000 });
     const m = await zp.evaluate(() => {
-      const v = [...document.querySelectorAll("#rot .vid")].map(x => x.getBoundingClientRect()), ta = document.querySelector("#scratch").getBoundingClientRect();
+      const v = [...document.querySelectorAll("#rot .vid")].map(x => x.getBoundingClientRect()), ta = document.querySelector("#cluck").getBoundingClientRect();   // BIG PLAN V1: the notes column is Cluck's box on desktop sugar (no #scratch)
       return { gap: Math.round(v[1].left - v[0].right), side: Math.abs(v[0].top - v[1].top) < 1, notes: Math.round(ta.height),
         handle: parseFloat(getComputedStyle(document.querySelector("#sash"), "::before").top), hscroll: document.documentElement.scrollWidth > innerWidth,
         above: Math.round(document.querySelector(".top").getBoundingClientRect().top), below: Math.round(innerHeight - document.querySelector("main").getBoundingClientRect().bottom) };
@@ -700,7 +666,7 @@ try {
     await z.close();
     assert.equal(m.gap, 24, "variant B: 24px between the videos");
     assert.ok(m.side, "videos side by side");
-    assert.ok(m.notes <= 800, `notes box capped (${m.notes}px)`);
+    assert.ok(m.notes <= 3600 - 100, `Cluck box fits the window (${m.notes}px; BIG PLAN V1: it fills the column, the old 800px notes cap is for the diet pad)`);
     assert.ok(Math.abs(m.handle - Math.round(3600 / 2 - 24)) <= 1, `divider handle mid-window, no 16rem cap (${m.handle}px)`);
     assert.equal(m.hscroll, false, "no sideways scroll");
     assert.ok(m.above > 300 && Math.abs(m.above - m.below) <= 4, `snug in the middle up-down too (Tony, Oct 6 sketch): ${m.above}px above the bar, ${m.below}px below the page`);
@@ -721,17 +687,16 @@ try {
       const L = Math.min(...rs.map(r => r.left)), R = Math.max(...rs.map(r => r.right));
       return { l: Math.round(L), r: Math.round(document.documentElement.clientWidth - R), cl: !!document.querySelector("#cluck")?.getClientRects().length };
     });
-    await zp.click("#mcGo");                                                   // nothing ticked: a wrong try; the CTA opens the sheet (B7 ii: never by itself)
-    await zp.click(".cl-peek .cl-cta");
+    await zp.click("#mcGo");                                                   // nothing ticked: a wrong try; Cluck's box is open from load (BIG PLAN V1)
     await zp.waitForFunction(() => document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 6000 });
     const open = await gaps();
-    await zp.click("#cluck .cl-x");
-    await zp.waitForFunction(() => !document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 3000 });
+    await z.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // "closed" = diet: the notes box in place of Cluck
+    await zp.reload(); await opened(zp, "CALC1_E01");
     const shut = await gaps();
     await z.close();
     assert.ok(open.cl, "Cluck did not open");
     assert.ok(Math.abs(open.l - open.r) <= 2, `Cluck open: left gap ${open.l}, right gap ${open.r}`);
-    assert.ok(Math.abs(shut.l - shut.r) <= 2, `Cluck closed: left gap ${shut.l}, right gap ${shut.r}`);
+    assert.ok(Math.abs(shut.l - shut.r) <= 2, `Diet (no Cluck): left gap ${shut.l}, right gap ${shut.r}`);
   });
   /* W91 (Tony, Oct 26, desktop): focusing the answer box parked the docked corner (meant for a phone's keyboard): the notes box jumped up, then jerked back on blur */
   const w91 = async (vp, x = {}) => {
