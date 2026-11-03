@@ -189,7 +189,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
           face: rgb(getComputedStyle(nf).backgroundColor), right: !!document.querySelector("#q .opt.right, #q .ff.ok"), carrierOpacity: getComputedStyle(car).opacity,
           tri: [...document.querySelectorAll('use[href="#i-tri"]')].map(u => !!u.closest(".nx")), nav: document.querySelector("#qnext use").getAttribute("href"),
           untried: [...document.querySelectorAll("#q .opt:not(.wrong):not(.right)")].map(x => getComputedStyle(x).opacity),
-          rightShown: !!document.querySelector("#q .opt.right"), fb: document.querySelector("#fb").textContent, chip: R(document.querySelector("#wish:not([hidden]) .cue-chip")) };
+          rightShown: !!document.querySelector("#q .opt.right"), fb: document.querySelector("#fb").textContent, chip: R(document.querySelector(":is(#wish:not([hidden]), .rbox) .cue-chip")) };
       });
       const c = check, n = got.nx;
       assert.equal(got.n, 1, "exactly one Next");

@@ -63,8 +63,8 @@ const wtext = page => page.evaluate(() => document.querySelector("#cluck .wtext"
 async function wish(page) {
   await page.goto(BASE + "/#CALC1_LF1"); await opened(page, "CALC1_LF1");
   await pick(page, "a");
-  await page.waitForSelector("#wish:not([hidden]) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 6000 });
-  if (!(await page.locator("#cluck .wtext").count())) await page.click("#wish:not([hidden]) .wchip, .cl-peek .cl-cta");   // desktop opens by itself
+  await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 6000 });
+  if (!(await page.locator("#cluck .wtext").count())) await page.click(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta");   // desktop opens by itself
 }
 const done = page => page.waitForFunction(() => /answer is/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
 

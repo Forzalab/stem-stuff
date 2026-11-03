@@ -227,9 +227,9 @@ try {
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
-    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish .cue-chip")?.textContent || "") && document.querySelector("#wish .cue-chip").getAttribute("aria-expanded") === "false", null, { timeout: 6000 });   // a row has Cluck too. Closed out of tries = the T17b-1 duck chip "Ask Cluck"
+    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector(":is(#wish, .rbox) .cue-chip")?.textContent || "") && document.querySelector(":is(#wish, .rbox) .cue-chip").getAttribute("aria-expanded") === "false", null, { timeout: 6000 });   // a row has Cluck too. Closed out of tries = the T17b-1 duck chip "Ask Cluck"
     assert.equal(await page.evaluate(() => !!window.stemCluckOpen && window.stemCluckOpen()), false, "a wrong answer never opens Cluck by itself, desktop too (B7 ii, Tony Oct 18)");
-    await page.click("#wish .cue-chip");
+    await page.click(":is(#wish, .rbox) .cue-chip");
     assert.equal(await page.isVisible("#cluck #clTabEP"), true, "Cluck's text shows");
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
     assert.equal(await page.evaluate(() => window.__said.length), 0, "Cluck types the text but stays quiet (Tony, Oct 5)");
@@ -431,14 +431,14 @@ try {
     };
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
-    if (await page.isHidden("#cluck")) await page.click("#wish .wchip, .cl-peek .cl-cta, .cue-chip");
+    if (await page.isHidden("#cluck")) await page.click(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, .cue-chip");
     await whole("away and back");
     await page.reload(); await opened(page, "CALC1_E01");
-    if (await page.isHidden("#cluck")) await page.click("#wish .wchip, .cl-peek .cl-cta, .cue-chip");
+    if (await page.isHidden("#cluck")) await page.click(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, .cue-chip");
     await whole("after a reload");
     await page.evaluate(() => { const o = JSON.parse(localStorage.getItem("stem-cluck")); for (const k of Object.keys(o)) o[k].t = Date.now() - 8 * 864e5; localStorage.setItem("stem-cluck", JSON.stringify(o)); });
     await page.reload(); await opened(page, "CALC1_E01");
-    await page.waitForFunction(() => document.querySelector("#wish .wchip") && /Explain my mistake/.test(document.querySelector("#wish .wchip").textContent), null, { timeout: 4000 });
+    await page.waitForFunction(() => document.querySelector(":is(#wish, .rbox) .wchip") && /Explain my mistake|Ask Cluck/.test(document.querySelector(":is(#wish, .rbox) .wchip").textContent), null, { timeout: 4000 });
     assert.equal(asked, 1, "a 7-day-old entry is dropped, and a restore never calls by itself: the Explain my mistake chip");
   });
 
@@ -450,11 +450,11 @@ try {
     assert.equal(await page.$eval(".choices", g => g.getAttribute("aria-label")), "Choices");
     assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
-    await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
     await page.waitForTimeout(400);
     assert.equal(asked, 0, "fired on its own past the cap");
     await page.evaluate(() => { window.__said = []; });
-    await page.click("#wish .wchip");
+    await page.click(":is(#wish, .rbox) .wchip");
     await page.click("#cluck .wtext");                                       // a tap skips the wait + typing: the text shows as it streams
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 1500 })
       .catch(async e => { throw new Error(e.message + " | wish: " + await page.innerHTML("#cluck") + " | asked " + asked); });

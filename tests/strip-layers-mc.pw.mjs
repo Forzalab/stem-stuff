@@ -243,6 +243,24 @@ await step("a question without Cluck's key has no drawer on mc / pick-all / mult
   }
 });
 
+await step("the drawer's chip stays live across Cluck's sheet (PR 385 CI): /explain fails, tap the chip, Escape at once, the chip is back and focused, a second tap opens the sheet again", async () => {
+  const pg = await pageFor(browser, 1280, 800);
+  await pg.route("**/explain", r => r.fulfill({ status: 500, body: "" }));   // a failed wish repaints #wish: a fresh chip, which the strip re-docks
+  await goTo(pg, "STM_MCQ"); await pickMC(pg, "a");
+  await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE);
+  const opened = () => pg.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 4000 });
+  await pg.click("#q .vdrawer .wchip"); await opened();
+  await pg.waitForTimeout(150);                                               // inside the drawer's 260 ms shut animation: the old code let its timer hide it for good
+  await pg.keyboard.press("Escape");
+  await pg.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
+  await pg.waitForTimeout(SETTLE);
+  assert.equal(await drawerOpen(pg), true, "the drawer is back once the sheet closes");
+  assert.equal(await pg.evaluate(() => document.activeElement.matches(".vdrawer .wchip")), true, "focus returns to the chip");
+  await pg.click("#q .vdrawer .wchip");
+  await opened().catch(() => { throw new Error("the second tap on the chip did nothing (its handler sat on a stale chip)"); });
+  await pg.ctx.close();
+});
+
 await browser.close();
 srv.kill();
 console.log(failures ? `${failures} FAIL` : "all ok");

@@ -234,7 +234,7 @@ await step("E desktop 1280: with the 'okay, but how?' peek up, no 'Show him' row
   await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
   await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
   c = await one(page, "question closed");
-  const cmp = await page.evaluate(() => [...document.querySelectorAll("#wish .cue-ok")].some(e => e.getClientRects().length > 0));
+  const cmp = await page.evaluate(() => [...document.querySelectorAll(":is(#wish, .rbox) .cue-ok")].some(e => e.getClientRects().length > 0));
   assert.ok(!c.how && !c.back && cmp, "solved: 'See Cluck's steps' is the one CTA, no 'Show him' row " + JSON.stringify({ ...c, cmp }));
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();

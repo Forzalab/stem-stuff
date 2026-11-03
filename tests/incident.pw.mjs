@@ -81,10 +81,10 @@ async function wrong({ explain, debug = false, off = false } = {}) {
   await page.goto(BASE + (debug ? "/?debug=1" : "/") + "#BANK_INC");
   await page.waitForFunction(() => !document.getElementById("splash") && /^#CALC1_INC1/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
-  await page.waitForFunction(() => /Send Tony this code/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 10000 });
+  await page.waitForFunction(() => /Send Tony this code/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 10000 });
   return page;
 }
-const chip = page => page.evaluate(() => document.querySelector("#wish").innerText.replace(/\s+/g, " ").trim());
+const chip = page => page.evaluate(() => [...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.innerText).join(" ").replace(/\s+/g, " ").trim());
 const beacon = async (page, n = 1) => { for (let i = 0; i < 30 && page.beacons.length < n; i++) await page.waitForTimeout(100); return page.beacons; };
 
 await step("/explain 502 + X-Incident: the old words + the server's code; no reason for a student; one beacon with that code", async () => {
@@ -104,7 +104,7 @@ await step("a plain 500 (no header): the page's own E- code; the sheet says \"Co
   const t = await chip(page);
   assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
   const code = t.match(CODE)[0];
-  await page.click("#wish .wchip");                                    // a tap = Try again (still 500): a new code
+  await page.click(":is(#wish, .rbox) .wchip");                                    // a tap = Try again (still 500): a new code
   await page.waitForFunction(c => { const x = document.querySelector("#cluck .wtext")?.innerText || ""; return /Couldn't load Cluck\./.test(x) && /Send Tony this code: E-/.test(x) && !x.includes(c); }, code, { timeout: 8000 });
   const sheet = await page.evaluate(() => document.querySelector("#cluck .wtext").innerText.replace(/\s+/g, " ").trim());
   assert.match(sheet, /^Couldn't load Cluck\. Try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, sheet);

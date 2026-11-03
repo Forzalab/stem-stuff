@@ -2219,7 +2219,7 @@ function wishPaint() {
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   rboxSync();
-  const btn = document.querySelector(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta");
+  const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta") || document.querySelector(".rbox .wchip");   // the chip painted just now: in #wish, or already docked (typed bar). Never an older chip that the strip drawer (a .rbox before #wish in the DOM) still holds: it is about to be replaced, and the new one would get no handler
   btn?.addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }

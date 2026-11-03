@@ -180,8 +180,9 @@
       st.key = h.key; st.open = true;
     }
     var want = st.open && !chip.hidden;
+    if (want && (drawer.hidden || drawer.classList.contains("vd-shut")) && sheetFocus && lost()) { sheetFocus = false; setTimeout(function () { if (drawer && !drawer.hidden && chip.isConnected && lost()) chip.focus({ preventScroll: true }); }, 0); }   // the sheet closed with the keyboard inside it: focus goes back to the chip it came from (app.js clClose focuses it while the drawer is still shut)
     nextSync(drawer, q);
-    if (want && drawer.hidden) show(drawer, st.still);
+    if (want && (drawer.hidden || drawer.classList.contains("vd-shut"))) show(drawer, st.still);   // also while it is still sliding shut: its timer would hide it with st.open true and nothing left to reopen it (the sheet closing inside the 260ms)
     else if (!want && !drawer.hidden) hide(drawer);
     place(h, drawer);
     hs.forEach(function (x) { if (x.v && x.ic) icon(x, true, want && x === h); });
@@ -214,6 +215,9 @@
     owner = h.el; st.open = true; st.still = false; sync();
   }
 
+  function lost() { var a = D.activeElement; return !a || a === D.body || !a.getClientRects().length; }   // nothing focused, or the focused element has just been hidden with the sheet
+  var sheetFocus = false;                                    // the keyboard is inside Cluck's sheet or on the drawer (the sheet hides the chip and shuts the drawer under it)
+  D.addEventListener("focusin", function (e) { sheetFocus = !!(e.target.closest && e.target.closest("#cluck, .vdrawer")); }, true);
   var BTN = "#q .ff .vk[role=button], #q .vkb";
   D.addEventListener("click", function (e) {
     var vk = e.target.closest && e.target.closest(BTN);
