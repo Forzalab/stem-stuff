@@ -58,6 +58,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="offline.js" defer></script>
 <script src="brainrot.js" defer></script>
 <script src="peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (design/IDLE-PEEK.md) -->
+<script src="strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
 <!-- sugar rewards (design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
 <script src="rewards/icons.js" defer></script>
 <script src="vendor/confetti.browser.js" defer></script>
@@ -102,6 +103,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <link rel="stylesheet" href="design/explain-box.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="strip.css"><!-- the answer strip: the verdict drawer under a typed answer (strip.js; B3 PR-B1). After app.css: it layers on .ff / .wchip -->
 <link rel="stylesheet" href="nav.css">
 <link rel="stylesheet" href="vendor/fonts/press-start-2p.css">
 <link rel="stylesheet" href="rewards/rewards.css">
