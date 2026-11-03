@@ -39,13 +39,15 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 
 | token | hex | role |
 |---|---|---|
-| `--page` | #050c16 | page, bars, the dock, wells (older names on it: `--paper`, `--field`) |
-| `--card` | #101c2c | the one card fill: question box, every choice, list card (`--qbox`, `--sheet`) |
-| `--float` | #1b2b40 | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
-| `--line` | #394a61 | the one line colour: dividers, control edges, the 0.5px row hairline (`--edge`) |
-| `--ink` | #e8edf5 | body text, icons in buttons |
-| `--muted` | #a7b7cd | secondary text, placeholders, locked state (`--hint`) |
-| `--action` / `--focus` | #92c0ff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` letter), focus ring, caret (`--c1`) |
+| `--page` | #000 | page, bars, the dock, wells (older names on it: `--paper`, `--field`) |
+| `--card` | #000 | the SURFACE: the question box and its kin (`--qbox`). Black like the page: surfaces are outlined by a 1px inset `--line`, not a lighter slab |
+| `--sheet` | #161616 | the CONTROL fill: buttons, every choice, the list card. Its own token, one step above the black surface, so fill-first buttons keep their shape (PROPOSAL value: the mock had no control fill) |
+| `--float` | #1a1a1a | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
+| `--line` | #666666 | the one line colour: dividers, control edges, the 1px row edge (`--edge`) |
+| `--ink` | #fff | body text, icons in buttons |
+| `--muted` | #a3a3a3 | secondary text, placeholders, locked state (`--hint`) |
+| `--action` / `--focus` | #3b9eff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` black letter; hover `--action-on` #70b8ff), focus ring, caret |
+| `--c1`, `--c1-hi`, `--grid` | #92c0ff, #c9e0ff, #394a61 | figures only (the locked force blue, its hover, the decorative grid). Own values: they do not follow `--action` or `--line`, so a theme can retune the UI without recolouring every figure. UI uses `--action` / `--action-on` |
 | `--c2`, `--c3` | #ffb86b, #ff8fc8 | figure series only. Not for UI state |
 
 **The warm family** (one hue band, 55–70°; lightness is the role, PALETTE-v3 §1): `--help` #ff9a3e is Cluck, hints, the bulb and send; `--reward` #ffcd94 is the HUD (XP bar, numerals, star), the +XP float, the toast and the bursts only, never in a help surface, a CTA or a chip; `--help-on` #ffdcc0 Cluck's name and card titles; `--help-deep` #b05a00 burst fields, rims, outlines (never under text); `--help-line`, `--help-fill`, `--help-sheet`, `--help-rule`, `--help-muted`, `--help-ink` (ink on any warm solid); `--glow` #ff8204 at alpha only. Bursts use three slots of this ramp (rarer = lighter): 0 purples, 0 magentas, 0 whites. The reward rasters land on the ramp through `--goldify` (the gold star) and `--duckgold` (the natural-colour duck), measured at OKLCH hue 62–70.
@@ -55,8 +57,12 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 | token | means | use it for | never |
 |---|---|---|---|
 | `--correct` #4ee6af | right | check glyph, a right row's 1px ring, a right box's edge, the green Next face (`--correct-ink` label, `--correct-press` pressed), right answer text, Copy done | decoration, "success" toasts for routine saves, a fill under a row |
-| `--wrong` #eb596e | wrong | X glyph, a wrong row's 1px ring, the strike on a wrong choice, used try pips, list X marks, the entry error line. `--wrong-rim` #d14a5f: only the typed box's 2px dashed edge | hover, delete buttons, emphasis, a fill under a row |
+| `--wrong` #eb596e | wrong | X glyph, a wrong row's 1px ring, the strike on a wrong choice, used try pips, list X marks, the entry error line. `--wrong-rim` #d14a5f: only the typed box's 1px dashed edge | hover, delete buttons, emphasis, a fill under a row (soft verdict wash below) |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
+
+**Soft verdict fills** (Tony, Nov 2: "less red saturation for the fill, the green too"): `--wrong-fill` #28191a and `--correct-fill` #14221c (OKLCH lightness kept, chroma halved). The only fills under a box or row: the answer bar's verdict wash (strip PR-B) and the sugar kept row. Never under text that needs more than their 10:1, never on a large area.
+
+**Ink is the site theme** (strip ship spec, Tony Nov 2: "ink whole site"): one black ground (page and surface), `--sheet` a step lighter so buttons keep their shape, `--line` #666666 (3.7:1 on black, 3.2:1 on `--sheet`: control edges need 3:1, WCAG 1.4.11), `--ink` white, `--action` #3b9eff with a black label, figures keep their own `--c1` / `--grid`. Ink replaces the navy ladder (page #050c16, card #101c2c, line #394a61, action #92c0ff); contrast of text on `--page` is 21:1 (white), `--muted` 8.3:1, `--wrong` 6.2:1, `--correct` 13.3:1 (NOTES Round 3 table, to re-measure in §7). There is no theme switch. Greyscale and Impeccable (§7) still apply.
 
 There is no warning color. The warm family is never a warning and never a figure series on the page; the one exception is a live figure inside Cluck (below). `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
 
@@ -119,17 +125,17 @@ One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and dispar
 
 | what | border |
 |---|---|
-| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), badges, `.md th`, the toast | `--bw` (1px), `--edge` (toast `--line`). Hover `--muted`. Right `--correct`. Pending `--c1` dashed |
-| Choices `.opt` | `--bw-hair` (0.5px) `--line` at rest; every state 1px (`--bw`): selected `--action`, right `--correct`, wrong `--wrong` (solid; the strike and the x carry it in grey) |
-| Buttons `.btn` | fill-first: `--bw` **transparent**, the fill carries it; hover = `--raised` fill only. `.btn-go` keeps its `--c1` edge |
+| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), badges, `.md th`, the toast | `--bw` (1px), `--edge` (toast `--line`). Hover `--muted`. Right `--correct`. Pending `--action` dashed |
+| Choices `.opt` | `--bw` (1px) `--line` at rest; every state the same 1px: selected `--action`, right `--correct`, wrong `--wrong` (solid; the strike and the x carry it in grey) |
+| Buttons `.btn` | fill-first: `--bw` **transparent**, the fill carries it; hover = `--raised` fill only. `.btn-go` keeps its `--action` edge |
 | Field focus (every field, the pad too) | border `--focus` + `inset 0 0 0 1px var(--focus)` = one 2px blue edge. **No outline** |
 | Keyboard focus (buttons, FAB, sash, anything `:focus-visible`) | `--ring` (2px) `--focus` outline at 2px offset (-3px inside a field) |
-| Wrong typed box (`.ff.bad`) | `--bw-alarm` (2px) `--wrong-rim` **dashed**: the only heavy line (dash = not accepted, so it survives grayscale) |
-| Sugar kept row (`.choices.all .opt.kept`, Tony Oct 20) | `--bw-alarm` (2px) `--correct` **solid** + `--correct-fill`: a fixed right tick after a miss (CHOOSE-ALL.md §4) |
+| Wrong typed box (`.ff.bad`) | `--bw` (1px) `--wrong-rim` **dashed** (dash = not accepted, so it survives grayscale) |
+| Sugar kept row (`.choices.all .opt.kept`, Tony Oct 20) | `--bw` (1px) `--correct` **solid** + `--correct-fill`: a fixed right tick after a miss (CHOOSE-ALL.md §4) |
 | Cluck's ask rim (`.ask`) | 1.5px, shown only while Cluck types: the one listed exception |
 
 - Never a border and an outline on the same focus. Never 3px. Guarded by `tests/style.test.mjs` §2.6.
-- A wrong border adds `--bw-up` (1px). The box takes it back from its padding and the arrow / verdict offsets, so the text and the ✕ never move (render.pw: "the x is where the arrow was", "nothing moved").
+- **One weight** (Tony, Nov 2: "all dashed and filled lines share the same thickness"): every border, dashed or solid, is `--bw` (1px). Width never carries meaning; tone does (rest `--line`, state = status colour, dash = not accepted / pending). The only heavier line is the 2px focus ring. `--bw-hair`, `--bw-alarm`, `--bw-up` and `--bw-sel` are retired (a 0.5px hairline computes to 1px in Chromium anyway, so the tier only ever showed in Safari). A wrong box is the same size as any other state, so nothing moves and no offsets are needed.
 - Surfaces have no border. A background change separates them.
 - Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom).
 - No colored side stripes on anything.
@@ -145,6 +151,7 @@ A shadow means "this floats over content". Allowed only on:
 | toast | `--shadow-1` (with the 1px `--line` hairline: Impeccable flags a hairline with a wide shadow) |
 | the Scratchpad button (floats over the page) | `--shadow-3`; `--shadow-4` while dragged |
 | code suggestions (floats over the page) | `--shadow-3` |
+| verdict drawer (slides out from under the answer bar) and the finger bar (strip PR-B / PR-C) | `--shadow-2` = `0 8px 16px -6px rgb(0 0 0 / .6), 0 1px 2px rgb(0 0 0 / .4)`, between `--shadow-1` and `--shadow-3`, with the drawer's 1px `--line` edge |
 | start page field | `--shadow-1` at rest, `--shadow-3` on hover / focus (Tony: "popping, like Google"; the only thing on that page) |
 
 Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows outside "Fades and glows" below. The start field and the Scratchpad button are the two named exceptions among controls.
@@ -174,6 +181,7 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 
 - Easing: `ease-out` (enter and feedback). No bounce, no elastic, no spring overshoot.
 - Move at most 14px. Animate `opacity` and `transform` only; never animate layout (height, top, width).
+- Scoped exception, **the verdict drawer** (Tony, "ship it", Nov 2; strip PR-B): one slide out from behind the answer bar on open (380ms) and back on close (240ms), on the iOS sheet curve `cubic-bezier(.32,.72,0,1)`, no overshoot; it travels its own height and is clipped at the bar's edge. The finger bar slides up from the bottom edge the same way (320ms) on the first input. Reduced motion: a fade.
 - Loops: only for "busy" (autosave sweep, splash). Stop them the moment the work ends.
 - Direct manipulation (the sash, dragging the Scratchpad button) follows the finger with no transition; the release snap is `--d-move` ease-out. Why: the hand moves it, so it is not layout animation.
 - Reduced motion: `app.css` turns off every transition. Every `@keyframes` and every View Transition needs its own `prefers-reduced-motion` rule: no movement; a fade of `--d-move` or less, or an instant change. Snaps are instant.
@@ -186,7 +194,7 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 
 - Anatomy: 48×48 (`--btn`), no visible border (`--bw` transparent, §2.6), 8px radius, `--sheet` fill, one 24px sprite icon in `--ink`. `aria-label` and `title` when there is no word.
 - States: hover `--raised` fill; active 1px down; keyboard focus `--ring` (2px) `--focus` outline at 2px offset; disabled 45% opacity, no hover, no press.
-- Variants: `.btn-go` (primary: `--c1` fill, `--field` icon, `--c1-hi` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-state switch (today: q | a).
+- Variants: `.btn-go` (primary: `--action` fill, `--field` icon, `--action-on` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-state switch (today: q | a).
 - Do: one `.btn-go` visible per field. Put the arrow flush inside its field.
 - Don't: text-only buttons, a "→" after a word (the labelled **Next ▶** in the Check slot is the one named exception: a filled button with the `i-tri` sprite icon, never a typed arrow), a second filled color, round or pill buttons (named exceptions: the start field's buttons, the q | a switch, the Scratchpad button).
 
@@ -220,18 +228,19 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 | idle, empty | `--edge` | empty (arrow hidden) | `--hint` placeholder |
 | typed | `--edge` | `.btn-go` arrow | `--ink` |
 | focus | `--focus`, 2px (field rule) | arrow if typed | `--ink` |
-| wrong, try left | `--wrong-rim` 2px dashed, no fill | `i-x` in `--wrong` | `--ink`, editable |
+| wrong, try left | `--wrong-rim` 1px dashed, `--wrong-fill` wash (strip; until PR-B ships: no fill) | `i-x` in `--wrong` | `--ink`, editable |
 | correct | `--correct` 1px, no fill (both modes) | verdict `i-ok` in `--correct` LEFT of the slot; the slot holds the labelled **Next ▶** on a `--correct` face (96x48 hit, 92x44 face, right-aligned on Check; sugar: 3px `--field` ring round it) | `--correct`, read-only |
-| locked (out of tries) | `--edge`, not dimmed (it carries Next) | verdict `i-lock` in `--muted` LEFT of the slot; the slot holds the labelled **Next ▶** on a neutral `--raised` face, 0.5px `--line` (a fail is never praised) | `--muted`, read-only, no words under it (no out-of-tries line) |
+| locked (out of tries) | `--edge`, not dimmed (it carries Next) | verdict `i-lock` in `--muted` LEFT of the slot; the slot holds the labelled **Next ▶** on a neutral `--raised` face, 1px `--line` (a fail is never praised) | `--muted`, read-only, no words under it (no out-of-tries line) |
 | closed, not the last try (multi parts) | `--edge` / `--correct`, 50% opacity | its verdict icon | read-only, not-allowed cursor |
 
 - Do: show the verdict icon in the arrow slot, so the result sits where the eye already is. Keep the box the same size in every state.
+- **Strip ship spec** (Tony, Nov 2; takes effect with PR-B / PR-C, until then the live rules below stand): the verdict drawer replaces the Next-in-slot rule (T17b-1) and the duck chip. It is a sibling of the bar or the picked row (never a child), 2/3 of the bar's width, right-aligned, top tucked 8px under the bar; z order bar > drawer > later content. Contents: [Ask Cluck] (solid `--help`, `--help-ink`; "See steps" on a right or locked answer) and a 48px [⌃] close. It opens on a verdict; the verdict icon reopens it; Esc, ⌃ or a tap outside closes it. Check and Next live in the finger bar pinned to the bottom (hidden until the answer is submittable; one morphing primary: Check, Checking, Skip, Next question; Next is site blue). The card header keeps only the number, type and try pips.
 - Next (T17b-1, app.js `cueNext`): once a question closes, the last try's Check slot (box, mc row, multi part, pick-all Check row) gets a labelled Next. The Check rect lies inside it (right edges flush), so nothing moves; focus goes to it; a held Enter (`e.repeat`) never presses it. It lands once with `g-next-in` (200ms, 120ms delay; reduced motion `g-next-fade`). The filled ▶ (`i-tri`) is only on this filled Next; the nav bar Next and every ghost / text button keep the thin chevron `i-next`. Sugar adds the duck chip under the answer ("Compare with Cluck's steps" / "Ask Cluck", no XP); diet has no chip, duck or wash.
 - Don't: put the verdict in a new line that pushes content; show a glow (glows are for Cluck's sheet only: §2.7 "Fades and glows"); use both a colored border and a focus outline (one ring).
 
 ### Multiple-choice choice (`.opt`)
 
-- Anatomy: full-width row, min 52px, `--sheet` fill, a 0.5px `--line` hairline (`--bw-hair`), 8px radius, a round letter badge (1px `--line` ring, `--muted` letter), the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
+- Anatomy: full-width row, min 52px, `--sheet` fill, a 1px `--line` edge, 8px radius, a round letter badge (1px `--line` ring, `--muted` letter), the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
 - States (V1 thin light: a state is a 1px ring + a 20px glyph in one solid colour, on the unchanged row; never a fill; the letter badge never changes with right / wrong): idle hairline, hover `--muted`, selected 1px `--action` ring + filled `--action` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong 1px `--wrong` ring + `i-x` at the row's right end + `--muted` text struck in `--wrong`; right 1px `--correct` ring + `i-ok` at the right end (8px left of Next on the row that carries it); a right row the student missed: dashed `--correct`; pending `--c1` dashed. Closed rows never dim. Pick-all: the square badge is the glyph slot (1px ring + glyph in the state colour). Pills: no badge, the label takes the state colour. Try pips: 8px, used = filled `--wrong`, left = hollow `--line`.
 - Do: tap again to deselect; keys A to E, 1 to 5, arrows (existing keys; see Keyboard in §5).
 - Don't: submit on the first tap; color the whole row red or green.
@@ -254,7 +263,7 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 ### List and nav (`.qnav`, `.qlist`)
 
 - Nav: list button (`.btn-label`: checklist icon + bank code), shuffle, then Prev / Next pushed to the right edge. Arrows are icon-only.
-- List: in the flow under the bar (it covers nothing), a `--sheet` card, 10px radius, rows of at least `--btn`, number in `--muted` bold tabular, title in `--ink`. Current row: `--raised` + `--c1` number. Done marks (`i-ok`, `i-x`, 20px) at the right edge. Out-of-tries or right: title struck through and dimmed, still a link.
+- List: in the flow under the bar (it covers nothing), a `--sheet` card, 10px radius, rows of at least `--btn`, number in `--muted` bold tabular, title in `--ink`. Current row: `--raised` + `--action` number. Done marks (`i-ok`, `i-x`, 20px) at the right edge. Out-of-tries or right: title struck through and dimmed, still a link.
 - Don't: counters ("3 / 12"), headings on the list, side stripes on the current row.
 - Redo misses (`#qredo`, Oct 6): `.btn-label` with `i-redo` (a loop around an X), shown with the list like Shuffle; icon only on phones. In a round (`html.redo-on`) it reads "Exit redo" with the `--raised` "on" fill, the list button says "Redo" / "Redo done", and progress is the list's own ticks (no counter). Look A of `try/redo-variants.html`; B to E are Tony's alternatives, all inside this file's rules.
 
@@ -266,7 +275,7 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 
 ### Codeblock (`.cb`, T43)
 
-- Anatomy: a fenced block (```lang) in question or choice text (`app.js` `codeblock`). It is a `--page` well with 8px radius, sitting inside the card's padding (mock A). Header row: the language tag (`--t-xs` 600 `--muted`) on the left, the empty T44 slot, then Copy (`i-copy`, 44px, transparent). Under the header, a `--bw-hair` `--line` rule. The code is `--mono` 16px / 1.55, weight 400 only (no bold keywords). Line numbers are `--muted`, one per real line. A long line wraps, hanging under its own indent + 2ch.
+- Anatomy: a fenced block (```lang) in question or choice text (`app.js` `codeblock`). It is a `--page` well with 8px radius, sitting inside the card's padding (mock A). Header row: the language tag (`--t-xs` 600 `--muted`) on the left, the empty T44 slot, then Copy (`i-copy`, 44px, transparent). Under the header, a `--bw` (1px) `--line` rule. The code is `--mono` 16px / 1.55, weight 400 only (no bold keywords). Line numbers are `--muted`, one per real line. A long line wraps, hanging under its own indent + 2ch.
 - Colour: **Tokyo Night** (enkia/tokyo-night-vscode-theme, MIT), as the `--syn-*` tokens in `:root`: keyword, string, number, comment, function, type, preprocessor. Each one is at least 4.5:1 on `--page`. Comments use the theme's dark5 `#737aa2`, because its own `#565f89` is 3.2:1. A tiny regex highlighter colours C/C++, Java, JS/TS and Python. Comments and strings win over the keywords inside them. Any other language stays plain.
 - States: Copy done = the `i-ok` icon in `--correct` for 2 s.
 - In a choice row (a button): no fill, no radius, no Copy. Comments there are `--muted`, because `--syn-com` is 4.1:1 on the row's `--card`.
@@ -360,6 +369,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 
 - Plain, short, active, sentence case. One job per string. Verdicts are icons in the answer box, not words (AUDIT.md); the screen-reader text ends with a period: "Correct." "Not quite. One more try." "Out of tries."
 - Name things as the student sees them: "Scratchpad", "Copy", "Questions". Not system words.
+- "See steps" (Cluck's door on a right or locked answer; "Ask Cluck" on a wrong one): one row from 360px up, states its action (strip, Round 6).
 - A button's label states its action ("Open a problem file", "Show the scratchpad"). The same action keeps the same word everywhere.
 - Errors say what happened and what to do. No apology, no blame.
 - No exclamation marks, no "Oops", no "Great job!". Calm, not cheerful.

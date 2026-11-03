@@ -16,8 +16,8 @@ dialog.lg::backdrop { background: color-mix(in srgb, var(--scrim) 60%, transpare
   border: var(--bw) solid var(--line); border-radius: 8px; background: var(--raised); color: var(--ink);
   font-size: var(--t-sm); font-weight: var(--w-em); -webkit-tap-highlight-color: transparent; }
 .lg-btn:hover { background: var(--float); }
-.lg-go { border-color: var(--c1); background: var(--c1); color: var(--field); }
-.lg-go:hover { border-color: var(--c1-hi); background: var(--c1-hi); }
+.lg-go { border-color: var(--action); background: var(--action); color: var(--field); }
+.lg-go:hover { border-color: var(--action-on); background: var(--action-on); }
 .lg-go:disabled { opacity: 0.45; cursor: default; }
 .lg-x:focus-visible, .lg-btn:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .lg-file { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); border: 0; }   /* the picker: real, reachable via its button */

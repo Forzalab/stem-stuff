@@ -39,9 +39,9 @@ test("§2.1 colours: tokens only (raw hex / rgb only in masks)", () => {
 
 const DOCK = /^0 -10px 24px -8px rgb\(0 0 0 \/ 0\.55\)$/;                      // STYLE.md §9 #7: becomes --shadow-up
 test("§2.7 shadows: tokens only, on the named layers", () => {
-  const ok = v => v === "none" || v.split(/,(?![^(]*\))/).map(s => s.trim()).every(p => /^var\(--(shadow-[134]|ai-nm-(up|in|btn))\)$/.test(p) || /^inset 0 0 0 \d+px var\(--[a-z0-9-]+\)$/.test(p));
+  const ok = v => v === "none" || v.split(/,(?![^(]*\))/).map(s => s.trim()).every(p => /^var\(--(shadow-[1234]|ai-nm-(up|in|btn))\)$/.test(p) || /^inset 0 0 0 \d+px var\(--[a-z0-9-]+\)$/.test(p));
   const bad = ALL.filter(d => d.prop === "box-shadow" && !ok(d.value) && !DOCK.test(d.value));
-  assert.deepEqual(bad.map(fmt), [], "shadows come from --shadow-1/3/4 (STYLE.md §2.7)");
+  assert.deepEqual(bad.map(fmt), [], "shadows come from --shadow-1/2/3/4 (STYLE.md §2.7)");
 });
 test("§2.7 the raw dock shadow is a token", { todo: "STYLE.md §9 #7" }, () => {
   assert.equal(ALL.filter(d => d.prop === "box-shadow" && DOCK.test(d.value)).length, 0);
@@ -53,14 +53,43 @@ test("§2.5 radius: only the listed radii", () => {
   assert.deepEqual(bad.map(fmt), [], "radius follows size (STYLE.md §2.5)");
 });
 
-test("§2.6 borders: one weight (--bw), answer rows rest on --bw-hair, only a wrong typed answer is heavier (--bw-alarm)", () => {
+test("§2.6 borders: ONE line weight (--bw, 1px), dashed or solid; only the ask rim's 1.5px and 1px dividers", () => {
   const ok = d => {
-    const v = d.value.replace(/var\(--bw(-alarm|-hair)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
+    const v = d.value.replace(/var\(--bw(, *1px)?\)/g, "");                                          // the token (explain-box.css has a 1px fallback)
     const px = v.match(/\d*\.?\d+px/g) || [];
     return px.every(p => p === "1px" || (p === "1.5px" && d.sel === ".ask"));                  // 1px dividers; Cluck's ask rim (Tony's image 3) is the listed exception
   };
   const bad = ALL.filter(d => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && !ok(d));
-  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-hair), var(--bw-alarm), 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
+  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw) or 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
+});
+test("§2.6 the heavy / hairline weights are retired: no --bw-alarm / --bw-hair / --bw-up / --bw-sel anywhere the app loads", () => {
+  const hits = ["app.css", "nav.css", "views.css", "design/explain-box.css", "index.html", ...JS].flatMap(f => read(f).split("\n").map((l, i) => [f, i + 1, l]))
+    .filter(([, , l]) => /--bw-(alarm|hair|up|sel)\b/.test(l)).map(([f, n, l]) => `${f}:${n} ${l.trim().slice(0, 90)}`);
+  assert.deepEqual(hits, [], "one weight: use --bw; tone, not width, carries meaning (STYLE.md §2.6)");
+});
+test("§2.6 a wrong typed box is 1px dashed --wrong-rim (the dash survives greyscale), same size as every other state", () => {
+  const bad = ALL.filter(d => d.file === "app.css" && d.sel === ".ff.bad" && d.prop === "border");
+  assert.equal(bad.length, 1);
+  assert.match(bad[0].value, /^var\(--bw\) dashed var\(--wrong-rim\)$/);
+  assert.deepEqual(ALL.filter(d => /^\.ff\.bad\b/.test(d.sel) && /^(padding|right|top)/.test(d.prop)).map(fmt), [], "no offsets: the border is the same 1px as the other states");
+});
+test("§2.1 surface vs control vs figure tokens are split; soft fills; Ink is the site theme", () => {
+  const root = read("app.css").match(/^:root \{([\s\S]*?)\n\}/m)[1];
+  const tok = n => (root.match(new RegExp("--" + n + ":\\s*([^;]+);")) || [])[1]?.trim();
+  assert.ok(tok("sheet") && !/var\(--card\)/.test(tok("sheet")), "--sheet (control fill) has its own value, not an alias of --card");
+  assert.equal(tok("grid"), "#394a61", "--grid is its own value, not --line");
+  assert.equal(tok("c1"), "#92c0ff", "--c1 (figure force blue) is not --action");
+  assert.equal(tok("c1-hi"), "#c9e0ff");
+  assert.equal(tok("wrong-fill"), "#28191a");
+  assert.equal(tok("correct-fill"), "#14221c");
+  assert.match(tok("shadow-2"), /rgb\(0 0 0 \/ 0\.6\)/);
+  assert.deepEqual([tok("page"), tok("card"), tok("sheet"), tok("line"), tok("ink"), tok("action")], ["#000", "#000", "#161616", "#666666", "#fff", "#3b9eff"], "Ink is the site theme (Tony, Nov 2)");
+  assert.ok(!/data-theme/.test(read("app.css") + read("app.js")), "Ink is not a switch: it is :root");
+  assert.match(read("app.css"), /\.p, \.boxed \.q[^{]*\{ box-shadow: inset 0 0 0 1px var\(--line\); \}/, "black surfaces are outlined, not lighter slabs");
+});
+test("--c1 is for figures: UI controls use --action", () => {
+  const ui = ALL.filter(d => /(^|[ ,.])(\.btn-go|\.code-box|\.opt\.pend|\.qlist|\.fq|\.mcopy|\.fcard|\.lg-go|\.rp-check)/.test(d.sel) && /var\(--c1(-hi)?\)/.test(d.value));
+  assert.deepEqual(ui.map(fmt), []);
 });
 test("§2.6 field focus: the 2px edge, never an outline too", () => {
   const field = s => /:focus-within|textarea:focus/.test(s) && !/\.btn\b/.test(s);
