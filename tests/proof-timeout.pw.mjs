@@ -51,6 +51,8 @@ try {
   await step("no answer: at 25 s a timeout line + Try again, no try spent; Try again re-sends", async () => {
     const { ctx, page, held } = await open();
     await page.waitForTimeout(300);
+    for (let i = 0; i < 100 && !held.length; i++) await page.waitForTimeout(50);   // the 25 s timer starts when the request is sent: jump the clock only after that, or a slow runner's late send leaves the timer ahead of the jump
+    assert.equal(held.length, 1, "Check sent no request");
     await page.clock.fastForward(24000);
     assert.equal(await page.locator("#fb .verdict.wait").count(), 0, "gave up before 25 s");
     await page.clock.fastForward(1500);
