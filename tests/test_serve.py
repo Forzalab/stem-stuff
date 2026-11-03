@@ -992,6 +992,19 @@ class Repair(unittest.TestCase):
         self.assertNotIn("repair", out)
         self.assertNotIn("welcome", serve.public(serve.view(self.FIX["PHYS_RPA"], "sugar"), "s"))
 
+    def test_welcome_pick_answer_wrong_option_gets_its_own_line(self):
+        """todo 76: the answer step's `miss` never ships (KEY), so a wrong pick on it fell back to the generic welcome hint; /check now
+        answers a wrong option with that option's line as `hint` (also on the 2nd miss, beside `answer`); an option with no line: no hint."""
+        fix = copy.deepcopy(self.FIX)
+        fix["PHYS_WLC"]["repair"]["steps"][-1] = {"id": "answer", "label": "Pick the answer", "kind": "pick", "ok": "a",
+            "opts": [{"id": "a", "md": "$3$"}, {"id": "b", "md": "$12$"}, {"id": "c", "md": "$\\tfrac13$"}], "miss": {"b": "That multiplies. Speed is per second."}}
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            post = lambda v, n: json.loads(serve.dispatch("POST", "/repair/PHYS_WLC/check", f"sid={self.sid('r-w76')}", json.dumps({"value": v, "n": n}).encode())[2])
+            self.assertEqual(post("b", 1), {"ok": False, "hint": "That multiplies. Speed is per second."})
+            self.assertEqual(post("b", 2), {"ok": False, "answer": "$3$", "hint": "That multiplies. Speed is per second."})
+            self.assertEqual(post("c", 1), {"ok": False})
+            self.assertEqual(post("a", 1), {"ok": True})
+
     def test_sheet_tex_for_sheet_steps(self):
         """a `sheet` step's chips need the formulas, not their ids: `sheet` = {id: tex} for the pool ids on the formula sheet; none: no key."""
         rows = {"V_AVG": {"id": "V_AVG", "group": "g", "tex": "v=\\frac{d}{t}"}, "MOM_CONS": {"id": "MOM_CONS", "group": "g", "tex": "p=p'"}}
