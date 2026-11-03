@@ -120,6 +120,11 @@ const TIP = { type: "graph", kind: "scene", alt: "two forces at one tip", marks:
   { mark: "force", at: [0, 0], angle: 90, len: 1.2, label: "$T_1$" },
   { mark: "force", at: [0, 0], angle: 90, len: 1.2, label: "$T_2$", color: "c2" },
   { mark: "force", at: [0, 0], angle: 0, len: 1.2, label: "$F$" }] };
+/* todo 124 W124, I-LBL-1 against strokes: a label centred ON a dashed axis line (5TF 2b), and one whose background hides a short solid rod */
+const DASHED = { type: "graph", kind: "scene", alt: "a dashed x axis with a label on it", marks: [
+  { mark: "seg", from: [-3, 0], to: [3, 0], dash: true }, { mark: "text", at: [0, 0], text: "$x_2$" }, { mark: "seg", from: [-3, 2], to: [3, 2] }] };
+const MASKED = { type: "graph", kind: "scene", alt: "a short rod under a wide label", marks: [
+  { mark: "seg", from: [-0.2, 0], to: [0.2, 0] }, { mark: "text", at: [0, 0], text: "$m_{1}+m_{2}$" }, { mark: "seg", from: [-3, 2], to: [3, 2] }] };
 const CLASH = { type: "graph", kind: "scene", alt: "two boxes in each other", marks: [
   { mark: "body", at: [0, 3], shape: "box", w: 1, h: 1 }, { mark: "body", at: [0.5, 3.2], shape: "box", w: 1, h: 1 }] };
 /* W340 §2: the crowded triangle as #343 wrote it drew "90°" at B while the square corner is A (Tony: "bruh"). Corrected good = the
@@ -246,6 +251,16 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
       assert.ok(r.findings.split(" ").includes("I-BODY-1"), r.findings);
       assert.equal(r.svg, false, "U7: a finding nothing fixed degrades: no svg");
       assert.equal(r.alt, CLASH.alt, "U7: the alt text in the plain box");
+    });
+    await step(`figcheck strokes: a label on a dashed axis is seen (I-LBL-1:stroke), the figure still draws, ${label} ${width}`, async () => {
+      const r = await page.evaluate(g => { const el = document.getElementById("f"); el._g = null; el.innerHTML = ""; delete el.dataset.figFindings; delete el.dataset.figSoft; Graph.render(el, g);
+        return { soft: el.dataset.figSoft ?? null, findings: el.dataset.figFindings ?? null, svg: !!el.querySelector("svg") }; }, DASHED);
+      assert.ok((r.soft || "").split(" ").includes("I-LBL-1:stroke"), `soft: ${r.soft}`);
+      assert.equal(r.findings, "", "a soft finding never degrades"); assert.equal(r.svg, true);
+    });
+    await step(`figcheck strokes: a label hiding a solid rod is seen (I-LBL-1:mask), ${label} ${width}`, async () => {
+      const r = await page.evaluate(g => { const el = document.getElementById("f"); el._g = null; el.innerHTML = ""; delete el.dataset.figSoft; Graph.render(el, g); return { soft: el.dataset.figSoft ?? null, svg: !!el.querySelector("svg") }; }, MASKED);
+      assert.ok((r.soft || "").split(" ").includes("I-LBL-1:mask"), `soft: ${r.soft}`); assert.equal(r.svg, true);
     });
     for (const [name, prog] of GEO) {
       await step(`labels: Geometry ${name}, no overlap, none on a stroke without a knockout, inside, ${label} ${width}`, async () => {

@@ -297,12 +297,47 @@ def _outside(l, k):
     return max(math.hypot(l[0], l[1]) - k["hw"], 0)
 
 
+def _steep(s):
+    a = abs(_ang(s["u"]))
+    return min(a, 180 - a) > 60
+
+
 def fix(marks):
     """(fixed copy of a scene's marks, sorted finding codes): contact / anchor / direction. Mirrors graph.js fix()."""
     codes, out = set(), [dict(m) if isinstance(m, dict) else m for m in marks]
     out_d = [m for m in out if isinstance(m, dict)]
     surf, bodies = _surfaces(out_d), []
     paths = [p for m in out_d if m.get("mark") == "path" for p in (m.get("pts") or []) if _pt(p)]
+
+    def wall_out(q):
+        # I-BODY-1: a steep surface (a wall, > 60 deg) is no support; it only pushes a body out of it, along the support when there is one
+        k, ca, sa = q["k"], math.cos(q["ang1"] * _DEG), math.sin(q["ang1"] * _DEG)
+        for s in surf:
+            if not _steep(s):
+                continue
+            rx, ry = q["c1"][0] - s["a"][0], q["c1"][1] - s["a"][1]
+            t, dl = rx * s["u"][0] + ry * s["u"][1], s["u"][0] * ry - s["u"][1] * rx
+            if t < 0 or t > s["L"]:
+                continue
+            if not s["up"] and any(_outside(_local(p, q), k) <= FIX["tol"] * k["size"] for p in (s["a"], s["b"])):
+                continue
+            side = s["up"] or (1 if dl >= 0 else -1)
+            n = [-side * s["u"][1], side * s["u"][0]]
+            ext = k["hw"] * abs(n[0] * ca + n[1] * sa) + k["hh"] * abs(-n[0] * sa + n[1] * ca) if k["box"] else k["hw"]
+            gap = side * dl - ext
+            if gap >= -FIX["tol"] * k["H"]:
+                continue
+            p = q.get("prim")
+            nu = n[0] * p["u"][0] + n[1] * p["u"][1] if p else 0
+            if p and abs(nu) > 0.3:
+                sg = 1 if nu > 0 else -1
+                d, step = [p["u"][0] * sg, p["u"][1] * sg], -gap / abs(nu)
+            else:
+                d, step = n, -gap
+            q["c1"] = [q["c1"][0] + d[0] * step, q["c1"][1] + d[1] * step]
+            q["m"]["at"] = q["c1"]
+            codes.add("contact")
+
     for m in out_d:
         k = _solid(m)
         if not k:
@@ -314,6 +349,8 @@ def fix(marks):
             continue
         best = None
         for s in surf:
+            if _steep(s):
+                continue
             rx, ry = q["c"][0] - s["a"][0], q["c"][1] - s["a"][1]
             t, dl = rx * s["u"][0] + ry * s["u"][1], s["u"][0] * ry - s["u"][1] * rx
             if t < 0 or t > s["L"]:
@@ -327,6 +364,7 @@ def fix(marks):
             if best is None or abs(gap) < abs(best[3]):
                 best = (s, side, t, gap)
         if best is None:
+            wall_out(q)
             continue
         s, side, t, gap = best
         n = [-side * s["u"][1], side * s["u"][0]]
@@ -338,6 +376,8 @@ def fix(marks):
         q["rest"] = {"n": n, "u": s["u"]}
         if abs(gap) > FIX["tol"] * k["H"] or (k["box"] and _turn(q["ang"], q["ang1"], 180) > FIX["turn"]):
             codes.add("contact")
+        q["prim"] = s
+        wall_out(q)
         m["at"] = q["c1"]
         if k["box"]:
             m["angle"] = q["ang1"]

@@ -4,7 +4,7 @@
 //   shapes      poly box circle wseg surface incline       convex polygons, circles, width-segments; label rects are [x, y, w, h]
 //   primitives  collide (SAT poly x poly, circle x poly by closest point, circle x circle)  segHitsBox (Liang-Barsky = scene.js)
 //               ptSeg  depthAlong (penetration along a normal)  contactGap (signed gap of a body to a surface along its outward normal)
-//   checks      checkContact I-INC-1  checkTilt I-INC-2  checkOverlap I-BODY-1  checkAnchor I-FORCE-1  checkDirection I-FORCE-2/3  checkLabels I-LBL-1/2
+//   checks      checkLabelStrokes I-LBL-1 (strokes)  checkContact I-INC-1  checkTilt I-INC-2  checkOverlap I-BODY-1  checkAnchor I-FORCE-1  checkDirection I-FORCE-2/3  checkLabels I-LBL-1/2
 //               checkSteps I-STEP-2/3  checkBalance I-BAL-1  checkAll (one model, every check)
 //   packer      place(): scene.js place() ported as is (8 dirs x 3 rings, overlap score, free grid, leader lines), same numbers
 // A finding is plain data: { id: "I-…", ids: [the objects], amount, unit, kind?, fix? }. `fix` is a suggestion only (snap vector,
@@ -252,6 +252,43 @@ export function checkLabels(labels, R, opts = {}) {
   }
   return clean(out);
 }
+/** I-LBL-1 (strokes; todo 124): labels [{id, box, knock?}] against the strokes drawn [{id, pts: [a, b], dash?}] (all px). A stroke of ANOTHER
+ *  mark under a label box (shrunk 1 px each side; dashed lines and axes count) is a finding unless the placer knocked the label out
+ *  (kind "stroke"); and a label whose box hides half or more of a solid mark (a bar and its caps, a short rod) is a finding even knocked
+ *  (kind "mask": the label's background wipes the mark). A label on its own mark's strokes is the design (a name on its body). */
+export function checkLabelStrokes(labels, strokes, opts = {}) {
+  const pad = opts.pad ?? 1, out = [], tot = new Map();
+  for (const s of strokes) if (!s.dash) tot.set(String(s.id), (tot.get(String(s.id)) || 0) + len(sub(s.pts[1], s.pts[0])));
+  for (const l of labels) {
+    const [x, y, w, h] = l.box, bx = [x + pad, y + pad, w - 2 * pad, h - 2 * pad];
+    if (bx[2] <= 0 || bx[3] <= 0) continue;
+    const by = new Map();
+    for (const s of strokes) {
+      const id = String(s.id);
+      if (id === String(l.id) || !segHitsBox(s.pts[0], s.pts[1], bx)) continue;
+      const L = len(sub(s.pts[1], s.pts[0])), f = clipFraction(s.pts[0], s.pts[1], bx);
+      const e = by.get(id) || { px: 0, solid: 0 };
+      e.px += f * L; if (!s.dash) e.solid += f * L;
+      by.set(id, e);
+    }
+    for (const [id, e] of by) {
+      if (tot.get(id) > 0 && e.solid >= 0.5 * tot.get(id) && e.solid >= 2) out.push({ id: "I-LBL-1", ids: [String(l.id), id], amount: e.solid, unit: "px", kind: "mask", fix: { replace: String(l.id) } });
+      else if (!l.knock && e.px > 1) out.push({ id: "I-LBL-1", ids: [String(l.id), id], amount: e.px, unit: "px", kind: "stroke", fix: { replace: String(l.id) } });
+    }
+  }
+  return clean(out);
+}
+/** the share (0..1) of segment ab inside the box [x, y, w, h] (Liang-Barsky) */
+function clipFraction(a, b, [x, y, w, h]) {
+  let t0 = 0, t1 = 1;
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  for (const [p, q] of [[-dx, a[0] - x], [dx, x + w - a[0]], [-dy, a[1] - y], [dy, y + h - a[1]]]) {
+    if (p === 0) { if (q < 0) return 0; continue; }
+    const r = q / p;
+    if (p < 0) { if (r > t1) return 0; if (r > t0) t0 = r; } else { if (r < t0) return 0; if (r < t1) t1 = r; }
+  }
+  return Math.max(0, t1 - t0);
+}
 const toWorld = (f, p) => [(p[0] - (f.R.x + f.R.w / 2)) / f.cam.s + f.cam.cx, -(p[1] - (f.R.y + f.R.h / 2)) / f.cam.s + f.cam.cy];
 const toScreen = (f, p) => [f.R.x + f.R.w / 2 + (p[0] - f.cam.cx) * f.cam.s, f.R.y + f.R.h / 2 - (p[1] - f.cam.cy) * f.cam.s];
 function bboxOf(pts) {
@@ -311,6 +348,7 @@ export function checkAll(m, opts = {}) {
     ...checkAnchor(m.forces || [], bodies, o),
     ...checkDirection(m.forces || [], { ...o, surfaces }),
     ...(m.labels ? checkLabels(m.labels, m.R, o) : []),
+    ...(m.labels && m.strokes ? checkLabelStrokes(m.labels, m.strokes, o) : []),
   ];
 }
 
@@ -436,7 +474,7 @@ export function autoHues(keys) {
   const u = [...new Set(keys.map(String))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return new Map(u.map((k, i) => [k, AUTO_HUES[i % AUTO_HUES.length]]));
 }
-const FigCheck = { AUTO_HUES, autoHues, angleAt, angleNumber, resolveAngles, checkAngleLabels, poly, box, circle, wseg, surface, incline, centroid, ptSeg, depthAlong, collide, segHitsBox, contactGap,
+const FigCheck = { checkLabelStrokes, AUTO_HUES, autoHues, angleAt, angleNumber, resolveAngles, checkAngleLabels, poly, box, circle, wseg, surface, incline, centroid, ptSeg, depthAlong, collide, segHitsBox, contactGap,
   checkContact, checkTilt, checkOverlap, checkAnchor, roleOf, checkDirection, checkLabels, checkSteps, checkBalance, checkAll, candBox, overlap, inBox, place, leaderOf };
 if (typeof globalThis !== "undefined") globalThis.FigCheck = FigCheck;
 export default FigCheck;
