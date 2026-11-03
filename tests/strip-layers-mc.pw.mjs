@@ -116,6 +116,13 @@ for (const [kind, widths, states] of CASES) {
       const T = `${W} ${kind} ${state}`;
       if (state !== "out") { if (pg) await pg.ctx.close(); pg = await pageFor(browser, W, SIZE[W]); }
       await reach(pg, kind, state);
+      if (kind === "multi" && state === "wrong") {   // a part miss with a try left makes no Cluck chip (partFeedback never calls wishOnWrong; Cluck comes when the whole item closes): nothing to host
+        await step(`${T}: a part miss with a try left has no chip, so no drawer; the part keeps its own mark`, async () => {
+          assert.equal(await drawerOpen(pg), false); assert.equal(await pg.evaluate(() => document.querySelectorAll("#q .vkb").length), 0);
+          assert.ok(await pg.isVisible('#q .part[data-i="0"] .vk'), "part mark");
+        });
+        continue;
+      }
       await step(`${T}: the drawer is open after the verdict, never a child of its host, one Ask Cluck chip`, async () => {
         assert.ok(await drawerOpen(pg), "no open drawer after the verdict");
         const rel = await pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"), host = d.previousElementSibling; return { nest: !!d.closest(".opt, .ff, .ch"), n: document.querySelectorAll("#q .vdrawer").length, chips: document.querySelectorAll(".wchip").length, inD: d.querySelectorAll(".wchip").length, prev: host && host.className }; });
@@ -195,16 +202,19 @@ await step("inline pills: the drawer follows the whole group (a sibling after .c
   assert.ok(r.open && r.after, JSON.stringify({ inl, ...r })); await pg.ctx.close();
 });
 
-await step("multi: one drawer + one chip; it moves to the part with the newest verdict and back when that part's icon is tapped", async () => {
+await step("multi: one drawer + one chip (Cluck comes when the item closes); it hangs under the newest verdict and moves to a part when its icon is tapped", async () => {
   const pg = await pageFor(browser, 390, 844);
   await goTo(pg, "STM_MUL");
-  await part(pg, 0, "9"); await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE + 300);
-  const under = () => pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"); const p = d && d.closest(".part, #ff"); const prev = d && d.previousElementSibling; return { n: document.querySelectorAll("#q .vdrawer").length, chips: document.querySelectorAll(".wchip").length, open: !!d && !d.hidden, host: prev && prev.closest(".part") && prev.closest(".part").dataset.i, hostPips: prev && prev.classList.contains("pips") && prev.previousElementSibling.closest(".part").dataset.i }; });
-  let u = await under(); assert.ok(u.open && u.n === 1 && u.chips === 1 && (u.host === "0" || u.hostPips === "0"), "part a: " + JSON.stringify(u));
-  await part(pg, 1, "9"); await verdictCount(pg, 2); await pg.waitForTimeout(SETTLE + 300);
-  u = await under(); assert.ok(u.open && u.n === 1 && u.chips === 1 && (u.host === "1" || u.hostPips === "1"), "part b: " + JSON.stringify(u));
+  await part(pg, 0, "9"); await verdictCount(pg, 1); await pg.fill('#q .part[data-i="0"] .ans', "8"); await pg.click("#go0"); await verdictCount(pg, 2);   // part a: out of tries (locked)
+  await pg.waitForTimeout(SETTLE);
+  await part(pg, 1, "4"); await pg.waitForSelector("#q.closed"); await pg.waitForTimeout(SETTLE + 300);   // part b right: the item closes, Cluck's chip comes
+  const under = () => pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"); const prev = d && d.previousElementSibling; return { n: document.querySelectorAll("#q .vdrawer").length, chips: document.querySelectorAll(".wchip").length, open: !!d && !d.hidden, host: prev && prev.closest(".part") && prev.closest(".part").dataset.i, hostPips: prev && prev.classList.contains("pips") && prev.previousElementSibling.closest(".part").dataset.i }; });
+  const at = (u, i) => u.open && u.n === 1 && u.chips === 1 && (u.host === i || u.hostPips === i);
+  let u = await under(); assert.ok(at(u, "1"), "part b (newest): " + JSON.stringify(u));
   await pg.click('#q .part[data-i="0"] .ff .vk[role=button]'); await pg.waitForTimeout(SETTLE + 300);
-  u = await under(); assert.ok(u.open && u.n === 1 && u.chips === 1 && (u.host === "0" || u.hostPips === "0"), "back to part a: " + JSON.stringify(u));
+  u = await under(); assert.ok(at(u, "0"), "moved to part a: " + JSON.stringify(u));
+  await pg.click('#q .part[data-i="1"] .ff .vk[role=button]'); await pg.waitForTimeout(SETTLE + 300);
+  u = await under(); assert.ok(at(u, "1"), "back to part b: " + JSON.stringify(u));
   assert.deepEqual(pg.errs, []); await pg.ctx.close();
 });
 
