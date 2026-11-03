@@ -50,19 +50,18 @@ try {
       const check = async (when) => {
         const b = await box(page);
         assert.equal(b.shown, want, `notes ${want ? "missing" : "visible"} ${when}`);
-        if (when === "on load") assert.ok(b.h > 0, `#xb lost its height ${when} (display:none?)`);   // later: Cluck open fills #work, and X / Escape dismisses the column (cl-gone), both by design (DISMISS.md)
+        if (when === "on load" && want) assert.ok(b.h > 0, `#xb lost its height ${when} (display:none?)`);   // diet only: sugar has Cluck's box from load, which fills #work (BIG PLAN V1, Tony Nov 2: no X, no Escape, so no height to keep)
       };
       await check("on load");
       if (SHOT) await page.screenshot({ path: join(SHOT, `desk-${w}-${mode}-load.png`) });
       await page.fill("#ans", "1"); await page.keyboard.press("Enter");
       if (mode === "sugar") {
-        await page.waitForSelector(".cl-peek .cl-cta", { timeout: 8000 });
-        await page.click(".cl-peek .cl-cta");
-        await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });
+        await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });   // open from load: nothing to click
         await page.waitForTimeout(600);
         await check("after Explain Cluck opened");
         await page.keyboard.press("Escape"); await page.waitForTimeout(500);
-        await check("after Explain Cluck closed");
+        assert.equal(await shown(page, "#work.cl-on #cluck"), true, "Escape leaves Cluck's box open");
+        await check("after Escape");
       } else await check("after a wrong answer");
       if (want) {
         await page.fill("#xbField textarea", "my note"); await page.waitForTimeout(700);

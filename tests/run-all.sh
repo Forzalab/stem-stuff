@@ -48,7 +48,7 @@ declare -A PART_ENV=(
   [ux-flows@phone]="WIDTHS=393"     # chunk key = width first (CEO plan PR 1); split a width further with FLOWS= only if it alone becomes the heaviest lane
   [ux-flows@desk]="WIDTHS=1280"
   [dot1@phone]="DOT_W=393"          # DOT-1 status dot: by width (each width opens its own pages)
-  [dot1@desk]="DOT_W=1280"
+  [dot1@desk]="DOT_W=700"   # BIG PLAN V1: 700, not 1280 (no dot on desktop sugar: the box is always open)
   [cluck-permanent@desk]="CP_W=1280,721"   # BIG PLAN V1: by width class
   [cluck-permanent@phone]="CP_W=393"
   [next-cue@1]="NC_MODE=sugar"      # by mode; the sugar-only restore check rides with sugar
