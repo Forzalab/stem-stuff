@@ -167,7 +167,7 @@ async function close(page, type, outcome, { code } = {}) {
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const CASES = [["num", "PHYS_TNM"], ["text", "PHYS_TTX"], ["expr", "PHYS_TEX"], ["mc", "PHYS_TMC"], ["mc-pill", "PHYS_TTF"], ["multi", "PHYS_TMU"], ["pick-all", "PHYS_TPA"]];
-const field = "rgb(0, 0, 0)";   // --field = --page (Ink, Nov 2)
+const field = "rgb(2, 6, 12)";   // --field = --page (Deep navy, Nov 2)
 for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
   const O = { mode, W, H };
   for (const [type, code] of CASES) for (const outcome of ["right", "out"]) {
@@ -211,9 +211,9 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
       } else assert.equal(got.ring, "none", "a ring outside the sugar right row: " + got.ring);
       if (outcome === "right" && !got.all) {   // V1 thin light, both modes: a 1px --correct ring, no fill (the row keeps its rest surface)
         assert.match(got.rim, /^1px rgb\(78, 230, 175\)/, "right ring (1px --correct): " + got.rim);
-        assert.ok(["rgb(22, 22, 22)", "rgb(0, 0, 0)"].includes(got.wash), "a fill on the right row/box: " + got.wash);
+        assert.ok(["rgb(20, 35, 58)", "rgb(11, 20, 34)", "rgb(2, 6, 12)"].includes(got.wash), "a fill on the right row/box: " + got.wash);
       }
-      assert.equal(got.face, outcome === "right" ? "rgb(78, 230, 175)" : "rgb(26, 26, 26)", "Next face: --correct after right, --raised out of tries (PALETTE-v3 §6)");
+      assert.equal(got.face, outcome === "right" ? "rgb(78, 230, 175)" : "rgb(27, 43, 64)", "Next face: --correct after right, --raised out of tries (PALETTE-v3 §6)");
       if (outcome === "out") {
         assert.equal(got.rightShown, false, "a reveal: the right row is marked");
         if (type === "mc") assert.ok(got.untried.length && got.untried.every(o => o === "1"), "untried mc rows dimmed (V1: rows never dim): " + got.untried);
