@@ -16,6 +16,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8886), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "repair-gap-")), BANKS = join(TMP, "banks");
 const MAX_GAP = 48;                                                         // px chips -> hint (the normal step gap is --s2 = 8)
+const MISS_D = "You used the diameter. What do you square in the area? QUACK.", MISS_W0 = "A diameter is not a radius. Which one does the area use?";   // todo 76: per-option lines
 const sac = n => ({ title: `Gap ${n}`, tip: "Pressure = force / area.", key: "$P=F/A$\nAnswer: 4" });
 const welcome = {
   code: "PHYS_GQ1", type: "num", answer: "3.74", tol: 0.01, welcome: true, noob: { tier: 1 }, saccharine: sac(0),
@@ -25,7 +26,9 @@ const welcome = {
     { id: "sheet", label: "Which formula line do you use for pressure?", kind: "sheet", pool: ["PRESSURE", "DENSITY", "P_DEPTH"], ok: "PRESSURE",
       why: { q: "Why this line?", opts: ["pressure is mass per volume", "pressure is force per area", "pressure grows with depth here"], ok: 1 } },
     { id: "area", label: "Area of the big piston", kind: "fill", tex: "A=\\pi(▢)^2", opts: ["d/2", "d", "2d"], ok: "d/2", fam: "off-by-factor",
-      why: { q: "Why half?", opts: ["the diameter is the radius", "you halve it for the second student", "area uses the radius, and the radius is half the diameter"], ok: 2 } },
+      miss: { d: MISS_D },
+      why: { q: "Why half?", opts: ["the diameter is the radius", "you halve it for the second student", "area uses the radius, and the radius is half the diameter"], ok: 2,
+        miss: { 0: MISS_W0 } } },
     { id: "answer", label: "Final answer", kind: "num" }
   ] }
 };
@@ -45,7 +48,7 @@ async function step(name, fn) {
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   for (const sz of SIZES) {
-    await step(`${sz.name}: a wrong pick on the fill step: the hint sits under the chips (gap <= ${MAX_GAP}px, no empty band)`, async () => {
+    await step(`${sz.name}: a wrong pick on the fill step: its own line (chip + why chip), under the chips (gap <= ${MAX_GAP}px, no empty band)`, async () => {
       const ctx = await browser.newContext({ viewport: { width: sz.w, height: sz.h }, serviceWorkers: "block" });
       await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
       await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
@@ -68,6 +71,10 @@ try {
         assert.ok(m.text && m.vis === "visible", "the hint is not shown: " + JSON.stringify(m));
         assert.ok(m.gap >= 0 && m.gap <= MAX_GAP, `chips -> hint gap ${Math.round(m.gap)}px (max ${MAX_GAP}); the unseen why block is ${Math.round(m.whyH)}px tall`);
         console.log(`     ${sz.name} gap ${Math.round(m.gap)}px`);
+        assert.equal(m.text, MISS_D, "a wrong chip with a miss line shows THAT line, not the generic hint");
+        await page.click(`${act} .rp-chip[data-v="d/2"]`);
+        await page.click(`${act} .rp-why .rp-chip[data-why="0"]`);        // a wrong why chip with a line (todo 76)
+        await page.waitForFunction(t => [...document.querySelectorAll("#q .rp-miss")].some(e => e.textContent === t && getComputedStyle(e).visibility === "visible"), MISS_W0, { timeout: 5000 });
       } finally { await ctx.close(); }
     });
   }
