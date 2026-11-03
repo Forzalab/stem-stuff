@@ -95,7 +95,8 @@ try {
     assert.equal(L.closed, false, "the replay has its second try");
     assert.equal(L.hint, true, "the replay shows the hint");
     assert.equal(L.pips, true, "the replay shows its tries");
-    assert.equal(L.duck, true, "Cluck peeks after the replay's first wrong");
+    assert.equal(L.duck, false, "BIG PLAN V1: desktop sugar has no duck, Cluck's box is open instead");
+    assert.equal(await page.evaluate(() => window.stemCluckOpen()), true, "Cluck's box is open after the replay's first wrong");
     await next(page); await opened(page, "PHYS_MQ3");
     assert.equal(await page.evaluate(() => window.stemMock.on()), false);
     await next(page);
