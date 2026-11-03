@@ -218,13 +218,13 @@ async function net(url, init = {}, ms = TIMEOUT) {
   inflight.add(req);
   try { const r = await fetch(url, { ...init, signal: ctl.signal }); fr.h(r); return r; }
   catch (e) { fr.x(e); throw e; }
-  finally { clearTimeout(t); inflight.delete(req); }
+  finally { if (!init.stream) clearTimeout(t); inflight.delete(req); }   // init.stream (a staged body): the cut-off also covers the body, headers come first
 }
 const localState = new Map();
 /* /check timed out twice in a row (flight recorder P2): the 2nd is its own incident, timeout_x2, so it is not folded into the 1st (flight.js
    dedupe) and its report shows the page after two waits; any other answer resets the count */
 let checkSlow = 0;
-async function check(code, answer) {
+async function check(code, answer, st) {   // st: the proof Check's stage tracker (stages.js)
   const off = window.stemOffline;
   if (off && off.has(code)) return gradeLocal(modeView(off.get(code), modeOf()), answer);   // an upload: the same mode view the server uses
   const t0 = Date.now(), tp = traceparent(), slow = checkSlow;
@@ -233,15 +233,30 @@ async function check(code, answer) {
   try {
     const rd = window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {};   // a redo round grades in its own namespace
     const r = await net("check", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-                                     body: JSON.stringify({ code, ...answer, ...rd }) }, S?.prob?.code === code && S.prob.type === "proof" ? PROOF_TIMEOUT : TIMEOUT);
-    if (r.ok) { try { return await r.json(); } catch (e) { inc = reqInc("check", "/check", t0, { e, phase: "parse", q: code, tp }); } }
+                                     body: JSON.stringify({ code, ...answer, ...rd, ...(st && { stages: true }) }), stream: !!st }, S?.prob?.code === code && S.prob.type === "proof" ? PROOF_TIMEOUT : TIMEOUT);
+    if (r.ok) { try { return st ? await staged(r, st) : await r.json(); } catch (e) { if (timedOut(e)) throw e; inc = reqInc("check", "/check", t0, { e, phase: "parse", q: code, tp }); } }   // a staged body cut by the 25 s abort is a timeout, not a parse failure
     else if (r.status >= 500) inc = reqInc("check", "/check", t0, { r, q: code, tp });   // a 4xx: no grader here (a static host), not a failure
   } catch (e) {
     if (timedOut(e)) checkSlow = slow + 1;
+    st?.finish(false);
     inc = reqInc("check", "/check", t0, { e, q: code, tp, why: checkSlow >= 2 ? "timeout_x2" : undefined });
     if (timedOut(e)) return { verdict: "timeout", inc }; /* else offline */
   }
+  st?.finish(false);
   return { verdict: "pending", inc };
+}
+/* a staged /check body (stages.js): event lines drive the stage rows, the rest is today's JSON; no event at all = a plain JSON body */
+async function staged(r, st) {
+  const rd = r.body.getReader(), dec = new TextDecoder(), sp = { buf: "" };
+  let text = "";
+  for (;;) {
+    const { value, done } = await rd.read(); if (done) break;
+    const c = Stages.feed(sp, dec.decode(value, { stream: true }));
+    c.events.forEach(st.event); text += c.text;
+  }
+  const v = JSON.parse(text);
+  st.finish(v.verdict !== "busy" && v.verdict !== "timeout");   // a tick only for a real verdict: busy = the grader gave up
+  return v;
 }
 /* mirror of serve.py grade(): keep the two in step */
 const PROOF_TRIES = 3;                                     // serve.py PROOF_TRIES (W107, Tony Oct 27: a proof gets 3 Checks)
@@ -827,7 +842,7 @@ function renderQuestion() {
         <textarea id="ans" class="ans" rows="8" maxlength="${PROOF_MAX}" aria-label="Your proof"${p.how ? ' aria-describedby="how"' : ""} ${INPUT_ATTRS.replace(' enterkeyhint="send"', "")}
           placeholder="Base case: ...&#10;Assume: ...&#10;Prove: ..."></textarea>
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check proof" disabled>${icon("i-go")}</button>
-      </div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
+      </div><div class="stg" id="stgp" aria-live="off"></div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
     wireProof();
   } else {
     const v = p.var || "x";
@@ -1352,8 +1367,10 @@ async function submitProof() {
   if (!v.trim() || S.finished || busy) return;
   busy = true;
   try {
-    const mine = S, r = await check(S.code, { answer: v });
-    if (S !== mine) return;
+    const mine = S, host = () => (S === mine ? $("#stgp") : null), st = Stages.make({ host, cap: PROOF_TIMEOUT / 1000 });   // stages.js: the Check's real steps, live
+    const h0 = host(); if (h0) h0.innerHTML = h0._stg = "";
+    const r = await check(S.code, { answer: v }, st);
+    if (S !== mine) { st.stop(); return; }
     if (r.verdict === "busy" || r.verdict === "timeout" || r.verdict === "pending") { proofWait(r); return; }   // not a try: the text stays
     if (r.verdict !== "invalid") record({ a: v }, r);
     if (r.rubric) rubricChips(r.rubric);
@@ -1922,13 +1939,14 @@ async function wishStart(auto) {
   const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
   w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
+  w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
   const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
-  let r = null, bytes = 0;
+  let r = null, bytes = 0, err = null;
   try {
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail() }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
     fr.h(r);
     if (!r.ok || !r.body) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
@@ -1937,19 +1955,23 @@ async function wishStart(auto) {
       if (r.status === 503 && !sc) { cluckOff = true; w.off = !auto; }     // no key here: a press (not the background ask) says so in the sheet
     }
     else {
-      const rd = r.body.getReader(), dec = new TextDecoder();
+      const rd = r.body.getReader(), dec = new TextDecoder(), sp = { buf: "" };
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
         bytes += value.length; fr.f();
-        w.text += dec.decode(value, { stream: true });
+        const c = Stages.feed(sp, dec.decode(value, { stream: true }));
+        for (const e of c.events) e.error ? (err = e) : w.stg.event(e);       // an {"error": "S-XXXXX"} line: the server's in-band failure (status was 200 already)
+        w.text += c.text;
         window.stemT?.("_tok");   // telemetry: first chunk time
         if (wish === w && w.open) wishText();
         if (wish === w) peekText();
       }
       fr.e(bytes);
-      if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
+      if (err) { w.failed = 1; w.inc = err.error; }
+      else if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
     }
   } catch (e) { fr.x(e); if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
+  w.ctl.signal.aborted ? w.stg.stop() : w.stg.finish(!w.failed && !!w.text);   // the tick only for a whole reply
   w.done = true;
   if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
@@ -1959,7 +1981,7 @@ async function wishStart(auto) {
   if (w.open) wishDraw();                                                  // an open sheet shows the failure, not a caret forever (G2c row 23)
 }
 function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
-  Object.assign(w, { failed: 0, capped: false, inc: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
+  Object.assign(w, { failed: 0, capped: false, inc: null, stg: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
   wishStart(false);
 }
 /* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
@@ -2132,6 +2154,7 @@ function wishFrame(now) {
   if (!x || !w || !w.open) return;
   if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
   const t = w.text;
+  if (w.stg?.seen) w.stg.paint(); else x.parentElement.querySelector(":scope > .stg")?.remove();   // a stale row list from another question never stays
   if (w.done && !t && (w.failed || w.capped)) {                           // nothing came: say so in the sheet (the chip sits under it on a phone)
     if (w.drawn !== -2) {
       if (w.off) $("#cluck .cl-ft").hidden = true;                          // no ask field: /chat has no key either
@@ -2145,7 +2168,7 @@ function wishFrame(now) {
   }
   if (now < w.at || !t) {
     w.l0 ??= Math.random() * WISH_LINES.length | 0; w.w0 ??= now;
-    const k = t ? -1 : (w.l0 + ((now - w.w0) / WISH_SWAP | 0)) % WISH_LINES.length;   // first chunk in: the line goes, the caret stays
+    const k = t || w.stg?.seen ? -1 : (w.l0 + ((now - w.w0) / WISH_SWAP | 0)) % WISH_LINES.length;   // first chunk in: the line goes, the caret stays
     if (w.drawn !== -1 || w.line !== k) {
       x.innerHTML = k < 0 ? WCARET : `<span class="wload" aria-hidden="true">${WISH_LINES[k]}</span>${WCARET}`;
       if (k >= 0 && !w.thought) { w.thought = true; say("Cluck is thinking."); }
@@ -2169,6 +2192,13 @@ function wishFrame(now) {
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
   if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
+}
+/* the stage rows' home: above the reply in the open sheet (null = closed: stages.js paints when asked again, so opening shows the state so far) */
+function wishStgHost(w) {
+  const x = wish === w && w.open && $("#cluck .wtext"); if (!x) return null;
+  const p = x.parentElement; let h = p.querySelector(":scope > .stg");
+  if (!h) { h = document.createElement("div"); h.className = "stg"; h.setAttribute("aria-live", "off"); (p.querySelector(":scope > .cl-quack") || x).before(h); }
+  return h;
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 /* the peek: only the start of the steps (the rest is under the fade); wishCut never splits a $..$ */

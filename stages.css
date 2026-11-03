@@ -1,0 +1,22 @@
+/* 160 PR-B "tool call theater" (stages.js): Cluck's real steps while he works. A Step list (mock v1): a spinner + the "now" words per running
+   row, a tick + the past tense per done row, each row's seconds on the right, a "4s / 25s" chip (the proof Check only), and the one-line
+   "Thought for 6s" summary when the reply is whole. Chrome, not Cluck's reply: tokens only, no new colors (the tick is --correct). */
+.stg { color: var(--muted); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.stg:empty { display: none; }
+.stg-l { list-style: none; margin: 0; padding: 0; }
+.stg-r { display: flex; align-items: center; gap: var(--s2); min-height: 1.75rem; }
+.stg-tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-s, .stg-tmr { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stg-tmr { display: block; text-align: end; font-size: var(--t-xs); }
+.stg-ic { flex: none; position: relative; display: inline-block; width: 1rem; height: 1rem; }
+.stg-r.run .stg-ic { border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: stg-spin .9s linear infinite; }
+.stg-r.done .stg-ic::after, .stg-ok::after { content: ""; position: absolute; left: 4px; top: 0; width: 5px; height: 10px; border: solid var(--correct); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.stg-r.bad .stg-ic { border: 2px dashed var(--wrong-rim); border-radius: 50%; }   /* no tick: an open ring */
+.stg-r.bad { color: var(--wrong-on); }
+.stg-sum { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: 44px; padding: 0; background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.stg-sum > span { flex: 1; }
+.stg-chev { flex: none; width: .5rem; height: .5rem; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform var(--d-move, .2s); }
+.stg-sum.open .stg-chev { transform: rotate(45deg); }
+.stg-sum.open + .stg-l { padding-inline-start: var(--s5); }
+@keyframes stg-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .stg-r.run .stg-ic { animation: none; } .stg-chev { transition: none; } }

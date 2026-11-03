@@ -52,6 +52,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="copy/seen-lines.js" defer></script><!-- J6 seen lines (data only), read by intent.js -->
 <script src="intent.js" defer></script><!-- Jev log + rule counters + nudges, on for all (?jev=0 = off on this device); after telemetry.js: it wraps window.stemT -->
 <script src="toast.js" defer></script><!-- the one toast (design/TOAST.md round 5): the stage lines + the notes (todo 112); before app.js, which shows the notes, and engine.js, which shows the stage lines -->
+<script src="copy/stage-lines.js" defer></script><script src="stages.js" defer></script><!-- 160 PR-B: the stage rows (words + tracker); before app.js, which reads window.Stages -->
 <script type="module" src="app.js"></script>
 <script type="module" src="nav.js"></script>
 <!-- offline hook: offline.js (service worker registration, cache) is written separately; do not implement here -->
@@ -108,6 +109,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="vendor/fonts/press-start-2p.css">
 <link rel="stylesheet" href="rewards/rewards.css">
 <link rel="stylesheet" href="toast.css">
+<link rel="stylesheet" href="stages.css"><!-- 160 PR-B: the stage rows (stages.js) -->
 <link rel="stylesheet" href="repair.css">
 <link rel="stylesheet" href="welcome.css">
 <link rel="stylesheet" href="views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
