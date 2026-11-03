@@ -31,6 +31,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const MIN = 60000;
+const WIDE = { width: 700, height: 900 };   // BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) has Cluck open for good, so the duck never rises there. The mouse flows run at 700: a mouse, the one-column layout, just under the side-by-side breakpoint
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
 const browser = await pw.chromium.launch();
 
@@ -105,7 +106,7 @@ const look = page => page.evaluate(() => {
     scrollW: document.documentElement.scrollWidth, col: { l: fr.left, r: fr.right, cx: fr.left + fr.width / 2 } };
 });
 
-for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1440, height: 900 }]]) for (const rm of [false, true]) {
+for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", WIDE]]) for (const rm of [false, true]) {
   const tag = `${name}${rm ? " reduce" : ""}`;
   await step(`${tag}: no peek at 2:59, the peek at 3:00, then the sunrise ends with the duck up over the sun`, async () => {
     const page = await open({ vp, rm, touch: name === "phone" });
@@ -163,7 +164,7 @@ await step("motion, mid-run: the peek shows the eyes only (42px of 64)", async (
 });
 
 await step("any input puts him away; a mouse move never does while he is up (fix A); the timer starts over", async () => {
-  const page = await open({ vp: { width: 1440, height: 900 } });
+  const page = await open({ vp: WIDE });
   await idle(page, 3 * MIN + 1000);
   assert.equal(await up(page), true);
   await page.mouse.move(600, 600); await page.mouse.move(610, 600);
@@ -201,7 +202,7 @@ await step("input in the 3 min (a pick, a wheel) pushes the peek out; a question
 });
 
 await step("desktop: duck up, the mouse moves 200px toward him: still up; a click on him works; a key press still dismisses", async () => {
-  const page = await open({ vp: { width: 1440, height: 900 } });
+  const page = await open({ vp: WIDE });
   await idle(page, 3 * MIN + 1000);
   await settle(page);
   assert.equal(await up(page), true);
@@ -214,7 +215,7 @@ await step("desktop: duck up, the mouse moves 200px toward him: still up; a clic
   assert.equal(await up(page), false, "the click on him took it");
   assert.deepEqual(page.errs, []);
   await page.context().close();
-  const p2 = await open({ vp: { width: 1440, height: 900 } });
+  const p2 = await open({ vp: WIDE });
   await idle(p2, 3 * MIN + 1000);
   await p2.mouse.move(300, 300); await p2.mouse.move(500, 300);
   assert.equal(await up(p2), true, "moved, still up");
@@ -269,7 +270,7 @@ const wrongPick = async (page, id = "b") => {
   await page.click(`.ch[data-id="${id}"] .send`);
   await until(page, n => window.__drill.state.tries.length > n, n);
 };
-for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["desktop", { width: 1440, height: 900 }, false], ["desktop reduce", { width: 1440, height: 900 }, true]]) {
+for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["desktop", WIDE, false], ["desktop reduce", WIDE, true]]) {
   await step(`${name}: the first wrong answer starts the sunrise in ~0.7 s, once per question, then the 3 min idle peek still comes`, async () => {
     const page = await open({ vp, rm, touch: name === "phone" });
     await idle(page, 5000);
@@ -303,7 +304,7 @@ for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["d
 }
 
 await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up, a click puts him away; a move after 2.5 s keeps him up too (fix A)", async () => {
-  const page = await open({ vp: { width: 1440, height: 900 } });
+  const page = await open({ vp: WIDE });
   await wrongPick(page);
   await page.mouse.move(700, 400);
   await idle(page, 1600);                                              // 0.7 s wait + 0.9 s up
@@ -315,7 +316,7 @@ await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up,
   await idle(page, 800);
   assert.equal(await up(page), false, "a click puts him away");
   await page.context().close();
-  const p2 = await open({ vp: { width: 1440, height: 900 } });
+  const p2 = await open({ vp: WIDE });
   await wrongPick(p2);
   await p2.mouse.move(700, 400);
   await idle(p2, 1600);
