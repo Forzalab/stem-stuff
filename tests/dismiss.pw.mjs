@@ -77,6 +77,7 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close
     for (const id of await page.$$eval(".opt[data-id]", os => os.map(o => o.dataset.id).filter(d => d !== "a" && d !== "b"))) {
       if (await page.evaluate(() => window.__drill.state.finished)) break;
       const k = await page.evaluate(() => window.__drill.state.tries.length);
+      await page.evaluate(() => document.querySelector(".vdrawer:not([hidden]) .vd-x, .vdrawer:not([hidden]) [aria-label=\"Close\"]")?.click()); await page.waitForFunction(() => !document.querySelector(".vdrawer:not([hidden]):not(.vd-shut)"), null, { timeout: 3000 });   // V2: the tray opens after a miss on desktop too: shut it first, it covers the next row
       await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
       await page.waitForFunction(k => window.__drill.state.tries.length > k, k, { timeout: 5000 });
     }

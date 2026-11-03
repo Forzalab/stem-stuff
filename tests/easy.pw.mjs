@@ -367,7 +367,7 @@ try {
     const first = (await page.textContent("#cluck .wtext")).trim();
     assert.ok(!/Egg-cellent/.test(first), "no typing: " + first);
     unhold();
-    assert.equal(await page.isHidden("#wish"), true, "desktop, sheet open: no chip (Tony, Oct 5: variant a)");
+    assert.equal(await page.isHidden("#wish"), false, "desktop, permanent box (V2): the chip stays, it is the tray / verdict way to Cluck (always-true-gate: Oct 5 variant a no longer holds)");
     assert.equal(await page.$(".cl-peek"), null, "desktop, sheet open: no peek, no CTA");
     assert.equal(await page.isVisible("#cluck .cl-bar"), true, "B5 (Tony, Oct 18): bar visible at 1280, the Cluck / TUTOR header");
     assert.equal(await page.isVisible("#cluck .cl-x"), false, "V1: no X on desktop sugar");
@@ -848,7 +848,7 @@ try {
       const cmp = p.locator(":is(#wish, .rbox) .cue-ok");   // B3 PR-B1: on a typed question the chip lives in the verdict drawer (class rbox)
       if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await p.waitForTimeout(400); }
       const z = await g();
-      assert.equal(z.wish, false, "the sheet is open: #wish hides (W90's rule)");
+      assert.equal(z.wish, true, "V2: the permanent box keeps #wish unhidden (its chip is the tray / bar segment); the data-box rule folds the spent room instead (W90)");
       assert.ok(z.pv === 0 && z.fc - z.ff <= a.fc - a.ff + 1, `a blank band: #ff -> #fcard ${z.fc - z.ff} px (before any answer ${a.fc - a.ff}), the spent room ${z.pv} px`);
     } finally { await c.close(); }
   });

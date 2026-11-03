@@ -1296,8 +1296,7 @@ function xLine(i, r) {                                                     // no
 }
 function xCluck(msg) {                                                     // Cluck's 6 moves, as his message; he opens (the wrong-answer prefetch path)
   if (!S || !msg) return;
-  if (wish && wish.ctl) wish.ctl.abort();
-  wish = newWish();
+  wishNew();
   Object.assign(wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
   wishPaint();
   clOpen("explain", ":is(#wish, .rbox) .wchip", true);
@@ -1808,7 +1807,7 @@ function reveal(r, part) {
 function cueChip(still) {
   if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
-  if (!wish || wish.code !== S.code) { wish = Object.assign(newWish(), { started: false }); wishFromCache(wish); }
+  if (!wish || wish.code !== S.code || wish.idle) { wishNew({ started: false }); wishFromCache(wish); }
   if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
   wishPaint();
 }
@@ -1876,6 +1875,14 @@ let wish = null;   // { code, text, started, done, open, failed, ctl, off }
    Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
 let cluckOff = false;
 const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-PENDING
+/* BIG PLAN V2 (Tony, Nov 2 23:01): every line of the permanent box that is not Cluck's own reply lives here. COPY-PENDING: Tony vets all of it (the no-key
+   note is meant to read like a good fun 404 page). The three starters are app chrome (like .wchip): a tap sends its text through the ask field's pipe (clSend) */
+const CL_COPY = {
+  idle: "Ask me anything about this question. If you miss, I'll explain what went wrong.",
+  starters: ["What is this asking?", "Which formula fits?", "Check my setup"],
+  nokey: "404: Cluck not found. This one hatched without a duck, so he's off paddling somewhere else. The question is all yours. You've got this!",
+  done: "Want my steps? Tap the duck chip under your answer.",
+};
 const WHY_ASK = "Why does this work?";                                   // COPY-PENDING (W110): the chip under a right-pick reply, and the question it sends
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
    the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
@@ -1917,14 +1924,20 @@ function wishReset() {
   document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
   clReset();
 }
+function wishNew(ex) {                                                       // a real wish; the idle one it replaces hands over its spent questions (the server counts per question)
+  const spent = wish && wish.idle && wish.code === S.code ? wish.chat.filter(t => t.role === "user").length + (wish.spent || 0) : 0;
+  if (wish && wish.ctl) wish.ctl.abort();
+  if (wish && wish.idle && cl) { cl.el.querySelector(".cl-thread").innerHTML = ""; cl.el.querySelector(".wtext").innerHTML = ""; cl.el.querySelector("#clTabEP .cl-quack")?.remove(); }
+  return (wish = Object.assign(newWish(), { spent }, ex));
+}
+const idleWish = () => Object.assign(newWish(), { text: CL_COPY.idle, done: true, started: true, shown: CL_COPY.idle.length, pos: CL_COPY.idle.length, skip: true, at: 1, said: true, idle: true, key: "idle|" + S.code });
 const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
 /* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
   if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
-  if (wish && wish.code === S.code) { wishPaint(); return; }               // a later miss redrew the hint card: Cluck's peek goes back in
-  wish = newWish();
-  const w = wish;
+  if (wish && wish.code === S.code && !wish.idle) { wishPaint(); return; } // a later miss redrew the hint card: Cluck's peek goes back in
+  const w = wishNew();
   /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
   const auto = () => { if (sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ":is(#wish, .rbox) .wchip", true); };
@@ -2191,7 +2204,7 @@ function wishFrame(now) {
   }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
+  if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // (the idle wish is born said: the box opening on load is not announced)   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
 }
 /* the stage rows' home: above the reply in the open sheet (null = closed: stages.js paints when asked again, so opening shows the state so far) */
 function wishStgHost(w) {
@@ -2220,14 +2233,16 @@ function wishPaint() {
   const room = Math.max(0, ...[...document.querySelectorAll(".cl-peek, .cl-room")].map(p => p.getBoundingClientRect().height));   // the room the peek had (W129 L4)
   document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
   el.classList.remove("gone");
-  if (!w || [404, 503].includes(w.failed)) {
+  if (!w || w.idle || [404, 503].includes(w.failed)) {                    // (the idle wish is the box's own opener: nothing on the page yet)
     el.hidden = true;
     if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
     clBackSync(); return;
   }
-  const off = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
+  const perm = clPerm();                                                   // V2: the permanent box is never "the way back": the chip stays (the strip tray's Ask Cluck, the verdict's See steps)
+  const off = perm ? false : sideMQ.matches ? w.open                       // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
     : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Compare with a similar solution" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
   el.hidden = off;
+  el.toggleAttribute("data-box", perm && !!w.open);                          // V2: what hiding #wish did to the spent preview (app.css), for the permanent box
   const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
   if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
   el.classList.toggle("cue", cue);
@@ -2236,7 +2251,7 @@ function wishPaint() {
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
-  } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
+  } else if (w.started && !w.failed && !perm) {                            // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
     el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
     const keep = off && sideMQ.matches && room > 0;                         // desktop, the sheet open: no peek, no chip (Tony, Oct 5: variant a), but its room stays as an empty
@@ -2246,8 +2261,8 @@ function wishPaint() {
     el.hidden = (off && !keep) || !!host;
     el.classList.toggle("gone", keep && !host);                             // #wish's own card: unseen, its room kept
   } else {
-    const label = !w.started ? "Explain my mistake" : "Oops, didn't load. Tap to try again.";
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
+    const label = !w.started ? "Explain my mistake" : w.failed ? "Oops, didn't load. Tap to try again." : "Ask Cluck";   // permanent box + a reply on its way: the chip (the tray's "Ask Cluck") takes the student to the box's ask field
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   rboxSync();
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta") || document.querySelector(".rbox .wchip");   // the chip painted just now: in #wish, or already docked (typed bar). Never an older chip that the strip drawer (a .rbox before #wish in the DOM) still holds: it is about to be replaced, and the new one would get no handler
@@ -2256,6 +2271,7 @@ function wishPaint() {
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
     else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ":is(#wish, .rbox) .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
+    else if (perm && w.open) { clAskFocus(); return; }                      // the box is always open: the chip goes to its ask field
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : ":is(#wish, .rbox) .wchip");
   });
@@ -2276,7 +2292,7 @@ function clEl() {
   el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Explain");
   el.innerHTML = `<button type="button" class="cl-grab" aria-label="Expand Cluck to full screen"><i></i></button><div class="cl-bar"><span class="cl-avw" role="img" aria-label="Cluck, online"><span class="cl-av">${icon("i-duck")}</span><i class="cl-dot"></i></span><span class="cl-title">Cluck</span><span class="tag">TUTOR</span><button type="button" class="cl-x" aria-label="Close">${icon("i-x")}</button></div>
     <button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button>
-    <div class="cl-bd"><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
+    <div class="cl-bd"><p class="cl-note" hidden></p><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-starters" role="group" aria-label="Ask Cluck" hidden></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
       <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
       <div class="cl-pane" id="clTabSP"></div></div>
     <div class="cl-ft"><button type="button" class="cl-more" aria-label="Scroll down">${icon("i-down")}</button><div class="cl-fi"></div></div>`;   // .cl-fi: the ask field / done row (clAsk); the hint stays
@@ -2394,7 +2410,9 @@ function clOpen(tab, from, auto) {                                        // aut
   window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
   clEl(); if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
-  cl.perm = clPerm(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
+  cl.perm = clPerm();
+  if (cl.perm && !S.finished && S.prob.wish && !cluckOff && !S.prob.original && (!wish || wish.code !== S.code)) wish = idleWish();   // V2: before any miss the box holds the opener + starters, not a blank
+  cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
   if (sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
@@ -2528,6 +2546,7 @@ function clTab(tab, focus) {
     if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
   }
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
+  clIdleSync();
   clMore();
   if (focus) {                                                              // a manual open: focus goes into the sheet (an auto open never moves it)
     const ta = cl.el.querySelector(".ask textarea");
@@ -2557,17 +2576,40 @@ function clMore(late) {
   if (on === bd.classList.contains("below")) { clearTimeout(cl.moreT); cl.moreT = 0; return; }
   if (on && late !== true) { cl.moreT ||= setTimeout(() => { cl.moreT = 0; clMore(true); }, 150); return; }   // it shows once the sheet has settled (side by side the column re-fits ~70ms after it opens): no flash; it hides at once
   bd.classList.toggle("below", on);
+  if (wish && wish.idle) return;                                           // V2: the opener + starters are not a reply: Jev hears nothing for them
   const k = `${wish?.code}#${cl.el.querySelectorAll(".cl-thread .wreply").length}`, m = cl.more;
   if (on && m?.k !== k) { cl.more = { k }; window.stemT?.("cluck_more", { act: "shown" }); }
   else if (!on && cl.open && m?.k === k && !m.end) { m.end = true; window.stemT?.("cluck_more", { act: "bottom" }); }   // scrolled to the end (a close is not "bottom")
 }
 /* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
+/* V2: the permanent box's own words. Idle (before any miss): Cluck's opener line (the idle wish's text) + three starter chips; each sends through the ask field's pipe, so it counts against the 5.
+   A question with no Cluck key: the note instead (CL_COPY.nokey). Right on the first try, no steps asked yet: the note points at the duck chip */
+function clIdleSync() {
+  if (!cl) return;
+  const st = cl.el.querySelector(".cl-starters"), nt = cl.el.querySelector(".cl-note"), w = wish, perm = cl.open && cl.perm && !!S;
+  const idle = perm && !!w && w.idle && w.code === S.code && !w.chat.length && !w.busy && !w.out && CHAT_TURNS - (w.spent || 0) > 0;
+  st.hidden = !idle;
+  if (idle && !st.firstChild) {
+    for (const t of CL_COPY.starters) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "cl-starter"; b.textContent = t;
+      b.addEventListener("click", () => { if (wish && wish.idle && !wish.busy) clSend(t); });
+      st.append(b);
+    }
+  }
+  const text = !perm ? "" : (!S.prob.wish || cluckOff) ? CL_COPY.nokey : (!!w && !w.idle && !w.started && S.finished) ? CL_COPY.done : "";
+  nt.hidden = !text; nt.textContent = text;
+}
+function clAskFocus() {                                                     // the tray's Ask Cluck on the permanent box: the field takes the cursor (the box stays where it is)
+  const ta = cl && cl.el.querySelector(".cl-ft:not([hidden]) .ask textarea:not(:disabled)");
+  if (ta) ta.focus({ preventScroll: false }); else cl?.el.querySelector(".cl-bd")?.scrollTo({ top: 1e5, behavior: "smooth" });
+}
 function clAsk(build) {
   if (!cl) return;
+  clIdleSync();
   const ft = cl.el.querySelector(".cl-fi"), w = wish;
   cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
   if (!w) { ft.innerHTML = ""; return; }
-  const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
+  const left = w.out ? 0 : CHAT_TURNS - (w.spent || 0) - w.chat.filter(t => t.role === "user").length;   // spent: the starters asked before the miss
   if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>Classic Cluck, wound down at ${CHAT_TURNS}. On to the next one.</p></div>`; return; }
   if (build || !ft.querySelector(".ask")) {
     ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;

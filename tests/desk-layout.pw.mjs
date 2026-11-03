@@ -263,7 +263,8 @@ try {
           await settle(page);
           await column(page, `${tag} notes`, size);
           if (await page.$("#work .rot-link")) {
-            await gate(page, "fold", size, () => page.click("#work .rot-link"), async c => [{ x: c.q0["#work"][0], y: c.q0["#work"][1], w: c.q0["#work"][2], h: Math.max(c.q0["#work"][3], c.q1["#work"][3]) }]);
+            const fold = () => page.click("#work .rot-link"); fold.live = true;   // V2: the box holds the idle opener + starters; the scroll-down fade (.below) follows the box as it grows, so its edge may repaint once
+            await gate(page, "fold", size, fold, async c => [{ x: c.q0["#work"][0], y: c.q0["#work"][1], w: c.q0["#work"][2], h: Math.max(c.q0["#work"][3], c.q1["#work"][3]) }]);
             await column(page, `${tag} folded`, size);
             await page.click("#work .rot-link"); await page.waitForTimeout(400);
           }
