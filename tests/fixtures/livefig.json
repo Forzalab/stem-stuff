@@ -2651,6 +2651,208 @@
       "label": "$N$"
      }
     ]
+   },
+   {
+    "name": "corner: a 1x1 block 0.04 above the floor, 0.03 off the piston face (I-BODY-1: stays flat, rests on the floor)",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "A block on the floor beside a piston.",
+     "marks": [
+      {
+       "mark": "surface",
+       "from": [
+        -5,
+        0
+       ],
+       "to": [
+        5,
+        0
+       ]
+      },
+      {
+       "mark": "seg",
+       "from": [
+        1.53,
+        0
+       ],
+       "to": [
+        1.53,
+        2
+       ]
+      },
+      {
+       "mark": "body",
+       "at": [
+        1,
+        0.54
+       ],
+       "shape": "box",
+       "w": 1,
+       "h": 1,
+       "angle": 0
+      },
+      {
+       "mark": "force",
+       "at": [
+        1,
+        0.54
+       ],
+       "angle": 270,
+       "len": 1,
+       "label": "$mg$"
+      }
+     ]
+    },
+    "codes": [
+     "contact"
+    ],
+    "want": [
+     {
+      "mark": "surface",
+      "from": [
+       -5,
+       0
+      ],
+      "to": [
+       5,
+       0
+      ]
+     },
+     {
+      "mark": "seg",
+      "from": [
+       1.53,
+       0
+      ],
+      "to": [
+       1.53,
+       2
+      ]
+     },
+     {
+      "mark": "body",
+      "at": [
+       1,
+       0.5
+      ],
+      "shape": "box",
+      "w": 1,
+      "h": 1,
+      "angle": 0
+     },
+     {
+      "mark": "force",
+      "at": [
+       1,
+       0.5
+      ],
+      "angle": 270,
+      "len": 1,
+      "label": "$mg$"
+     }
+    ]
+   },
+   {
+    "name": "corner: a block cutting 0.1 into the piston face is pushed out along the floor (I-BODY-1)",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "A block on the floor beside a piston.",
+     "marks": [
+      {
+       "mark": "surface",
+       "from": [
+        -5,
+        0
+       ],
+       "to": [
+        5,
+        0
+       ]
+      },
+      {
+       "mark": "seg",
+       "from": [
+        1.4,
+        -0.3
+       ],
+       "to": [
+        1.4,
+        2
+       ]
+      },
+      {
+       "mark": "body",
+       "at": [
+        1,
+        0.5
+       ],
+       "shape": "box",
+       "w": 1,
+       "h": 1,
+       "angle": 0
+      },
+      {
+       "mark": "force",
+       "at": [
+        1,
+        0.5
+       ],
+       "angle": 270,
+       "len": 1,
+       "label": "$mg$"
+      }
+     ]
+    },
+    "codes": [
+     "contact"
+    ],
+    "want": [
+     {
+      "mark": "surface",
+      "from": [
+       -5,
+       0
+      ],
+      "to": [
+       5,
+       0
+      ]
+     },
+     {
+      "mark": "seg",
+      "from": [
+       1.4,
+       -0.3
+      ],
+      "to": [
+       1.4,
+       2
+      ]
+     },
+     {
+      "mark": "body",
+      "at": [
+       0.8999999999999999,
+       0.5
+      ],
+      "shape": "box",
+      "w": 1,
+      "h": 1,
+      "angle": 0
+     },
+     {
+      "mark": "force",
+      "at": [
+       0.8999999999999999,
+       0.5
+      ],
+      "angle": 270,
+      "len": 1,
+      "label": "$mg$"
+     }
+    ]
    }
   ]
  }

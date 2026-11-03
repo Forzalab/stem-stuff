@@ -54,15 +54,15 @@
   /* stroke recorder (U3, I-LBL-1): while a figure is built, every drawn stroke is kept as screen-px segments tagged with the mark
      that drew it, so mount() can place labels off them (figcheck.js place()). Grid lines are not obstacles. */
   let REC = null, CUR = -1, LAY = 1;   // LAY: the emphasis layer (1 main, 2 given, 3 context) of the mark being drawn; its labels take it too
-  function rec(pts, closed) {
+  function rec(pts, closed, dash) {
     if (!REC) return;
-    const q = pts.filter(fin);
-    for (let i = 0; i + 1 < q.length; i++) REC.push({ id: CUR, pts: [q[i], q[i + 1]] });
-    if (closed && q.length > 2) REC.push({ id: CUR, pts: [q[q.length - 1], q[0]] });
+    const q = pts.filter(fin), d = dash ? { dash: true } : {};
+    for (let i = 0; i + 1 < q.length; i++) REC.push({ id: CUR, pts: [q[i], q[i + 1]], ...d });
+    if (closed && q.length > 2) REC.push({ id: CUR, pts: [q[q.length - 1], q[0]], ...d });
   }
   const ring = (c, r, a0 = 0, a1 = 360, n = 16) => Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + (a1 - a0) * i / n) * deg; return [c[0] + r * Math.cos(a), c[1] - r * Math.sin(a)]; });
   function line(pts, st, w, dash) {
-    if (st !== "var(--grid)") rec(pts);
+    if (st !== "var(--grid)") rec(pts, false, dash);
     return `<polyline points="${P(pts)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
   }
   /* split a sampled curve at non-finite points and big jumps (asymptotes) */
@@ -407,6 +407,26 @@
   function fix(marks) {
     const codes = new Set(), out = marks.map(m => ({ ...m }));
     const surf = surfacesOf(out), bodies = [];
+    /* I-BODY-1: a steep surface (a wall, a piston face, > 60 deg) is no support: the body is never turned or pulled onto it. It only
+       pushes a body out of it (along the support when there is one, so the body keeps resting), by the depth of the overlap. */
+    const steep = s => { const a = Math.abs(angOf(s.u)); return Math.min(a, 180 - a) > 60; };
+    const wallOut = q => {
+      const k = q.k, ca = Math.cos(q.ang1 * deg), sa = Math.sin(q.ang1 * deg);
+      for (const s of surf) {
+        if (!steep(s)) continue;
+        const rx = q.c1[0] - s.a[0], ry = q.c1[1] - s.a[1], t = rx * s.u[0] + ry * s.u[1], dl = s.u[0] * ry - s.u[1] * rx;
+        if (t < 0 || t > s.L) continue;
+        if (!s.up && [s.a, s.b].some(p => outside(local(p, q), k) <= FIX.tol * k.size)) continue;
+        const side = s.up || (dl >= 0 ? 1 : -1), n = [-side * s.u[1], side * s.u[0]];
+        const ext = k.box ? k.hw * Math.abs(n[0] * ca + n[1] * sa) + k.hh * Math.abs(-n[0] * sa + n[1] * ca) : k.hw;
+        const gap = side * dl - ext;
+        if (gap >= -FIX.tol * k.H) continue;
+        const p = q.prim, along = p && Math.abs(n[0] * p.u[0] + n[1] * p.u[1]) > 0.3;
+        const d = along ? [p.u[0] * Math.sign(n[0] * p.u[0] + n[1] * p.u[1]), p.u[1] * Math.sign(n[0] * p.u[0] + n[1] * p.u[1])] : n, k2 = -gap / (along ? Math.abs(n[0] * p.u[0] + n[1] * p.u[1]) : 1);
+        q.c1 = [q.c1[0] + d[0] * k2, q.c1[1] + d[1] * k2];
+        q.m.at = q.c1; codes.add("contact");
+      }
+    };
     const paths = out.filter(m => m.mark === "path").flatMap(m => { try { return sample(m).filter(fin); } catch { return []; } });
     for (const m of out) {
       const k = solid(m);
@@ -417,6 +437,7 @@
       if (paths.some(p => Math.hypot(p[0] - q.c[0], p[1] - q.c[1]) <= FIX.near * k.size)) continue;   // a body on its trajectory flies
       let best = null;
       for (const s of surf) {
+        if (steep(s)) continue;                                // a wall is a side contact: resolved after the support below (I-BODY-1)
         const rx = q.c[0] - s.a[0], ry = q.c[1] - s.a[1], t = rx * s.u[0] + ry * s.u[1], dl = s.u[0] * ry - s.u[1] * rx;
         if (t < 0 || t > s.L) continue;
         const side = s.up || (dl >= 0 ? 1 : -1), gap = side * dl - k.hh;
@@ -424,13 +445,15 @@
         if (!s.up && [s.a, s.b].some(p => outside(local(p, q), k) <= FIX.tol * k.size)) continue;   // a seg that starts on the body (a radius, a rope)
         if (!best || Math.abs(gap) < Math.abs(best.gap)) best = { s, side, t, gap };
       }
-      if (!best) continue;
+      if (!best) { wallOut(q); continue; }
       const { s, side, t, gap } = best, n = [-side * s.u[1], side * s.u[0]];
       q.c1 = [s.a[0] + t * s.u[0] + k.hh * n[0], s.a[1] + t * s.u[1] + k.hh * n[1]];
       let tilt = angOf(s.u); if (tilt > 90) tilt -= 180; if (tilt <= -90) tilt += 180;
       if (k.box) q.ang1 = tilt;
       q.rest = { n, u: s.u };
       if (Math.abs(gap) > FIX.tol * k.H || (k.box && turnBy(q.ang, q.ang1, 180) > FIX.turn)) codes.add("contact");
+      q.prim = s;
+      wallOut(q);
       m.at = q.c1; if (k.box) m.angle = q.ang1;
     }
     /* which body a point is on (inside its outline, or within near x size of it), in the body's authored pose */
@@ -524,7 +547,8 @@
         grow.t = Math.max(grow.t, 4 - it.y); grow.b = Math.max(grow.b, it.y + it.h - H + 4);
       }
       if (leads) el.firstElementChild.insertAdjacentHTML("beforeend", leads);
-      el._labels = items.map(it => ({ id: String(it.L.id), box: [it.x, it.y, it.w, it.h] }));
+      el._labels = items.map(it => ({ id: String(it.L.id), box: [it.x, it.y, it.w, it.h], knock: !!it.knock }));
+      el._strokes = strokes;
       el._R = { x: 0, y: 0, w: W, h: H };
       if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
       for (const s in pad) pad[s] += Math.max(0, Math.ceil(grow[s]));
@@ -647,11 +671,16 @@
     if (!FC) return;
     try {
       const m = build.marks ? figModel(build.marks) : {};
-      const fs = FC.checkAll({ ...m, labels: el._labels || [], R: el._R });
-      const codes = [...new Set(fs.map(f => f.id))].sort();
+      const fs = FC.checkAll({ ...m, labels: el._labels || [], R: el._R, strokes: el._strokes });
+      /* soft findings (a label over another mark's stroke, or hiding a solid mark: I-LBL-1 stroke / mask) are seen, not degraded: the
+         figure still teaches, the label's knock-out background covers the line. They sit in data-fig-soft and in fig_check, not in
+         data-fig-findings (a tick label under a curve must not turn a graph into its alt text). */
+      const soft = f => f.id === "I-LBL-1" && (f.kind === "stroke" || f.kind === "mask");
+      const codes = [...new Set(fs.filter(f => !soft(f)).map(f => f.id))].sort(), warn = [...new Set(fs.filter(soft).map(f => f.id + ":" + f.kind))].sort();
       el.dataset.figFindings = codes.join(" ");
-      return codes;
-    } catch (e) { console.warn("figcheck", e); return []; }
+      if (warn.length) el.dataset.figSoft = warn.join(" "); else delete el.dataset.figSoft;
+      return { codes, warn };
+    } catch (e) { console.warn("figcheck", e); return { codes: [], warn: [] }; }
   }
   /* ---- degrade + telemetry (fable audit 2026-10-29 U7, §2 verdict ladder: ok -> fixed -> degrade -> telemetry). Every finding
      checkAll still reports is one nothing fixed: the pre-pass (fix) and the label packer (mount) have run, and the RJ rows have no
@@ -1123,9 +1152,9 @@
       el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
       mount(el, build);
     }
-    const rules = figFindings(el, build) || [], degraded = rules.length > 0;
+    const fc = figFindings(el, build) || { codes: [], warn: [] }, degraded = fc.codes.length > 0;
     if (degraded) degrade(el, block);
-    figReport(el, rules, build.fixed || [], degraded);
+    figReport(el, [...fc.codes, ...fc.warn], build.fixed || [], degraded);
   }
 
   root.Graph = { render, tex, fix };
