@@ -6,19 +6,19 @@
   --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
-     Tony's round 7 PICKER 1, 2, 4, 8). Ink (Tony, Nov 2): black page + surface, 1 control fill, 1 line. Every colour is a role */
-  --page: #000; --card: #000; --float: #1a1a1a; --line: #666666; --ink: #fff; --muted: #a3a3a3;
+     Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
+  --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc;
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
   --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
      A state is a 1px line + a trailing glyph in the solid colour on the unchanged row: no fill, the letter badge never changes.
      On a card: correct 10.8:1, wrong 5.1:1, action 9.2:1; Next's label --correct-ink on --correct 9.9:1, on --correct-press 6.8:1 */
   /* --sheet = the CONTROL fill (buttons, choice rows, the list card); --card / --qbox = the SURFACE (the question box). Same value today; split so
-     a theme can set the surface to the page and still give controls a shape (Ink, below; STYLE §2.1) */
-  --sheet: #161616;
-  --action: #3b9eff; --action-ink: #000; --action-fill: #0f1e33; --action-on: #70b8ff; --focus: var(--action);
-  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #14221c; --correct-on: #bdead5; --correct-rim: #029e72;
-  --wrong: #eb596e; --wrong-ink: #391418; --wrong-fill: #28191a; --wrong-on: #ffd1d3; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 1px dashed edge; --wrong-fill / --correct-fill: soft (OKLCH chroma halved) */
+     a theme can set the surface to the page and still give controls a shape (STYLE §2.1) */
+  --sheet: #14233a;
+  --action: #5aa9ff; --action-ink: #031428; --action-fill: #102542; --action-on: #8cc2ff; --focus: var(--action);
+  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #10261f; --correct-on: #bdead5; --correct-rim: #029e72;
+  --wrong: #eb596e; --wrong-ink: #391418; --wrong-fill: #2a1a24; --wrong-on: #ffd1d3; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 1px dashed edge; --wrong-fill / --correct-fill: soft (OKLCH chroma halved) */
   /* one warm family, hue 55-70, lightness is the role (PALETTE-v3 §1): help = Cluck, hints, bulb, send; reward = the HUD, floats, toast,
      bursts only (§4: never in a help surface, a CTA or a chip). --glow at alpha only. --help-deep never under text */
   --help-on: #ffdcc0; --reward: #ffcd94; --help: #ff9a3e; --glow: #ff8204; --help-deep: #b05a00; --help-muted: #a99c8e;
@@ -33,7 +33,7 @@
      kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
   --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
   --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
-  --body: var(--card); --ramp: var(--card); --knock: rgb(0 0 0 / 0.85);   /* figure fills and label knockouts sit on the question box */
+  --body: var(--card); --ramp: var(--card); --knock: rgb(11 20 34 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
   --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
@@ -54,10 +54,9 @@
   --shadow-4: 0 16px 36px -8px rgb(0 0 0 / 0.6), 0 3px 6px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
-/* Ink is the site theme (strip ship spec; Tony Nov 2: "ink whole site"). One black ground, shapes drawn by line, a saturated blue action.
-   The surfaces (question box, freeze strip, docked videos) are black like the page, so each is outlined by a 1px inset --line instead of a
-   lighter slab; --sheet (the control fill) stays a step lighter so fill-first buttons keep their shape (STYLE §2.1). --sheet #161616 and
-   --action-fill are PROPOSALS (the mock had no control fill). */
+/* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
+   fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
+   box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
 .p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
 @supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
   :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }

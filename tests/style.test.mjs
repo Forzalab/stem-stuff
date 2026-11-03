@@ -73,19 +73,21 @@ test("§2.6 a wrong typed box is 1px dashed --wrong-rim (the dash survives greys
   assert.match(bad[0].value, /^var\(--bw\) dashed var\(--wrong-rim\)$/);
   assert.deepEqual(ALL.filter(d => /^\.ff\.bad\b/.test(d.sel) && /^(padding|right|top)/.test(d.prop)).map(fmt), [], "no offsets: the border is the same 1px as the other states");
 });
-test("§2.1 surface vs control vs figure tokens are split; soft fills; Ink is the site theme", () => {
+test("§2.1 surface vs control vs figure tokens are split; soft fills; Deep navy is the site theme", () => {
   const root = read("app.css").match(/^:root \{([\s\S]*?)\n\}/m)[1];
   const tok = n => (root.match(new RegExp("--" + n + ":\\s*([^;]+);")) || [])[1]?.trim();
   assert.ok(tok("sheet") && !/var\(--card\)/.test(tok("sheet")), "--sheet (control fill) has its own value, not an alias of --card");
   assert.equal(tok("grid"), "#394a61", "--grid is its own value, not --line");
   assert.equal(tok("c1"), "#92c0ff", "--c1 (figure force blue) is not --action");
   assert.equal(tok("c1-hi"), "#c9e0ff");
-  assert.equal(tok("wrong-fill"), "#28191a");
-  assert.equal(tok("correct-fill"), "#14221c");
+  assert.equal(tok("wrong-fill"), "#2a1a24");
+  assert.equal(tok("correct-fill"), "#10261f");
   assert.match(tok("shadow-2"), /rgb\(0 0 0 \/ 0\.6\)/);
-  assert.deepEqual([tok("page"), tok("card"), tok("sheet"), tok("line"), tok("ink"), tok("action")], ["#000", "#000", "#161616", "#666666", "#fff", "#3b9eff"], "Ink is the site theme (Tony, Nov 2)");
+  assert.deepEqual([tok("page"), tok("card"), tok("sheet"), tok("line"), tok("ink"), tok("action")], ["#02060c", "#0b1422", "#14233a", "#5e7899", "#f3f7fc", "#5aa9ff"], "Deep navy is the site theme (Tony, Nov 2); a revert to Ink (#000 / #161616 / #666666 / #3b9eff) fails here");
+  assert.notEqual(tok("page"), "#000", "not Ink: the page is navy");
+  assert.notEqual(tok("card"), tok("page"), "the surface is a step above the page");
   assert.ok(!/data-theme/.test(read("app.css") + read("app.js")), "Ink is not a switch: it is :root");
-  assert.match(read("app.css"), /\.p, \.boxed \.q[^{]*\{ box-shadow: inset 0 0 0 1px var\(--line\); \}/, "black surfaces are outlined, not lighter slabs");
+  assert.match(read("app.css"), /\.p, \.boxed \.q[^{]*\{ box-shadow: inset 0 0 0 1px var\(--line\); \}/, "surfaces keep the 1px inset line (the navy slab step is only 1.10:1)");
 });
 test("--c1 is for figures: UI controls use --action", () => {
   const ui = ALL.filter(d => /(^|[ ,.])(\.btn-go|\.code-box|\.opt\.pend|\.qlist|\.fq|\.mcopy|\.fcard|\.lg-go|\.rp-check)/.test(d.sel) && /var\(--c1(-hi)?\)/.test(d.value));

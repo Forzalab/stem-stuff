@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- interactive-widget: Chromium shrinks the layout viewport for the keyboard, so sticky just works there. Safari ignores it; app.js handles Safari (design/FREEZE.md). -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#000">
+<meta name="theme-color" content="#02060c">
 <meta name="color-scheme" content="dark">
 <meta name="stem-build" content="dev"><!-- tools/build_public.py stamps the deploy's PR here (tools/version.sh); the corner badge #ver shows it -->
 <meta name="stem-t" content=""><!-- telemetry (design/plans/TELEMETRY.md): tools/build_public.py stamps the PostHog project token + Clarity id here; empty = off -->
@@ -14,11 +14,11 @@
 <!-- Loading splash (design/SPLASH.md): markup, this CSS and the script after it are inline so it paints before any file loads.
      No text. Colors are the app.css dark tokens (--paper --sheet --c1 --ink), copied here because app.css is not loaded yet. -->
 <style>
-html { background: #000; color: #fff; }   /* --page, --ink */
-#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000; transition: opacity .2s ease-out; }
+html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
+#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #02060c; transition: opacity .2s ease-out; }
 #splash.out { opacity: 0; pointer-events: none; }
 #splash svg { display: block; width: 64px; height: 64px; }
-#splash .sp-tile { fill: #161616; }   /* --sheet */
+#splash .sp-tile { fill: #14233a; }   /* --sheet */
 #splash .sp-curve { fill: none; stroke: #92c0ff; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 1.1; animation: sp-draw 2.2s infinite; }   /* --action */
 #splash .sp-dot { fill: #e8edf5; transform-box: fill-box; transform-origin: center; animation: sp-dot 2.2s infinite; }   /* --ink */
 @keyframes sp-draw {
