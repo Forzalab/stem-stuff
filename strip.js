@@ -59,9 +59,10 @@
     tn.data = WORDS[tn.data.trim()];
   }
   function anchor(at) { var n = at.nextElementSibling; return n && n.classList.contains("pips") ? n : at; }   // pips() inserts right after the bar and removes at.nextElementSibling if it is a .pips
+  function fxPlaying() { return D.documentElement.classList.contains("fx-busy") || !!D.querySelector(".fx-ov"); }   // a reward overlay (a level-up burst) is still playing: the slide would be a second animation group (blink-fx: one at a time), so the drawer just appears
   function make(h) {
     var d = D.createElement("div");
-    d.className = "vdrawer rbox"; d.setAttribute("role", "group"); d.setAttribute("aria-label", "Cluck");
+    d.className = "vdrawer rbox" + (fxPlaying() ? " vd-still" : ""); d.setAttribute("role", "group"); d.setAttribute("aria-label", "Cluck");
     d.innerHTML = (h.next ? '<button type="button" class="btn vd-next"></button>' : "") + '<button type="button" class="btn vd-x" aria-label="Close help">' + CHEV + "</button>";
     d.querySelector(".vd-x").addEventListener("click", function () { close(true, true); });
     var nx = d.querySelector(".vd-next");
@@ -90,7 +91,7 @@
   }
   function show(d, still) {
     clearTimeout(shutT);
-    d.classList.remove("vd-shut"); d.classList.toggle("vd-still", !!still);
+    d.classList.remove("vd-shut"); d.classList.toggle("vd-still", !!still || fxPlaying());
     d.hidden = false;
   }
   function hide(d, instant) {

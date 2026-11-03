@@ -222,6 +222,18 @@ await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced m
   }
 });
 
+await step("a reward overlay still playing (a level-up burst): the drawer opens at rest, no slide (one animation group at a time, blink-fx)", async () => {
+  const pg = await pageFor(browser, 390, 844);
+  await goTo(pg, "STP_NUM");
+  await pg.evaluate(() => { const o = document.createElement("div"); o.className = "fx-ov fx-levelup"; o.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;pointer-events:none"; document.body.append(o); });
+  await submit(pg, "2");
+  await pg.waitForSelector("#q .vdrawer");
+  const n = await pg.evaluate(() => getComputedStyle(document.querySelector("#q .vdrawer")).animationName);
+  assert.equal(n, "none", "the drawer slid while an overlay played: " + n);
+  await pg.evaluate(() => document.querySelector(".fx-ov").remove());
+  await pg.ctx.close();
+});
+
 /* doneExit's 900 ms beat blurs the active element after a right answer; it must leave the strip's own focus (verdict icon, drawer) alone.
    Before: a close (or Esc) inside the beat put focus on the icon and the beat then blurred it (CI flake of "focus returns", PR #382 x #381). */
 await step("right answer: focus put on the verdict icon inside doneExit's beat survives it", async () => {
