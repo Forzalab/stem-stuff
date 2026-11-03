@@ -73,6 +73,10 @@
     {
       "source": "/health",
       "destination": "/api/index?path=/health"
+    },
+    {
+      "source": "/mini",
+      "destination": "/api/index?path=/mini"
     }
   ]
 }

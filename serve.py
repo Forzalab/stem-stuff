@@ -4159,9 +4159,77 @@ def dispatch(method, path, cookie_header="", body=b"", ua=""):
     return res
 
 
+MINI_PER_HOUR = 10                           # POST /mini per student (sid) per hour (Tony, Nov 2); the 11th is a 429
+MINI_MAX = 1024                              # POST /mini body cap in bytes; a screenshot or any image bytes do not fit
+_mini_hits = {}                              # "stem:mini:sid:hour" -> calls (the in-process twin of the KV counter)
+_mini_lock = threading.Lock()
+
+
+def mini_allowed(sid, now=None):
+    """INCR + EXPIRE on stem:mini:<sid>:<hour> (KV, as the spend counter), the in-process dict without KV or when KV fails.
+    Records the call; False once the student has had MINI_PER_HOUR this hour."""
+    h = int((now if now is not None else time.time()) // 3600)
+    k = f"stem:mini:{sid}:{h}"
+    if all(KV):
+        try:
+            n = int(_kv("INCR", k))
+            if n == 1:
+                _kv("EXPIRE", k, 3700)
+            return n <= MINI_PER_HOUR
+        except (OSError, ValueError, TypeError):
+            pass
+    with _mini_lock:
+        for old in [x for x in _mini_hits if not x.endswith(f":{h}")]:
+            del _mini_hits[old]
+        _mini_hits[k] = _mini_hits.get(k, 0) + 1
+        return _mini_hits[k] <= MINI_PER_HOUR
+
+
+def mini_ctx(p, u, step, text):
+    """mini.reply's ctx from the server's own item: stem, solution (the saccharine key text), key (the graded number), tol. Nothing
+    here comes from the client but the step label and the student's words."""
+    stem = "\n".join("\n".join(m) if isinstance(m, list) else str(m) for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))
+    sol = sugar(p).get("key", "")
+    try:
+        key = signature(u, str(u["answer"])) if u.get("type") == "num" else None
+    except (UNREADABLE, KeyError):
+        key = None
+    return dict(code=p["code"], stem=stem, solution="\n".join(sol) if isinstance(sol, list) else str(sol), key=key, tol=tol_of(u),
+                goal=str(step), answer=text, numbers="", error=None, twist=None)
+
+
+def mini_route(cookie_header, body):
+    """POST /mini {code, step, text?} -> {program} (OpenUI Lang). 400: not JSON, over MINI_MAX, image bytes, bad fields; 404: unknown or
+    hidden code; 429: MINI_PER_HOUR. Not a try. A client key / solution / tol / stem field is never read. A program that says the key
+    (mini.leaked) or fails views_gate is replaced by the authored line before it leaves."""
+    import mini
+    sid, cookie = new_sid(cookie_header)
+    try:
+        b = json.loads(body) if 0 < len(body) <= MINI_MAX else None
+    except (ValueError, UnicodeDecodeError):
+        b = None
+    if not isinstance(b, dict) or b"data:image" in body or any(k in b for k in ("image", "images", "img", "png", "photo")):
+        return _json(400, {"error": "invalid"}, cookie)
+    step, text = b.get("step"), b.get("text", "")
+    if not isinstance(b.get("code"), str) or not isinstance(step, (str, int)) or isinstance(step, bool) or not isinstance(text, str) or len(text) > 500:
+        return _json(400, {"error": "invalid"}, cookie)
+    mode = mode_of(cookie_header)
+    p = lookup(b["code"], mode)
+    if p is None or hidden(p, mode):
+        return _json(404, {"error": "not found"}, cookie)
+    if not mini_allowed(sid):
+        return _json(429, {"error": "hourly"}, cookie)
+    ctx = mini_ctx(p, view(p, mode), str(step)[:200], text)
+    prog = mini.reply(ctx)
+    ok = isinstance(prog, str) and not mini.leaked(prog, ctx) and mini.valid(prog, ctx)
+    return _json(200, {"program": prog if ok else mini.authored(mini.AUTHORED[0])}, cookie)
+
+
 def _dispatch(method, path, cookie_header, body, ua):
     if method == "POST" and path == "/log/incident":
         return log_incident(cookie_header, body, ua)
+    if method == "POST" and path == "/mini":
+        return mini_route(cookie_header, body)
     if method == "POST":
         rc = REPAIR_CHECK_PATH.match(path)
         if path not in ("/check", "/narrate", "/diagnose", "/diagnose/explain") and not rc:
