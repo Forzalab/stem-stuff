@@ -158,11 +158,11 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
   assert.match(b.trace_id || "", /^[0-9a-f]{32}$/);
   assert.equal(cl.trace_id, b.trace_id, "the beacon's trace id is the request's (traceparent)");
   assert.equal(sv.trace_id, b.trace_id, "the server's line shares it");
-  /* P2: the request's ONE trace line: its status, the NOTE call's 402, its S- codes, the same trace id */
+  /* P2: the request's ONE trace line: its status (200: the page asks for stages, so the failure is in-band, the status was sent before it; the beacon above keeps 503), the NOTE call's 402, its S- codes, the same trace id */
   for (let i = 0; i < 30 && !traces.some(x => x.path === "/explain"); i++) await page.waitForTimeout(100);
   const tl = traces.filter(x => x.path === "/explain");
   assert.equal(tl.length, 1, "one trace line: " + JSON.stringify(traces));
-  assert.deepEqual([tl[0].status, tl[0].trace_id, tl[0].q, tl[0].done], [503, b.trace_id, "CALC1_INC1", true]);
+  assert.deepEqual([tl[0].status, tl[0].trace_id, tl[0].q, tl[0].done], [200, b.trace_id, "CALC1_INC1", true]);
   assert.ok(tl[0].inc.includes(code) && tl[0].phases.some(p => p.p === "note" && p.status === 402), JSON.stringify(tl[0]));
   await page.screenshot({ path: join(SHOTS, "incident-budget.png") });
   await page.context().close();
