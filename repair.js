@@ -229,6 +229,12 @@
       const pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
       if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
       body.append(val);
+      /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
+      if (s.miss && s.state !== "future") {
+        const m = h("p", "rp-miss", s.miss);
+        if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
+        body.append(m);
+      }
       if (s.ask) {
         const w = whyUi(s);
         if (s.state === "future" || (live && !s.ok)) { lock(w, "rp-ghost", null); w.style.visibility = "hidden"; w.dataset.room = ""; }   // its room stays, unseen until its step's pick:
@@ -236,11 +242,6 @@
         body.append(w);
       }
       li.append(body);
-      if (s.miss && s.state !== "future") {
-        const m = h("p", "rp-miss", s.miss);
-        if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
-        li.append(m);
-      }
       return li;
     }
     function stepEl(s) {
