@@ -183,15 +183,19 @@ for (const [W, H] of SIZES) {
     await open("CALC1_T6B");
     await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settle();
     const r = await page.evaluate(async () => {
-      const has = !!document.startViewTransition, t0 = performance.now(); let ran = 0;
+      const has = !!document.startViewTransition; let ran = 0, lead = 0;
       const orig = document.startViewTransition.bind(document);
-      document.startViewTransition = cb => { const v = orig(cb); v.finished.then(() => { ran = performance.now() - t0; }, () => {}); return v; };
+      /* the crossfade itself = ready (pseudo-elements up, animation starts) -> finished. Click -> ready is snapshot capture + the
+         callback + a frame, main-thread work that stretches on a loaded runner (500-524ms wall on CI) and is not the fade */
+      document.startViewTransition = cb => { const v = orig(cb), t0 = performance.now(); let t1 = 0;
+        v.ready.then(() => { t1 = performance.now(); lead = t1 - t0; }, () => {});
+        v.finished.then(() => { ran = performance.now() - t1; }, () => {}); return v; };
       document.querySelector("#mtMode").click();
-      await new Promise(r => setTimeout(r, 600));
-      return { has, ran };
+      await new Promise(r => setTimeout(r, 1500));
+      return { has, ran, lead };
     });
     assert.ok(r.has, "no View Transitions in this browser (falls back to instant)");
-    assert.ok(r.ran >= 180 && r.ran <= 450, `transition ran ${Math.round(r.ran)}ms`);
+    assert.ok(r.ran >= 180 && r.ran <= 450, `transition ran ${Math.round(r.ran)}ms (click to ready ${Math.round(r.lead)}ms)`);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.click("#mtMode");
     assert.ok(await page.evaluate(() => document.documentElement.classList.contains("mt-q")), "not instant with reduced motion");
