@@ -171,6 +171,7 @@ def _words(el, reg):
     return out
 
 
+SIZE_RE = re.compile(r"\|\s*(up|down|same)\s+[1-9]\b", re.I)
 TUG_ROW = re.compile(r"^\s*[^|]{1,10}\|[^|]{0,24}\|\s*(?:up|down|same)(?:\s+[1-9])?\s*(?:\|[^|]{1,60})?$", re.I)   # label | move | up|down|same [size] [| why]: tug.mjs parseRow
 
 
@@ -209,6 +210,8 @@ def check_element(el, ctx):
         return why
     key_ref = re.compile(reg["key_ref"])
     texts = _words(el, reg)
+    if name == "Tug":                                 # the pull size ("up 3") is a bar length, not a number the student reads: not a leak, not "not-given"
+        texts = [(k, SIZE_RE.sub(r"| \1", t)) if k == "rows" else (k, t) for k, t in texts]
     if name == "Graph":
         why = graph_emph(el["props"])
         if why:

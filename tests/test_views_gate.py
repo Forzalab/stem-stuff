@@ -90,6 +90,12 @@ class TugFlip(unittest.TestCase):
         self.assertEqual(self.one('t = Tug(["V | m | up"], "P", "alt", "up 3/2")')[1][0], "t:stage:Tug.net", "a Cluck reply is never post: no end-knot answer")
         self.assertEqual(self.one('t = Flip([["a", "b"]])')[1][0], "t:flip:row")
 
+    def test_a_pull_size_equal_to_a_key_value_is_not_a_leak(self):
+        # CTX's answer is 5.0: "up 5" is a bar length (bench Nov 4: PHYS_SGU's Tug died on "up 3", a choice's value), "= 5 m" in the move still is a leak
+        t = 't = Tug(["V | box squeezed | up 5", "T | gas cooled | down 2"])'
+        self.assertEqual(self.one(t)[1], ["ok"])
+        self.assertIn("leak:", self.one('t = Tug(["V | = 5 m | up 5"])')[1][0])
+
     def test_a_key_literal_in_a_row_is_a_leak(self):
         self.assertIn("leak:", self.one('t = Tug(["c | 5 m | up"])')[1][0])
         self.assertIn("leak:", self.one('t = Flip([["c", "x", "5 m"]])')[1][0])
