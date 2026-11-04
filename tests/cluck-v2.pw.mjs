@@ -6,7 +6,9 @@
 //   steps     after a right try the "See Cluck's steps" chip is back on the page (V1 lost it)
 //   nokey     a question with no Cluck key keeps the box and shows the note (CL_COPY.nokey: COPY-PENDING); no chips
 //   latest    a 2nd miss on a numeric item asks /explain again with the NEW value (the box never keeps explaining the first wrong value)
-//   guard     phone sugar (393): no starters, no box on load, the peek + "okay, but how?" still come after a miss
+//   guard     phone sugar (393): no starters, no box on load
+//   genmiss   every width, matched / generic / freeform miss, tries left or out of tries (MC + freeform): the tray's Ask Cluck is the one Cluck entry;
+//             no peek, no "okay, but how?"; out of tries, no "Try again" anywhere
 // CV_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-v2@desk, cluck-v2@phone. Own serve.py + a stub OpenRouter. No page.clock jumps (nothing here waits on time).
 //   node tests/cluck-v2.pw.mjs <port> [shots dir]
 import { createRequire } from "node:module";
@@ -58,6 +60,7 @@ for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } 
 
 let failures = 0;
 async function step(name, fn) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
@@ -147,21 +150,6 @@ for (const w of W.filter(w => w >= 720)) {
     assert.ok(await page.evaluate(() => window.stemCluckOpen()), "the box is still open");
     await page.context().close();
   });
-  await step(`@desk ${w}: after a wrong MC pick the tray covers no remaining answer row, and the next row is clickable with the tray open`, async () => {
-    const page = await open(w);
-    await wrong(page);
-    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
-    await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) and the rows' room settle
-    const g = await page.evaluate(() => {
-      const d = document.querySelector(".vdrawer:not([hidden])").getBoundingClientRect();
-      const rows = [...document.querySelectorAll("#q .opt:not([data-id=\"b\"])")].map(o => ({ id: o.dataset.id, r: o.getBoundingClientRect() }));
-      return { d, rows: rows.map(o => [o.id, o.r.top, o.r.bottom]), cls: document.querySelector("#q .ch.strip")?.className, vd: document.documentElement.className, hits: rows.filter(o => o.r.width && o.r.bottom > d.top && o.r.top < d.bottom && o.r.right > d.left && o.r.left < d.right).map(o => o.id) };
-    });
-    assert.deepEqual(g.hits, [], "the tray overlaps these remaining rows " + JSON.stringify(g));
-    await page.click('.opt[data-id="c"]', { timeout: 3000 });           // no force, no closing the tray first
-    assert.ok(await page.evaluate(() => !!document.querySelector('.opt[data-id="c"].sel, .opt[data-id="c"][aria-checked="true"]')), "row C took the pick");
-    await page.context().close();
-  });
   await step(`@desk ${w}: right after a miss, "See Cluck's steps" is on the page`, async () => {
     const page = await open(w);
     await wrong(page); await streamed(page);
@@ -189,12 +177,11 @@ for (const w of W.filter(w => w >= 720)) {
   });
 }
 for (const w of W.filter(w => w < 720)) {
-  await step(`@phone ${w}: no starters, no box on load; a miss still brings the peek and "okay, but how?"`, async () => {
+  await step(`@phone ${w}: no starters, no box on load`, async () => {
     const page = await open(w);
     assert.ok(!(await vis(page, "#cluck, .cl-starter")), "nothing of the box on load");
     await wrong(page);
     await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 });
-    await page.waitForFunction(() => [...document.querySelectorAll(".cl-peek .cl-cta")].some(e => e.getClientRects().length), null, { timeout: 5000 });
     assert.ok(!(await vis(page, ".cl-starter")), "no starters on a phone");
     await page.context().close();
   });
@@ -206,6 +193,66 @@ for (const w of W.filter(w => w < 720)) {
     await num(page, "7");
     await page.waitForFunction(() => /You picked 7\./.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 });
     assert.deepEqual(stubPicks.filter(x => /^(3|7)$/.test(x)), ["3", "7"], "/explain per miss: " + stubPicks);
+    await page.context().close();
+  });
+}
+for (const w of W) {
+/* Tony, Nov 3 19:31: "the tray ARE ALLOWED to overlay elements": it may lie over the rows below the pick, but opening it and dismissing it move nothing (no room is kept, none is left behind) */
+await step(`@${w < 720 ? "phone" : "desk"} ${w}: wrong MC pick -> tray -> dismiss: no row moves, no gap is left between the picked row and the next (Tony's D / E shot)`, async () => {
+  const page = await open(w);
+  const tops = () => page.evaluate(() => [...document.querySelectorAll("#q .opt")].map(o => [o.dataset.id, Math.round(o.getBoundingClientRect().top + scrollY)]));
+  const t0 = await tops();
+  await wrong(page);
+  await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+  await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) settles
+  assert.deepEqual(await tops(), t0, "opening the tray moved a row");
+  await page.click(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(500);
+  assert.deepEqual(await tops(), t0, "dismissing the tray left a gap / moved a row");
+  await page.context().close();
+});
+}
+// Tony Nov 3 19:35: "when clicking on Ask Cluck the first time, it DISMISSES the box instead": the FIRST tap on the tray's chip opens Cluck (never closes the
+// tray or the box), at every width, whether or not the reply has streamed yet.
+for (const w of W) for (const early of [true, false]) {
+  await step(`@${w < 720 ? "phone" : "desk"} ${w}: the first tap on the tray's Ask Cluck opens Cluck${early ? " (before the reply streamed)" : ""}, the tray stays`, async () => {
+    const page = await open(w);
+    await wrong(page);
+    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+    if (!early) await page.waitForTimeout(2500);   // the stub's reply has streamed by now (the closed phone sheet shows no text to wait on)
+    await page.waitForTimeout(500);
+    await page.click(".vdrawer .wchip");
+    await page.waitForTimeout(900);
+    const g = await page.evaluate(() => ({ open: !!window.stemCluckOpen(), cl: (() => { const e = document.querySelector("#cluck"); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"; })(), tray: !!document.querySelector(".vdrawer:not([hidden])") }));
+    assert.ok(g.open && g.cl, "the first tap did not open Cluck: " + JSON.stringify(g));
+    await page.context().close();
+  });
+}
+// GENMISS (Tony Nov 3 16:13, "a generic error still show 'ok but how' when it should show a tray with the cluck button ONLY (one entry)"): on EVERY wrong try, at every width,
+// matched (wrong[] hint) or generic (a value no wrong[] row names), the only Cluck entry is the tray's Ask Cluck chip. No peek card, no "okay, but how?" anywhere.
+const generic = async page => { if (await page.locator('.vdrawer:not([hidden]) .vd-x').count()) await page.click('.vdrawer:not([hidden]) .vd-x'); if (await page.locator('#toast.on').count()) await page.click('#toast.on'); await page.click('.opt[data-id="c"]');   // the one-time tray tip (a tap closes it)
+     // the tray may lie over the rows (Tony, Nov 3 19:31): dismiss it first
+   await page.click('.ch[data-id="c"] .send'); };
+const numMiss = async page => { await toNum(page); await num(page, "7"); };
+const mcOut = async page => { await wrong(page); await page.waitForTimeout(400); await generic(page); };
+const numOut = async page => { await numMiss(page); await page.waitForTimeout(400); await num(page, "8"); };
+for (const w of W) for (const [kind, miss] of [["matched", wrong], ["generic", generic], ["freeform", numMiss], ["mc out-of-tries", mcOut], ["freeform out-of-tries", numOut]]) {
+  await step(`@${w < 720 ? "phone" : "desk"} ${w}: a ${kind} miss: the tray's Ask Cluck is the ONLY Cluck entry (no peek, no "okay, but how?")`, async () => {
+    const page = await open(w);
+    await miss(page);
+    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+    await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 }).catch(() => { /* the stream may be off; the entries are what is asserted */ });
+    await page.waitForTimeout(600);
+    const g = await page.evaluate(() => {
+      const shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
+      const ent = [...document.querySelectorAll(".wchip, .cl-cta, .cl-peek, .cue-chip, #clBack")].filter(shown);
+      return { ent: ent.map(e => (e.className + ":" + (e.textContent || "").trim().replace(/\s+/g, " ")).slice(0, 60)), inTray: ent.filter(e => e.closest(".vdrawer")).length, body: document.body.innerText };
+    });
+    assert.equal(g.ent.length, 1, "exactly one Cluck entry: " + JSON.stringify(g.ent));
+    assert.equal(g.inTray, 1, "and it is the tray's: " + JSON.stringify(g.ent));
+    assert.match(g.ent[0], /Ask Cluck/, "its label: " + g.ent[0]);
+    assert.ok(!/okay, but how/i.test(g.body), "'okay, but how?' is on the page");
+    if (kind === "matched") assert.ok(g.body.includes(HINT), "the bank hint stays in the left hint card");
+    if (/out-of-tries/.test(kind)) assert.ok(!/try again/i.test(g.body), "a locked question offers no Try again: " + (g.body.match(/.{0,60}try again.{0,30}/i) || [""])[0]);
     await page.context().close();
   });
 }
