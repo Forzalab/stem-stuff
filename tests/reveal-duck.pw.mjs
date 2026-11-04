@@ -1,5 +1,5 @@
 // REVEAL-DUCK (Nov 3, Tony 22:48): the reveal lines under the strip drawer wear the dark duck (the old "Why does this work?" CTA's i-duck, one shared
-//   icon: app.js revDuck / .rv-duck): "Avenged!" (guard row), "That's it! ..." (right), "Not it. The answer is ..." (wrong). Present, drawn, not hidden,
+//   icon: app.js revDuck / .rv-duck, trailing the copy button so nothing shifts; NOT on Avenged!, guard.pw asserts no duck there): "That's it! ..." (right), "Not it. The answer is ..." (wrong). Present, drawn, not hidden,
 //   contrast >= 3:1 against the line's background; dark + light colour scheme, 393 + 1280.   node tests/reveal-duck.pw.mjs <port>
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -65,14 +65,6 @@ try {
         await page.waitForTimeout(2200); await typeAnswer(page, "0.650");
         await page.waitForSelector("#q .ansl b", { timeout: 6000 }); await page.waitForTimeout(500);
         assert.match(await page.textContent("#q .ansl"), /Not it/); ok(await duckOf(page, "#q .ansl"), "wrong");
-      } finally { await page.context().close(); }
-    });
-    await step(`${w} ${scheme}: Avenged! guard row has the duck`, async () => {
-      const page = await open(w, scheme, "#PHYS_RDM", true);
-      try {
-        await (await page.$$("#q .opt:not(:disabled)"))[0].click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send");
-        await page.waitForSelector("#q .guard.won", { timeout: 6000 }); await page.waitForTimeout(900);
-        ok(await duckOf(page, "#q .guard.won"), "avenged");
       } finally { await page.context().close(); }
     });
   }
