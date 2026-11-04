@@ -992,6 +992,20 @@ class Repair(unittest.TestCase):
         self.assertNotIn("repair", out)
         self.assertNotIn("welcome", serve.public(serve.view(self.FIX["PHYS_RPA"], "sugar"), "s"))
 
+    def test_public_has_repair_flag(self):
+        """The app sends GET /repair after a miss only when public() says `has_repair` (a 404 is a failed request in the console): true for a
+        template with repair.steps and for its twin (the template's ladder), absent otherwise; the ladder itself never rides along."""
+        pub = lambda c: serve.public(serve.view(self.FIX[c], "sugar"), "s")
+        self.assertIs(pub("PHYS_RPA")["has_repair"], True)
+        self.assertNotIn("repair", pub("PHYS_RPA"))
+        twins = [c for c, p in self.FIX.items() if p.get("twin") and (self.FIX.get(p.get("parent_template")) or {}).get("repair")]
+        for c in twins:
+            self.assertIs(pub(c)["has_repair"], True, c)
+        fix = copy.deepcopy(self.FIX)
+        del fix["PHYS_RPA"]["repair"]
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            self.assertNotIn("has_repair", serve.public(serve.view(fix["PHYS_RPA"], "sugar"), "s"))
+
     def test_welcome_pick_answer_wrong_option_gets_its_own_line(self):
         """todo 76: the answer step's `miss` never ships (KEY), so a wrong pick on it fell back to the generic welcome hint; /check now
         answers a wrong option with that option's line as `hint` (also on the 2nd miss, beside `answer`); an option with no line: no hint."""

@@ -539,6 +539,9 @@ def public(p, sid=""):
         out["parts"] = [{k: q[k] for k in ("label", "prompt", "type", "var", *(("unit",) if q.get("type") == "num" else ())) if k in q} for q in p["parts"]]
     if p.get("type") == "num" and "unit" in p:              # W132: the answer line shows it after the value; a unit never gives the number away
         out["unit"] = p["unit"]
+    t = (problems().get(p.get("parent_template")) if p.get("twin") else p) or {}
+    if isinstance((t.get("repair") or {}).get("steps"), list) and t["repair"]["steps"]:   # the app asks GET /repair only for these (a miss on the rest sends nothing); the ladder itself never ships
+        out["has_repair"] = True
     if p.get("twist") is True:                               # W133: the question header's Twist chip; a twist gives nothing away
         out["twist"] = True
     return out
