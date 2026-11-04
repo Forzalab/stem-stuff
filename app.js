@@ -665,6 +665,7 @@ async function load(code) {
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
+  $("#rpHost")?.remove();                                                  // the last question's repair ladder
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null, wl };
   qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
@@ -799,6 +800,25 @@ function welcomeQ(q) {
     window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
     if (!$("#qnav").hidden) { const nx = nextBtn(); w.el.append(nx); nx.focus({ preventScroll: true }); }
   } });
+}
+
+/* ---------- the repair ladder after a miss (brain design-round-66 DESIGN-v3 §3, T8; Tony Nov 3) ----------
+   Every graded wrong try on an item with `repair` draws its ladder (repair.js, variant "repair") under the verdict: GET /repair/<code>
+   is sent only after the /check that recorded the miss (403 before it), 404 = no ladder = nothing changes. Not on the welcome item or in
+   the mock. The same slip family on the next miss keeps the element (a step is never reset); another family redraws. The answer box,
+   the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. */
+function repairAfterMiss(r) {
+  if (!S || S.wl || mockHold() || !window.Repair) return;
+  const mine = S, code = S.code, fam = r.error || "";
+  if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
+  const host = (() => { let h = $("#rpHost"); if (!h) { h = document.createElement("div"); h.id = "rpHost"; $("#fb").after(h); } return h; })();
+  mine.rp = { fam };
+  net(`repair/${code}`, { headers: { traceparent: traceparent() } }).then(x => x.ok ? x.json() : null, () => null).then(rp => {
+    if (S !== mine || !rp || !rp.steps) { if (S === mine && !rp) mine.rp = null; return; }
+    const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
+      credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
+    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade });
+  });
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -1860,7 +1880,7 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); wishOnWrong(); }   // no ladder: each wrong try shows the next formula row, then the arrows
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); wishOnWrong(); repairAfterMiss(r); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 
