@@ -808,7 +808,7 @@ function welcomeQ(q) {
    the mock. The same slip family on the next miss keeps the element (a step is never reset); another family redraws. The answer box,
    the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. */
 function repairAfterMiss(r) {
-  if (!S || S.wl || mockHold() || !window.Repair) return;
+  if (!S || S.wl || !S.prob.has_repair || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
   const mine = S, code = S.code, fam = r.error || "";
   if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
   const host = (() => { let h = $("#rpHost"); if (!h) { h = document.createElement("div"); h.id = "rpHost"; $("#fb").after(h); } return h; })();

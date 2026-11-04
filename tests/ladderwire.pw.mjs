@@ -20,7 +20,7 @@ const LAD = num("PHYS_LW1", { repair: { steps: [
   { id: "who", label: "Which force presses down?", kind: "pick", opts: [{ id: "a", md: "the load's" }, { id: "b", md: "the air's" }], ok: "a" },
   { id: "answer", label: "Final answer", kind: "num", ok: "4", tol: 0.01 }] } });
 mkdirSync(BANKS);
-writeFileSync(join(BANKS, "BANK_P2X.json"), JSON.stringify({ v: 1, problems: [LAD, num("PHYS_LW2"), num("PHYS_LW3")] }));
+writeFileSync(join(BANKS, "BANK_P2X.json"), JSON.stringify({ v: 1, problems: [LAD, num("PHYS_LW2"), num("PHYS_LW3", { repair: LAD.repair })] }));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P2X", STEM_FRONT_TITLE: "Exam 2",
   STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
@@ -74,7 +74,7 @@ try {
     const n = await open("PHYS_LW2", { width: w, height: h });
     await step(`${w}: an item with no ladder (404) is unchanged`, async () => {
       await miss(n.page, "3");
-      assert.ok(n.log.some(l => /GET .*\/repair\/PHYS_LW2 404/.test(l)), "the probe was not sent: " + n.log.join(" | "));
+      assert.deepEqual(n.log.filter(l => /repair/.test(l)), [], "a no-ladder miss sent a /repair request (a console 404): " + n.log.join(" | "));
       assert.equal(await n.page.$("section.rp"), null, "a ladder on an item without one");
       assert.equal(n.errs.length, 0, n.errs.join("; "));
     });
