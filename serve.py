@@ -870,7 +870,7 @@ def _load_tries():
         for k, v in (data.get("cluck") or {}).items():
             bits = k.split(" ")
             if len(bits) == 2 and isinstance(v, list):
-                rows = [r for r in v if isinstance(r, list) and len(r) == 4 and isinstance(r[0], int) and isinstance(r[2], str)]
+                rows = [r for r in v if isinstance(r, list) and len(r) in (4, 5) and isinstance(r[0], int) and isinstance(r[2], str)]   # 5: a locked turn (row_locked)
                 if rows:
                     _cluck_turns[(bits[0], bits[1])] = rows
     except (OSError, ValueError, AttributeError, TypeError, IndexError):

@@ -616,6 +616,22 @@ class Handlers(unittest.TestCase):
         self.assertEqual(self.bodies[-1]["messages"][0]["content"][0]["text"], a1)
         self.assertIn("OUT of tries", json.dumps(self.bodies[-1]["messages"][-1]["content"]))   # and the follow-up turn on the locked box says it too
 
+    def test_locked_turn_survives_a_reload(self):                       # review of #403: _load_tries kept only 4-field rows, so a locked row
+        p = dict(P1, code="H_1")                                          # (5th field) vanished on the next read (KV: every call; file: a fresh instance)
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(("d" * 32, "H_1"))["wrong"] = ["a", "c"]
+            serve._save_tries()
+        self.assertEqual(serve.cluck_begin(p, "d" * 32, "a"), (1, True))         # "a" is wrong on P1
+        self.assertTrue(serve.row_locked(serve._cluck_turns[("d" * 32, "H_1")][-1]))
+        serve._cluck_turns.clear()
+        serve._gen["loaded"] = None                                       # what another instance (or a KV read) sees: the saved blob only
+        with serve._tries_lock:
+            serve._load_tries()
+        rows = serve._cluck_turns.get(("d" * 32, "H_1"))
+        self.assertTrue(rows and serve.row_locked(rows[-1]), rows)
+        self.assertEqual(serve.cluck_begin(p, "d" * 32, "a"), (2, True))  # the turn count goes on, it does not restart at 1
+
     def test_off_without_claude_key_or_deepseek_arm(self):
         with mock.patch.dict(os.environ, {"CLUCK_ARM": "split"}):
             os.environ.pop("CLAUDE_API")

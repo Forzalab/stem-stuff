@@ -7,7 +7,8 @@
 //   nokey     a question with no Cluck key keeps the box and shows the note (CL_COPY.nokey: COPY-PENDING); no chips
 //   latest    a 2nd miss on a numeric item asks /explain again with the NEW value (the box never keeps explaining the first wrong value)
 //   guard     phone sugar (393): no starters, no box on load
-//   genmiss   every width, matched or generic miss: the tray's Ask Cluck is the one Cluck entry; no peek, no "okay, but how?"
+//   genmiss   every width, matched / generic / freeform miss, tries left or out of tries (MC + freeform): the tray's Ask Cluck is the one Cluck entry;
+//             no peek, no "okay, but how?"; out of tries, no "Try again" anywhere
 // CV_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-v2@desk, cluck-v2@phone. Own serve.py + a stub OpenRouter. No page.clock jumps (nothing here waits on time).
 //   node tests/cluck-v2.pw.mjs <port> [shots dir]
 import { createRequire } from "node:module";
@@ -212,7 +213,10 @@ for (const w of W.filter(w => w < 720)) {
 // GENMISS (Tony Nov 3 16:13, "a generic error still show 'ok but how' when it should show a tray with the cluck button ONLY (one entry)"): on EVERY wrong try, at every width,
 // matched (wrong[] hint) or generic (a value no wrong[] row names), the only Cluck entry is the tray's Ask Cluck chip. No peek card, no "okay, but how?" anywhere.
 const generic = async page => { await page.click('.opt[data-id="c"]'); await page.click('.ch[data-id="c"] .send'); };
-for (const w of W) for (const [kind, miss] of [["matched", wrong], ["generic", generic]]) {
+const numMiss = async page => { await toNum(page); await num(page, "7"); };
+const mcOut = async page => { await wrong(page); await page.waitForTimeout(400); await generic(page); };
+const numOut = async page => { await numMiss(page); await page.waitForTimeout(400); await num(page, "8"); };
+for (const w of W) for (const [kind, miss] of [["matched", wrong], ["generic", generic], ["freeform", numMiss], ["mc out-of-tries", mcOut], ["freeform out-of-tries", numOut]]) {
   await step(`@${w < 720 ? "phone" : "desk"} ${w}: a ${kind} miss: the tray's Ask Cluck is the ONLY Cluck entry (no peek, no "okay, but how?")`, async () => {
     const page = await open(w);
     await miss(page);
@@ -229,6 +233,7 @@ for (const w of W) for (const [kind, miss] of [["matched", wrong], ["generic", g
     assert.match(g.ent[0], /Ask Cluck/, "its label: " + g.ent[0]);
     assert.ok(!/okay, but how/i.test(g.body), "'okay, but how?' is on the page");
     if (kind === "matched") assert.ok(g.body.includes(HINT), "the bank hint stays in the left hint card");
+    if (/out-of-tries/.test(kind)) assert.ok(!/try again/i.test(g.body), "a locked question offers no Try again: " + (g.body.match(/.{0,60}try again.{0,30}/i) || [""])[0]);
     await page.context().close();
   });
 }
