@@ -1584,3 +1584,8 @@ html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dv
 .cl-starter:hover { border-color: var(--help); }
 .cl-starter:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cl-note { margin: var(--s4) 0 0; color: var(--help-muted); font-size: var(--t-md); line-height: 1.5; }
+
+/* the subject pass swap (app.js wishSwap): a changed prose line fades in; reduced motion just swaps */
+#cluck .wswap { animation: wswap var(--d-move) ease-out; }
+@keyframes wswap { from { opacity: .25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #cluck .wswap { animation: none; } }
