@@ -198,9 +198,13 @@
       box.append(opts);
       return box;
     }
-    function whyUi(s) {
-      const w = s.st.why, box = h("div", "rp-why");
-      box.append(h("p", "rp-q", w.q || L().why || "Why is that?"));
+    function whyUi(s, mask) {
+      const w = s.st.why, box = h("div", "rp-why"), q = h("p", "rp-q", w.q || L().why || "Why is that?");
+      if (mask) {                                                                // the preview (LADDER-UI): its real words keep the room, unseen; a
+        box.classList.add("rp-mask");                                            // neutral question shows over them ("Why half?" before d/2 gives the answer away)
+        const real = h("span", "rp-real"); real.append(...q.childNodes); q.append(h("span", "rp-mask-t", L().why || "Why is that?"), real);
+      }
+      box.append(q);
       const opts = h("div", "rp-opts");
       w.opts.forEach((t, i) => opts.append(chip(t, { why: String(i) }, tryWhy, s, i, s.whyTried)));
       box.append(opts);
@@ -236,9 +240,9 @@
         body.append(m);
       }
       if (s.ask) {
-        const w = whyUi(s);
-        if (s.state === "future" || (live && !s.ok)) { lock(w, "rp-ghost", null); w.style.visibility = "hidden"; w.dataset.room = ""; }   // its room stays, unseen until its step's pick:
-        else if (s.why != null) lock(w, "rp-locked", s.why);                    // "Why half?" before d/2 gives the answer away (W129 shot QA)
+        const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
+        if (early) lock(w, "rp-ghost", null);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
+        else if (s.why != null) lock(w, "rp-locked", s.why);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
         body.append(w);
       }
       li.append(body);

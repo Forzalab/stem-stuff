@@ -173,9 +173,9 @@ try {
     const chips = await page.$$eval('#q .rp-step[data-state="active"] .rp-chip', els => els.map(el => { const cs = getComputedStyle(el);
       return { bg: cs.backgroundColor, line: cs.borderTopColor, w: cs.borderTopWidth, style: cs.borderTopStyle, ink: cs.color }; }));
     assert.ok(chips.length >= 2, `chips: ${chips.length}`);
-    const w15 = await cv(page, "borderTopWidth", "1.5px");                     // as the engine computes 1.5px (Chromium / Firefox floor it to 1px)
+    const w15 = await cv(page, "borderTopWidth", "var(--bw)");                 // LADDER-UI (Nov 3): every edge is --bw (STYLE.md "one weight"; was 1.5px)
     for (const f of chips) {
-      assert.deepEqual(f, { bg: chipBg, line: help, w: w15, style: "solid", ink: on }, "a chip off its role (1.5px --help edge, --help 10% over --help-sheet, --help-on)");
+      assert.deepEqual(f, { bg: chipBg, line: help, w: w15, style: "solid", ink: on }, "a chip off its role (--bw --help edge, --help 10% over --help-sheet, --help-on)");
       assert.notEqual(f.line, c1, "a chip in the blue --c1");
     }
     const chip = '#q .rp-step[data-state="active"] .rp-chip';
@@ -186,12 +186,12 @@ try {
       await cv(page, "backgroundColor", "color-mix(in srgb, var(--help) 20%, var(--help-sheet))"), "a chip's hover is not --help 20%");
     await page.mouse.move(0, 0);
     const veil = await cv(page, "backgroundColor", "color-mix(in srgb, var(--help-on) 6%, transparent)");
-    const fields = await page.$$eval("#q .rp-ghost .rp-chip", els => els.map(el => { const cs = getComputedStyle(el);   // W129: a future step's chips, drawn in place, not live yet
+    const fields = await page.$$eval("#q .rp-ghost:not(.rp-mask) .rp-chip", els => els.map(el => { const cs = getComputedStyle(el);   // W129: a future step's chips, drawn in place, not live yet
       return { bg: cs.backgroundColor, line: cs.borderTopColor, w: cs.borderTopWidth, style: cs.borderTopStyle, ink: cs.color }; }));
     assert.ok(fields.length >= 2, `previews: ${fields.length}`);
-    for (const f of fields) assert.deepEqual(f, { bg: veil, line: await tok(page, "--help-line"), w: w15, style: "dashed", ink: await tok(page, "--help-muted") },
-      "a preview off its role (the live chip's 1.5px edge, dashed --help-line, --help-on 6% veil, --help-muted)");
-    console.log("      (decorative, aria-hidden) a preview's --help-muted on its veil:", (await contrast(page, "#q .rp-ghost .rp-chip")).toFixed(2) + ":1");
+    for (const f of fields) assert.deepEqual(f, { bg: veil, line: await tok(page, "--help-line"), w: w15, style: "dashed", ink: on },
+      "a preview off its role (the live chip's --bw edge, dashed --help-line, --help-on 6% veil, --help-on words: LADDER-UI, readable ahead)");
+    console.log("      (decorative, aria-hidden) a preview's --help-on on its veil:", (await contrast(page, "#q .rp-ghost .rp-chip")).toFixed(2) + ":1");
     const ns = await page.$$eval("#q .rp-n", els => els.map(el => getComputedStyle(el).color));
     assert.ok(ns.length >= 4 && ns.every(c => c === help), `a step number off --help: ${ns}`);
     const rn = await contrast(page, "#q .rp-n");

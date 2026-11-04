@@ -1961,6 +1961,7 @@ async function wishStart(auto) {
   const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
   let r = null, bytes = 0, err = null;
   try {
+    window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
     fr.h(r);
@@ -2684,6 +2685,7 @@ async function clCompare(w) {
   let r = null, bytes = 0, inc = null;
   const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
   try {
+    window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail() }) });
     fr.h(r);
@@ -2716,6 +2718,7 @@ async function clSend(msg) {
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
   const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
   try {
+    window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
     fr.h(r);
@@ -2762,7 +2765,7 @@ function rwSync() {
     RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
     RW().use(rwKey());
     if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud);
-      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) });   // Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
+      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")), toastClear: "#fb" });   // REVEAL-TRAY (Nov 3): never on the hint card (desktop's foot spot lay on it after a miss); Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
       RW().mountHUD(rwHud); }
     else RW().render(0);
   }

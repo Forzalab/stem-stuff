@@ -235,10 +235,10 @@ try {
           const row = id => async () => { const r = await rows(page); return r.filter(x => x.id === id); };
           /* a future step's follow-up does not leak its answer (W129 shot QA: "Why half?" showed before d/2): drawn for its room, unseen until the pick */
           const whyBox = () => page.evaluate(() => { const e = document.querySelector('#q .rp-step[data-id="area"] .rp-why'); if (!e) return null; const r = e.getBoundingClientRect();
-            return { vis: getComputedStyle(e).visibility, seen: [...e.querySelectorAll(".rp-q, .rp-chip")].some(c => getComputedStyle(c).visibility === "visible"), y: r.y + scrollY, h: r.height,
+            return { vis: getComputedStyle(e).visibility, seen: !e.classList.contains("rp-mask") && [...e.querySelectorAll(".rp-q, .rp-chip")].some(c => getComputedStyle(c).visibility === "visible"), y: r.y + scrollY, h: r.height,   // LADDER-UI (Nov 3): before the pick a masked preview (words unseen), not an empty room
               rows: [...document.querySelectorAll("#q .rp-step")].filter(l => l.dataset.id !== "area").map(l => l.getBoundingClientRect().y + scrollY) }; });
           const w0 = await whyBox();
-          assert.ok(w0 && !w0.seen && w0.vis === "hidden" && w0.h > 0, `${tag}: before d/2 the area step's "why" row shows or has no room: ${JSON.stringify(w0)}`);
+          assert.ok(w0 && !w0.seen && w0.h > 0, `${tag}: before d/2 the area step's "why" row shows or has no room: ${JSON.stringify(w0)}`);
           await gate(page, "3-fill", size, tapIn('.rp-chip[data-v="d/2"]'), async c => [...changedRows(c), ...(await row("area")())]);
           const w1 = await whyBox();
           assert.ok(w1.seen && w1.vis === "visible", `${tag}: after d/2 the "why" row is not shown: ${JSON.stringify(w1)}`);

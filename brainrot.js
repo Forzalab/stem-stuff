@@ -255,7 +255,10 @@
   addEventListener("load", () => idle(warmUp, { timeout: 3000 }));
   /* app.js clPlace(): Cluck's sheet opened or shut; the players stay, the sheet takes the room under them (app.css #work.cl-on) */
   function sheet() { if (on) place(false); }
-  window.stemBrainrot = { sync, warmUp, sheet, cats: CATS };
+  /* Tony, Nov 3: "when Cluck starts to generate, collapse the brainrot": app.js calls it as a Cluck stream starts. Docked (desktop) only: it
+     folds as the "Hide curated brainrot" link does (the student's own fold, so nothing opens it again but that link); the box below takes the column */
+  function fold() { if (!el || !on || stashed || !el.classList.contains("docked")) return; stashed = userMin = true; place(); }
+  window.stemBrainrot = { sync, warmUp, sheet, fold, cats: CATS };
   addEventListener("resize", () => { if (on) place(false); });
   PHONE.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // a window dragged across the phone width: hide it, or bring it in
   document.addEventListener("focusin", () => setTimeout(sync, 0));

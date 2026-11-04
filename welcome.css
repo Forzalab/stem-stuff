@@ -26,18 +26,25 @@ section.wl .rp-step[data-state="active"] .rp-n::before { position: absolute; rig
 section.wl .rp-step:not([data-state="done"]) .rp-ok { visibility: hidden; }
 section.wl .rp-head { flex-wrap: nowrap; }
 /* the colours say their roles, no blue in the sheet (Tony 12:3x: "button is blue, i dont like blue … a color that emphasizes their roles"):
-   a tap chip = a 1.5px --help edge on --help 10% over --help-sheet, --help-on text (hover 20%); a preview (not a control yet, aria-hidden) =
-   a 1px dashed --help-line edge on a slight --help-on veil, --help-muted text; a step number = --help */
-section.wl .rp-chip { border: 1.5px solid var(--help); background: color-mix(in srgb, var(--help) 10%, var(--help-sheet)); color: var(--help-on); }
+   a tap chip = a --bw (1px, STYLE.md "one weight") --help edge on --help 10% over --help-sheet, --help-on text (hover 20%); a step number = --help */
+section.wl .rp-chip { border: var(--bw) solid var(--help); background: color-mix(in srgb, var(--help) 10%, var(--help-sheet)); color: var(--help-on); }
 section.wl .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--help) 20%, var(--help-sheet)); }
 section.wl .rp-n { color: var(--help); }
-/* a step not answerable yet (.rp-ghost, inert): its chips / box drawn as a preview, 1.5px dashed --help-line (the live chip's width, so it does
-   not move when it goes live) on a slight --help-on veil, --help-muted text. A done step (.rp-locked): the pick stays lit, the rest recede */
-section.wl .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border-style: dashed; border-color: var(--help-line); background: color-mix(in srgb, var(--help-on) 6%, transparent); color: var(--help-muted); opacity: 1; }
+/* a step not answerable yet (.rp-ghost, inert): its chips / box drawn as a preview, --bw dashed --help-line (dash = pending, STYLE.md; the live
+   chip's width, so it does not move when it goes live) on a slight --help-on veil, its words in --help-on: readable ahead (LADDER-UI, Tony Nov 3:
+   --help-muted read dim on the dark sheet); the dash and the missing tint say "not yet", never a dim text. A done step (.rp-locked): the pick
+   stays lit, the rest recede to a --help-line edge with --help-muted words at full strength (no opacity: at .55 they were 2.7:1, under 4.5) */
+section.wl .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border-style: dashed; border-color: var(--help-line); background: color-mix(in srgb, var(--help-on) 6%, transparent); color: var(--help-on); opacity: 1; }
 section.wl .rp-ghost .rp-check { border-width: var(--bw); }
 section.wl .rp-ghost .rp-q { color: var(--help-muted); }
-section.wl .rp-locked .rp-chip { color: var(--help-muted); opacity: .55; }
-section.wl .rp-locked .rp-chip.rp-picked { opacity: 1; color: var(--help-on); background: color-mix(in srgb, var(--help) 22%, var(--help-sheet)); }
+/* the why before its pick (repair.js whyUi mask, LADDER-UI Nov 3): drawn as a preview in its own room (W129 L6: the pick moves nothing), its words
+   unseen ("Why half?" would give d/2 away): the real question and chip words keep the size, a neutral "Why is that?" shows over the question */
+section.wl .rp-why.rp-mask .rp-q { position: relative; }
+section.wl .rp-why.rp-mask .rp-real, section.wl .rp-why.rp-mask .rp-chip { color: transparent; }
+section.wl .rp-why.rp-mask .rp-chip * { visibility: hidden; }
+section.wl .rp-why.rp-mask .rp-mask-t { position: absolute; left: 0; top: 0; color: var(--help-muted); white-space: nowrap; }
+section.wl .rp-locked .rp-chip { border-color: var(--help-line); color: var(--help-muted); opacity: 1; }
+section.wl .rp-locked .rp-chip.rp-picked { opacity: 1; border-color: var(--help); color: var(--help-on); background: color-mix(in srgb, var(--help) 22%, var(--help-sheet)); }
 section.wl .rp-locked .rp-in { color: var(--help-on); border-color: var(--help-line); opacity: 1; }   /* the done box keeps no --edge: a theme's blue line must not leak into the warm sheet */
 section.wl .rp-locked .rp-check { visibility: hidden; }
 section.wl .rp-locked .rp-q { color: var(--help-muted); }

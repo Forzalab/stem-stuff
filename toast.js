@@ -152,9 +152,15 @@
     place();
     void el.offsetWidth; el.classList.add('on');
     var follow = setInterval(function () {                               // the question may still be laying out under it
-      if (cur !== o) { clearInterval(follow); return; }
+      if (cur !== o) { clearInterval(follow); if (mo) mo.disconnect(); return; }
       if (!place() || yields()) hide(true);                              // scrolled out of its room, a control came under it, the duck rose or Cluck opened: gone at once (no exit motion beside the answer's: one blink)
     }, 120);
+    /* a `clear` box that fills while it shows (the hint card landing after a miss, REVEAL-TRAY Nov 3): re-placed before that frame paints, not at
+       the next tick, so it is never drawn on it */
+    if (o.clear && g.MutationObserver) {
+      var mo = new MutationObserver(function () { if (cur !== o) { mo.disconnect(); return; } if (!place() || yields()) hide(true); });
+      d.querySelectorAll(o.clear).forEach(function (c) { mo.observe(c, { childList: true, subtree: true, characterData: true }); });
+    }
     arm(o.ms || 4000);
     if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
   }
