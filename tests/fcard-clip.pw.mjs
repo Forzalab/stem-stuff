@@ -40,6 +40,7 @@ for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } 
 
 let failures = 0;
 async function step(name, fn) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
@@ -144,6 +145,27 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
     const [ctx, page] = await open({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, "no-preference");
     assert.equal(await page.evaluate(() => matchMedia("(hover: hover)").matches), false);
     assert.equal((await st(page)).o, 1, "copy hidden on touch");
+    await ctx.close();
+  });
+  /* v49 img2 (Tony, Nov 3 18:14, phone): keyboard up = Swap's problem pane (a flex column: #fb order 2, #q order 3). The card had no
+     order, so it sat between the question and the answer, squeezed the question to 2 lines, ran edge to edge on the pane's frame, and its
+     notch painted the page's --paper (a black block) on the pane's --qbox. Now: under the answer, inset like the rows, notch on the pane's own colour */
+  await step("393 keyboard up (Swap problem pane): the Key formulas card sits under the answer, inside the pane, its notch on the pane's colour", async () => {
+    const [ctx, page] = await open({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, "no-preference");
+    await page.focus("#ff input"); await page.waitForTimeout(300);
+    await page.setViewportSize({ width: 393, height: 469 });
+    await page.waitForFunction(() => document.documentElement.classList.contains("swap-problem"), null, { timeout: 5000 });
+    await page.waitForTimeout(450);
+    const m = await page.evaluate(() => {
+      const r = s => document.querySelector(s).getBoundingClientRect(), fc = r("#fcard"), q = r("#q"), fi = r("#freezeIn");
+      const n = getComputedStyle(document.querySelector(".fc-notch")).backgroundImage, pane = getComputedStyle(document.querySelector("#freezeIn")).backgroundColor;
+      return { fcTop: fc.top, fcL: fc.left, fcR: fc.right, fcB: fc.bottom, qB: q.bottom, fiL: fi.left, fiR: fi.right, fiB: fi.bottom, notch: n, pane };
+    });
+    if (SHOTS) await page.screenshot({ path: join(SHOTS, "fcard-swap-393.png") });
+    assert.ok(m.fcTop >= m.qB - 1, "the card is not under the answer " + JSON.stringify(m));
+    assert.ok(m.fcL >= m.fiL + 8 && m.fcR <= m.fiR - 8, "the card runs on the pane's frame " + JSON.stringify(m));
+    assert.ok(m.fcB <= m.fiB + 1, "the card is cut off at the pane's bottom " + JSON.stringify(m));
+    assert.ok(m.notch.startsWith("linear-gradient(" + m.pane + " "), "the notch's top half is not the pane's colour " + JSON.stringify(m));
     await ctx.close();
   });
   await b.close();

@@ -845,7 +845,7 @@ html.side #work > .orig { margin: 0; }
 .fcard { --fc-tint: color-mix(in srgb, var(--action) 10%, var(--paper));
   position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--action); border-radius: 10px; background: var(--fc-tint); }
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
-  padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--action); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
+  padding: 0 var(--s2); background: linear-gradient(var(--fc-above, var(--paper)) 50%, var(--fc-tint) 50%); color: var(--action); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }   /* minmax(0, ...): a formula wider than the screen (BUOY, 529px at 390) shrinks its row to the box and scrolls in .fm; an auto column grew to it and pushed the "?" and the page sideways (Oct 26) */
 .fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
@@ -1254,6 +1254,8 @@ html.swap-problem .freeze-in { height: 100%; display: flex; flex-direction: colu
 html.swap-problem #problem { flex: 1 1 auto; min-height: 3rem; overflow-y: auto; overscroll-behavior: contain; }
 html.swap-problem #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; }
 html.swap-problem #q { order: 3; flex: 0 0 auto; max-height: 80%; overflow-y: auto; overscroll-behavior: contain; }
+html.swap-problem #fcard { order: 4; flex: none; margin: var(--s2) var(--s4) var(--s4); }   /* v49 img2: no order put it between the question and the answer, on the frame */
+html.swap .fcard { --fc-above: var(--qbox); }                                     /* the notch's top half is the pane, not the page (a black block on --qbox) */
 html.swap-problem .work { align-self: end; z-index: 1; opacity: 0; pointer-events: none; }
 html.swap-problem .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.swap-problem .freeze.clipped #problem { -webkit-mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); }
