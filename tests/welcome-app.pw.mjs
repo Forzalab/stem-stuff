@@ -186,7 +186,7 @@ try {
       await cv(page, "backgroundColor", "color-mix(in srgb, var(--help) 20%, var(--help-sheet))"), "a chip's hover is not --help 20%");
     await page.mouse.move(0, 0);
     const veil = await cv(page, "backgroundColor", "color-mix(in srgb, var(--help-on) 6%, transparent)");
-    const fields = await page.$$eval("#q .rp-ghost .rp-chip", els => els.map(el => { const cs = getComputedStyle(el);   // W129: a future step's chips, drawn in place, not live yet
+    const fields = await page.$$eval("#q .rp-ghost:not(.rp-mask) .rp-chip", els => els.map(el => { const cs = getComputedStyle(el);   // W129: a future step's chips, drawn in place, not live yet
       return { bg: cs.backgroundColor, line: cs.borderTopColor, w: cs.borderTopWidth, style: cs.borderTopStyle, ink: cs.color }; }));
     assert.ok(fields.length >= 2, `previews: ${fields.length}`);
     for (const f of fields) assert.deepEqual(f, { bg: veil, line: await tok(page, "--help-line"), w: w15, style: "dashed", ink: on },
