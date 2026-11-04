@@ -44,6 +44,3 @@
    sized to its words (the popover's .pop-act precedent), never .btn-go (STYLE.md §4: the filled one is the page's submit) */
 .stoast-short .stoast-bar { display: none; }
 .stoast-a { justify-self: start; width: auto; padding: 0 var(--s3); font: inherit; white-space: nowrap; }
-
-/* the top slot (toast.js): while a status toast / the Next note is up, the question card moves down by its height instead of being covered */
-#freeze.freeze { margin-top: var(--toast-room, 0px); }

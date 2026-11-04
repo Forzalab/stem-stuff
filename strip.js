@@ -180,7 +180,7 @@
   function tip(h) {                                           // one-time: the way back on a row is its badge. Never twice per user (localStorage; blocked storage = shown each time)
     try { if (localStorage.getItem(TIP_KEY)) return; localStorage.setItem(TIP_KEY, "1"); } catch (e) { /* blocked: show it anyway */ }
     var T = window.stemToast, at = h && h.ic;
-    if (T && T.note && at) T.note({ text: TIP, at: at, slotFallback: true, ms: 5000 });
+    if (T && T.note && at) T.note({ text: TIP, at: at, loose: true, ms: 5000 });
   }
   function close(focus, byX) {
     var st = owner && seen.get(owner), h = drawer && drawer._h;

@@ -766,7 +766,6 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .cl-why .ico:first-child { width: 22px; height: 22px; }
 .cl-why:hover span { text-decoration: underline; text-underline-offset: 4px; }
 .cl-why:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.cl-why.rw-chip { width: auto; max-width: 100%; margin: var(--s4) 0 0; padding: 4px 20px 6px 4px; border: 3px solid transparent; border-radius: var(--rw-pill); background: var(--help) padding-box; color: var(--help-ink); font: 600 var(--t-sm, 1rem)/1.15 var(--rw-font); }   /* the tray chip's look (rewards.css .rw-chip), not the old rule-and-chevron CTA */
 .cl-why.rw-chip:hover span { text-decoration: none; }
 @media (prefers-reduced-motion: no-preference) {   /* pressed: the duck tilts once, the chevron nudges toward the sheet */
   .cl-cta:active .ico:first-child { transform: rotate(-14deg); }
@@ -1466,7 +1465,6 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 #toast.up::before { top: auto; bottom: -8px; transform: rotate(225deg); }                         /* above its anchor: caret on the bottom edge */
 #toast.row { min-height: 0; padding: var(--s2) var(--s3); }                                       /* MC: on the struck text, caret left at the X */
 #toast.row::before { top: calc(50% - 7px); left: -8px; transform: rotate(-45deg); }
-#toast.slot::before { display: none; }                                                            /* in the top slot (toast.js): it points at nothing */
 /* B (Tony, Oct 28: HUD tips, the pad-mode note): the words left, then a 44px close button centred on the right, toast.css's .stoast-x look */
 #toast.has-x { justify-content: space-between; gap: var(--s2); padding-right: 4px; text-align: left; }
 #toast .toast-x {

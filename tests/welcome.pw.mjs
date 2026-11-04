@@ -79,7 +79,8 @@ try {
     assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-val-opts .rp-chip:not(:disabled)', c => c.length) > 0, true, "step two: live");
     assert.equal(await fields("answer"), 1, "the last step keeps its preview");
     assert.deepEqual(await tops(), t0, "a row moved");
-    assert.equal(await page.$$eval(".rp-why", w => w.length), 0, "no why box until the live step's right chip is picked (Tony, Nov 3 19:29)");
+    assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-why .rp-chip', c => c.length), 3, "one why on the fam step");
+    assert.equal(await page.$$eval(".rp-why", w => w.length), 1, "only one why");
   });
 
   await step("finishing emits welcome_done once", async () => {

@@ -51,7 +51,7 @@ async function openBank(page, first) {
   if (first) await go(page, first);
 }
 /* the card alone: the floating things (a stage toast, a note, a popover) are not the card */
-const CARD = { animations: "disabled", style: ".stoast, #toast, .pop { visibility: hidden !important; } #freeze.freeze { margin-top: 0 !important; }"   /* a status toast in the top slot holds the card down by its height: the card is shot with the room off, so the same pixels either way */ };
+const CARD = { animations: "disabled", style: ".stoast, #toast, .pop { visibility: hidden !important; }" };
 const twistToastOn = page => page.evaluate(t => { const e = document.querySelector(".stoast.on"); return !!e && e.querySelector(".stoast-t").textContent === t; }, TOAST);
 const waitToast = page => page.waitForFunction(t => { const e = document.querySelector(".stoast.on"); return !!e && e.querySelector(".stoast-t").textContent === t && !e.classList.contains("out"); }, TOAST, { timeout: 14000 });
 /* the toast's rect against every box it must never lie on: the answer area (#q, the box / choices) and Next */

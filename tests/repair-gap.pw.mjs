@@ -66,7 +66,7 @@ try {
         const m = await page.evaluate(() => {
           const li = document.querySelector('#q .rp-step[data-id="area"]'), chips = [...li.querySelectorAll(".rp-opts .rp-chip")].filter(c => !c.closest(".rp-why"));
           const hint = li.querySelector(".rp-miss"), cb = Math.max(...chips.map(c => c.getBoundingClientRect().bottom));
-          return { gap: hint.getBoundingClientRect().top - cb, text: hint.textContent, vis: getComputedStyle(hint).visibility, whyH: li.querySelector(".rp-why")?.getBoundingClientRect().height ?? 0 };
+          return { gap: hint.getBoundingClientRect().top - cb, text: hint.textContent, vis: getComputedStyle(hint).visibility, whyH: li.querySelector(".rp-why").getBoundingClientRect().height };
         });
         assert.ok(m.text && m.vis === "visible", "the hint is not shown: " + JSON.stringify(m));
         assert.ok(m.gap >= 0 && m.gap <= MAX_GAP, `chips -> hint gap ${Math.round(m.gap)}px (max ${MAX_GAP}); the unseen why block is ${Math.round(m.whyH)}px tall`);

@@ -107,6 +107,7 @@ html.start .rw-hud { display: none; }
   border: 3px solid transparent; border-radius: var(--rw-pill); cursor: pointer; background: var(--help) padding-box;   /* the old rim's 3px kept clear: the chip keeps its box, nothing around it moves */
   transform-origin: 50% 60%;
 }
+.cl-why.rw-chip { width: auto; max-width: 100%; margin: var(--s4) 0 0; padding: 4px 20px 6px 4px; border: 3px solid transparent; border-radius: var(--rw-pill); background: var(--help) padding-box; color: var(--help-ink); font: 600 var(--t-sm, 1rem)/1.15 var(--rw-font); }   /* W118c Tony Nov 3: the "Why does this work?" CTA wears the tray chip look (overrides app.css .cl-why's rule-and-chevron). the tray chip's look (rewards.css .rw-chip), not the old rule-and-chevron CTA */
 .rw-chip > span { position: relative; }
 .rw-chip:active { filter: brightness(.9); transform: translateY(1px); }
 .rw-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 5px; }

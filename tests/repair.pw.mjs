@@ -39,7 +39,7 @@ try {
     await mount({ variant: "repair", error: "sign" });
     assert.deepEqual(await states(), ["given:done", "sheet:done", "signs:active", "plug:future", "answer:future"]);
     assert.equal(await page.$$eval('.rp-step[data-state="done"]', s => s.every(x => x.textContent.includes("✓"))), true, "a done step says ✓ (not hue alone)");
-    assert.equal(await page.$$eval(".rp-why", c => c.length), 0, "the why is not drawn before the right chip is picked (Tony, Nov 3 19:29)");
+    assert.equal(await page.$$eval('.rp-step[data-state="active"] .rp-why .rp-chip', c => c.length), 3, "3 why chips on the fam step");
     assert.equal(await page.$$eval('.rp-step[data-state="future"] .rp-chip, .rp-step[data-state="future"] input', c => c.length), 0, "a future step is a label only");
     assert.match(await page.textContent(".rp-line"), /\S/, "Cluck's line");
     await noSideScroll();
