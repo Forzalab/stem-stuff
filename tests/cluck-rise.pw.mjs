@@ -114,12 +114,11 @@ for (const [tag, vp] of VPS) {
     await settle(page); await page.clock.runFor(1000); await settle(page);
     const duck = await page.evaluate(() => { const b = document.querySelector(".ck-peek").getBoundingClientRect(); return { op: +getComputedStyle(document.querySelector(".ck-duck")).opacity, top: b.top, bottom: b.bottom }; });
     assert.ok(duck.op === 1 && duck.top < vp.height && duck.bottom > 0, "the duck is up, on screen: " + JSON.stringify(duck));
-    assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "the hint card already shows the start of Cluck's text");
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
     await page.click(".ck-peek");                                       // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
-    await page.click(".cl-peek .cl-cta");                               // the way in is the hint card's "okay, but how?" (what the duck tap used to open)
+    await reopen(page); await page.click(".vdrawer .wchip");                                // the way in is the tray's Ask Cluck (GENMISS, Tony Nov 3: no "okay, but how?" peek)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the hint card CTA opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});                  // a tap skips the typing
@@ -241,11 +240,13 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
     if (e.matches(".ck-say") || x < 0 || x >= W || y < 0 || y >= H) continue;   // the line is not a target (pointer-events: none)
     const h = document.elementFromPoint(x, y);
     if (scrollY > 0 && h && stuck(h) && !stuck(e)) continue;                                  // a row SCROLLED under a sticky bar (the HUD): scrolling, not a layout clash (same rule as the pair check below). At scrollY 0 it is still a clash. 1px of page height flips this at 393x659 (Ink, one line weight: state rows no longer shrink 1px)
+    if (h && e.matches(".opt") && h.closest(".vdrawer")) continue;           // Tony, Nov 3 19:31: the tray MAY lie over the rows below the pick (tray-matrix.pw.mjs holds the rest: never under a sibling, never on the answer row or Next)
     if (!h || !(h === e || e.contains(h))) out.push(`${nm(e)} covered at its centre by ${h ? nm(h) : "nothing"}`);
   }
   for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
     const a = els[i], b = els[j]; if (a.contains(b) || b.contains(a)) continue;
     if (a.closest(".ch") && a.closest(".ch") === b.closest(".ch")) continue;   // the mc pill: its Check / Next sits inside its own row by design (next-cue)
+    if ((a.matches(".opt") && b.closest(".vdrawer")) || (b.matches(".opt") && a.closest(".vdrawer"))) continue;   // the tray over a remaining answer row (Tony, Nov 3 19:31)
     if (stuck(a) !== stuck(b)) continue;                                       // a scrolled page under a sticky bar: scrolling, not a layout clash
     const p = a.getBoundingClientRect(), q = b.getBoundingClientRect();
     const w = Math.min(p.right, q.right) - Math.max(p.left, q.left), h = Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top);
@@ -276,7 +277,7 @@ for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the d
   bad.push(...(await clash(page, "body")).map(s => "miss, duck up: " + s));
   await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}-v2.png`) });
   await page.click(".ck-peek");                                         // B3 PR-B1: the duck only dismisses; Cluck opens from the hint card's CTA
-  await page.click(".cl-peek .cl-cta");
+  await reopen(page); await page.click(".vdrawer .wchip");
   await page.clock.runFor(600);
   await page.click("#cluck .wtext").catch(() => {});
   await page.clock.runFor(2000);

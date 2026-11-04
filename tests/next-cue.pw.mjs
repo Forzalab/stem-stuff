@@ -140,7 +140,8 @@ async function close(page, type, outcome, { code } = {}) {
     return { check, before };
   }
   if (p.type === "mc") {
-    if (!right && p.choices.length > 2) { await page.tap(`#q .opt[data-id="c"]`); await page.tap(`#q .ch[data-id="c"] .send`); await page.waitForSelector(`#q .opt.wrong`); await page.waitForTimeout(450); }
+    if (!right && p.choices.length > 2) { await page.tap(`#q .opt[data-id="c"]`); await page.tap(`#q .ch[data-id="c"] .send`); await page.waitForSelector(`#q .opt.wrong`); await page.waitForTimeout(450);
+      if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) { await page.tap(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(450); } }   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
     const id = right ? "a" : p.choices.length > 2 ? "d" : "b";
     await page.tap(`#q .opt[data-id="${id}"]`);
     const go = page.locator(`#q .ch[data-id="${id}"] .send`); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);   // the lock-in dim settles

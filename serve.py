@@ -870,7 +870,7 @@ def _load_tries():
         for k, v in (data.get("cluck") or {}).items():
             bits = k.split(" ")
             if len(bits) == 2 and isinstance(v, list):
-                rows = [r for r in v if isinstance(r, list) and len(r) == 4 and isinstance(r[0], int) and isinstance(r[2], str)]
+                rows = [r for r in v if isinstance(r, list) and len(r) in (4, 5) and isinstance(r[0], int) and isinstance(r[2], str)]   # 5: a locked turn (row_locked)
                 if rows:
                     _cluck_turns[(bits[0], bits[1])] = rows
     except (OSError, ValueError, AttributeError, TypeError, IndexError):
@@ -2260,7 +2260,8 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
         xyz = xyz_block(n)
         rows = cluck_noted(p, sid, turn[0], xyz)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
+        locked = any(row_locked(r) for r in rows if r[0] == turn[0])
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
@@ -2671,19 +2672,24 @@ def v4_dynamic(xyz, reveal, text):
 RESULT_OK = "RESULT: correct"                 # C (Tony, Oct 21): the pick is right; the letter's lamp rule: cheer, ONE plain reason, stop (Tony, Oct 28)
 
 
-def v4_result(p, pick, solved=False):
-    """W110: the RESULT line for this pick, graded by the server (pick_ok), or a solved item: RESULT_OK | "RESULT: wrong" | "" (no unit to grade)"""
+RESULT_LOCKED = ("RESULT: wrong. The student is OUT of tries: the question is closed and the answer is on screen. "
+                 "Do not say try again, do not invite another try or guess, do not wish them luck on a retry; explain the slip and stop.")   # Tony Nov 3: a locked box said "Try again, I believe in you"
+
+
+def v4_result(p, pick, solved=False, locked=False):
+    """W110: the RESULT line for this pick, graded by the server (pick_ok), or a solved item: RESULT_OK | "RESULT: wrong" | "" (no unit to grade).
+    locked (tries used up, not solved): the wrong line says so, so the reply never invites another try"""
     ok = solved or pick_ok(p, pick)
-    return RESULT_OK if ok else "RESULT: wrong" if ok is False else ""
+    return RESULT_OK if ok else (RESULT_LOCKED if locked else "RESULT: wrong") if ok is False else ""
 
 
-def v4_user(p, pick, text, reveal, xyz="", solved=False, full=True):
+def v4_user(p, pick, text, reveal, xyz="", solved=False, full=True, locked=False):
     """one user turn as two blocks: [explain_prompt(p, pick) + the RESULT line (v4_result)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY].
     full=False (C2: a chat follow-up on the same pick, the bench's layout): the question block is not sent again; block A is only "RESULT: correct"
-    on a right pick, else "" (and block B then starts with no blank line)"""
-    dyn, r = v4_dynamic(xyz, reveal, text), v4_result(p, pick, solved)
+    on a right pick, RESULT_LOCKED on a locked item, else "" (and block B then starts with no blank line)"""
+    dyn, r = v4_dynamic(xyz, reveal, text), v4_result(p, pick, solved, locked)
     if not full:
-        return [RESULT_OK, dyn] if r == RESULT_OK else ["", dyn.lstrip("\n")]
+        return [r, dyn] if r in (RESULT_OK, RESULT_LOCKED) else ["", dyn.lstrip("\n")]   # a locked box says so on every turn, follow-ups too
     return [explain_prompt(p, pick) + ("\n\n" + r if r else ""), dyn]
 
 
@@ -2699,7 +2705,7 @@ def v4_chat_turns(p, pick, history, rows):
         return rows[i] if 0 <= i < len(rows) else None
     w = row(len(rows) - m - 1)                                            # the wish turn this box came from
     last = w[3] if w else pick                                            # the pick the question block was last sent with
-    out.append({"role": "user", "content": v4_user(p, last, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "", row_solved(w))})
+    out.append({"role": "user", "content": v4_user(p, last, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "", row_solved(w), locked=row_locked(w))})
     for t in history:
         if t["role"] == "assistant":
             out.append({"role": "assistant", "content": livefig.strip(t["content"]) or "..."})
@@ -2708,7 +2714,7 @@ def v4_chat_turns(p, pick, history, rows):
         k = r[3] if r else pick
         # C2: the question block rides once (the wish turn); a follow-up resends it only when the pick changed (the new SLIP). The choice reads
         # only stored rows (or the request pick when a row is missing), so a replay stays byte for byte
-        out.append({"role": "user", "content": v4_user(p, k, t["content"], bool(r[1]) if r else False, r[2] if r else "", row_solved(r), full=k != last)})
+        out.append({"role": "user", "content": v4_user(p, k, t["content"], bool(r[1]) if r else False, r[2] if r else "", row_solved(r), full=k != last, locked=row_locked(r))})
         last = k
         j += 1
     return out
@@ -2739,6 +2745,11 @@ def row_solved(r):
     return bool(r) and r[1] == 2
 
 
+def row_locked(r):
+    """a stored Cluck turn row sent on a locked item (tries used up, not solved): its 5th field (older rows have none)"""
+    return bool(r) and len(r) > 4 and bool(r[4])
+
+
 def cluck_begin(p, sid, pick):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
     counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
@@ -2752,7 +2763,7 @@ def cluck_begin(p, sid, pick):
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
         reveal = out or solved or n >= 3
-        rows.append([n, 2 if solved else int(reveal), "", pick])
+        rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))   # [4] = True only on a locked item (tries used up, not solved): the reply must not invite a retry
         del rows[:-CLUCK_KEEP]
         _save_tries()
     return n, reveal

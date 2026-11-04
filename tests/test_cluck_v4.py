@@ -597,6 +597,41 @@ class Handlers(unittest.TestCase):
         self.assertEqual(c2[-1]["content"][0]["text"], "RESULT: correct")                  # C2: RESULT only, the question block not resent
         self.assertIn("REVEAL: yes\n\nUSER QUERY: i divided too", c2[-1]["content"][1]["text"])
 
+    def test_locked_wish_tells_cluck_not_to_invite_a_retry(self):       # Tony Nov 3 (1280): out of tries, the reply said "Try again, I believe in you"
+        self.go(serve.explain)                                                              # a wrong pick with tries left: the plain RESULT line
+        a0 = self.bodies[-1]["messages"][0]["content"][0]["text"]
+        self.assertTrue(a0.endswith("\n\nRESULT: wrong"), a0[-80:])
+        self.assertNotIn("OUT of tries", a0)
+        serve._cluck_turns.clear()
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(("d" * 32, "H_1"))["wrong"] = ["a", "c"]                            # the tries are used up (sugar: locked)
+        self.assertTrue(serve.tries_out(dict(P1, code="H_1"), "d" * 32))
+        self.go(serve.explain)
+        a1 = self.bodies[-1]["messages"][0]["content"][0]["text"]
+        self.assertIn("RESULT: wrong. The student is OUT of tries", a1)
+        self.assertIn("Do not say try again", a1)
+        hist = [{"role": "assistant", "content": "Quack."}, {"role": "user", "content": "why?"}]
+        self.go(serve.chat, history=hist)                                                    # the wish turn replays with the same line (byte for byte)
+        self.assertEqual(self.bodies[-1]["messages"][0]["content"][0]["text"], a1)
+        self.assertIn("OUT of tries", json.dumps(self.bodies[-1]["messages"][-1]["content"]))   # and the follow-up turn on the locked box says it too
+
+    def test_locked_turn_survives_a_reload(self):                       # review of #403: _load_tries kept only 4-field rows, so a locked row
+        p = dict(P1, code="H_1")                                          # (5th field) vanished on the next read (KV: every call; file: a fresh instance)
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(("d" * 32, "H_1"))["wrong"] = ["a", "c"]
+            serve._save_tries()
+        self.assertEqual(serve.cluck_begin(p, "d" * 32, "a"), (1, True))         # "a" is wrong on P1
+        self.assertTrue(serve.row_locked(serve._cluck_turns[("d" * 32, "H_1")][-1]))
+        serve._cluck_turns.clear()
+        serve._gen["loaded"] = None                                       # what another instance (or a KV read) sees: the saved blob only
+        with serve._tries_lock:
+            serve._load_tries()
+        rows = serve._cluck_turns.get(("d" * 32, "H_1"))
+        self.assertTrue(rows and serve.row_locked(rows[-1]), rows)
+        self.assertEqual(serve.cluck_begin(p, "d" * 32, "a"), (2, True))  # the turn count goes on, it does not restart at 1
+
     def test_off_without_claude_key_or_deepseek_arm(self):
         with mock.patch.dict(os.environ, {"CLUCK_ARM": "split"}):
             os.environ.pop("CLAUDE_API")
@@ -1093,6 +1128,8 @@ class PartHandlers(Handlers):
     def tearDown(self):
         self.wp.stop()
         super().tearDown()
+
+    test_locked_wish_tells_cluck_not_to_invite_a_retry = None                              # the single-item case lives in Handlers
 
     def test_right_part_pick_without_state(self):
         self.reply = "Yes! **6** is right. The test fails once i is 6.\n"
