@@ -102,6 +102,7 @@ weight() {
     twin-first) echo 9 ;;   # todo 121 twin held for its template's miss, own server, local run ~8 s
     repair) echo 5 ;;   # C2 local run ~4 s (estimate until CI timing)
     repair-twin) echo 3 ;;   # W117 keyless answer step takes the shown item's type, local run ~2 s (estimate until CI timing)
+    link) echo 3 ;;   # LINK-FEATURES S1 live-synced link hues on the repair lab, local run ~3 s (estimate until CI timing)
     login) echo 5 ;;   # local run ~7 s
     proof) echo 8 ;;   # W107 proof box, local run (estimate until CI timing)
     brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
@@ -146,6 +147,7 @@ tags() {
     twin-first) echo "@logic @real-time" ;;   # todo 121; waits out the real 2 s spam gate before its miss
     repair) echo "@layout @fast-time" ;;   # C2 repair ladder lab; installs page.clock for the 10 s study gate
     repair-twin) echo "@logic @real-time" ;;   # W117 mc template + num twin on one ladder; stub grader, no clock
+    link) echo "@layout @real-time" ;;   # LINK-FEATURES S1: ?links=1 link hues on the repair lab (flag off = byte-identical); no clock
     login) echo "@logic @real-time" ;;
     proof) echo "@logic @real-time" ;;   # W107 proof box + stub grader
     proof-timeout) echo "@logic @fast-time" ;;   # todo 109 item 1: fake page clock, own server

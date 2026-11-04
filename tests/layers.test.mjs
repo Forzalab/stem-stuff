@@ -152,3 +152,14 @@ test("openui Geometry: arrows with no tone get distinct palette hues (tn-<hue>),
   const t = hueOf(geo(`"arrow(A,C,$F_1$,tone=ok)", "arrow(A,B,$F_2$)"`));
   assert.equal(t.arrows[0], "tn-ok"); assert.ok(/^tn-(sky|amber)/.test(t.arrows[1]) && t.arrows[1] !== "tn-ok");
 });
+
+// LINK-FEATURES S1 (links.mjs): a link wears its hue's step 1 | 2 | 3 as TEXT colour, on the backgrounds solution text sits on. The repair
+// ladder (.rp) paints --help-sheet but is not inside .ai-box, so it resolves the PAGE set; .ai-box (Cluck) resolves the Cluck set (above).
+// Ladder chips sit on --sheet, where some layer-3 steps fall under 4.5:1: links.mjs renders chips plain (tests/link.pw.mjs asserts it).
+test("links: every link hue x step on the ladder's --help-sheet (page set) holds text >= 4.5:1", () => {
+  const help = /--help-sheet: (#[0-9a-f]{6})/.exec(APP)[1], bg = hex(help);
+  for (const h of AUTO) for (const [n, c] of [[1, PALETTE[h]], [2, SETS.page[`${h}-2`]], [3, SETS.page[`${h}-3`]]]) {
+    const r = contrast(hex(c), bg);
+    assert.ok(r >= FLOOR - 0.005, `${h} step ${n} on --help-sheet ${help}: ${r.toFixed(2)}:1`);
+  }
+});

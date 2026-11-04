@@ -359,6 +359,13 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
    .tn-<hue>) paints the whole mark in that hue's step instead (--ink / --muted / --c1 are what its strokes and labels read). */
 .ly2 { --ink: var(--fig-ink-2); --muted: var(--fig-muted-2); --c1: var(--fig-c1-2); --c2: var(--fig-c2-2); --c3: var(--fig-c3-2); }
 .ly3 { --ink: var(--fig-ink-3); --muted: var(--fig-muted-3); --c1: var(--fig-c1-3); --c2: var(--fig-c2-3); --c3: var(--fig-c3-3); }
+/* Links (LINK-FEATURES v2 S1, links.mjs, ?links=1, default off): one quantity wears one hue in its words, its symbol and its figure mark.
+   links.mjs sets .ln + .tn-<hue> + the layer (.ly2 / .ly3, above) on every node of an id; the newest line's ids get .ln-on (layer 1).
+   No ring or negative margin (.wtext overflow-x clips them): colour + an underline that stays inside the line box. Hue is never the
+   only cue: the words still say what the quantity is (WCAG 1.4.1). */
+.ln { color: var(--ink); }
+.ln-on, .katex .ln-on { text-decoration: underline 2px; text-decoration-skip-ink: none; text-underline-offset: .18em; }
+@media (prefers-reduced-motion: no-preference) { .ln { transition: color .2s ease-out; } }
 .tn-ink { --ink: var(--fig-ink-1); --muted: var(--fig-ink-1); --c1: var(--fig-ink-1); }
 .tn-ink.ly2 { --ink: var(--fig-ink-2); --muted: var(--fig-ink-2); --c1: var(--fig-ink-2); }
 .tn-ink.ly3 { --ink: var(--fig-ink-3); --muted: var(--fig-ink-3); --c1: var(--fig-ink-3); }
