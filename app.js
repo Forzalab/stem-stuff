@@ -2252,15 +2252,7 @@ function wishPaint() {
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
-  } else if (w.started && !w.failed && !perm) {                            // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
-    const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
-    el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
-    const keep = off && sideMQ.matches && room > 0;                         // desktop, the sheet open: no peek, no chip (Tony, Oct 5: variant a), but its room stays as an empty
-    const into = host || el.querySelector(".cluck > div");                  // box (W129 L4: taking it out shortened the page, which a scrolled short window paid for with a jump)
-    if (!off) into.insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("okay, but how?", w.open)}</div>`);
-    else if (keep) into.insertAdjacentHTML("beforeend", `<div class="cl-room" aria-hidden="true" style="height:${room}px"></div>`);
-    el.hidden = (off && !keep) || !!host;
-    el.classList.toggle("gone", keep && !host);                             // #wish's own card: unseen, its room kept
+  /* GENMISS (Tony, Nov 3): the Q3 = C inline peek + "okay, but how?" card is gone: on every wrong try, matched or generic, on every layout, the only Cluck entry is the strip tray's "Ask Cluck" (the chip below) */
   } else {
     const label = !w.started ? "Explain my mistake" : w.failed ? "Oops, didn't load. Tap to try again." : "Ask Cluck";   // permanent box + a reply on its way: the chip (the tray's "Ask Cluck") takes the student to the box's ask field
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;

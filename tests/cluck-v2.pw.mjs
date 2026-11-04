@@ -5,7 +5,8 @@
 //   tray      the strip tray (drawer under the answer) appears with the hint box and its "Ask Cluck" is reachable at once; a tap puts the cursor in the box's ask field
 //   steps     after a right try the "See Cluck's steps" chip is back on the page (V1 lost it)
 //   nokey     a question with no Cluck key keeps the box and shows the note (CL_COPY.nokey: COPY-PENDING); no chips
-//   guard     phone sugar (393): no starters, no box on load, the peek + "okay, but how?" still come after a miss
+//   guard     phone sugar (393): no starters, no box on load
+//   genmiss   every width, matched or generic miss: the tray's Ask Cluck is the one Cluck entry; no peek, no "okay, but how?"
 // CV_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-v2@desk, cluck-v2@phone. Own serve.py + a stub OpenRouter. No page.clock jumps (nothing here waits on time).
 //   node tests/cluck-v2.pw.mjs <port> [shots dir]
 import { createRequire } from "node:module";
@@ -168,13 +169,35 @@ for (const w of W.filter(w => w >= 720)) {
   });
 }
 for (const w of W.filter(w => w < 720)) {
-  await step(`@phone ${w}: no starters, no box on load; a miss still brings the peek and "okay, but how?"`, async () => {
+  await step(`@phone ${w}: no starters, no box on load`, async () => {
     const page = await open(w);
     assert.ok(!(await vis(page, "#cluck, .cl-starter")), "nothing of the box on load");
     await wrong(page);
     await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 });
-    await page.waitForFunction(() => [...document.querySelectorAll(".cl-peek .cl-cta")].some(e => e.getClientRects().length), null, { timeout: 5000 });
     assert.ok(!(await vis(page, ".cl-starter")), "no starters on a phone");
+    await page.context().close();
+  });
+}
+// GENMISS (Tony Nov 3 16:13, "a generic error still show 'ok but how' when it should show a tray with the cluck button ONLY (one entry)"): on EVERY wrong try, at every width,
+// matched (wrong[] hint) or generic (a value no wrong[] row names), the only Cluck entry is the tray's Ask Cluck chip. No peek card, no "okay, but how?" anywhere.
+const generic = async page => { await page.click('.opt[data-id="c"]'); await page.click('.ch[data-id="c"] .send'); };
+for (const w of W) for (const [kind, miss] of [["matched", wrong], ["generic", generic]]) {
+  await step(`@${w < 720 ? "phone" : "desk"} ${w}: a ${kind} miss: the tray's Ask Cluck is the ONLY Cluck entry (no peek, no "okay, but how?")`, async () => {
+    const page = await open(w);
+    await miss(page);
+    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+    await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 }).catch(() => { /* the stream may be off; the entries are what is asserted */ });
+    await page.waitForTimeout(600);
+    const g = await page.evaluate(() => {
+      const shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
+      const ent = [...document.querySelectorAll(".wchip, .cl-cta, .cl-peek, .cue-chip, #clBack")].filter(shown);
+      return { ent: ent.map(e => (e.className + ":" + (e.textContent || "").trim().replace(/\s+/g, " ")).slice(0, 60)), inTray: ent.filter(e => e.closest(".vdrawer")).length, body: document.body.innerText };
+    });
+    assert.equal(g.ent.length, 1, "exactly one Cluck entry: " + JSON.stringify(g.ent));
+    assert.equal(g.inTray, 1, "and it is the tray's: " + JSON.stringify(g.ent));
+    assert.match(g.ent[0], /Ask Cluck/, "its label: " + g.ent[0]);
+    assert.ok(!/okay, but how/i.test(g.body), "'okay, but how?' is on the page");
+    if (kind === "matched") assert.ok(g.body.includes(HINT), "the bank hint stays in the left hint card");
     await page.context().close();
   });
 }
