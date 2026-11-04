@@ -3353,7 +3353,9 @@ def _v4_claude_chunks(v4, max_tokens):
             msgs.append({"role": "user", "content": blocks})
         else:                                                    # always the block form, so a turn looks the same whether or not it is the marked one
             msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
-    return _claude_one(system, msgs, max_tokens, v4["arm"])
+    # a turn that may draw gets FIG_TOKENS on top (the old path does the same): a held ```fig the gate drops still spends its tokens, and
+    # PHYS_LP5 (Nov 3) hit max_tokens at 700 and ended mid-word
+    return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"])
 
 
 def _v4_deepseek_chunks(v4, key, max_tokens):
