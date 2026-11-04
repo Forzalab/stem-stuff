@@ -12,7 +12,7 @@ export function renumberSteps(t) {
 }
 
 /* A strict GFM pipe table at lines[i]: a header row, a "|---|" separator row with the same column count, then >=1 body rows, every row the same
-   column count (blank lines between rows are skipped: models put one between every row). Returns { head, rows, next } (next = the line after the
+   column count (blank lines between rows are skipped: models put one between every row; a short LAST line is a row still arriving, not part of the table). Returns { head, rows, next } (next = the line after the
    last row) or null, and then the caller renders the line as it always did. */
 const cells = l => { const m = /^\s*\|(.*)\|\s*$/.exec(l); return m ? m[1].split("|").map(c => c.trim()) : null; };
 export function pipeTable(lines, i) {
@@ -26,8 +26,29 @@ export function pipeTable(lines, i) {
     if (!lines[j].trim()) continue;
     const r = cells(lines[j]);
     if (!r) break;
-    if (r.length !== head.length) return null;
+    if (r.length !== head.length) {
+      if (lines.slice(j + 1).every(x => !x.trim())) break;                // the last line, cut short while it streams (pipeHold keeps it back)
+      return null;
+    }
     rows.push(r); next = j + 1;
   }
   return rows.length ? { head, rows, next } : null;
+}
+/* A table still arriving: the text so far ends in a lone header row, a header + a separator still being typed, a header + separator with no body row yet,
+   or a body row cut short. Returns the index to resume at (past the held lines) or null. Held, not drawn: no raw bars flash and the layout does not
+   jump when the rows land. A held line opens with "|" then a space or nothing ("|x| = 3", absolute value, is prose). */
+const OPEN = /^\s*\|(?: |$)/, SEPISH = /^\s*\|[\s:|-]*$/;
+export function pipeHold(lines, i) {
+  if (!OPEN.test(lines[i] ?? "")) return null;
+  let last = lines.length - 1; while (last > i && !lines[last].trim()) last--;
+  if (i === last) return last + 1;                                         // a lone header, or a cut row, at the end
+  if (!/^\s*\|/.test(lines[last])) return null;
+  const head = cells(lines[i]); if (!head) return null;
+  let j = i + 1; while (j < last && !lines[j].trim()) j++;
+  if (j === last) return SEPISH.test(lines[last]) || cells(lines[last]) === null || cells(lines[last]).length !== head.length ? last + 1 : null;   // header, then the separator being typed (or a bad line)
+  const sep = cells(lines[j]);
+  if (!sep || sep.length !== head.length || !sep.every(c => /^:?-+:?$/.test(c))) return null;
+  const done = lines.slice(j + 1, last).some(l => l.trim());              // body rows already complete before the last line
+  if (!done) return cells(lines[last]) === null || cells(lines[last]).length !== head.length ? last + 1 : null;   // the first row, cut
+  return null;
 }

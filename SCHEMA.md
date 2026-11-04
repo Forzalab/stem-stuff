@@ -360,6 +360,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Text | L0 | layout | P1.1 | `Text(text: string≤400)` |  |
 | Legend | L0 | layout | P1.1 | `Legend(items: string≤32[]≤8)` |  |
 | Table | L0 | layout | P1.1 | `Table(head: string≤24[]≤5, rows: string≤40[]≤5[]≤12)` |  |
+| Tug | L1 | interaction | P1.1 | `Tug(rows: string≤110[]≤6, of?: string≤24, alt?: string≤120, net?: string≤24)` |  |
+| Flip | L1 | interaction | P1.1 | `Flip(rows: string≤40[]≤3[]≤4, alt?: string≤120)` |  |
 | Math | L0 | domain | planned | `Math(tex: string≤200)` | symbolic.simplify |
 | Chips | L0 | layout | planned | `Chips(items: string≤32[]≤8)` |  |
 | Callout | L1 | layout | P1.1 | `Callout(tag: string≤24, text: string≤400)` |  |
@@ -387,7 +389,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Recipe | Stages | Length | Components |
 |---|---|---|---|
 | hint-line | pre, wrong | S | Hints |
-| misconception | wrong | S | Callout, Chips |
+| misconception | wrong | S | Callout, Chips, Tug, Flip |
 | predict-reveal | pre, wrong, post | S | Predict, Reveal, Callout |
 | steps | wrong, post | M | Steps, Step, Graph, Legend, Table |
 | twin-compare | pre, wrong, post | M | Compare, Steps, Step, Graph, Legend |

@@ -67,6 +67,34 @@ class Gate(unittest.TestCase):
         self.assertEqual(views_gate.gate("root = View([fig, c])\n" + GEO + '\nc = Text("key.v1")', CTX)[1], ["c:stage:Text.text"])
 
 
+class TugFlip(unittest.TestCase):
+    """TUG-VIEW.md: Tug rows are `label | move | up|down|same [size] [| why]`, <= 6; net is post-only; Flip rows are exactly 3 cells, <= 4"""
+    def one(self, stmt):
+        return views_gate.gate("root = View([t])\n" + stmt, CTX)
+
+    def test_good_tug_and_flip_pass(self):
+        t = 't = Tug(["V | down to 1/3 | up 3 | Smaller box.", "T | down to 1/2 | down 2"], "P", "two pulls")'
+        self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
+        f = 't = Flip([["arm of W", "L", "half of L"], ["KE", "x", "y"]])'
+        self.assertEqual(self.one(f), ("root = View([t])\n" + f, ["ok"]))
+
+    def test_seven_rows_drop_the_whole_statement(self):
+        rows = ", ".join(['"V | m | up"'] * 7)
+        prog, log = self.one(f"t = Tug([{rows}])")
+        self.assertIsNone(prog)
+        self.assertTrue(log[0].startswith("t:too-long"), log)
+
+    def test_bad_rows_and_net(self):
+        self.assertEqual(self.one('t = Tug(["V | m | sideways"])')[1][0], "t:tug:row")
+        self.assertEqual(self.one('t = Tug(["a very long label | m | up"])')[1][0], "t:tug:row")
+        self.assertEqual(self.one('t = Tug(["V | m | up"], "P", "alt", "up 3/2")')[1][0], "t:stage:Tug.net", "a Cluck reply is never post: no end-knot answer")
+        self.assertEqual(self.one('t = Flip([["a", "b"]])')[1][0], "t:flip:row")
+
+    def test_a_key_literal_in_a_row_is_a_leak(self):
+        self.assertIn("leak:", self.one('t = Tug(["c | 5 m | up"])')[1][0])
+        self.assertIn("leak:", self.one('t = Flip([["c", "x", "5 m"]])')[1][0])
+
+
 class Stream(unittest.TestCase):
     def test_fence_streams_held_until_closed(self):
         body = GOOD

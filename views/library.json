@@ -28,6 +28,12 @@
                   "$ref": "#/$defs/Table"
                 },
                 {
+                  "$ref": "#/$defs/Tug"
+                },
+                {
+                  "$ref": "#/$defs/Flip"
+                },
+                {
                   "$ref": "#/$defs/Callout"
                 },
                 {
@@ -140,6 +146,60 @@
         },
         "required": [
           "head",
+          "rows"
+        ]
+      },
+      "Tug": {
+        "description": "A push-pull rope: one row per factor, \"label | move | up|down|same [size 1-9]\"; the bar pulls right (up) or left (down); size is the bar's relative length; of = the thing pulled; net is the end knot (post only)",
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 110
+            },
+            "maxItems": 6
+          },
+          "of": {
+            "type": "string",
+            "maxLength": 24
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "net": {
+            "type": "string",
+            "maxLength": 24
+          }
+        },
+        "required": [
+          "rows"
+        ]
+      },
+      "Flip": {
+        "description": "Cards that flip from \"you did\" to \"the fix\": rows of [step, you did, the fix]; tap a card to flip it back",
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 3
+            },
+            "maxItems": 4
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
           "rows"
         ]
       },
@@ -338,6 +398,12 @@
                   "$ref": "#/$defs/Table"
                 },
                 {
+                  "$ref": "#/$defs/Tug"
+                },
+                {
+                  "$ref": "#/$defs/Flip"
+                },
+                {
                   "$ref": "#/$defs/Callout"
                 },
                 {
@@ -508,6 +574,12 @@
                   "$ref": "#/$defs/Table"
                 },
                 {
+                  "$ref": "#/$defs/Tug"
+                },
+                {
+                  "$ref": "#/$defs/Flip"
+                },
+                {
                   "$ref": "#/$defs/Callout"
                 },
                 {
@@ -640,6 +712,70 @@
         },
         "required": [
           "head",
+          "rows"
+        ]
+      }
+    },
+    "Tug": {
+      "signature": "Tug(rows: string[], of?: string, alt?: string, net?: string)",
+      "description": "A push-pull rope: one row per factor, \"label | move | up|down|same [size 1-9]\"; the bar pulls right (up) or left (down); size is the bar's relative length; of = the thing pulled; net is the end knot (post only)",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 110
+            },
+            "maxItems": 6
+          },
+          "of": {
+            "type": "string",
+            "maxLength": 24
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "net": {
+            "type": "string",
+            "maxLength": 24
+          }
+        },
+        "required": [
+          "rows"
+        ]
+      }
+    },
+    "Flip": {
+      "signature": "Flip(rows: string[][], alt?: string)",
+      "description": "Cards that flip from \"you did\" to \"the fix\": rows of [step, you did, the fix]; tap a card to flip it back",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 3
+            },
+            "maxItems": 4
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
           "rows"
         ]
       }
@@ -868,6 +1004,12 @@
                   "$ref": "#/$defs/Table"
                 },
                 {
+                  "$ref": "#/$defs/Tug"
+                },
+                {
+                  "$ref": "#/$defs/Flip"
+                },
+                {
                   "$ref": "#/$defs/Callout"
                 },
                 {
@@ -1049,6 +1191,8 @@
         "learning components: subject-blind, know data shapes only"
       ],
       "components": [
+        "Tug",
+        "Flip",
         "Callout",
         "Steps",
         "Step",

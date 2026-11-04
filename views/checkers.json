@@ -145,6 +145,12 @@
     "Table": {
       "rows": 8,
       "cols": 4
+    },
+    "Tug": {
+      "rows": 6
+    },
+    "Flip": {
+      "rows": 4
     }
   }
 }
