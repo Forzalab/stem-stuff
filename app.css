@@ -1078,7 +1078,7 @@ html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
 .cl:has(.wtext.wrun) .ask::before, .cl.wbusy .ask::before { content: ""; position: absolute; z-index: -2; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
   translate: -50% -50%; background: conic-gradient(from 270deg, var(--help), var(--c2) 15%, var(--c3) 32%, var(--c1) 50%, var(--c3) 72%, var(--help));
   animation: wspin 3.6s linear infinite; will-change: transform; pointer-events: none; }
-.cl:has(.wtext.wrun) .ask::after, .cl.wbusy .ask::after { content: ""; position: absolute; z-index: -1; inset: 1.5px; border-radius: 8.5px; background: var(--ai-pill); pointer-events: none; }
+.cl:has(.wtext.wrun) .ask::after, .cl.wbusy .ask::after { content: ""; position: absolute; z-index: -1; inset: 1.5px; border-radius: inherit; background: var(--ai-pill); pointer-events: none; }
 @keyframes wspin { to { transform: rotate(360deg); } }
 .ask .ff { flex: 1; min-height: var(--btn); padding: 0; border: 0; background: none; box-shadow: none; }
 .ask .ff:focus-within { box-shadow: none; }
