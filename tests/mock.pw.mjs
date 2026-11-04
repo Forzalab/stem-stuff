@@ -124,27 +124,28 @@ try {
       assert.equal(await page.evaluate(() => window.stemMock.state()?.done), true, t + ": the finished mock restarted");
     }
   });
-  await step("a mock night (Sunday 21:00) opened on X3 Q1 itself restarts it in place (a fresh round, no 'only question' note); a reload keeps the mock", async () => {
-    await night("2026-11-01T21:00:00");
-    await load("PHYS_MQ1");
-    await opened(page, "PHYS_MQ1").catch(async () => { throw new Error("the restart did not reopen X3 Q1: " + JSON.stringify(await page.evaluate(() => ({ m: window.stemMock.state(), item: window.stemQueue.item(), closed: document.querySelector("#q").classList.contains("closed"), toast: document.querySelector("#toast")?.textContent })))); });
-    assert.equal(await page.evaluate(() => window.stemMock.state().at), 1, "X3 Q1 is the mock's first");
-    assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), "2026-11-01");
-    assert.equal(await page.evaluate(() => window.stemMock.on()), true);
-    assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast")?.textContent || ""), /only question/);
-    await page.reload();
-    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ1", null, { timeout: 8000 });
-    await next(page); await opened(page, "PHYS_MQ2");
+  /* Tony, Nov 3 18:39 ("we are in mock mode, so it only has one try. lets turn it off"): the nights start no mock (shuffle.mjs MOCK_NIGHTS_ON = false);
+     ?mock=1 still does; a night mock already running on a device ends, so that student gets normal tries tonight */
+  await step("mock nights off: Sunday 21:00, Tuesday 19:00, Thursday 22:00 start no mock", async () => {
+    for (const t of ["2026-11-01T21:00:00", "2026-11-03T19:00:00", "2026-11-05T22:00:00"]) {
+      await night(t);
+      await load("PHYS_MQ2");
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ2", null, { timeout: 8000 });
+      await page.waitForTimeout(600);
+      assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), null, t + ": a night mock started");
+      assert.equal(await page.evaluate(() => window.stemMock.state()?.done), true, t + ": the finished mock restarted");
+    }
   });
-  await step("once per night: Monday 01:00 (still Sunday night) does not restart it; Tuesday 18:00 (a new night) does", async () => {
-    await night("2026-11-02T01:00:00", false);
-    await load("PHYS_MQ2"); await opened(page, "PHYS_MQ2");
-    await page.waitForTimeout(600);
-    assert.equal(await page.evaluate(() => window.stemMock.state().at), 2, "the same night restarted the mock");
-    await night("2026-11-03T18:00:00", false);
-    await load("PHYS_MQ2");
-    await page.waitForFunction(() => window.stemMock.state()?.at === 1 && localStorage.getItem("stem-mock-night") === "2026-11-03", null, { timeout: 8000 });
-    await opened(page, "PHYS_MQ1");
+  await step("a night mock already running (started before the switch) ends on the next load: normal tries; ?mock=1 alone keeps going", async () => {
+    await night("2026-11-03T19:00:00");
+    await page.goto(BASE + "/?mock=1"); await opened(page, "PHYS_MQ1");
+    await load("PHYS_MQ1"); await page.waitForTimeout(600);
+    assert.equal(await page.evaluate(() => window.stemMock.on()), true, "a ?mock=1 mock (no night key) ended");
+    await page.evaluate(() => localStorage.setItem("stem-mock-night", "2026-11-03"));   // the night's key: this mock was the night's
+    await load("PHYS_MQ1");
+    await page.waitForFunction(() => window.stemMock.state()?.done === true, null, { timeout: 8000 });
+    assert.equal(await page.evaluate(() => window.stemMock.on()), false);
+    assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), null, "the night key stayed");
     assert.deepEqual(errs, [], "no page errors");
   });
   await ctx.close();
