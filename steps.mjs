@@ -10,3 +10,24 @@ export function renumberSteps(t) {
     return s ? `${++n}. ${s[2]}` : l;
   }).join("\n");
 }
+
+/* A strict GFM pipe table at lines[i]: a header row, a "|---|" separator row with the same column count, then >=1 body rows, every row the same
+   column count (blank lines between rows are skipped: models put one between every row). Returns { head, rows, next } (next = the line after the
+   last row) or null, and then the caller renders the line as it always did. */
+const cells = l => { const m = /^\s*\|(.*)\|\s*$/.exec(l); return m ? m[1].split("|").map(c => c.trim()) : null; };
+export function pipeTable(lines, i) {
+  const head = cells(lines[i] ?? "");
+  if (!head) return null;
+  let j = i + 1; while (j < lines.length && !lines[j].trim()) j++;
+  const sep = cells(lines[j] ?? "");
+  if (!sep || sep.length !== head.length || !sep.every(c => /^:?-+:?$/.test(c))) return null;
+  const rows = []; let next = ++j;
+  for (; j < lines.length; j++) {
+    if (!lines[j].trim()) continue;
+    const r = cells(lines[j]);
+    if (!r) break;
+    if (r.length !== head.length) return null;
+    rows.push(r); next = j + 1;
+  }
+  return rows.length ? { head, rows, next } : null;
+}

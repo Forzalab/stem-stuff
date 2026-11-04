@@ -33,6 +33,10 @@ const LONG = ["Friction is the only thing turning the car, so it has to supply t
   "That is why slow corners can be tight and fast ones have to be wide. Picking two? That one forgot the square on $v$.\n\n",
   "Tick: a. Egg-cellent."];
 const SHORT = ["POOF! A wish is a wish.\n", "Tick: a. Egg-cellent."];
+/* Tony's PHYS_SGU reply (Nov 3 16:16): a strict GFM pipe table, a blank line between its rows, split mid-table across the stream */
+const TABLE = ["Here is the push and the pull side by side:\n\n| factor | what changed | effect on $P$ |\n\n|---|-", "--|---|\n\n| **V** | down to $\\frac13$ | up |\n\n| **T** | down to $\\frac12$",
+  " | down |\n\nPut both into one ratio:\n\n", "Tick: a. Egg-cellent."];
+const TABLE2 = ["Your slip and the fix:\n\n| step | you did | the fix |\n|---|---|---|\n", "| arm of W | $L$ | half of $L$ |\n| KE terms | $\\frac12Mv^2$ | $\\frac{7}{10}Mv^2$ |\n\nSo:\n\n", "Tick: a. Egg-cellent."];
 let parts = LONG;
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
@@ -150,6 +154,32 @@ for (const [tag, vp] of VPS) {
     assert.ok(!g.below && g.op === 0 && !g.vis, "no hint");
     assert.deepEqual(await page.evaluate(() => window.__more), [], "Jev hears nothing");
     assert.deepEqual(page.errs, [], "no page errors");
+    await page.context().close();
+  });
+  for (const [kind, reply, sel] of [["a cause -> up/down pipe table (Tony's SGU reply) renders as a Tug", TABLE, "tug"], ["any other strict pipe table renders as a styled .wtbl table", TABLE2, "tbl"]]) await step(`${tag}: ${kind} (no raw bars, KaTeX in the cells, no sideways scroll)`, async () => {
+    parts = reply;
+    const page = await cluck(vp);
+    const r = await page.evaluate(() => {
+      const w = document.querySelector("#cluck .wtext"), bars = [], walk = document.createTreeWalker(w, NodeFilter.SHOW_TEXT);
+      for (let t; (t = walk.nextNode());) if (t.textContent.includes("|") && !t.parentElement.closest(".katex")) bars.push(t.textContent);
+      return { tugs: w.querySelectorAll(".vw-tug").length, bar: [...w.querySelectorAll(".vw-tug .tg-bar")].map(b => (b.classList.contains("tn-sky") ? "sky" : b.classList.contains("tn-orange") ? "orange" : "?") + ":" + b.textContent),
+        knot: w.querySelector(".vw-tug .tg-net")?.textContent, tugK: w.querySelectorAll(".vw-tug .tg-lab .katex").length,
+        tables: w.querySelectorAll(".wtbl table").length, all: w.querySelectorAll("table").length, ths: w.querySelectorAll(".wtbl thead th").length,
+        rows: w.querySelectorAll(".wtbl tbody tr").length, katex: w.querySelectorAll(".wtbl td .katex").length, bars, sw: w.scrollWidth, cw: w.clientWidth,
+        after: /Put both into one ratio|So:/.test(w.textContent) };
+    });
+    if (sel === "tug") {
+      assert.deepEqual([r.tugs, r.all, r.bar, r.knot], [1, 0, ["sky:▲", "orange:▼"], "?"], "one Tug, the SGU rows, end knot ?: " + JSON.stringify(r));
+      assert.ok(r.tugK >= 2, "the labels go through KaTeX: " + r.tugK);
+    } else {
+      assert.deepEqual([r.tugs, r.tables, r.all, r.ths, r.rows], [0, 1, 1, 3, 2], "one styled table, 3 headers, 2 body rows: " + JSON.stringify(r));
+      assert.ok(r.katex >= 2, "the cells go through KaTeX: " + r.katex);
+    }
+    assert.deepEqual(r.bars, [], "no raw pipe text");
+    assert.ok(r.after, "the line after the table still shows");
+    assert.ok(r.sw <= r.cw + 1, `the reply does not scroll sideways (${r.sw} > ${r.cw})`);
+    assert.deepEqual(page.errs, [], "no page errors");
+    await page.screenshot({ path: join(SHOTS, `built-${sel}-${tag}.png`) });
     await page.context().close();
   });
 }
