@@ -1459,7 +1459,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
   position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
   display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
   background: var(--paper); color: var(--ink); border: var(--bw) solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);   /* --bw like every box: when picks conflict, the more unified one wins (Tony, Oct 3) */
-  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: balance; cursor: pointer;
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: pretty; cursor: pointer;   /* not balance: balance halves the lines but the box keeps the unbalanced width (v49: "4 words b4 newline") */
   user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
 #toast.on { visibility: visible; animation: toast-in .3s ease-out backwards; }
