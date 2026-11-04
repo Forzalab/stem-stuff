@@ -2032,12 +2032,13 @@ function wishSwap(w, t) {
 }
 /* a reply that died mid-way (an in-band error: 402, timeout, cut at max_tokens): drop the server's "stopped early" line, an unclosed fence,
    the half line at the end and a lead-in that promised a figure (ends with ":"), and the empty gaps a dropped figure left */
+const LEADIN = /:\s*$/;   // a line that promised a figure; the one rule for cutClean, slotsResolve and figDrop
 function cutClean(t) {
   let s = t.replace(/\n?\(Cluck stopped early\. Sorry!\)\s*$/, "");
   if ((s.match(/```/g) || []).length % 2) s = s.slice(0, s.lastIndexOf("```"));
   const lines = s.replace(/\s+$/, "").split("\n");
   if (lines.length && !/[.!?)\]$]\s*$|[^\x00-\x7f]\s*$/.test(lines.at(-1))) lines.pop();
-  while (lines.length && (/:\s*$/.test(lines.at(-1)) || !lines.at(-1).trim())) lines.pop();
+  while (lines.length && (LEADIN.test(lines.at(-1)) || !lines.at(-1).trim())) lines.pop();
   return lines.join("\n").replace(/\n{3,}/g, "\n\n");
 }
 function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
@@ -2067,6 +2068,10 @@ const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s)
    reply's end \u0006<fence or nothing>\u0007 follows. slotsResolve puts the fill AT the anchor, or removes the anchor and its blank line: while pending
    (and for good when nothing was drawn) the anchor leaves no DOM, so no gap and no empty box. Stripped of every control char, never shown. */
 const SLOT_FILL = /\u0006([\s\S]*?)\u0007/;
+function leadOut(a) {                                                    // text before a dropped figure: its ":" lead-in line goes, the blank line above it stays
+  const x = a.replace(/\n+$/, ""), i = x.lastIndexOf("\n");
+  return LEADIN.test(x.slice(i + 1)) ? x.slice(0, i + 1) : a.replace(/\n+$/, "\n");
+}
 function slotsResolve(t, status) {   // status: while the fill is pending the anchor shows a "Drawing…" line (wishHTML only; history and speech get none)
   if (!/[\u0005-\u0007]/.test(t)) return t;
   const m = SLOT_FILL.exec(t), fill = m ? m[1] : "";
@@ -2074,7 +2079,7 @@ function slotsResolve(t, status) {   // status: while the fill is pending the an
   const i = t.indexOf("\u0005");
   if (i >= 0) {
     const a = t.slice(0, i), b = t.slice(i + 1);
-    t = fill ? a + fill + b : status && !m ? a.replace(/\n*$/, "\n") + "\u0001DRAW\n" + b.replace(/^\n+/, "") : a.replace(/\n+$/, "\n") + b.replace(/^\n+/, "");
+    t = fill ? a + fill + b : status && !m ? a.replace(/\n*$/, "\n") + "\u0001DRAW\n" + b.replace(/^\n+/, "") : leadOut(a) + b.replace(/^\n+/, "");   // nothing drawn: the lead-in goes too
   }
   return t.replace(/[\u0005-\u0007]/g, "");
 }
@@ -2127,14 +2132,22 @@ function showStatic(ph, url, alt) {
   ph.replaceChildren(img); ph.classList.add("wstatic");
 }
 const tooNarrow = ph => ph.clientWidth < TINY_W || [...ph.querySelectorAll(".vw-slot.on > *")].some(x => x.scrollWidth > ph.clientWidth + 1);
+function figDrop(ph) {                                                   // a figure that drew nothing: its placeholder, the gaps around it and a ":" lead-in line right before it
+  const gap = e => e && e.classList.contains("wgap");
+  while (gap(ph.previousElementSibling)) ph.previousElementSibling.remove();
+  while (gap(ph.nextElementSibling)) ph.nextElementSibling.remove();
+  const p = ph.previousElementSibling;
+  if (p && p.classList.contains("wl") && !p.classList.contains("wstep") && LEADIN.test(p.textContent)) p.remove();
+  ph.remove();
+}
 function wishFigs(root) {
   for (const ph of root.querySelectorAll(".wfig[data-f]")) {
     const k = +ph.dataset.f, done = figEl[k];
-    if (figGone.has(k)) { ph.remove(); continue; }                      // drawn nothing before: it stays gone on every redraw
+    if (figGone.has(k)) { figDrop(ph); continue; }                      // drawn nothing before: it stays gone on every redraw
     if (done && !done.isConnected) { ph.replaceWith(done); continue; }
     ph.removeAttribute("data-f");
     if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
-      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); ph.remove(); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
+      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); figDrop(ph); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
       ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
       import("./views.js").then(V => {
         let drawn = false;
@@ -2149,7 +2162,7 @@ function wishFigs(root) {
     let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
     if (!b || b.type !== "graph") { ph.remove(); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
-    try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); ph.remove(); continue; }
+    try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); figDrop(ph); continue; }
     if (!done) figEl[k] = ph;
   }
 }                                // "1. Find the momentum before — only one cart moves"
