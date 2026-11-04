@@ -114,6 +114,9 @@ try {
       }
       await page.waitForFunction(() => /stored energy/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 10000 });
       assert.equal(await page.locator("#cluck .wtext .wcaret").count(), 1, "one caret while the figure is pending");
+      const gap = await page.evaluate(() => { const rows = [...document.querySelectorAll("#cluck .stg .stg-r, #cluck .stg .stg-sum")], q = document.querySelector("#cluck .cl-quack");
+        return rows.length && q ? q.getBoundingClientRect().top - rows.at(-1).getBoundingClientRect().bottom : null; });
+      assert.ok(gap === null || gap >= 11.5, "a gap (>= --s3, 12px) between the last stage row and the reply opener (Tony, Nov 4): " + gap);
       await final(page);
       const S = await page.evaluate(() => ({ ...window.__s, bad: window.__bad }));
       assert.deepEqual(S.bad, [], "violations");
