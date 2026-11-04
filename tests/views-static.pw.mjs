@@ -176,15 +176,16 @@ try {
     await page.context().close();
   });
   for (const [w, h] of [[1280, 900], [390, 844]]) {
-    await step(`a figure figcheck can't fix (two blocks in each other) never draws: the alt text in a plain box, no svg; fig_check has codes only, ${w}`, async () => {
+    await step(`a figure figcheck can't fix (two blocks in each other) never draws: nothing shown (0 height, no description box), no svg; fig_check has codes only, ${w}`, async () => {
       const page = await wish("clash", w, h);
       const sel = "#cluck .wtext .wfig:not(.wview)";
-      await page.waitForSelector(sel, { timeout: 5000 });
-      const f = await page.$eval(sel, e => ({ svg: !!e.querySelector("svg"), lbl: e.querySelectorAll(".lbl").length, text: e.textContent.trim(), cls: e.className, find: e.dataset.figFindings }));
+      await page.waitForSelector(sel, { timeout: 5000, state: "attached" }); await page.waitForSelector(sel + "[data-fig-degraded]", { state: "attached", timeout: 5000 });
+      const f = await page.$eval(sel, e => ({ svg: !!e.querySelector("svg"), lbl: e.querySelectorAll(".lbl").length, text: e.textContent.trim(), cls: e.className, find: e.dataset.figFindings,
+        h: e.getBoundingClientRect().height }));
       assert.equal(f.svg, false, "no svg: the interpenetrating drawing never reaches the student");
       assert.equal(f.lbl, 0, "no labels left over");
-      assert.equal(f.text, CLASH.alt, "the figure's alt text");
-      assert.match(f.cls, /\bfig-alt\b/, "in the plain alt box");
+      assert.equal(f.text, "", "Nov 3: no description-only box in a reply: nothing is shown for a figure that cannot be drawn");
+      assert.equal(f.h, 0, "0 height: no gap");
       assert.ok(f.find.split(" ").includes("I-BODY-1"), f.find);
       const T = await page.evaluate(() => window.__figT);
       assert.equal(T.length, 1, `one fig_check per figure render: ${JSON.stringify(T)}`);

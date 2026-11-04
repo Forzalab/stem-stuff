@@ -3161,6 +3161,7 @@ FIG_REASK_TOKENS = 600
 FIG_OUT_RE = re.compile(r"\n```fig\n[^\n]*\n```\n")
 OUI_OUT_RE = re.compile(r"\n```openui\n[\s\S]*?\n```\n")
 FIG_OK = ("ok", "off", "second")
+FIG_WAIT, FIG_FILL, FIG_END = "\u0005", "\u0006", "\u0007"   # anchor where a dropped figure was / its late fill / end of the fill (app.js slotsResolve)
 FIG_SLOT = "\u0003FIGSLOT\u0003"           # where a dropped fence was (livefig.Fence slot): a re-asked figure goes there
 
 
@@ -3197,15 +3198,12 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     ask = reask if reask and fig is not None and livefig.on() else None
     xyz, fence = Xyz(), views_gate.Fence(fig, FIG_SLOT if ask else None)
     guard = None if reveal else LeakGuard(facts)
-    sent, head, held = False, "", None           # head: the first visible line so far; None once it went on. held: the words after the slot
+    sent, head, waited = False, "", False        # head: the first visible line so far; None once it went on. waited: FIG_WAIT went out
     for t in chunks:
         vis = fence.feed(xyz.feed(t))
-        if held is not None or FIG_SLOT in vis:
-            held = (held or "") + vis
-            if "```" not in fence.buf:
-                continue
-            vis, held = held.replace(FIG_SLOT, fence.slot_plain), None    # the model opens another fence: it may draw its own; the words go on, and
-            fence.slot = FIG_SLOT                           # the slot moves to that fence if it is dropped too
+        if FIG_SLOT in vis:     # the dropped fence's place: a one-char anchor goes out NOW and the words after it keep streaming (Nov 3 prod:
+            vis = vis.replace(FIG_SLOT, FIG_WAIT, 1)     # they were held to the reply's end + the re-ask, 13-19 s of nothing); the figure
+            waited = True                                # (or nothing) follows at the end as FIG_FILL (client: slots_resolve, app.js)
         if head is not None:
             head, vis = head + vis, lamp_cut(head + vis)
             if "\n" not in vis.lstrip():            # no word yet, or the first line not ended
@@ -3215,12 +3213,14 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
         if vis:
             sent = True
             yield vis
-    vis = (held or "") + fence.feed(xyz.end()) + fence.end()
+    vis = fence.feed(xyz.end()) + fence.end()
     bad = [x for x in fence.log if x not in FIG_OK]
-    if bad:
+    if fence.log:
         log(f"fig {code} v4: " + ",".join(fence.log))      # reason codes only
-    if FIG_SLOT in vis:   # the re-ask's figure; none: what the dropped fence left (a figure-less stepper's captions as numbered lines)
-        vis = vis.replace(FIG_SLOT, fence.slot_plain if fence.shown else ask(fence.slot_why) or fence.slot_plain, 1)
+    for lang, body, why in fence.seen:                     # tuning (Nov 3): the model's own first 300 chars of each fence + its verdict; never the student's text
+        log(f"fig {code} block {lang}: {json.dumps(body[:300])} -> {why}")
+    if waited:    # the re-ask (or what the dropped fence left) fills the anchor; empty = the anchor goes, nothing is left behind
+        vis += FIG_FILL + (fence.slot_plain if fence.shown else ask(fence.slot_why) or fence.slot_plain) + FIG_END
     elif ask and not fence.shown and bad:                   # dropped at the very end (unclosed, too big): one more try, here; "" = words only
         vis += ask(bad[0].split(":")[0])
     if head is not None:

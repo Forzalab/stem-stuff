@@ -98,17 +98,15 @@ try {
     });
     await ctx.close();
   }
-  await step("a render error falls back to the alt text (fig-off)", async () => {
+  await step("a render error leaves nothing: no box, no alt text (Nov 3: a description-only box over no drawing)", async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", reducedMotion: "reduce" });
     await ctx.addInitScript(init);
     await ctx.addInitScript(() => { addEventListener("DOMContentLoaded", () => { const r = window.Graph?.render; if (window.Graph) window.Graph.render = (el, b) => el.closest(".wtext") ? (() => { throw new Error("boom"); })() : r(el, b); }); });
     const page = await ctx.newPage();
     await wish(page); setTimeout(() => gate?.(), 300);
     await done(page);
-    const f = page.locator("#cluck .wtext .wfig");
-    assert.equal(await f.count(), 1);
-    assert.match(await f.getAttribute("class"), /fig-off/);
-    assert.equal((await f.textContent()).trim(), FIX.valid[0].alt);
+    assert.equal(await page.locator("#cluck .wtext .wfig, #cluck .wtext .fig-off").count(), 0);
+    assert.doesNotMatch(await wtext(page), new RegExp(FIX.valid[0].alt.slice(0, 20)));
     await ctx.close();
   });
 } finally {
