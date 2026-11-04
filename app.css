@@ -1119,6 +1119,12 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
+.wtext .wtbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }   /* a GFM pipe table in a reply: the .vw-tb look (views.css); y hidden, the cell padding keeps KaTeX ink inside */
+.wtext .wtbl table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); line-height: var(--lh-ui); font-variant-numeric: tabular-nums; }
+.wtext .wtbl th { padding: var(--s1) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--edge); color: var(--muted); font-weight: var(--w-em); text-align: left; }
+.wtext .wtbl td { padding: var(--s2) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--line); vertical-align: top; min-width: 4ch; }
+.wtext .wtbl tr:last-child td { border-bottom: 0; }
+.wtext .wtug { max-width: none; }   /* a Tug (tug.mjs, styled in views.css) takes the full width */
 .wtext b { font-weight: var(--w-em); color: var(--ai-text); }
 .wtext .wmath { margin: 20px 0; text-align: center; overflow-x: auto; overflow-y: hidden; }   /* NO NESTED BOX (Tony, Oct 13): no well, no padding; V3: 20 around an equation */
 .wtext .weq + .weq { margin-top: 12px; }                                   /* V3: 12 between stacked equations */
