@@ -114,6 +114,8 @@ try {
         assert.ok(order.before < order.fig && order.fig < order.after, JSON.stringify(order));
       } else {
         assert.equal(j.boxes, 0, "a dropped figure leaves no DOM");
+        assert.doesNotMatch(await page.evaluate(() => document.querySelector("#cluck .wtext").textContent), /Here are the forces/, "a dropped figure takes its lead-in (a line ending ':') with it (Nov 3 prod, PHYS X3)");
+        assert.equal(await page.evaluate(() => [...document.querySelectorAll("#cluck .wtext .wl")].filter(e => /:\s*$/.test(e.textContent)).length), 0, "no dangling lead-in line");
       }
       assert.doesNotMatch(await page.evaluate(() => document.querySelector("#cluck .wtext").textContent), /Sorry/);
       const long = await page.evaluate(([t, REASK_MS]) => window.__long.filter(([s, d]) => s >= t && s < t + REASK_MS - 600 && d > 100), [t0, REASK_MS]);
