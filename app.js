@@ -812,9 +812,11 @@ function repairAfterMiss(r) {
   const mine = S, code = S.code, fam = r.error || "";
   if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
   const host = (() => { let h = $("#rpHost"); if (!h) { h = document.createElement("div"); h.id = "rpHost"; $("#fb").after(h); } return h; })();
-  mine.rp = { fam };
+  mine.rp?.m?.destroy();                                                          // another family: the old ladder goes first
+  const tok = mine.rp = { fam };                                                  // a slower fetch of an earlier miss must not land over this one
   net(`repair/${code}`, { headers: { traceparent: traceparent() } }).then(x => x.ok ? x.json() : null, () => null).then(rp => {
-    if (S !== mine || !rp || !rp.steps) { if (S === mine && !rp) mine.rp = null; return; }
+    if (S !== mine || mine.rp !== tok) return;
+    if (!rp || !rp.steps) { mine.rp = null; return; }
     const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
       credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
     mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade });

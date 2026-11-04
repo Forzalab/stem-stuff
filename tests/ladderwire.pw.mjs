@@ -80,6 +80,25 @@ try {
     });
     await n.ctx.close();
   }
+  {                                                                              // a slow ladder for miss A must not land over miss B's (other family)
+    const { ctx, page, errs } = await open("PHYS_LW3", { width: 393, height: 800 });
+    await step("race: a slow GET /repair for family A never lands over family B's ladder; the old mount is destroyed", async () => {
+      let nCheck = 0, nRep = 0;
+      const ladder = label => ({ code: "PHYS_LW3", steps: [{ id: "who", label, kind: "pick", opts: [{ id: "a", md: "x" }, { id: "b", md: "y" }], ok: "a" }, { id: "answer", label: "Final answer", kind: "num" }] });
+      await page.route("**/check", r => r.request().method() === "POST" && !/repair/.test(r.request().url())
+        ? r.fulfill({ json: { verdict: "wrong", triesLeft: 2 - ++nCheck, error: nCheck === 1 ? "famA" : "famB" } }) : r.fallback());
+      await page.route("**/repair/PHYS_LW3", async r => { const mine = ++nRep; if (mine === 1) await new Promise(x => setTimeout(x, 1500)); await r.fulfill({ json: ladder(mine === 1 ? "Ladder A" : "Ladder B") }); });
+      await page.fill("#q #ans", "3"); await page.press("#q #ans", "Enter"); await page.waitForTimeout(300);
+      await page.fill("#q #ans", "5"); await page.press("#q #ans", "Enter");
+      await page.waitForSelector("section.rp", { timeout: 4000 }); await page.waitForTimeout(2200);
+      assert.equal(nRep, 2, "two families = two fetches");
+      assert.equal(await page.locator("section.rp").count(), 1, "more than one ladder");
+      assert.match(await page.textContent("section.rp"), /Ladder B/, "the stale ladder A landed over B");
+      assert.doesNotMatch(await page.textContent("section.rp"), /Ladder A/);
+      assert.equal(errs.length, 0, errs.join("; "));
+    });
+    await ctx.close();
+  }
 } finally { await browser.close(); srv.kill(); }
 if (failures) { console.log(`${failures} failed`); process.exit(1); }
 console.log("all ok");
