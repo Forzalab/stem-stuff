@@ -760,13 +760,6 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .cl-cta .ico:first-child { transform-origin: 50% 80%; }
 .cl-cta .ico:last-child { width: 20px; height: 20px; }
 .cl-cta:active { color: var(--help); }
-/* W110 + W118c (Tony, Nov 2): "Why does this work?" is the last line of a right-pick reply (app.js clAsk): the CTA look (duck, label, chevron, --help, no fill) under a --help-rule line, inside the card; a tap asks it in the chat */
-.cl-why { display: flex; align-items: center; gap: var(--s2); box-sizing: border-box; min-width: 0; width: 100%; min-height: var(--btn); margin: var(--s4) 0 0; padding: var(--s2) 0 0; border: 0; border-top: var(--bw) solid var(--help-rule); border-radius: 0; background: none; color: var(--help); font: inherit; font-size: var(--t-md); font-weight: var(--w-em); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.cl-why .ico { flex: none; width: 18px; height: 18px; }
-.cl-why .ico:first-child { width: 22px; height: 22px; }
-.cl-why:hover span { text-decoration: underline; text-underline-offset: 4px; }
-.cl-why:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.cl-why.rw-chip:hover span { text-decoration: none; }
 @media (prefers-reduced-motion: no-preference) {   /* pressed: the duck tilts once, the chevron nudges toward the sheet */
   .cl-cta:active .ico:first-child { transform: rotate(-14deg); }
   .cl-cta:active .ico:last-child { transform: translateX(3px); }
