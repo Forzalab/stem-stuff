@@ -1,8 +1,9 @@
 /* repair.css: the Repair ladder (repair.js; brain design-round-66 DESIGN-v3 §3). App chrome on app.css tokens only (STYLE.md §2):
    a help surface (Cluck's warm family), one step open at a time. States say themselves in glyphs (✓ / ✗) and words; colour only repeats them.
    welcome.css (B3) owns the welcome variant's warm page; this file only lays the ladder out. */
-.rp { box-sizing: border-box; max-width: 100%; margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); background: var(--help-sheet);
-  border: var(--bw) solid var(--help-line); border-radius: 10px; color: var(--ink); font-size: var(--t-sm); line-height: var(--lh-ui); }
+/* the box and its choices wear the welcome (onboarding) box's look (Tony, Nov 3 19:11: "should be same as the onboarding box"; welcome.css section.wl) */
+.rp { box-sizing: border-box; max-width: 100%; margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); background: color-mix(in srgb, var(--help) 6%, var(--help-sheet));
+  border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); font-size: var(--t-sm); line-height: var(--lh-ui); }
 .rp-line { margin: 0 0 var(--s3); color: var(--help-on); }
 .rp-steps { margin: 0; padding: 0; list-style: none; }
 .rp-step { padding: var(--s2) 0; border-top: var(--bw) solid var(--help-rule); }
@@ -27,7 +28,9 @@
 /* a chip: a real button, 44px tall; a tried-wrong one keeps its text and gains ✗ (never hue alone) */
 .rp-chip, .rp-check, .rp-skip, .rp-next { box-sizing: border-box; min-height: 44px; margin: 0; padding: var(--s1) var(--s3); border: var(--bw) solid var(--line);
   border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.rp-chip:hover:not(:disabled) { background: var(--raised); }
+.rp-chip { border-color: var(--help); background: color-mix(in srgb, var(--help) 10%, var(--help-sheet)); color: var(--help-on); }   /* welcome.css section.wl .rp-chip */
+.rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--help) 20%, var(--help-sheet)); }
+.rp .rp-line em { font-style: italic; }   /* Cluck's leading *action* ("*waddles over*"): app.css .md em sets font-style normal (emphasis = weight); an action aside stays italic */
 .rp-chip:disabled { color: var(--muted); cursor: default; }
 .rp-x { margin-left: var(--s2); color: var(--wrong); }
 .rp-num { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }

@@ -27,7 +27,7 @@ class Resp(io.BytesIO):
 
 class Route(unittest.TestCase):
     def setUp(self):
-        self.urls, self.bodies = [], []
+        self.urls, self.bodies, self.timeouts = [], [], []
         self.claude_fails = False
         env = {"CLAUDE_API": "sk-ant-test", "OPENROUTER_API_KEY": "sk-or-test"}
         self.ps = [mock.patch.dict(os.environ, env), mock.patch.object(serve, "KV", (None, None)), mock.patch.object(serve.urllib.request, "urlopen", self.fake)]
@@ -45,6 +45,7 @@ class Route(unittest.TestCase):
             p.stop()
 
     def fake(self, req, timeout=None):
+        self.timeouts.append(timeout)
         self.urls.append(req.full_url)
         self.bodies.append(json.loads(req.data))
         if "anthropic.com" in req.full_url:
@@ -80,6 +81,13 @@ class Route(unittest.TestCase):
         with mock.patch.dict(os.environ, {"CLUCK_NOTE_PROVIDER": "openrouter"}):
             serve.note(self.p, "a", None, "sk-or-test")
         self.assertTrue(all("openrouter" in u for u in self.urls), self.urls)
+
+    def test_claude_note_windows_cover_haiku(self):                          # Haiku structured output: p50 2.49 s, max 2.92 s (n=5, Nov 3)
+        self.assertGreaterEqual(serve.NOTE_EXPLAIN_S_CLAUDE, 3.5)
+        self.assertGreater(serve.NOTE_TIMEOUT_CLAUDE, serve.NOTE_EXPLAIN_S_CLAUDE)
+        self.note_timeout = None
+        serve.note(self.p, "a", "why?", "sk-or-test")
+        self.assertEqual(self.timeouts[0], serve.NOTE_TIMEOUT_CLAUDE)               # the gate's Claude call waits the long window
 
     def test_no_claude_key_no_claude_call(self):
         with mock.patch.dict(os.environ, {"CLAUDE_API": ""}):

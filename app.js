@@ -873,7 +873,7 @@ function renderQuestion() {
     const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Ex: 9/2, 5e-4, sqrt(3), dne" : "";
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
-          ${INPUT_ATTRS} placeholder="${ph}">
+          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">Your answer</span>` : ""}
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
@@ -944,7 +944,7 @@ function formulaCard() {
   sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
     const arrow = steps.find(x => x.k === "arrow" && x.to === f.id), rowStep = steps.find(x => x.k === "row" && x.id === f.id);
     const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
-    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"${rowStep ? ` data-row="${esc(f.id)}"${out(rowStep) ? "" : " hidden"}` : ""}><span class="fm">${renderMath(f.tex, false)}</span>${q}${mathCopyBtn("Copy formula")}</li>`
+    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"${rowStep ? ` data-row="${esc(f.id)}"${out(rowStep) ? "" : " hidden"}` : ""}><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`   /* no copy button on the card (Tony, Nov 3 18:14: "hide the copy buttons on the key formula box"); a drag still copies plain text */
       + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
@@ -1183,7 +1183,7 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); glyph(o, "i-x"); if (r.triesLeft > 0) nudge(o, "jolt");   // the closing pick: no shake
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
+    if (r.triesLeft <= 0) finish();
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
@@ -1220,7 +1220,7 @@ async function submitAll() {
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
-    if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
+    if (r.triesLeft <= 0) finish();
   } else if (r.verdict === "pending") for (const o of on) o.classList.add("pend");
   else if (r.verdict === "locked") finish();
   feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
@@ -1361,7 +1361,6 @@ async function submitFF() {
     if (r.exprMode && !closes) xOpen(null);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    else if (r.verdict === "wrong") pips(r, ...pipsAt());
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -1398,7 +1397,6 @@ async function submitProof() {
     if (r.rubric) rubricChips(r.rubric);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    else if (r.verdict === "wrong") pips(r, ...pipsAt());
     if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your proof here first (up to ${PROOF_MAX} letters).</span></p>`; layoutFreeze(); return; }
     feedback(r, "");
     if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
@@ -1429,7 +1427,6 @@ function wireParts() {
 function shutPart(i, ok) {
   const { box, inp, go } = partEls(i);
   S.parts[i].shut = true; S.parts[i].ok = ok;
-  if (box.nextElementSibling?.classList.contains("pips")) box.nextElementSibling.remove();
   box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
   for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
   go.hidden = true;
@@ -1467,7 +1464,7 @@ async function submitPart(i) {
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); const rv = reveal(r, i); if (rv) say(rv); }
-    else { partFeedback(i, r, v); if (r.verdict === "wrong") pips(r, partEls(i).box, "afterend"); }
+    else partFeedback(i, r, v);
     if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && [document.body, inp].includes(document.activeElement)) partEls(nxt).inp.focus(); }   // inp: Chromium 153 keeps focus on the just-disabled box until the next frame, 141 blurred at once (W100)
     layoutFreeze();
@@ -1564,7 +1561,7 @@ function paintRec(rec) {
       if (last && typeof last.a === "string") { inp.value = last.a; go.hidden = u.done !== "open"; }
       if (u.done !== "open") shutPart(i, u.done === "correct");
       if (u.done === "correct") partFeedback(i, { verdict: "correct" });
-      else if (u.x > 0) { const r = { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined }; partFeedback(i, r); if (u.done === "open") pips(r, partEls(i).box, "afterend"); }
+      else if (u.x > 0) { const r = { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined }; partFeedback(i, r); }
     });
     if (S.parts.every(x => x.shut)) settle();
     return;
@@ -1602,7 +1599,7 @@ function paintRec(rec) {
   }
   if (u.done !== "open") finish();
   if (u.done === "correct") feedback({ verdict: "correct" });
-  else if (u.x > 0) { feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined }); pips({ verdict: "wrong", triesLeft: S.triesLeft }, ...pipsAt()); }   // a reload keeps the dots
+  else if (u.x > 0) feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined });
 }
 function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
@@ -1642,18 +1639,6 @@ async function syncServer(mine) {
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
-/* try pips (Tony, Oct 5: they replace the "One more try" toast, which covered a choice): after a wrong try with tries left, one dot
-   per try, used = filled red, left = hollow. Beside Check on a tick-all question, else under the rows / the answer box. The screen
-   reader already hears "Wrong. 1 try left." (verdictWords), so the dots are aria-hidden. A closed question drops them (finish, shutPart) */
-function pips(r, el, pos) {
-  if (!el) return;
-  const old = pos === "afterend" ? el.nextElementSibling : el.previousElementSibling;
-  if (old && old.classList.contains("pips")) old.remove();
-  const max = maxTries(S.prob), left = r.triesLeft;
-  if (r.verdict !== "wrong" || !(left > 0) || max < 2) return;
-  el.insertAdjacentHTML(pos, `<span class="pips" aria-hidden="true">${'<i class="used"></i>'.repeat(max - left)}${"<i></i>".repeat(left)}</span>`);
-}
-const pipsAt = () => $("#mcGo") ? [$("#mcGo"), "beforebegin"] : S.prob.type === "mc" ? [$("#q .choices"), "afterend"] : [$("#ff"), "afterend"];   // single pick has no Check: under the rows
 /* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
    never reads as lost work. Owes a miss = Pity roll, else Review; once closed: Avenged! / Reviewed, or Comes back later. No "+3" until
    D60 pays it. No lockout sub-lines (Tony, Oct 17: drop). */
@@ -1682,7 +1667,6 @@ function guard() {
 }
 function finish() {
   S.finished = true;
-  document.querySelectorAll("#q .pips").forEach(x => x.classList.add("spent"));   // hidden, its room kept: a closing tap never moves the page (T17b-1)
   $("#q").classList.add("closed");
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
@@ -1859,7 +1843,9 @@ function feedback(r, typed) {
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
-  /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
+  /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords.
+     The mock night (W103b) is the exception: one try, no hint, no Cluck, so the lock alone read as a dead end (Tony, Nov 3 18:14, img3): one line says why and where next */
+  else if (mockHold() && r.verdict === "wrong") h = `<p class="verdict wait mock-next">${icon("i-back")}<span>Mock round: one try each. Tap Next. Misses come back at the end.</span></p>`;
   let quackHtml = "";
   if (hintOf(r)) {
     const hintWithQuack = quackHint(hintOf(r), S.code + ":" + S.tries.length);
@@ -2336,12 +2322,12 @@ function wishPaint() {
     el.classList.toggle("gone", keep && !host);                             // #wish's own card: unseen, its room kept
   } else {
     const label = !w.started ? "Explain my mistake" : w.failed ? "Oops, didn't load. Tap to try again." : "Ask Cluck";   // permanent box + a reply on its way: the chip (the tray's "Ask Cluck") takes the student to the box's ask field
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-shine"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   rboxSync();
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta") || document.querySelector(".rbox .wchip");   // the chip painted just now: in #wish, or already docked (typed bar). Never an older chip that the strip drawer (a .rbox before #wish in the DOM) still holds: it is about to be replaced, and the new one would get no handler
   btn?.addEventListener("click", () => {
-    w.tapped = true;                                                       // the ad wiggle stops for good on this question
+    w.tapped = true;                                                       // the ad shine stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
     else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ":is(#wish, .rbox) .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
@@ -2702,8 +2688,8 @@ function clAsk(build) {
   const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
   let wb = cl.el.querySelector(".cl-why");
   if (why && !wb) {
-    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why";
-    wb.innerHTML = `${icon("i-duck")}<span>${WHY_ASK}</span>${icon("i-right")}`;   // W118c (Tony, Nov 2): the reply's last line is the action, the CTA look under a --help-rule line
+    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why rw-skin rw-chip";
+    wb.innerHTML = `<span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${WHY_ASK}</span>`;   // W118c (Tony, Nov 2): the reply's last line is the action. Tony, Nov 3 19:2x: it wears the tray's Ask Cluck chip look (the miss-side "okay, but how?" CTA is gone), and still sends WHY_ASK itself
     wb.addEventListener("click", () => clSend(WHY_ASK));
     const pane = cl.el.querySelector("#clTabEP"), host = [...pane.querySelectorAll(".msg, .cl-cmp")].filter(m => m.offsetParent).at(-1);
     if (host) host.append(wb); else pane.querySelector(".cl-thread").before(wb);

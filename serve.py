@@ -2253,7 +2253,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
     out = set()                                              # this request's out-of-credit providers (the NOTE's key is the chain's)
     on = on or stage_off
     on("note", "start")
-    n = note_within(NOTE_EXPLAIN_S, p, answer, None, key, scratch=scratch, out=out)
+    n = note_within(NOTE_EXPLAIN_S_CLAUDE if note_on_claude(out) else NOTE_EXPLAIN_S, p, answer, None, key, scratch=scratch, out=out)
     on("note", "end")
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
@@ -3958,6 +3958,10 @@ def wrap(text, tag):
 
 NOTE_TIMEOUT = 3                             # seconds; past it Cluck answers without a NOTE (fail open)
 NOTE_EXPLAIN_S = 1.5                         # /explain waits this long (wall clock) for the NOTE, then Cluck starts without it (speed #3)
+# On Claude (Tony 19:48 PST Nov 3: NOTE + gate stay on Claude, longer waits OK): claude-haiku-5-5 with structured output measured p50 2.49 s,
+# max 2.92 s over 5 calls (plain JSON was ~0.4 s faster but 2 of 5 did not parse). The windows cover that with margin, so the gate stops failing open.
+NOTE_TIMEOUT_CLAUDE = 4.5
+NOTE_EXPLAIN_S_CLAUDE = 3.5
 # NOTE bench Oct 21 (brain _files/note-bench-2026-10-20): pinned, deepseek mean 0.66 s vs 1.51 s unpinned, same validity + quality
 # Only these hosts (allow_fallbacks off, as on the DeepSeek arm; Tony, Oct 23): no unbenched fp4 host. All three failing = no NOTE (fail open).
 NOTE_PROVIDERS = [h for h in os.environ.get("CLUCK_NOTE_PROVIDERS", "together,baseten/fast,deepinfra/fp8").split(",") if h.strip()]
@@ -4065,7 +4069,7 @@ def claude_json(model, system, user, schema, max_tokens, timeout):
 
 def _note_claude(p, user, out):
     try:
-        n = claude_json(NOTE_CLAUDE_MODEL, CLUCK_NOTE, user, NOTE_SCHEMA, 400, NOTE_TIMEOUT)
+        n = claude_json(NOTE_CLAUDE_MODEL, CLUCK_NOTE, user, NOTE_SCHEMA, 400, NOTE_TIMEOUT_CLAUDE)
         if not isinstance(n, dict) or set(NOTE_SCHEMA["required"]) - set(n):
             raise ValueError("not the schema")
         return n

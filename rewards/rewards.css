@@ -97,9 +97,9 @@ html.start .rw-hud { display: none; }
 
 /* ---------- the Cluck chip, "Explain my mistake" (T4; Tony, Oct 4: "ask ai button should shake like an ad button") ----------
    The slot / red-gold kit pill, redrawn as our own CSS (no pixels copied): dark outline, thick gold rim, red-orange body, light top
-   edge, gloss cap, dark base, white duck in a candy coin. .rw-wiggle (app.js wishPaint, until the first tap on this question): 3 quick
-   swings, ±6°, twice in a row 1.2 s after it shows, then still (one blink: never a loop); it stops for good once a reward plays (fx.js) and waits while
-   one does (.fx-busy). Transform only; none with reduced motion. app.js keeps .wchip on it as the hook. */
+   edge, gloss cap, dark base, white duck in a candy coin. .rw-shine (app.js wishPaint, until the first tap on this question): one soft light
+   sweep across the chip (its ::after, background-position only), once per wrong try, then still (one blink: never a loop); it stops for good once a
+   reward plays (fx.js) and waits while one does (.fx-busy). None with reduced motion. app.js keeps .wchip on it as the hook. */
 /* impeccable waiver: casino-themed (Tony, Oct 4) */
 .rw-chip {   /* PALETTE-v3 §3: one flat --help face, --help-ink label (7.67:1), no bevel; pressed = the same face, darker, 1px down */
   position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 20px 6px 4px;
@@ -107,21 +107,25 @@ html.start .rw-hud { display: none; }
   border: 3px solid transparent; border-radius: var(--rw-pill); cursor: pointer; background: var(--help) padding-box;   /* the old rim's 3px kept clear: the chip keeps its box, nothing around it moves */
   transform-origin: 50% 60%;
 }
+.cl-why.rw-chip { width: auto; max-width: 100%; margin: var(--s4) 0 0; padding: 4px 20px 6px 4px; border: 3px solid transparent; border-radius: var(--rw-pill); background: var(--help) padding-box; color: var(--help-ink); font: 600 var(--t-sm, 1rem)/1.15 var(--rw-font); }   /* W118c Tony Nov 3: the "Why does this work?" CTA wears the tray chip look (overrides app.css .cl-why's rule-and-chevron). the tray chip's look (rewards.css .rw-chip), not the old rule-and-chevron CTA */
 .rw-chip > span { position: relative; }
 .rw-chip:active { filter: brightness(.9); transform: translateY(1px); }
 .rw-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 5px; }
 .rw-coin2 { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
   background: var(--reward); box-shadow: 0 0 0 2px var(--help-deep); }   /* the duck coin: a --reward disc, a --help-deep ring */
 .rw-coin2 svg { width: 24px; height: 24px; color: var(--help-ink); }
-.rw-chip.rw-wiggle { animation: rw-wiggle .75s ease-in-out 1.8s 2; }
-.fx-busy .rw-chip.rw-wiggle { animation-play-state: paused; }
+.rw-chip.rw-shine { overflow: hidden; }
+.rw-chip.rw-shine::after {   /* Tony, Nov 3 19:14: no shake; ONE soft light sweep per wrong try, then still. Background-position only: nothing moves */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background-repeat: no-repeat;
+  background-image: linear-gradient(105deg, transparent 38%, color-mix(in srgb, #fff 38%, transparent) 50%, transparent 62%);
+  background-size: 260% 100%; background-position: 160% 0;
+  animation: rw-chip-shine calc(var(--d-move) * 3) ease-in-out calc(var(--d-move) * 4) 1 backwards;
+}
+.fx-busy .rw-chip.rw-shine::after { animation-play-state: paused; }
 /* one blink (fx.js seq): while the FX layer plays, the HUD's level pulse waits for its own step (the bar is pinned by fx.js) */
 .fx-hold .rw-lvl.rw-pulse { animation-play-state: paused; }
 .fx-hold .rw-flame { transition: none; }
-@keyframes rw-wiggle {
-  0%, 100% { transform: rotate(0); }
-  17% { transform: rotate(-6deg); } 33% { transform: rotate(6deg); } 50% { transform: rotate(-6deg); } 67% { transform: rotate(6deg); } 83% { transform: rotate(-3deg); }
-}
+@keyframes rw-chip-shine { to { background-position: -60% 0; } }
 
 /* ---------- the Original card's header, variant A "Free hint card" (T1; Tony, Oct 4) ----------
    One solid tangerine fill, light top edge, dark base, a round chevron button, a bulb in a sun coin, a FREE sticker (app.js only while
@@ -256,7 +260,7 @@ html.start .rw-hud { display: none; }
 
 @keyframes fx-blink { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) {
-  .fx-rays, .fx-bulbs i, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-wiggle, .rw-hint.rw-nudge, .rw-hint.rw-nudge::after { animation: none !important; }
+  .fx-rays, .fx-bulbs i, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-shine::after, .rw-hint.rw-nudge, .rw-hint.rw-nudge::after { animation: none !important; }
   .rw-hint-chev svg { transition: none; }
   .rw-bar i, .rw-goal i, .rw-flame { transition: none; }
 }
