@@ -143,6 +143,25 @@
 @media (prefers-reduced-motion: no-preference) {
   .vw-reveal.open .vw-body { animation: vw-fade var(--d-move) ease-out both; }
   .vw-doodle svg { animation: vw-pop var(--d-dim) ease-out both; transform-origin: 50% 100%; }
+  .vw-tug .tg-bar { animation: tg-draw var(--d-dim) ease-out both; }   /* the Tug draws its bars from the knot */
+  .vw-tug .tg-bar.tg-down { animation: tg-draw-l var(--d-dim) ease-out both; }
 }
 @keyframes vw-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes vw-pop { from { opacity: 0; transform: translateY(var(--s2)); } to { opacity: 1; transform: none; } }
+
+/* Tug (tug.mjs): a push-pull rope. Rows = a label chip + the rope column; a bar grows from the knot (50%), right = up (sky), left = down (orange). No hover. */
+.vw-tug { margin: 0 0 var(--s3); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.vw-tug .tg-row { display: grid; grid-template-columns: minmax(7ch, 32%) 1fr; align-items: center; min-height: var(--btn); column-gap: var(--s2); }
+.vw-tug .tg-lab { min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+.vw-tug .tg-mv { color: var(--muted); }
+.vw-tug .tg-rope { position: relative; align-self: stretch; display: flex; align-items: center; }
+.vw-tug .tg-rope::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; border-left: var(--bw) solid var(--line); }   /* the rope runs through every row */
+.vw-tug .tg-knot { position: absolute; left: 50%; width: var(--s3); height: var(--s3); margin-left: calc(var(--s3) / -2); border-radius: 50%; background: var(--ink); }
+.vw-tug .tg-net { width: auto; height: auto; min-width: var(--s5); margin: 0; padding: 0 var(--s1); transform: translateX(-50%); border-radius: 50%; background: var(--ink); color: var(--bg); text-align: center; }
+.vw-tug .tg-bar { position: absolute; height: var(--s3); border-radius: 6px; background: var(--c1, var(--line)); color: var(--bg); font-size: var(--t-xs); line-height: var(--s3); text-align: center; overflow: hidden;
+  width: calc(var(--w) * .46%); min-width: var(--s4); }
+.vw-tug .tg-bar.tg-up { left: 50%; }
+.vw-tug .tg-bar.tg-down { right: 50%; }
+.vw-tug .tg-bar.tg-same { left: 50%; margin-left: calc(var(--s4) / -2); width: var(--s4); }
+@keyframes tg-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes tg-draw-l { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }

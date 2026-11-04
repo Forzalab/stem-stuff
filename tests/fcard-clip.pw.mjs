@@ -46,6 +46,7 @@ async function step(name, fn) {
 const go = async (page, code) => {
   await page.evaluate(c => { location.hash = c; }, code);
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && document.querySelector("#fcard li.f .katex"), code, { timeout: 8000 });
+  await page.evaluate(() => { while (window.stemLadder.step()); });   // a card with no ladder starts at row 1 (fcard-reveal.pw): this spec measures every row
   await page.evaluate(() => document.fonts.ready);
 };
 /* each visible card formula: [tex, overflow px (scrollHeight - clientHeight), ink past the top, ink past the bottom] */

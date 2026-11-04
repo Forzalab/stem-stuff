@@ -5,6 +5,7 @@
 //   tray      the strip tray (drawer under the answer) appears with the hint box and its "Ask Cluck" is reachable at once; a tap puts the cursor in the box's ask field
 //   steps     after a right try the "See Cluck's steps" chip is back on the page (V1 lost it)
 //   nokey     a question with no Cluck key keeps the box and shows the note (CL_COPY.nokey: COPY-PENDING); no chips
+//   latest    a 2nd miss on a numeric item asks /explain again with the NEW value (the box never keeps explaining the first wrong value)
 //   guard     phone sugar (393): no starters, no box on load
 //   genmiss   every width, matched or generic miss: the tray's Ask Cluck is the one Cluck entry; no peek, no "okay, but how?"
 // CV_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-v2@desk, cluck-v2@phone. Own serve.py + a stub OpenRouter. No page.clock jumps (nothing here waits on time).
@@ -33,15 +34,21 @@ const PROBS = [1, 2, 3].map(n => ({ code: `CALC1_CVT${n}`, title: `V2 ${n}`, typ
   choices: ["5.4 m/s", "2.7 m/s", "7.7 m/s", "9.8 m/s"].map((md, i) => ({ id: "abcd"[i], md })),
   wrong: [{ choice: "b", error: "half", hint: "QUACK. " + HINT }],
   saccharine: n === 3 ? { title: `V2 ${n}` } : { title: `V2 ${n}`, key: "Tick: a", slip: { b: "Half of it." } } }));   // CV3: no Cluck key
+PROBS.push({ code: "CALC1_CVT4", title: "V2 4", type: "num", answer: "42", body: txt("How many students are in the lab (4)?"),
+  saccharine: { title: "V2 4", key: "Tick: 42" } });   // a numeric item: the wrong values are free text
 writeFileSync(join(banks, "BANK_CVT.json"), JSON.stringify({ v: 1, problems: PROBS }));
 const SHORT = ["Only the part of gravity along the ramp speeds it up.\n", "Tick: a. Egg-cellent."];
+const stubPicks = [];
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
-  if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }
+  const jb = JSON.parse(body);
+  const picked = /STUDENT PICKED: ([^\n]*)/.exec(JSON.stringify(jb.messages || []).replace(/\\n/g, "\n"))?.[1];   // the try /explain was asked about
+  if (picked && jb.stream) stubPicks.push(picked);
+  if (!jb.stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   let i = 0;
   const t = setInterval(() => {
-    if (i < SHORT.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: SHORT[i++] } }] })}\n\n`);
+    if (i < SHORT.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: (i === 0 && picked ? `You picked ${picked}.\n` : "") + SHORT[i++] } }] })}\n\n`);
     else { res.end("data: [DONE]\n\n"); clearInterval(t); }
   }, 60);
 });
@@ -73,6 +80,9 @@ const vis = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)].
 const boxText = page => page.evaluate(() => document.querySelector("#cluck")?.innerText || "");
 const wrong = async page => { await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send'); };
 const right = async page => { await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send'); };
+const num = async (page, v) => { await page.fill("#ans", v); await page.press("#ans", "Enter"); };
+const streamedPick = (page, v) => page.waitForFunction(v => { const t = document.querySelector("#cluck")?.innerText || "", p = document.querySelector("#fb")?.innerText || ""; return t.includes("You picked " + v + ".") && /Egg-cellent/.test(t + p); }, v, { timeout: 10000 });
+const toNum = async page => { await page.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans"), null, { timeout: 8000 }); await page.waitForTimeout(500); };
 const streamed = page => page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
 
 for (const w of W.filter(w => w >= 720)) {
@@ -113,6 +123,17 @@ for (const w of W.filter(w => w >= 720)) {
     const t = await boxText(page);
     assert.ok(!/Ask me anything/.test(t) && !(await vis(page, "#cluck .cl-starter")), "the idle opener and chips are gone: " + t);
     await page.screenshot({ path: join(SHOTS, `cv2-miss-${w}.png`) });
+    await page.context().close();
+  });
+  await step(`@desk ${w}: a 2nd miss on a numeric item explains the NEW value, not the first`, async () => {
+    const page = await open(w); await toNum(page);
+    stubPicks.length = 0;
+    await num(page, "3"); await streamedPick(page, "3");
+    await num(page, "7");
+    await page.waitForFunction(() => (document.querySelector("#cluck")?.innerText || "").includes("You picked 7."), null, { timeout: 10000 });
+    const t = await boxText(page);
+    assert.ok(!t.includes("You picked 3"), "the box still explains the first miss: " + t);
+    assert.deepEqual(stubPicks.filter(x => /^(3|7)$/.test(x)), ["3", "7"], "/explain was asked about each miss, newest last: " + stubPicks);
     await page.context().close();
   });
   await step(`@desk ${w}: the tray appears with the hint box, Ask Cluck in it, a tap lands in the box's ask field`, async () => {
@@ -175,6 +196,16 @@ for (const w of W.filter(w => w < 720)) {
     await wrong(page);
     await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 });
     assert.ok(!(await vis(page, ".cl-starter")), "no starters on a phone");
+    await page.context().close();
+  });
+  await step(`@phone ${w}: a 2nd miss on a numeric item asks about the NEW value too`, async () => {
+    const page = await open(w); await toNum(page);
+    stubPicks.length = 0;
+    await num(page, "3");
+    await page.waitForFunction(() => /You picked 3\./.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 });
+    await num(page, "7");
+    await page.waitForFunction(() => /You picked 7\./.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 });
+    assert.deepEqual(stubPicks.filter(x => /^(3|7)$/.test(x)), ["3", "7"], "/explain per miss: " + stubPicks);
     await page.context().close();
   });
 }

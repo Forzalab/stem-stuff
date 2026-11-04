@@ -582,6 +582,12 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     for (const [name, f] of Object.entries(bad)) assert.ok(!validate(edit(f)), name);
     assert.ok(validate(edit(p => { p.PHYS_UNA.unit = "x".repeat(16); })), "16 chars is fine");
   });
+  // exam_q (E5 Nov 3): the item's Practice Exam position, 1..20. shuffle.mjs examQ/isTpl and serve.py PUBLIC already read it; the schema
+  // refused it, so a bank could not mark a new-numbers item as the exam's Q<n> (the night-before mock lost that position).
+  test("exam_q: an integer 1..20 validates; anything else does not", () => {
+    for (const n of [1, 7, 20]) assert.ok(validate(edit(p => { p.PHYS_UNA.exam_q = n; })), JSON.stringify(validate.errors, null, 1));
+    for (const v of [0, 21, 1.5, "5", -3]) assert.ok(!validate(edit(p => { p.PHYS_UNA.exam_q = v; })), `exam_q ${JSON.stringify(v)}`);
+  });
   // W132 lint: a num item / num part with no `unit` key warns on stderr (the gate still passes); "" = unitless on purpose, no warning
   test("unit lint (W132): problems.json passes but warns on its one blank num (CALC1_A9R); a fixture with every unit set warns on none", () => {
     const run = f => spawnSync("node", [fileURLToPath(new URL("../tools/schema-check.mjs", import.meta.url)), f], { encoding: "utf8" });
