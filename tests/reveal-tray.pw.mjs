@@ -113,6 +113,7 @@ try {
         assert.match(m.text, /1\.38/, "the value");
         hasDuck(await duck(page), "2nd miss");
         const at = () => page.evaluate(() => { const t = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : null; }; return { ff: t("#ff"), pv: t("#preview"), ansl: t("#q .ansl"), fb: t("#fb") }; });
+        await page.evaluate(() => window.stemToast.clear()); await page.waitForTimeout(250);   // the start line (top slot) moves the card by its height as it comes and goes: measure with the slot empty
         const a = await at();
         await page.click("#q .vdrawer .vd-x"); await page.waitForTimeout(SETTLE);
         assert.deepEqual(await at(), a, "closing the drawer moved something");

@@ -51,9 +51,9 @@ function obToast(n, text, at, o) {
     if ([1, 2, 3].every(i => localStorage.getItem("stem-ob-" + i))) localStorage.setItem("stem-ob", "done"); } catch { /* shown, not kept */ }
 }
 /* the note (design/STYLE.md §3 Toast; todo 112: the one toast component's note mode, toast.js stemToast.note, element #toast): a short
-   line with a caret on the thing it is about. Under its anchor, else above it (the Scratchpad button: above first); on a kept choice it
-   lies on the row's own words, caret left at the badge. Strict cover rule: never on a live control, so it may not show (-> false).
-   o: { x: the close button (HUD tips, the pad-mode note: Tony's B), prefer, allow, loose }. 2 s, tap or Esc closes it. */
+   line with a caret on the thing it is about. Under its anchor, else above it (the Scratchpad button: above first). Strict cover rule: never on a live
+   control, and (Tony, Nov 3) never on the question, the answer area or Cluck's tray, so it may not show (-> false).
+   o: { x: the close button (HUD tips, the pad-mode note: Tony's B), prefer, allow, slot: "top" (the top slot, no caret), slotFallback }. 2 s, tap or Esc closes it. */
 const noteAt = () => window.stemToast?.noteAt() || null;
 function hideToast() { window.stemToast?.noteHide(); }
 function placeToast() { window.stemToast?.notePlace(); }
@@ -93,17 +93,14 @@ const reqInc = (where, path, t0, { r, e, why, tp, ...x } = {}) => incident(where
   { status: r && r.status, phase: timedOut(e) ? "timeout" : "headers", server: xInc(r)[0], trace_id: xInc(r)[2] || traceOf(tp), err: e, ms: Date.now() - t0, path, ...x });
 /* a press that cannot move says why (nav.js "drill:note", load()): a note under Next, else the entry line (never silent, T16).
    Tony's pick "the stacked one" (Oct 28): caret under Next, no X, beside a stage toast. For its 2 s it may lie on the brainrot link and
-   on the level row (the HUD: Tony, Oct 29 "COVER", the phone's full-width row right under Next), never on the question card or the
-   answer area (stepped down onto the card's title it "looks buggy"). On desktop with the brainrot folded or gone (the mock) the Notes
-   pad's top edge sits right under Next: the note may lie on it too (#scratch, like the pad-mode note; mock.pw). No such room = the entry
-   line (under the bar on desktop, under the code bar on a phone); were that line ever out of sight, the old placement: never silent (T16) */
-const NOTE_NEXT = { allow: ".rot-link, .rw-tap, #scratch", clear: "#problem, #q" };
+   on the level row (the HUD: Tony, Oct 29 "COVER"), never on the question card or the answer area (stepped down onto the card's title it
+   "looks buggy"). Tony, Nov 3: a status line is not about Next, so it goes to the ONE top slot (toast.js), under the HUD, above the
+   question card, no caret. No such room = the entry line (under the bar on desktop, under the code bar on a phone) */
+const NOTE_NEXT = { slot: "top" };   // toast.js: the Next note lives in the top slot (Tony, Nov 3), no caret; the guard keeps it off the question and the answer area
 function note(text) {
   const at = $("#qnext"), there = at && !at.hidden && at.getClientRects().length;
   if (there && toast(text, at, NOTE_NEXT)) return;
-  entryMsg(text);
-  const m = $("#entryMsg");
-  if (there && !(m && m.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }))) toast(text, at, { loose: true });
+  entryMsg(text);   // no place in the slot (a stage toast is up, scrolled away): the entry line, never silent (T16)
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
 addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
@@ -873,7 +870,7 @@ function renderQuestion() {
     const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Ex: 9/2, 5e-4, sqrt(3), dne" : "";
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
-          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">Answer</span>` : ""}
+          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">Your answer</span>` : ""}
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
@@ -1137,7 +1134,7 @@ function keptTap(o) {
   window.stemT?.("_kepttap", { choice: o.dataset.id });   // intent.js log only, telemetry.js drops "_" names
   if (S.keptTold) return;
   S.keptTold = true;
-  if (!toast("That one's already correct!", o)) S.keptTold = false;            // kept A: on the row; no place (the cover rule) = the next tap tries again
+  if (!toast("That one's already correct!", o, { slotFallback: true })) S.keptTold = false;            // kept A: on the row; no place (the cover rule) = the next tap tries again
 }
 /* Check is live with 1+ ticks (empty is invalid: never sent); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
@@ -2286,12 +2283,12 @@ function wishPaint() {
     el.classList.toggle("gone", keep && !host);                             // #wish's own card: unseen, its room kept
   } else {
     const label = !w.started ? "Explain my mistake" : w.failed ? "Oops, didn't load. Tap to try again." : "Ask Cluck";   // permanent box + a reply on its way: the chip (the tray's "Ask Cluck") takes the student to the box's ask field
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-shine"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   rboxSync();
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta") || document.querySelector(".rbox .wchip");   // the chip painted just now: in #wish, or already docked (typed bar). Never an older chip that the strip drawer (a .rbox before #wish in the DOM) still holds: it is about to be replaced, and the new one would get no handler
   btn?.addEventListener("click", () => {
-    w.tapped = true;                                                       // the ad wiggle stops for good on this question
+    w.tapped = true;                                                       // the ad shine stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
     else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ":is(#wish, .rbox) .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
@@ -2652,8 +2649,8 @@ function clAsk(build) {
   const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
   let wb = cl.el.querySelector(".cl-why");
   if (why && !wb) {
-    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why";
-    wb.innerHTML = `${icon("i-duck")}<span>${WHY_ASK}</span>${icon("i-right")}`;   // W118c (Tony, Nov 2): the reply's last line is the action, the CTA look under a --help-rule line
+    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why rw-skin rw-chip";
+    wb.innerHTML = `<span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${WHY_ASK}</span>`;   // W118c (Tony, Nov 2): the reply's last line is the action. Tony, Nov 3 19:2x: it wears the tray's Ask Cluck chip look (the miss-side "okay, but how?" CTA is gone), and still sends WHY_ASK itself
     wb.addEventListener("click", () => clSend(WHY_ASK));
     const pane = cl.el.querySelector("#clTabEP"), host = [...pane.querySelectorAll(".msg, .cl-cmp")].filter(m => m.offsetParent).at(-1);
     if (host) host.append(wb); else pane.querySelector(".cl-thread").before(wb);
@@ -3101,7 +3098,7 @@ document.addEventListener("click", async e => {
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
   say(ok ? "Copied." : "Copy failed. Try again.");
-  if (ok) toast("Copied", b, { loose: true });   // COPY-PENDING: "Copied". loose: the one note that may lie on a control (prod as before, orc v27 default): under a card row or the answer there always is one, so a strict note would never show
+  if (ok) toast("Copied", b, { slotFallback: true });   // COPY-PENDING: "Copied". loose: the one note that may lie on a control (prod as before, orc v27 default): under a card row or the answer there always is one, so a strict note would never show
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 

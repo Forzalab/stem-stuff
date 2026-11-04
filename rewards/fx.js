@@ -53,7 +53,7 @@
       if (pinned) { pinned.style.transition = pinned.style.transform = ''; pinned = null; }   // its .5 s fill now plays, alone
     }
   }
-  const hush = () => document.querySelectorAll('.rw-chip.rw-wiggle').forEach(c => c.getAnimations().forEach(a => { try { a.finish(); } catch (e) { a.cancel(); } }));
+  const hush = () => document.querySelectorAll('.rw-chip.rw-shine').forEach(c => c.getAnimations({ subtree: true }).forEach(a => { try { a.finish(); } catch (e) { a.cancel(); } }));
   // a tap anywhere but the chip settles its wiggle at once (the student is answering: the ad never runs over Check). No chip = no work.
   document.addEventListener('pointerdown', e => { if (!(e.target.closest && e.target.closest('.rw-chip'))) hush(); }, { capture: true, passive: true });
   function begin() {
