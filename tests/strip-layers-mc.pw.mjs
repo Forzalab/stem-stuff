@@ -106,8 +106,8 @@ const move = page => page.evaluate(() => {
 });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const CASES = [["mc", [360, 390, 1280], ["wrong", "out", "right"]], ["inl", [390], ["wrong", "right"]], ["all", [390], ["wrong", "right"]], ["multi", [390], ["wrong", "right"]]];
-const SIZE = { 360: 740, 390: 844, 1280: 800 };
+const CASES = [["mc", [360, 390, 393, 1280], ["wrong", "out", "right"]], ["inl", [390], ["wrong", "right"]], ["all", [390], ["wrong", "right"]], ["multi", [390], ["wrong", "right"]]];
+const SIZE = { 360: 740, 390: 844, 393: 852, 1280: 800 };
 for (const [kind, widths, states] of CASES) {
   for (const W of widths) {
     if (process.env.SL_W && +process.env.SL_W !== W) continue;
@@ -139,34 +139,15 @@ for (const [kind, widths, states] of CASES) {
         });
         assert.deepEqual(bad, [], "something is painted over the drawer");
       });
-      await step(`${T}: contents: Ask Cluck + a 44px close${kind === "mc" || kind === "inl" ? " + Skip / Next" : ", no Next"}, nothing cut`, async () => {
+      await step(`${T}: contents: Ask Cluck + a 44px close, no Next (Tony, Nov 3 18:41: the tray has no Next; it lives in the bar / the row), nothing cut`, async () => {
         const c = await pg.evaluate(() => {
           const d = document.querySelector("#q .vdrawer"), r = e => { const b = e.getBoundingClientRect(); return { w: b.width, h: b.height }; }, chip = d.querySelector(".wchip"), x = d.querySelector(".vd-x"), nx = d.querySelector(".vd-next");
           const a = d.getBoundingClientRect(), inside = e => { const b = e.getBoundingClientRect(); return b.left >= a.left - 0.5 && b.right <= a.right + 0.5; };
           return { chip: chip && r(chip), x: x && r(x), nx: nx && { ...r(nx), txt: nx.textContent, cut: nx.scrollWidth > nx.clientWidth + 1, in: inside(nx) }, cut: chip && chip.scrollWidth > chip.clientWidth + 1, in: chip && inside(chip), inx: x && inside(x), text: chip && chip.textContent.trim() };
         });
         assert.ok(c.chip && c.x && c.chip.h >= 44 && c.x.h >= 44 && c.x.w >= 44 && !c.cut && c.in && c.inx, JSON.stringify(c));
-        if (kind === "mc" || kind === "inl") {
-          assert.ok(c.nx && c.nx.h >= 44 && !c.nx.cut && c.nx.in, JSON.stringify(c));
-          assert.equal(c.nx.txt, state === "wrong" ? "Skip" : "Next");
-        } else assert.equal(c.nx, null, "pick-all / multi: Next stays in the slot until PR-C");
+        assert.equal(c.nx, null, "a Next / Skip inside the Cluck tray: " + JSON.stringify(c.nx));
       });
-      if ((kind === "mc" || kind === "inl") && state !== "wrong") {
-        await step(`${T}: the drawer's Next is the filled --action control (computed background = --action); the slot Next stays`, async () => {
-          const r = await pg.evaluate(() => {
-            const nx = document.querySelector("#q .vdrawer .vd-next"), probe = document.createElement("i"); probe.style.backgroundColor = "var(--action)"; document.body.append(probe);
-            const want = getComputedStyle(probe).backgroundColor; probe.remove();
-            return { bg: getComputedStyle(nx).backgroundColor, want, slot: !!document.querySelector("#q .nx") };
-          });
-          assert.equal(r.bg, r.want, "drawer Next bg"); assert.ok(r.slot, "the row's own Next must stay (Tony: both)");
-        });
-        await step(`${T}: the drawer's Next goes to the next question`, async () => {
-          const before = await pg.textContent("#pcode");
-          await pg.click("#q .vdrawer .vd-next"); await pg.waitForTimeout(700);
-          assert.notEqual(await pg.textContent("#pcode"), before);
-        });
-        continue;   // Next left the page: the rest needs a fresh one
-      }
       await step(`${T}: reflow 0: closing the drawer moves nothing; focus returns to the reopen target`, async () => {
         const a = await move(pg);
         await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(SETTLE);

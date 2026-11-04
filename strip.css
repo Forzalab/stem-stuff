@@ -70,16 +70,6 @@
 .choices.inline .ch.cue .vkb-r { right: auto; left: 6px; }   /* an inline pill has no glyph beside Next (.vg is hidden): the badge takes the pill's left end, never its middle or Next's face */
 .vkb:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
 .vkb:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -3px; }
-/* single mc: the drawer spans its row: [Ask Cluck][Skip | Next][^]. Skip = quiet while a try is left; Next = the one filled --action control once the question is closed */
-.vdrawer > .vd-next {
-  flex: 1 0 auto; box-sizing: border-box; height: var(--btn); padding: 0 var(--s3); cursor: pointer; white-space: nowrap;
-  background: transparent; color: var(--muted); border: var(--bw) solid var(--line); border-radius: 6px;
-  font: var(--w-em) var(--t-sm) / 1 var(--font);
-}
-.vdrawer > .vd-next[hidden] { display: none; }
-.vdrawer > .vd-next:hover { border-color: var(--muted); }
-.vdrawer > .vd-next.go { background: var(--action); color: var(--action-ink); border-color: var(--action); }
-.vdrawer > .vd-next.go:hover { background: var(--action-on); border-color: var(--action-on); }
-.vdrawer > .vd-next:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* single mc: the drawer spans its row: [Ask Cluck][^]. No Next in the tray (Tony, Nov 3 18:41): the row has its own */
 /* desktop (side by side): the tray overlays nothing. A single mc's picked row (while it has a verdict, open or closed, so closing moves nothing) keeps room under it for the tray (60px high, tucked 8 under the row), so the next answer row stays clickable (Tony, Exam 3). Phones keep the overlay: their rows are the tray's cover by design */
 html.side .ch.strip { margin-bottom: calc(var(--btn) + var(--s3)); }

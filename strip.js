@@ -43,7 +43,7 @@
       } else if (g) {                                         // single: the picked row
         var t1 = S.tries[S.tries.length - 1], row = t1 && [].find.call(q.querySelectorAll(".ch"), function (c) { return c.dataset.id === String(t1.c); }) || q.querySelector(".ch:has(.opt.right)");
         var o = row && row.querySelector(".opt"), v = !o ? "" : o.classList.contains("right") && !o.classList.contains("reveal") ? "ok" : o.classList.contains("wrong") ? (fin ? "lock" : "wrong") : "";
-        if (row) out.push({ el: row, at: g.classList.contains("inline") ? g : row, after: g, kind: "row", v: v, n: S.tries.length, next: true, row: row });
+        if (row) out.push({ el: row, at: g.classList.contains("inline") ? g : row, after: g, kind: "row", v: v, n: S.tries.length, row: row });
       }
     } else {
       var ff1 = q.querySelector("#ff.ff");
@@ -63,25 +63,11 @@
   function make(h) {
     var d = D.createElement("div");
     d.className = "vdrawer rbox" + (fxPlaying() ? " vd-still" : ""); d.setAttribute("role", "group"); d.setAttribute("aria-label", "Cluck");
-    d.innerHTML = (h.next ? '<button type="button" class="btn vd-next"></button>' : "") + '<button type="button" class="btn vd-x" aria-label="Close help">' + CHEV + "</button>";
+    d.innerHTML = '<button type="button" class="btn vd-x" aria-label="Close help">' + CHEV + "</button>";   // no Next in the tray (Tony, Nov 3 18:41; NOTES v9: "tray has no Next"): Next is the row's / the bar's
     d.querySelector(".vd-x").addEventListener("click", function () { close(true, true); });
-    var nx = d.querySelector(".vd-next");
-    if (nx) nx.addEventListener("click", function () {      // the same queue as the bar's Next (nav.js go(1)); Skip is the same move while a try is left
-      var n = $("#qnext");
-      if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No more questions, no more eggs." } })); return; }
-      n.click();
-    });
     anchor(h.after || h.at).after(d);
     d.dataset.kind = h.kind;
     return d;
-  }
-  function nextSync(d, q) {                                   // Skip (quiet) while the question is open, Next (the one filled --action control) once it is closed
-    var nx = d.querySelector(".vd-next"); if (!nx) return;
-    var closed = q.classList.contains("closed"), nav = $("#qnav");
-    nx.hidden = !nav || nav.hidden;
-    nx.classList.toggle("go", closed);
-    var lab = closed ? "Next" : "Skip"; if (nx.textContent !== lab) nx.textContent = lab;
-    nx.setAttribute("aria-label", closed ? "Next question" : "Skip to the next question");
   }
   function place(h, d) {                                      // 2/3 of the bar, right-aligned, top tucked 8px under it (a single mc's drawer spans its row); both are children of one parent, so offsets share a frame
     var at = h.at, w = at.offsetWidth, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
@@ -160,7 +146,7 @@
     }
     var h = cur, st = h.st;
     if (h.kind !== "ff") badges(h);
-    if (drawer && (!drawer.isConnected || (!!drawer.querySelector(".vd-next")) !== !!h.next)) { drawer.remove(); drawer = null; }
+    if (drawer && !drawer.isConnected) drawer = null;
     if (!drawer) drawer = make(h);
     else if (owner !== h.el || drawer.previousElementSibling !== anchor(h.after || h.at)) { anchor(h.after || h.at).after(drawer); drawer.dataset.kind = h.kind; }
     owner = h.el;
@@ -182,7 +168,6 @@
     }
     var want = st.open && !chip.hidden;
     if (want && (drawer.hidden || drawer.classList.contains("vd-shut")) && sheetFocus && lost()) { sheetFocus = false; setTimeout(function () { if (drawer && !drawer.hidden && chip.isConnected && lost()) chip.focus({ preventScroll: true }); }, 0); }   // the sheet closed with the keyboard inside it: focus goes back to the chip it came from (app.js clClose focuses it while the drawer is still shut)
-    nextSync(drawer, q);
     if (want && (drawer.hidden || drawer.classList.contains("vd-shut"))) show(drawer, st.still);   // also while it is still sliding shut: its timer would hide it with st.open true and nothing left to reopen it (the sheet closing inside the 260ms)
     else if (!want && !drawer.hidden) hide(drawer);
     place(h, drawer);
