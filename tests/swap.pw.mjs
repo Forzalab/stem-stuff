@@ -196,6 +196,8 @@ for (const [W, H] of SIZES) {
     });
     assert.ok(r.has, "no View Transitions in this browser (falls back to instant)");
     assert.ok(r.ran >= 180 && r.ran <= 450, `transition ran ${Math.round(r.ran)}ms (click to ready ${Math.round(r.lead)}ms)`);
+    console.log(`     fade ${Math.round(r.ran)}ms, click to ready ${Math.round(r.lead)}ms`);
+    assert.ok(r.lead < 1500, `click to ready took ${Math.round(r.lead)}ms: the update callback is slow`);   // loose guard (~10x the usual lead): a real slowdown still fails
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.click("#mtMode");
     assert.ok(await page.evaluate(() => document.documentElement.classList.contains("mt-q")), "not instant with reduced motion");
