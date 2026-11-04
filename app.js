@@ -1995,17 +1995,19 @@ async function wishStart(auto) {
     }
     else {
       const rd = r.body.getReader(), dec = new TextDecoder(), sp = { buf: "" };
+      let swap = null;
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
         bytes += value.length; fr.f();
         const c = Stages.feed(sp, dec.decode(value, { stream: true }));
-        for (const e of c.events) e.error ? (err = e) : w.stg.event(e);       // an {"error": "S-XXXXX"} line: the server's in-band failure (status was 200 already)
+        for (const e of c.events) e.error ? (err = e) : typeof e.replace === "string" ? (swap = e.replace) : w.stg.event(e);       // an {"error": "S-XXXXX"} line: the server's in-band failure (status was 200 already); {"replace"}: the subject pass's fixed text
         w.text += c.text;
         window.stemT?.("_tok");   // telemetry: first chunk time
         if (wish === w && w.open) wishText();
         if (wish === w) peekText();
       }
       fr.e(bytes);
+      if (swap !== null && !err) wishSwap(w, swap);
       if (err) { w.failed = 1; w.inc = inc({ why: err.why, server: err.error, status: err.why === "budget_cap" ? 503 : 502, phase: w.text ? "stream" : "headers", bytes }); }   // the in-band error = the unstaged 503/502 (X-Incident): the same incident, its reason and the server's code
       else if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
     }
@@ -2018,6 +2020,27 @@ async function wishStart(auto) {
   if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
   wishPaint();
   if (w.open) wishDraw();                                                  // an open sheet shows the failure, not a caret forever (G2c row 23)
+}
+/* the subject pass (serve.py subject_pass, Tony Nov 3 19:26 "stream first, then FLASH the correct text back"): the streamed reply is
+   swapped for the fixed one. Same lines (the server checks); a line that changed and holds no math, fence or table is re-drawn in place with
+   a short fade (.wswap); figures, math and views keep their DOM. Still typing (or the sheet is closed): the next draw just uses the new text. */
+function wishSwap(w, t) {
+  const a = w.text.split("\n"), b = t.split("\n"), x = wish === w && w.open && w.ended ? $("#cluck .wtext") : null;
+  w.text = t;
+  if (!x || a.length !== b.length) return;
+  a.forEach((o, i) => {
+    if (o === b[i] || /[$`|\u0001]/.test(o + b[i]) || !o.trim()) return;
+    const want = o.replace(/\*\*/g, "").replace(/^\s*- /, "").trim();
+    const el = [...x.querySelectorAll(".wl, li, p")].find(e => !e.querySelector(".fig, .katex, .wl, li") && e.textContent.trim() === want);
+    if (!el) return;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = wishHTML(b[i]);
+    const n = el.tagName === "LI" ? tmp.querySelector("li") : tmp.firstElementChild;
+    if (!n) return;
+    n.classList.add("wswap");
+    el.replaceWith(n);
+  });
+  w.shown = w.pos = w.drawn = t.length;                                   // drawn = shown: no full redraw, so the figures keep their nodes
 }
 function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
   Object.assign(w, { failed: 0, capped: false, inc: null, stg: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });

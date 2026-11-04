@@ -2264,7 +2264,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
-                            fig_ctx(p, answer), edit=True, v4=v4, out=out)
+                            fig_ctx(p, answer), edit=True, v4=v4, out=out, swap=True)
     on("write", "end")
 
 
@@ -3283,7 +3283,8 @@ V4_MATH = ("Math, row by row (easy to read): each step is a row: a short line of
 # that carries its figure; views_gate drops a figure-less Steps (steps-nofig), the reply re-asks once in place, else plain numbered lines
 V4_STEPS_RULE = ("A stepper MUST carry a figure that changes in every step: a Graph as its first argument with each Step's node / edge marks, "
                  "and a table (head + rows) when the slip is a trace; never captions alone.")
-V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
+V4_FIG_POS = ("Positions count as numbers too: an x, y, vline or hline you place is a given number or 0. A factor or ratio you worked out (a quarter, one and a half) never becomes a coordinate or a bar value; show it as a Tug pull instead.\n")
+V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to a wrong pick, in each answer to \"Why does this work?\", and on a forces question (buoyancy, tension, weight, normal force: a ```fig scene, every force an arrow) on a right answer too; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
             "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer). A \"by what factor\" question gets a Tug, never a ```fig curve: each row names a change in the question's own words (\"V | box halved | up 2\"), never a fraction you worked out\n"
@@ -3449,7 +3450,85 @@ def v4_stream(v4, key, out=None):
                          phase="timeout" if isinstance(e, TimeoutError) else "headers", ms=ms)
 
 
-def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=None):
+# Subject pass (Tony 19:18 PST Nov 3, rule: brain CLUES-V2.md "no [inanimate object] + [verb]"; he accepts losing the stream for it): a
+# letter-prompt reply is held whole; every non-prose span (fences, $$ / $ math, table rows, `code`, kaomoji and other non-ASCII runs) becomes an
+# ordered slug ⟦1⟧ ⟦2⟧ ...; one cheap model rewrites only the masked prose; the result is kept only when the slugs come back all, once each, in
+# order, every number of the prose is kept, and the length stays within 0.8-1.25. Anything else (error, timeout, a broken slug) = the original.
+# CLUCK_SUBJECT=0 turns it off (the reply streams again).
+SUBJECT_S = 6                                # the swap waits at most this long after the stream ends
+SUBJECT_MODEL = os.environ.get("CLUCK_SUBJECT_MODEL", "deepseek/deepseek-v4.1-flash")
+def subject_block():
+    """the letter's SUBJECTS block, verbatim (the rewriter reads the same rule Cluck does)"""
+    t = PROMPT_V4 or ""
+    i = t.find("- SUBJECTS")
+    return t[i:t.find("\n- ", i + 2)] if i >= 0 else ""
+
+
+SUBJECT_HOW = """You fix ONE style rule in a tutor's reply, the rule below. Rewrite ONLY the sentences that break it (an object, a number, a law or an idea as the subject doing a person-like action), using P1, P2, P4 or P5. Every other sentence stays word for word. Ask no new question.
+Keep every ⟦n⟧ marker exactly: the same ones, in the same order, never move, merge or drop one. Keep every number, every QUACK, every line break, - list and **bold**. Same short, warm voice, about the same length. Hand back only the text.
+"""
+_SLUG_RE = re.compile(r"```[\s\S]*?(?:```|$)|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|`[^`\n]+`|(?m:^\s*\|.*$)|[^\x00-\x7F‘’“”–—…°]+")
+_SLUG = re.compile(r"⟦(\d+)⟧")
+_NUM = re.compile(r"\d+(?:\.\d+)?")
+
+
+def subject_mask(text):
+    """(masked prose, spans): each non-prose span becomes ⟦i⟧ (1-based, in order)"""
+    spans = []
+
+    def sub(m):
+        spans.append(m.group(0))
+        return f"⟦{len(spans)}⟧"
+    return _SLUG_RE.sub(sub, text), spans
+
+
+def subject_unmask(masked, spans):
+    return _SLUG.sub(lambda m: spans[int(m.group(1)) - 1], masked)
+
+
+def subject_ok(before, after, n):
+    """the validator: every slug once, in order; the prose's numbers kept (as a multiset); length ratio 0.8-1.25"""
+    if [int(x) for x in _SLUG.findall(after)] != list(range(1, n + 1)) or before.count("\n") != after.count("\n"):
+        return False                              # the lines must line up too: the client swaps line by line
+    strip = lambda t: _SLUG.sub("", t)  # noqa: E731
+    if sorted(_NUM.findall(strip(before))) != sorted(_NUM.findall(strip(after))):
+        return False
+    a, b = len(strip(before).strip()), len(strip(after).strip())
+    return a == 0 or 0.8 <= b / a <= 1.25
+
+
+def subject_on():
+    return os.environ.get("CLUCK_SUBJECT", "1").strip().lower() not in ("0", "off", "false", "no")
+
+
+def subject_pass(text, key, call=None):
+    """the reply with its inanimate-subject sentences rewritten, or the reply itself (validator fail, error, nothing to fix). call(masked) -> str
+    is the model call (tests stub it)."""
+    masked, spans = subject_mask(text)
+    if not re.search(r"[A-Za-z]{3}", _SLUG.sub("", masked)):
+        return text
+    t0 = time.time()
+    try:
+        got = (call or (lambda m: _subject_call(m, key)))(masked)
+    except Exception as e:  # noqa: BLE001
+        log(f"subject pass: error {e}")
+        return text
+    core = masked.strip("\n")
+    head, tail = masked[:len(masked) - len(masked.lstrip("\n"))], masked[len(masked.rstrip("\n")):]
+    got = got.strip("\n") if isinstance(got, str) else None
+    ok = got is not None and subject_ok(core, got, len(spans))
+    log(f"subject pass: {'kept' if ok and got != core else 'same' if ok else 'fallback'} ms={int((time.time() - t0) * 1000)} slugs={len(spans)}")
+    return subject_unmask(head + got + tail, spans) if ok else text
+
+
+def _subject_call(masked, key):
+    payload = dict(_model_params(SUBJECT_MODEL, 900), stream=False, temperature=0, provider={"zdr": True, "data_collection": "deny"},
+                   messages=[{"role": "system", "content": SUBJECT_HOW + subject_block()}, {"role": "user", "content": masked}])
+    with _or_post(payload, key, SUBJECT_S) as r:
+        return json.loads(r.read().decode("utf-8"))["choices"][0]["message"]["content"]
+
+
+def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=None, swap=False):
     """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params.
     fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.rule(fig) and its fences go through the
     gate; the OpenRouter path never has the rule and strips any fence (live figures are Claude only).
@@ -3458,11 +3537,15 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
     v4 (T62): the letter-prompt request (v4_stream); its arms fall back to each other, and only if both fail does `messages` run the old way."""
     out = set() if out is None else out          # this chain's out-of-credit providers (budget_hit): skipped, not retried
     if v4 is not None:
-        sent = False
+        sent, whole = False, []
         for t in v4_stream(v4, key, out):
             sent = True
+            whole.append(t)
             yield t
         if sent:
+            final = subject_pass("".join(whole), key) if swap and subject_on() and key else None   # Tony 19:26: stream first, then flash the fix
+            if final is not None and final != "".join(whole):
+                yield RS + json.dumps({"replace": final}) + "\n"   # the client swaps the changed prose lines; figures keep their DOM
             return
         fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
     elif claude_ready(out):

@@ -18,12 +18,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
+os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass (its own tests: tests/test_subject_pass.py) would spend one more mocked call per reply
 import serve  # noqa: E402
 from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "de6f36afefe015d9606c3649d58b2ca8d9a2480d6284d2c51109d08fc3c56820"
+SHA = "a1e9cfe844d32b4a09510dd28f4c8770cf1e68985951c7c5996c47faac63fe8a"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
