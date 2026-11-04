@@ -3286,7 +3286,7 @@ V4_STEPS_RULE = ("A stepper MUST carry a figure that changes in every step: a Gr
 V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
-            "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer)\n"
+            "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer). A \"by what factor\" question gets a Tug, never a ```fig curve: each row names a change in the question's own words (\"V | box halved | up 2\"), never a fraction you worked out\n"
             "- a step they did vs the fix: a Flip, one card per step\n"
             "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
             "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
@@ -3300,7 +3300,7 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
             "Plain text in Tug and Flip cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
             "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
-            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | up, down or same | 1-9 pull size | optional why\" (label 10 characters at most).\nExamples:\n"
+            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 4 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
             "root = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n"
             "root = View([f])\nf = Flip([[\"arm of W\", \"L\", \"half of L\"]])\n"
             "root = View([t])\nt = Table([\"case\", \"before\", \"after\"], [[\"gas\", \"2 atm\", \"6 atm\"]])\n"
@@ -3315,7 +3315,8 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
 # R6d: the letter's order (L44: "an ```openui Geometry view, else a ```fig block"): the openui lead first, then the ```fig rule
-V4_FIG_FIXED = ("\nWhich fence: for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
+V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```openui Tug; a step they did vs its fix, an ```openui Flip; "
+                "for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
                 "for the other kinds below, a ```fig block.\nThe ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
                 "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4 + "\n" + V4_VIEWS)
 
