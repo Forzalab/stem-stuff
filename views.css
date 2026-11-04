@@ -152,7 +152,7 @@
   .vw-flip .fl-a { visibility: hidden; }
   .vw-flip .fl-card.sa .fl-a, .vw-flip .fl-card.sb .fl-b { visibility: visible; }
   .vw-flip .fl-card.sa .fl-b, .vw-flip .fl-card.sb .fl-a { visibility: hidden; }
-  .vw-flip .fl-face { transition: visibility 0s linear calc(var(--d-move) / 2); }
+  .vw-flip .fl-face { transition: visibility var(--d-fast) step-start; transition-delay: calc(var(--d-move) / 2); }
   .vw-flip .fl-card:not(.sa):not(.sb) .fl-a { animation: fl-vis-a var(--d-dim) ease-in-out calc(var(--d-dim) * 3) both; }
   .vw-flip .fl-card:not(.sa):not(.sb) .fl-b { animation: fl-vis-b var(--d-dim) ease-in-out calc(var(--d-dim) * 3) both; }
 }
@@ -176,8 +176,8 @@
 @keyframes tg-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes tg-draw-l { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
 @keyframes tg-pulse { 50% { transform: scaleY(1.6); } }
-@keyframes fl-vis-a { 0%, 49.9% { visibility: visible; } 50%, 100% { visibility: hidden; } }
-@keyframes fl-vis-b { 0%, 49.9% { visibility: hidden; } 50%, 100% { visibility: visible; } }
+@keyframes fl-vis-a { 0% { visibility: visible; } 49% { visibility: visible; } 50% { visibility: hidden; } 100% { visibility: hidden; } }
+@keyframes fl-vis-b { 0% { visibility: hidden; } 49% { visibility: hidden; } 50% { visibility: visible; } 100% { visibility: visible; } }
 @keyframes fl-turn { from { transform: rotateY(0deg); } to { transform: rotateY(180deg); } }
 .vw-tug .tg-pull { cursor: pointer; }
 .vw-tug .tg-why { display: none; color: var(--muted); font-size: var(--t-xs); }
