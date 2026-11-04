@@ -1937,7 +1937,9 @@ const newWish = () => ({ code: S.code, text: "", started: true, done: false, ope
 function wishOnWrong() {
   if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
-  if (wish && wish.code === S.code && !wish.idle) { wishPaint(); return; } // a later miss redrew the hint card: Cluck's peek goes back in
+  /* a later miss redrew the hint card: Cluck's peek goes back in. A NEW miss (another try than the one the text explains, e.g. a 2nd wrong
+     number) restarts the stream with the latest try, so the box never keeps explaining the first one (C4a, "stream every miss") */
+  if (wish && wish.code === S.code && !wish.idle && !(wish.started && wish.key && wish.key !== ckKey(wish.code, askTry()))) { wishPaint(); return; }
   const w = wishNew();
   /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
