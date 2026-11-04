@@ -134,9 +134,13 @@ try {
       assert.equal(await page.locator("#cluck .wtext .vw-flip .fl-card").count(), 2);
       await page.waitForTimeout(1600);                                        // the beat (3 x --d-dim) + the turn
       assert.ok((await tf()).every(t => /^matrix3d\(-1/.test(t)), "after the beat each card shows the fix (turned 180): " + (await tf()));
+      // Firefox Android showed both faces at once: exactly one .fl-face may be visible, at rest and after each tap
+      const up = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-card")].map(c => [...c.querySelectorAll(".fl-face")].filter(f => { const cs = getComputedStyle(f); return cs.visibility !== "hidden" && +cs.opacity > 0; }).map(f => f.classList.contains("fl-a") ? "a" : "b").join("")));
+      assert.deepEqual(await up(), ["b", "b"], "at rest exactly the fix face is visible");
       const c0 = page.locator("#cluck .wtext .vw-flip .fl-card").first();
       await c0.click(); await page.waitForTimeout(500);
       assert.equal((await tf())[0], "none", "a tap turns card 1 back to what you did");
+      assert.deepEqual(await up(), ["a", "b"], "after a tap: card 1 shows only what you did");
       assert.ok(/^matrix3d\(-1/.test((await tf())[1]), "card 2 stays on the fix");
       await c0.click(); await page.waitForTimeout(500);
       assert.ok(/^matrix3d\(-1/.test((await tf())[0]), "a second tap: the fix again");
