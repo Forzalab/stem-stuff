@@ -24,6 +24,9 @@
 .rp-tex .katex, .rp-val .katex, .rp-chip .katex { font-size: var(--kx); }
 .rp-opts { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .rp-why { margin-top: var(--s3); }
+.rp-whyin { animation: rp-whyin .2s ease-out backwards; }
+@keyframes rp-whyin { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rp-whyin { animation: none; } }
 .rp-q { margin: 0 0 var(--s2); color: var(--help-on); }
 /* a chip: a real button, 44px tall; a tried-wrong one keeps its text and gains ✗ (never hue alone) */
 .rp-chip, .rp-check, .rp-skip, .rp-next { box-sizing: border-box; min-height: 44px; margin: 0; padding: var(--s1) var(--s3); border: var(--bw) solid var(--line);

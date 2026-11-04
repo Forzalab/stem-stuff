@@ -113,9 +113,8 @@ try {
       await page.waitForSelector('#q .rp-step[data-id="area"][data-state="active"]');
       await step(`${T}: step 3 live (A = π(□)², d/2 · d · 2d): its row ends at its chips; done chips 4.5:1`, async () => {
         await noBand("step 3 live"); await readable("step 3 live");
-        const pv = await page.evaluate(() => { const w = document.querySelector('#q .rp-step[data-id="area"] .rp-why'), t = w && w.querySelector(".rp-mask-t"), r = w && w.querySelector(".rp-real");
-          return { mask: !!w && w.classList.contains("rp-mask"), shown: t && getComputedStyle(t).visibility === "visible" ? t.textContent : null, real: r ? getComputedStyle(r).color : null, h: w ? Math.round(w.getBoundingClientRect().height) : 0 }; });
-        assert.ok(pv.mask && pv.shown === "Why is that?" && pv.real === "rgba(0, 0, 0, 0)" && pv.h > 0, "before d/2 the why is a masked preview (no 'Why half?'): " + JSON.stringify(pv));
+        /* Tony, Nov 3 19:29: before d/2 the "Why is that?" label and its boxes are not drawn at all (no dashed placeholders, no gap) */
+        assert.equal(await page.$$eval('#q .rp-step[data-id="area"] .rp-why', e => e.length), 0, "before d/2 there is no why block");
         if (SHOTS) await page.locator('#q .rp-step[data-id="area"]').screenshot({ path: join(SHOTS, `lu-area-${mode}-${w}.png`) });
       });
       await page.click(`${act} .rp-chip[data-v="d"]`);

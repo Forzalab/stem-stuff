@@ -239,10 +239,10 @@
         if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
         body.append(m);
       }
-      if (s.ask) {
-        const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
-        if (early) lock(w, "rp-ghost", null);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
-        else if (s.why != null) lock(w, "rp-locked", s.why);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
+      /* Tony, Nov 3 19:29: the "Why is that?" box is not drawn at all (no empty dashed room) until the step's right chip is picked, then it fades in */
+      if (s.ask && s.state !== "future" && (s.ok || s.why != null)) {
+        const w = whyUi(s);
+        if (s.why != null) lock(w, "rp-locked", s.why); else if (!s.whySeen) { s.whySeen = true; w.classList.add("rp-whyin"); }
         body.append(w);
       }
       li.append(body);
@@ -265,7 +265,7 @@
         const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not
         s.seen = true;
         if (!s.ok) body.append(valueUi(s));
-        if (s.ask && s.why == null) body.append(whyUi(s));
+        if (s.ask && s.why == null && s.ok) { const w = whyUi(s); if (!s.whySeen) { s.whySeen = true; w.classList.add("rp-whyin"); } body.append(w); }   // only after the right chip (Tony, Nov 3)
         li.append(body);
       }
       if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
