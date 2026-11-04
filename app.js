@@ -1892,7 +1892,6 @@ const CL_COPY = {
   nokey: "404: Cluck not found. This one hatched without a duck, so he's off paddling somewhere else. The question is all yours. You've got this!",
   done: "Want my steps? Tap the duck chip under your answer.",
 };
-const WHY_ASK = "Why does this work?";                                   // COPY-PENDING (W110): the chip under a right-pick reply, and the question it sends
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
    the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
    sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
@@ -2692,18 +2691,6 @@ function clAsk(build) {
     inp.addEventListener("input", () => askFit(inp));
   }
   const ready = wishTyped(w) && !w.busy;
-  /* W110 (Tony, Oct 28): Cluck's reply to a RIGHT pick ends on its one reason, no question; this chip offers more. A tap asks it through
-     the chat (clSend). Only under a reply that explains the right try (the box text or Compare's), before any follow-up */
-  const t = S && S.code === w.code ? S.tries.at(-1) : null, k = t && ckKey(w.code, t);
-  const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
-  let wb = cl.el.querySelector(".cl-why");
-  if (why && !wb) {
-    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why rw-skin rw-chip";
-    wb.innerHTML = `<span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${WHY_ASK}</span>`;   // W118c (Tony, Nov 2): the reply's last line is the action. Tony, Nov 3 19:2x: it wears the tray's Ask Cluck chip look (the miss-side "okay, but how?" CTA is gone), and still sends WHY_ASK itself
-    wb.addEventListener("click", () => clSend(WHY_ASK));
-    const pane = cl.el.querySelector("#clTabEP"), host = [...pane.querySelectorAll(".msg, .cl-cmp")].filter(m => m.offsetParent).at(-1);
-    if (host) host.append(wb); else pane.querySelector(".cl-thread").before(wb);
-  } else if (!why && wb) wb.remove();
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
   ft.querySelector(".send").disabled = !ready;

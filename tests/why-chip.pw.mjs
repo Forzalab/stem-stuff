@@ -70,10 +70,11 @@ async function part(page, i, v) {
 async function compare(page) {
   await page.click(":is(#wish, .rbox) .cue-ok");
   await page.waitForFunction(() => /Power is work/.test(document.querySelector("#cluck .cl-cmp")?.textContent || "") && !document.querySelector("#cluck .cl-cmp .wcaret"), null, { timeout: 8000 });
-  await page.waitForSelector("#cluck .cl-why", { state: "visible", timeout: 4000 });
+  await page.waitForTimeout(2000);   // a chip, if there were one, would be drawn by now
 }
 
-await step("mc: a miss, then right: Compare's reply has the chip; a tap asks it through /chat; then the chip goes", async () => {
+/* Tony Nov 3 22:00: the tray's Ask Cluck is the ONLY Cluck entry: the reply carries no "Why does this work?" chip, ever */
+await step("mc: a miss, then right: Compare's reply has NO 'Why does this work?' chip (the tray's Ask Cluck is the only entry)", async () => {
   const page = await open("CALC1_WHY1");
   await mc(page, "b");
   for (let i = 0; i < 50 && !page.sent.explain.length; i++) await page.waitForTimeout(100);   // the miss's background ask (prefetch)
@@ -81,45 +82,11 @@ await step("mc: a miss, then right: Compare's reply has the chip; a tap asks it 
   assert.equal(await page.locator("#cluck .cl-why").count(), 0, "no chip on a wrong pick");
   await mc(page, "a");
   await compare(page);
-  assert.equal((await page.textContent("#cluck .cl-why")).trim(), "Why does this work?");
   assert.equal(page.sent.explain.at(-1).answer, "a");
   assert.equal(page.sent.explain.at(-1).part, undefined, "a single item sends no part");
-  await page.click("#cluck .cl-why");
-  await page.waitForFunction(() => /splits the work/.test(document.querySelector("#cluck .cl-thread")?.textContent || ""), null, { timeout: 6000 });
-  const c = page.sent.chat.at(-1);
-  assert.equal(c.history.at(-1).role, "user");
-  assert.equal(c.history.at(-1).content, "Why does this work?");
-  assert.equal(c.answer, "a");
-  assert.equal(await page.locator("#cluck .cl-why").count(), 0, "asked once: the chip goes");
-  assert.deepEqual(page.errs, []);
-  await page.context().close();
-});
-
-/* W118c (Tony, Oct 29/Nov 2): the chip is the reply's last line, a CTA (duck, label, chevron, --help, no fill) under a --help-rule line, inside the card */
-await step("118c: the chip is the last child of the last reply bubble, no fill, --help-rule above, inside the card, tap >= 44px (390x844, 1366x768)", async () => {
-  const page = await open("CALC1_WHY1");
-  await mc(page, "b");
-  for (let i = 0; i < 50 && !page.sent.explain.length; i++) await page.waitForTimeout(100);
-  await mc(page, "a");
-  await compare(page);
-  for (const [w, h] of [[390, 844], [1366, 768]]) {
-    await page.setViewportSize({ width: w, height: h });
-    await page.waitForTimeout(300);
-    const r = await page.evaluate(() => {
-      const chip = document.querySelector("#cluck .cl-why"), host = [...document.querySelectorAll("#cluck .msg, #cluck .cl-cmp")].filter(m => m.offsetParent).at(-1);
-      const cs = getComputedStyle(chip), b = chip.getBoundingClientRect(), c = host.getBoundingClientRect();
-      const probe = document.createElement("i"); probe.style.color = "var(--help-rule)"; document.body.append(probe);
-      const rule = getComputedStyle(probe).color; probe.remove();
-      return { cls: chip.className, inside: host.contains(chip), last: host.lastElementChild === chip, bg: cs.backgroundColor, bgi: cs.backgroundImage,
-        topW: cs.borderTopWidth, topC: cs.borderTopColor, rule, l: b.left - c.left, rr: c.right - b.right, h: b.height };
-    });
-    const tag = `${w}x${h}`;
-    assert.ok(r.inside && r.last, `${tag}: chip is the last child of the last reply bubble`);
-    /* Tony, Nov 3: the chip wears the tray's Ask Cluck chip look (.rw-chip: the --help face), not the old no-fill rule-and-chevron CTA */
-    assert.ok(r.cls.includes("rw-chip") && r.bg !== "rgba(0, 0, 0, 0)", `${tag}: the tray chip look (${r.cls} ${r.bg})`);
-    assert.ok(r.l >= -0.5 && r.rr >= -0.5, `${tag}: chip inside the card horizontally (left ${r.l}, right ${r.rr})`);
-    assert.ok(r.h >= 44, `${tag}: tap target ${r.h}px`);
-  }
+  assert.equal(await page.locator("#cluck .cl-why").count(), 0, "no chip under the right-pick reply");
+  assert.ok(!/Why does this work/.test(await page.textContent("#cluck")), "no such words in the sheet");
+  assert.equal(page.sent.chat.length, 0, "nothing asked through /chat");
   assert.deepEqual(page.errs, []);
   await page.context().close();
 });

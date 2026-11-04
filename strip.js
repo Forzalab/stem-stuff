@@ -222,11 +222,21 @@
     if (vk && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(vk); return; }
     if (e.key === "Escape" && drawer && !drawer.hidden && !(window.stemCluckModal && window.stemCluckModal())) close(true);
   });
-  D.addEventListener("pointerdown", function (e) {            // a tap outside closes it (POPOVER rule); the drawer and the verdict icons are inside
-    if (!drawer || drawer.hidden || drawer.classList.contains("vd-shut")) return;
-    var t = e.target; if (!t || !t.closest) return;
-    if (drawer.contains(t) || t.closest("#q .ff .vk, #q .vkb, #cluck")) return;   // Cluck's sheet is the drawer's own family: at phone width it floats over the drawer (#wish stays shown), and a tap in it (Try again) must not close the drawer for good
-    close(false);
+  /* a tap outside closes it (POPOVER rule); the drawer and the verdict icons are inside. Only a REAL tap: pointerdown then pointerup, moved < 10 px,
+     no pointercancel (the browser took the touch for a scroll) and no scroll between. A drag-scroll used to close it (Tony, phone). */
+  var tap = null;
+  function outside(t) {
+    if (!drawer || drawer.hidden || drawer.classList.contains("vd-shut")) return false;
+    if (!t || !t.closest) return false;
+    return !(drawer.contains(t) || t.closest("#q .ff .vk, #q .vkb, #cluck"));   // Cluck's sheet is the drawer's own family: at phone width it floats over the drawer (#wish stays shown), and a tap in it (Try again) must not close the drawer for good
+  }
+  D.addEventListener("pointerdown", function (e) { tap = outside(e.target) && e.isPrimary !== false ? { id: e.pointerId, x: e.clientX, y: e.clientY } : null; }, true);
+  D.addEventListener("pointermove", function (e) { if (tap && e.pointerId === tap.id && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) >= 10) tap = null; }, true);
+  D.addEventListener("pointercancel", function () { tap = null; }, true);
+  D.addEventListener("scroll", function () { tap = null; }, true);
+  D.addEventListener("pointerup", function (e) {
+    var t = tap; tap = null;
+    if (t && e.pointerId === t.id && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 10 && outside(e.target)) close(false);
   }, true);
   D.addEventListener("input", function (e) {                  // editing the box starts a new try: the old verdict's drawer goes
     if (!drawer || drawer.hidden || !e.target.closest || !e.target.closest("#ff, .part")) return;
