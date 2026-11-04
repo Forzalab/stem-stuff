@@ -130,6 +130,27 @@ try {
       } finally { await page.context().close(); }
     });
   }
+  for (const w of W.filter(x => x < 500)) {
+    await step(`${w}: the tray stays open while the page is touch-scrolled; a still tap outside still closes it`, async () => {
+      const page = await open(w);
+      try {
+        await typeAnswer(page, "1.636");
+        await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+        await page.waitForTimeout(SETTLE);
+        const shown = () => page.evaluate(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && !d.classList.contains("vd-shut"); });
+        assert.ok(await shown(), "the tray is open");
+        const cdp = await page.context().newCDPSession(page);
+        const drag = async dy => cdp.send("Input.synthesizeScrollGesture", { x: 196, y: 700, yDistance: dy, gestureSourceType: "touch", speed: 600 });
+        await drag(-250); await page.waitForTimeout(300);
+        assert.ok(await shown(), "a touch-drag up left the tray open");
+        await drag(250); await page.waitForTimeout(300);
+        assert.ok(await shown(), "a touch-drag down left the tray open");
+        const pt = await page.evaluate(() => { const d = document.querySelector("#q .vdrawer").getBoundingClientRect(); const h = document.querySelector("#q h2, #q .qtitle, #q") ; return { x: 196, y: Math.min(innerHeight - 20, 780) , d: d.toJSON() }; });
+        await page.touchscreen.tap(pt.x, pt.y); await page.waitForTimeout(SETTLE);
+        assert.ok(!(await shown()), "a still tap outside closed it " + JSON.stringify(pt));
+      } finally { await page.context().close(); }
+    });
+  }
   for (const w of W) {
     await step(`${w}: tags: "Pity roll" + "Twist" sit on ONE row before the title (never stacked)`, async () => {
       const page = await open(w);
