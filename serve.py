@@ -2141,11 +2141,16 @@ def pick_unit(p, pick):
     return (None if p.get("type") in ("multi", "proof") else p), pick
 
 
+def no_attempt(pick):
+    """a free question: the student has not tried the item (no pick, or an empty answer on a part): there is nothing to grade"""
+    return (pick["answer"] if isinstance(pick, dict) else pick) in (None, "")
+
+
 def pick_ok(p, pick):
     """the server's own verdict on THIS pick against its unit's key (the grader's rules, no tries state, no KV, never a client verdict):
-    True | False | None (no unit to grade, or unreadable)"""
+    True | False | None (no unit to grade, no attempt yet, or unreadable)"""
     u, a = pick_unit(p, pick)
-    if u is None:
+    if u is None or no_attempt(pick):
         return None
     if u["type"] == "mc":
         return set(map(str, a)) == rights(u) if u.get("pick") == "all" and isinstance(a, list) else a == u["correct"]
@@ -2202,8 +2207,11 @@ def explain_prompt(p, answer):
         at = f" (part {lab})"
     slips = [(sg.get("slip") or {}).get(str(x)) for x in picked] if not isinstance(answer, dict) else []
     slip = " ".join(x for x in slips if x) or (_unit_slip(u, a) if u is not None and ok is False else "")
-    lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}{at}", f"KEY:\n{sg['key']}",
-              "SLIP: " + ("none, the pick is right" if ok else slip or "(none written; name the likely slip from the KEY)")]
+    if no_attempt(answer):                               # a free question: no pick, no slip, no verdict (v4_result gives none either)
+        lines += ["STUDENT PICKED: nothing yet (the student has not tried this question)", f"KEY:\n{sg['key']}"]
+    else:
+        lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}{at}", f"KEY:\n{sg['key']}",
+                  "SLIP: " + ("none, the pick is right" if ok else slip or "(none written; name the likely slip from the KEY)")]
     ideas = skill_ideas(p)
     if ideas:                                            # SCHEMA.md "Skills": the algebra behind it, explained in plain words, no calculus
         lines.append("ALGEBRA THIS NEEDS (many students are shaky here; when the slip is one of these, explain it in plain words, no calculus):\n" + "\n".join("- " + i for i in ideas))
@@ -2854,11 +2862,15 @@ def pick_line(line, vals):
     return bool(vals) and any(livefig._eq(n, v) for n in livefig.nums(line) for v in vals)
 
 
+# a no-attempt turn is not a miss: the letter's RESULT: wrong opener ("Not quite.") is cut if the model writes it anyway (prod Nov 3: "Which formula fits?")
+_MISS_RE = re.compile(r"^[ \t]*(?:not[ \t]+quite|not[ \t]+it|wrong|incorrect|nope)\b[ \t]*[,.!:;]*(?:[ \t]*quack\b[ \t]*[,.!]*)?[ \t]*", re.I)
+
+
 class LineStrip:
     """open item (not locked, not solved): drops the lines for which pick_line is true, keeps the rest. Lines stream as they end; the last partial
     line is held to the end. A fenced figure passes untouched."""
-    def __init__(self, vals):
-        self.vals, self.buf, self.fenced = vals, "", False
+    def __init__(self, vals, picks=True, opener=False):
+        self.vals, self.buf, self.fenced, self.picks, self.opener = vals, "", False, picks, opener   # opener: cut a miss verdict off the first line (a free question)
 
     def _lines(self, text):
         out = []
@@ -2866,7 +2878,13 @@ class LineStrip:
             if line.lstrip().startswith("```"):
                 self.fenced = not self.fenced
                 out.append(line)
-            elif self.fenced or not pick_line(line, self.vals):
+            elif self.fenced:
+                out.append(line)
+            elif not (self.picks and pick_line(line, self.vals)):
+                if self.opener and line.strip():
+                    self.opener, line = False, _MISS_RE.sub("", line, 1)
+                    if not line.strip():
+                        continue
                 out.append(line)
         return "".join(out)
 
@@ -3234,7 +3252,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
     return m.group(0) if m else ""
 
 
-def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=True):
+def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=True, free=False):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
     livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: V4_FIG_FIXED + v4_fig_howto), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
@@ -3245,7 +3263,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=Tru
     ask = reask if reask and fig is not None and livefig.on() else None
     xyz, fence = Xyz(), views_gate.Fence(fig, FIG_SLOT if ask else None)
     guard = None if reveal else LeakGuard(facts)
-    strip = None if closed else LineStrip(facts[1])   # open item (even on REVEAL yes from the 3rd turn): no pick, no answer value, ever
+    strip = LineStrip(facts[1], not closed, free) if free or not closed else None   # open item (even on REVEAL yes from the 3rd turn): no pick, no answer value, ever
     sent, head, waited = False, "", False        # head: the first visible line so far; None once it went on. waited: FIG_WAIT went out
     for t in chunks:
         vis = fence.feed(xyz.feed(t))
@@ -3541,7 +3559,7 @@ def v4_stream(v4, key, out=None):
                 first = v4["turns"][0]["content"]
                 reask = lambda why: fig_reask(_v4_claude_system(v4),   # noqa: E731
                                               first[0] if isinstance(first, (list, tuple)) else str(first), v4["fig"], why, v4["code"])
-            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask, v4.get("closed", True)):
+            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask, v4.get("closed", True), v4.get("free", False)):
                 sent = True
                 yield t
             if sent:
@@ -4384,7 +4402,7 @@ def chat(cookie_header, body):
         v4 = None
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
-            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=turn_closed((sid, p["code"])), facts=leak_facts(p, pick_done(p, units_done(p, sid), pick)), code=p["code"], arm=cluck_arm(sid),
+            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=turn_closed((sid, p["code"])), free=no_attempt(pick), facts=leak_facts(p, pick_done(p, units_done(p, sid), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
