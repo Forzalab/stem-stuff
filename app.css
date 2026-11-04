@@ -1,4 +1,5 @@
-/* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
+/* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check) */
+
 :root {
   /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family per device, two weights (400, 600), five sizes.
      Atkinson is the default everywhere; WebKit alone switches to SF (@supports below). Mono: the scratchpad, pre-formatted tables and the codeblock only */
@@ -491,12 +492,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .chk .cluck > .ico { margin-top: 0; }
 .chk .cluck .md { overflow-wrap: anywhere; }
 .q.closed .chk:not(.cue) { display: none; }   /* closed: the Check row goes, unless it carries Next (T17b-1) */
-/* try pips (app.js pips; Tony, Oct 5: they replace the "One more try" toast): one dot per try after a wrong one; used = filled --bad, left = hollow */
-.pips { flex: none; display: inline-flex; align-items: center; gap: var(--s1); }
-.pips i { width: 8px; height: 8px; border-radius: 50%; border: var(--bw) solid var(--line); }   /* filled vs hollow is the cue, never hue alone */
-.pips i.used { background: var(--wrong); border-color: var(--wrong); }
-.pips.spent, .preview.spent { visibility: hidden; }   /* the question closed: the dots go, their room stays (T17b-1: nothing moves after Check) */
-.choices + .pips, .ff + .pips { display: flex; justify-content: flex-end; margin-top: var(--s2); }   /* no Check beside them: right-aligned under the rows / the box */
+.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check). No try dots (Tony, Nov 3 16:23) */
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
    The selected pill holds the arrow flush at its right end, so it alone reserves the arrow's room (56px, as in the stacked list).
@@ -615,11 +611,6 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .ff .vk[data-v="i-ok"] { color: var(--correct); }
 .ff .vk[data-v="i-x"] { color: var(--wrong); }
 .ff .vk[data-v="i-lock"] { color: var(--muted); }
-.mparts .pips { grid-area: pp; margin-top: 0; }   /* the try dots sit under the box (r9: with no area they auto-placed into the empty cell left of the hint, over the duck) */
-.mparts .part:has(> .pips) { grid-template-areas: "mk pr" ". bx" ". pp"; }
-.mparts .part:has(> .pips).hinted { grid-template-areas: "mk pr" ". bx" ". pp" ". ht"; }
-.mparts .part.nopr:has(> .pips) { grid-template-areas: "mk bx" ". pp"; }
-.mparts .part.nopr:has(> .pips).hinted { grid-template-areas: "mk bx" ". pp" ". ht"; }
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
 @media (min-width: 40rem) {
@@ -627,10 +618,6 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   .mparts .part.nopr { grid-template-areas: "mk bx bx"; }
   .mparts .part.hinted { grid-template-areas: "mk pr bx" ". ht ht"; }
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
-  .mparts .part:has(> .pips) { grid-template-areas: "mk pr bx" ". . pp"; }
-  .mparts .part:has(> .pips).hinted { grid-template-areas: "mk pr bx" ". . pp" ". ht ht"; }
-  .mparts .part.nopr:has(> .pips) { grid-template-areas: "mk bx bx" ". . pp"; }
-  .mparts .part.nopr:has(> .pips).hinted { grid-template-areas: "mk bx bx" ". . pp" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
 .ff.bad { border: var(--bw) dashed var(--wrong-rim); }   /* 1px like every line: the dash is what says "not accepted" (survives greyscale) */

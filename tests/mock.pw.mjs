@@ -98,7 +98,7 @@ try {
     const L = await look(page);
     assert.equal(L.closed, false, "the replay has its second try");
     assert.equal(L.hint, true, "the replay shows the hint");
-    assert.equal(L.pips, true, "the replay shows its tries");
+    assert.equal(L.pips, false, "no try dots (Tony, Nov 3 16:23: retry is always possible)");
     assert.equal(L.duck, false, "BIG PLAN V1: desktop sugar has no duck, Cluck's box is open instead");
     assert.equal(await page.evaluate(() => window.stemCluckOpen()), true, "Cluck's box is open after the replay's first wrong");
     await next(page); await opened(page, "PHYS_MQ3");

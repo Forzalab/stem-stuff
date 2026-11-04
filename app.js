@@ -1183,7 +1183,7 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); glyph(o, "i-x"); if (r.triesLeft > 0) nudge(o, "jolt");   // the closing pick: no shake
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
+    if (r.triesLeft <= 0) finish();
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
@@ -1220,7 +1220,7 @@ async function submitAll() {
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
-    if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
+    if (r.triesLeft <= 0) finish();
   } else if (r.verdict === "pending") for (const o of on) o.classList.add("pend");
   else if (r.verdict === "locked") finish();
   feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
@@ -1361,7 +1361,6 @@ async function submitFF() {
     if (r.exprMode && !closes) xOpen(null);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    else if (r.verdict === "wrong") pips(r, ...pipsAt());
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -1398,7 +1397,6 @@ async function submitProof() {
     if (r.rubric) rubricChips(r.rubric);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    else if (r.verdict === "wrong") pips(r, ...pipsAt());
     if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your proof here first (up to ${PROOF_MAX} letters).</span></p>`; layoutFreeze(); return; }
     feedback(r, "");
     if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
@@ -1429,7 +1427,6 @@ function wireParts() {
 function shutPart(i, ok) {
   const { box, inp, go } = partEls(i);
   S.parts[i].shut = true; S.parts[i].ok = ok;
-  if (box.nextElementSibling?.classList.contains("pips")) box.nextElementSibling.remove();
   box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
   for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
   go.hidden = true;
@@ -1467,7 +1464,7 @@ async function submitPart(i) {
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); const rv = reveal(r, i); if (rv) say(rv); }
-    else { partFeedback(i, r, v); if (r.verdict === "wrong") pips(r, partEls(i).box, "afterend"); }
+    else partFeedback(i, r, v);
     if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && [document.body, inp].includes(document.activeElement)) partEls(nxt).inp.focus(); }   // inp: Chromium 153 keeps focus on the just-disabled box until the next frame, 141 blurred at once (W100)
     layoutFreeze();
@@ -1564,7 +1561,7 @@ function paintRec(rec) {
       if (last && typeof last.a === "string") { inp.value = last.a; go.hidden = u.done !== "open"; }
       if (u.done !== "open") shutPart(i, u.done === "correct");
       if (u.done === "correct") partFeedback(i, { verdict: "correct" });
-      else if (u.x > 0) { const r = { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined }; partFeedback(i, r); if (u.done === "open") pips(r, partEls(i).box, "afterend"); }
+      else if (u.x > 0) { const r = { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined }; partFeedback(i, r); }
     });
     if (S.parts.every(x => x.shut)) settle();
     return;
@@ -1602,7 +1599,7 @@ function paintRec(rec) {
   }
   if (u.done !== "open") finish();
   if (u.done === "correct") feedback({ verdict: "correct" });
-  else if (u.x > 0) { feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined }); pips({ verdict: "wrong", triesLeft: S.triesLeft }, ...pipsAt()); }   // a reload keeps the dots
+  else if (u.x > 0) feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined });
 }
 function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
@@ -1642,18 +1639,6 @@ async function syncServer(mine) {
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
-/* try pips (Tony, Oct 5: they replace the "One more try" toast, which covered a choice): after a wrong try with tries left, one dot
-   per try, used = filled red, left = hollow. Beside Check on a tick-all question, else under the rows / the answer box. The screen
-   reader already hears "Wrong. 1 try left." (verdictWords), so the dots are aria-hidden. A closed question drops them (finish, shutPart) */
-function pips(r, el, pos) {
-  if (!el) return;
-  const old = pos === "afterend" ? el.nextElementSibling : el.previousElementSibling;
-  if (old && old.classList.contains("pips")) old.remove();
-  const max = maxTries(S.prob), left = r.triesLeft;
-  if (r.verdict !== "wrong" || !(left > 0) || max < 2) return;
-  el.insertAdjacentHTML(pos, `<span class="pips" aria-hidden="true">${'<i class="used"></i>'.repeat(max - left)}${"<i></i>".repeat(left)}</span>`);
-}
-const pipsAt = () => $("#mcGo") ? [$("#mcGo"), "beforebegin"] : S.prob.type === "mc" ? [$("#q .choices"), "afterend"] : [$("#ff"), "afterend"];   // single pick has no Check: under the rows
 /* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
    never reads as lost work. Owes a miss = Pity roll, else Review; once closed: Avenged! / Reviewed, or Comes back later. No "+3" until
    D60 pays it. No lockout sub-lines (Tony, Oct 17: drop). */
@@ -1682,7 +1667,6 @@ function guard() {
 }
 function finish() {
   S.finished = true;
-  document.querySelectorAll("#q .pips").forEach(x => x.classList.add("spent"));   // hidden, its room kept: a closing tap never moves the page (T17b-1)
   $("#q").classList.add("closed");
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
