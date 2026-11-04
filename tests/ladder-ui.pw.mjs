@@ -1,6 +1,6 @@
 // LADDER-UI (Tony's phone, Nov 3: Exam 3 welcome ladder, step 3 "Area of the big piston", A = π(□)², chips d/2 · d · 2d):
-//   band      no step row is taller than what it shows: the unseen "why" follow-up kept its full room (visibility: hidden) from the start, a
-//             ~200px empty band under the chips; a right pick after a wrong one kept the hidden hint line as a band above the why
+//   band      no step row is taller than what it shows: the unseen "why" follow-up kept its full
+//             room (visibility: hidden) from the start, a ~200px empty band under the chips: it is now a masked preview in that room (W129 L6 kept)
 //   contrast  every chip's text reads 4.5:1 on its real background (preview, live, done; opacity counted): a done step's other chips sat at 55%
 //   weight    every chip border is --bw (1px) (STYLE.md "one weight"): the welcome chips were 1.5px
 // 393 phone (touch) + 1280 + 721, sugar + diet. Own serve.py + a throwaway bank (no brain bank).   node tests/ladder-ui.pw.mjs <port> [shots dir]
@@ -72,7 +72,7 @@ const chips = page => page.evaluate(() => {
     const chain = []; for (let e = el; e; e = e.parentElement) chain.unshift(rgba(getComputedStyle(e).backgroundColor));
     return chain.reduce((b, f) => over(f, b), [0, 0, 0, 1]);
   };
-  return [...document.querySelectorAll("#q section.wl .rp-chip")].filter(c => c.getClientRects().length && getComputedStyle(c).visibility === "visible").map(c => {
+  return [...document.querySelectorAll("#q section.wl .rp-chip")].filter(c => c.getClientRects().length && getComputedStyle(c).visibility === "visible" && !c.closest(".rp-mask")).map(c => {   // a masked why preview shows no words
     let o = 1; for (let e = c; e && !e.matches("section.wl"); e = e.parentElement) o *= +getComputedStyle(e).opacity;
     const cs = getComputedStyle(c), under = bgUnder(c.parentElement), fill = over(rgba(cs.backgroundColor), under);
     const t = over(rgba(cs.color), fill), mix = (a, b) => [0, 1, 2].map(i => a[i] * o + b[i] * (1 - o)).concat(1);
@@ -113,19 +113,18 @@ try {
       await page.waitForSelector('#q .rp-step[data-id="area"][data-state="active"]');
       await step(`${T}: step 3 live (A = π(□)², d/2 · d · 2d): its row ends at its chips; done chips 4.5:1`, async () => {
         await noBand("step 3 live"); await readable("step 3 live");
+        const pv = await page.evaluate(() => { const w = document.querySelector('#q .rp-step[data-id="area"] .rp-why'), t = w && w.querySelector(".rp-mask-t"), r = w && w.querySelector(".rp-real");
+          return { mask: !!w && w.classList.contains("rp-mask"), shown: t && getComputedStyle(t).visibility === "visible" ? t.textContent : null, real: r ? getComputedStyle(r).color : null, h: w ? Math.round(w.getBoundingClientRect().height) : 0 }; });
+        assert.ok(pv.mask && pv.shown === "Why is that?" && pv.real === "rgba(0, 0, 0, 0)" && pv.h > 0, "before d/2 the why is a masked preview (no 'Why half?'): " + JSON.stringify(pv));
         if (SHOTS) await page.locator('#q .rp-step[data-id="area"]').screenshot({ path: join(SHOTS, `lu-area-${mode}-${w}.png`) });
       });
       await page.click(`${act} .rp-chip[data-v="d"]`);
       await page.waitForSelector('#q .rp-step[data-id="area"] .rp-miss');
       await page.click(`${act} .rp-chip[data-v="d/2"]`);
       await page.waitForSelector('#q .rp-step[data-id="area"] .rp-why .rp-chip:not(:disabled)', { state: "visible" });
-      await step(`${T}: wrong then right: the why opens right under the chips (no band left by the hint line)`, async () => {
-        const gap = await page.evaluate(() => {
-          const li = document.querySelector('#q .rp-step[data-id="area"]');
-          const cb = Math.max(...[...li.querySelectorAll(".rp-val-opts .rp-chip")].map(c => c.getBoundingClientRect().bottom));
-          return Math.round(li.querySelector(".rp-why").getBoundingClientRect().top - cb);
-        });
-        assert.ok(gap <= 24, `chips -> "Why half?" ${gap}px (max 24)`);
+      await step(`${T}: wrong then right: the why shows its words in its own room (desk-layout pins that nothing moves); no band`, async () => {
+        const m = await page.evaluate(() => { const w = document.querySelector('#q .rp-step[data-id="area"] .rp-why'); return { mask: w.classList.contains("rp-mask"), q: w.querySelector(".rp-q").textContent }; });
+        assert.deepEqual(m, { mask: false, q: "Why half?" }, "the why after d/2");
         await noBand("why open");
       });
       await page.click(`${act} .rp-why .rp-chip[data-why="2"]`);

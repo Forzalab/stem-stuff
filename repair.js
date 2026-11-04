@@ -132,7 +132,7 @@
       const st = s.st;
       if (right) { s.ok = true; s.val = v; if (welcome) s.missGone = true; else s.miss = ""; }   // welcome: the hint line keeps its room, emptied (a row never shrinks)
       else {
-        s.tried.add(String(v)); missed = true; s.missGone = false; s.missAt = "val";
+        s.tried.add(String(v)); missed = true; s.missGone = false;
         const h = welcome ? hint() : L().miss || "";
         s.miss = (st.miss && st.miss[v]) || said || h;
         if (!welcome && s.tried.size >= TRIES) fillIn(s);
@@ -143,7 +143,7 @@
       const w = s.st.why;
       if (i === w.ok) { s.why = i; if (welcome) s.missGone = true; else s.miss = ""; }
       else {
-        whyOk = false; s.whyTried.add(i); missed = true; s.missGone = false; s.missAt = "why";
+        whyOk = false; s.whyTried.add(i); missed = true; s.missGone = false;
         s.miss = (w.miss && w.miss[i]) || (welcome ? hint() : L().miss || "");   // the chip's own line (todo 76), else the generic one
         if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
       }
@@ -198,9 +198,13 @@
       box.append(opts);
       return box;
     }
-    function whyUi(s) {
-      const w = s.st.why, box = h("div", "rp-why");
-      box.append(h("p", "rp-q", w.q || L().why || "Why is that?"));
+    function whyUi(s, mask) {
+      const w = s.st.why, box = h("div", "rp-why"), q = h("p", "rp-q", w.q || L().why || "Why is that?");
+      if (mask) {                                                                // the preview (LADDER-UI): its real words keep the room, unseen; a
+        box.classList.add("rp-mask");                                            // neutral question shows over them ("Why half?" before d/2 gives the answer away)
+        const real = h("span", "rp-real"); real.append(...q.childNodes); q.append(h("span", "rp-mask-t", L().why || "Why is that?"), real);
+      }
+      box.append(q);
       const opts = h("div", "rp-opts");
       w.opts.forEach((t, i) => opts.append(chip(t, { why: String(i) }, tryWhy, s, i, s.whyTried)));
       box.append(opts);
@@ -230,19 +234,15 @@
       if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
       body.append(val);
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
-      /* LADDER-UI (Tony's phone, Nov 3): a hint line answered by a right pick goes when that pick opens the why: the row grows there anyway,
-         so nothing moves up, and the why sits right under the chips (its hidden room was a ~60px band). A why's own hint keeps its room */
-      const spent = s.missGone && s.ask && s.missAt !== "why";
-      if (s.miss && s.state !== "future" && !spent) {
+      if (s.miss && s.state !== "future") {
         const m = h("p", "rp-miss", s.miss);
         if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
         body.append(m);
       }
       if (s.ask) {
-        const w = whyUi(s);
-        if (s.state === "future" || (live && !s.ok)) { lock(w, "rp-ghost", null); w.hidden = true; }   // unseen until its step's pick: "Why half?" before d/2 gives
-        else if (s.why != null) lock(w, "rp-locked", s.why);                    // the answer away (W129 shot QA). It takes no room (LADDER-UI, Tony Nov 3: its kept room
-                                                                                 // was a ~200px empty band under the chips); the right pick opens it under them
+        const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
+        if (early) lock(w, "rp-ghost", null);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
+        else if (s.why != null) lock(w, "rp-locked", s.why);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
         body.append(w);
       }
       li.append(body);

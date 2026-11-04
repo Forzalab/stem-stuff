@@ -37,6 +37,12 @@ section.wl .rp-n { color: var(--help); }
 section.wl .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border-style: dashed; border-color: var(--help-line); background: color-mix(in srgb, var(--help-on) 6%, transparent); color: var(--help-on); opacity: 1; }
 section.wl .rp-ghost .rp-check { border-width: var(--bw); }
 section.wl .rp-ghost .rp-q { color: var(--help-muted); }
+/* the why before its pick (repair.js whyUi mask, LADDER-UI Nov 3): drawn as a preview in its own room (W129 L6: the pick moves nothing), its words
+   unseen ("Why half?" would give d/2 away): the real question and chip words keep the size, a neutral "Why is that?" shows over the question */
+section.wl .rp-why.rp-mask .rp-q { position: relative; }
+section.wl .rp-why.rp-mask .rp-real, section.wl .rp-why.rp-mask .rp-chip { color: transparent; }
+section.wl .rp-why.rp-mask .rp-chip * { visibility: hidden; }
+section.wl .rp-why.rp-mask .rp-mask-t { position: absolute; left: 0; top: 0; color: var(--help-muted); white-space: nowrap; }
 section.wl .rp-locked .rp-chip { border-color: var(--help-line); color: var(--help-muted); opacity: 1; }
 section.wl .rp-locked .rp-chip.rp-picked { opacity: 1; border-color: var(--help); color: var(--help-on); background: color-mix(in srgb, var(--help) 22%, var(--help-sheet)); }
 section.wl .rp-locked .rp-in { color: var(--help-on); border-color: var(--help-line); opacity: 1; }   /* the done box keeps no --edge: a theme's blue line must not leak into the warm sheet */
