@@ -188,6 +188,11 @@ for (const [tag, vp] of VPS) {
       assert.deepEqual([r.tugs, r.all, r.bar, r.knot], [1, 0, ["sky:▲", "orange:▼"], "?"], "one Tug, the SGU rows, end knot ?: " + JSON.stringify(r));
       assert.ok(r.tugK >= 2, "the labels go through KaTeX: " + r.tugK);
     } else if (sel === "flip") {
+      const col = await page.evaluate(() => { const ink = () => document.querySelector(".vw-flip") && (() => { const f = document.querySelector(".vw-flip"), pr = document.createElement("span"); pr.style.color = "var(--muted)"; f.parentElement.insertBefore(pr, f);
+        const out = { muted: getComputedStyle(pr).color, st: getComputedStyle(f.querySelector(".fl-st")).color, gl: getComputedStyle(f.querySelector(".fl-gl")).color, tx: getComputedStyle(f.querySelector(".fl-tx")).color, ink: getComputedStyle(f.parentElement).color }; pr.remove(); return out; })(); return ink(); });
+      assert.equal(col.st, col.muted, "the step label is the sheet's muted ink, not the card's hue: " + JSON.stringify(col));
+      assert.notEqual(col.gl, col.muted, "the glyph keeps the hue");
+      assert.notEqual(col.tx, col.gl, "the card text is not the hue");
       assert.deepEqual([r.tugs, r.all, r.flips], [0, 0, 2], "two flip cards, no table: " + JSON.stringify(r));
       assert.ok(r.flipK >= 4, "both faces of both cards go through KaTeX: " + r.flipK);
     } else {

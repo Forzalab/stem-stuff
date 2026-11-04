@@ -143,6 +143,11 @@ try {
       const g = await page.evaluate(() => { const w = document.querySelector("#cluck .wtext"), c = [...w.querySelectorAll(".vw-flip .fl-card")].map(x => x.getBoundingClientRect().width), cw = w.querySelector(".vw-flip").getBoundingClientRect().width;
         return { c, cw, role: w.querySelector(".fl-card").getAttribute("role") }; });
       if (w < 500) assert.ok(g.c.every(x => Math.abs(x - g.cw) <= 2), `phone: cards stack at full width ${JSON.stringify(g)}`);
+      const col = await page.evaluate(() => { const ink = () => document.querySelector(".vw-flip") && (() => { const f = document.querySelector(".vw-flip"), pr = document.createElement("span"); pr.style.color = "var(--muted)"; f.parentElement.insertBefore(pr, f);
+        const out = { muted: getComputedStyle(pr).color, st: getComputedStyle(f.querySelector(".fl-st")).color, gl: getComputedStyle(f.querySelector(".fl-gl")).color, tx: getComputedStyle(f.querySelector(".fl-tx")).color, ink: getComputedStyle(f.parentElement).color }; pr.remove(); return out; })(); return ink(); });
+      assert.equal(col.st, col.muted, "the step label is the sheet's muted ink, not the card's hue: " + JSON.stringify(col));
+      assert.notEqual(col.gl, col.muted, "the glyph keeps the hue");
+      assert.notEqual(col.tx, col.gl, "the card text is not the hue");
       await page.emulateMedia({ reducedMotion: "reduce" });
       const both = await page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-card")[0].querySelectorAll(".fl-face")].map(f => { const r = f.getBoundingClientRect(); return [getComputedStyle(f).backfaceVisibility, r.height > 0 && r.width > 0]; }));
       assert.deepEqual(both, [["visible", true], ["visible", true]], "reduced motion: both faces drawn");

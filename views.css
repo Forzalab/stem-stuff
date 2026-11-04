@@ -174,16 +174,16 @@
 .vw-tug .tg-why { display: none; color: var(--muted); font-size: var(--t-xs); }
 .vw-tug .tg-pull.on .tg-why { display: block; }
 /* Flip (tug.mjs): a card, two faces. Resting state = the fix (B) up; .sa = "you did" (A), .sb = B, both after a tap. Reduced motion: both faces, stacked, A at layer 3. */
-.vw-flip { display: grid; grid-template-columns: 1fr; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.vw-flip { --fl-ink: var(--ink); --fl-muted: var(--muted); display: grid; grid-template-columns: 1fr; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--t-sm); line-height: var(--lh-ui); }
 @media (min-width: 40rem) { .vw-flip { grid-template-columns: 1fr 1fr; } }
 .vw-flip .fl-card { perspective: 40rem; cursor: pointer; }
 .vw-flip .fl-in { display: grid; transform-style: preserve-3d; transform: rotateY(180deg); }
 .vw-flip .fl-card.sa .fl-in { transform: none; }
 .vw-flip .fl-face { grid-area: 1 / 1; display: grid; grid-template-columns: auto 1fr; column-gap: var(--s2); align-content: center; min-height: var(--btn); padding: var(--s2) var(--s3);
-  border: var(--bw) solid var(--c1); border-radius: 6px; backface-visibility: hidden; color: var(--fig-ink-1); }
+  border: var(--bw) solid var(--c1); border-radius: 6px; backface-visibility: hidden; color: var(--fl-ink); }
 .vw-flip .fl-b { transform: rotateY(180deg); }
 .vw-flip .fl-gl { grid-row: 1 / 3; align-self: center; color: var(--c1); font-weight: var(--w-em); }
-.vw-flip .fl-st { color: var(--muted); font-size: var(--t-xs); }
+.vw-flip .fl-st { color: var(--fl-muted); font-size: var(--t-xs); }
 .vw-flip .fl-tx { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   .vw-flip .fl-in, .vw-flip .fl-card.sa .fl-in { transform: none; gap: var(--s1); }

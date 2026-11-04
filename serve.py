@@ -3294,6 +3294,7 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
             "- a proof: a Table with base | assume | prove, or a Callout per part\n"
             "- graph theory: a ```fig network of the few key nodes only, never the whole graph again\n"
             "Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls: a Tug; a step vs its fix: a Flip; other rows: a Table or a \"- \" list.\n"
+            "Plain text in Tug and Flip cells, no $...$ (write 1/3, not \\frac13).\n"
             "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
             + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | up, down or same | 1-9 pull size | optional why\" (label 10 characters at most).\nExamples:\n"
