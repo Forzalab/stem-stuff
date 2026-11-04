@@ -136,7 +136,7 @@ tags() {
     queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
     cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
-    welcome-app) echo "@layout @real-time" ;;   # todo 119: the welcome Q1 wired into the app (own serve.py, fixture bank)
+    welcome-app|fcard-reveal) echo "@logic @real-time" ;;   # todo 119: the welcome Q1 wired into the app (own serve.py, fixture bank)
     minicluck) echo "@layout @real-time" ;;
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
