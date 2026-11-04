@@ -314,8 +314,7 @@ class Leaks(unittest.TestCase):
 
 class Arm(unittest.TestCase):
     def test_hash_is_stable_and_even(self):
-        with mock.patch.dict(os.environ):
-            os.environ.pop("CLUCK_ARM", None)
+        with mock.patch.dict(os.environ, {"CLUCK_ARM": "split"}):              # split is opt-in since Nov 3 (default claude: tests/test_route_claude.py)
             ids = [f"sid{i:04d}x{i * 7919}" for i in range(1000)]
             arms = [serve.cluck_arm(i) for i in ids]
             self.assertEqual(arms, [serve.cluck_arm(i) for i in ids])
