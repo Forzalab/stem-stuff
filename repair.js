@@ -198,12 +198,8 @@
       box.append(opts);
       return box;
     }
-    function whyUi(s, mask) {
-      const w = s.st.why, box = h("div", "rp-why"), q = h("p", "rp-q", w.q || L().why || "Why is that?");
-      if (mask) {                                                                // the preview (LADDER-UI): its real words keep the room, unseen; a
-        box.classList.add("rp-mask");                                            // neutral question shows over them ("Why half?" before d/2 gives the answer away)
-        const real = h("span", "rp-real"); real.append(...q.childNodes); q.append(h("span", "rp-mask-t", L().why || "Why is that?"), real);
-      }
+    function whyUi(s) {                                                          // the "Why is that?" popup: only after the step's RIGHT chip; absolute over the rows below (repair.css .rp-pop)
+      const w = s.st.why, box = h("div", "rp-why rp-pop"), q = h("p", "rp-q", w.q || L().why || "Why is that?");
       box.append(q);
       const opts = h("div", "rp-opts");
       w.opts.forEach((t, i) => opts.append(chip(t, { why: String(i) }, tryWhy, s, i, s.whyTried)));
@@ -239,13 +235,8 @@
         if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
         body.append(m);
       }
-      if (s.ask) {
-        const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
-        if (early) lock(w, "rp-ghost", null);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
-        else if (s.why != null) lock(w, "rp-locked", s.why);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
-        body.append(w);
-      }
       li.append(body);
+      if (s.ask && s.ok && s.why == null) li.append(whyUi(s));   // the popup floats over the rows below: no room kept, nothing moves
       return li;
     }
     function stepEl(s) {
@@ -265,8 +256,8 @@
         const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not
         s.seen = true;
         if (!s.ok) body.append(valueUi(s));
-        if (s.ask && s.why == null) body.append(whyUi(s));
         li.append(body);
+        if (s.ask && s.ok && s.why == null) li.append(whyUi(s));
       }
       if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
       return li;
@@ -309,6 +300,13 @@
       }
       kids.push(foot);
       el.replaceChildren(...kids);
+      clampPop();
+    }
+    function clampPop() {                                                        // the popup floats over the rows below but never past the ladder's foot: it must not grow the page (its going would scroll it back)
+      const pop = el.querySelector(".rp-pop");
+      if (!pop || !el.isConnected) return;
+      const over = pop.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom;
+      if (over > 0) pop.style.top = `calc(100% - ${Math.ceil(over)}px)`;
     }
 
     if (full) {                                                                 // #36: the full card fills in the answer

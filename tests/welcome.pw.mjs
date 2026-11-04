@@ -79,14 +79,14 @@ try {
     assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-val-opts .rp-chip:not(:disabled)', c => c.length) > 0, true, "step two: live");
     assert.equal(await fields("answer"), 1, "the last step keeps its preview");
     assert.deepEqual(await tops(), t0, "a row moved");
-    assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-why .rp-chip', c => c.length), 3, "one why on the fam step");
-    assert.equal(await page.$$eval(".rp-why", w => w.length), 1, "only one why");
+    assert.equal(await page.$$eval(".rp-why", w => w.length), 0, "no why until the fam step's right chip");
   });
 
   await step("finishing emits welcome_done once", async () => {
     await act('.rp-val-opts .rp-chip[data-v="+"]');                           // a wrong tap mid-way is still a hint
     assert.equal(await page.getAttribute('.rp-step[data-id="plug"]', "data-state"), "active");
     await act('.rp-val-opts .rp-chip[data-v="×"]');
+    assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-why.rp-pop .rp-chip', c => c.length), 3, "the right chip shows the why (a popup, 3 chips)");
     await act('.rp-why .rp-chip[data-why="0"]');
     await page.fill('.rp-step[data-state="active"] input', "6");
     await act(".rp-check");

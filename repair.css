@@ -24,6 +24,9 @@
 .rp-tex .katex, .rp-val .katex, .rp-chip .katex { font-size: var(--kx); }
 .rp-opts { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .rp-why { margin-top: var(--s3); }
+.rp-step { position: relative; }
+/* the "Why is that?" popup (Tony, Nov 3): shown only after the step's right chip, ABSOLUTE over the rows below (no room kept, so nothing moves), same chips, no close, gone when the ladder moves on */
+.rp-why.rp-pop { position: absolute; z-index: 2; top: 100%; left: calc(1.25rem + var(--s2)); right: 0; margin: 0; padding: var(--s2) var(--s3); box-sizing: border-box; background: var(--help-sheet); border: var(--bw) solid var(--help-line); border-radius: 6px; }
 .rp-q { margin: 0 0 var(--s2); color: var(--help-on); }
 /* a chip: a real button, 44px tall; a tried-wrong one keeps its text and gains ✗ (never hue alone) */
 .rp-chip, .rp-check, .rp-skip, .rp-next { box-sizing: border-box; min-height: 44px; margin: 0; padding: var(--s1) var(--s3); border: var(--bw) solid var(--line);

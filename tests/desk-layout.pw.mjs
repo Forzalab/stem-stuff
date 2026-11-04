@@ -234,17 +234,17 @@ try {
           /* the fill step: its value, then its why, in the same row (the row stays active between: the row itself is what changes) */
           const row = id => async () => { const r = await rows(page); return r.filter(x => x.id === id); };
           /* a future step's follow-up does not leak its answer (W129 shot QA: "Why half?" showed before d/2): drawn for its room, unseen until the pick */
-          const whyBox = () => page.evaluate(() => { const e = document.querySelector('#q .rp-step[data-id="area"] .rp-why'); if (!e) return null; const r = e.getBoundingClientRect();
-            return { vis: getComputedStyle(e).visibility, seen: !e.classList.contains("rp-mask") && [...e.querySelectorAll(".rp-q, .rp-chip")].some(c => getComputedStyle(c).visibility === "visible"), y: r.y + scrollY, h: r.height,   // LADDER-UI (Nov 3): before the pick a masked preview (words unseen), not an empty room
-              rows: [...document.querySelectorAll("#q .rp-step")].filter(l => l.dataset.id !== "area").map(l => l.getBoundingClientRect().y + scrollY) }; });
+          const whyBox = () => page.evaluate(() => { const e = document.querySelector('#q .rp-step[data-id="area"] .rp-why'), rows = [...document.querySelectorAll("#q .rp-step")].filter(l => l.dataset.id !== "area").map(l => l.getBoundingClientRect().y + scrollY);
+            if (!e) return { none: true, rows }; const r = e.getBoundingClientRect();
+            return { none: false, pos: getComputedStyle(e).position, vis: getComputedStyle(e).visibility, seen: [...e.querySelectorAll(".rp-q, .rp-chip")].some(c => getComputedStyle(c).visibility === "visible"), rows }; });   // Nov 3: the why is a popup over the rows below, absent until the right chip
           const w0 = await whyBox();
-          assert.ok(w0 && !w0.seen && w0.h > 0, `${tag}: before d/2 the area step's "why" row shows or has no room: ${JSON.stringify(w0)}`);
-          await gate(page, "3-fill", size, tapIn('.rp-chip[data-v="d/2"]'), async c => [...changedRows(c), ...(await row("area")())]);
+          assert.ok(w0.none, `${tag}: before d/2 the area step's "why" is not on the page: ${JSON.stringify(w0)}`);
+          let pop = null;
+          await gate(page, "3-fill", size, tapIn('.rp-chip[data-v="d/2"]'), async c => { pop = await rectOf(page, "#q .rp-why"); return [...changedRows(c), ...(await row("area")()), ...(pop ? [pop] : [])]; });   // the popup lies over the rows below: its rect is meant to change
           const w1 = await whyBox();
-          assert.ok(w1.seen && w1.vis === "visible", `${tag}: after d/2 the "why" row is not shown: ${JSON.stringify(w1)}`);
-          assert.ok(Math.abs(w1.y - w0.y) <= 1 && Math.abs(w1.h - w0.h) <= 1 && w1.rows.every((y, k) => Math.abs(y - w0.rows[k]) <= 1),
-            `${tag}: the "why" row's reveal moved something: ${JSON.stringify({ w0, w1 })}`);
-          await gate(page, "3-why", size, tapIn('.rp-chip[data-why="2"]'), async c => changedRows(c));
+          assert.ok(!w1.none && w1.seen && w1.vis === "visible" && w1.pos === "absolute", `${tag}: after d/2 the "why" popup is not shown: ${JSON.stringify(w1)}`);
+          assert.ok(w1.rows.every((y, k) => Math.abs(y - w0.rows[k]) <= 1), `${tag}: the "why" popup's reveal moved a row: ${JSON.stringify({ w0, w1 })}`);
+          await gate(page, "3-why", size, tapIn('.rp-chip[data-why="2"]'), async c => [...changedRows(c), ...(pop ? [pop] : [])]);
           await page.fill(act(".rp-in"), "3.74");
           /* the last Check: the answer row, the done line and Next arrive at the card's foot (below the ladder: meant to change) */
           await gate(page, "4-answer", size, tapIn(".rp-check"), async c => { const wl = await rectOf(page, "#q section.wl"), a = c.r0.find(r => r.id === "answer");

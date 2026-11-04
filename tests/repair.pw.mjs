@@ -39,7 +39,7 @@ try {
     await mount({ variant: "repair", error: "sign" });
     assert.deepEqual(await states(), ["given:done", "sheet:done", "signs:active", "plug:future", "answer:future"]);
     assert.equal(await page.$$eval('.rp-step[data-state="done"]', s => s.every(x => x.textContent.includes("✓"))), true, "a done step says ✓ (not hue alone)");
-    assert.equal(await page.$$eval('.rp-step[data-state="active"] .rp-why .rp-chip', c => c.length), 3, "3 why chips on the fam step");
+    assert.equal(await page.$$eval(".rp-why", c => c.length), 0, "the why is hidden until the step's right chip is picked");
     assert.equal(await page.$$eval('.rp-step[data-state="future"] .rp-chip, .rp-step[data-state="future"] input', c => c.length), 0, "a future step is a label only");
     assert.match(await page.textContent(".rp-line"), /\S/, "Cluck's line");
     await noSideScroll();
@@ -50,8 +50,12 @@ try {
     assert.equal(await page.textContent('.rp-step[data-id="signs"] .rp-chip[data-v="+"]').then(t => t.includes("✗")), true);
     assert.match(await page.textContent('.rp-step[data-id="signs"] .rp-miss'), /\S/);
     assert.equal(await page.getAttribute('.rp-step[data-id="signs"]', "data-state"), "active");
+    assert.equal(await page.$$eval(".rp-why", c => c.length), 0, "a wrong chip does not show the why");
     await act('.rp-val-opts .rp-chip[data-v="−"]');
     assert.equal(await page.getAttribute('.rp-step[data-id="signs"]', "data-state"), "active", "the why is still to answer");
+    const pop = await page.evaluate(() => { const w = document.querySelector('.rp-step[data-id="signs"] .rp-why'), nx = document.querySelector('.rp-step[data-id="plug"]'), r = w && w.getBoundingClientRect(), n = nx.getBoundingClientRect();
+      return w && { pos: getComputedStyle(w).position, chips: w.querySelectorAll(".rp-chip").length, over: r.top < n.bottom && r.bottom > n.top, close: !!w.querySelector("[aria-label*=lose], .rp-x") }; });
+    assert.ok(pop && pop.pos === "absolute" && pop.chips === 3 && pop.over && !pop.close, "the right chip shows the why as a popup over the rows below, not dismissable: " + JSON.stringify(pop));
     await act('.rp-why .rp-chip[data-why="0"]');
     assert.deepEqual(await states(), ["given:done", "sheet:done", "signs:done", "plug:done", "answer:active"]);
   });
