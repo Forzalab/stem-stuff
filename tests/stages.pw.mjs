@@ -97,10 +97,10 @@ for (const w of WIDTHS) {
     await page.waitForFunction(() => /Drafting the wish/.test(document.querySelector("#cluck .stg .stg-r.run .stg-tx")?.textContent || ""), null, { timeout: 5000 });
     assert.match(await text(page, "#cluck .stg .stg-r.done .stg-tx"), /Fluffed feathers/, "the done row is past tense");
     assert.equal(await page.locator("#cluck .stg .stg-ok").count(), 0, "no tick before the reply");
+    req.write("QUACK. Base case: clean.\nLine 3 teleports.\n");   // sent before the 2 s tick so the first words (after the 900 ms wait) are on the page without moving the clock: no caret stands in for "started" any more (Tony, Nov 4)
     await page.clock.runFor(2000);
     assert.equal(await text(page, "#cluck .stg .stg-r.run .stg-s"), "2s");
-    req.write("QUACK. Base case: clean.\nLine 3 teleports.\n");
-    await page.waitForFunction(() => /Base case: clean/.test(document.querySelector("#cluck .wtext")?.textContent || "") || document.querySelector("#cluck .wtext .wcaret"), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Base case: clean/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 5000 });
     assert.equal(await page.locator("#cluck .stg .stg-ok").count(), 0, "text is flowing, the reply is not whole yet: no tick");
     req.write(ev("write", "end")); req.end();
     await waitSel(page, "#cluck .stg .stg-sum");

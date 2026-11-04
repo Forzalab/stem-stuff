@@ -3,6 +3,7 @@
    "Thought for 6s" summary when the reply is whole. Chrome, not Cluck's reply: tokens only, no new colors (the tick is --correct). */
 .stg { color: var(--muted); font-size: var(--t-sm); line-height: var(--lh-ui); }
 .stg:empty { display: none; }
+#cluck .stg { margin-bottom: var(--s3); }   /* Tony Nov 4: a breath between the stage rows and the reply opener (the same step as a figure to its text) */
 .stg-l { list-style: none; margin: 0; padding: 0; }
 .stg-r { display: flex; align-items: center; gap: var(--s2); min-height: 1.75rem; }
 .stg-tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
