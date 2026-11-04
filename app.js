@@ -2179,7 +2179,7 @@ function wishHTML(t, ended) {
   t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(WOUI, (m, p) => `\n\u0001FIG${figKey(OUI + p)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
   t = renumberSteps(t);                                                   // badges count 1, 2, 3 whatever digits the model typed ("1." every time is common)
   t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
-  const lines = t.split("\n");
+  const lines = t.replace(/\s+$/, "").split("\n");                       // a trailing newline (text cut mid-stream after a line) is not a blank line: no gap at the end
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i], fg = /^\u0001FIG(\d+)$/.exec(l);
     if (l === "\u0001DRAW") { flush(); put('<div class="wl wdraw" aria-hidden="true">Drawing…</div>'); continue; }
