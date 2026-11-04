@@ -148,6 +148,13 @@
   .vw-tug .tg-pull.on .tg-bar { animation: tg-pulse var(--d-move) ease-out; }   /* a tapped row pulses once */
   .vw-flip .fl-card:not(.sa):not(.sb) .fl-in { animation: fl-turn var(--d-dim) ease-in-out calc(var(--d-dim) * 3) both; }   /* a beat on "you did", then the fix */
   .vw-flip .fl-in { transition: transform var(--d-move) ease-in-out; }
+  /* Firefox Android drew both faces (backface-visibility is not enough): hide the face that is not up, switched at the half-turn */
+  .vw-flip .fl-a { visibility: hidden; }
+  .vw-flip .fl-card.sa .fl-a, .vw-flip .fl-card.sb .fl-b { visibility: visible; }
+  .vw-flip .fl-card.sa .fl-b, .vw-flip .fl-card.sb .fl-a { visibility: hidden; }
+  .vw-flip .fl-face { transition: visibility 0s linear calc(var(--d-move) / 2); }
+  .vw-flip .fl-card:not(.sa):not(.sb) .fl-a { animation: fl-vis-a var(--d-dim) ease-in-out calc(var(--d-dim) * 3) both; }
+  .vw-flip .fl-card:not(.sa):not(.sb) .fl-b { animation: fl-vis-b var(--d-dim) ease-in-out calc(var(--d-dim) * 3) both; }
 }
 @keyframes vw-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes vw-pop { from { opacity: 0; transform: translateY(var(--s2)); } to { opacity: 1; transform: none; } }
@@ -169,6 +176,8 @@
 @keyframes tg-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes tg-draw-l { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
 @keyframes tg-pulse { 50% { transform: scaleY(1.6); } }
+@keyframes fl-vis-a { 0%, 49.9% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@keyframes fl-vis-b { 0%, 49.9% { visibility: hidden; } 50%, 100% { visibility: visible; } }
 @keyframes fl-turn { from { transform: rotateY(0deg); } to { transform: rotateY(180deg); } }
 .vw-tug .tg-pull { cursor: pointer; }
 .vw-tug .tg-why { display: none; color: var(--muted); font-size: var(--t-xs); }
