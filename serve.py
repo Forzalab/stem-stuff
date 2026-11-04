@@ -2253,7 +2253,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
     out = set()                                              # this request's out-of-credit providers (the NOTE's key is the chain's)
     on = on or stage_off
     on("note", "start")
-    n = note_within(NOTE_EXPLAIN_S, p, answer, None, key, scratch=scratch, out=out)
+    n = note_within(NOTE_EXPLAIN_S_CLAUDE if note_on_claude(out) else NOTE_EXPLAIN_S, p, answer, None, key, scratch=scratch, out=out)
     on("note", "end")
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
@@ -2762,9 +2762,9 @@ def cluck_noted(p, sid, n, xyz):
 
 
 def cluck_arm(sid):
-    """"claude" or "deepseek": CLUCK_ARM=claude|deepseek|split (default split); split = a stable hash of the cookie id (the one tries.json
+    """"claude" or "deepseek": CLUCK_ARM=claude|deepseek|split (default claude since Nov 3; split was the default); split = a stable hash of the cookie id (the one tries.json
     uses) mod 2, so a student stays on one provider across every question and turn"""
-    a = os.environ.get("CLUCK_ARM", "split").strip().lower()
+    a = os.environ.get("CLUCK_ARM", "claude").strip().lower()   # Tony 19:41 PST Nov 3 "route ALL to claude": split / deepseek only by env
     if a in ("claude", "deepseek"):
         return a
     return "deepseek" if int(hashlib.sha256(str(sid).encode()).hexdigest(), 16) % 2 else "claude"
@@ -3351,7 +3351,9 @@ def _v4_claude_chunks(v4, max_tokens):
             msgs.append({"role": "user", "content": blocks})
         else:                                                    # always the block form, so a turn looks the same whether or not it is the marked one
             msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
-    return _claude_one(system, msgs, max_tokens, v4["arm"])
+    # a turn that may draw gets FIG_TOKENS on top (the old path does the same): a held ```fig the gate drops still spends its tokens, and
+    # PHYS_LP5 (Nov 3) hit max_tokens at 700 and ended mid-word
+    return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"])
 
 
 def _v4_deepseek_chunks(v4, key, max_tokens):
@@ -3800,6 +3802,10 @@ def wrap(text, tag):
 
 NOTE_TIMEOUT = 3                             # seconds; past it Cluck answers without a NOTE (fail open)
 NOTE_EXPLAIN_S = 1.5                         # /explain waits this long (wall clock) for the NOTE, then Cluck starts without it (speed #3)
+# On Claude (Tony 19:48 PST Nov 3: NOTE + gate stay on Claude, longer waits OK): claude-haiku-5-5 with structured output measured p50 2.49 s,
+# max 2.92 s over 5 calls (plain JSON was ~0.4 s faster but 2 of 5 did not parse). The windows cover that with margin, so the gate stops failing open.
+NOTE_TIMEOUT_CLAUDE = 4.5
+NOTE_EXPLAIN_S_CLAUDE = 3.5
 # NOTE bench Oct 21 (brain _files/note-bench-2026-10-20): pinned, deepseek mean 0.66 s vs 1.51 s unpinned, same validity + quality
 # Only these hosts (allow_fallbacks off, as on the DeepSeek arm; Tony, Oct 23): no unbenched fp4 host. All three failing = no NOTE (fail open).
 NOTE_PROVIDERS = [h for h in os.environ.get("CLUCK_NOTE_PROVIDERS", "together,baseten/fast,deepinfra/fp8").split(",") if h.strip()]
@@ -3838,6 +3844,9 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
     user = explain_prompt(p, answer) + ("\n\n" + r if r else "") + scratch_block(scratch, tag)
     if text is not None:
         user += "\n\nMESSAGE:\n" + wrap(text, tag)
+    n = _note_claude(p, user, out) if note_on_claude(out) else None    # Tony 19:41 PST Nov 3: Anthropic first; OpenRouter only if Claude fails
+    if n is not None:
+        return _note_done(p, answer, text, n)
     for m in OPENROUTER_NOTE_MODELS:
         payload = dict(_model_params(m, 400), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
                        provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
@@ -3858,15 +3867,59 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
         except Exception as e:  # noqa: BLE001
             log(f"note {p['code']}: {e}")
             continue
-        if text is None:
-            n["on_topic"] = True
-        n["field"] = field_of(p, n["field"])
-        picked = answer if isinstance(answer, list) else [answer]
-        if not any((sugar(p).get("slip") or {}).get(str(a)) for a in picked) and n["confidence"] == "high":
-            n["confidence"] = "medium"
-        log(f"note {p['code']}: gap={n['gap']} field={n['field']} confidence={n['confidence']}")   # counts per question, no free text
-        return n
+        return _note_done(p, answer, text, n)
     return None
+
+
+def _note_done(p, answer, text, n):
+    if text is None:
+        n["on_topic"] = True
+    n["field"] = field_of(p, n["field"])
+    picked = answer if isinstance(answer, list) else [answer]
+    if not any((sugar(p).get("slip") or {}).get(str(a)) for a in picked) and n["confidence"] == "high":
+        n["confidence"] = "medium"
+    log(f"note {p['code']}: gap={n['gap']} field={n['field']} confidence={n['confidence']}")   # counts per question, no free text
+    return n
+
+
+# The NOTE (and /chat's on-topic gate, the same call) on Anthropic first (Tony 19:41 PST Nov 3, "route ALL to claude"): the cheapest model,
+# structured output on NOTE_SCHEMA, its spend counted like every Claude call. CLUCK_NOTE_PROVIDER=openrouter puts it back on OpenRouter.
+NOTE_CLAUDE_MODEL = os.environ.get("CLUCK_NOTE_CLAUDE_MODEL", "claude-haiku-5-5")
+
+
+def note_on_claude(out):
+    return os.environ.get("CLUCK_NOTE_PROVIDER", "claude").strip().lower() == "claude" and bool(os.environ.get("CLAUDE_API")) and claude_ready(out if out is not None else set())
+
+
+def claude_json(model, system, user, schema, max_tokens, timeout):
+    """one non-streamed Claude call with structured output (schema): the parsed dict. Spend counted (claude_add + reply_spend)."""
+    params = claude_params(model, max_tokens)
+    params["output_config"] = dict(params["output_config"], format={"type": "json_schema", "schema": schema})
+    payload = dict(params, system=[{"type": "text", "text": system, "cache_control": CACHE}], messages=[{"role": "user", "content": user}])
+    req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
+                                 headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
+                                          "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        m = json.load(resp)
+    u = m.get("usage") or {}
+    i, o = claude_price(model)
+    usd = (int(u.get("input_tokens") or 0) * i + int(u.get("cache_creation_input_tokens") or 0) * i * CACHE_WRITE
+           + int(u.get("cache_read_input_tokens") or 0) * i * CACHE_READ + int(u.get("output_tokens") or 0) * o) / 1e6
+    claude_add(usd)
+    reply_spend(usd)
+    log(f"claude json usage: in={u.get('input_tokens')} out={u.get('output_tokens')} usd={usd:.5f} model={model}")
+    return json.loads("".join(b.get("text", "") for b in m.get("content", []) if b.get("type") == "text"))
+
+
+def _note_claude(p, user, out):
+    try:
+        n = claude_json(NOTE_CLAUDE_MODEL, CLUCK_NOTE, user, NOTE_SCHEMA, 400, NOTE_TIMEOUT_CLAUDE)
+        if not isinstance(n, dict) or set(NOTE_SCHEMA["required"]) - set(n):
+            raise ValueError("not the schema")
+        return n
+    except Exception as e:  # noqa: BLE001
+        log(f"note {p['code']}: claude {NOTE_CLAUDE_MODEL}: {e} (OpenRouter next)")
+        return None
 
 
 def note_within(budget, *a, **k):

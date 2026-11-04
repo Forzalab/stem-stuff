@@ -313,8 +313,7 @@ class Leaks(unittest.TestCase):
 
 class Arm(unittest.TestCase):
     def test_hash_is_stable_and_even(self):
-        with mock.patch.dict(os.environ):
-            os.environ.pop("CLUCK_ARM", None)
+        with mock.patch.dict(os.environ, {"CLUCK_ARM": "split"}):              # split is opt-in since Nov 3 (default claude: tests/test_route_claude.py)
             ids = [f"sid{i:04d}x{i * 7919}" for i in range(1000)]
             arms = [serve.cluck_arm(i) for i in ids]
             self.assertEqual(arms, [serve.cluck_arm(i) for i in ids])
@@ -1348,6 +1347,24 @@ class Visuals(unittest.TestCase):
         self.assertNotIn(serve.FIG_SLOT, out)
         self.assertLess(out.index("Here:"), out.index("```fig"), out)
 
+
+
+class FigureBudget(unittest.TestCase):
+    """PHYS_LP5 on demo a0mazqlm0 (Tony 19:35 Nov 3): a held ```fig the gate dropped (no-force) still spent its tokens, the reply hit
+    max_tokens (out=700 = V4_MAX) and ended mid-word ("Use rotational Newton's 2n"). A turn that may draw gets FIG_TOKENS on top, as the old path did."""
+    def sent(self, fig):
+        seen = []
+        v4 = {"turns": [{"role": "user", "content": ["Q", "dyn"]}], "fig": fig, "bank": "b", "arm": "claude", "imgs": ()}
+        with mock.patch.object(serve, "_claude_one", lambda system, msgs, max_tokens, arm=None: seen.append(max_tokens) or iter(())):
+            list(serve._v4_claude_chunks(v4, serve.V4_MAX))
+        return seen[0]
+
+    def test_a_turn_that_may_draw_has_room_for_the_figure(self):
+        with mock.patch.object(serve, "v4_fig_howto", lambda fig: "howto"):
+            self.assertEqual(self.sent(object()), serve.V4_MAX + serve.FIG_TOKENS)
+
+    def test_no_figure_no_extra(self):
+        self.assertEqual(self.sent(None), serve.V4_MAX)
 
 if __name__ == "__main__":
     unittest.main()
