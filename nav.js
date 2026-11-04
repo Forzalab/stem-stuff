@@ -8,7 +8,7 @@
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
-import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight } from "./shuffle.mjs";
+import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
@@ -620,6 +620,13 @@ function init() {
   mix.addEventListener("click", () => { const st = Q(); st.mix = !st.mix; save(); update(cur); });   // the student switches the order (Tony #3)
   skip.addEventListener("click", () => { skipAhead(Q()); save(); go(1); });                           // strong starters: a tier up, and on
   next.addEventListener("click", () => go(1));
+  /* MOCK_NIGHTS_ON false: a mock a night started (its key stored) is done; a ?mock=1 mock (no key) goes on */
+  function endNightMock() {
+    let k = null; try { k = localStorage.getItem(MOCK_NIGHT); } catch { return; }
+    if (!k) return;
+    const st = Q(); if (st.mock && !st.mock.done) { st.mock.done = true; save(); }
+    try { localStorage.removeItem(MOCK_NIGHT); } catch { /* blocked */ }
+  }
   /* the night-before mock (W103b): the front bank's exam-order list (shuffle.mjs mockList), from its first question */
   let reload = null;                                                 // one same-code reload asked of app.js (stemMock.again)
   function startMock() {
@@ -657,7 +664,9 @@ function init() {
     if (front()) try { localStorage.setItem("stem-noob-" + bank().code, "1"); } catch { /* blocked */ }
     save();
   });
-  addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c);
+  addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c);
+    if (!MOCK_NIGHTS_ON && !wantMock && off() && front()) endNightMock();   // nights off: a night mock left running ends here (normal tries from this question)
+    update(c);
     if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1 or the night: once the first question has opened, so app.js's first load never overwrites the mock's hash
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)

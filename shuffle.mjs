@@ -219,7 +219,11 @@ export function familiesMet(items, seen = {}) {
 /* the night-before mock starts by itself (W139, Tony Oct 31: no button) on a Sunday, Tuesday or Thursday NIGHT, device local time:
    18:00-03:59, the small hours counted to the evening before (Mon 01:00 = Sunday night). The night's key (its evening's date), else null */
 export const MOCK_NIGHTS = [0, 2, 4], NIGHT_FROM = 18, NIGHT_TO = 4;
+/* OFF (Tony, Nov 3 18:39: "we are in mock mode, so it only has one try. lets turn it off"): no night starts a mock; ?mock=1 still does.
+   true = the nights above again (nav.js also ends a night mock left running while this is false) */
+export const MOCK_NIGHTS_ON = false;
 export function mockNight(d) {
+  if (!MOCK_NIGHTS_ON) return null;
   const h = d.getHours();
   if (h >= NIGHT_TO && h < NIGHT_FROM) return null;
   const e = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (h < NIGHT_TO ? 1 : 0));

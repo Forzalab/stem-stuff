@@ -141,39 +141,36 @@ await step("aligned block: one row per line", async () => {
   await ctx.close();
 });
 
-await step("formula card: a drag over a row copies the formula; the copy button copies it too and says Copied", async () => {
+await step("formula card: a drag over a row copies the formula; the card has no copy button (Tony, Nov 3 18:14)", async () => {
   const { ctx, page } = await open(DESK, "CALC1_CM1");
   await page.waitForSelector("#fcard li.f .katex");
   await page.evaluate(() => { while (window.stemLadder.step()); });   // a card with no ladder starts at row 1 (fcard-reveal.pw); this step copies from row 2
   await drag(page, { sel: "#fcard li.f .fm", katex: 0.3 }, { sel: "#fcard li.f .fm", katex: 0.7 });
   assert.equal(await copyNow(page), "K = (1/2)*m*v^2");
   await blank(page);
-  assert.deepEqual(await tapArea(page, "#fcard li.f .mcopy"), [true, true, true], "the card row's copy has a 44px tap area");
-  await page.locator("#fcard li.f").nth(1).locator(".mcopy").click();
-  await page.waitForFunction(() => document.querySelectorAll("#fcard .mcopy.done").length === 1, null, { timeout: 3000 });
-  assert.equal(await clip(page), "v = sqrt(2*g*h)");
-  await page.waitForFunction(() => { const t = document.querySelector("#toast.on"); return !!t && t.textContent === "Copied" && t.getBoundingClientRect().width > 40; }, null, { timeout: 3000 });
+  assert.equal(await page.locator("#fcard .mcopy").count(), 0, "a copy button on the Key formulas card");
   if (SHOTS) await page.locator("#fcard").screenshot({ path: join(SHOTS, "copy-fcard-1280.png") });
   await ctx.close();
 });
 
 /* W108c: on a row with a doc the copy sits after the "?": each keeps its own 44px tap area, side by side, never over the other (a 12px gap let the
    copy's area take the "?"'s right side: easy's "a 16px mark with a 44px tap area" hit BUTTON.mcopy), at every screen size */
-await step('formula card row with a "?": the "?" and the copy each keep a 44px tap area, no overlap (360, 390, 844x390, 1280, 1366, 1920)', async () => {
+await step('formula card row with a "?": the "?" keeps a 44px tap area, no copy beside it (360, 390, 844x390, 1280, 1366, 1920)', async () => {
   for (const vp of [{ width: 360, height: 640 }, PHONE, { width: 844, height: 390 }, DESK, { width: 1366, height: 768 }, { width: 1920, height: 1080 }]) {
     const { ctx, page } = await open(vp, "CALC1_CM1");
-    await page.waitForSelector("#fcard li.f .fq + .mcopy");
+    await page.waitForSelector("#fcard li.f .fq");
+    assert.equal(await page.locator("#fcard .mcopy").count(), 0, `${vp.width}: a copy button on the card`);
     await page.$eval("#fcard li.f .fq", x => x.scrollIntoView({ block: "center" }));
     const hits = await page.evaluate(() => {
       const row = document.querySelector("#fcard li.f"), out = {};
-      for (const [k, s] of [["q", ".fq"], ["copy", ".mcopy"]]) {
+      for (const [k, s] of [["q", ".fq"]]) {
         const b = row.querySelector(s), r = b.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
         out[k] = [[20, 0], [-20, 0], [0, 20], [0, -20], [20, 20], [-20, -20]].map(([dx, dy]) => { const e = document.elementFromPoint(x + dx, y + dy); return b.contains(e) || (e ? e.tagName + "." + e.className : "none"); });
       }
       return out;
     });
     const all = Array(6).fill(true);
-    assert.deepEqual(hits, { q: all, copy: all }, `${vp.width}x${vp.height}: 20px round each 16px mark is its own button`);
+    assert.deepEqual(hits, { q: all }, `${vp.width}x${vp.height}: 20px round each 16px mark is its own button`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${vp.width}: no sideways scroll`);
     if (SHOTS && (vp.width === 390 || vp.width === 1280)) await page.locator("#fcard").screenshot({ path: join(SHOTS, `copy-fcard-q-${vp.width}.png`) });
     await ctx.close();

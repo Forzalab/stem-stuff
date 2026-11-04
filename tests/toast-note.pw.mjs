@@ -111,7 +111,7 @@ try {
   });
 
   /* HUD B (Tony Oct 28): the T37 tip keeps its caret on the piece and gains an X (44px, a real button); the X or a tap closes it */
-  for (const [w, h] of [[1440, 900], [390, 844]]) {
+  for (const [w, h] of [[1440, 900], [390, 844], [393, 852]]) {
     await step(`${w} HUD tip B: caret on the coin, an X that closes it, on no live control`, async () => {
       const { c, p, errors } = await open(w, h, { seen: true });
       await p.evaluate(() => localStorage.removeItem("stem-ob-rw-right"));
@@ -122,6 +122,11 @@ try {
       assert.ok(n.x && n.x.width >= 44 && n.x.height >= 44, "B: an X, 44px " + JSON.stringify(n.x));
       assert.equal(await p.$eval("#toast .toast-x", b => b.tagName + " " + b.getAttribute("aria-label")), "BUTTON Close");
       assert.deepEqual(await under(p, "#toast", "#rwCoin, #rwHud *"), [], "over a control");
+      /* v49 (Tony 18:14, phone): a wrapped note fills its lines; `text-wrap: balance` cut it into two half lines ("4 words b4 newline")
+         while the box kept the unbalanced width, so an empty band sat on the right */
+      const fill = await p.evaluate(() => { const s = document.querySelector("#toast .toast-t"), R = document.createRange(); R.selectNodeContents(s);
+        const ls = [...R.getClientRects()].map(r => r.width); return { avail: s.getBoundingClientRect().width, ls }; });
+      assert.ok(fill.ls.length === 1 || fill.ls[0] >= fill.avail * 0.75, w + ": first line fills the note " + JSON.stringify(fill));
       await p.click("#toast .toast-x");
       await p.waitForFunction(() => !document.querySelector("#toast.on"), null, { timeout: 2000 });
       assert.deepEqual(errors, []);

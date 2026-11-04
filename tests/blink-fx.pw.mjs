@@ -195,6 +195,32 @@ try {
     check(!c.infinite && !c.runningAtEnd, "the wiggle stops");
   });
 
+  await step("the Cluck chip shines (no shake): one light sweep on its ::after, nothing moves, none under reduced motion", async () => {
+    await go(page, "CALC1_B04");                                       // a fresh item: B02 was already missed in the step above
+    await page.route(/\/explain/, r => r.abort());                              // no reply: the chip stays "Explain my mistake" (it is the CTA once Cluck's text starts)
+    await page.evaluate(() => { window.__bfChip = window.__bf.chipRuns(3000); });
+    await pick(page, "b");
+    await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip.rw-chip", { timeout: 6000 });
+    const c = await page.evaluate(() => window.__bfChip);
+    /* Tony, Nov 3 19:14: "lets not shake the ask cluck button ... a subtle shine": nothing moves the chip; a light sweep crosses it instead
+       (its ::after, no transform), and reduced motion has none */
+    const sh = await page.evaluate(() => {
+      const chip = document.querySelector(".rw-chip"); if (!chip) return null;
+      const an = document.getAnimations().filter(a => a.effect && a.effect.target === chip);
+      const moves = an.filter(a => a.effect.getKeyframes().some(k => k.transform || k.rotate || k.translate)).map(a => a.animationName);
+      return { moves, after: getComputedStyle(chip, "::after").animationName, chipAnim: getComputedStyle(chip).animationName };
+    });
+    check(!!sh, "no Cluck chip on the page");
+    if (sh) {
+      check(c.runs === 0 && sh.moves.length === 0 && sh.chipAnim === "none", "the chip still shakes: " + JSON.stringify([c.runs, sh]));
+      check(sh.after === "rw-chip-shine", "no shine on the chip: " + JSON.stringify(sh));
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      check(await page.evaluate(() => getComputedStyle(document.querySelector(".rw-chip"), "::after").animationName) === "none", "reduced motion still shines");
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+    }
+    await page.unroute(/\/explain/);
+  });
+
   await step("a first-try right with a level up AND a drop (the bells + ONE level-up overlay, the reels inside): one group at a time", async () => {
     await go(page, "CALC1_B03"); await page.waitForTimeout(800);               // the question has opened (the HUD's own catch-up has played)
     await seedXp(page, 70); await rig(page, [0.5, 0, 0, 0]);                    // 14 XP (84): crosses level 2; a common drop

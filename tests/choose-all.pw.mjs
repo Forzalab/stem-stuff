@@ -101,13 +101,13 @@ try {
     });
     await step(`${name}: wrong set: first distractor (authored order) struck, other ticks stay; Enter = Check`, async () => {
       await tap(row(page, "d")); await tap(row(page, "a")); await tap(row(page, "b"));
+      const n0 = await page.evaluate(() => window.__drill.state.tries.length);
       await row(page, "a").focus(); await page.keyboard.press("Enter");
-      await page.waitForSelector("#q .chk .pips"); await page.waitForTimeout(150);
+      await page.waitForFunction(k => window.__drill.state.tries.length > k, n0, { timeout: 4000 }); await page.waitForSelector("#fb .cluck, #q .chk .cluck"); await page.waitForTimeout(150);
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
       assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast.on")?.textContent || ""), /try|wisely/i, "no try toast over the choices (Tony, Oct 5)");   // text, never a handle: a failing assert on a handle inspects the whole Playwright graph assert.match(s.fb, /qu+a+c+k/i); assert.equal(s.finished, false);
-      assert.deepEqual(await page.$eval("#q .chk .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1], "try pips: one used, one left");
-      assert.ok(await page.evaluate(() => document.querySelector("#q .chk .pips").getBoundingClientRect().right <= document.querySelector("#mcGo").getBoundingClientRect().left), "the pips sit beside Check");
+      assert.equal(await page.locator("#q .pips").count(), 0, "try pips are back (Tony, Nov 3 16:23: hidden)");
       const sel = touch ? "#fb .cluck" : "#q .chk .cluck";
       if (touch) assert.equal(await page.$("#q .chk .cluck"), null, "phones: the Scratchpad button sits on Check's row, so the hint goes under the question");
       else {
