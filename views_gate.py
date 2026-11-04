@@ -363,6 +363,7 @@ class Fence(livefig.Fence):
             return self.log.append("second") or ""
         prog, why = gate(body, self.ctx)
         self.log.append("oui:" + ",".join(why))
+        self.seen.append(("openui", body[:300], self.log[-1]))
         if any(w.endswith(":steps-nofig") for w in why):   # a figure-less stepper: its captions wait as plain lines (livefig.Fence.plain)
             self.plain = steps_plain(body)
         if prog is None:

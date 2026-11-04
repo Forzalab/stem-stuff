@@ -40,6 +40,19 @@ LET, VAL = serve.leak_facts(P1)
 WRONG_A = "\n\nRESULT: wrong"                  # W110: the server grades every pick; "a" is wrong on P1
 
 
+
+def settled(text):
+    """what the page shows once the stream is over: app.js slotsResolve in Python (the anchor FIG_WAIT gets the FIG_FILL ... FIG_END text, or goes)"""
+    m = re.search(serve.FIG_FILL + "([\\s\\S]*?)" + serve.FIG_END, text)
+    fill = m.group(1) if m else ""
+    text = text[:m.start()] + text[m.end():] if m else re.sub(serve.FIG_FILL + "[\\s\\S]*$", "", text)
+    i = text.find(serve.FIG_WAIT)
+    if i >= 0:
+        a, b = text[:i], text[i + 1:]
+        text = a + fill + b if fill else re.sub(r"\n+$", "\n", a) + b.lstrip("\n")
+    return re.sub("[\u0005-\u0007]", "", text)
+
+
 class Slow(Resp):
     """a stream that sleeps waits[i] s before its line i: a model that thinks or pings before (or between) its words"""
     def __init__(self, data, waits):
@@ -1299,14 +1312,14 @@ class Visuals(unittest.TestCase):
                 calls.append(why)
                 return answer
             return f
-        out = "".join(serve.v4_visible(iter(parts), True, ("", []), "T_ST", serve.fig_ctx(p, "a"), reask("\n```openui\n" + drawn + "\n```\n")))
+        out = settled("".join(serve.v4_visible(iter(parts), True, ("", []), "T_ST", serve.fig_ctx(p, "a"), reask("\n```openui\n" + drawn + "\n```\n"))))
         self.assertEqual(calls, ["steps-nofig"])
         self.assertIn("Graph(", out)
         self.assertLess(out.index("Click through:"), out.index("```openui"), out)
         self.assertLess(out.index("```openui"), out.index("Try once more."), out)
         self.assertNotIn("Push in", out.split("```")[0] + out.split("```")[-1])
         calls.clear()
-        out = "".join(serve.v4_visible(iter(parts), True, ("", []), "T_ST", serve.fig_ctx(p, "a"), reask("")))
+        out = settled("".join(serve.v4_visible(iter(parts), True, ("", []), "T_ST", serve.fig_ctx(p, "a"), reask(""))))
         self.assertEqual(calls, ["steps-nofig"])
         self.assertNotIn("```", out)
         self.assertRegex(out, r"Click through:\n+\*\*1\.\*\* Push in: the work along the ramp\.\n\*\*2\.\*\* Friction takes its share\.\n+\s*Try once more\.$")
@@ -1361,7 +1374,7 @@ class Visuals(unittest.TestCase):
                 mock.patch("urllib.request.urlopen", side_effect=fake), mock.patch.object(serve, "log", lambda *a: None):
             serve._claude_spent.clear()
             serve._last_err.clear()
-            out = "".join(serve._cluck_stream([{"role": "system", "content": "OLD"}, {"role": "user", "content": "q"}], "sk-or", 450, v4=v4))
+            out = settled("".join(serve._cluck_stream([{"role": "system", "content": "OLD"}, {"role": "user", "content": "q"}], "sk-or", 450, v4=v4)))
         self.assertEqual(out.count("```fig"), 1, out)
         self.assertRegex(out, r"Forces on the block:\n+```fig\n[^\n]*\n```\n+\s*Try once more\.\s*$", out)
         # and on v4_visible itself (both arms): the figure sits where the dropped fence was, the words after it stay after it
@@ -1370,11 +1383,24 @@ class Visuals(unittest.TestCase):
         def reask(why):
             calls.append(why)
             return "\n```fig\n" + good + "\n```\n"
-        out = "".join(serve.v4_visible(iter(["Not quite.\n\nForces on the block:\n", "```fig\n{bad\n```\n", "\nTry once more."]),
+        raw = "".join(serve.v4_visible(iter(["Not quite.\n\nForces on the block:\n", "```fig\n{bad\n```\n", "\nTry once more."]),
                                        True, ("", []), "T_RMP", serve.fig_ctx(p, "a"), reask))
+        out = settled(raw)
+        # the words after the dropped fence stream BEFORE the re-ask runs (Nov 3): the fill comes last, the anchor first
+        self.assertLess(raw.index(serve.FIG_WAIT), raw.index("Try once more."), raw)
+        self.assertLess(raw.index("Try once more."), raw.index(serve.FIG_FILL), raw)
         self.assertEqual(calls, ["json"])
         self.assertLess(out.index("Forces on the block:"), out.index("```fig"), out)
         self.assertLess(out.index("```fig"), out.index("Try once more."), out)
+        # the debug line for tuning (Nov 3): each fence's first 300 chars and its verdict, in the log, no reply prose
+        lines = []
+        with mock.patch.object(serve, "log", lambda *x: lines.append(" ".join(map(str, x)))):
+            "".join(serve.v4_visible(iter(["Secret prose words.\n", "```fig\n{bad " + "x" * 400 + "\n```\n"]), True, ("", []), "T_RMP", serve.fig_ctx(p, "a"), reask))
+        blk = [l for l in lines if " block " in l]
+        self.assertEqual(len(blk), 1, lines)
+        self.assertIn("-> json", blk[0])
+        self.assertLess(len(blk[0]), 420)
+        self.assertNotIn("Secret prose", " ".join(lines))
         # a later good figure of the model's own still wins: no re-ask, one figure, no slot marker left (livefig.pw's leak-then-good reply)
         calls.clear()
         out = "".join(serve.v4_visible(iter(["Words.\n", "```fig\n{bad\n```\n", "Here:\n", "```fig\n" + good + "\n```\n", "End.\n"]),

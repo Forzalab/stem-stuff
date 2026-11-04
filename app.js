@@ -2022,13 +2022,28 @@ const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
 /* live figures (serve.py + livefig.py, Claude path only): the server sends at most one checked graph block per reply as
    "\n```fig\n<json>\n```\n". wishHTML puts a .wfig placeholder in its place (an unclosed fence shows nothing: never raw JSON);
    wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
-const WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
+const figGone = new Set(), WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
 const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.length; figJSON.push(j); } return k; };
 /* a view (P4.1, views_gate.py): the server sends gated OpenUI Lang programs (with ```fig, at most two visuals a reply, todo 113) as "\n```openui\n<program>\n```\n", in the
    same one-figure slot; its key is the program behind a \u0002 mark. wishFigs draws it with views.js (loaded lazily); nothing drawn: its alt text. */
 const WOUI = /\n?```openui\n([\s\S]*?)\n```\n?/g, OUI = "\u0002";
 const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";
-const stripFigs = t => t.replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
+/* a figure the server is still drawing (serve.py v4_visible, Nov 3): the words stream on past a one-char anchor \u0005 where a dropped figure was; at the
+   reply's end \u0006<fence or nothing>\u0007 follows. slotsResolve puts the fill AT the anchor, or removes the anchor and its blank line: while pending
+   (and for good when nothing was drawn) the anchor leaves no DOM, so no gap and no empty box. Stripped of every control char, never shown. */
+const SLOT_FILL = /\u0006([\s\S]*?)\u0007/;
+function slotsResolve(t, status) {   // status: while the fill is pending the anchor shows a "Drawing…" line (wishHTML only; history and speech get none)
+  if (!/[\u0005-\u0007]/.test(t)) return t;
+  const m = SLOT_FILL.exec(t), fill = m ? m[1] : "";
+  t = m ? t.slice(0, m.index) + t.slice(m.index + m[0].length) : t.replace(/\u0006[\s\S]*$/, "");
+  const i = t.indexOf("\u0005");
+  if (i >= 0) {
+    const a = t.slice(0, i), b = t.slice(i + 1);
+    t = fill ? a + fill + b : status && !m ? a.replace(/\n*$/, "\n") + "\u0001DRAW\n" + b.replace(/^\n+/, "") : a.replace(/\n+$/, "\n") + b.replace(/^\n+/, "");
+  }
+  return t.replace(/[\u0005-\u0007]/g, "");
+}
+const stripFigs = t => slotsResolve(t).replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
 /* the static fallback (todo 113 spec, Tony Oct 28: "a STATIC IMAGE of the same visual, never an error box"): every view, once drawn, is drawn
    again off screen at STATIC_W px and kept as an image (SVG foreignObject, its computed look inlined). A phone too narrow for the view (the
    slot under TINY_W px, or the view wider than its slot) shows that image, scaled to fit; a later draw of the same program that fails shows it
@@ -2080,10 +2095,11 @@ const tooNarrow = ph => ph.clientWidth < TINY_W || [...ph.querySelectorAll(".vw-
 function wishFigs(root) {
   for (const ph of root.querySelectorAll(".wfig[data-f]")) {
     const k = +ph.dataset.f, done = figEl[k];
+    if (figGone.has(k)) { ph.remove(); continue; }                      // drawn nothing before: it stays gone on every redraw
     if (done && !done.isConnected) { ph.replaceWith(done); continue; }
     ph.removeAttribute("data-f");
     if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
-      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { ph.replaceChildren(); ph.textContent = alt; ph.classList.add("fig-off"); };
+      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); ph.remove(); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
       ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
       import("./views.js").then(V => {
         let drawn = false;
@@ -2098,11 +2114,12 @@ function wishFigs(root) {
     let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
     if (!b || b.type !== "graph") { ph.remove(); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
-    try { Graph.render(ph, b); } catch (e) { console.error(e); ph.textContent = b.alt || ""; ph.classList.add("fig-off"); }
+    try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); ph.remove(); continue; }
     if (!done) figEl[k] = ph;
   }
 }                                // "1. Find the momentum before — only one cart moves"
-function wishHTML(t) {
+function wishHTML(t, ended) {
+  t = slotsResolve(t, !ended);
   let out = "", step = null, eqs = [], li = [];
   const put = h => { if (step === null) out += h; else step += h; };
   const flush = () => {
@@ -2117,6 +2134,7 @@ function wishHTML(t) {
   const lines = t.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i], fg = /^\u0001FIG(\d+)$/.exec(l);
+    if (l === "\u0001DRAW") { flush(); put('<div class="wl wdraw" aria-hidden="true">Drawing…</div>'); continue; }
     if (fg) { flush(); put(`<div class="fig wfig" data-f="${fg[1]}"></div>`); continue; }
     const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
     if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
@@ -2176,7 +2194,7 @@ function wishType(el, s) {
       s.pos = reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
       s.shown = Math.max(s.shown, wishCut(s.text, s.pos, s.done));
       const end = s.done && s.shown >= s.text.length;
-      if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown)) + (end ? "" : WCARET); wishFigs(el); drawn = s.shown; }
+      if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown), end) + (end ? "" : WCARET); wishFigs(el); drawn = s.shown; }
       end ? res() : requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
@@ -2207,7 +2225,7 @@ function wishFrame(now) {
     w.l0 ??= Math.random() * WISH_LINES.length | 0; w.w0 ??= now;
     const k = t || w.stg?.seen ? -1 : (w.l0 + ((now - w.w0) / WISH_SWAP | 0)) % WISH_LINES.length;   // first chunk in: the line goes, the caret stays
     if (w.drawn !== -1 || w.line !== k) {
-      x.innerHTML = k < 0 ? WCARET : `<span class="wload" aria-hidden="true">${WISH_LINES[k]}</span>${WCARET}`;
+      x.innerHTML = k < 0 ? `<span class="wload wtag" aria-hidden="true">Thinking…</span>${WCARET}` : `<span class="wload" aria-hidden="true">${WISH_LINES[k]}</span>${WCARET}`;
       if (k >= 0 && !w.thought) { w.thought = true; say("Cluck is thinking."); }
       w.drawn = -1; w.line = k;
     }
@@ -2222,7 +2240,7 @@ function wishFrame(now) {
       const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
       if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
-    x.innerHTML = wishHTML(t.slice(0, w.shown)) + (!end ? WCARET : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : "");   // the stream broke mid-reply: the code under what came
+    x.innerHTML = wishHTML(t.slice(0, w.shown), end) + (!end ? WCARET : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : "");   // the stream broke mid-reply: the code under what came
     wishFigs(x);
     w.drawn = w.shown; w.ended = end;
   }
@@ -2743,7 +2761,7 @@ async function clSend(msg) {
     w.chat.pop();                                                          // not answered: it does not count
     if (err === "limit") { w.out = true; box.remove(); }
     else re.innerHTML = wishHTML(err === "hourly" ? "Oh duck, Cluck is tired! Come back later." : "Oops, didn't load. Ask again?") + incHTML(inc);
-  } else { w.chat.push({ role: "assistant", content: text }); say(speakable(stripFigs(text))); }
+  } else { w.chat.push({ role: "assistant", content: slotsResolve(text) }); say(speakable(stripFigs(text))); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
   if (!w.out) cl.el.querySelector(".ask textarea")?.focus();

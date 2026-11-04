@@ -540,6 +540,7 @@ class Fence:
         # slot: a marker emitted ONCE in place of the first fence dropped while nothing is shown (slot_why = its reason), so a caller can
         # put a re-asked figure exactly there (W340 vf-physics-b: it went to the end, "Forces on the block:" sat over a gap)
         self.slot, self.slot_why = slot, None
+        self.seen = []                           # (lang, first 300 chars of the fence body, verdict): the debug line serve.v4_visible logs
         # plain: words a dropped fence leaves behind (views_gate: a figure-less stepper's captions as numbered lines). They go out in the
         # fence's place; with a slot they wait (slot_plain) for the re-ask, and show only if it brings no figure
         self.plain, self.slot_plain = "", ""
@@ -552,7 +553,8 @@ class Fence:
         g = parse(body) if lang in ("fig", "json", "") else None
         warn = []
         why = "json" if g is None else check(g, self.ctx, warn)
-        self.log.append(why or ("ok:" + "+".join(warn) if warn else "ok"))     # ok:contact+anchor = shown, fixed by the pre-pass
+        self.log.append(why or ("ok:" + "+".join(warn) if warn else "ok"))
+        self.seen.append((lang or "fig", body[:300], self.log[-1]))     # ok:contact+anchor = shown, fixed by the pre-pass
         # (no finding: sent as written; graph.js still snaps it exactly, the residual is under every tolerance)
         if why:
             return ""

@@ -695,6 +695,9 @@
     el.classList.add("fig-off", "fig-alt");
     el.dataset.figDegraded = "1";
     el.style.height = ""; el.style.maxWidth = ""; el.style.marginInline = "";
+    if (el.closest(".wtext")) {   // in Cluck's reply (Nov 3 prod, PHYS_NYT: a bordered box of description text over no drawing): nothing at all, 0 height
+      el.replaceChildren(); el.style.display = "none"; el.setAttribute("aria-hidden", "true"); el.removeAttribute("role"); el.removeAttribute("aria-label");
+    }
   }
   function figReport(el, rules, fixed, degraded) {
     if (!rules.length && !fixed.length) return;
@@ -1136,7 +1139,7 @@
   function render(el, block) {
     if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
     if (!el._g) el._g = prep(block);
-    if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; }   // a redraw starts clean
+    if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; el.style.display = ""; el.removeAttribute("aria-hidden"); }   // a redraw starts clean
     const g = el._g;
     const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
     el.style.maxWidth = ""; el.style.marginInline = "";
