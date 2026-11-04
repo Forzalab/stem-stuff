@@ -144,6 +144,7 @@ await step("aligned block: one row per line", async () => {
 await step("formula card: a drag over a row copies the formula; the copy button copies it too and says Copied", async () => {
   const { ctx, page } = await open(DESK, "CALC1_CM1");
   await page.waitForSelector("#fcard li.f .katex");
+  await page.evaluate(() => { while (window.stemLadder.step()); });   // a card with no ladder starts at row 1 (fcard-reveal.pw); this step copies from row 2
   await drag(page, { sel: "#fcard li.f .fm", katex: 0.3 }, { sel: "#fcard li.f .fm", katex: 0.7 });
   assert.equal(await copyNow(page), "K = (1/2)*m*v^2");
   await blank(page);

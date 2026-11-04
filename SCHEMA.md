@@ -89,6 +89,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `twist` | all, optional | `true` = a twist of a real exam question; the app shows a Twist chip in the question header, and the first twist on a device a one-time toast (todo 133, W133). Not on a part | yes, only as `true` |
 | `twin` | all, optional | `"a"` (same question, new numbers) or `"b"` (the twisted one): a redo twin of `parent_template` | yes |
 | `parent_template` | with `twin` | the code of the twin's template item, in the same bank | yes |
+| `exam_q` | all, optional | integer 1–20: the item's Practice Exam position. A non-twin item with `exam_q` counts as that position's template (shuffle.mjs `isTpl`, the night-before mock, families met) even when its title says twin or twist | yes |
 | `proof` | `proof` (required) | the key of a proof item: `reference`, `rubric`, `keys`, `hints` (see "Proof items") | **no** |
 | `repair` | all, optional | the repair ladder `{ steps, alt? }`, served by `GET /repair/<code>` after a recorded wrong try (`alt` only after a twin miss) | **no** |
 
@@ -713,6 +714,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "welcome": {"const": true, "description": "the bank's welcome Q1 (DESIGN-v3 §2): at most one per bank, needs repair (welcome.js renders it through repair.js)"},
         "unit": {"type": "string", "maxLength": 16, "description": "num only: the answer's unit, KaTeX-safe text (\"m/s^2\", \"10^4 kg·m^2/s\", \"°C\", \"%\"); \"\" = unitless. Schema only for now: the display is W132"},
         "twist": {"type": "boolean", "description": "a twist of a real exam question; the app shows a Twist chip (todo 133)"},
+        "exam_q": {"type": "integer", "minimum": 1, "maximum": 20, "description": "the item's Practice Exam position (1..20): shuffle.mjs examQ / isTpl read it before the title"},
         "twin": {"enum": ["a", "b"], "description": "a redo twin of parent_template: a = same question, new numbers; b = the twisted one. Needs parent_template"},
         "parent_template": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$", "description": "twin: the code of its template item in this bank (not a twin, carries repair); one a and one b per template"},
         "repair": {"type": "object", "required": ["steps"], "additionalProperties": false, "description": "server only: the repair ladder (SCHEMA.md \"Repair ladder\"); GET /repair/<code> after a recorded wrong try",
