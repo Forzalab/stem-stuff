@@ -90,7 +90,7 @@
       return D ? (D[solved || full ? "L3" : missed ? "L2" : "L1"] || "") + (D.tail || "") : L().done || "";
     }
 
-    const el = h("section", "rp");
+    const el = h("section", "rp ai-skin");                                      // Cluck's token scope (app.css .ai-skin), as the welcome box: its rim's --ai-line
     el.dataset.variant = variant; el.dataset.ladder = alt ? "alt" : "main";
     el.setAttribute("aria-label", "Repair");
     host.replaceChildren(el);

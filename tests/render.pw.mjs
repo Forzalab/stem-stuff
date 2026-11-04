@@ -136,6 +136,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await go.isEnabled());
       const g = await go.boundingBox(), f = await page.locator("#ff").boundingBox();
       assert.ok(g.x + g.width <= f.x + f.width && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside the field");
+      const qH = (await page.locator("#q").boundingBox()).height;
       await go.click();
       await page.waitForSelector(".cluck");
       // wrong with a try left: the x sits in the arrow's slot, the box is dashed red, no verdict words; typing clears it
@@ -144,12 +145,10 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await page.locator("#ff.bad").count() === 1 && await go.isHidden(), "bad box, the x holds the arrow's slot");
       const vk = await page.locator("#ff .vk").boundingBox();
       assert.ok(Math.abs(vk.x - g.x) < 1 && Math.abs(vk.y - g.y) < 1, "the x is where the arrow was");
-      assert.equal(await page.locator("#toast.on").count(), 0, "no toast (Tony, Oct 5: try pips instead)");
-      {   // the pips: right under the wrong box, right-aligned, one used + one left
-        assert.deepEqual(await page.$eval("#ff + .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1]);
-        const pb = await page.locator("#ff + .pips").boundingBox(), fb = await page.locator("#ff").boundingBox();
-        assert.ok(pb.y >= fb.y + fb.height && pb.y - (fb.y + fb.height) < 24 && Math.abs(pb.x + pb.width - (fb.x + fb.width)) < 1, "pips under the box, right edge");
-      }
+      assert.equal(await page.locator("#toast.on").count(), 0, "no toast (Tony, Oct 5)");
+      /* no try dots (Tony, Nov 3 16:23: "retry is always possible"), and no ghost row where they were: the answer area does not grow */
+      assert.equal(await page.locator("#q .pips").count(), 0, "try pips are back");
+      assert.ok(Math.abs((await page.locator("#q").boundingBox()).height - qH) < 1, "the answer area grew after the wrong try (a ghost pips row)");
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");
       assert.equal(await page.locator("#ff .vk").count(), 0, "typing clears the x");

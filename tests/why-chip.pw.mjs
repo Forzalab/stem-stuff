@@ -110,13 +110,13 @@ await step("118c: the chip is the last child of the last reply bubble, no fill, 
       const cs = getComputedStyle(chip), b = chip.getBoundingClientRect(), c = host.getBoundingClientRect();
       const probe = document.createElement("i"); probe.style.color = "var(--help-rule)"; document.body.append(probe);
       const rule = getComputedStyle(probe).color; probe.remove();
-      return { inside: host.contains(chip), last: host.lastElementChild === chip, bg: cs.backgroundColor, bgi: cs.backgroundImage,
+      return { cls: chip.className, inside: host.contains(chip), last: host.lastElementChild === chip, bg: cs.backgroundColor, bgi: cs.backgroundImage,
         topW: cs.borderTopWidth, topC: cs.borderTopColor, rule, l: b.left - c.left, rr: c.right - b.right, h: b.height };
     });
     const tag = `${w}x${h}`;
     assert.ok(r.inside && r.last, `${tag}: chip is the last child of the last reply bubble`);
-    assert.ok(r.bg === "rgba(0, 0, 0, 0)" && r.bgi === "none", `${tag}: no fill (${r.bg} ${r.bgi})`);
-    assert.ok(parseFloat(r.topW) > 0 && r.topC === r.rule, `${tag}: top rule is --help-rule (${r.topW} ${r.topC} vs ${r.rule})`);
+    /* Tony, Nov 3: the chip wears the tray's Ask Cluck chip look (.rw-chip: the --help face), not the old no-fill rule-and-chevron CTA */
+    assert.ok(r.cls.includes("rw-chip") && r.bg !== "rgba(0, 0, 0, 0)", `${tag}: the tray chip look (${r.cls} ${r.bg})`);
     assert.ok(r.l >= -0.5 && r.rr >= -0.5, `${tag}: chip inside the card horizontally (left ${r.l}, right ${r.rr})`);
     assert.ok(r.h >= 44, `${tag}: tap target ${r.h}px`);
   }

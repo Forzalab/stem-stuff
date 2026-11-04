@@ -59,6 +59,27 @@ try {
       if (w === 393 && process.env.SHOTS) await page.screenshot({ path: join(process.env.SHOTS, "miss1-393.png"), fullPage: true });
       assert.equal(await page.locator("#q #ans").count(), 1, "the answer box went away");
     });
+    /* Tony, Nov 3 19:11 (demo, phone): the in-app ladder ("clue box") and its choices wear the welcome (onboarding) box's look, and Cluck's
+       leading *action* ("*waddles over*") is italic */
+    await step(`${w}: the ladder box + its choices look like the welcome box; the *action* intro is italic`, async () => {
+      const m = await page.evaluate(() => {
+        const ref = document.createElement("section"); ref.className = "wl ai-skin"; ref.innerHTML = '<div class="rp"><div class="rp-opts"><button class="rp-chip">x</button></div></div>';
+        document.body.append(ref);
+        const cs = e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopColor, c.borderTopWidth, c.borderTopStyle, c.borderRadius]; };
+        const box = document.querySelector("section.rp");
+        /* this fixture's step is typed and its intro has no action: a choice row and the repair intro as repair.js draws them (introEl: <em>action</em>) */
+        const probe = document.createElement("div"); probe.innerHTML = '<p class="rp-line"><em>waddles over</em> Let\'s fix this together.</p><div class="rp-opts"><button class="rp-chip" type="button">the sideways slant</button></div>';
+        box.querySelector(".rp-steps").before(probe);
+        const chip = probe.querySelector(".rp-chip"), em = probe.querySelector(".rp-line em");
+        const out = { box: cs(box), want: cs(ref), chip: chip && cs(chip).concat(getComputedStyle(chip).color), wantChip: cs(ref.querySelector(".rp-chip")).concat(getComputedStyle(ref.querySelector(".rp-chip")).color),
+          em: em && getComputedStyle(em).fontStyle, emText: em && em.textContent };
+        ref.remove(); probe.remove(); return out;
+      });
+      assert.deepEqual(m.box, m.want, "the ladder box is not the welcome box's surface / rim");
+      assert.ok(m.chip, "no live choice in the ladder");
+      assert.deepEqual(m.chip, m.wantChip, "the ladder's choices are not the welcome box's");
+      assert.equal(m.em, "italic", "the *action* intro is not italic: " + JSON.stringify([m.emText, m.em]));
+    });
     await step(`${w}: miss 2 keeps the same element (not reset), the 2-try lock closes, Next is reachable`, async () => {
       await page.evaluate(() => { document.querySelector("section.rp").dataset.same = "1"; });
       await miss(page, "5");

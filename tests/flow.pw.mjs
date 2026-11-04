@@ -254,10 +254,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);
     assert.equal(await toastText(), "", "shown again");
   });
-  await step("390 wrong MC answer: no toast over the choices; try pips under the rows (Tony, Oct 5)", async () => {
+  await step("390 wrong MC answer: no toast over the choices; no try pips (Tony, Nov 3 16:23)", async () => {
     await page.locator('.opt[data-id="a"]').tap(); await page.locator('.ch[data-id="a"] .send').tap(); await page.waitForTimeout(500);
     assert.equal(await toastText(), "");
-    assert.deepEqual(await page.$eval("#q .choices + .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1], "one used, one left");
+    assert.equal(await page.locator("#q .pips").count(), 0, "try pips are back");
   });
   await step("390 onboarding / toast: no page errors", async () => assert.deepEqual(errors, []));
   await ctx.close();
