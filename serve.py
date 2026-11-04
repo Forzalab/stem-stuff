@@ -2421,7 +2421,8 @@ Style goals:
 - Each piece of jargon gets plain words the first time it appears.
 - 150 to 200 words of prose ($$ lines not counted), the same order, short paragraphs. Keep and even grow the warmth: praise for the student's thinking, effort and instincts stays, and a wrong pick still feels safe and normal. One QUACK and one (action) at most.
 - Drop every mention of a KEY, an answer key, a SLIP or a NOTE, or of where the answer comes from ("From the KEY:", "the key says"): the fact stays, said as your friend's own.
-Please keep these exactly as they are, character for character: every $$...$$ line (the $$\\boxed{...}$$ one too), the ```fig block, the "Pick" line, $...$ math and **bold**. The answer, numbers, units and facts stay as your friend wrote them, and the praise never turns a wrong pick right; your work is the words around them."""
+Please keep these exactly as they are, character for character: every $$...$$ line (the $$\\boxed{...}$$ one too), the ```fig block, the "Pick" line, $...$ math and **bold**. The answer, numbers, units and facts stay as your friend wrote them, and the praise never turns a wrong pick right; your work is the words around them.
+Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls go in a Tug view, a step vs its fix in a Flip view (```openui), other rows in a "- " list."""
 
 
 def rewrite_on():
@@ -3282,18 +3283,24 @@ V4_STEPS_RULE = ("A stepper MUST carry a figure that changes in every step: a Gr
 V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
+            "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer)\n"
+            "- a step they did vs the fix: a Flip, one card per step\n"
             "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
             "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
             "- forces, torque, motion: a ```fig scene (every force an arrow); lengths, angles, lever arms: a Geometry\n"
             "- energy before and after: ```fig bars\n"
-            "- a factor, a ratio, their value vs the right one: a Table, one column for their move, one for the fix\n"
+            "- their value vs the right one: a Table, one column for their move, one for the fix\n"
             "- an algebra chain: a stepper, the broken step named in its caption\n"
             "- a proof: a Table with base | assume | prove, or a Callout per part\n"
             "- graph theory: a ```fig network of the few key nodes only, never the whole graph again\n"
+            "Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls: a Tug; a step vs its fix: a Flip; other rows: a Table or a \"- \" list.\n"
+            "Plain text in Tug and Flip cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
             "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
-            + _view_lines(("Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nExamples:\n"
-            "root = View([t])\nt = Table([\"step\", \"you did\", \"the fix\"], [[\"arm of W\", \"L\", \"half of L\"]])\n"
+            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | up, down or same | 1-9 pull size | optional why\" (label 10 characters at most).\nExamples:\n"
+            "root = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n"
+            "root = View([f])\nf = Flip([[\"arm of W\", \"L\", \"half of L\"]])\n"
+            "root = View([t])\nt = Table([\"case\", \"before\", \"after\"], [[\"gas\", \"2 atm\", \"6 atm\"]])\n"
             "root = View([s])\ns = Steps(g, [s1, s2], null, [\"i\", \"s\"])\ng = Graph(\"i 40 40, s 160 40\", \"i>s\")\n"
             "s1 = Step(\"First test: i = 1, s = 0.\", \"i:cur\", null, null, null, null, [[\"1\", \"0\"]])\n"
             "s2 = Step(\"Add 1. Now i = 2.\", \"i:done s:cur\", \"i-s:tree\", null, null, null, [[\"1\", \"0\"], [\"2\", \"1\"]])\n"

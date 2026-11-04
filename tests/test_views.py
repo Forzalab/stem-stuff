@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import gen_views as gv  # noqa: E402
 
 REG = gv.load()
-P11 = ["View", "Head", "Text", "Legend", "Table", "Callout", "Steps", "Step", "Hints", "Predict", "Reveal", "Answer", "Doodle", "Graph", "Geometry"]
+P11 = ["View", "Head", "Text", "Legend", "Table", "Callout", "Steps", "Step", "Hints", "Predict", "Reveal", "Answer", "Doodle", "Graph", "Geometry", "Tug", "Flip"]
 
 
 def outputs(reg=REG):
@@ -166,7 +166,7 @@ class Generated(unittest.TestCase):
         self.assertEqual(by["Plot"]["ships"], "planned")
         self.assertNotIn("Text", by)
         self.assertEqual(ch["marks"], REG["marks"])
-        self.assertEqual(ch["cluck_caps"], {"Table": {"rows": 8, "cols": 4}})
+        self.assertEqual(ch["cluck_caps"], {"Table": {"rows": 8, "cols": 4}, "Tug": {"rows": 6}, "Flip": {"rows": 4}})
 
     def test_schema_block(self):
         with open(gv.SCHEMA_MD) as f:

@@ -9,8 +9,8 @@ import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden a
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
-import { renumberSteps, pipeTable } from "./steps.mjs";
-import { tableShape, tugFromTable, tugHTML } from "./tug.mjs";
+import { renumberSteps, pipeTable, pipeHold } from "./steps.mjs";
+import { tableShape, tugFromTable, tugHTML, flipModel, flipHTML } from "./tug.mjs";
 import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
 import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
@@ -2125,9 +2125,12 @@ function wishHTML(t) {
       flush(); i = tb.next - 1;
       const row = (r, tag) => `<tr>${r.map(c => `<${tag}>${wishLine(c)}</${tag}>`).join("")}</tr>`;
       if (tableShape(tb.head, tb.rows) === "tug") { put(`<div class="wl wtug">${tugHTML(tugFromTable(tb.head, tb.rows), wishLine)}</div>`); continue; }   // cause -> up/down rows: a Tug (tug.mjs)
+      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (tug.mjs)
       put(`<div class="wl wtbl"><table><thead>${row(tb.head, "th")}</thead><tbody>${tb.rows.map(r => row(r, "td")).join("")}</tbody></table></div>`);
       continue;
     }
+    const hold = pipeHold(lines, i);                                      // a table still arriving (header, separator, a cut row): wait for it, no raw bars
+    if (hold !== null) { flush(); i = hold - 1; continue; }
     flush();
     put(!l.trim() ? '<div class="wl wgap"></div>' : `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${wishLine(l)}</div>`);   // a blank line: a short breath, not a full empty row
   }

@@ -67,6 +67,68 @@ class Gate(unittest.TestCase):
         self.assertEqual(views_gate.gate("root = View([fig, c])\n" + GEO + '\nc = Text("key.v1")', CTX)[1], ["c:stage:Text.text"])
 
 
+class TugFlip(unittest.TestCase):
+    """TUG-VIEW.md: Tug rows are `label | move | up|down|same [size] [| why]`, <= 6; net is post-only; Flip rows are exactly 3 cells, <= 4"""
+    def one(self, stmt):
+        return views_gate.gate("root = View([t])\n" + stmt, CTX)
+
+    def test_good_tug_and_flip_pass(self):
+        t = 't = Tug(["V | down to 1/3 | up 3 | Smaller box.", "T | down to 1/2 | down 2"], "P", "two pulls")'
+        self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
+        f = 't = Flip([["arm of W", "L", "half of L"], ["KE", "x", "y"]])'
+        self.assertEqual(self.one(f), ("root = View([t])\n" + f, ["ok"]))
+
+    def test_seven_rows_drop_the_whole_statement(self):
+        rows = ", ".join(['"V | m | up"'] * 7)
+        prog, log = self.one(f"t = Tug([{rows}])")
+        self.assertIsNone(prog)
+        self.assertTrue(log[0].startswith("t:too-long"), log)
+
+    def test_bad_rows_and_net(self):
+        self.assertEqual(self.one('t = Tug(["V | m | sideways"])')[1][0], "t:tug:row")
+        self.assertEqual(self.one('t = Tug(["a very long label | m | up"])')[1][0], "t:tug:row")
+        self.assertEqual(self.one('t = Flip([["a", "b"]])')[1][0], "t:flip:row")
+
+    def test_a_bad_row_is_trimmed_the_tug_stays_with_two_good_rows(self):
+        # bench Nov 4 (SGU, T6Y): one row off the grammar used to drop the whole Tug
+        t = 't = Tug(["V | box squeezed | up 3", "T | gas cooled | down 2", "a label far too long | x | up"], "P", "two pulls")'
+        prog, log = self.one(t)
+        self.assertEqual(log, ["t:trim:Tug.row"])
+        self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | box squeezed | up 3", "T | gas cooled | down 2"], "P", "two pulls")')
+        self.assertEqual(self.one('t = Tug(["V | a | up 3", "T | b | sideways"])')[1][0], "t:tug:row", "one good row left: dropped as before")
+
+    def test_a_size_in_its_own_cell_is_folded_in(self):
+        # bench Nov 4 (SGU): `V | box doubles | same | 1 | why` (5 cells) killed the Tug; the size cell is folded into the direction, the why kept
+        t = 't = Tug(["V | box doubles | same | 1 | No pull on speed.", "T | gas cooled | down 4 | Colder, so slower."], "KE", "alt")'
+        prog, log = self.one(t)
+        self.assertEqual(log, ["t:trim:Tug.size"])
+        self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | box doubles | same 1 | No pull on speed.", "T | gas cooled | down 4 | Colder, so slower."], "KE", "alt")')
+        self.assertEqual(self.one('t = Tug(["V", "T"])')[1][0], "t:tug:row", "bare labels: dropped")
+
+    def test_a_net_is_trimmed_never_drawn(self):
+        # bench Nov 4 (USR): the model wrote the end-knot answer; a Cluck reply is never post, so only the net line goes
+        prog, log = self.one('t = Tug(["V | m | up", "T | n | down"], "P", "alt", "up 3/2")')
+        self.assertEqual(log, ["t:trim:Tug.net"])
+        self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | m | up", "T | n | down"], "P", "alt")')
+        prog, log = self.one('t = Tug(["V | m | up"], null, "alt", "up 3/2")')
+        self.assertEqual((prog, log), ('root = View([t])\nt = Tug(["V | m | up"], null, "alt")', ["t:trim:Tug.net"]))
+
+    def test_a_leak_in_a_kept_row_still_drops_after_the_trim(self):
+        prog, log = self.one('t = Tug(["c | = 5 m | up", "T | n | down", "a label far too long | x | up"])')
+        self.assertIsNone(prog)
+        self.assertIn("leak:", " ".join(log))
+
+    def test_a_pull_size_equal_to_a_key_value_is_not_a_leak(self):
+        # CTX's answer is 5.0: "up 5" is a bar length (bench Nov 4: PHYS_SGU's Tug died on "up 3", a choice's value), "= 5 m" in the move still is a leak
+        t = 't = Tug(["V | box squeezed | up 5", "T | gas cooled | down 2"])'
+        self.assertEqual(self.one(t)[1], ["ok"])
+        self.assertIn("leak:", self.one('t = Tug(["V | = 5 m | up 5"])')[1][0])
+
+    def test_a_key_literal_in_a_row_is_a_leak(self):
+        self.assertIn("leak:", self.one('t = Tug(["c | 5 m | up"])')[1][0])
+        self.assertIn("leak:", self.one('t = Flip([["c", "x", "5 m"]])')[1][0])
+
+
 class Stream(unittest.TestCase):
     def test_fence_streams_held_until_closed(self):
         body = GOOD

@@ -36,7 +36,9 @@ const SHORT = ["POOF! A wish is a wish.\n", "Tick: a. Egg-cellent."];
 /* Tony's PHYS_SGU reply (Nov 3 16:16): a strict GFM pipe table, a blank line between its rows, split mid-table across the stream */
 const TABLE = ["Here is the push and the pull side by side:\n\n| factor | what changed | effect on $P$ |\n\n|---|-", "--|---|\n\n| **V** | down to $\\frac13$ | up |\n\n| **T** | down to $\\frac12$",
   " | down |\n\nPut both into one ratio:\n\n", "Tick: a. Egg-cellent."];
-const TABLE2 = ["Your slip and the fix:\n\n| step | you did | the fix |\n|---|---|---|\n", "| arm of W | $L$ | half of $L$ |\n| KE terms | $\\frac12Mv^2$ | $\\frac{7}{10}Mv^2$ |\n\nSo:\n\n", "Tick: a. Egg-cellent."];
+const TABLE4 = ["Your slip and the fix:\n\n| step | you did | the fix |\n|---|---|---|\n| arm of W | $L$ | half of $L$ |\n| KE terms | $\\frac12Mv^2$ | $\\frac{7}{10}Mv^2$ |\n\nSo:\n\n", "Tick: a. Egg-cellent."];
+const TABLE3 = "Pulls:\n\n| factor | what changed | effect on $P$ |\n|---|---|---|\n| **V** | down to $\\frac13$ | up |\n| **T** | down to $\\frac12$ | down |\n\nSo:\n\nTick: a. Egg-cellent.";
+const TABLE2 = ["Units:\n\n| unit | symbol | meaning |\n|---|---|---|\n", "| newton | $N$ | force |\n| joule | $J$ | energy |\n\nSo:\n\n", "Tick: a. Egg-cellent."];
 let parts = LONG;
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
@@ -62,7 +64,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const VPS = [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 800 }]];
 
 /* a wrong pick streams Cluck's reply (prefetch); the idle duck's tap opens the sheet on it; the typing is skipped */
-async function cluck(vp) {
+async function cluck(vp, watch = false) {
   const phone = vp.width < 500;
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
@@ -87,7 +89,12 @@ async function cluck(vp) {
     new MutationObserver(() => { if (bd.classList.contains("below")) window.__below = true; }).observe(bd, { attributes: true, attributeFilter: ["class"] });
     if (bd.classList.contains("below")) window.__below = true;
   });
-  await page.click("#cluck .wtext").catch(() => {});                    // a tap skips the typing
+  if (watch) await page.evaluate(() => {                                // a table still arriving must never flash raw bars: every DOM change is checked while it types
+    window.__bars = []; const w = document.querySelector("#cluck .wtext");
+    const look = () => { const k = document.createTreeWalker(w, NodeFilter.SHOW_TEXT); for (let t; (t = k.nextNode());) if (t.textContent.includes("|") && !t.parentElement.closest(".katex")) window.__bars.push(t.textContent); };
+    new MutationObserver(look).observe(w, { subtree: true, childList: true, characterData: true });
+  });
+  else await page.click("#cluck .wtext").catch(() => {});               // a tap skips the typing
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
   await page.waitForTimeout(400);                                       // KaTeX + the 180 ms fade
   return page;
@@ -156,7 +163,16 @@ for (const [tag, vp] of VPS) {
     assert.deepEqual(page.errs, [], "no page errors");
     await page.context().close();
   });
-  for (const [kind, reply, sel] of [["a cause -> up/down pipe table (Tony's SGU reply) renders as a Tug", TABLE, "tug"], ["any other strict pipe table renders as a styled .wtbl table", TABLE2, "tbl"]]) await step(`${tag}: ${kind} (no raw bars, KaTeX in the cells, no sideways scroll)`, async () => {
+  await step(`${tag}: a table that is still typing out shows no raw bars at any moment, and ends as one Tug`, async () => {
+    parts = TABLE3.match(/[^]{1,9}/g);                                  // 9-character pieces: the header, the separator and every row arrive cut
+    const page = await cluck(vp, true);
+    const r = await page.evaluate(() => ({ bars: window.__bars, tugs: document.querySelectorAll("#cluck .wtext .vw-tug").length }));
+    assert.deepEqual(r.bars, [], "no raw pipe text, ever, while it typed");
+    assert.equal(r.tugs, 1);
+    assert.deepEqual(page.errs, [], "no page errors");
+    await page.context().close();
+  });
+  for (const [kind, reply, sel] of [["a cause -> up/down pipe table (Tony's SGU reply) renders as a Tug", TABLE, "tug"], ["a step | you did | the fix pipe table renders as Flip cards", TABLE4, "flip"], ["any other strict pipe table renders as a styled .wtbl table", TABLE2, "tbl"]]) await step(`${tag}: ${kind} (no raw bars, KaTeX in the cells, no sideways scroll)`, async () => {
     parts = reply;
     const page = await cluck(vp);
     const r = await page.evaluate(() => {
@@ -166,11 +182,19 @@ for (const [tag, vp] of VPS) {
         knot: w.querySelector(".vw-tug .tg-net")?.textContent, tugK: w.querySelectorAll(".vw-tug .tg-lab .katex").length,
         tables: w.querySelectorAll(".wtbl table").length, all: w.querySelectorAll("table").length, ths: w.querySelectorAll(".wtbl thead th").length,
         rows: w.querySelectorAll(".wtbl tbody tr").length, katex: w.querySelectorAll(".wtbl td .katex").length, bars, sw: w.scrollWidth, cw: w.clientWidth,
-        after: /Put both into one ratio|So:/.test(w.textContent) };
+        flips: w.querySelectorAll(".vw-flip .fl-card").length, flipK: w.querySelectorAll(".vw-flip .fl-tx .katex").length, after: /Put both into one ratio|So:/.test(w.textContent) };
     });
     if (sel === "tug") {
       assert.deepEqual([r.tugs, r.all, r.bar, r.knot], [1, 0, ["sky:▲", "orange:▼"], "?"], "one Tug, the SGU rows, end knot ?: " + JSON.stringify(r));
       assert.ok(r.tugK >= 2, "the labels go through KaTeX: " + r.tugK);
+    } else if (sel === "flip") {
+      const col = await page.evaluate(() => { const ink = () => document.querySelector(".vw-flip") && (() => { const f = document.querySelector(".vw-flip"), pr = document.createElement("span"); pr.style.color = "var(--muted)"; f.parentElement.insertBefore(pr, f);
+        const out = { muted: getComputedStyle(pr).color, st: getComputedStyle(f.querySelector(".fl-st")).color, gl: getComputedStyle(f.querySelector(".fl-gl")).color, tx: getComputedStyle(f.querySelector(".fl-tx")).color, ink: getComputedStyle(f.parentElement).color }; pr.remove(); return out; })(); return ink(); });
+      assert.equal(col.st, col.muted, "the step label is the sheet's muted ink, not the card's hue: " + JSON.stringify(col));
+      assert.notEqual(col.gl, col.muted, "the glyph keeps the hue");
+      assert.notEqual(col.tx, col.gl, "the card text is not the hue");
+      assert.deepEqual([r.tugs, r.all, r.flips], [0, 0, 2], "two flip cards, no table: " + JSON.stringify(r));
+      assert.ok(r.flipK >= 4, "both faces of both cards go through KaTeX: " + r.flipK);
     } else {
       assert.deepEqual([r.tugs, r.tables, r.all, r.ths, r.rows], [0, 1, 1, 3, 2], "one styled table, 3 headers, 2 body rows: " + JSON.stringify(r));
       assert.ok(r.katex >= 2, "the cells go through KaTeX: " + r.katex);
