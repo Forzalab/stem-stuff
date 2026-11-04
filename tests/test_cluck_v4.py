@@ -691,6 +691,14 @@ class Fallbacks(unittest.TestCase):
             self.run_arm("claude", reveal=True)
         self.assertEqual(self.calls, ["claude"])
 
+    def test_reply_cut_at_max_tokens_ends_on_the_error(self):      # Tony 19:37 Nov 3 (PHYS_LP5 "Newton's 2n"): a cut reply is a failure, not a quiet end
+        self.claude = lambda: Resp(sse_claude(["Use the torque law.\n", "Use rotational Newton's 2n"]).replace(b'"stop_reason": "end_turn"', b'"stop_reason": "max_tokens"'))
+        with self.assertRaises(serve.ReplyCut):
+            self.run_arm("claude", reveal=True)
+        self.assertEqual(self.calls, ["claude"])                                # text went out: no switch to the other arm
+        self.claude = lambda: Resp(sse_claude(["Use the torque law.\n"]))
+        self.assertEqual(self.run_arm("claude", reveal=True), "Use the torque law.\n")   # end_turn: no error
+
     def test_no_word_by_the_cap_falls_back(self):
         with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S": "0.1", "CLUCK_FIRST_TEXT_S_DEEPSEEK": "0.1"}):   # DeepSeek's own cap (todo 47)
             self.claude = lambda: Slow(PING * 6 + sse_claude(["Too late.\n"]), {i: 0.03 for i in range(18)})   # pings only for 0.5 s
@@ -1356,7 +1364,7 @@ class FigureBudget(unittest.TestCase):
     def sent(self, fig):
         seen = []
         v4 = {"turns": [{"role": "user", "content": ["Q", "dyn"]}], "fig": fig, "bank": "b", "arm": "claude", "imgs": ()}
-        with mock.patch.object(serve, "_claude_one", lambda system, msgs, max_tokens, arm=None: seen.append(max_tokens) or iter(())):
+        with mock.patch.object(serve, "_claude_one", lambda system, msgs, max_tokens, arm=None, cut=False: seen.append(max_tokens) or iter(())):
             list(serve._v4_claude_chunks(v4, serve.V4_MAX))
         return seen[0]
 

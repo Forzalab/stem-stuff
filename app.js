@@ -2008,6 +2008,7 @@ async function wishStart(auto) {
       }
       fr.e(bytes);
       if (swap !== null && !err) wishSwap(w, swap);
+      if (err && w.text) { w.text = cutClean(w.text); w.lost = true; }   // Tony 19:37 Nov 3: a reply that died mid-way keeps its whole lines, then one clean line
       if (err) { w.failed = 1; w.inc = inc({ why: err.why, server: err.error, status: err.why === "budget_cap" ? 503 : 502, phase: w.text ? "stream" : "headers", bytes }); }   // the in-band error = the unstaged 503/502 (X-Incident): the same incident, its reason and the server's code
       else if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
     }
@@ -2042,8 +2043,18 @@ function wishSwap(w, t) {
   });
   w.shown = w.pos = w.drawn = t.length;                                   // drawn = shown: no full redraw, so the figures keep their nodes
 }
+/* a reply that died mid-way (an in-band error: 402, timeout, cut at max_tokens): drop the server's "stopped early" line, an unclosed fence,
+   the half line at the end and a lead-in that promised a figure (ends with ":"), and the empty gaps a dropped figure left */
+function cutClean(t) {
+  let s = t.replace(/\n?\(Cluck stopped early\. Sorry!\)\s*$/, "");
+  if ((s.match(/```/g) || []).length % 2) s = s.slice(0, s.lastIndexOf("```"));
+  const lines = s.replace(/\s+$/, "").split("\n");
+  if (lines.length && !/[.!?)\]$]\s*$|[^\x00-\x7f]\s*$/.test(lines.at(-1))) lines.pop();
+  while (lines.length && (/:\s*$/.test(lines.at(-1)) || !lines.at(-1).trim())) lines.pop();
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n");
+}
 function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
-  Object.assign(w, { failed: 0, capped: false, inc: null, stg: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
+  Object.assign(w, { failed: 0, lost: false, capped: false, inc: null, stg: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
   wishStart(false);
 }
 /* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
@@ -2259,7 +2270,9 @@ function wishFrame(now) {
       const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
       if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
-    x.innerHTML = wishHTML(t.slice(0, w.shown)) + (!end ? WCARET : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : "");   // the stream broke mid-reply: the code under what came
+    x.innerHTML = wishHTML(t.slice(0, w.shown)) + (!end ? WCARET : w.failed && w.lost ? `<div class="wl wlost">Cluck lost signal. <button type="button" class="wretry">Tap to retry.</button>${incHTML(w.inc)}</div>`
+      : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : "");   // the stream broke mid-reply: what came, then the clean line (+ its code)
+    x.querySelector(".wlost .wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
     wishFigs(x);
     w.drawn = w.shown; w.ended = end;
   }

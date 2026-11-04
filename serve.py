@@ -2517,9 +2517,14 @@ def fallback_reason(e):
     return e.reason if isinstance(e, FirstTextLate) else "stuck" if isinstance(e, TimeoutError) else "error"
 
 
-def _claude_one(system, messages, max_tokens, arm="-"):
+class ReplyCut(OSError):
+    """a reply that stopped at max_tokens, mid-sentence"""
+
+
+def _claude_one(system, messages, max_tokens, arm="-", cut=False):
     """one streamed Claude call (system as given, messages without it); yields text (Plain), holds until the first newline and cuts a
-    leading NOTE line. Counts the spend."""
+    leading NOTE line. Counts the spend. cut=True (a Cluck letter turn): a reply that hit max_tokens raises ReplyCut after its text, so the
+    stream ends on the in-band error and the page shows its clean "lost signal" line (Tony 19:37 PST Nov 3), not a half word."""
     payload = dict(claude_params(CLAUDE_MODEL, max_tokens), stream=True, system=system, messages=messages)
     req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
                                  headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
@@ -2549,6 +2554,8 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                     d = ev.get("delta") or {}
                     if d.get("stop_reason") == "refusal":   # W113: Opus refuses some letter turns (reasoning_extraction): logged, the other arm answers
                         stop = "refusal:" + str((d.get("stop_details") or {}).get("category") or "-")
+                    elif d.get("stop_reason") == "max_tokens":
+                        stop = "max_tokens"
                 elif kind == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
                     t = ev["delta"].get("text") or ""
                     said = said or bool(t.strip())
@@ -2567,6 +2574,8 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                 text = plain.feed(held)
                 if text:
                     yield text
+            if cut and stop == "max_tokens" and said:
+                raise ReplyCut("claude: the reply hit max_tokens")
     finally:
         if any(used.values()):
             usd = claude_cost(used)
@@ -3323,8 +3332,47 @@ V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```op
 
 
 def v4_fig_howto(fig):
-    """the per-question, uncached part of the figure how-to"""
-    return livefig.rule_tail(fig).lstrip("\n")
+    """the per-question, uncached part of the figure how-to (+ the topic's own spec, fig_spec)"""
+    spec = fig_spec(getattr(fig, "code", None))
+    return livefig.rule_tail(fig).lstrip("\n") + (("\n" + FIG_SPECS[spec]) if spec else "")
+
+
+# Topic injection (Tony 19:37 PST Nov 3): the item's topic picks ONE figure spec (its grammar, one worked example, the rules), sent as a firm
+# "draw it like this" in the per-question tail. Deterministic: keywords of the item's title, stem and formula tags, first rule that fits.
+# CLUCK_FIG_SPEC: "p3x" (default: Exam 3 bank only), "1" every bank, "0" off.
+FIG_SPECS = {
+    "forces": ("DRAW IT LIKE THIS (forces): one ```fig scene, a free-body picture, on a right answer too. The body as a box or disk; EVERY force on it "
+               "an arrow from the body's own point, up or down as it acts (weight down, buoyant force or tension up, normal force off the surface); "
+               "labels are symbols ($W$, $F_B$, $T$, $F_N$), never a number you worked out. Example:\n"
+               "```fig\n{\"type\":\"graph\",\"kind\":\"scene\",\"alt\":\"Forces on the floating block: buoyant force up, weight down.\",\"marks\":["
+               "{\"mark\":\"body\",\"at\":[0,0],\"shape\":\"box\",\"w\":1,\"h\":0.8},{\"mark\":\"force\",\"at\":[0,0],\"angle\":90,\"len\":1.4,\"label\":\"$F_B$\"},"
+               "{\"mark\":\"force\",\"at\":[0,0],\"angle\":270,\"len\":1.4,\"label\":\"$W$\"}]}\n```"),
+    "factor": ("DRAW IT LIKE THIS (a factor): one ```openui Tug, one row per change the question names, in its own words; the direction cell is up, "
+               "down or same with a 1-9 size in that SAME cell; no row for the result, no net. Example:\n"
+               "```openui\nroot = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n```"),
+    "rotation": ("DRAW IT LIKE THIS (rotation): one ```openui Geometry: the axis as a seg, each mass a point, each lever arm a dim from the axis "
+                 "with the question's own length; for a torque, add the force as an arrow at the point it pulls; never the answer. Example:\n"
+                 "```openui\nroot = View([g])\ng = Geometry(\"A 0,0; B 0,2; C 4,0; D 4,2\", [\"seg(A,B)\", \"dim(A,C,2a)\", \"label(A,left)\"], \"The axis is the left edge; the right masses sit 2a from it.\")\n```"),
+    "graph": ("DRAW IT LIKE THIS (a graph): one ```fig network of the few nodes that prove the idea, the question's own labels. Example:\n"
+              "```fig\n" + livefig.EXAMPLE["network"] + "\n```"),
+}
+_SPEC_RULES = (("factor", r"by what factor|what factor|\bfactor\b|\bratio\b"),
+               ("forces", r"buoy|float|submerg|tension|normal force|\bweight\b|string|diver|density|apparent"),
+               ("rotation", r"\brpm\b|torque|moment of inertia|\baxis\b|lever|center of (?:mass|gravity)|angular|rotat"),
+               ("graph", r"\bvertex|\bvertices|\bgraph\b|spanning tree|shortest path"))
+
+
+def fig_spec(code):
+    """the figure spec name for this item, or None (flag off, another bank, no topic fits)"""
+    mode = os.environ.get("CLUCK_FIG_SPEC", "p3x").strip().lower()
+    if not code or mode in ("0", "off", "false", "no") or (mode == "p3x" and bank_of(code) != "BANK_P3X"):
+        return None
+    p = problems().get(code)
+    if not p:
+        return None
+    text = " ".join([str(p.get("title", ""))] + [str(b.get("md", "")) for b in p.get("body", []) if b.get("type") == "text"]
+                    + [" ".join((sugar(p).get("part") or []))]).lower()
+    return next((name for name, rx in _SPEC_RULES if re.search(rx, text)), None)
 
 
 def _v4_claude_system(v4):
@@ -3355,7 +3403,7 @@ def _v4_claude_chunks(v4, max_tokens):
             msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
     # a turn that may draw gets FIG_TOKENS on top (the old path does the same): a held ```fig the gate drops still spends its tokens, and
     # PHYS_LP5 (Nov 3) hit max_tokens at 700 and ended mid-word
-    return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"])
+    return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"], cut=True)
 
 
 def _v4_deepseek_chunks(v4, key, max_tokens):
@@ -3500,7 +3548,7 @@ def subject_ok(before, after, n):
 
 
 def subject_on():
-    return os.environ.get("CLUCK_SUBJECT", "1").strip().lower() not in ("0", "off", "false", "no")
+    return os.environ.get("CLUCK_SUBJECT", "0").strip().lower() in ("1", "on", "true", "yes")   # OFF by default: the rewriter changed ~80% of replies (bench Nov 3)
 
 
 def subject_pass(text, key, call=None):
@@ -3523,7 +3571,31 @@ def subject_pass(text, key, call=None):
     return subject_unmask(head + got + tail, spans) if ok else text
 
 
+SUBJECT_CLAUDE_MODEL = os.environ.get("CLUCK_SUBJECT_CLAUDE_MODEL", "claude-haiku-5-5")
+
+
+def _subject_claude(masked):
+    payload = dict(claude_params(SUBJECT_CLAUDE_MODEL, 900), system=[{"type": "text", "text": SUBJECT_HOW + subject_block(), "cache_control": CACHE}],
+                   messages=[{"role": "user", "content": masked}])
+    req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
+                                 headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=SUBJECT_S) as resp:
+        m = json.load(resp)
+    u = m.get("usage") or {}
+    i, o = claude_price(SUBJECT_CLAUDE_MODEL)
+    usd = (int(u.get("input_tokens") or 0) * i + int(u.get("cache_creation_input_tokens") or 0) * i * CACHE_WRITE
+           + int(u.get("cache_read_input_tokens") or 0) * i * CACHE_READ + int(u.get("output_tokens") or 0) * o) / 1e6
+    claude_add(usd)
+    log(f"claude subject usage: in={u.get('input_tokens')} out={u.get('output_tokens')} usd={usd:.5f} model={SUBJECT_CLAUDE_MODEL}")
+    return "".join(b.get("text", "") for b in m.get("content", []) if b.get("type") == "text")
+
+
 def _subject_call(masked, key):
+    if os.environ.get("CLAUDE_API") and claude_ready(set()):         # Tony 19:41 "route ALL to claude": Haiku first, OpenRouter if it fails
+        try:
+            return _subject_claude(masked)
+        except Exception as e:  # noqa: BLE001
+            log(f"subject pass: claude {SUBJECT_CLAUDE_MODEL}: {e} (OpenRouter next)")
     payload = dict(_model_params(SUBJECT_MODEL, 900), stream=False, temperature=0, provider={"zdr": True, "data_collection": "deny"},
                    messages=[{"role": "system", "content": SUBJECT_HOW + subject_block()}, {"role": "user", "content": masked}])
     with _or_post(payload, key, SUBJECT_S) as r:
