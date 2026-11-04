@@ -9,8 +9,8 @@ import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden a
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
-import { renumberSteps, pipeTable } from "./steps.mjs";
-import { tableShape, tugFromTable, tugHTML } from "./tug.mjs";
+import { renumberSteps, pipeTable, pipeHold } from "./steps.mjs";
+import { tableShape, tugFromTable, tugHTML, flipModel, flipHTML } from "./tug.mjs";
 import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
 import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
@@ -665,6 +665,7 @@ async function load(code) {
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
+  $("#rpHost")?.remove();                                                  // the last question's repair ladder
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null, wl };
   qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
@@ -799,6 +800,27 @@ function welcomeQ(q) {
     window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
     if (!$("#qnav").hidden) { const nx = nextBtn(); w.el.append(nx); nx.focus({ preventScroll: true }); }
   } });
+}
+
+/* ---------- the repair ladder after a miss (brain design-round-66 DESIGN-v3 §3, T8; Tony Nov 3) ----------
+   Every graded wrong try on an item with `repair` draws its ladder (repair.js, variant "repair") under the verdict: GET /repair/<code>
+   is sent only after the /check that recorded the miss (403 before it), 404 = no ladder = nothing changes. Not on the welcome item or in
+   the mock. The same slip family on the next miss keeps the element (a step is never reset); another family redraws. The answer box,
+   the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. */
+function repairAfterMiss(r) {
+  if (!S || S.wl || !S.prob.has_repair || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
+  const mine = S, code = S.code, fam = r.error || "";
+  if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
+  const host = (() => { let h = $("#rpHost"); if (!h) { h = document.createElement("div"); h.id = "rpHost"; $("#fb").after(h); } return h; })();
+  mine.rp?.m?.destroy();                                                          // another family: the old ladder goes first
+  const tok = mine.rp = { fam };                                                  // a slower fetch of an earlier miss must not land over this one
+  net(`repair/${code}`, { headers: { traceparent: traceparent() } }).then(x => x.ok ? x.json() : null, () => null).then(rp => {
+    if (S !== mine || mine.rp !== tok) return;
+    if (!rp || !rp.steps) { mine.rp = null; return; }
+    const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
+      credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
+    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade });
+  });
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -1860,7 +1882,7 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); wishOnWrong(); }   // no ladder: each wrong try shows the next formula row, then the arrows
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); wishOnWrong(); repairAfterMiss(r); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 
@@ -2126,9 +2148,12 @@ function wishHTML(t) {
       flush(); i = tb.next - 1;
       const row = (r, tag) => `<tr>${r.map(c => `<${tag}>${wishLine(c)}</${tag}>`).join("")}</tr>`;
       if (tableShape(tb.head, tb.rows) === "tug") { put(`<div class="wl wtug">${tugHTML(tugFromTable(tb.head, tb.rows), wishLine)}</div>`); continue; }   // cause -> up/down rows: a Tug (tug.mjs)
+      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (tug.mjs)
       put(`<div class="wl wtbl"><table><thead>${row(tb.head, "th")}</thead><tbody>${tb.rows.map(r => row(r, "td")).join("")}</tbody></table></div>`);
       continue;
     }
+    const hold = pipeHold(lines, i);                                      // a table still arriving (header, separator, a cut row): wait for it, no raw bars
+    if (hold !== null) { flush(); i = hold - 1; continue; }
     flush();
     put(!l.trim() ? '<div class="wl wgap"></div>' : `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${wishLine(l)}</div>`);   // a blank line: a short breath, not a full empty row
   }

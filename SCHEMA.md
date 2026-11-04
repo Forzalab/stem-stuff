@@ -360,6 +360,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Text | L0 | layout | P1.1 | `Text(text: string≤400)` |  |
 | Legend | L0 | layout | P1.1 | `Legend(items: string≤32[]≤8)` |  |
 | Table | L0 | layout | P1.1 | `Table(head: string≤24[]≤5, rows: string≤40[]≤5[]≤12)` |  |
+| Tug | L1 | interaction | P1.1 | `Tug(rows: string≤110[]≤6, of?: string≤24, alt?: string≤120, net?: string≤24)` |  |
+| Flip | L1 | interaction | P1.1 | `Flip(rows: string≤40[]≤3[]≤4, alt?: string≤120)` |  |
 | Math | L0 | domain | planned | `Math(tex: string≤200)` | symbolic.simplify |
 | Chips | L0 | layout | planned | `Chips(items: string≤32[]≤8)` |  |
 | Callout | L1 | layout | P1.1 | `Callout(tag: string≤24, text: string≤400)` |  |
@@ -387,7 +389,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Recipe | Stages | Length | Components |
 |---|---|---|---|
 | hint-line | pre, wrong | S | Hints |
-| misconception | wrong | S | Callout, Chips |
+| misconception | wrong | S | Callout, Chips, Tug, Flip |
 | predict-reveal | pre, wrong, post | S | Predict, Reveal, Callout |
 | steps | wrong, post | M | Steps, Step, Graph, Legend, Table |
 | twin-compare | pre, wrong, post | M | Compare, Steps, Step, Graph, Legend |
@@ -1869,7 +1871,7 @@ Five per-item fields, all optional, top level next to `saccharine`. The `problem
 
 **`twin`, `parent_template`**: `"twin": "a", "parent_template": "PHYS_RPA"`. A redo twin of its template: `a` = same question, new numbers (opens after a repair); `b` = the twisted one (queued after the `a` twin wins). Every twin names its template; the template is in the same bank, is not a twin, and carries `repair`. At most one `a` and one `b` per template. `parent_template` only on a twin. Both public.
 
-**`repair`** (server only: `public()` never sends it; `GET /repair/<code>` does, after a recorded wrong try, and `alt` only after a twin miss is recorded; the `welcome` item's before any try, since its ladder is the question). Hand-written per template; twins use their template's ladder. The response adds `sheet` = `{id: tex}` for the formula-sheet ids its `sheet` steps offer.
+**`repair`** (server only: `public()` never sends it; `GET /repair/<code>` does, after a recorded wrong try, and `alt` only after a twin miss is recorded; the `welcome` item's before any try, since its ladder is the question). `public()` ships only `has_repair: true` (the item or its template has steps; the app sends GET /repair after a miss only then). Hand-written per template; twins use their template's ladder. The response adds `sheet` = `{id: tex}` for the formula-sheet ids its `sheet` steps offer.
 
 ```json
 "repair": {

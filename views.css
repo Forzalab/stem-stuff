@@ -143,8 +143,11 @@
 @media (prefers-reduced-motion: no-preference) {
   .vw-reveal.open .vw-body { animation: vw-fade var(--d-move) ease-out both; }
   .vw-doodle svg { animation: vw-pop var(--d-dim) ease-out both; transform-origin: 50% 100%; }
-  .vw-tug .tg-bar { animation: tg-draw var(--d-dim) ease-out both; }   /* the Tug draws its bars from the knot */
-  .vw-tug .tg-bar.tg-down { animation: tg-draw-l var(--d-dim) ease-out both; }
+  .vw-tug .tg-bar { animation: tg-draw var(--d-dim) ease-out calc(var(--i, 0) * var(--d-fast)) both; }   /* the Tug draws its bars from the knot, one row after another */
+  .vw-tug .tg-bar.tg-down { animation: tg-draw-l var(--d-dim) ease-out calc(var(--i, 0) * var(--d-fast)) both; }
+  .vw-tug .tg-pull.on .tg-bar { animation: tg-pulse var(--d-move) ease-out; }   /* a tapped row pulses once */
+  .vw-flip .fl-card:not(.sa):not(.sb) .fl-in { animation: fl-turn var(--d-dim) ease-in-out calc(var(--d-dim) * 3) both; }   /* a beat on "you did", then the fix */
+  .vw-flip .fl-in { transition: transform var(--d-move) ease-in-out; }
 }
 @keyframes vw-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes vw-pop { from { opacity: 0; transform: translateY(var(--s2)); } to { opacity: 1; transform: none; } }
@@ -165,3 +168,26 @@
 .vw-tug .tg-bar.tg-same { left: 50%; margin-left: calc(var(--s4) / -2); width: var(--s4); }
 @keyframes tg-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes tg-draw-l { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+@keyframes tg-pulse { 50% { transform: scaleY(1.6); } }
+@keyframes fl-turn { from { transform: rotateY(0deg); } to { transform: rotateY(180deg); } }
+.vw-tug .tg-pull { cursor: pointer; }
+.vw-tug .tg-why { display: none; color: var(--muted); font-size: var(--t-xs); }
+.vw-tug .tg-pull.on .tg-why { display: block; }
+/* Flip (tug.mjs): a card, two faces. Resting state = the fix (B) up; .sa = "you did" (A), .sb = B, both after a tap. Reduced motion: both faces, stacked, A at layer 3. */
+.vw-flip { --fl-ink: var(--ink); --fl-muted: var(--muted); display: grid; grid-template-columns: 1fr; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--t-sm); line-height: var(--lh-ui); }
+@media (min-width: 40rem) { .vw-flip { grid-template-columns: 1fr 1fr; } }
+.vw-flip .fl-card { perspective: 40rem; cursor: pointer; }
+.vw-flip .fl-in { display: grid; transform-style: preserve-3d; transform: rotateY(180deg); }
+.vw-flip .fl-card.sa .fl-in { transform: none; }
+.vw-flip .fl-face { grid-area: 1 / 1; display: grid; grid-template-columns: auto 1fr; column-gap: var(--s2); align-content: center; min-height: var(--btn); padding: var(--s2) var(--s3);
+  border: var(--bw) solid var(--c1); border-radius: 6px; backface-visibility: hidden; color: var(--fl-ink); }
+.vw-flip .fl-b { transform: rotateY(180deg); }
+.vw-flip .fl-gl { grid-row: 1 / 3; align-self: center; color: var(--c1); font-weight: var(--w-em); }
+.vw-flip .fl-st { color: var(--fl-muted); font-size: var(--t-xs); }
+.vw-flip .fl-tx { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) {
+  .vw-flip .fl-in, .vw-flip .fl-card.sa .fl-in { transform: none; gap: var(--s1); }
+  .vw-flip .fl-face { grid-area: auto; backface-visibility: visible; }
+  .vw-flip .fl-b { transform: none; }
+  .vw-flip .fl-a { border-style: dashed; }
+}

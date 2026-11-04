@@ -16,7 +16,7 @@ import oui
 ROOT = os.path.dirname(os.path.abspath(__file__))
 # What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
 # through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
-CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step"}
+CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip"}
 GEO_CAPS = {"pts": 12, "marks": 12, "labels": 6}
 GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1}   # name -> point / number args before the text
 GEO_TEXT = {"dim", "angle", "arrow", "label"}
@@ -171,6 +171,24 @@ def _words(el, reg):
     return out
 
 
+SIZE_RE = re.compile(r"\|\s*(up|down|same)\s+[1-9]\b", re.I)
+TUG_ROW = re.compile(r"^\s*[^|]{1,10}\|[^|]{0,24}\|\s*(?:up|down|same)(?:\s+[1-9])?\s*(?:\|[^|]{1,60})?$", re.I)   # label | move | up|down|same [size] [| why]: tug.mjs parseRow
+
+
+def tug_flip(el):
+    """Tug / Flip rows (TUG-VIEW.md): a Tug row off the grammar -> tug:row, a Tug net -> stage:Tug.net (net is the end knot's answer: post only, and a Cluck
+    reply is never post), a Flip row without exactly 3 cells -> flip:row. A bad statement is dropped; the caps (6 / 4 rows) are _caps'."""
+    p = el.get("props") or {}
+    if el.get("typeName") == "Tug":
+        if p.get("net"):
+            return "stage:Tug.net"
+        if not all(isinstance(r, str) and TUG_ROW.match(r) for r in p.get("rows") or []):
+            return "tug:row"
+    if el.get("typeName") == "Flip" and not all(isinstance(r, list) and len(r) == 3 and all(isinstance(c, str) for c in r) for r in p.get("rows") or []):
+        return "flip:row"
+    return None
+
+
 def check_element(el, ctx):
     """None when one statement's element may be drawn in a Cluck reply, else the reason (a short code, logged; never shown)"""
     reg = registry()
@@ -187,8 +205,13 @@ def check_element(el, ctx):
         why = _caps(v, comp["props"].get(k), f"{name}.{k}")
         if why:
             return why
+    why = tug_flip(el)
+    if why:
+        return why
     key_ref = re.compile(reg["key_ref"])
     texts = _words(el, reg)
+    if name == "Tug":                                 # the pull size ("up 3") is a bar length, not a number the student reads: not a leak, not "not-given"
+        texts = [(k, SIZE_RE.sub(r"| \1", t)) if k == "rows" else (k, t) for k, t in texts]
     if name == "Graph":
         why = graph_emph(el["props"])
         if why:
@@ -233,6 +256,45 @@ def steps_plain(body):
     return ""
 
 
+def fix_tug_row(r):
+    """the model's usual slip (bench Nov 4): the pull size as its own cell, `V | box | same | 1 | why`; folded into `same 1`, the why kept"""
+    p = [x.strip() for x in r.split("|")]
+    if len(p) >= 4 and re.fullmatch(r"(?i)up|down|same", p[2]) and re.fullmatch(r"[1-9]", p[3]):
+        p[2:4] = [p[2] + " " + p[3]]
+        return " | ".join(p)
+    return r
+
+
+def trim_tug(el, raw):
+    """a Tug with a bad row or a net is trimmed, not dropped (bench Nov 4: 3 of 44 replies lost their Tug to one bad row / a net): the bad rows go
+    (the Tug stays when >= 2 good rows remain), the net line goes. Rewrites the element's props and raw[statementId]; returns the log codes.
+    Caps and schema errors (a 7th row, a long string) are not trimmed: those drop the statement, as before. A leak is checked after the trim, on what is left."""
+    p, sid = el.get("props") or {}, el.get("statementId")
+    rows = p.get("rows")
+    if not isinstance(rows, list) or not sid or sid not in raw:
+        return []
+    fixed = [fix_tug_row(r) if isinstance(r, str) else r for r in rows]
+    good = [r for r in fixed if isinstance(r, str) and TUG_ROW.match(r)]
+    codes = []
+    if len(good) != len(rows) or fixed != rows:
+        if len(good) == len(rows):
+            codes.append(f"{sid}:trim:Tug.size")
+    if len(good) != len(rows):
+        if len(good) < 2:
+            return []                                   # too little left: tug_flip drops it (tug:row)
+        codes.append(f"{sid}:trim:Tug.row")
+    if p.get("net"):
+        codes.append(f"{sid}:trim:Tug.net")
+    if not codes:
+        return []
+    p["rows"] = good
+    p.pop("net", None)
+    q = lambda s: json.dumps(s, ensure_ascii=False)     # noqa: E731
+    args = [q(good)] + ([q(p["of"])] if p.get("of") else ["null"] if p.get("alt") else []) + ([q(p["alt"])] if p.get("alt") else [])
+    raw[sid] = f"{sid} = Tug({', '.join(args)})"
+    return codes
+
+
 def gate(body, ctx):
     """(program text, log codes) for one closed ```openui fence body; program None = the whole fence is dropped"""
     if ctx is None:
@@ -270,6 +332,8 @@ def gate(body, ctx):
         sid = k["statementId"]
         why = errs.get(sid)
         for el in _elements(k, []):
+            if el.get("typeName") == "Tug" and not errs.get(el.get("statementId")):
+                log += trim_tug(el, raw)
             why = why or errs.get(el.get("statementId")) or check_element(el, ctx)
         why = why or bare_steps(k)
         if why:
