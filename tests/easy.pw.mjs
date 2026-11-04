@@ -95,7 +95,11 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
+/* a card with no ladder starts at row 1 and grows with wrong tries (fcard-reveal.pw); these steps look at the whole card, so open it fully (the ladder items LD* keep their own start) */
+const opened = async (page, code) => {
+  await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
+  if (!/^CALC1_LD/.test(code)) await page.evaluate(() => { while (window.stemLadder?.step()); });
+};
 async function typeCode(page, code) {
   await showCode(page);
   await page.fill("#code", code); await page.press("#code", "Enter");

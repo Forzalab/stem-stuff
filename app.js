@@ -864,17 +864,17 @@ const FC_ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3
    in order: the mid pieces (each pops inside its row), then the chain arrows. window.stemLadder.step() shows the next one (Jev's hit, lane 4) */
 const ladderSteps = p => {
   const ld = p.ladder, ids = (p.formulas || []).map(f => f.id);
-  if (!ld) return [];
+  if (!ld) return [...ids.slice(1).map((id, i) => ({ k: "row", id })), ...ids.slice(1).map((to, i) => ({ k: "arrow", from: ids[i], to }))];   // no ladder (every Exam 3 item): synthesized, row 1 only at first, then the rows, then the arrows, one per step
   return [...(ld.mid || []).filter(m => ids.includes(m.of)).map((m, i) => ({ k: "mid", i, ...m })),
     ...(ld.arrows || []).filter(a => ids.indexOf(a.to) > 0 && ids[ids.indexOf(a.to) - 1] === a.from).map(a => ({ k: "arrow", ...a }))];
 };
 function ladderStep() {
   const sec = $("#fcard"), steps = S && sec ? ladderSteps(S.prob) : [];
   if (!steps.length || (S.lad ||= 0) >= steps.length) return false;
-  const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : `.to[data-to="${st.to}"]`);
+  const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : st.k === "row" ? `.f[data-row="${st.id}"]` : `.to[data-to="${st.to}"]`);
   sec.querySelectorAll(".f.mid.cur").forEach(m => midOpen(m, false));                 // the last piece's notes fold to its "why?"
   if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); }
-  const sr = $("#sr"); if (sr) sr.textContent = st.k === "mid" ? `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.` : "A link was added between key formulas.";
+  const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to the key formulas." : st.k === "mid" ? `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.` : "A link was added between key formulas.";
   return true;
 }
 window.stemLadder = { step: ladderStep, left: () => S && $("#fcard") ? ladderSteps(S.prob).length - (S.lad || 0) : 0 };
@@ -919,9 +919,9 @@ function formulaCard() {
   sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
   sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
   sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
-    const arrow = steps.find(x => x.k === "arrow" && x.to === f.id);
+    const arrow = steps.find(x => x.k === "arrow" && x.to === f.id), rowStep = steps.find(x => x.k === "row" && x.id === f.id);
     const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
-    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}${mathCopyBtn("Copy formula")}</li>`
+    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"${rowStep ? ` data-row="${esc(f.id)}"${out(rowStep) ? "" : " hidden"}` : ""}><span class="fm">${renderMath(f.tex, false)}</span>${q}${mathCopyBtn("Copy formula")}</li>`
       + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
@@ -1859,7 +1859,7 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") wishOnWrong();
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); wishOnWrong(); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 
