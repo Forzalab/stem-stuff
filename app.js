@@ -2160,7 +2160,7 @@ function wishFigs(root) {
       continue;
     }
     let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
-    if (!b || b.type !== "graph") { ph.remove(); continue; }
+    if (!b || b.type !== "graph") { figGone.add(k); figDrop(ph); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
     try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); figDrop(ph); continue; }
     if (!done) figEl[k] = ph;
