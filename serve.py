@@ -2677,10 +2677,10 @@ def v4_result(p, pick, solved=False, locked=False):
 def v4_user(p, pick, text, reveal, xyz="", solved=False, full=True, locked=False):
     """one user turn as two blocks: [explain_prompt(p, pick) + the RESULT line (v4_result)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY].
     full=False (C2: a chat follow-up on the same pick, the bench's layout): the question block is not sent again; block A is only "RESULT: correct"
-    on a right pick, else "" (and block B then starts with no blank line)"""
+    on a right pick, RESULT_LOCKED on a locked item, else "" (and block B then starts with no blank line)"""
     dyn, r = v4_dynamic(xyz, reveal, text), v4_result(p, pick, solved, locked)
     if not full:
-        return [RESULT_OK, dyn] if r == RESULT_OK else ["", dyn.lstrip("\n")]
+        return [r, dyn] if r in (RESULT_OK, RESULT_LOCKED) else ["", dyn.lstrip("\n")]   # a locked box says so on every turn, follow-ups too
     return [explain_prompt(p, pick) + ("\n\n" + r if r else ""), dyn]
 
 
@@ -2737,8 +2737,8 @@ def row_solved(r):
 
 
 def row_locked(r):
-    """a stored Cluck turn row sent on a locked item (tries used up, not solved): reveal 3"""
-    return bool(r) and r[1] == 3
+    """a stored Cluck turn row sent on a locked item (tries used up, not solved): its 5th field (older rows have none)"""
+    return bool(r) and len(r) > 4 and bool(r[4])
 
 
 def cluck_begin(p, sid, pick):
@@ -2754,7 +2754,7 @@ def cluck_begin(p, sid, pick):
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
         reveal = out or solved or n >= 3
-        rows.append([n, 2 if solved else 3 if out else int(reveal), "", pick])
+        rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))   # [4] = True only on a locked item (tries used up, not solved): the reply must not invite a retry
         del rows[:-CLUCK_KEEP]
         _save_tries()
     return n, reveal

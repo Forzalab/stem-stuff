@@ -118,7 +118,7 @@ for (const [tag, vp] of VPS) {
     await page.click(".ck-peek");                                       // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
-    await page.click(".vdrawer .wchip");                                // the way in is the tray's Ask Cluck (GENMISS, Tony Nov 3: no "okay, but how?" peek)
+    await reopen(page); await page.click(".vdrawer .wchip");                                // the way in is the tray's Ask Cluck (GENMISS, Tony Nov 3: no "okay, but how?" peek)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the hint card CTA opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});                  // a tap skips the typing
@@ -275,7 +275,7 @@ for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the d
   bad.push(...(await clash(page, "body")).map(s => "miss, duck up: " + s));
   await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}-v2.png`) });
   await page.click(".ck-peek");                                         // B3 PR-B1: the duck only dismisses; Cluck opens from the hint card's CTA
-  await page.click(".vdrawer .wchip");
+  await reopen(page); await page.click(".vdrawer .wchip");
   await page.clock.runFor(600);
   await page.click("#cluck .wtext").catch(() => {});
   await page.clock.runFor(2000);

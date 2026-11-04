@@ -614,6 +614,7 @@ class Handlers(unittest.TestCase):
         hist = [{"role": "assistant", "content": "Quack."}, {"role": "user", "content": "why?"}]
         self.go(serve.chat, history=hist)                                                    # the wish turn replays with the same line (byte for byte)
         self.assertEqual(self.bodies[-1]["messages"][0]["content"][0]["text"], a1)
+        self.assertIn("OUT of tries", json.dumps(self.bodies[-1]["messages"][-1]["content"]))   # and the follow-up turn on the locked box says it too
 
     def test_off_without_claude_key_or_deepseek_arm(self):
         with mock.patch.dict(os.environ, {"CLUCK_ARM": "split"}):
