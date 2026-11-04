@@ -77,6 +77,8 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close
     for (const id of await page.$$eval(".opt[data-id]", os => os.map(o => o.dataset.id).filter(d => d !== "a" && d !== "b"))) {
       if (await page.evaluate(() => window.__drill.state.finished)) break;
       const k = await page.evaluate(() => window.__drill.state.tries.length);
+      if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) await page.click(".vdrawer:not([hidden]) .vd-x");   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
+      if (await page.locator("#toast.on").count()) await page.click("#toast.on");                                         // the one-time tray tip
       await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
       await page.waitForFunction(k => window.__drill.state.tries.length > k, k, { timeout: 5000 });
     }

@@ -94,15 +94,19 @@
     d.classList.remove("vd-shut"); d.classList.toggle("vd-still", !!still || fxPlaying());
     d.hidden = false;
   }
+  /* only the host that owns the OPEN drawer is lifted above it (.vd-host, z 3); every other verdict host (.strip) stays under it, so the tray may lie over the rows
+     below (Tony, Nov 3 19:31) and no stale host paints over it. It drops when the drawer is gone: nothing stays lifted after the tray shuts. */
+  function unlift() { D.querySelectorAll("#q .vd-host").forEach(function (e) { e.classList.remove("vd-host"); }); }
   function hide(d, instant) {
     clearTimeout(shutT);
     if (d.hidden) return;
-    if (instant || getComputedStyle(d).animationName === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) { d.hidden = true; d.classList.remove("vd-shut"); return; }
+    if (instant || getComputedStyle(d).animationName === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) { d.hidden = true; d.classList.remove("vd-shut"); unlift(); return; }
     d.classList.add("vd-shut");
-    shutT = setTimeout(function () { d.hidden = true; d.classList.remove("vd-shut"); }, 260);   // 240ms + a frame; animationend would not fire on a hidden tab
+    shutT = setTimeout(function () { d.hidden = true; d.classList.remove("vd-shut"); unlift(); }, 260);   // 240ms + a frame; animationend would not fire on a hidden tab
   }
   function clean() {                                          // strip every mark the strip put on the question
     D.querySelectorAll("#q .strip").forEach(function (e) { e.classList.remove("strip"); });
+    unlift();
     D.querySelectorAll("#q .vkb").forEach(function (e) { e.remove(); });
     D.querySelectorAll("#q .ff .vk").forEach(function (e) { icon({ ic: e, kind: "ff" }, false, false); });
   }
@@ -175,6 +179,10 @@
     if (chip.hidden !== hid) chip.hidden = hid;
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
+    if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
+      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (e !== h.el && e !== h.at) e.classList.remove("vd-host"); });
+      [h.el, h.at].forEach(function (e) { if (!e.classList.contains("vd-host")) e.classList.add("vd-host"); });
+    }
     drawer.dataset.st = h.v;
     if (st.key !== h.key) {                                   // a new verdict: the drawer opens. Live it slides out; a closed question restored at first sight opens at rest
       if (st.key !== null) st.still = false;

@@ -240,11 +240,13 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
     if (e.matches(".ck-say") || x < 0 || x >= W || y < 0 || y >= H) continue;   // the line is not a target (pointer-events: none)
     const h = document.elementFromPoint(x, y);
     if (scrollY > 0 && h && stuck(h) && !stuck(e)) continue;                                  // a row SCROLLED under a sticky bar (the HUD): scrolling, not a layout clash (same rule as the pair check below). At scrollY 0 it is still a clash. 1px of page height flips this at 393x659 (Ink, one line weight: state rows no longer shrink 1px)
+    if (h && e.matches(".opt") && h.closest(".vdrawer")) continue;           // Tony, Nov 3 19:31: the tray MAY lie over the rows below the pick (tray-matrix.pw.mjs holds the rest: never under a sibling, never on the answer row or Next)
     if (!h || !(h === e || e.contains(h))) out.push(`${nm(e)} covered at its centre by ${h ? nm(h) : "nothing"}`);
   }
   for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
     const a = els[i], b = els[j]; if (a.contains(b) || b.contains(a)) continue;
     if (a.closest(".ch") && a.closest(".ch") === b.closest(".ch")) continue;   // the mc pill: its Check / Next sits inside its own row by design (next-cue)
+    if ((a.matches(".opt") && b.closest(".vdrawer")) || (b.matches(".opt") && a.closest(".vdrawer"))) continue;   // the tray over a remaining answer row (Tony, Nov 3 19:31)
     if (stuck(a) !== stuck(b)) continue;                                       // a scrolled page under a sticky bar: scrolling, not a layout clash
     const p = a.getBoundingClientRect(), q = b.getBoundingClientRect();
     const w = Math.min(p.right, q.right) - Math.max(p.left, q.left), h = Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top);

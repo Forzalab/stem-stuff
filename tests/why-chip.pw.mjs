@@ -57,6 +57,7 @@ async function open(code) {
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
 async function mc(page, id) {
   const n = await tries(page);
+  if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) await page.click(".vdrawer:not([hidden]) .vd-x");   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
   await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
 }
