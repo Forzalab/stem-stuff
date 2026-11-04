@@ -8,6 +8,7 @@
 
 /* the bar: above its drawer, with the soft verdict wash (--wrong-fill / --correct-fill, STYLE §2.1) while the drawer is on */
 .ff.strip { z-index: 3; }
+.ff.strip:has(+ .vdrawer[hidden]) { z-index: auto; }   /* drawer shut: the bar needs no lift, so the revealed answer's copy under it keeps its 44px area (it sat on a pips row's room until v49 dropped the dots) */
 .ch.strip, .chk.strip, .choices.strip { position: relative; z-index: 3; }   /* B2: a single mc's picked row, pick-all's Check row, an inline pill group: the host of an open drawer lifts (bar > drawer 2 > later content, even a later row's Next at z 1) */
 .ff.strip.bad { background: var(--wrong-fill); }
 .ff.strip.ok { background: var(--correct-fill); }
