@@ -362,10 +362,10 @@ try {
 
   await step("easy: an item with a narration still streams /explain (the narration is never the box text); a lone caret, then typed; reopening goes on where it was; no voice", async () => {
     const said = () => page.evaluate(() => window.__said);
-    await page.waitForSelector("#cluck .wtext .wcaret", { timeout: 6000 });   // BIG PLAN V1 (Tony Nov 2): desktop sugar has Cluck open from load, so the miss streams straight into the box (no peek, no CTA, no close)
+    await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) .wtext"), null, { timeout: 6000 });   // BIG PLAN V1 (Tony Nov 2): desktop sugar has Cluck open from load, so the miss streams straight into the box (no peek, no CTA, no close)
     assert.equal(asked, 1, "the first wrong answer asks /explain, narration or not");
     await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) #clTabEP:not([hidden])"), null, { timeout: 6000 });
-    assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone: " + await page.innerHTML("#cluck .wtext"));
+    assert.ok(!(await page.$("#cluck .wtext .wcaret")) && !(await page.$("#cluck .wtext .wl")), "nothing comes first: no caret, no status (Tony, Nov 4): " + await page.innerHTML("#cluck .wtext"));
     release();
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 3000 });
     const first = (await page.textContent("#cluck .wtext")).trim();

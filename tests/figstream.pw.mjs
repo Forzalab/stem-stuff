@@ -90,7 +90,7 @@ try {
       await ctx.addInitScript(init);
       const page = await ctx.newPage(); const errs = []; page.on("pageerror", e => errs.push(e.message));
       await wish(page);
-      await page.waitForFunction(() => !!document.querySelector("#cluck .wtext .wtag"), null, { timeout: 8000 });   // before the first token: a thinking status, not a bare caret
+      assert.equal(await page.locator("#cluck .wtext .wtag, #cluck .wtext .wload, #cluck .wtext .wcaret").count(), 0, "before the first token: nothing (no status slug, no caret; Tony, Nov 4)");
       await page.waitForFunction(() => /heat, height/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 10000 });
       await page.waitForFunction(() => /stored energy/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 10000 });
       // the model is done with the prose; the re-ask (REASK_MS) is still pending: the words are on the page, no figure box, no gap
@@ -98,10 +98,10 @@ try {
       assert.ok(await page.evaluate(() => window.__texts.length) >= 3, "the prose arrived in >= 3 updates");
       assert.doesNotMatch(await page.evaluate(() => document.querySelector("#cluck .wtext").textContent), /Sorry|```|\{"type"/);
       assert.deepEqual(await junk(page), { boxes: 0, empty: 0, ctl: false, gaps: 1 }, "while the figure is pending");
-      assert.equal(await page.locator("#cluck .wtext .wdraw").count(), 1, "a drawing status stands at the anchor while the figure is pending");
+      assert.equal(await page.locator("#cluck .wtext .wdraw").count(), 0, "no drawing status at the anchor while the figure is pending (Tony, Nov 4)");
       await final(page);
       const j = await junk(page);
-      assert.equal(await page.locator("#cluck .wtext .wdraw").count(), 0, "the drawing status goes when it resolves");
+      assert.equal(await page.locator("#cluck .wtext .wdraw").count(), 0, "still no drawing status when it resolves");
       assert.equal(j.ctl, false); assert.equal(j.empty, 0, "no empty block"); if (mode !== "good") assert.equal(j.gaps, 1, "no spacer the dropped figure left behind (the reply has one blank line)");
       if (mode === "good") {
         assert.equal(j.boxes, 1);

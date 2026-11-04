@@ -1142,13 +1142,8 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext .wstitle { font-weight: var(--w-em); color: var(--ai-text); }
 .wtext .wssub { font-size: var(--t-xs); color: var(--help-muted); }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--help-rule); }
-.wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
+.wcaret { display: inline-block; width: .5em; height: 1.2em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }
-.wload { margin-inline-end: var(--s1); color: var(--muted); animation: wload-in var(--d-move) ease-out; }   /* Cluck's wait line (app.js WISH_LINES): fades in per swap */
-.wdraw { color: var(--muted); font-size: var(--t-sm); animation: wload-in var(--d-move) ease-out; }   /* a figure is being drawn (app.js slotsResolve): one line at its anchor until it lands or goes */
-@media (prefers-reduced-motion: reduce) { .wdraw { animation: none; } }
-@keyframes wload-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .wload { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask, .cl .ask::before { animation: none !important; } }
 
 /* ---------- scratchpad + copy ---------- */

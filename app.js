@@ -2072,14 +2072,14 @@ function leadOut(a) {                                                    // text
   const x = a.replace(/\n+$/, ""), i = x.lastIndexOf("\n");
   return LEADIN.test(x.slice(i + 1)) ? x.slice(0, i + 1) : a.replace(/\n+$/, "\n");
 }
-function slotsResolve(t, status) {   // status: while the fill is pending the anchor shows a "Drawing…" line (wishHTML only; history and speech get none)
+function slotsResolve(t) {
   if (!/[\u0005-\u0007]/.test(t)) return t;
   const m = SLOT_FILL.exec(t), fill = m ? m[1] : "";
   t = m ? t.slice(0, m.index) + t.slice(m.index + m[0].length) : t.replace(/\u0006[\s\S]*$/, "");
   const i = t.indexOf("\u0005");
   if (i >= 0) {
     const a = t.slice(0, i), b = t.slice(i + 1);
-    t = fill ? a + fill + b : status && !m ? a.replace(/\n*$/, "\n") + "\u0001DRAW\n" + b.replace(/^\n+/, "") : leadOut(a) + b.replace(/^\n+/, "");   // nothing drawn: the lead-in goes too
+    t = fill ? a + fill + b : leadOut(a) + b.replace(/^\n+/, "");   // pending or nothing drawn: the lead-in goes too (no status line stands in: Tony, Nov 4)
   }
   return t.replace(/[\u0005-\u0007]/g, "");
 }
@@ -2167,7 +2167,7 @@ function wishFigs(root) {
   }
 }                                // "1. Find the momentum before — only one cart moves"
 function wishHTML(t, ended) {
-  t = slotsResolve(t, !ended);
+  t = slotsResolve(t);
   let out = "", step = null, eqs = [], li = [];
   const put = h => { if (step === null) out += h; else step += h; };
   const flush = () => {
@@ -2182,7 +2182,6 @@ function wishHTML(t, ended) {
   const lines = t.replace(/\s+$/, "").split("\n");                       // a trailing newline (text cut mid-stream after a line) is not a blank line: no gap at the end
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i], fg = /^\u0001FIG(\d+)$/.exec(l);
-    if (l === "\u0001DRAW") { flush(); put('<div class="wl wdraw" aria-hidden="true">Drawing…</div>'); continue; }
     if (fg) { flush(); put(`<div class="fig wfig" data-f="${fg[1]}"></div>`); continue; }
     const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
     if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
@@ -2217,11 +2216,14 @@ function wishHTML(t, ended) {
    no typing (the wait stays). */
 const WISH_DOTS = 900, WISH_CPS = 35;
 const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
-/* the wait (Tony, Oct 18): a wish now waits for a draft AND its rewrite (serve.py EDITOR), so until the first chunk Cluck says what he's up
-   to, one line every WISH_SWAP ms from a random start, the caret after it; each line fades in (reduced motion: swaps, no fade). The lines are
-   aria-hidden: the screen reader hears "Cluck is thinking." once. */
-const WISH_LINES = ["Whipping up a duck omelette…", "Splashing in the pond…", "Fluffing feathers…", "Counting breadcrumbs…", "Quacking the numbers…", "Shining up the lamp…"];
-const WISH_SWAP = 1600;
+/* the caret follows the words (Tony, Nov 4): it sits inline at the end of the last line that has text, never on a line of its own; no text yet = no caret */
+function wishBody(el, html, caret) {
+  el.innerHTML = html;
+  if (!caret) return;
+  const hosts = [...el.querySelectorAll(".wl:not(.wgap):not(.wlist), li")].filter(e => !e.closest(".wfig, .wtbl") && e.textContent.trim());
+  hosts.at(-1)?.insertAdjacentHTML("beforeend", WCARET);
+}
+/* the wait: nothing on the page until the first word (Tony, Nov 4: no "Thinking…", no wait lines, no lone caret); the screen reader hears "Cluck is thinking." once */
 function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
@@ -2242,7 +2244,7 @@ function wishType(el, s) {
       s.pos = reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
       s.shown = Math.max(s.shown, wishCut(s.text, s.pos, s.done));
       const end = s.done && s.shown >= s.text.length;
-      if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown), end) + (end ? "" : WCARET); wishFigs(el); drawn = s.shown; }
+      if (drawn !== s.shown || end) { wishBody(el, wishHTML(s.text.slice(0, s.shown), end), !end); wishFigs(el); drawn = s.shown; }
       end ? res() : requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
@@ -2270,12 +2272,10 @@ function wishFrame(now) {
     x.classList.remove("wrun"); return;
   }
   if (now < w.at || !t) {
-    w.l0 ??= Math.random() * WISH_LINES.length | 0; w.w0 ??= now;
-    const k = t || w.stg?.seen ? -1 : (w.l0 + ((now - w.w0) / WISH_SWAP | 0)) % WISH_LINES.length;   // first chunk in: the line goes, the caret stays
-    if (w.drawn !== -1 || w.line !== k) {
-      x.innerHTML = k < 0 ? `<span class="wload wtag" aria-hidden="true">Thinking…</span>${WCARET}` : `<span class="wload" aria-hidden="true">${WISH_LINES[k]}</span>${WCARET}`;
-      if (k >= 0 && !w.thought) { w.thought = true; say("Cluck is thinking."); }
-      w.drawn = -1; w.line = k;
+    if (w.drawn !== -1) {                                                 // before the first word: nothing on the page (no caret, no status line)
+      x.innerHTML = "";
+      if (!w.thought) { w.thought = true; say("Cluck is thinking."); }
+      w.drawn = -1;
     }
     w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
@@ -2288,8 +2288,8 @@ function wishFrame(now) {
       const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
       if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
-    x.innerHTML = wishHTML(t.slice(0, w.shown), end) + (!end ? WCARET : w.failed && w.lost ? `<div class="wl wlost">Cluck lost signal. <button type="button" class="wretry">Tap to retry.</button>${incHTML(w.inc)}</div>`
-      : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : "");   // the stream broke mid-reply: what came, then the clean line (+ its code)
+    wishBody(x, wishHTML(t.slice(0, w.shown), end) + (!end ? "" : w.failed && w.lost ? `<div class="wl wlost">Cluck lost signal. <button type="button" class="wretry">Tap to retry.</button>${incHTML(w.inc)}</div>`
+      : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : ""), !end);   // the stream broke mid-reply: what came, then the clean line (+ its code)
     x.querySelector(".wlost .wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
     wishFigs(x);
     w.drawn = w.shown; w.ended = end;
@@ -2730,7 +2730,7 @@ async function clCompare(w) {
   const t = S.tries.at(-1) || {}, key = ckKey(w.code, t), th = cl.el.querySelector(".cl-thread");
   const bd = cl.el.querySelector(".cl-bd"), top = el => { bd.scrollTop += el.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8; };   // the message's top at the body's top
   if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.el); return; }
-  const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply">${WCARET}</div>`;
+  const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
   const re = box.lastChild;
   w.cmp = { key, el: box };
   th.append(box); top(box);
@@ -2764,7 +2764,7 @@ async function clSend(msg) {
   if (!w || w.busy || !wishTyped(w)) return;
   const th = cl.el.querySelector(".cl-thread");
   const me = document.createElement("div"); me.className = "msg me"; me.innerHTML = clWho(true) + '<p class="md"></p>'; me.lastChild.textContent = msg;
-  const box = document.createElement("div"); box.className = "msg"; box.innerHTML = clWho(false) + `<div class="wtext wreply">${WCARET}</div>`;
+  const box = document.createElement("div"); box.className = "msg"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
   const re = box.lastChild;
   th.append(me, box);
   w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
