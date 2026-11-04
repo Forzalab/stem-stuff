@@ -256,6 +256,15 @@ def steps_plain(body):
     return ""
 
 
+def fix_tug_row(r):
+    """the model's usual slip (bench Nov 4): the pull size as its own cell, `V | box | same | 1 | why`; folded into `same 1`, the why kept"""
+    p = [x.strip() for x in r.split("|")]
+    if len(p) >= 4 and re.fullmatch(r"(?i)up|down|same", p[2]) and re.fullmatch(r"[1-9]", p[3]):
+        p[2:4] = [p[2] + " " + p[3]]
+        return " | ".join(p)
+    return r
+
+
 def trim_tug(el, raw):
     """a Tug with a bad row or a net is trimmed, not dropped (bench Nov 4: 3 of 44 replies lost their Tug to one bad row / a net): the bad rows go
     (the Tug stays when >= 2 good rows remain), the net line goes. Rewrites the element's props and raw[statementId]; returns the log codes.
@@ -264,8 +273,12 @@ def trim_tug(el, raw):
     rows = p.get("rows")
     if not isinstance(rows, list) or not sid or sid not in raw:
         return []
-    good = [r for r in rows if isinstance(r, str) and TUG_ROW.match(r)]
+    fixed = [fix_tug_row(r) if isinstance(r, str) else r for r in rows]
+    good = [r for r in fixed if isinstance(r, str) and TUG_ROW.match(r)]
     codes = []
+    if len(good) != len(rows) or fixed != rows:
+        if len(good) == len(rows):
+            codes.append(f"{sid}:trim:Tug.size")
     if len(good) != len(rows):
         if len(good) < 2:
             return []                                   # too little left: tug_flip drops it (tug:row)

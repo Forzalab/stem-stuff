@@ -97,6 +97,14 @@ class TugFlip(unittest.TestCase):
         self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | box squeezed | up 3", "T | gas cooled | down 2"], "P", "two pulls")')
         self.assertEqual(self.one('t = Tug(["V | a | up 3", "T | b | sideways"])')[1][0], "t:tug:row", "one good row left: dropped as before")
 
+    def test_a_size_in_its_own_cell_is_folded_in(self):
+        # bench Nov 4 (SGU): `V | box doubles | same | 1 | why` (5 cells) killed the Tug; the size cell is folded into the direction, the why kept
+        t = 't = Tug(["V | box doubles | same | 1 | No pull on speed.", "T | gas cooled | down 4 | Colder, so slower."], "KE", "alt")'
+        prog, log = self.one(t)
+        self.assertEqual(log, ["t:trim:Tug.size"])
+        self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | box doubles | same 1 | No pull on speed.", "T | gas cooled | down 4 | Colder, so slower."], "KE", "alt")')
+        self.assertEqual(self.one('t = Tug(["V", "T"])')[1][0], "t:tug:row", "bare labels: dropped")
+
     def test_a_net_is_trimmed_never_drawn(self):
         # bench Nov 4 (USR): the model wrote the end-knot answer; a Cluck reply is never post, so only the net line goes
         prog, log = self.one('t = Tug(["V | m | up", "T | n | down"], "P", "alt", "up 3/2")')
