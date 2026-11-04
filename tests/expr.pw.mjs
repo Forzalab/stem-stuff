@@ -55,6 +55,7 @@ for (const p of [PORT, OFFP]) for (let i = 0; i < 80; i++) { try { if ((await fe
 
 let fails = 0;
 async function step(name, fn) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
   try { await fn(); console.log("ok  ", name); }
   catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
@@ -147,6 +148,34 @@ try {
     await page.waitForFunction(() => !document.querySelector("#ansGo").hidden || document.querySelector("#ff.bad"));
     const r2 = await send(page, "2"); assert.equal(r2.verdict, "wrong"); assert.equal(r2.triesLeft, 0); assert.equal("diag" in r2, false);
     assert.equal(await page.$("#xline"), null);
+    await ctx.close();
+  });
+  /* v49 (Tony, Nov 3 18:14): Material floating label. Empty + no focus: the placeholder inside. Focus, or text in it: a SHORTER label sits on
+     the top border (the placeholder goes); blur while empty: back inside */
+  await step("393 answer box: the placeholder floats onto the border as a shorter label on focus / with text, back on blur when empty", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    const page = await ctx.newPage();
+    await page.goto(`http://localhost:${OFFP}/#PHYS_XG2`); await opened(page, "PHYS_XG2");
+    const read = () => page.evaluate(() => {
+      const ff = document.querySelector("#ff"), fl = ff.querySelector(".fl"), inp = document.querySelector("#ans");
+      if (!fl) return { fl: null };
+      const r = fl.getBoundingClientRect(), b = ff.getBoundingClientRect(), cs = getComputedStyle(fl);
+      return { fl: fl.textContent, ph: inp.placeholder, shown: +cs.opacity > 0.5 && cs.visibility !== "hidden", onBorder: Math.abs((r.top + r.bottom) / 2 - b.top) <= 3,
+        phColor: getComputedStyle(inp, "::placeholder").color };
+    });
+    const rest = await read();
+    assert.ok(rest.fl && rest.fl.length < rest.ph.length, "a shorter floating label: " + JSON.stringify(rest));
+    assert.equal(rest.shown, false, "the label shows at rest: " + JSON.stringify(rest));
+    await page.focus("#ans"); await page.waitForTimeout(250);
+    const foc = await read();
+    assert.ok(foc.shown && foc.onBorder, "focus: the label is not on the border " + JSON.stringify(foc));
+    assert.match(foc.phColor, /rgba\(.*, 0\)|transparent/, "focus: the placeholder still shows inside " + JSON.stringify(foc));
+    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    assert.equal((await read()).shown, false, "blur, empty: the label stays up");
+    await page.fill("#ans", "12"); await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    const kept = await read();
+    assert.ok(kept.shown && kept.onBorder, "blur with text: the label left the border " + JSON.stringify(kept));
     await ctx.close();
   });
 } finally {

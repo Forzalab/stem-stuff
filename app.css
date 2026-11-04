@@ -527,6 +527,16 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
+/* Material floating label (Tony, Nov 3 18:14): empty and idle, the placeholder sits inside; focus or text, it floats onto the top border as the
+   short "Answer" (the long "Ex: ..." placeholder goes), and comes back on blur when empty. CSS only: the label is the input's next sibling.
+   Its fill covers the border line only (transparent above it), so it needs no knowledge of the card's colour */
+.ff > .fl { position: absolute; left: calc(var(--s3) - 4px); top: 50%; padding: 0 4px; transform: translateY(-50%); pointer-events: none;
+  font-size: var(--t-md); line-height: 1.2; color: var(--hint); opacity: 0; white-space: nowrap;
+  background: linear-gradient(transparent calc(50% - 1px), var(--field) calc(50% - 1px));
+  transition: top var(--d-fast, 150ms) ease-out, font-size var(--d-fast, 150ms) ease-out, opacity var(--d-fast, 150ms) ease-out; }
+.ff input:is(:focus, :not(:placeholder-shown)) ~ .fl { top: 0; font-size: var(--t-xs); opacity: 1; color: var(--muted); }
+.ff input:focus ~ .fl { color: var(--focus); }
+.ff input:focus::placeholder { color: transparent; }
 .ff.ok { border-color: var(--correct); }   /* V1: a 1px --correct edge, no fill */
 .ff.done input { color: var(--correct); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
