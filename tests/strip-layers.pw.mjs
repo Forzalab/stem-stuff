@@ -263,12 +263,13 @@ await step("duck: a tap on the sunrise duck only dismisses it (Cluck stays close
   await pg.ctx.close();
 });
 
-/* Cluck's reply already streaming (the auto ask went out): the hint card carries it with its own CTA, so there is no chip to host and no drawer */
-await step("Cluck's reply already streaming: the hint card carries it, no drawer, no page error", async () => {
+/* Cluck's reply already streaming (the auto ask went out): GENMISS (Tony, Nov 3, "a tray with the cluck button ONLY"): the tray carries Ask Cluck, no hint-card peek / "okay, but how?" */
+await step("Cluck's reply already streaming: the tray's Ask Cluck is the only Cluck entry (no peek), no page error", async () => {
   const pg = await pageFor(browser, 390, 844, { stream: true });
   await goTo(pg, "STP_NUM"); await submit(pg, "2");
   await pg.waitForFunction(() => window.__drill.state.tries.length >= 1); await pg.waitForTimeout(SETTLE + 600);
-  assert.equal(await pg.evaluate(() => !!document.querySelector("#q .vdrawer:not([hidden])")), false);
+  const g = await pg.evaluate(() => ({ tray: !!document.querySelector("#q .vdrawer:not([hidden]) .wchip"), peek: !!document.querySelector(".cl-peek, .cl-cta") }));
+  assert.deepEqual(g, { tray: true, peek: false });
   assert.deepEqual(pg.errs, []); await pg.ctx.close();
 });
 

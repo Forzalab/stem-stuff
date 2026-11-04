@@ -194,8 +194,8 @@ async function cluckOpen(page, w) {
   assert.equal(await answerKey(page, C.single, false), "wrong");
   await page.waitForFunction(() => !!document.querySelector(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, #cluck:not([hidden])"), null, { timeout: 6000 });
   if (w === 393) {
-    await page.waitForFunction(() => /okay, but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 6000 });   // Lane 2: Q3 = C peek + the E1 CTA
-    await page.click(".cl-peek .cl-cta");
+    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector(".vdrawer:not([hidden]) .wchip")?.textContent || ""), null, { timeout: 6000 });   // GENMISS (Tony Nov 3): the tray's Ask Cluck is the way in (no "okay, but how?" peek)
+    await page.click(".vdrawer .wchip");
   } else {                                                          // desktop sugar: the box is open from load (BIG PLAN V1, Tony Nov 2); nothing to click
     assert.ok(await vis(page, "#cluck"), "desktop: Cluck's box is already open");
   }
@@ -284,8 +284,8 @@ flow(21, "cluck-sheet", async (page, w) => {
   /* Esc closes (focus goes back to the chip), the chip reopens, the X closes */
   await page.keyboard.press("Escape"); await closed().catch(() => { throw new Error("Escape did not close the sheet"); });
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-open")), false, "html.cl-open cleared on close");
-  await page.waitForFunction(() => /okay, but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 3000 });
-  await page.click(".cl-peek .cl-cta"); await opened_();
+  await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector(".vdrawer:not([hidden]) .wchip")?.textContent || ""), null, { timeout: 3000 });   // GENMISS: the tray's chip, not the old peek CTA
+  await page.click(".vdrawer .wchip"); await opened_();
   await page.click("#cluck .wtext").catch(() => {});
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 8000 });
   await page.click("#cluck .cl-bar .cl-x"); await closed();         // B5: the bar's X on desktop too (no corner X)

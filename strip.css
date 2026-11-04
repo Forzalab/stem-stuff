@@ -81,5 +81,5 @@
 .vdrawer > .vd-next.go { background: var(--action); color: var(--action-ink); border-color: var(--action); }
 .vdrawer > .vd-next.go:hover { background: var(--action-on); border-color: var(--action-on); }
 .vdrawer > .vd-next:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-/* desktop (side by side): the tray overlays nothing. A single mc's picked row (while it has a verdict, open or closed, so closing moves nothing) keeps room under it for the tray (60px high, tucked 8 under the row), so the next answer row stays clickable (Tony, Exam 3). Phones keep the overlay: their rows are the tray's cover by design */
-html.side .ch.strip { margin-bottom: calc(var(--btn) + var(--s3)); }
+/* desktop (side by side): the tray overlays nothing. A single mc's picked row (while it has a verdict, open or closed, so closing moves nothing) keeps room under it for the tray (60px high, tucked 8 under the row), so the next answer row stays clickable (Tony, Exam 3). GENMISS (Tony, Nov 3): phones now get the tray after every miss too (no "okay, but how?" peek), so the same room applies there */
+.ch.strip { margin-bottom: calc(var(--btn) + var(--s3)); }
