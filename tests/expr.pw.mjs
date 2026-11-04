@@ -166,6 +166,7 @@ try {
     });
     const rest = await read();
     assert.ok(rest.fl && rest.fl.length < rest.ph.length, "a shorter floating label: " + JSON.stringify(rest));
+    assert.equal(rest.fl, "Your answer", "the border label text (Tony, Nov 3 19:21)");
     assert.equal(rest.shown, false, "the label shows at rest: " + JSON.stringify(rest));
     await page.focus("#ans"); await page.waitForTimeout(250);
     const foc = await read();

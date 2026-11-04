@@ -1,0 +1,302 @@
+diff --git a/strip.css b/strip.css
+index ead79cd..9af6f32 100644
+--- a/strip.css
++++ b/strip.css
+@@ -7,8 +7,9 @@
+    Until PR-C moves them into the finger bar, Check and the labelled Next stay where they are (the Check slot); the drawer carries Cluck only. */
+ 
+ /* the bar: above its drawer, with the soft verdict wash (--wrong-fill / --correct-fill, STYLE §2.1) while the drawer is on */
+-.ff.strip { z-index: 3; }
+-.ch.strip, .chk.strip, .choices.strip { position: relative; z-index: 3; }   /* B2: a single mc's picked row, pick-all's Check row, an inline pill group: the host of an open drawer lifts (bar > drawer 2 > later content, even a later row's Next at z 1) */
++.ff.strip { z-index: 1; }
++.ch.strip, .chk.strip, .choices.strip { position: relative; z-index: 1; }
++.vd-host { z-index: 3 !important; }   /* the host of the OPEN drawer (strip.js): bar 3 > drawer 2 > every other host and later row 1 (Tony, Nov 3 19:31: the tray may lie over them; a stale host used to paint over it) */   /* B2: a single mc's picked row, pick-all's Check row, an inline pill group: the host of an open drawer lifts (bar > drawer 2 > later content, even a later row's Next at z 1) */
+ .ff.strip.bad { background: var(--wrong-fill); }
+ .ff.strip.ok { background: var(--correct-fill); }
+ /* the verdict icon is the way back to the drawer (STYLE §3: "the verdict icon reopens it") */
+@@ -81,5 +82,4 @@
+ .vdrawer > .vd-next.go { background: var(--action); color: var(--action-ink); border-color: var(--action); }
+ .vdrawer > .vd-next.go:hover { background: var(--action-on); border-color: var(--action-on); }
+ .vdrawer > .vd-next:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+-/* desktop (side by side): the tray overlays nothing. A single mc's picked row (while it has a verdict, open or closed, so closing moves nothing) keeps room under it for the tray (60px high, tucked 8 under the row), so the next answer row stays clickable (Tony, Exam 3). GENMISS (Tony, Nov 3): phones now get the tray after every miss too (no "okay, but how?" peek), so the same room applies there */
+-.ch.strip { margin-bottom: calc(var(--btn) + var(--s3)); }
++/* the tray MAY overlay the rows below it (Tony, Nov 3 19:31: "the tray ARE ALLOWED to overlay elements"): no room is kept under the picked row, so opening it and dismissing it reflow nothing (it sits above them, z-index above the rows) */
+diff --git a/strip.js b/strip.js
+index 4f02eaa..12ae46e 100644
+--- a/strip.js
++++ b/strip.js
+@@ -94,15 +94,19 @@
+     d.classList.remove("vd-shut"); d.classList.toggle("vd-still", !!still || fxPlaying());
+     d.hidden = false;
+   }
++  /* only the host that owns the OPEN drawer is lifted above it (.vd-host, z 3); every other verdict host (.strip) stays under it, so the tray may lie over the rows
++     below (Tony, Nov 3 19:31) and no stale host paints over it. It drops when the drawer is gone: nothing stays lifted after the tray shuts. */
++  function unlift() { D.querySelectorAll("#q .vd-host").forEach(function (e) { e.classList.remove("vd-host"); }); }
+   function hide(d, instant) {
+     clearTimeout(shutT);
+     if (d.hidden) return;
+-    if (instant || getComputedStyle(d).animationName === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) { d.hidden = true; d.classList.remove("vd-shut"); return; }
++    if (instant || getComputedStyle(d).animationName === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) { d.hidden = true; d.classList.remove("vd-shut"); unlift(); return; }
+     d.classList.add("vd-shut");
+-    shutT = setTimeout(function () { d.hidden = true; d.classList.remove("vd-shut"); }, 260);   // 240ms + a frame; animationend would not fire on a hidden tab
++    shutT = setTimeout(function () { d.hidden = true; d.classList.remove("vd-shut"); unlift(); }, 260);   // 240ms + a frame; animationend would not fire on a hidden tab
+   }
+   function clean() {                                          // strip every mark the strip put on the question
+     D.querySelectorAll("#q .strip").forEach(function (e) { e.classList.remove("strip"); });
++    unlift();
+     D.querySelectorAll("#q .vkb").forEach(function (e) { e.remove(); });
+     D.querySelectorAll("#q .ff .vk").forEach(function (e) { icon({ ic: e, kind: "ff" }, false, false); });
+   }
+@@ -175,6 +179,10 @@
+     if (chip.hidden !== hid) chip.hidden = hid;
+     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
+     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
++    if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
++      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (e !== h.el && e !== h.at) e.classList.remove("vd-host"); });
++      [h.el, h.at].forEach(function (e) { if (!e.classList.contains("vd-host")) e.classList.add("vd-host"); });
++    }
+     drawer.dataset.st = h.v;
+     if (st.key !== h.key) {                                   // a new verdict: the drawer opens. Live it slides out; a closed question restored at first sight opens at rest
+       if (st.key !== null) st.still = false;
+diff --git a/tests/cluck-v2.pw.mjs b/tests/cluck-v2.pw.mjs
+index 36563f6..61a353e 100644
+--- a/tests/cluck-v2.pw.mjs
++++ b/tests/cluck-v2.pw.mjs
+@@ -60,6 +60,7 @@ for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; }
+ 
+ let failures = 0;
+ async function step(name, fn) {
++  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
+   try { await fn(); console.log("ok  ", name); }
+   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
+ }
+@@ -149,21 +150,6 @@ for (const w of W.filter(w => w >= 720)) {
+     assert.ok(await page.evaluate(() => window.stemCluckOpen()), "the box is still open");
+     await page.context().close();
+   });
+-  await step(`@desk ${w}: after a wrong MC pick the tray covers no remaining answer row, and the next row is clickable with the tray open`, async () => {
+-    const page = await open(w);
+-    await wrong(page);
+-    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+-    await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) and the rows' room settle
+-    const g = await page.evaluate(() => {
+-      const d = document.querySelector(".vdrawer:not([hidden])").getBoundingClientRect();
+-      const rows = [...document.querySelectorAll("#q .opt:not([data-id=\"b\"])")].map(o => ({ id: o.dataset.id, r: o.getBoundingClientRect() }));
+-      return { d, rows: rows.map(o => [o.id, o.r.top, o.r.bottom]), cls: document.querySelector("#q .ch.strip")?.className, vd: document.documentElement.className, hits: rows.filter(o => o.r.width && o.r.bottom > d.top && o.r.top < d.bottom && o.r.right > d.left && o.r.left < d.right).map(o => o.id) };
+-    });
+-    assert.deepEqual(g.hits, [], "the tray overlaps these remaining rows " + JSON.stringify(g));
+-    await page.click('.opt[data-id="c"]', { timeout: 3000 });           // no force, no closing the tray first
+-    assert.ok(await page.evaluate(() => !!document.querySelector('.opt[data-id="c"].sel, .opt[data-id="c"][aria-checked="true"]')), "row C took the pick");
+-    await page.context().close();
+-  });
+   await step(`@desk ${w}: right after a miss, "See Cluck's steps" is on the page`, async () => {
+     const page = await open(w);
+     await wrong(page); await streamed(page);
+@@ -210,9 +196,42 @@ for (const w of W.filter(w => w < 720)) {
+     await page.context().close();
+   });
+ }
++for (const w of W) {
++/* Tony, Nov 3 19:31: "the tray ARE ALLOWED to overlay elements": it may lie over the rows below the pick, but opening it and dismissing it move nothing (no room is kept, none is left behind) */
++await step(`@${w < 720 ? "phone" : "desk"} ${w}: wrong MC pick -> tray -> dismiss: no row moves, no gap is left between the picked row and the next (Tony's D / E shot)`, async () => {
++  const page = await open(w);
++  const tops = () => page.evaluate(() => [...document.querySelectorAll("#q .opt")].map(o => [o.dataset.id, Math.round(o.getBoundingClientRect().top + scrollY)]));
++  const t0 = await tops();
++  await wrong(page);
++  await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
++  await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) settles
++  assert.deepEqual(await tops(), t0, "opening the tray moved a row");
++  await page.click(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(500);
++  assert.deepEqual(await tops(), t0, "dismissing the tray left a gap / moved a row");
++  await page.context().close();
++});
++}
++// Tony Nov 3 19:35: "when clicking on Ask Cluck the first time, it DISMISSES the box instead": the FIRST tap on the tray's chip opens Cluck (never closes the
++// tray or the box), at every width, whether or not the reply has streamed yet.
++for (const w of W) for (const early of [true, false]) {
++  await step(`@${w < 720 ? "phone" : "desk"} ${w}: the first tap on the tray's Ask Cluck opens Cluck${early ? " (before the reply streamed)" : ""}, the tray stays`, async () => {
++    const page = await open(w);
++    await wrong(page);
++    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
++    if (!early) await page.waitForTimeout(2500);   // the stub's reply has streamed by now (the closed phone sheet shows no text to wait on)
++    await page.waitForTimeout(500);
++    await page.click(".vdrawer .wchip");
++    await page.waitForTimeout(900);
++    const g = await page.evaluate(() => ({ open: !!window.stemCluckOpen(), cl: (() => { const e = document.querySelector("#cluck"); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"; })(), tray: !!document.querySelector(".vdrawer:not([hidden])") }));
++    assert.ok(g.open && g.cl, "the first tap did not open Cluck: " + JSON.stringify(g));
++    await page.context().close();
++  });
++}
+ // GENMISS (Tony Nov 3 16:13, "a generic error still show 'ok but how' when it should show a tray with the cluck button ONLY (one entry)"): on EVERY wrong try, at every width,
+ // matched (wrong[] hint) or generic (a value no wrong[] row names), the only Cluck entry is the tray's Ask Cluck chip. No peek card, no "okay, but how?" anywhere.
+-const generic = async page => { await page.click('.opt[data-id="c"]'); await page.click('.ch[data-id="c"] .send'); };
++const generic = async page => { if (await page.locator('.vdrawer:not([hidden]) .vd-x').count()) await page.click('.vdrawer:not([hidden]) .vd-x'); if (await page.locator('#toast.on').count()) await page.click('#toast.on'); await page.click('.opt[data-id="c"]');   // the one-time tray tip (a tap closes it)
++     // the tray may lie over the rows (Tony, Nov 3 19:31): dismiss it first
++   await page.click('.ch[data-id="c"] .send'); };
+ const numMiss = async page => { await toNum(page); await num(page, "7"); };
+ const mcOut = async page => { await wrong(page); await page.waitForTimeout(400); await generic(page); };
+ const numOut = async page => { await numMiss(page); await page.waitForTimeout(400); await num(page, "8"); };
+diff --git a/tests/tray-matrix.pw.mjs b/tests/tray-matrix.pw.mjs
+new file mode 100644
+index 0000000..c3cb2b5
+--- /dev/null
++++ b/tests/tray-matrix.pw.mjs
+@@ -0,0 +1,146 @@
++// TRAY OVERLAY MATRIX (Tony, Nov 3 19:31 / 19:32): the strip tray may overlay the content below it, but it must not break its neighbours. Per cell
++// (width x item type x state): (1) zero reflow of the neighbours when it opens and when it is dismissed (no room kept, none left behind);
++// (2) it is never UNDER a sibling (4 points inside it hit the tray: no stale host z, no clipping parent); (3) it never covers the current
++// answer / verdict row (only the 8px tuck under it) or the Next control; (4) it stays inside the window; (5) its Ask Cluck takes focus.
++// States: wrong + tray open, dismissed, out of tries (MC), the last question. Items: MC, freeform, multi-part field.
++// PW_BROWSER=firefox runs it in Firefox (no isMobile there). TM_W=393,1280 picks widths.   node tests/tray-matrix.pw.mjs <port>
++import { createRequire } from "node:module";
++import { createServer } from "node:http";
++import assert from "node:assert/strict";
++import { spawn } from "node:child_process";
++import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join, dirname } from "node:path";
++import { fileURLToPath } from "node:url";
++const require = createRequire(import.meta.url);
++let pw;
++try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
++
++const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
++const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8894", BASE = `http://127.0.0.1:${PORT}`;
++const W = (process.env.TM_W || "360,393,721,1280").split(",").map(Number);
++const tmp = mkdtempSync(join(tmpdir(), "tray-mx-")), banks = join(tmp, "banks"), SHOTS = process.argv[3] || tmp;
++mkdirSync(banks); mkdirSync(SHOTS, { recursive: true });
++const txt = md => [{ type: "text", md }];
++const HINT = "Which part of gravity pushes along the ramp?";   // the tail of the bank hint (the page dresses it as "quack. (kaomoji) ...")
++const PROBS = [1, 2, 3].map(n => ({ code: `CALC1_CVT${n}`, title: `V2 ${n}`, type: "mc", shuffle: false,
++  body: txt(`A 2.0 kg block starts from rest and slides 3.0 m down a frictionless ramp tilted at 30 degrees (${n}). How fast is it moving at the bottom?`), correct: "a",
++  choices: ["5.4 m/s", "2.7 m/s", "7.7 m/s", "9.8 m/s"].map((md, i) => ({ id: "abcd"[i], md })),
++  wrong: [{ choice: "b", error: "half", hint: "QUACK. " + HINT }],
++  saccharine: n === 3 ? { title: `V2 ${n}` } : { title: `V2 ${n}`, key: "Tick: a", slip: { b: "Half of it." } } }));   // CV3: no Cluck key
++PROBS.push({ code: "CALC1_CVT4", title: "V2 4", type: "num", answer: "42", body: txt("How many students are in the lab (4)?"),
++  saccharine: { title: "V2 4", key: "Tick: 42" } });   // a numeric item: the wrong values are free text
++PROBS.push({ code: "CALC1_CVT5", title: "V2 5", type: "multi", body: txt("Trace the loop for n = 5."),
++  parts: [{ label: "a", prompt: "What is i when the test fails?", type: "num", answer: "6", tol: 0.0001 }, { label: "b", prompt: "What does it return?", type: "num", answer: "10", tol: 0.0001 }],
++  saccharine: { title: "V2 5", key: "Tick: 6, 10" } });
++writeFileSync(join(banks, "BANK_CVT.json"), JSON.stringify({ v: 1, problems: PROBS }));
++const SHORT = ["Only the part of gravity along the ramp speeds it up.\n", "Tick: a. Egg-cellent."];
++const stubPicks = [];
++const stub = createServer(async (req, res) => {
++  let body = ""; for await (const c of req) body += c;
++  const jb = JSON.parse(body);
++  const picked = /STUDENT PICKED: ([^\n]*)/.exec(JSON.stringify(jb.messages || []).replace(/\\n/g, "\n"))?.[1];   // the try /explain was asked about
++  if (picked && jb.stream) stubPicks.push(picked);
++  if (!jb.stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }
++  res.writeHead(200, { "Content-Type": "text/event-stream" });
++  let i = 0;
++  const t = setInterval(() => {
++    if (i < SHORT.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: (i === 0 && picked ? `You picked ${picked}.\n` : "") + SHORT[i++] } }] })}\n\n`);
++    else { res.end("data: [DONE]\n\n"); clearInterval(t); }
++  }, 60);
++});
++await new Promise(r => stub.listen(0, "127.0.0.1", r));
++const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
++  OPENROUTER_BASE: `http://127.0.0.1:${stub.address().port}`, OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: "ignore" });
++for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
++
++let failures = 0;
++async function step(name, fn) {
++  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;
++  try { await fn(); console.log("ok  ", name); }
++  catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
++}
++const browser = await pw[process.env.PW_BROWSER || "chromium"].launch({ args: ["--no-sandbox"] });
++async function open(w, hash = "#BANK_CVT") {
++  const phone = w < 500;
++  const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone && !process.env.PW_BROWSER, isMobile: phone && !process.env.PW_BROWSER, serviceWorkers: "block" });
++  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
++  await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
++  const page = await ctx.newPage();
++  page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
++  page.chats = []; page.on("request", r => { if (/\/chat$/.test(r.url()) && r.method() === "POST") page.chats.push(JSON.parse(r.postData() || "{}")); });
++  await page.goto(BASE + "/" + hash);
++  await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 }).catch(async e => { throw new Error(e.message.split("\n")[0] + " " + JSON.stringify(await page.evaluate(() => ({ h: location.hash, b: window.stemBank && window.stemBank.code, f: document.getElementById("freeze")?.hidden, s: !!document.getElementById("splash") })))); });
++  await page.waitForTimeout(500);
++  return page;
++}
++const probe = page => page.evaluate(() => {
++  const top = e => Math.round(e.getBoundingClientRect().top + scrollY), vis = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
++  const near = [...document.querySelectorAll("#q .opt, #q .ff:not(.rbox), #q .part, #qnext, #q .nx, #q .choices")].filter(vis).map(e => [e.id || e.dataset.id || e.className.split(" ")[0], top(e)]);
++  const d = document.querySelector(".vdrawer:not([hidden])"), dr = d && d.getBoundingClientRect();
++  let hits = null, host = null, nextHit = null, focus = null;
++  if (d) {
++    const pts = [[.25, .55], [.75, .55], [.25, .85], [.75, .85]].map(([x, y]) => document.elementFromPoint(dr.left + dr.width * x, dr.top + dr.height * y));
++    hits = pts.map(e => !!e && !!e.closest(".vdrawer"));
++    const h = document.querySelector("#q .opt.wrong, #q .opt.right, #q .ff.strip.bad, #q .ff.strip.ok, #q .part.bad, #q .part.ok, #q .vd-host") ;
++    const hr = h && h.closest(".ch, .ff, .part, .choices")?.getBoundingClientRect();
++    host = hr ? { overlap: Math.max(0, Math.min(dr.bottom, hr.bottom) - Math.max(dr.top, hr.top)) * (dr.right > hr.left && dr.left < hr.right ? 1 : 0) } : null;
++    const nx = [...document.querySelectorAll("#qnext, #q .nx")].find(vis);
++    if (nx) { const r = nx.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); nextHit = !!e && (!!e.closest("#qnext, #q .nx") || !!e.closest(".vdrawer .vd-next")); }
++    const chip = d.querySelector(".wchip"); if (chip && !chip.hidden) { chip.focus({ preventScroll: true }); focus = document.activeElement === chip; }
++  }
++  return { near, drawer: dr && dr.toJSON(), hits, host, nextHit, focus, vw: innerWidth, stale: [...document.querySelectorAll("#q .vd-host")].length };
++});
++const same = (a, b, what) => assert.deepEqual(a.near, b.near, what + " moved a neighbour");
++const kinds = {
++  "MC": { go: async (p) => {}, miss: async p => { await p.click('.opt[data-id="b"]'); await p.click('.ch[data-id="b"] .send'); } },
++  "freeform": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans")); await p.waitForTimeout(400); },
++    miss: async p => { await p.fill("#ans", "7"); await p.press("#ans", "Enter"); } },
++  "multi-part": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT5"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT5" && !!document.querySelector("#q .part .ans")); await p.waitForTimeout(400); },
++    miss: async p => { await p.fill('#q .part[data-i="0"] .ans', "5"); await p.press('#q .part[data-i="0"] .ans', "Enter"); } },
++};
++for (const w of W) for (const [kind, K] of Object.entries(kinds)) {
++  await step(`${process.env.PW_BROWSER || "chromium"} ${w} ${kind}: wrong + tray open, dismiss, (out of tries), last question: no reflow, never under a sibling, never on the answer / Next, inside the window, focus`, async () => {
++    const page = await open(w);
++    await K.go(page);
++    const t0 = await probe(page);
++    await K.miss(page);
++    if (kind === "multi-part") {   // a multi-part field has no tray (the chip lives in #wish): nothing to overlay, nothing may move or stay lifted
++      await page.waitForTimeout(1500);
++      const m = await probe(page);
++      assert.equal(m.drawer, null, "a multi-part field grew a tray"); assert.equal(m.stale, 0, "a host is lifted");
++      await page.context().close(); return;
++    }
++    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 7000 }).catch(async e => { throw new Error(e.message.split("\n")[0] + " | " + await page.evaluate(() => JSON.stringify({ tries: window.__drill.state.tries.length, dr: [...document.querySelectorAll(".vdrawer")].map(d => d.hidden), cls: [...document.querySelectorAll("#q .part, #q .ff")].map(e => e.className), fb: document.querySelector("#fb")?.textContent.slice(0, 60) }))); });
++    await page.waitForTimeout(700);
++    const a = await probe(page);
++    if (kind === "MC") same({ near: a.near.filter(x => /^[a-d]$/.test(x[0])) }, { near: t0.near.filter(x => /^[a-d]$/.test(x[0])) }, "opening the tray");
++    assert.ok(a.hits && a.hits.every(Boolean), `${w} ${kind}: the tray is under something (clipped or a sibling over it): ` + JSON.stringify(a.hits));
++    assert.ok(!a.host || a.host.overlap <= 10, `${w} ${kind}: the tray covers the answer / verdict row by ${a.host?.overlap}px`);
++    assert.ok(a.nextHit !== false, `${w} ${kind}: the tray covers Next`);
++    assert.ok(a.drawer.left >= -1 && a.drawer.right <= a.vw + 1, `${w} ${kind}: outside the window ` + JSON.stringify(a.drawer));
++    assert.ok(a.focus !== false, `${w} ${kind}: Ask Cluck cannot take focus`);
++    await page.click(".vdrawer .vd-x"); await page.waitForTimeout(600);
++    const b = await probe(page);
++    same(a, b, "dismissing the tray");
++    assert.equal(b.drawer, null, "the tray is gone");
++    assert.equal(b.stale, 0, "a host is still lifted (z) after the tray shut");
++    if (kind === "MC") {   // out of tries: a 2nd wrong pick, the tray comes back over the same rows
++      await page.waitForTimeout(2200);
++      if (await page.locator("#toast.on").count()) await page.click("#toast.on");   // the one-time tray tip (a tap closes it)
++      await page.click('.opt[data-id="c"]'); await page.click('.ch[data-id="c"] .send');
++      await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 7000 });
++      await page.waitForTimeout(700);
++      const c = await probe(page);
++      assert.ok(c.hits && c.hits.every(Boolean), `${w} ${kind}: out of tries, the tray is under something ` + JSON.stringify(c.hits));
++      same({ near: c.near.filter(x => /^[a-d]$/.test(x[0])) }, { near: t0.near.filter(x => /^[a-d]$/.test(x[0])) }, "the second tray");
++      await page.click(".vdrawer .vd-x"); await page.waitForTimeout(600);
++      same({ near: (await probe(page)).near.filter(x => /^[a-d]$/.test(x[0])) }, { near: t0.near.filter(x => /^[a-d]$/.test(x[0])) }, "dismissing the second tray");
++    }
++    assert.deepEqual(page.errs, []);
++    await page.context().close();
++  });
++}
++await browser.close(); srv.kill(); stub.close();
++console.log(failures ? `\n${failures} failing` : "\nall ok");
++process.exit(failures ? 1 : 0);
+diff --git a/tests/why-chip.pw.mjs b/tests/why-chip.pw.mjs
+index 87d3199..9955a61 100644
+--- a/tests/why-chip.pw.mjs
++++ b/tests/why-chip.pw.mjs
+@@ -57,6 +57,7 @@ async function open(code) {
+ const tries = page => page.evaluate(() => window.__drill.state.tries.length);
+ async function mc(page, id) {
+   const n = await tries(page);
++  if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) await page.click(".vdrawer:not([hidden]) .vd-x");   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
+   await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
+   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
+ }

@@ -57,46 +57,54 @@
     }
     return out;
   }
-  var covers = function (x, y, w, h) {
-    if (hits(x, y, w, h).length) return true;
-    var cs = cur && cur.clear ? d.querySelectorAll(cur.clear) : [];
-    for (var i = 0; i < cs.length; i++) {                                // `clear`: never on these boxes, tap or no tap (W133)
+  /* THE TOP SLOT (Tony, Nov 3 19:21: "Ready when you are." lay on the repair ladder). Every status toast (show(): the stage lines, the twist
+     toast) and the Next note lives in ONE place: under the HUD, above the question card (#freeze). The page keeps room for it: while one
+     is up, `--toast-room` pushes #freeze down by exactly the toast's height (toast.css), so nothing the student reads or taps is covered.
+     The room is measured from #freeze's natural top, at scroll 0 only (a stuck sticky element reads 0: sticky-measure-bug). Scrolled
+     away from the top there is no slot: the toast waits (or is dropped by its `until`). */
+  var PROTECT = '#problem, #q, .rp, .vdrawer, .strip, .vd, .ff';        // the guard, for EVERY toast: the question, the answer area (its ladder, answer boxes), Cluck's tray
+  var room = 0, f0 = 0, slotEnd = { st: 0, n: 0 };
+  function barBottom() { var bar = d.querySelector('.top'); return bar && getComputedStyle(bar).position === 'sticky' ? bar.getBoundingClientRect().bottom : 0; }
+  /* a box (viewport coords) on a protected one, seen or not? (a hidden box has no rects) */
+  function onProtected(x, y, w, h) {
+    var cs = d.querySelectorAll(PROTECT);
+    for (var i = 0; i < cs.length; i++) {
+      if (el && el.contains(cs[i]) || nEl && nEl.contains(cs[i])) continue;
       var r = cs[i].getBoundingClientRect();
       if (r.width < 1 || r.height < 1 || r.right <= x || r.left >= x + w || r.bottom <= y || r.top >= y + h) continue;
+      if (cs[i].checkVisibility && !cs[i].checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
       return true;
     }
     return false;
-  };
-  /* desktop = the side layout (question column left, Explain + Notes right) on a screen tall enough for a foot; a landscape phone
-     (844x390) is side too but has no foot to spare, so it stays a phone here */
-  var desk = function () { var vv = g.visualViewport; return d.documentElement.classList.contains('side') && (vv ? vv.height : innerHeight) >= 500; };
-  /* -> true when it has a place, on screen, under the pinned bar, over no live control.
-     Phone: 12px under its anchor; it scrolls with its anchor. Never over the anchor: that is the problem the student reads first (a
-     short landscape phone, 844x390, put it on the question's own words), so with no room under it, it waits for a scroll (W88 r4).
-     Desktop (img3, Tony Oct 28: "in prod the toast appears at NOT bottom-left"): bottom-left of the question column, on the viewport's
-     foot, where it stays while the page scrolls. Under the answer box it lay mid-column on the Key formulas card (1440, 1366) or found
-     no room at all (1280x720). A control at the foot (a long question, the brainrot corner): under its anchor, as on a phone. */
+  }
+  /* -> { f0: the document y of #freeze without the room, x, w } or null (no question card on screen, or never measured at the top) */
+  function slotBase() {
+    var fz = d.getElementById('freeze'), qq = d.getElementById('q');
+    if (!fz || !qq || fz.hidden || !fz.getClientRects().length) return null;
+    if (!(g.pageYOffset > 0)) f0 = fz.getBoundingClientRect().top + g.pageYOffset - room;
+    if (!f0) return null;
+    var r = qq.getBoundingClientRect();
+    return { f0: f0, x: Math.round(r.left), w: Math.round(Math.min(400, r.width)) };
+  }
+  /* the room under the last thing in the slot (document y of its foot + 12px) */
+  function slotRoomSync() {
+    var end = Math.max(slotEnd.st, slotEnd.n), r = end ? Math.max(0, Math.round(end + 12 - f0)) : 0;
+    if (r === room) return;
+    room = r; d.documentElement.style.setProperty('--toast-room', r + 'px');
+  }
+  function slotFree(which) { slotEnd[which] = 0; slotRoomSync(); }
+  /* -> true when the stage toast has its place in the slot now: first in it, on screen under the pinned bar, on nothing protected */
   function place() {
     if (!cur || !el) return false;
-    var a = anchor(cur);
-    if (!a) return false;
-    var b = a.getBoundingClientRect(), cs = getComputedStyle(d.documentElement);
-    var gut = parseFloat(cs.getPropertyValue('--gut')) || 16, vw = d.documentElement.clientWidth;
-    var w = Math.round(Math.min(400, b.width, vw - 2 * gut));
-    el.style.width = w + 'px';
-    var h = el.offsetHeight, bar = d.querySelector('.top'), barB = 0;
-    if (bar && getComputedStyle(bar).position === 'sticky') barB = bar.getBoundingClientRect().bottom;
-    var vv = g.visualViewport, foot = vv ? vv.offsetTop + vv.height : innerHeight, bottom = foot - 12;
-    var x = Math.round(Math.min(Math.max(gut, b.left), vw - gut - w));
-    var sides = desk() ? ['foot', 'under'] : ['under'];
-    for (var i = 0; i < sides.length; i++) {
-      var y = Math.round(sides[i] === 'foot' ? foot - gut - h : b.bottom + 12);
-      if (y < barB + 8 || y + h > bottom || covers(x, y, w, h)) continue;
-      el.style.left = x + 'px'; el.style.top = y + 'px';               // whole px: the words stay on the pixel grid
-      el.dataset.side = sides[i];
-      return true;
-    }
-    return false;
+    var m = slotBase();
+    if (!m || slotEnd.n) { slotFree('st'); return false; }               // no question card on screen, or a note holds the slot (2 s): wait
+    el.style.width = m.w + 'px';
+    var h = el.offsetHeight, T = Math.max(m.f0 - 8, barBottom() + g.pageYOffset + 8), y = Math.round(T - g.pageYOffset), x = m.x;
+    slotEnd.st = T + h; slotRoomSync();
+    if (y < barBottom() + 4 || onProtected(x, y, m.w, h)) { slotFree('st'); return false; }
+    el.style.left = x + 'px'; el.style.top = y + 'px';                   // whole px: the words stay on the pixel grid
+    el.dataset.side = 'top';
+    return true;
   }
   function hold() { if (left) { clearTimeout(timer); left = Math.max(800, left - (Date.now() - since)); } }
   function go() { if (left && cur) arm(left); }
@@ -144,7 +152,7 @@
     el.style.width = '';
     actionPut(o);
     el.querySelector('.stoast-t').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
-    if (!place()) { cur = null; actionPut({}); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
+    if (!place()) { cur = null; actionPut({}); slotFree('st'); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
     q.shift();
     el.querySelector('.sr-only').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
     count(o);
@@ -152,15 +160,9 @@
     place();
     void el.offsetWidth; el.classList.add('on');
     var follow = setInterval(function () {                               // the question may still be laying out under it
-      if (cur !== o) { clearInterval(follow); if (mo) mo.disconnect(); return; }
+      if (cur !== o) { clearInterval(follow); return; }
       if (!place() || yields()) hide(true);                              // scrolled out of its room, a control came under it, the duck rose or Cluck opened: gone at once (no exit motion beside the answer's: one blink)
     }, 120);
-    /* a `clear` box that fills while it shows (the hint card landing after a miss, REVEAL-TRAY Nov 3): re-placed before that frame paints, not at
-       the next tick, so it is never drawn on it */
-    if (o.clear && g.MutationObserver) {
-      var mo = new MutationObserver(function () { if (cur !== o) { mo.disconnect(); return; } if (!place() || yields()) hide(true); });
-      d.querySelectorAll(o.clear).forEach(function (c) { mo.observe(c, { childList: true, subtree: true, characterData: true }); });
-    }
     arm(o.ms || 4000);
     if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
   }
@@ -173,7 +175,7 @@
     b.addEventListener('click', function () { var run = o.action.run; hide(true); if (run) run(); });
     el.querySelector('.stoast-b').appendChild(b);
   }
-  function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
+  function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); slotFree('st'); next(); }
   function hide(quiet) {
     clearTimeout(timer); left = 0;
     if (!cur || !el) return;
@@ -212,8 +214,21 @@
   function nHold() { if (nLeft) { clearTimeout(nT); nLeft = Math.max(600, nLeft - (Date.now() - nSince)); } }
   function nGo() { if (nLeft && nCur) nArm(nLeft); }
   function nArm(ms) { clearTimeout(nT); nLeft = ms; nSince = Date.now(); nT = setTimeout(noteHide, ms); }
-  function noteHide() { clearTimeout(nT); nLeft = 0; nCur = null; if (nEl) nEl.classList.remove('on'); }
+  function noteHide() { clearTimeout(nT); nLeft = 0; nCur = null; if (nEl) nEl.classList.remove('on'); slotFree('n'); }
   function noteAt() { return nCur && nEl && nEl.classList.contains('on') ? nCur.at : null; }
+  /* the note in the top slot (no caret: it points at nothing): the Next note, and a note whose anchor lies on the question or the tray
+     (a kept choice, the Copied note, the tray tip) where no caret place is legal. Under the stage toast when one is up. */
+  function noteSlot(o, t) {
+    var m = slotBase();
+    if (!m) return false;
+    t.classList.remove('row', 'up'); t.classList.add('slot');
+    t.style.maxWidth = m.w + 'px';
+    var T = slotEnd.st ? slotEnd.st + 8 : Math.max(m.f0 - 8, barBottom() + g.pageYOffset + 8), h = t.offsetHeight, w = t.offsetWidth, y = Math.round(T - g.pageYOffset);
+    slotEnd.n = T + h; slotRoomSync();
+    if (y < barBottom() + 4 || onProtected(m.x, y, w, h)) { slotFree('n'); return false; }
+    t.style.left = m.x + 'px'; t.style.top = y + 'px';
+    return true;
+  }
   /* -> true when the note has a place now (whole px: sharp words, TOAST.md round 5) */
   function notePlace() {
     var o = nCur, t = nEl;
@@ -232,8 +247,7 @@
     /* the live controls under the box, plus `clear`: what it must not lie on although no tap goes there (the Next note: the question
        card and the answer area's words, the HUD's own pieces beside its empty tap layer) */
     var free = function (x, y, w, h) {
-      if (o.loose) return [];
-      var out = hits(x, y, w, h, skip, true), cs = o.clear ? d.querySelectorAll(o.clear) : [];
+      var out = hits(x, y, w, h, skip, true), cs = d.querySelectorAll(PROTECT + (o.clear ? ', ' + o.clear : ''));   // the guard: never on the question, the answer area, the tray (an anchor inside them has no legal caret place: the slot)
       for (var i = 0; i < cs.length; i++) {
         var r = cs[i].getBoundingClientRect();
         if (r.width < 2 || r.height < 2 || r.right <= x || r.left >= x + w || r.bottom <= y || r.top >= y + h) continue;
@@ -243,11 +257,12 @@
       return out;
     };
     t.classList.toggle('row', row);
+    if (o.slot === 'top') return noteSlot(o, t);
     if (row) {
       t.classList.remove('up');
       t.style.maxWidth = Math.max(120, b.right - m.right - 18) + 'px';
       var rx = Math.round(m.right + 12), ry = Math.round(b.top + b.height / 2 - t.offsetHeight / 2);
-      if (free(rx, ry, t.offsetWidth, t.offsetHeight).length) return false;
+      if (free(rx, ry, t.offsetWidth, t.offsetHeight).length) return o.slotFallback ? noteSlot(o, t) : false;
       t.style.left = rx + 'px'; t.style.top = ry + 'px';
       return true;
     }
@@ -255,14 +270,18 @@
     if (barB > top) top = barB + 8;
     var right = mx > b.left + b.width / 2;                                 // which edge it lines up with: the anchor's side of the caret
     var sides = o.prefer === 'above' ? ['above', 'under'] : ['under', 'above'];
-    if (o.loose) sides = [o.prefer === 'above' || b.bottom + 12 + t.offsetHeight > bottom ? 'above' : 'under'];   // the old rule
     for (var i = 0; i < sides.length; i++) {
       var lo = gut, hi = vw - gut, up = sides[i] === 'above';
       t.style.maxWidth = '';
       for (var k = 0; k < 4; k++) {
         var w = t.offsetWidth, h = t.offsetHeight;
         var x = Math.round(Math.min(Math.max(lo, right ? b.right - w : b.left), hi - w)), y = Math.round(up ? b.top - 12 - h : b.bottom + 12);
-        if (!o.loose && (y < top || y + h > bottom)) break;
+        if (y < top || y + h > bottom) break;
+        /* a tip on the HUD hangs in the top slot: the page keeps room under it (the question would be under it otherwise), at scroll 0 and when no stage toast is up */
+        if (inBar && !up && slotEnd.st) hide(true);                         // the tip is the newer word: a status line in the slot steps aside (it is only the start line at a first right answer)
+        var hung = inBar && !up && g.pageYOffset === 0 && !slotEnd.st && !!slotBase();
+        if (inBar && !up && !hung) break;
+        if (hung) { slotEnd.n = y + h; slotRoomSync(); }
         var hit = free(x, y, w, h);
         if (!hit.length) {
           t.classList.toggle('up', up);
@@ -270,6 +289,7 @@
           t.style.setProperty('--px', Math.max(18, Math.min(w - 18, mx - x)) + 'px');
           return true;
         }
+        if (hung) slotFree('n');
         /* something beside the caret: keep clear of it and let the words wrap. Something right where the caret points: this side is
            out (the caret always touches its anchor: Tony, Oct 29, a note stepped 70px down from Next "looks buggy") */
         for (var j = 0; j < hit.length; j++) {
@@ -282,13 +302,13 @@
       }
     }
     t.style.maxWidth = '';
-    return false;
+    return o.slotFallback ? noteSlot(o, t) : false;
   }
   function note(o) {
     if (!o || !o.text || !o.at) return false;
     nMount();
-    clearTimeout(nT); nLeft = 0;
-    nEl.classList.remove('on', 'up', 'row');
+    clearTimeout(nT); nLeft = 0; slotFree('n');
+    nEl.classList.remove('on', 'up', 'row', 'slot');
     nEl.textContent = '';
     var s = d.createElement('span'); s.className = 'toast-t'; s.textContent = o.text; nEl.appendChild(s);
     nEl.classList.toggle('has-x', !!o.x);

@@ -83,6 +83,7 @@ try {
       const s = await page.evaluate(() => ({ chip: !!document.querySelector(".twist-chip, #twistChip, .twist-row"), title: document.querySelector("#blocks .ptitle")?.textContent,
         kids: [...document.querySelector("#blocks").children].map(e => e.className) }));
       assert.equal(s.chip, false); assert.equal(s.title, "Made-up Set, Question 2"); assert.deepEqual(s.kids, ["ptitle", "md"]);
+      await page.evaluate(() => window.stemToast.clear()); await page.waitForTimeout(250);   // the start line (top slot) holds the card down by its height while it shows: shoot with the slot empty, both times
       card0 = await page.locator("#problem").screenshot(CARD);
       await go(page, "PHYS_W04");                                      // twist: false = no twist
       assert.equal(await page.locator(".twist-chip").count(), 0);
@@ -138,6 +139,7 @@ try {
     });
     await step(`${w}: the non-twist card is pixel-identical after a twist was open (nothing leaks)`, async () => {
       await go(page, "PHYS_W02"); await page.waitForTimeout(300);
+      await page.evaluate(() => window.stemToast.clear()); await page.waitForTimeout(250);
       const card1 = await page.locator("#problem").screenshot(CARD);
       assert.ok(card0 && card0.equals(card1), "the non-twist card changed");
     });
