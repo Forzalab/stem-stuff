@@ -591,6 +591,25 @@ class Handlers(unittest.TestCase):
         self.assertIn("REVEAL: no", c3[2]["content"][-1]["text"])
         self.assertNotIn("secret", json.dumps(c3))                                          # the model's notes are not replayed either
 
+    def test_free_question_is_not_a_wrong_try(self):                   # Nov 3 prod: "Which formula fits?" with no attempt -> "Not quite, quack."
+        for none in (None, ""):
+            serve._chats.clear()                                                    # the per-item follow-up cap is shared by the cases
+            self.reply = "Not quite, quack. Think about rate.\nPower is work over time.\n"
+            out = self.go(serve.chat, answer=none, history=[{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "Which formula fits?"}])
+            ctx = json.dumps(self.bodies[-1]["messages"])
+            self.assertNotIn("RESULT", ctx)                                         # no verdict at all
+            self.assertNotIn("STUDENT PICKED: None", ctx)
+            self.assertNotIn("SLIP", ctx)
+            self.assertNotRegex(out, r"(?i)not quite|wrong")                        # and a model that says it anyway is cut
+            self.assertIn("Power is work over time.", out)
+
+    def test_real_wrong_try_keeps_not_quite(self):
+        serve._chats.clear()
+        self.reply = "Not quite. You multiplied by time.\nDivide instead.\n"
+        out = self.go(serve.chat, answer="a", history=[{"role": "assistant", "content": "Hi"}, {"role": "user", "content": "why?"}])
+        self.assertIn("RESULT: wrong", json.dumps(self.bodies[-1]["messages"]))
+        self.assertTrue(out.startswith("Not quite."))
+
     def test_solved_wish_then_chat(self):                              # C: a correct pick -> REVEAL yes + RESULT: correct, no nudge, replayed
         with serve._tries_lock:
             serve._load_tries()
@@ -1142,6 +1161,7 @@ class PartHandlers(Handlers):
         self.wp.stop()
         super().tearDown()
 
+    test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None      # single-item cases live in Handlers
     test_locked_wish_tells_cluck_not_to_invite_a_retry = None                              # the single-item case lives in Handlers
 
     def test_right_part_pick_without_state(self):
