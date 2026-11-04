@@ -35,6 +35,8 @@ const root = document.documentElement;
 const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
+/* the ONE reveal-line duck (the old "Why does this work?" CTA's i-duck, moved here after #406 dropped the CTA): Avenged!, "That's it!", "Not it." */
+const revDuck = () => `<span class="rv-duck" aria-hidden="true">${icon("i-duck")}</span>`;
 let lastQuack = "";   // quack.mjs: the last prefix shown, so the next one differs (Tony D72: every Cluck hint starts with a QUACK)
 const quackHint = (h, seed) => { const out = withQuack(h, seed, lastQuack); lastQuack = quack(seed, lastQuack); return out; };
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
@@ -1662,7 +1664,7 @@ function guard() {
   if (won && !redeem) return;
   const burst = won && !painting && !matchMedia("(prefers-reduced-motion: reduce)").matches ? `<span class="burst" aria-hidden="true">${"<i></i>".repeat(8)}</span>` : "";
   $("#q").insertAdjacentHTML("beforeend", won
-    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
+    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${revDuck()}${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
     : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
 function finish() {
@@ -1732,7 +1734,7 @@ function rboxSync() {
       if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(v).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
       const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b> <span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;
       host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden");
-      host.insertAdjacentHTML("beforeend", `<p class="ansl"><span>That's it! The answer is </span>${unit}${mathCopyBtn("Copy answer", v)}</p>`);
+      host.insertAdjacentHTML("beforeend", `<p class="ansl">${revDuck()}<span>That's it! The answer is </span>${unit}${mathCopyBtn("Copy answer", v)}</p>`);
       pvFit(host);
     }
   }
@@ -1805,7 +1807,7 @@ function reveal(r, part) {
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
   const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b>\u2009<span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;   // W132: value green + thin space + unit in ink; copy = the value only
   const sentence = !multi && rboxOn();                       // 114r v1f: the line under the reveal box is a plain sentence, no check, no chip
-  host.insertAdjacentHTML("beforeend", `<p class="ansl">${sentence ? "<span>Not it. The answer is\u00a0</span>" : `${icon("i-ok")}<span>Answer</span>`}${unit}${mathCopyBtn("Copy answer", String(c))}</p>`);
+  host.insertAdjacentHTML("beforeend", `<p class="ansl">${sentence ? `${revDuck()}<span>Not it. The answer is\u00a0</span>` : `${icon("i-ok")}<span>Answer</span>`}${unit}${mathCopyBtn("Copy answer", String(c))}</p>`);
   if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + (host.querySelector(".ansl .ansv") || host.querySelector(".ansl b")).textContent.replace(/\s+/g, " ").trim() + ".";
