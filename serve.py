@@ -2265,7 +2265,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
-                            fig_ctx(p, answer), edit=True, v4=v4, out=out)
+                            fig_ctx(p, answer), edit=True, v4=v4, out=out, swap=True)
     on("write", "end")
 
 
@@ -2518,9 +2518,14 @@ def fallback_reason(e):
     return e.reason if isinstance(e, FirstTextLate) else "stuck" if isinstance(e, TimeoutError) else "error"
 
 
-def _claude_one(system, messages, max_tokens, arm="-"):
+class ReplyCut(OSError):
+    """a reply that stopped at max_tokens, mid-sentence"""
+
+
+def _claude_one(system, messages, max_tokens, arm="-", cut=False):
     """one streamed Claude call (system as given, messages without it); yields text (Plain), holds until the first newline and cuts a
-    leading NOTE line. Counts the spend."""
+    leading NOTE line. Counts the spend. cut=True (a Cluck letter turn): a reply that hit max_tokens raises ReplyCut after its text, so the
+    stream ends on the in-band error and the page shows its clean "lost signal" line (Tony 19:37 PST Nov 3), not a half word."""
     payload = dict(claude_params(CLAUDE_MODEL, max_tokens), stream=True, system=system, messages=messages)
     req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
                                  headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
@@ -2550,6 +2555,8 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                     d = ev.get("delta") or {}
                     if d.get("stop_reason") == "refusal":   # W113: Opus refuses some letter turns (reasoning_extraction): logged, the other arm answers
                         stop = "refusal:" + str((d.get("stop_details") or {}).get("category") or "-")
+                    elif d.get("stop_reason") == "max_tokens":
+                        stop = "max_tokens"
                 elif kind == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
                     t = ev["delta"].get("text") or ""
                     said = said or bool(t.strip())
@@ -2568,6 +2575,8 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                 text = plain.feed(held)
                 if text:
                     yield text
+            if cut and stop == "max_tokens" and said:
+                raise ReplyCut("claude: the reply hit max_tokens")
     finally:
         if any(used.values()):
             usd = claude_cost(used)
@@ -3294,10 +3303,11 @@ V4_MATH = ("Math, row by row (easy to read): each step is a row: a short line of
 # that carries its figure; views_gate drops a figure-less Steps (steps-nofig), the reply re-asks once in place, else plain numbered lines
 V4_STEPS_RULE = ("A stepper MUST carry a figure that changes in every step: a Graph as its first argument with each Step's node / edge marks, "
                  "and a table (head + rows) when the slip is a trace; never captions alone.")
-V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
+V4_FIG_POS = ("Positions count as numbers too: an x, y, vline or hline you place is a given number or 0. A factor or ratio you worked out (a quarter, one and a half) never becomes a coordinate or a bar value; show it as a Tug pull instead.\n")
+V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to a wrong pick, in each answer to \"Why does this work?\", and on a forces question (buoyancy, tension, weight, normal force: a ```fig scene, every force an arrow) on a right answer too; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
-            "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer)\n"
+            "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer). A \"by what factor\" question gets a Tug, never a ```fig curve: each row names a change in the question's own words (\"V | box halved | up 2\"), never a fraction you worked out\n"
             "- a step they did vs the fix: a Flip, one card per step\n"
             "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
             "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
@@ -3311,7 +3321,7 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
             "Plain text in Tug and Flip cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
             "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
-            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | up, down or same | 1-9 pull size | optional why\" (label 10 characters at most).\nExamples:\n"
+            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 4 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
             "root = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n"
             "root = View([f])\nf = Flip([[\"arm of W\", \"L\", \"half of L\"]])\n"
             "root = View([t])\nt = Table([\"case\", \"before\", \"after\"], [[\"gas\", \"2 atm\", \"6 atm\"]])\n"
@@ -3326,14 +3336,54 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
 # R6d: the letter's order (L44: "an ```openui Geometry view, else a ```fig block"): the openui lead first, then the ```fig rule
-V4_FIG_FIXED = ("\nWhich fence: for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
+V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```openui Tug; a step they did vs its fix, an ```openui Flip; "
+                "for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
                 "for the other kinds below, a ```fig block.\nThe ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
                 "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4 + "\n" + V4_VIEWS)
 
 
 def v4_fig_howto(fig):
-    """the per-question, uncached part of the figure how-to"""
-    return livefig.rule_tail(fig).lstrip("\n")
+    """the per-question, uncached part of the figure how-to (+ the topic's own spec, fig_spec)"""
+    spec = fig_spec(getattr(fig, "code", None))
+    return livefig.rule_tail(fig).lstrip("\n") + (("\n" + FIG_SPECS[spec]) if spec else "")
+
+
+# Topic injection (Tony 19:37 PST Nov 3): the item's topic picks ONE figure spec (its grammar, one worked example, the rules), sent as a firm
+# "draw it like this" in the per-question tail. Deterministic: keywords of the item's title, stem and formula tags, first rule that fits.
+# CLUCK_FIG_SPEC: "p3x" (default: Exam 3 bank only), "1" every bank, "0" off.
+FIG_SPECS = {
+    "forces": ("DRAW IT LIKE THIS (forces): one ```fig scene, a free-body picture, on a right answer too. The body as a box or disk; EVERY force on it "
+               "an arrow from the body's own point, up or down as it acts (weight down, buoyant force or tension up, normal force off the surface); "
+               "labels are symbols ($W$, $F_B$, $T$, $F_N$), never a number you worked out. Example:\n"
+               "```fig\n{\"type\":\"graph\",\"kind\":\"scene\",\"alt\":\"Forces on the floating block: buoyant force up, weight down.\",\"marks\":["
+               "{\"mark\":\"body\",\"at\":[0,0],\"shape\":\"box\",\"w\":1,\"h\":0.8},{\"mark\":\"force\",\"at\":[0,0],\"angle\":90,\"len\":1.4,\"label\":\"$F_B$\"},"
+               "{\"mark\":\"force\",\"at\":[0,0],\"angle\":270,\"len\":1.4,\"label\":\"$W$\"}]}\n```"),
+    "factor": ("DRAW IT LIKE THIS (a factor): one ```openui Tug, one row per change the question names, in its own words; the direction cell is up, "
+               "down or same with a 1-9 size in that SAME cell; no row for the result, no net. Example:\n"
+               "```openui\nroot = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n```"),
+    "rotation": ("DRAW IT LIKE THIS (rotation): one ```openui Geometry: the axis as a seg, each mass a point, each lever arm a dim from the axis "
+                 "with the question's own length; for a torque, add the force as an arrow at the point it pulls; never the answer. Example:\n"
+                 "```openui\nroot = View([g])\ng = Geometry(\"A 0,0; B 0,2; C 4,0; D 4,2\", [\"seg(A,B)\", \"dim(A,C,2a)\", \"label(A,left)\"], \"The axis is the left edge; the right masses sit 2a from it.\")\n```"),
+    "graph": ("DRAW IT LIKE THIS (a graph): one ```fig network of the few nodes that prove the idea, the question's own labels. Example:\n"
+              "```fig\n" + livefig.EXAMPLE["network"] + "\n```"),
+}
+_SPEC_RULES = (("factor", r"by what factor|what factor|\bfactor\b|\bratio\b"),
+               ("forces", r"buoy|float|submerg|tension|normal force|\bweight\b|string|diver|density|apparent"),
+               ("rotation", r"\brpm\b|torque|moment of inertia|\baxis\b|lever|center of (?:mass|gravity)|angular|rotat"),
+               ("graph", r"\bvertex|\bvertices|\bgraph\b|spanning tree|shortest path"))
+
+
+def fig_spec(code):
+    """the figure spec name for this item, or None (flag off, another bank, no topic fits)"""
+    mode = os.environ.get("CLUCK_FIG_SPEC", "p3x").strip().lower()
+    if not code or mode in ("0", "off", "false", "no") or (mode == "p3x" and bank_of(code) != "BANK_P3X"):
+        return None
+    p = problems().get(code)
+    if not p:
+        return None
+    text = " ".join([str(p.get("title", ""))] + [str(b.get("md", "")) for b in p.get("body", []) if b.get("type") == "text"]
+                    + [" ".join((sugar(p).get("part") or []))]).lower()
+    return next((name for name, rx in _SPEC_RULES if re.search(rx, text)), None)
 
 
 def _v4_claude_system(v4):
@@ -3364,7 +3414,7 @@ def _v4_claude_chunks(v4, max_tokens):
             msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
     # a turn that may draw gets FIG_TOKENS on top (the old path does the same): a held ```fig the gate drops still spends its tokens, and
     # PHYS_LP5 (Nov 3) hit max_tokens at 700 and ended mid-word
-    return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"])
+    return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"], cut=True)
 
 
 def _v4_deepseek_chunks(v4, key, max_tokens):
@@ -3461,7 +3511,109 @@ def v4_stream(v4, key, out=None):
                          phase="timeout" if isinstance(e, TimeoutError) else "headers", ms=ms)
 
 
-def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=None):
+# Subject pass (Tony 19:18 PST Nov 3, rule: brain CLUES-V2.md "no [inanimate object] + [verb]"; he accepts losing the stream for it): a
+# letter-prompt reply is held whole; every non-prose span (fences, $$ / $ math, table rows, `code`, kaomoji and other non-ASCII runs) becomes an
+# ordered slug ⟦1⟧ ⟦2⟧ ...; one cheap model rewrites only the masked prose; the result is kept only when the slugs come back all, once each, in
+# order, every number of the prose is kept, and the length stays within 0.8-1.25. Anything else (error, timeout, a broken slug) = the original.
+# CLUCK_SUBJECT=0 turns it off (the reply streams again).
+SUBJECT_S = 6                                # the swap waits at most this long after the stream ends
+SUBJECT_MODEL = os.environ.get("CLUCK_SUBJECT_MODEL", "deepseek/deepseek-v4.1-flash")
+def subject_block():
+    """the letter's SUBJECTS block, verbatim (the rewriter reads the same rule Cluck does)"""
+    t = PROMPT_V4 or ""
+    i = t.find("- SUBJECTS")
+    return t[i:t.find("\n- ", i + 2)] if i >= 0 else ""
+
+
+SUBJECT_HOW = """You fix ONE style rule in a tutor's reply, the rule below. Rewrite ONLY the sentences that break it (an object, a number, a law or an idea as the subject doing a person-like action), using P1, P2, P4 or P5. Every other sentence stays word for word. Ask no new question.
+Keep every ⟦n⟧ marker exactly: the same ones, in the same order, never move, merge or drop one. Keep every number, every QUACK, every line break, - list and **bold**. Same short, warm voice, about the same length. Hand back only the text.
+"""
+_SLUG_RE = re.compile(r"```[\s\S]*?(?:```|$)|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|`[^`\n]+`|(?m:^\s*\|.*$)|[^\x00-\x7F‘’“”–—…°]+")
+_SLUG = re.compile(r"⟦(\d+)⟧")
+_NUM = re.compile(r"\d+(?:\.\d+)?")
+
+
+def subject_mask(text):
+    """(masked prose, spans): each non-prose span becomes ⟦i⟧ (1-based, in order)"""
+    spans = []
+
+    def sub(m):
+        spans.append(m.group(0))
+        return f"⟦{len(spans)}⟧"
+    return _SLUG_RE.sub(sub, text), spans
+
+
+def subject_unmask(masked, spans):
+    return _SLUG.sub(lambda m: spans[int(m.group(1)) - 1], masked)
+
+
+def subject_ok(before, after, n):
+    """the validator: every slug once, in order; the prose's numbers kept (as a multiset); length ratio 0.8-1.25"""
+    if [int(x) for x in _SLUG.findall(after)] != list(range(1, n + 1)) or before.count("\n") != after.count("\n"):
+        return False                              # the lines must line up too: the client swaps line by line
+    strip = lambda t: _SLUG.sub("", t)  # noqa: E731
+    if sorted(_NUM.findall(strip(before))) != sorted(_NUM.findall(strip(after))):
+        return False
+    a, b = len(strip(before).strip()), len(strip(after).strip())
+    return a == 0 or 0.8 <= b / a <= 1.25
+
+
+def subject_on():
+    return os.environ.get("CLUCK_SUBJECT", "0").strip().lower() in ("1", "on", "true", "yes")   # OFF by default: the rewriter changed ~80% of replies (bench Nov 3)
+
+
+def subject_pass(text, key, call=None):
+    """the reply with its inanimate-subject sentences rewritten, or the reply itself (validator fail, error, nothing to fix). call(masked) -> str
+    is the model call (tests stub it)."""
+    masked, spans = subject_mask(text)
+    if not re.search(r"[A-Za-z]{3}", _SLUG.sub("", masked)):
+        return text
+    t0 = time.time()
+    try:
+        got = (call or (lambda m: _subject_call(m, key)))(masked)
+    except Exception as e:  # noqa: BLE001
+        log(f"subject pass: error {e}")
+        return text
+    core = masked.strip("\n")
+    head, tail = masked[:len(masked) - len(masked.lstrip("\n"))], masked[len(masked.rstrip("\n")):]
+    got = got.strip("\n") if isinstance(got, str) else None
+    ok = got is not None and subject_ok(core, got, len(spans))
+    log(f"subject pass: {'kept' if ok and got != core else 'same' if ok else 'fallback'} ms={int((time.time() - t0) * 1000)} slugs={len(spans)}")
+    return subject_unmask(head + got + tail, spans) if ok else text
+
+
+SUBJECT_CLAUDE_MODEL = os.environ.get("CLUCK_SUBJECT_CLAUDE_MODEL", "claude-haiku-5-5")
+
+
+def _subject_claude(masked):
+    payload = dict(claude_params(SUBJECT_CLAUDE_MODEL, 900), system=[{"type": "text", "text": SUBJECT_HOW + subject_block(), "cache_control": CACHE}],
+                   messages=[{"role": "user", "content": masked}])
+    req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
+                                 headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=SUBJECT_S) as resp:
+        m = json.load(resp)
+    u = m.get("usage") or {}
+    i, o = claude_price(SUBJECT_CLAUDE_MODEL)
+    usd = (int(u.get("input_tokens") or 0) * i + int(u.get("cache_creation_input_tokens") or 0) * i * CACHE_WRITE
+           + int(u.get("cache_read_input_tokens") or 0) * i * CACHE_READ + int(u.get("output_tokens") or 0) * o) / 1e6
+    claude_add(usd)
+    log(f"claude subject usage: in={u.get('input_tokens')} out={u.get('output_tokens')} usd={usd:.5f} model={SUBJECT_CLAUDE_MODEL}")
+    return "".join(b.get("text", "") for b in m.get("content", []) if b.get("type") == "text")
+
+
+def _subject_call(masked, key):
+    if os.environ.get("CLAUDE_API") and claude_ready(set()):         # Tony 19:41 "route ALL to claude": Haiku first, OpenRouter if it fails
+        try:
+            return _subject_claude(masked)
+        except Exception as e:  # noqa: BLE001
+            log(f"subject pass: claude {SUBJECT_CLAUDE_MODEL}: {e} (OpenRouter next)")
+    payload = dict(_model_params(SUBJECT_MODEL, 900), stream=False, temperature=0, provider={"zdr": True, "data_collection": "deny"},
+                   messages=[{"role": "system", "content": SUBJECT_HOW + subject_block()}, {"role": "user", "content": masked}])
+    with _or_post(payload, key, SUBJECT_S) as r:
+        return json.loads(r.read().decode("utf-8"))["choices"][0]["message"]["content"]
+
+
+def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=None, swap=False):
     """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params.
     fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.rule(fig) and its fences go through the
     gate; the OpenRouter path never has the rule and strips any fence (live figures are Claude only).
@@ -3470,11 +3622,15 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
     v4 (T62): the letter-prompt request (v4_stream); its arms fall back to each other, and only if both fail does `messages` run the old way."""
     out = set() if out is None else out          # this chain's out-of-credit providers (budget_hit): skipped, not retried
     if v4 is not None:
-        sent = False
+        sent, whole = False, []
         for t in v4_stream(v4, key, out):
             sent = True
+            whole.append(t)
             yield t
         if sent:
+            final = subject_pass("".join(whole), key) if swap and subject_on() and key else None   # Tony 19:26: stream first, then flash the fix
+            if final is not None and final != "".join(whole):
+                yield RS + json.dumps({"replace": final}) + "\n"   # the client swaps the changed prose lines; figures keep their DOM
             return
         fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
     elif claude_ready(out):

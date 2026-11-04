@@ -18,12 +18,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
+os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass (its own tests: tests/test_subject_pass.py) would spend one more mocked call per reply
 import serve  # noqa: E402
 from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "0dfe67a6004a209d1cd15a8e5ffdfd9f29aaebbd20b0d3a00273a62abf08cf52"
+SHA = "a1e9cfe844d32b4a09510dd28f4c8770cf1e68985951c7c5996c47faac63fe8a"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -738,6 +739,14 @@ class Fallbacks(unittest.TestCase):
             self.run_arm("claude", reveal=True)
         self.assertEqual(self.calls, ["claude"])
 
+    def test_reply_cut_at_max_tokens_ends_on_the_error(self):      # Tony 19:37 Nov 3 (PHYS_LP5 "Newton's 2n"): a cut reply is a failure, not a quiet end
+        self.claude = lambda: Resp(sse_claude(["Use the torque law.\n", "Use rotational Newton's 2n"]).replace(b'"stop_reason": "end_turn"', b'"stop_reason": "max_tokens"'))
+        with self.assertRaises(serve.ReplyCut):
+            self.run_arm("claude", reveal=True)
+        self.assertEqual(self.calls, ["claude"])                                # text went out: no switch to the other arm
+        self.claude = lambda: Resp(sse_claude(["Use the torque law.\n"]))
+        self.assertEqual(self.run_arm("claude", reveal=True), "Use the torque law.\n")   # end_turn: no error
+
     def test_no_word_by_the_cap_falls_back(self):
         with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S": "0.1", "CLUCK_FIRST_TEXT_S_DEEPSEEK": "0.1"}):   # DeepSeek's own cap (todo 47)
             self.claude = lambda: Slow(PING * 6 + sse_claude(["Too late.\n"]), {i: 0.03 for i in range(18)})   # pings only for 0.5 s
@@ -1418,7 +1427,7 @@ class FigureBudget(unittest.TestCase):
     def sent(self, fig):
         seen = []
         v4 = {"turns": [{"role": "user", "content": ["Q", "dyn"]}], "fig": fig, "bank": "b", "arm": "claude", "imgs": ()}
-        with mock.patch.object(serve, "_claude_one", lambda system, msgs, max_tokens, arm=None: seen.append(max_tokens) or iter(())):
+        with mock.patch.object(serve, "_claude_one", lambda system, msgs, max_tokens, arm=None, cut=False: seen.append(max_tokens) or iter(())):
             list(serve._v4_claude_chunks(v4, serve.V4_MAX))
         return seen[0]
 

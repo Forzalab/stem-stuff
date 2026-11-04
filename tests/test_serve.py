@@ -23,6 +23,7 @@ import tempfile  # noqa: E402
 TMP = tempfile.mkdtemp(prefix="stem-tries-")
 os.environ["STEM_TRIES"] = os.path.join(TMP, "tries.json")   # never write the real tries.json (the Http server inherits it)
 os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset: v:1 fixture banks keep loading (serve.today); the Http server inherits it
+os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass has its own tests (tests/test_subject_pass.py)
 import serve  # noqa: E402
 
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
