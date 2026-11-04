@@ -74,6 +74,10 @@ try {
   await step("mock phase: a wrong answer closes the question (one try), no hint, no pips, no Cluck peek", async () => {
     await answer(page, "999");
     assert.deepEqual(await look(page), { closed: true, hint: false, pips: false, wish: false, duck: false });
+    /* v49 (Tony, Nov 3 18:14, img3: "this lockout shows no hint for user to moveon, it just locks out"): one short line says why and where next */
+    const line = await page.evaluate(() => document.querySelector("#fb .mock-next")?.textContent || "");
+    assert.match(line, /one try/i, "no 'one try' line on the mock lockout: " + JSON.stringify(line));
+    assert.match(line, /Next/, "the mock lockout line does not point to Next: " + JSON.stringify(line));
   });
   await step("mock phase: Next plays the exam order; a right one, then a skipped one", async () => {
     await next(page); await opened(page, "PHYS_MQ2");

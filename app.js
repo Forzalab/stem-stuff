@@ -1859,7 +1859,9 @@ function feedback(r, typed) {
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
-  /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
+  /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords.
+     The mock night (W103b) is the exception: one try, no hint, no Cluck, so the lock alone read as a dead end (Tony, Nov 3 18:14, img3): one line says why and where next */
+  else if (mockHold() && r.verdict === "wrong") h = `<p class="verdict wait mock-next">${icon("i-back")}<span>Mock round: one try each. Tap Next. Misses come back at the end.</span></p>`;
   let quackHtml = "";
   if (hintOf(r)) {
     const hintWithQuack = quackHint(hintOf(r), S.code + ":" + S.tries.length);
