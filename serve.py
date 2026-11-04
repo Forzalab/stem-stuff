@@ -2261,7 +2261,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
         rows = cluck_noted(p, sid, turn[0], xyz)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
         locked = any(row_locked(r) for r in rows if r[0] == turn[0])
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=turn_closed((sid, p["code"])), facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
@@ -2750,6 +2750,13 @@ def row_locked(r):
     return bool(r) and len(r) > 4 and bool(r[4])
 
 
+def turn_closed(key):
+    """the newest Cluck turn row of this (sid, code) was sent on a solved or locked item: its answer may be said"""
+    with _tries_lock:
+        r = (_cluck_turns.get(key) or [None])[-1]
+    return row_solved(r) or row_locked(r)
+
+
 def cluck_begin(p, sid, pick):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
     counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
@@ -2833,6 +2840,46 @@ def leak_kind(text, facts):
             if any(livefig._eq(n, v) for v in vals):
                 return "number"
     return None
+
+
+_PICK_ANY_RE = re.compile(r"\b(?:pick|choose|go\s+with|select|(?:the\s+)?(?:answer|(?:correct|right)\s+(?:one|choice|letter|answer))(?:\s+is|\s*[:=]))\s*[*(]{0,3}([A-Za-z])[*)]{0,3}(?![A-Za-z0-9'])", re.I)
+
+
+def pick_line(line, vals):
+    """leak gate for an item still open (tries left, not solved): True when the line names a choice to pick (any letter, right or wrong, "Pick e.",
+    "the answer is (b)") or says the answer's value. Prod Nov 3 (#407): a 3rd-turn reply (REVEAL yes, LeakGuard off) said "W = 210 N ... Pick e." """
+    for m in _PICK_ANY_RE.finditer(line):
+        if m.group(1).isupper() or _TAIL_RE.match(line, m.end()) or line[m.end() - 1] in ")*":
+            return True
+    return bool(vals) and any(livefig._eq(n, v) for n in livefig.nums(line) for v in vals)
+
+
+class LineStrip:
+    """open item (not locked, not solved): drops the lines for which pick_line is true, keeps the rest. Lines stream as they end; the last partial
+    line is held to the end. A fenced figure passes untouched."""
+    def __init__(self, vals):
+        self.vals, self.buf, self.fenced = vals, "", False
+
+    def _lines(self, text):
+        out = []
+        for line in text.splitlines(True):
+            if line.lstrip().startswith("```"):
+                self.fenced = not self.fenced
+                out.append(line)
+            elif self.fenced or not pick_line(line, self.vals):
+                out.append(line)
+        return "".join(out)
+
+    def feed(self, text):
+        self.buf += text
+        if "\n" not in self.buf:
+            return ""
+        head, _, self.buf = self.buf.rpartition("\n")
+        return self._lines(head + "\n")
+
+    def end(self):
+        last, self.buf = self.buf, ""
+        return self._lines(last)
 
 
 class Xyz:
@@ -3187,7 +3234,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
     return m.group(0) if m else ""
 
 
-def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
+def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=True):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
     livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: V4_FIG_FIXED + v4_fig_howto), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
@@ -3198,6 +3245,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     ask = reask if reask and fig is not None and livefig.on() else None
     xyz, fence = Xyz(), views_gate.Fence(fig, FIG_SLOT if ask else None)
     guard = None if reveal else LeakGuard(facts)
+    strip = None if closed else LineStrip(facts[1])   # open item (even on REVEAL yes from the 3rd turn): no pick, no answer value, ever
     sent, head, waited = False, "", False        # head: the first visible line so far; None once it went on. waited: FIG_WAIT went out
     for t in chunks:
         vis = fence.feed(xyz.feed(t))
@@ -3210,6 +3258,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
                 continue
             head = None
         vis = guard.feed(vis) if guard else vis
+        vis = strip.feed(vis) if strip and vis else vis
         if vis:
             sent = True
             yield vis
@@ -3228,6 +3277,8 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
         vis = vis if vis.strip() else ""
     if guard:
         vis = guard.feed(vis) + guard.end()
+    if strip:
+        vis = strip.feed(vis) + strip.end()
     if vis:
         sent = True
         yield vis
@@ -3490,7 +3541,7 @@ def v4_stream(v4, key, out=None):
                 first = v4["turns"][0]["content"]
                 reask = lambda why: fig_reask(_v4_claude_system(v4),   # noqa: E731
                                               first[0] if isinstance(first, (list, tuple)) else str(first), v4["fig"], why, v4["code"])
-            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask):
+            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask, v4.get("closed", True)):
                 sent = True
                 yield t
             if sent:
@@ -4333,7 +4384,7 @@ def chat(cookie_header, body):
         v4 = None
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
-            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), pick)), code=p["code"], arm=cluck_arm(sid),
+            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=turn_closed((sid, p["code"])), facts=leak_facts(p, pick_done(p, units_done(p, sid), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
