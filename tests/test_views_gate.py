@@ -87,8 +87,28 @@ class TugFlip(unittest.TestCase):
     def test_bad_rows_and_net(self):
         self.assertEqual(self.one('t = Tug(["V | m | sideways"])')[1][0], "t:tug:row")
         self.assertEqual(self.one('t = Tug(["a very long label | m | up"])')[1][0], "t:tug:row")
-        self.assertEqual(self.one('t = Tug(["V | m | up"], "P", "alt", "up 3/2")')[1][0], "t:stage:Tug.net", "a Cluck reply is never post: no end-knot answer")
         self.assertEqual(self.one('t = Flip([["a", "b"]])')[1][0], "t:flip:row")
+
+    def test_a_bad_row_is_trimmed_the_tug_stays_with_two_good_rows(self):
+        # bench Nov 4 (SGU, T6Y): one row off the grammar used to drop the whole Tug
+        t = 't = Tug(["V | box squeezed | up 3", "T | gas cooled | down 2", "a label far too long | x | up"], "P", "two pulls")'
+        prog, log = self.one(t)
+        self.assertEqual(log, ["t:trim:Tug.row"])
+        self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | box squeezed | up 3", "T | gas cooled | down 2"], "P", "two pulls")')
+        self.assertEqual(self.one('t = Tug(["V | a | up 3", "T | b | sideways"])')[1][0], "t:tug:row", "one good row left: dropped as before")
+
+    def test_a_net_is_trimmed_never_drawn(self):
+        # bench Nov 4 (USR): the model wrote the end-knot answer; a Cluck reply is never post, so only the net line goes
+        prog, log = self.one('t = Tug(["V | m | up", "T | n | down"], "P", "alt", "up 3/2")')
+        self.assertEqual(log, ["t:trim:Tug.net"])
+        self.assertEqual(prog, 'root = View([t])\nt = Tug(["V | m | up", "T | n | down"], "P", "alt")')
+        prog, log = self.one('t = Tug(["V | m | up"], null, "alt", "up 3/2")')
+        self.assertEqual((prog, log), ('root = View([t])\nt = Tug(["V | m | up"], null, "alt")', ["t:trim:Tug.net"]))
+
+    def test_a_leak_in_a_kept_row_still_drops_after_the_trim(self):
+        prog, log = self.one('t = Tug(["c | = 5 m | up", "T | n | down", "a label far too long | x | up"])')
+        self.assertIsNone(prog)
+        self.assertIn("leak:", " ".join(log))
 
     def test_a_pull_size_equal_to_a_key_value_is_not_a_leak(self):
         # CTX's answer is 5.0: "up 5" is a bar length (bench Nov 4: PHYS_SGU's Tug died on "up 3", a choice's value), "= 5 m" in the move still is a leak

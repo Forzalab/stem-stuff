@@ -256,6 +256,32 @@ def steps_plain(body):
     return ""
 
 
+def trim_tug(el, raw):
+    """a Tug with a bad row or a net is trimmed, not dropped (bench Nov 4: 3 of 44 replies lost their Tug to one bad row / a net): the bad rows go
+    (the Tug stays when >= 2 good rows remain), the net line goes. Rewrites the element's props and raw[statementId]; returns the log codes.
+    Caps and schema errors (a 7th row, a long string) are not trimmed: those drop the statement, as before. A leak is checked after the trim, on what is left."""
+    p, sid = el.get("props") or {}, el.get("statementId")
+    rows = p.get("rows")
+    if not isinstance(rows, list) or not sid or sid not in raw:
+        return []
+    good = [r for r in rows if isinstance(r, str) and TUG_ROW.match(r)]
+    codes = []
+    if len(good) != len(rows):
+        if len(good) < 2:
+            return []                                   # too little left: tug_flip drops it (tug:row)
+        codes.append(f"{sid}:trim:Tug.row")
+    if p.get("net"):
+        codes.append(f"{sid}:trim:Tug.net")
+    if not codes:
+        return []
+    p["rows"] = good
+    p.pop("net", None)
+    q = lambda s: json.dumps(s, ensure_ascii=False)     # noqa: E731
+    args = [q(good)] + ([q(p["of"])] if p.get("of") else ["null"] if p.get("alt") else []) + ([q(p["alt"])] if p.get("alt") else [])
+    raw[sid] = f"{sid} = Tug({', '.join(args)})"
+    return codes
+
+
 def gate(body, ctx):
     """(program text, log codes) for one closed ```openui fence body; program None = the whole fence is dropped"""
     if ctx is None:
@@ -293,6 +319,8 @@ def gate(body, ctx):
         sid = k["statementId"]
         why = errs.get(sid)
         for el in _elements(k, []):
+            if el.get("typeName") == "Tug" and not errs.get(el.get("statementId")):
+                log += trim_tug(el, raw)
             why = why or errs.get(el.get("statementId")) or check_element(el, ctx)
         why = why or bare_steps(k)
         if why:
