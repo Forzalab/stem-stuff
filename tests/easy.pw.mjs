@@ -446,7 +446,7 @@ try {
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.ok(box[1] <= 900 - 32, `the column: as tall as its content, at most the window less the 16px margins (Tony, Oct 6): ${box[1]}`);
     assert.equal(box[2], true, "the sheet fills the column under the videos");
     assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
-      [false, "true", true], "the sheet is open: the players stay, shown by default; the label row stays (Tony, Oct 6)");
+      [true, "false", true], "Cluck generated: the players folded (Tony, Nov 3: \"when Cluck starts to generate, collapse the brainrot\"); the label row stays (Tony, Oct 6)");
     assert.equal(await page.textContent("#cluck .ask .left"), "5 left");
     assert.equal(await page.$$eval("#cluck [role=tab], #cluck .cl-ttl", e => e.length), 0, "one scroll: no tabs, no second title (Tony, Oct 5: variant a)");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
