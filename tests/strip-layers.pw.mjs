@@ -143,11 +143,11 @@ for (const [W, H] of VPS) {
       });
       assert.deepEqual(out, []);
     });
-    await step(`${T}: shape: 2/3 of the bar (wider only when the label needs it), right-aligned, top tucked one radius (8px) under the bar`, async () => {
+    await step(`${T}: shape: 2/3 of the bar (wider only when the label needs it), right-aligned, top tucked 2px behind the bar bottom edge, over everything below (Tony, Nov 5)`, async () => {
       assert.ok(g.d.w >= g.bar.w * 2 / 3 - 1.5 && g.d.w <= g.bar.w + 0.5, `drawer ${g.d.w} vs 2/3 of ${g.bar.w}`);
       if (W >= 1000) assert.ok(Math.abs(g.d.w - g.bar.w * 2 / 3) <= 1.5, `at ${W} the label fits in 2/3: drawer ${g.d.w} vs ${g.bar.w * 2 / 3}`);
       assert.ok(Math.abs(g.d.r - g.bar.r) <= 1, `right edges ${g.d.r} vs ${g.bar.r}`);
-      assert.ok(Math.abs(g.d.t - (g.bar.b - 8)) <= 1, `top ${g.d.t} vs bar bottom - 8 = ${g.bar.b - 8}`);
+      assert.ok(g.d.t >= g.bar.b - 8 && g.d.t <= g.bar.b + 2, `top ${g.d.t} vs bar bottom ${g.bar.b} (-8..+2: tucked behind the bar border, never below it)`);
     });
     await step(`${T}: contents: Ask Cluck + a 44px+ close, full words, nothing cut, no Next inside`, async () => {
       const c = await pg.evaluate(() => {

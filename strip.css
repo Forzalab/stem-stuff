@@ -10,6 +10,7 @@
 .ff.strip { z-index: 1; }
 .ff.strip:has(+ .vdrawer[hidden]) { z-index: auto; }   /* drawer shut: the bar needs no lift, so the revealed answer's copy under it keeps its 44px area (#402) */
 .ch.strip, .chk.strip, .choices.strip { position: relative; z-index: 1; }
+.choices.vd-host, .chk.vd-host { position: relative; }   /* a choices list lifts above its tray (z needs a positioned box) */
 .vd-host { z-index: 3 !important; }   /* the host of the OPEN drawer (strip.js): bar 3 > drawer 2 > every other host and later row 1 (Tony, Nov 3 19:31: the tray may lie over them; a stale host used to paint over it) */   /* B2: a single mc's picked row, pick-all's Check row, an inline pill group: the host of an open drawer lifts (bar > drawer 2 > later content, even a later row's Next at z 1) */
 .ff.strip.bad { background: var(--wrong-fill); }
 .ff.strip.ok { background: var(--correct-fill); }
@@ -23,7 +24,7 @@
 .vdrawer {
   --ease-drawer: cubic-bezier(.32, .72, 0, 1);
   position: absolute; z-index: 2; box-sizing: border-box; display: flex; align-items: center; gap: var(--s1);
-  padding: calc(8px + var(--s1)) var(--s1) var(--s1);                     /* 8px = the bar's radius: the top is tucked under the bar */
+  padding: calc(var(--vd-tuck, 2px) + var(--s1)) var(--s1) var(--s1);     /* --vd-tuck (strip.js place): how far the top is tucked behind the box's bottom edge (2px behind a border, 0 under a verdict line) */
   background: color-mix(in srgb, var(--page) 93%, var(--help));          /* the page warmed 7% toward Cluck's orange (round 12b); the edge below stays neutral */
   border: var(--bw) solid var(--line); border-top: 0; border-radius: 0 0 8px 8px; box-shadow: var(--shadow-2);
   animation: vd-out 380ms var(--ease-drawer) both;

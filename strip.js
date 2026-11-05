@@ -43,7 +43,7 @@
       } else if (g) {                                         // single: the picked row
         var t1 = S.tries[S.tries.length - 1], row = t1 && [].find.call(q.querySelectorAll(".ch"), function (c) { return c.dataset.id === String(t1.c); }) || q.querySelector(".ch:has(.opt.right)");
         var o = row && row.querySelector(".opt"), v = !o ? "" : o.classList.contains("right") && !o.classList.contains("reveal") ? "ok" : o.classList.contains("wrong") ? (fin ? "lock" : "wrong") : "";
-        if (row) out.push({ el: row, at: g.classList.contains("inline") ? g : row, after: g, kind: "row", v: v, n: S.tries.length, row: row });
+        if (row) out.push({ el: row, at: g.classList.contains("inline") ? g : row, after: g, g: g, kind: "row", v: v, n: S.tries.length, row: row });
       }
     } else {
       var ff1 = q.querySelector("#ff.ff");
@@ -69,11 +69,20 @@
     d.dataset.kind = h.kind;
     return d;
   }
-  function place(h, d) {                                      // 2/3 of the bar, right-aligned, top tucked 8px under it (a single mc's drawer spans its row); both are children of one parent, so offsets share a frame
-    var at = h.at, w = at.offsetWidth, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
+  /* Tony, Nov 5: "i want the cluck panel to come from under the input box, OVERLAPPING any other element". The tray hangs from the INPUT box (the typed bar .ff; mc / choose-all: the choices box):
+     its top is tucked 2px behind the box's bottom edge, the box paints above it (.vd-host z 3 > tray z 2), and it floats OVER whatever follows (the verdict line, Next, the Cluck card).
+     It is absolute and keeps no flow room: opening or closing it moves nothing. Side (Tony, same day): "only go left IFF the form is choose all/tick box, bcs the next button is not
+     convenient. otherwise, all stay at right": choose-all = the box's left edge; every other form = the box's right edge. */
+  function boxOf(h) {
+    var el = h.g || h.at;
+    return { left: el.offsetLeft, w: el.offsetWidth, bottom: el.offsetTop + el.offsetHeight, tuck: 2, side: h.kind === "list" ? "left" : "right" };
+  }
+  function place(h, d) {
+    var b = boxOf(h), w = b.w, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
     d.style.width = dw + "px";
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
-    d.style.width = dw + "px"; d.style.left = at.offsetLeft + w - dw + "px"; d.style.top = at.offsetTop + at.offsetHeight - 8 + "px";
+    d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
+    d.style.setProperty("--vd-tuck", b.tuck + "px");
   }
   function show(d, still) {
     clearTimeout(shutT);
@@ -166,8 +175,9 @@
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
     if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
-      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (e !== h.el && e !== h.at) e.classList.remove("vd-host"); });
-      [h.el, h.at].forEach(function (e) { if (!e.classList.contains("vd-host")) e.classList.add("vd-host"); });
+      var lift = h.kind === "list" ? [h.g] : [h.el, h.at, h.g];   // choose-all: only the choices box (the anchor); its Check / Next row stays under the tray
+      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (lift.indexOf(e) < 0) e.classList.remove("vd-host"); });
+      lift.forEach(function (e) { if (e && !e.classList.contains("vd-host")) e.classList.add("vd-host"); });
     }
     drawer.dataset.st = h.v;
     if (st.key !== h.key) {                                   // a new verdict: the drawer opens. Live it slides out; a closed question restored at first sight opens at rest
