@@ -30,6 +30,8 @@ writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 20261022, proble
     body: body("Four particles ($m_1..m_4$ = 2, 3, 5, 6 kg) sit on the corners of a frame $2a \\times 2b$, $a$ = 3.0 m, $b$ = 7.0 m. It turns about the y axis through its centre and speeds up by 30 rev/min each second. Find the torque, in N·m.") },
   { code: "PHYS_XG2", title: "Practice: lift piston", type: "num", answer: String(900 * 9.8 / (Math.PI * 0.64)), form: "900*9.8/(pi*0.8^2)", tol: 0.01,
     body: body("A 900 kg crate sits on a piston of radius 0.8 m. Find the pressure, in Pa.") },
+  { code: "PHYS_XH1", title: "Practice: how num", type: "num", answer: "9", tol: 0.01, how: "Give a number in N.", body: body("Find $3\\times 3$.") },
+  { code: "PHYS_XH2", title: "Practice: how expr", type: "expr", var: "x", answer: "2*x", how: "Type a formula in x.", body: body("Differentiate $x^2$.") },
 ] }));
 /* the fake Claude (Messages API, non-stream): the L3 diagnosis as structured JSON text, the golden answer's shape */
 const L3 = { family: null, concept: "perpendicular distance to the axis", confidence: 0.9, student_view: {
@@ -140,7 +142,7 @@ try {
   });
 
   await step("EXPR_MODE off: today's box (a second number is graded, no prompt, no exprMode)", async () => {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block" });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
     const page = await ctx.newPage();
     await page.goto(`http://localhost:${OFFP}/#PHYS_XG2`); await opened(page, "PHYS_XG2");
@@ -165,8 +167,8 @@ try {
         phColor: getComputedStyle(inp, "::placeholder").color };
     });
     const rest = await read();
-    assert.ok(rest.fl && rest.fl.length < rest.ph.length, "a shorter floating label: " + JSON.stringify(rest));
-    assert.equal(rest.fl, "Your answer", "the border label text (Tony, Nov 3 19:21)");
+    assert.ok(rest.fl, "a floating label: " + JSON.stringify(rest));
+    assert.equal(rest.fl, rest.ph, "the border label is the placeholder text (Tony, Nov 4)");
     assert.equal(rest.shown, false, "the label shows at rest: " + JSON.stringify(rest));
     await page.focus("#ans"); await page.waitForTimeout(250);
     const foc = await read();
@@ -178,6 +180,61 @@ try {
     const kept = await read();
     assert.ok(kept.shown && kept.onBorder, "blur with text: the label left the border " + JSON.stringify(kept));
     await ctx.close();
+  });
+  /* Tony, Nov 4: the floating label IS the placeholder; the grey hint line hides while the label floats; one line, clear of Check, at 390 */
+  for (const code of ["PHYS_XH1", "PHYS_XH2"]) await step("390 floating label = placeholder, hint hides while it floats, label clear of Check: " + code, async () => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    const page = await ctx.newPage();
+    await page.goto(`http://localhost:${OFFP}/#${code}`); await opened(page, code);
+    const read = () => page.evaluate(() => {
+      const fl = document.querySelector("#ff .fl"), how = document.querySelector("#q .how"), go = document.querySelector("#ansGo").getBoundingClientRect(), r = fl.getBoundingClientRect();
+      return { fl: fl.textContent, ph: document.querySelector("#ans").placeholder, howShown: getComputedStyle(how).display !== "none", right: r.right, goLeft: go.left, h: r.height, ell: getComputedStyle(fl).textOverflow };
+    });
+    assert.equal((await read()).howShown, true, "idle: the hint shows");
+    const sh = n => (SHOTS && code === "PHYS_XH1") ? page.screenshot({ path: join(SHOTS, `fl-${n}-390.png`) }) : null;
+    await sh("idle");
+    await page.focus("#ans"); await page.waitForTimeout(250); await sh("focus");
+    const f = await read();
+    assert.equal(f.fl, f.ph, "label text is the placeholder: " + JSON.stringify(f));
+    assert.equal(f.howShown, false, "focus: the hint is hidden");
+    assert.ok(f.right <= f.goLeft, "label right edge clear of Check: " + JSON.stringify(f));
+    assert.equal(f.ell, "ellipsis"); assert.ok(f.h < 24, "one line: " + JSON.stringify(f));
+    await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
+    await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
+    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    assert.equal((await read()).howShown, true, "blur, empty: the hint is back");
+    await ctx.close();
+  });
+  await step("390 verdict boxes: placeholder + label gone; edit after a miss brings the label back, the x stays under the arrow", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    let page = await ctx.newPage();
+    await page.goto(`http://localhost:${OFFP}/#PHYS_XH1`); await opened(page, "PHYS_XH1");
+    const st = () => page.evaluate(() => { const ff = document.querySelector("#ff"), fl = ff.querySelector(".fl"), vk = ff.querySelectorAll(".vk"), go = document.querySelector("#ansGo");
+      return { fl: +getComputedStyle(fl).opacity, ph: getComputedStyle(ff.querySelector("input"), "::placeholder").color, marks: vk.length, vkShown: !!vk[0] && getComputedStyle(vk[0]).display !== "none",
+        bad: ff.classList.contains("bad"), cue: ff.classList.contains("cue"), arrow: !go.hidden && getComputedStyle(go).display !== "none" }; });
+    const shot = n => SHOTS ? page.screenshot({ path: join(SHOTS, `fl-${n}-390.png`) }) : null;
+    const hidden = o => o.fl === 0 && /rgba\(.*, 0\)|transparent/.test(o.ph);
+    await page.fill("#ans", "1"); await page.click("#ansGo");
+    await page.waitForFunction(() => document.querySelector("#ff .vk")); await page.waitForTimeout(300);
+    let o = await st(); assert.ok(hidden(o) && o.vkShown && o.marks === 1, "wrong: label+placeholder gone, x shown " + JSON.stringify(o)); await shot("wrong");
+    await page.fill("#ans", "12"); await page.waitForTimeout(300);
+    o = await st(); assert.ok(o.fl > 0.5 && !o.bad && !o.cue && o.arrow && o.marks === 1 && !o.vkShown, "edit: label back, neutral, arrow, x hidden but in DOM " + JSON.stringify(o)); await shot("edit");
+    await page.fill("#ans", ""); await page.waitForTimeout(300);
+    o = await st(); assert.ok(o.vkShown, "cleared: the x shows again " + JSON.stringify(o));
+    await page.fill("#ans", "2"); await page.click("#ansGo");
+    await page.waitForFunction(() => document.querySelectorAll("#ff .vk").length >= 1); await page.waitForTimeout(300);
+    o = await st(); assert.equal(o.marks, 1, "check again: one mark " + JSON.stringify(o));
+    await ctx.close();
+    const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+    await c2.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    page = await c2.newPage();
+    await page.goto(`http://localhost:${OFFP}/#PHYS_XH1`); await opened(page, "PHYS_XH1");
+    await page.fill("#ans", "9"); await page.waitForTimeout(100);
+    await page.click("#ansGo"); await page.waitForSelector("#ff.ok", { timeout: 8000 }); await page.waitForTimeout(400);
+    o = await st(); assert.ok(hidden(o), "right: label+placeholder gone " + JSON.stringify(o)); await shot("right");
+    await c2.close();
   });
 } finally {
   await browser.close();
