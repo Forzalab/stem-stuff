@@ -2,11 +2,13 @@
 No clone and no git: the brain is heavy and Tony's phone has no copy (design/DEPLOY.md). tools/ship.sh calls this when no local
 brain clone exists.
 
-usage: python3 tools/brain_banks.py OUTDIR
-  writes each bank to OUTDIR/<name> and prints "EPOCH<tab>PATH" per bank. If one name sits in several *-bank folders, the
+usage: python3 tools/brain_banks.py OUTDIR            |   python3 tools/brain_banks.py --check-pins SPEC
+  writes each bank to OUTDIR/<name> and prints "EPOCH<tab>PATH<tab>SOURCE" per bank (SOURCE = brain, or brain@<sha> for a pinned bank). If one name sits in several *-bank folders, the
   newest commit wins (EPOCH = that commit time, else 0).
 exit: 0 ok, 3 no BRAIN_TOKEN (skipped), 1 error (bad token, network, a file that is not a bank): ship.sh then stops, so a broken
   or partial bank set is never deployed.
+Pins: $SHIP_PINS="BANK_P3X@cd581738[,BANK_Y22@sha]" fetches that bank at that brain commit (ref=<sha>) instead of main; every other bank
+  stays at main. A pinned name that is not in the brain at that sha = error, nothing is written. --check-pins only validates SPEC.
 env: BRAIN_TOKEN (GitLab token with read_api; from stem-stuff/.env), BRAIN_API (default https://gitlab.com/api/v4),
   BRAIN_PROJECT (default Forzalab-bravo/brain), BRAIN_REF (default main).
 The token goes in one header, only to BRAIN_API's host, never across a redirect, and is never printed."""
@@ -29,6 +31,25 @@ class Fail(Exception):
     pass
 
 
+PIN = re.compile(r"^(BANK_[A-Z0-9]{3,6})(?:\.json)?@([0-9a-f]{7,40})$")
+
+
+def parse_pins(spec):
+    """"BANK_P3X@cd581738,BANK_Y22@sha" -> {"BANK_P3X": "cd581738", ...}. Malformed or duplicate = Fail."""
+    pins = {}
+    for item in (spec or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        m = PIN.match(item)
+        if not m:
+            raise Fail(f"bad pin {item!r} (want BANK_X@<hex sha, 7-40 chars>)")
+        if m.group(1) in pins:
+            raise Fail(f"bank {m.group(1)} is pinned twice")
+        pins[m.group(1)] = m.group(2)
+    return pins
+
+
 def get(endpoint, token, **query):   # not "path": GitLab's own query field is called path
     url = f"{API}/projects/{PROJECT}/{endpoint}" + ("?" + urllib.parse.urlencode(query) if query else "")
     req = urllib.request.Request(url)
@@ -43,17 +64,17 @@ def get(endpoint, token, **query):   # not "path": GitLab's own query field is c
         raise Fail(f"GitLab unreachable: {getattr(e, 'reason', e)}") from None
 
 
-def bank_paths(token):
+def bank_paths(token, ref=None):
     found, page = [], "1"
     while page:   # the tree is paged; X-Next-Page is empty on the last page
-        r = get("repository/tree", token, path="projects", recursive="true", per_page="100", ref=REF, page=page)
+        r = get("repository/tree", token, path="projects", recursive="true", per_page="100", ref=ref or REF, page=page)
         found += [i["path"] for i in json.load(r) if i.get("type") == "blob" and BANK.match(i.get("path", ""))]
         page = r.headers.get("X-Next-Page", "")
     return found
 
 
-def committed(path, token):
-    c = json.load(get("repository/commits", token, path=path, ref_name=REF, per_page="1"))
+def committed(path, token, ref=None):
+    c = json.load(get("repository/commits", token, path=path, ref_name=ref or REF, per_page="1"))
     return int(datetime.datetime.fromisoformat(c[0]["committed_date"].replace("Z", "+00:00")).timestamp()) if c else 0
 
 
@@ -61,27 +82,50 @@ def main(out):
     token = os.environ.get("BRAIN_TOKEN", "")
     if not token:
         return 3
+    pins = parse_pins(os.environ.get("SHIP_PINS", ""))
+    plan = []   # (file name, path, ref, commit time); resolved first, so a bad pin fails before anything is written
     by_name = {}
     for p in bank_paths(token):
         by_name.setdefault(BANK.match(p).group(1), []).append(p)
+    for name in pins:
+        by_name.pop(name + ".json", None)
     for name, paths in sorted(by_name.items()):
         when = {p: committed(p, token) for p in paths} if len(paths) > 1 else {paths[0]: 0}
         path = max(paths, key=lambda p: (when[p], p))
-        raw = get(f"repository/files/{urllib.parse.quote(path, safe='')}/raw", token, ref=REF).read()
+        plan.append((name, path, REF, when[path]))
+    for bank, sha in sorted(pins.items()):
+        paths = [p for p in bank_paths(token, sha) if BANK.match(p).group(1) == bank + ".json"]
+        if not paths:
+            raise Fail(f"pinned {bank}@{sha}: no {bank}.json in the brain at that commit")
+        when = {p: committed(p, token, sha) for p in paths} if len(paths) > 1 else {paths[0]: 0}
+        path = max(paths, key=lambda p: (when[p], p))
+        plan.append((bank + ".json", path, sha, when[path]))
+    got = []
+    for name, path, ref, when in plan:
+        raw = get(f"repository/files/{urllib.parse.quote(path, safe='')}/raw", token, ref=ref).read()
         try:
             ok = isinstance(json.loads(raw).get("groups" if name == "formula-sheet.json" else "problems"), list)
         except (ValueError, AttributeError):
             ok = False
         if not ok:
             raise Fail(f"{path}: not a bank (needs a JSON object with a problems list)")
+        got.append((name, raw, when, "brain" if ref == REF and name[:-5] not in pins else f"brain@{ref}"))
+    for name, raw, when, src in got:
         dest = os.path.join(out, name)
         with open(dest, "wb") as f:
             f.write(raw)
-        print(f"{when[path]}\t{dest}")
+        print(f"{when}\t{dest}\t{src}")
     return 0
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--check-pins":
+        try:
+            parse_pins(sys.argv[2])
+            sys.exit(0)
+        except Fail as e:
+            print(f"ship: {e}", file=sys.stderr)
+            sys.exit(1)
     if len(sys.argv) != 2 or not os.path.isdir(sys.argv[1]):
         sys.exit("usage: brain_banks.py OUTDIR")
     try:

@@ -13,6 +13,13 @@
 
   /* ---------- 1. the duck + the sky ---------- */
   var box = null, onDismiss = null, onHollow = null, outT = 0;
+  /* telemetry (cluck_rise): shown -> tapped | dismissed (other input put it away) | expired (the bank closed / another rise replaced it) */
+  var cur = null;
+  function tel(phase) {
+    if (!cur) return;
+    var c = cur; if (phase !== "shown") cur = null;
+    try { window.stemT && window.stemT("cluck_rise", { phase: phase, trigger: c.trigger, code: (window.stemBank && window.stemBank.code) || null, item: c.item, shown_ms: phase === "shown" ? 0 : Math.round(performance.now() - c.at) }); } catch (e) { /* never the page's problem */ }
+  }
   function build() {
     if (box) return box;
     box = document.createElement("div");
@@ -20,10 +27,10 @@
     box.innerHTML = '<div class="ck-sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></div>' +
       '<p class="ck-say" aria-hidden="true"></p><button type="button" class="ck-peek"><span class="ck-duck"></span></button>' +
       '<button type="button" class="ck-hollow" aria-label="Felt hollow" hidden></button>';
-    box.querySelector(".ck-peek").addEventListener("click", function () { var f = onDismiss; down(); if (f) f(); });
+    box.querySelector(".ck-peek").addEventListener("click", function () { var f = onDismiss; tel("tapped"); down(); if (f) f(); });
     box.querySelector(".ck-hollow").addEventListener("click", function (e) {   // J6 seen: "felt hollow" (say's o.onHollow); not before it shows
       if (+getComputedStyle(e.currentTarget).opacity < 0.5) return;
-      var f = onHollow; down(); if (f) f();
+      var f = onHollow; tel("tapped"); down(); if (f) f();
     });
     document.body.append(box);
     addEventListener("resize", function () { if (up()) place(); });
@@ -41,6 +48,7 @@
   function up() { return !!box && !box.hidden && !box.classList.contains("out"); }
   function rise(o) {
     build(); clearTimeout(outT);
+  tel("expired"); cur = { trigger: o.trigger || "idle", item: location.hash.replace(/^#/, "") || null, at: performance.now() };
     onDismiss = o.onDismiss || null; onHollow = null; box.querySelector(".ck-hollow").hidden = true;   // only say() shows the hollow tap
     box.querySelector(".ck-say").textContent = o.line || "";
     box.querySelector(".ck-peek").setAttribute("aria-label", "Dismiss " + (o.label || "Cluck"));
@@ -48,6 +56,7 @@
     void box.offsetWidth;                                                   // restart: every rise plays the sunrise from the top
     box.classList.add("on");
     room();
+    tel("shown");
   }
   /* nothing on top of anything (Tony, Oct 19): the duck and its line rest on no control. Where they would (a short phone: the hint card's
      "okay, but how?" at the window's foot), the page gets that much room under its end and scrolls up by it; the room stays until the next
@@ -69,6 +78,7 @@
   addEventListener("hashchange", function () { H.classList.remove("ck-room"); H.style.removeProperty("--ck-room"); });
   function down() {
     if (!up()) return;
+    tel("dismissed");
     box.classList.add("out");                                               // duck 300 ms, sky 400 ms (app.css), then night again
     outT = setTimeout(function () { box.hidden = true; box.classList.remove("on", "out"); }, 630);
   }
@@ -94,7 +104,7 @@
     if (idle < wait()) return arm(wait() - idle);                           // input came since: wait out the rest
     if (!ok()) { last = performance.now(); return arm(wait()); }           // busy elsewhere (e.g. Cluck open): a fresh wait from now
     mine = true; n++; lastRise = performance.now();
-    rise({ line: "Cluck is here if you get stuck.", label: "Cluck",
+    rise({ line: "Cluck is here if you get stuck.", label: "Cluck", trigger: "idle",
       onDismiss: function () { mine = false; arm(wait()); } });
   }
   /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
@@ -109,7 +119,7 @@
       wt = 0;
       if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
       mine = true; lastRise = performance.now();
-      rise({ line: "Cluck is here if you get stuck.", label: "Cluck",
+      rise({ line: "Cluck is here if you get stuck.", label: "Cluck", trigger: "wrong",
         onDismiss: function () { mine = false; arm(wait()); } });
     }, WRONG_MS);
   }
@@ -135,6 +145,7 @@
   });
   addEventListener("drill:bank", function () {                               // a bank opened or left: a new bank session
     n = 0; last = performance.now(); mx = null; wrongDone = {}; clearTimeout(wt); wt = 0;
+    tel("expired");
     if (mine) { mine = false; down(); }
     arm(wait());
   });
@@ -152,7 +163,7 @@
     o = o || {};
     if ((!line && !o.nod) || document.visibilityState === "hidden" || up() || !ok()) return false;
     var me = said = { onAway: o.onAway };
-    rise({ line: line || "", label: line ? "Cluck: " + line : "Cluck",
+    rise({ line: line || "", label: line ? "Cluck: " + line : "Cluck", trigger: "jev",
       onDismiss: function () { if (said === me) { said = null; if (o.onAway) o.onAway(); } if (o.onOpen) o.onOpen(); } });   // onOpen (opt-in, app.js "?" peek): only the duck's own tap reaches onDismiss; Jev's onTap stays unused
     if (o.onHollow) { onHollow = function () { if (said === me) said = null; o.onHollow(); }; box.querySelector(".ck-hollow").hidden = false; }
     return true;
@@ -162,6 +173,6 @@
     var f = said.onAway; said = null; down(); if (f) f();
   }
   ["pointerdown", "keydown", "wheel", "touchstart", "input"].forEach(function (k) { document.addEventListener(k, sayAway, opt); });
-  addEventListener("drill:bank", function () { if (said) { said = null; down(); } });
+  addEventListener("drill:bank", function () { tel("expired"); if (said) { said = null; down(); } });
   window.stemDuck.say = say;
 })();

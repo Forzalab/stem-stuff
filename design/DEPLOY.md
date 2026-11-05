@@ -37,6 +37,11 @@ Decided Oct 3, 2026 (PR #34). How to deploy: README, "Deploy on Vercel".
 - From Termux: `tools/press.sh demo` (then `live`). It queues the run and returns in ~2 s (Oct 23, Tony: "i want 2s, not 2min"; the run
   itself is ~2 min, 55 s of it the Vercel build). A red run = GitHub's failed-workflow notification. `tools/press.sh --wait live` = the old
   way: checks secrets, watches the run, says in one line what is wrong (run failed + log tail). Needs `pkg install gh` and `gh auth login`.
+- Nov 5 (Tony: "`ship.sh live` should send out a queue for gh action"): on Termux (or `--remote`) `tools/ship.sh demo|live` hands off to `tools/press.sh`
+  and returns in ~2 s; `--wait` watches the run; `--local` forces the old local deploy. One-time: `pkg install gh && gh auth login`.
+- Pins ship a bank at an older brain commit: `SHIP_PINS="BANK_P3X@cd581738[,BANK_Y@sha]"` or `--pin BANK_X@sha` (also on press.sh); the source line
+  reads `BANK_P3X(brain@cd581738)`; a pin the brain lacks at that sha stops the deploy. Repo variable `SHIP_PINS` (Settings → Secrets and
+  variables → Actions → Variables) is the default when the run's `pins` input is empty. Today's value: `BANK_P3X@cd581738` until A6 (`vary` in SCHEMA.md) lands; then delete it.
 - Press: GitHub app → Actions → **ship** → Run workflow → mode `demo` or `live`. The button exists only once ship.yml is on main.
 - Termux (~1 KB), with a fine-grained PAT (this repo only, Actions: read and write) in `$GH_PAT`:
   `curl -X POST -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" https://api.github.com/repos/forzalab/stem-stuff/actions/workflows/ship.yml/dispatches -d '{"ref":"main","inputs":{"mode":"live"}}'`
