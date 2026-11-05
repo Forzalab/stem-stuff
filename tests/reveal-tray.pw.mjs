@@ -112,10 +112,11 @@ try {
         assert.ok(m && m.d, "a reveal line and an open drawer: " + JSON.stringify(m));
         assert.match(m.text, /1\.38/, "the value");
         hasDuck(await duck(page), "2nd miss");
-        const at = () => page.evaluate(() => { const t = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : null; }; return { ff: t("#ff"), pv: t("#preview"), ansl: t("#q .ansl"), fb: t("#fb") }; });
+        const at = () => page.evaluate(() => { const t = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : null; }; return { ff: t("#ff"), pv: t("#preview"), ansl: t("#q .ansl") }; });
         const a = await at();
         await page.click("#q .vdrawer .vd-x"); await page.waitForTimeout(SETTLE);
-        assert.deepEqual(await at(), a, "closing the drawer moved something");
+        assert.deepEqual(await at(), a, "closing the drawer moved something above it");   // Tony, Nov 4: the tray sits under the box + verdict line and keeps flow room while shown, so only what is BELOW it (fb) moves up when it closes
+        assert.equal(await page.locator("#q .vd-room").count(), 0, "the tray's room is still reserved after it closed");
         await page.click("#q .nx");                                           // Next -> the next item, answered right first time
         await page.waitForFunction(() => location.hash === "#PHYS_RT2" && !!document.querySelector("#ff input:not([disabled]), #ff textarea:not([disabled])"), null, { timeout: 8000 });
         await typeAnswer(page, "1.38");

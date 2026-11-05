@@ -717,6 +717,8 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .rv-duck { flex: none; display: inline-flex; width: 1.25rem; height: 1.25rem; color: var(--help-deep); }   /* the shared reveal-line duck, dark variant (Tony Nov 3) */
 .rv-duck .ico, .ansl .rv-duck .ico { width: 100%; height: 100%; color: var(--help-deep); }
 .ansl b { color: var(--correct); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ansl > :is(.ansv, b) { margin-left: calc(.2em - var(--s2)); }   /* Tony, Nov 4: the gap before the value = the gap after it. The flex gap would be 8px before the value but one word space (.2em in Atkinson) after it, so the value sits one word space from the words before it: the same space as inside the line */
+.ansl > b { margin-right: calc(.2em - var(--s2)); }   /* a bare value (no unit): the same word space before the copy icon */
 .ansl .ansu { color: var(--ink); font-weight: 400; }   /* W132: the unit after the value, plain ink (Tony: "green ok, but put units in white") */
 .ansl .ansu sup { font-size: .75em; line-height: 0; position: relative; top: -.4em; vertical-align: baseline; }   /* m/s^2: raised, the line keeps its height (no jank) */
 .preview:has(.ansl) { color: var(--ink); }

@@ -43,7 +43,7 @@
       } else if (g) {                                         // single: the picked row
         var t1 = S.tries[S.tries.length - 1], row = t1 && [].find.call(q.querySelectorAll(".ch"), function (c) { return c.dataset.id === String(t1.c); }) || q.querySelector(".ch:has(.opt.right)");
         var o = row && row.querySelector(".opt"), v = !o ? "" : o.classList.contains("right") && !o.classList.contains("reveal") ? "ok" : o.classList.contains("wrong") ? (fin ? "lock" : "wrong") : "";
-        if (row) out.push({ el: row, at: g.classList.contains("inline") ? g : row, after: g, kind: "row", v: v, n: S.tries.length, row: row });
+        if (row) out.push({ el: row, at: g.classList.contains("inline") ? g : row, after: g, g: g, kind: "row", v: v, n: S.tries.length, row: row });
       }
     } else {
       var ff1 = q.querySelector("#ff.ff");
@@ -69,11 +69,30 @@
     d.dataset.kind = h.kind;
     return d;
   }
-  function place(h, d) {                                      // 2/3 of the bar, right-aligned, top tucked 8px under it (a single mc's drawer spans its row); both are children of one parent, so offsets share a frame
-    var at = h.at, w = at.offsetWidth, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
+  /* Tony, Nov 4 (live #415 shots 1-3): the tray SLIPS FROM UNDER the answer box, anchored to its BOTTOM-LEFT: left edge = the box's left edge, top tucked behind the box's bottom edge.
+     The box = the typed bar plus its verdict line (.ansl, when it sits below the bar), or the whole choices list (mc / choose-all). The tray takes its flow room only while it is
+     shown (a .vd-room spacer right after the box, gone with the tray: no orphan gap); what comes later (the choose-all Next row) is pushed down below it, never under it. */
+  var room = null;
+  function boxOf(h) {                                         // the box the tray hangs from: its left, width, bottom, the element the room goes after, and how far the top tucks behind the bottom edge
+    var g = h.g, at = h.at, pv = h.kind === "ff" && at.id === "ff" ? D.querySelector("#q #preview") : null;
+    if (g) return { left: g.offsetLeft, w: g.offsetWidth, bottom: g.offsetTop + g.offsetHeight, after: h.kind === "row" ? null : g, tuck: 2 };   // a single mc's drawer already sits right after the list (sync keeps it there): its room goes after the drawer, or the two would keep swapping places
+    if (pv && pv.querySelector(".ansl") && pv.getClientRects().length) return { left: at.offsetLeft, w: at.offsetWidth, bottom: pv.offsetTop + pv.offsetHeight, after: pv, tuck: 0 };   // the verdict line is part of the box: the tray starts under its text
+    return { left: at.offsetLeft, w: at.offsetWidth, bottom: at.offsetTop + at.offsetHeight, after: null, tuck: 2, free: true };   // a bar with no verdict line under it (a wrong try): the tray may lie over what is below it (Tony, Nov 3 19:31), no room is kept
+  }
+  function reserve(after, d, h) {                             // flow room for the open tray (it is absolute): a spacer after the box, the tray's height less its tuck, + the 8px the row below has
+    if (!room) { room = D.createElement("div"); room.className = "vd-room"; room.setAttribute("aria-hidden", "true"); }
+    var anchorEl = after || d;
+    if (room.previousElementSibling !== anchorEl || !room.isConnected) anchorEl.after(room);
+    room.style.height = Math.max(0, d.offsetHeight - h) + 8 + "px";
+  }
+  function unreserve() { if (room) { room.remove(); room = null; } }
+  function place(h, d) {
+    var b = boxOf(h), w = b.w, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
     d.style.width = dw + "px";
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
-    d.style.width = dw + "px"; d.style.left = at.offsetLeft + w - dw + "px"; d.style.top = at.offsetTop + at.offsetHeight - 8 + "px";
+    d.style.width = dw + "px"; d.style.left = b.left + "px"; d.style.top = b.bottom - b.tuck + "px";
+    d.style.setProperty("--vd-tuck", b.tuck + "px");
+    if (!d.hidden && !b.free) reserve(b.after, d, b.tuck); else unreserve();
   }
   function show(d, still) {
     clearTimeout(shutT);
@@ -82,7 +101,7 @@
   }
   /* only the host that owns the OPEN drawer is lifted above it (.vd-host, z 3); every other verdict host (.strip) stays under it, so the tray may lie over the rows
      below (Tony, Nov 3 19:31) and no stale host paints over it. It drops when the drawer is gone: nothing stays lifted after the tray shuts. */
-  function unlift() { D.querySelectorAll("#q .vd-host").forEach(function (e) { e.classList.remove("vd-host"); }); }
+  function unlift() { D.querySelectorAll("#q .vd-host").forEach(function (e) { e.classList.remove("vd-host"); }); unreserve(); }
   function hide(d, instant) {
     clearTimeout(shutT);
     if (d.hidden) return;
@@ -166,8 +185,8 @@
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
     if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
-      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (e !== h.el && e !== h.at) e.classList.remove("vd-host"); });
-      [h.el, h.at].forEach(function (e) { if (!e.classList.contains("vd-host")) e.classList.add("vd-host"); });
+      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (e !== h.el && e !== h.at && e !== h.g) e.classList.remove("vd-host"); });
+      [h.el, h.at, h.g].forEach(function (e) { if (e && !e.classList.contains("vd-host")) e.classList.add("vd-host"); });
     }
     drawer.dataset.st = h.v;
     if (st.key !== h.key) {                                   // a new verdict: the drawer opens. Live it slides out; a closed question restored at first sight opens at rest

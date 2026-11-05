@@ -49,7 +49,7 @@ async function pageFor(browser, W, H) {
 }
 const R = `(e => e && (({ left, top, right, bottom, width, height }) => ({ left, top, right, bottom, width, height }))(e.getBoundingClientRect()))`;
 const pos = page => page.evaluate(`(() => { const R = ${R}, y = window.scrollY; const g = s => R(document.querySelector(s));
-  return { chk: g("#ansGo"), nx: g("#q .nx"), ff: g("#ff"), card: g("#q"), fz: g("#freezeIn"), y }; })()`);
+  return { chk: g("#ansGo"), nx: g("#q .nx"), ff: g("#ff"), card: g("#q"), fz: g("#freezeIn"), room: document.querySelector("#q .vd-room")?.getBoundingClientRect().height || 0, y }; })()`);
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 // BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) shows no drawer chip (its box is open and carries Cluck), so the wide pass runs at 700
 for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "out"]) {
@@ -73,7 +73,7 @@ for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "
     assert.ok(Math.abs(after.ff.top + after.y - before.ff.top - before.y) <= 1, "the field moved");
     assert.ok(Math.abs(after.card.top + after.y - before.card.top - before.y) <= 1, "the question card moved");
     console.log(`     the question block grew ${(after.fz.height - before.fz.height).toFixed(2)}px (the old chip row added its own height under the field)`);
-    assert.ok(after.fz.height - before.fz.height <= 1, `the block under the field grew ${after.fz.height - before.fz.height}px: nothing may be added after Check`);
+    assert.ok(after.fz.height - before.fz.height <= after.room + 1, `the block under the field grew ${after.fz.height - before.fz.height}px: only the open tray's own room (${after.room}px, Tony Nov 4: it slips out from under the box and keeps its room while shown) may be added after Check`);
     assert.ok(Math.abs(after.nx.top + after.nx.height / 2 - before.chk.top - before.chk.height / 2) <= 1 && Math.abs(dy) <= 1, `Next moved: centre ${after.nx.top + after.nx.height / 2} vs Check ${before.chk.top + before.chk.height / 2}`);
   });
   await step(`${T}: Ask Cluck is in the verdict drawer under the bar (a sibling, solid Cluck colours, inline SVG duck); Next is outside the field`, async () => {
@@ -85,7 +85,7 @@ for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "
         dk: chip && R(chip.querySelector(".dk")) }; })()`);
     assert.ok(g.inside && g.sib, "Ask Cluck is not in a drawer that is the field's sibling"); assert.equal(g.inField, false, "no chip left in the field");
     assert.ok(g.chip.left >= g.dr.left - 0.5 && g.chip.right <= g.dr.right + 0.5, "the chip is inside the drawer");
-    assert.ok(Math.abs(g.dr.right - g.ff.right) <= 1, `drawer and field share the right edge ${g.dr.right} vs ${g.ff.right}`);
+    assert.ok(Math.abs(g.dr.left - g.ff.left) <= 1, `drawer and field share the left edge ${g.dr.left} vs ${g.ff.left}`);   // Tony, Nov 4: the tray is anchored bottom-LEFT under the box (was: right edges equal)
     assert.ok(g.nx.left >= g.ff.right - 0.5, `Next is not outside the field (nx.left ${g.nx.left}, field.right ${g.ff.right})`);
     assert.ok(g.nx.left - g.ff.right <= 10, "Next is not beside the field");
     assert.ok(g.svg && !g.img, "the duck is not the inline SVG");
