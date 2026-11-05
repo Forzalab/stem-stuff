@@ -94,6 +94,8 @@ weight() {
     proof-timeout) echo 6 ;;   # todo 109 item 1: fake clock, own server, local run ~5 s (estimate until CI timing)
     welcome) echo 5 ;;   # local run ~4 s
     ladder-ui) echo 30 ;;   # LADDER-UI (Nov 3): the welcome ladder at 393 / 1280 / 721 x sugar / diet, own server; local ~25 s (estimate until CI timing)
+    cluck-history) echo 20 ;;   # W2 Cluck history status lines + folds at 390 / 1280, own serve.py, stub OpenRouter; estimate until CI timing
+    w3) echo 40 ;;   # W3 polish items 1-8 at 390 / 1280, own serve.py, page.clock for the 30 s ladder; estimate until CI timing
     reveal-tray) echo 45 ;;   # REVEAL-TRAY (Nov 3): reveal under the drawer, its duck, tags row, Cluck box, brainrot fold, toast; own server + stub; local ~40 s
     reveal-duck) echo 45 ;;
     expr) echo 12 ;;   # W137: 3 screen sizes + flag off, own servers; local run ~11 s
