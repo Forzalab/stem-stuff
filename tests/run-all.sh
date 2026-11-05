@@ -84,6 +84,7 @@ weight() {
     bar) echo 15 ;; polish) echo 14 ;; choose-all-spam) echo 13 ;; bank|cluck-more) echo 12 ;; splash) echo 11 ;; livefig) echo 10 ;; figstream) echo 8 ;; figgap|caret) echo 8 ;; seen) echo 9 ;;
     fcard-reveal) echo 8 ;; codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip|repair-gap) echo 5 ;; blind|katex-wrap|measure-slots|views-oui|views-static) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font) echo 1 ;;
+    retry-wait) echo 49 ;;   # local estimate: 49.0 s, STEM_TODAY=2026-10-23, shared server (not CI-measured)
     geomarks) echo 12 ;;  # wgeo U1: + the ramp contact check on chromium/firefox/webkit at 1440 + 390; U3: + labels at 1440/390/360 (graph.js + Geometry); local run ~12.5 s (CI has chromium only: ~5 s)
     reveal-box) echo 12 ;;   # W114f: own server, 4 pages (390 + 1280, right + out), local run ~12 s
     cluck-permanent@desk) echo 30 ;; cluck-permanent@phone) echo 8 ;; cluck-v2@desk) echo 40 ;; cluck-v2@phone) echo 8 ;;   # BIG PLAN V1: Cluck always open on desktop sugar, own server (estimate until CI timing)
@@ -143,7 +144,7 @@ tags() {
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
     guard) echo "@layout @real-time" ;;   # W104 sleeping guard, own server
     queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
-    cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
+    cluck-rise|idle-peek|nudge|seen|retry-wait) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
     cluck-lost) echo "@layout @real-time" ;;   # the clean error line after a mid-reply failure
     tray-anchor) echo "@layout @real-time" ;;   # TRAY-ANCHOR: own serve.py + a stub OpenRouter, no real-time waits
