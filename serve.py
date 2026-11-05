@@ -3386,7 +3386,7 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
             "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
             "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
             "- forces, torque, motion: a ```fig scene (every force an arrow); lengths, angles, lever arms: a Geometry\n"
-            "- energy: a Tug as an energy battery. Adding energy in chunks (heat to warm / melt / boil, work in steps): one row per chunk, all \"up\", the size its rough share (a big chunk = a long bar), the label its chunk name (Q₁, Q₂…), the move in plain words (\"melt the ice\"). Trading forms (before / after, conservation): one row per form, \"down\" for the form that drains, \"up\" for the one that fills. Never a value, never the total; the total goes in a text line.\n"
+            "- energy: heat added in chunks (warm / melt / boil along a heating curve): a stepper, one chunk per step, its table growing a row per chunk (the battery) and ending on the total; the heat figure spec shows how. Trading forms (before / after, conservation): a Tug as an energy battery, one row per form, \"down\" for the form that drains, \"up\" for the one that fills. Never a value, never the total; the total goes in a text line.\n"
             "- their value vs the right one: a Table, one column for their move, one for the fix\n"
             "- an algebra chain: a stepper, the broken step named in its caption\n"
             "- a proof: a Table with base | assume | prove, or a Callout per part\n"
@@ -3397,7 +3397,7 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
             + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 5 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
             "root = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n"
-            "root = View([t])\nt = Tug([\"Q₁ | warm the ice | up 1\", \"Q₂ | melt the ice | up 2\", \"Q₃ | warm the water | up 3\", \"Q₄ | boil it | up 9\"], \"Q\", \"the energy battery\")\n"
+            "root = View([t])\nt = Tug([\"PE | ball falls | down 3\", \"KE | speeds up | up 3\"], \"E\", \"energy trades forms\")\n"
             "root = View([f])\nf = Flip([[\"arm of W\", \"L\", \"half of L\"]])\n"
             "root = View([t])\nt = Table([\"case\", \"before\", \"after\"], [[\"gas\", \"2 atm\", \"6 atm\"]])\n"
             "root = View([s])\ns = Steps(g, [s1, s2], null, [\"i\", \"s\"])\ng = Graph(\"i 40 40, s 160 40\", \"i>s\")\n"
@@ -3426,15 +3426,31 @@ def v4_fig_howto(fig):
 # Topic injection (Tony 19:37 PST Nov 3): the item's topic picks ONE figure spec (its grammar, one worked example, the rules), sent as a firm
 # "draw it like this" in the per-question tail. Deterministic: keywords of the item's title, stem and formula tags, first rule that fits.
 # CLUCK_FIG_SPEC: "p3x" (default: Exam 3 bank only), "1" every bank, "0" off.
-# the heating-curve worked example (spec "heat"): made-up numbers, not a bank item; tests/test_fig_spec.py runs it through livefig.check
-HEAT_EXAMPLE = json.dumps({"type": "graph", "kind": "cartesian", "alt": "Heating curve for ice warmed, melted, warmed, boiled and warmed again: three slopes and two flats.",
-    "x": {"min": 0, "max": 18, "step": 0, "label": "$Q$ added"}, "y": {"min": -90, "max": 145, "step": 0, "label": "$T$ (°C)"}, "marks": [
-    {"mark": "seg", "from": [0, -10], "to": [2, 0]}, {"mark": "seg", "from": [2, 0], "to": [5, 0]}, {"mark": "seg", "from": [5, 0], "to": [9, 100]},
-    {"mark": "seg", "from": [9, 100], "to": [15, 100]}, {"mark": "seg", "from": [15, 100], "to": [17, 120]},
-    {"mark": "text", "at": [8.5, -18], "text": "You melt it. No temp change."}, {"mark": "text", "at": [10.5, 124], "text": "You boil it. No temp change."},
-    {"mark": "dim", "from": [0, -60], "to": [2, -60], "side": "r", "label": "$Q_1=mc\\Delta T$"}, {"mark": "dim", "from": [2, -60], "to": [5, -60], "side": "r", "label": "$Q_2=mL$"},
-    {"mark": "dim", "from": [5, -60], "to": [9, -60], "side": "r", "label": "$Q_3=mc\\Delta T$"}, {"mark": "dim", "from": [9, -60], "to": [15, -60], "side": "r", "label": "$Q_4=mL$"},
-    {"mark": "dim", "from": [15, -60], "to": [17, -60], "side": "r", "label": "$Q_5=mc\\Delta T$"}]}, ensure_ascii=False, separators=(",", ":"))
+# the heating-curve worked example (spec "heat"): an OpenUI Steps stepper on made-up numbers (ice at -10 C to steam at 120 C), not a bank item.
+# One Graph (corner nodes A..F; x = heat added, y up = hotter, widths in proportion), one edge and one Step per piece; step k marks the nodes behind it
+# done, its end node cur, its own edge "tree" (thick) and the earlier edges "seen" (dashed); rows = the growing battery table, the last step adds the total.
+# tests/test_fig_spec.py runs it through views_gate.gate
+def _heat_example():
+    nodes = "A 40 150, B 100 120, C 190 120, D 290 50, E 380 50, F 460 20"
+    temps = ["-10\u00b0C", "0\u00b0C", "0\u00b0C", "100\u00b0C", "100\u00b0C", "120\u00b0C"]
+    caps = ["Q\u2081 = mc\u0394T. You warm the ice to 0\u00b0C.", "Q\u2082 = mL. You melt it. No temp change.", "Q\u2083 = mc\u0394T. You warm the water to 100\u00b0C.",
+            "Q\u2084 = mL. You boil it. No temp change.", "Q\u2085 = mc\u0394T. You warm the steam to 120\u00b0C."]
+    rows = [["Q\u2081 = mc\u0394T", "warm the ice"], ["Q\u2082 = mL", "melt it"], ["Q\u2083 = mc\u0394T", "warm the water"], ["Q\u2084 = mL", "boil it"],
+            ["Q\u2085 = mc\u0394T", "warm the steam"]]
+    ids, sub = "ABCDEF", "\u2081\u2082\u2083\u2084\u2085"
+    out = ["root = View([s])", "s = Steps(g, [" + ", ".join(f"s{k}" for k in range(1, 6)) + '], null, ["chunk", "what you do"])',
+           'g = Graph("' + nodes + '", "' + ", ".join(f"{ids[i]}-{ids[i + 1]}" for i in range(5)) + '")']
+    for k in range(1, 6):
+        nd = " ".join(f"{ids[i]}:done" for i in range(k)) + f" {ids[k]}:cur"
+        ed = " ".join([f"{ids[i]}-{ids[i + 1]}:seen" for i in range(k - 1)] + [f"{ids[k - 1]}-{ids[k]}:tree"])
+        tg = " ".join(f"{ids[i]}:{temps[i]}" for i in range(k + 1))
+        lb = ", ".join(f'"{ids[i]}-{ids[i + 1]}:Q{sub[i]}"' for i in range(k))
+        rw = rows[:k] + ([["total", "+".join(f"Q{c}" for c in sub)]] if k == 5 else [])
+        out.append(f's{k} = Step("{caps[k - 1]}", "{nd}", "{ed}", "{tg}", [{lb}], null, ' + json.dumps(rw, ensure_ascii=False) + ")")
+    return "\n".join(out)
+
+
+HEAT_EXAMPLE = _heat_example()
 FIG_SPECS = {
     "forces": ("DRAW IT LIKE THIS (forces): one ```fig scene, a free-body picture, on a right answer too. The body as a box or disk; EVERY force on it "
                "an arrow from the body's own point, up or down as it acts (weight down, buoyant force or tension up, normal force off the surface); "
@@ -3448,13 +3464,16 @@ FIG_SPECS = {
     "rotation": ("DRAW IT LIKE THIS (rotation): one ```openui Geometry: the axis as a seg, each mass a point, each lever arm a dim from the axis "
                  "with the question's own length; for a torque, add the force as an arrow at the point it pulls; never the answer. Example:\n"
                  "```openui\nroot = View([g])\ng = Geometry(\"A 0,0; B 0,2; C 4,0; D 4,2\", [\"seg(A,B)\", \"dim(A,C,2a)\", \"label(A,left)\"], \"The axis is the left edge; the right masses sit 2a from it.\")\n```"),
-    "heat": ("DRAW IT LIKE THIS (heating curve): one ```fig cartesian, x = $Q$ added, y = $T$ (°C). Draw ONLY this question's path, one seg per piece: a slope is "
-             "mcΔT (its width follows c·ΔT), a flat is mL (its width follows L); positions are not checked, keep them in proportion. One dim under the x-axis per piece "
-             "(side \"r\", well below the curve, y floor about -90, axis step 0 so no ticks) carries its label: the chunk and its formula ($Q_1=mc\\Delta T$, $Q_2=mL$), symbols only, never a number from the question. "
-             "A flat also gets one text mark in plain words, you as the subject: \"You melt it. No temp change.\" / \"You boil it. No temp change.\" Never \"the heat goes\", "
-             "never \"temp stays flat\". Cooling is the same curve with arrow marks pointing right to left ($Q$ taken out). The total $Q=Q_1+Q_2+\\dots$ goes in a text line, not the figure. "
-             "At most 10 labels here (5 pieces, 2 axes, 2 flat captions). Example (made-up numbers):\n"
-             "```fig\n" + HEAT_EXAMPLE + "\n```"),
+    "heat": ("DRAW IT LIKE THIS (heating curve): one ```openui stepper, Steps(g, steps, null, [\"chunk\", \"what you do\"]), one piece of the curve per step, at most 8 steps. "
+             "g is a Graph: a node at each corner of the curve (ids A, B, C...), x = heat added (a slope is mcΔT and its width follows c·ΔT, a flat is mL and its width follows L), y up = hotter "
+             "(svg y grows down, so a higher temperature has a SMALLER y), keep the widths in proportion; ONLY this question's path; edges one per piece, in walking order (\"A-B, B-C\"). "
+             "Each Step(cap, nodes, edges, tags, labels, null, rows): the nodes behind the piece \"done\", its end node \"cur\"; its own edge \"tree\", the earlier edges \"seen\"; "
+             "tags = the temperature at a node (\"B:0°C\"), only a temperature the question gives, or 0 / 100; labels = the chunk names so far (\"A-B:Q₁\"); "
+             "rows = the growing heat table: step k holds the rows of Q₁ to Q_k, symbols only (\"Q₂ = mL\" | \"melt it\"), never a number from the question, and the last step adds [\"total\", \"Q₁+Q₂+...\"]. "
+             "The caption (140 characters at most) names the chunk's formula, then what YOU do: \"Q₁ = mcΔT. You warm the ice to 0°C.\" / \"Q₂ = mL. You melt it. No temp change.\" / \"You boil it. No temp change.\" "
+             "Never \"the heat goes\", never \"temp stays flat\". Cooling is the same curve walked from hot to cold: nodes and edges in that order (\"F-E, E-D...\"), captions that say \"You take heat out…\" "
+             "(\"Q₁ = mcΔT. You take heat out of the steam, down to 100°C.\"). The total Q goes in the last table row, never as a number. Example (made-up numbers):\n"
+             "```openui\n" + HEAT_EXAMPLE + "\n```"),
     "graph": ("DRAW IT LIKE THIS (a graph): one ```fig network of the few nodes that prove the idea, the question's own labels. Example:\n"
               "```fig\n" + livefig.EXAMPLE["network"] + "\n```"),
 }
