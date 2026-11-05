@@ -152,7 +152,7 @@ try {
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
         frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
         tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (design/mockups/formula-use.html ?v=7)
-      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(90, 169, 255) 1px", tinted: true, tex: true, old: false });
+      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(94, 120, 153) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src || f.dataset.src));   // 4-6: their src waits for the row to scroll to them
     assert.equal(srcs.length, 5);
@@ -226,7 +226,7 @@ try {
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
         frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
         tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),
-      { role: "note", label: "Key formulas", notch: "Key formulas", onBorder: true, n: 1, arrows: 0, centred: true, frame: "rgb(90, 169, 255) 1px", tinted: true, tex: true, old: false }, "one formula: the same box, no arrow");
+      { role: "note", label: "Key formulas", notch: "Key formulas", onBorder: true, n: 1, arrows: 0, centred: true, frame: "rgb(94, 120, 153) 1px", tinted: true, tex: true, old: false }, "one formula: the same box, no arrow");
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');

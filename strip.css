@@ -55,6 +55,8 @@
 .vdrawer > .wchip svg.dk > :is(ellipse, circle:first-of-type) { fill: currentColor; }
 .vdrawer > .wchip svg.dk > path { fill: var(--help-on); }
 .vdrawer > .wchip svg.dk > circle:last-of-type { fill: var(--help); }
+/* the chip's i-duck (W3 item 6, was a webp pose): a solid dark duck in the chip's ink on the tangerine, like the reveal line's dark duck (.rv-duck) */
+.vdrawer > .wchip svg.dk.ico { width: 24px; height: 24px; color: var(--help-ink); }
 .vdrawer > .wchip .inc { display: none; }
 .vdrawer > .vd-x {
   flex: none; width: var(--btn); height: var(--btn); padding: 0; display: grid; place-items: center; cursor: pointer;

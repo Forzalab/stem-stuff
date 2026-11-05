@@ -273,7 +273,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       assert.ok(g.r.l >= 16 - 0.5 && g.r.r <= g.vw - 16 + 0.5, `chip outside the 16px gutter: ${g.r.l}-${g.r.r}`);
       assert.ok(g.r.h >= 44, `chip ${g.r.h} tall`);
       if (type === "num") assert.ok(g.svg > 0 && g.svg <= 24, `the typed box's duck is the small inline SVG (114r v1f, Tony: simple duck, no overflow): ${g.svg}px`);   // W114f: Tony's design replaced the 48px official pose here
-      else { assert.match(g.duck, outcome === "right" ? /duck-calm-nod-128\.webp$/ : /duck-out-shrug-128\.webp$/); assert.ok(Math.abs(g.dh - 24) <= 0.5, `duck ${g.dh}px (24: the drawer chip's duck, Tony Nov 2)`); }   // the drawer docks the chip at 24px (strip.css .vdrawer > .wchip .dk), same as the typed box's
+      else { assert.ok(!g.duck, "no webp pose on the chip any more (W3: the solid i-duck)"); assert.ok(Math.abs(g.svg - 24) <= 0.5, `duck ${g.svg}px (24: the drawer chip's solid dark i-duck, W3)`); }   // the drawer docks the chip at 24px (strip.css .vdrawer > .wchip .dk), same as the typed box's
       const nod = await page.evaluate(() => { const d = document.querySelector(":is(#wish, .rbox) .cue-chip .g-nod"), n = d && getComputedStyle(d);
         return d ? { name: n.animationName, delay: parseFloat(n.animationDelay) * (n.animationDelay.endsWith("ms") ? 1 : 1000), iter: n.animationIterationCount } : null; });
       if (outcome === "right") {                                                   // a fresh browser: the first right of the day nods, once, after Next has landed (180 + 300 ms)

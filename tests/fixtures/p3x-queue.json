@@ -1,0 +1,400 @@
+[
+{
+"code": "PHYS_PHN",
+"title": "X3 Q2 rolling sphere spring ramp, practice",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_E4K",
+"title": "X3 Q2 twist hollow sphere spring ramp",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_A98",
+"title": "X3 Q2 twin rolling sphere numbers",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_ATU",
+"title": "X3 Q2 twist rolling sphere find speed",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_KY5",
+"title": "X3 Q4 twin rectangle Ix Iy Iz",
+"exam_q": 4,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_96G",
+"title": "X3 Q5 twin rectangle KE 45 rpm",
+"exam_q": 5,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_GVE",
+"title": "X3 Q7 twin rectangle L after 8 s",
+"exam_q": 7,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_HCM",
+"title": "X3 Q8 twin hydraulic lift numbers",
+"exam_q": 8,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_SL6",
+"title": "X3 Q8 twist twin hydraulic lift lighter student, numbers",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_WMK",
+"title": "X3 Q9 twin diver lead belt",
+"exam_q": 9,
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_CL8",
+"title": "X3 Q11 twin second liquid specific gravity",
+"exam_q": 11,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_JJN",
+"title": "X3 Q12 twin cube Young's modulus",
+"exam_q": 12,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_C3Z",
+"title": "X3 Q13 twin cube shear modulus",
+"exam_q": 13,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_9VM",
+"title": "X3 Q14 twin cube bulk modulus",
+"exam_q": 14,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_CUU",
+"title": "X3 Q15 twin band tension",
+"exam_q": 15,
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_AAQ",
+"title": "X3 Q15 twist twin band fitting temperature, new numbers",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_FW6",
+"title": "X3 Q16 twin gas pressure factor",
+"exam_q": 16,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_T6Y",
+"title": "X3 Q18 twin gas vrms factor",
+"exam_q": 18,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_JQ4",
+"title": "X3 Q19 twin Cu-Al junction temperature",
+"exam_q": 19,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_JYQ",
+"title": "X3 Q19 twist twin heat current through rods, new numbers",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_YNJ",
+"title": "X3 Q20 twin bulb ice to steam",
+"exam_q": 20,
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_CQZ",
+"title": "X3 Q20 twist twin bulb stops at warm water, new numbers",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_7HA",
+"title": "X3 Q1 twin rod string at 3/10, T1 150 N",
+"exam_q": 1,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_3XF",
+"title": "X3 Q1 twist twin rod find T2, string at 3/10",
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_VGR",
+"title": "X3 Q1 twist twin rod T2 given, string at 3/10",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_3Q9",
+"title": "X3 Q3 twin rectangle CG, masses reversed",
+"exam_q": 3,
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_BQ3",
+"title": "X3 Q8 welcome pressure under the student's piston",
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_TX2",
+"title": "X3 Q2 twist disk spring ramp, d from the release point",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_LP5",
+"title": "X3 Q6 twist rectangle torque about the left edge",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_8GP",
+"title": "X3 Q6 twist twin rectangle torque about the left edge",
+"parent_template": "PHYS_LP5",
+"twin": "a",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_QJT",
+"title": "X3 Q8 twist hydraulic lift pistons at different heights",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_2ZY",
+"title": "X3 Q2 twist twin hollow sphere numbers",
+"parent_template": "PHYS_E4K",
+"twin": "a",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_UCA",
+"title": "X3 Q2 twist twin rolling sphere find speed, new numbers",
+"parent_template": "PHYS_ATU",
+"twin": "a",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_HR4",
+"title": "X3 Q2 twist twin disk spring ramp numbers",
+"parent_template": "PHYS_TX2",
+"twin": "a",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_K55",
+"title": "X3 Q6 twin rectangle torque 35 rpm per s",
+"exam_q": 6,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_EUU",
+"title": "X3 Q10 twin floating object density, 81.5% submerged",
+"exam_q": 10,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_USR",
+"title": "X3 Q17 twin gas KE factor",
+"exam_q": 17,
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_QNJ",
+"title": "X3 Q1 twist rod both strings moved in, find the weight",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_NTP",
+"title": "X3 Q2 twist solid cylinder rolls down the ramp, find a",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_6E4",
+"title": "X3 Q2 twist hoop rolls down onto a spring, find k",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_B6B",
+"title": "X3 Q3 twist rectangle CG, labels moved",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_6J5",
+"title": "X3 Q5 twist rectangle KE about the x-axis, labels moved",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_JZJ",
+"title": "X3 Q7 twist rectangle L about the x-axis, labels moved",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_55X",
+"title": "X3 Q8 twist hydraulic lift how many students for a height",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_2EP",
+"title": "X3 Q9 twist diver rises with a light belt, find a",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_V3V",
+"title": "X3 Q9 twist diver sinks, find the diver's density",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_9R3",
+"title": "X3 Q15 twist gold ring heated, find the temperature change",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_NYT",
+"title": "X3 Q15 twist gold ring cools on the finger, find the tension",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_HME",
+"title": "X3 Q15 twist twin gold ring tension, new numbers",
+"noob": {
+"tier": 3
+}
+},
+{
+"code": "PHYS_SGU",
+"title": "X3 Q16 twist gas contracts and cools, pressure factor",
+"noob": {
+"tier": 1
+}
+},
+{
+"code": "PHYS_75G",
+"title": "X3 Q16 twist gas squeezed, heated in Celsius, P factor",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_PVJ",
+"title": "X3 Q19 twist copper rod longer, find the hot end",
+"noob": {
+"tier": 2
+}
+},
+{
+"code": "PHYS_HJ9",
+"title": "X3 Q19 twist aluminum on the hot side, find the cold end",
+"noob": {
+"tier": 2
+}
+}
+]

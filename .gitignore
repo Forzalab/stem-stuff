@@ -10,3 +10,4 @@ public/
 .vercel/
 .env
 version.json
+.claude/worktrees/

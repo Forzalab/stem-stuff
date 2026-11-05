@@ -8,7 +8,7 @@
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
-import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "./shuffle.mjs";
+import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, familyOf, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
@@ -411,6 +411,7 @@ function init() {
   /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
   const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
+  const famOf = familyOf(c => off() && off().get(c), topicOf);       // the Exam-3 queue spacing key (shuffle.mjs famFree): exam question, else the topic
   /* noob mode (the front bank, until "Shuffle"): tier 0 = a dead-easy, else the author's noob.tier 1-3, untagged = 3 */
   const front = () => !!bank() && !!bank().front;
   const noob = () => front() && !Q().mix;
@@ -476,7 +477,7 @@ function init() {
     let code = null, redeem = false;
     if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
     else {
-      const p = noob() ? ramp(st, [...live], tierOf) : qPick(st, [...live], topicOf);
+      const p = noob() ? ramp(st, [...live], tierOf, famOf) : qPick(st, [...live], topicOf, famOf);
       if (!p) return null;
       code = p.code; redeem = p.redeem;
     }
@@ -494,7 +495,7 @@ function init() {
     const st = Q(), live = twinGate(list.filter(c => !snack(c) && !dead(c) && !(window.stemHidden && window.stemHidden(c))), c => off() && off().get(c), st.seen);
     const fresh = st.pos === 0 && !Object.keys(st.seen).length;
     const od = deadOpen(st, opener(list.filter(c => dead(c) && !(window.stemHidden && window.stemHidden(c)))));   // T28 P2: a fresh queue starts on a dead-easy
-    const p = od ? { code: od } : !live.length ? null : noob() ? ramp(st, live, tierOf) : fresh ? { code: live[0] } : qPick(st, live, topicOf);
+    const p = od ? { code: od } : !live.length ? null : noob() ? ramp(st, live, tierOf, famOf) : fresh ? { code: live[0] } : qPick(st, live, topicOf, famOf);
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
   };
   /* the list (a jump index, not the queue): file order, Q1, Q2, ... as the bank JSON lists them (a second upload joins after the

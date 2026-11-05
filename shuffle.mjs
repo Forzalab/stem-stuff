@@ -31,7 +31,23 @@ export const FAR = 30;            // a right first pick: this many others before
 export const SKIP = 8;            // shown, never answered (Next): it comes back like a second miss, owing nothing
 export const NEAR = 3;            // never the same code within 3 slots
 export const PULL = 4;            // every 4th slot pulls the least-seen topic (D59)
+export const FAMGAP = 3;          // never a card whose family (famOf) was served in the last 3 slots (Tony Nov 5: Exam-3 twists of one question)
 const hash = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); h = Math.imul(h ^ (h >>> 15), 2246822507); return (h ^ (h >>> 13)) >>> 0; };
+/* family spacing, ONE helper for qPick and ramp. famOf(code) -> the family key (nav.js familyOf), or null/undefined = off.
+   famFree: the cands whose family was not served in the last FAMGAP slots (a review slot counts, a repeat too); [] when all are blocked,
+   so the caller falls back to its old pick (never a dead end). famLess: breadth over depth, the family with fewer serves first. */
+export function famFree(st, cands, famOf) {
+  if (!famOf) return cands;
+  const hot = new Set();
+  for (const c in st.seen) { const s = st.seen[c]; if (s.last != null && s.last > st.pos - FAMGAP) hot.add(famOf(c)); }
+  return hot.size ? cands.filter(c => !hot.has(famOf(c))) : cands;
+}
+export function famLess(st, famOf) {
+  if (!famOf) return () => 0;
+  const n = new Map();
+  for (const c in st.seen) { const f = famOf(c); n.set(f, (n.get(f) || 0) + (st.seen[c].n || 0)); }
+  return (a, b) => (n.get(famOf(a)) || 0) - (n.get(famOf(b)) || 0);
+}
 export function qNew(salt = "") { return { v: 1, salt: String(salt), pos: 0, seen: {}, hist: [], at: -1 }; }
 /* the first open of a bank under the queue: the marks already saved (server or this browser) become history, so no progress is
    lost. A right one rests FAR away; a miss owes a Redeem: the first after a warm-up of NEAR fresh questions, the rest one per PULL. */
@@ -48,7 +64,7 @@ export function qMigrate(st, codes, markOf) {
 /* the next slot's pick from pool (the bank's real questions, snacks left out), topicOf(code) -> topic.
    Returns { code, redeem, why } or null for an empty pool. Tiers: a due miss (earliest first) > the 4th-slot topic pull > the
    best score among the due > the soonest due. Never a code shown in the last NEAR slots; a tiny bank caps every gap at n - 1. */
-export function qPick(st, pool, topicOf = family) {
+export function qPick(st, pool, topicOf = family, famOf = null) {
   const n = pool.length;
   if (!n) return null;
   const t = st.pos + 1, cap = Math.max(0, n - 1), near = Math.min(NEAR, cap);
@@ -59,11 +75,12 @@ export function qPick(st, pool, topicOf = family) {
   for (const [k, v] of avg) avg.set(k, v / size.get(k));
   const most = Math.max(...avg.values());
   const score = c => { const s = S(c) || {}; return (most - avg.get(topicOf(c))) + (s.n ? 0 : 1) + 0.5 * (s.miss || 0) - 0.5 * (s.right || 0); };
-  const tie = c => hash(st.salt + c);
-  const best = (a, b) => score(b) - score(a) || tie(a) - tie(b);
+  const tie = c => hash(st.salt + c), less = famLess(st, famOf);
+  const best = (a, b) => score(b) - score(a) || less(a, b) || tie(a) - tie(b);
   const soon = (a, b) => due(a) - due(b) || best(a, b);
   const free = pool.filter(c => { const s = S(c); return !s || s.last == null || t - s.last > near; });
-  const live = free.length ? free : pool;
+  const apart = famFree(st, free.length ? free : pool, famOf);      // no card of a family served in the last FAMGAP slots; none left -> the old pick
+  const live = apart.length ? apart : free.length ? free : pool;
   const ready = live.filter(c => due(c) <= t);
   const out = (code, why) => ({ code, redeem: !!(S(code) && S(code).owe), again: !!(S(code) && S(code).n), why });   // again: a re-showing (graded fresh)
   const owes = c => !!(S(c) && S(c).owe);
@@ -146,18 +163,21 @@ export const RAMP_UP = 2;         // TUNABLE: clean first picks at a tier to mov
 export const REVIEW_FROM = 4;     // TUNABLE: the first re-injection slot
 export const REVIEW_EVERY = 5;    // TUNABLE: then one every this many slots
 const gate = st => st.ramp || (st.ramp = { tier: 1, clean: 0 });
-export function ramp(st, pool, tierOf) {
+export function ramp(st, pool, tierOf, famOf = null) {
   const od = deadOpen(st, pool.filter(c => !tierOf(c)));
   if (od) return { code: od, redeem: false, again: false, why: "open" };
   const real = pool.filter(c => tierOf(c)), t = st.pos + 1, tier = st.ramp ? st.ramp.tier : 1, S = c => st.seen[c];
   if (t >= REVIEW_FROM && (t - REVIEW_FROM) % REVIEW_EVERY === 0) {
-    const back = real.filter(c => S(c) && S(c).n && S(c).last < st.pos);   // never the one just shown
-    if (back.length) return { ...qPick(st, back), why: "review" };
+    const back = famFree(st, real.filter(c => S(c) && S(c).n && S(c).last < st.pos), famOf);   // never the one just shown, nor a family served in the last FAMGAP slots
+    if (back.length) return { ...qPick(st, back, family, famOf), why: "review" };
   }
   const d = c => Math.abs(tierOf(c) - tier);
-  const fresh = real.filter(c => !(S(c) && S(c).n)).sort((a, b) => d(a) - d(b) || tierOf(a) - tierOf(b) || hash(st.salt + a) - hash(st.salt + b));
+  const less = famLess(st, famOf);
+  const byTier = (a, b) => less(a, b) || d(a) - d(b) || tierOf(a) - tierOf(b) || hash(st.salt + a) - hash(st.salt + b);
+  const all = real.filter(c => !(S(c) && S(c).n)), fresh = famFree(st, all, famOf).sort(byTier);
   if (fresh.length) return { code: fresh[0], redeem: false, again: false, why: "tier" };
-  return qPick(st, real.length ? real : pool);
+  const p = qPick(st, real.length ? real : pool, family, famOf);   // every new one is in a hot family: a seen one of another family, else the old pick
+  return all.length && !famFree(st, [p.code], famOf).length ? { code: all.sort(byTier)[0], redeem: false, again: false, why: "tier" } : p;
 }
 export function rampAnswer(st, code, right, tierOf) {
   const r = gate(st), k = tierOf(code);
@@ -183,7 +203,12 @@ export function glue(order, beforeOf) {
    BANK_P3X; a range "X3 Q10-11" is no position). A template = no twin / parent_template and no "twin" / "twist" in its title. A template
    with twins (SCHEMA.md twin a|b + parent_template) plays one of them, picked by hash(salt + n) so a reload agrees; none -> itself.
    st.mock = mockNew(list) rides in the saved queue (additive, like st.ramp): { list, at, res: { CODE: right }, miss, back, done }. */
-const examQ = p => Number.isInteger(p.exam_q) ? p.exam_q : +((/^X3 Q(\d{1,2})\b(?!-)/.exec(p.title || "") || [])[1] || 0);
+export const examQ = p => Number.isInteger(p.exam_q) ? p.exam_q : +((/^X3 Q(\d{1,2})\b(?!-)/.exec(p.title || "") || [])[1] || 0);
+/* the Exam-3 family key (Tony Nov 5): famOf(itemOf, topicOf) -> code -> "X3Q<n>" (the item's examQ, else its parent_template's), else topicOf(code) */
+export const familyOf = (itemOf, topicOf = family) => c => {
+  const p = itemOf(c), n = p && (examQ(p) || (p.parent_template && itemOf(p.parent_template) ? examQ(itemOf(p.parent_template)) : 0));
+  return n ? "X3Q" + n : topicOf(c);
+};
 const isTpl = p => !p.twin && !p.parent_template && (Number.isInteger(p.exam_q) || !/\b(twin|twist)\b/i.test(p.title));
 export function mockList(items, salt = "") {
   const twins = new Map(), at = new Map();

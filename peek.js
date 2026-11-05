@@ -153,7 +153,7 @@
     if ((!line && !o.nod) || document.visibilityState === "hidden" || up() || !ok()) return false;
     var me = said = { onAway: o.onAway };
     rise({ line: line || "", label: line ? "Cluck: " + line : "Cluck",
-      onDismiss: function () { if (said === me) { said = null; if (o.onAway) o.onAway(); } } });
+      onDismiss: function () { if (said === me) { said = null; if (o.onAway) o.onAway(); } if (o.onOpen) o.onOpen(); } });   // onOpen (opt-in, app.js "?" peek): only the duck's own tap reaches onDismiss; Jev's onTap stays unused
     if (o.onHollow) { onHollow = function () { if (said === me) said = null; o.onHollow(); }; box.querySelector(".ck-hollow").hidden = false; }
     return true;
   }

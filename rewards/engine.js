@@ -238,8 +238,28 @@
       flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts'), pop: pop };
     ui.lvl.addEventListener('animationend', function () { ui.lvl.classList.remove('rw-pulse'); });
     shownLvl = null; shownWon = null;
+    swipeAway(el);
     render(0);
     return el;
+  }
+  /* a swipe up on the banner (touch or pointer drag up >= 30 px, mostly vertical) slides it up and away; the host brings it back with the next
+     question (app.js rwSync sets el.hidden again). A plain tap is untouched: .rw-tap still opens the popover. */
+  function swipeAway(el) {
+    if (el._rwSwipe) return;
+    el._rwSwipe = true;
+    var y0 = 0, x0 = 0, id = null, swiped = false;
+    el.addEventListener('pointerdown', function (e) { id = e.pointerId; x0 = e.clientX; y0 = e.clientY; swiped = false; });
+    el.addEventListener('pointermove', function (e) { if (e.pointerId === id && y0 - e.clientY > 10 && !el.hasPointerCapture(id)) try { el.setPointerCapture(id); } catch (x) { /* the release may land elsewhere */ } });   // a drag leaves the strip: its release still reports here (a tap never gets here)
+    el.addEventListener('pointerup', function (e) {
+      if (e.pointerId !== id) return;
+      id = null;
+      var dy = y0 - e.clientY, dx = Math.abs(e.clientX - x0);
+      if (dy < 30 || dx > dy) return;
+      swiped = true; el.classList.add('rw-away');
+      setTimeout(function () { el.hidden = true; el.classList.remove('rw-away'); }, reduced() ? 0 : 220);
+    });
+    el.addEventListener('pointercancel', function () { id = null; });
+    el.addEventListener('click', function (e) { if (swiped) { swiped = false; e.preventDefault(); } }, true);   // the drag's release is not a tap: no popover
   }
   function countUp(to, gain) {
     cancelAnimationFrame(raf);

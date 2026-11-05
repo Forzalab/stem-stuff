@@ -809,6 +809,10 @@ function welcomeQ(q) {
    is sent only after the /check that recorded the miss (403 before it), 404 = no ladder = nothing changes. Not on the welcome item or in
    the mock. The same slip family on the next miss keeps the element (a step is never reset); another family redraws. The answer box,
    the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. */
+function rpUnmount() {                                                          // the brown repair box goes: Cluck's close, a right main answer
+  if (S?.rp) { S.rp.m?.destroy(); S.rp = null; }
+  $("#rpHost")?.remove();
+}
 function repairAfterMiss(r) {
   if (!S || S.wl || !S.prob.has_repair || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
   const mine = S, code = S.code, fam = r.error || "";
@@ -821,8 +825,18 @@ function repairAfterMiss(r) {
     if (!rp || !rp.steps) { mine.rp = null; return; }
     const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
       credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
-    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade });
+    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade, on: (name, d) => { if (name === "repair_answer") repairPick(mine, d); } });
   });
+}
+
+/* the ladder's "Final answer" chip, graded right (repair.js repair_answer): the main box takes the same option and checks it, so one tap is not two.
+   The option whose shown value equals the chip's value (its id only if the words differ in markup); none matches = nothing happens */
+function repairPick(mine, d) {
+  if (S !== mine || S.finished || busy || S.prob.type !== "mc" || all(S.prob)) return;
+  const plain = t => String(t ?? "").replace(/[$\s]+/g, "").toLowerCase();
+  const o = opts().find(x => !x.disabled && plain(x.querySelector(".txt")?.textContent) === plain(d.md)) || opts().find(x => !x.disabled && x.dataset.id === d.value);
+  if (!o) return;
+  select(o); submitMC();
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -899,8 +913,24 @@ function ladderStep() {
   const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : st.k === "row" ? `.f[data-row="${st.id}"]` : `.to[data-to="${st.to}"]`);
   sec.querySelectorAll(".f.mid.cur").forEach(m => midOpen(m, false));                 // the last piece's notes fold to its "why?"
   if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); }
+  ladClock();                                                                          // any reveal restarts the 30 s clock
   const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to the key formulas." : st.k === "mid" ? `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.` : "A link was added between key formulas.";
   return true;
+}
+/* the clock (Tony, Nov 5): on the question with Cluck's sheet closed, the next piece shows 30 s after the last reveal (or after the question loaded), until all are
+   out. Counted in visible seconds: a hidden tab does not run it. A wrong try or Jev's hit still reveals at once and restarts it */
+const LAD_S = 30;
+let ladTimer = 0;
+function ladClock() {
+  clearInterval(ladTimer); ladTimer = 0;
+  const mine = S;
+  if (!mine || !$("#fcard") || (mine.lad || 0) >= ladderSteps(mine.prob).length) return;
+  let n = 0;
+  ladTimer = setInterval(() => {
+    if (S !== mine || !$("#fcard")) { clearInterval(ladTimer); ladTimer = 0; return; }
+    if (document.visibilityState === "hidden" || window.stemCluckModal?.()) return;
+    if (++n >= LAD_S) ladderStep();                                                // reveals, then ladClock() restarts (or stops when all are out)
+  }, 1000);
 }
 window.stemLadder = { step: ladderStep, left: () => S && $("#fcard") ? ladderSteps(S.prob).length - (S.lad || 0) : 0 };
 /* "?" next to a formula (Tony, Oct 21): a static popup built from the sheet row's doc (what it is for, each symbol = meaning + unit, when to use it, one tiny example), like code docs. No AI.
@@ -953,6 +983,7 @@ function formulaCard() {
     const w = e.target.closest(".fh-more");
     if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
+    if ((S.fqTaps = (S.fqTaps || 0) + 1) >= 2 && !S.fqPeek && window.stemDuck?.say?.("stuck? ask me", { onOpen: () => window.stemIdleTap() })) S.fqPeek = true;   // the 2nd "?" tap on a question: the duck peeks (once); a tap on it opens Cluck, never auto
     const f = S.prob.formulas[b.dataset.i];
     Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => {
       const fig = window.FormulaFigs?.[f.id];
@@ -965,6 +996,7 @@ function formulaCard() {
     } });
   });
   $("#q").after(sec);
+  ladClock();                                                                       // the question loaded: the first piece's 30 s start now
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
@@ -1721,7 +1753,7 @@ function rboxSync() {
   const wb = document.querySelector("#wish .wbar"), btn = wb && wb.querySelector(".wchip");
   if (btn) {
     ff.querySelectorAll(":scope > .wchip").forEach(x => x.remove());
-    const img = btn.querySelector("img.dk");
+    const img = btn.querySelector(".dk");
     if (img) { const t = document.createElement("template"); t.innerHTML = DUCK; const svg = t.content.firstChild; if (img.classList.contains("g-nod")) svg.classList.add("g-nod"); img.replaceWith(svg); }
     btn.hidden = wishEl().hidden;
     ff.insertBefore(btn, ff.querySelector(".nx"));
@@ -1835,6 +1867,7 @@ function nodGate() {
 }
 function nodMiss() { const st = nodGet() || { day: ptDay(), n: 0, last: false }; st.miss = true; try { localStorage.setItem("stem-nod", JSON.stringify(st)); } catch { /* blocked */ } }
 function feedback(r, typed) {
+  if (r.verdict === "correct") rpUnmount();                                  // right: the repair box has done its job
   const fb = $("#fb");
   let h = "";
   /* right / wrong / out: the answer box (or the MC badge) shows the icon; no words on the page */
@@ -1919,7 +1952,7 @@ function ckPut(key, text) {
 function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
   const key = S && S.code === w.code ? ckKey(w.code, S.tries.at(-1)) : "", text = key ? ckGet(key) : "";
   if (!text) return false;
-  Object.assign(w, { key, text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
+  Object.assign(w, { key, tr: clTry(S.tries.at(-1)), text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
   return true;
 }
 function wishEl() {
@@ -1962,7 +1995,7 @@ const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the
 const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
 async function wishStart(auto) {
   const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
-  w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
+  w.key = key; w.tr = clTry(t);                                                           // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
@@ -2341,7 +2374,7 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck">${icon("i-duck", "dk ico" + (nod && !q ? " g-nod" : ""))}<span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
   /* GENMISS (Tony, Nov 3): the Q3 = C inline peek + "okay, but how?" card is gone: on every wrong try, matched or generic, on every layout, the only Cluck entry is the strip tray's "Ask Cluck" (the chip below) */
   } else {
@@ -2505,8 +2538,18 @@ function clOpen(tab, from, auto) {                                        // aut
   }
 }
 const clPerm = () => modeOf() === "sugar" && sideMQ.matches && !!S;           // BIG PLAN V1 (Tony Nov 2, 22:49): desktop sugar keeps Cluck's box open from the first paint, no X, no Escape, no dismiss. Phones and diet: unchanged
+/* the first close of Cluck's sheet on this device (flag stem-ob-cluck, set only when the note was placed): a note on the way back in */
+function cluckToast() {
+  try { if (localStorage.getItem("stem-ob-cluck")) return; } catch { return; }
+  setTimeout(() => {
+    const at = document.querySelector(":is(#wish, .rbox) .wchip");
+    if (!at || at.hidden || !at.getClientRects().length || noteAt() || !toast("Cluck lives in Ask Cluck. Tap it to reopen.", at)) return;
+    try { localStorage.setItem("stem-ob-cluck", "1"); } catch { /* shown, not kept */ }
+  }, 80);
+}
 function clClose(dismiss, force) {                                         // force: clReset only (a new question empties the box, applyMT opens it again)
   if (!cl || !cl.open || (clPerm() && !force)) return;
+  rpUnmount(); if (!force) cluckToast();                                   // the brown repair box goes with the sheet; the first time ever, a note says where Cluck went
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
   cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
@@ -2623,6 +2666,7 @@ function clTab(tab, focus) {
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: w.shown is kept, so the text is redrawn whole, not typed again
+  clHist(!!(w && w.open && !was));
   if (w && !w.open && was) w.tick = 0;
   if (S && S.orig) {
     S.orig.open = cl.open && has.steps && cl.fold;
@@ -2649,6 +2693,8 @@ function clReset() {                                                        // a
   clClose(false, true);
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
+  cl.el.querySelector("#clTabEP > .cl-st")?.remove();
+  cl.el.querySelectorAll("#clTabEP [hidden]").forEach(e => { e.hidden = false; });
   cl.el.querySelector(".cl-fi").innerHTML = "";
 }
 /* the scroll-down hint (Tony, Oct 19, variant A): while more than 8px of the text is under the ask field, .cl-bd.below shows a fade over the
@@ -2722,6 +2768,53 @@ function askFit(ta) {
   ta.style.height = Math.min(h, max) + "px";
   ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
 }
+/* Cluck's history (W2, Nov 5): each Cluck turn that answers a graded pick or typed answer starts with a status line (rules either side, small
+   muted text, no box): "chose 1.80 J ✓" / "typed 6 ✗", the choice's VALUE, never its letter. Lines build up in order = the history. Once a
+   later turn exists, an earlier WRONG reply folds under its line (the line is the toggle); the latest reply and every right one stay open */
+const clPlain = md => /[$\\]/.test(String(md ?? "")) ? clTex(md) : String(md ?? "").replace(/`/g, "").replace(/\s+/g, " ").trim();   // plain text (code) stays as shown; only TeX is flattened
+const clTex = md => String(md ?? "").replace(/\\(?:text|mathrm|mathbf|textbf)\{([^}]*)\}/g, "$1").replace(/\\circ/g, "°").replace(/\\cdot/g, "·").replace(/\\times/g, "×").replace(/\\pi/g, "π")
+  .replace(/\\[,;:! ]|~/g, " ").replace(/\\([%$&#_{}])/g, "$1").replace(/\\(?:left|right|mathit)\b/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[$*`{}]/g, "").replace(/\s+/g, " ").trim();
+const CL_ST_MAX = 28;
+function clTry(t) {                                                         // { v, label } of a graded try; null = no status line (no grade, or no value to show)
+  if (!t || (t.v !== "correct" && t.v !== "wrong") || !S || S.prob.type === "proof") return null;   // a proof has no value to name
+  const p = S.prob, u = p.type === "multi" && Number.isInteger(t.part) ? p.parts?.[t.part] || p : p;
+  let val = t.c != null ? [].concat(t.c).map(id => clPlain((u.choices || []).find(c => c.id === id)?.md ?? "")).filter(Boolean).join(", ") : String(t.a ?? "").trim();
+  if (t.c != null && !val) val = "none";                                    // a choose-all with nothing ticked ("neither" can be the key)
+  if (!val) return null;
+  const pre = t.c != null ? "chose " : "typed ", cut = val.length > CL_ST_MAX ? val.slice(0, CL_ST_MAX - 1).trimEnd() + "\u2026" : val;   // a long (code) choice: cut at ~28 chars, the full text in the title
+  return { v: t.v, label: pre + cut, full: pre + val };
+}
+window.__clTry = clTry;   // tests (as __drill): the status line's label for a try
+function clStatus(tr) {
+  const d = document.createElement("div"); d.className = "cl-st"; d.dataset.v = tr.v; const mark = tr.v === "correct" ? "✓" : "✗";
+  d.dataset.t = `${tr.label} ${mark}`; d.dataset.full = `${tr.full || tr.label} ${mark}`;
+  d.innerHTML = '<i aria-hidden="true"></i><span class="cl-st-b"></span><i aria-hidden="true"></i>';
+  return d;
+}
+function clHist(land) {                                                     // idempotent: add the first line, fold/open each turn, land on the latest
+  if (!cl) return;
+  const pane = cl.el.querySelector("#clTabEP");
+  if (wish?.tr && !pane.querySelector(":scope > .cl-st")) pane.querySelector(":scope > .msg")?.before(clStatus(wish.tr));
+  const segs = [];
+  for (const e of pane.querySelectorAll(":scope > .cl-st, :scope > .msg, .cl-thread > *")) {
+    if (e.classList.contains("cl-st")) segs.push({ st: e, items: [] }); else segs.at(-1)?.items.push(e);
+  }
+  segs.forEach(({ st, items }, i) => {
+    const fold = st.dataset.v === "wrong" && i < segs.length - 1, open = !fold || !!st._open, lab = st.dataset.t;
+    items.forEach(e => { e.hidden = !open; });
+    const b = document.createElement(fold ? "button" : "span"); b.className = "cl-st-b"; b.title = st.dataset.full; if (st.dataset.full !== lab) b.setAttribute("aria-label", st.dataset.full);
+    if (fold) {
+      b.type = "button"; b.setAttribute("aria-expanded", String(open));
+      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; b.append(lab);
+      b.addEventListener("click", () => { st._open = !open; clHist(); st.querySelector(".cl-st-b").focus({ preventScroll: true }); });
+    } else b.textContent = lab;
+    st.children[1].replaceWith(b);
+  });
+  if (land && segs.length > 1 && !pane.hidden) {                           // the sheet opens on the latest reply
+    const bd = cl.el.querySelector(".cl-bd"), st = segs.at(-1).st;
+    bd.scrollTop += st.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8;
+  }
+}
 /* "See Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
    right answer comes as a NEW message under it (the miss stays above as history), typed like a chat reply and scrolled into view inside the
    sheet (the page does not move). One /explain (not auto) per right answer, cached like the box text; a re-press scrolls to it. Not in the
@@ -2729,13 +2822,15 @@ function askFit(ta) {
 async function clCompare(w) {
   const t = S.tries.at(-1) || {}, key = ckKey(w.code, t), th = cl.el.querySelector(".cl-thread");
   const bd = cl.el.querySelector(".cl-bd"), top = el => { bd.scrollTop += el.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8; };   // the message's top at the body's top
-  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.el); return; }
+  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.st || w.cmp.el); return; }
+  const tr = clTry(t), st = tr && clStatus(tr);
   const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
   const re = box.lastChild;
-  w.cmp = { key, el: box };
-  th.append(box); top(box);
+  w.cmp = { key, el: box, st };
+  if (st) th.append(st);
+  th.append(box); clHist(); top(st || box);
   const ty = { text: ckGet(key), pos: 0, shown: 0, done: false }, typed = wishType(re, ty);
-  if (ty.text) { ty.done = true; typed.then(() => top(box)); return; }    // this browser has it: no call
+  if (ty.text) { ty.done = true; typed.then(() => top(st || box)); return; }    // this browser has it: no call
   w.busy = true; clAsk();
   const t0 = Date.now(), tp = traceparent(), fr = frReq("explain", tp);
   let r = null, bytes = 0, inc = null;
@@ -2755,7 +2850,7 @@ async function clCompare(w) {
   } catch (e) { fr.x(e); fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
   if (wish !== w) return;
   const ok = !!r && r.ok && ty.text.trim() && !inc;
-  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(box); say(speakable(stripFigs(ty.text))); }
+  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(st || box); say(speakable(stripFigs(ty.text))); }
   else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Oh duck, Cluck is tired! Come back later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
   w.busy = false; clAsk();
 }
