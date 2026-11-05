@@ -152,8 +152,8 @@ def _leak(text, ctx, where):
             return "number"
         if any(livefig._sig3(abs(x), a) for a in ctx.answers):
             return f"leak:{where}={x:g}"
-        if not any(livefig._eq(abs(x), g) for g in ctx.givens):
-            return f"not-given:{where}={x:g}"
+        if not any(livefig._eq(abs(x), g) for g in ctx.givens) and not (ctx.spec == "heat" and any(livefig._eq(abs(x), g) for g in livefig.HEAT_CONST)):
+            return f"not-given:{where}={x:g}"            # a heat stepper (spec "heat") may also show the sheet's constants, 0 and 100 C first; the leak check above stays first
     return None
 
 
@@ -221,6 +221,8 @@ def check_element(el, ctx):
         if why:
             return why
         texts += [("label", t) for t in labels]
+    if ctx.spec == "heat" and name == "Step":         # a heating-curve stepper names its node temperatures in tags (and its edge chunks in labels): numbers a student reads
+        texts += [("tags", str(p)) for p in [(el.get("props") or {}).get("tags")] if p] + [("labels", x) for x in (el.get("props") or {}).get("labels") or []]
     for k, t in texts:
         if key_ref.match(t.strip()):
             return f"stage:{name}.{k}"                  # a key ref is post-only; a Cluck reply is never post

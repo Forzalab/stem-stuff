@@ -1263,14 +1263,20 @@ class Visuals(unittest.TestCase):
             out, log = views_gate.gate(prog.strip(), ctx)
             self.assertEqual(log, ["ok"], prog)
 
-    def test_energy_is_a_tug_battery_not_bars(self):
+    def test_energy_heat_chunks_are_a_stepper_and_conservation_a_tug(self):
         row = next(r for r in serve.V4_VIEWS.split("\n") if r.startswith("- energy"))
-        self.assertIn("Tug as an energy battery", row)
-        self.assertIn("one row per chunk, all \"up\"", row)
+        heat, trade = row.split("Trading forms")
+        self.assertIn("stepper", heat)
+        self.assertIn("growing", heat)
+        self.assertNotIn("Tug", heat, "heat in chunks no longer points at the Tug")
+        self.assertIn("Tug as an energy battery", trade)
+        self.assertIn("conservation", trade)
         self.assertNotIn("```fig bars", serve.V4_VIEWS.split("Never a markdown pipe table")[0], "bars is no longer the VISUALS pick")
         self.assertNotIn("energy before and after: ```fig", serve.V4_VIEWS)
         self.assertIn("2 to 5 rows", serve.V4_VIEWS)
         self.assertNotIn("2 to 4 rows", serve.V4_VIEWS)
+        self.assertNotIn("Q₁ | warm the ice | up 1", serve.V4_VIEWS, "the heat Tug example is swapped for the stepper")
+        self.assertIn('"PE | ', serve.V4_VIEWS, "the conservation Tug example stays")
 
     def test_reveal_yes_view_may_show_the_answer(self):
         self.assertIn(13.0, serve.fig_ctx(P1, "a").answers)

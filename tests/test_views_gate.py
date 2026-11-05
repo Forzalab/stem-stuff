@@ -85,11 +85,11 @@ class TugFlip(unittest.TestCase):
         t = "t = Tug(" + str(self.BATTERY).replace("'", '"') + ', "Q", "the energy battery")'
         self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
 
-    def test_battery_example_rows_pass_the_grammar_and_a_value_size_does_not(self):
+    def test_conservation_example_rows_pass_the_grammar_and_a_value_size_does_not(self):
         import serve
         ex = serve.V4_VIEWS.split("Examples:\n")[1]
-        rows = re.search(r'"Q₁ \| [^\]]*', ex).group(0).split('", "')
-        self.assertEqual(len(rows), 4)
+        rows = re.search(r'"PE \| [^\]]*', ex).group(0).split('", "')
+        self.assertEqual(len(rows), 2)
         for r in rows:
             self.assertTrue(views_gate.TUG_ROW.match(r.strip('"')), r)
         self.assertFalse(views_gate.TUG_ROW.match("Q₁ | melt the ice | up 334"))
@@ -144,6 +144,37 @@ class TugFlip(unittest.TestCase):
     def test_a_key_literal_in_a_row_is_a_leak(self):
         self.assertIn("leak:", self.one('t = Tug(["c | 5 m | up"])')[1][0])
         self.assertIn("leak:", self.one('t = Flip([["c", "x", "5 m"]])')[1][0])
+
+
+class HeatNumbers(unittest.TestCase):
+    """a heating-curve stepper (spec "heat"): the sheet's constants are givens in a caption / label; the leak check still comes first"""
+    PROG = ('root = View([s])\ns = Steps(g, [s1, s2], null, ["chunk", "what you do"])\ng = Graph("A 40 120, B 120 80, C 220 80", "A-B, B-C")\n'
+            's1 = Step("Q\u2081 = mc\u0394T. You warm the ice to 0\u00b0C.", "A:done B:cur", "A-B:tree", "A:%s B:0\u00b0C", null, null, [["Q\u2081", "warm"]])\n'
+            's2 = Step("Q\u2082 = mL. You melt it. No temp change.", "A:done B:done C:cur", "A-B:seen B-C:tree", "B:0\u00b0C", null, null, [["Q\u2081", "warm"], ["Q\u2082", "melt"]])')
+
+    def ctx(self, spec, answers=(999.0,)):
+        return livefig.context("H1", "Ice at -10 C warms to steam. How long?", "", list(answers), subject="physics.mechanics", spec=spec)
+
+    def test_zero_and_hundred_are_givens_under_heat_only(self):
+        prog = self.PROG % "10\u00b0C"
+        cap100 = prog.replace("to 0\u00b0C", "to 100\u00b0C")
+        self.assertEqual(views_gate.gate(cap100, self.ctx("heat")), (cap100, ["ok"]))
+        out, log = views_gate.gate(cap100, self.ctx(None))
+        self.assertIsNone(out)
+        self.assertIn("s:not-given:Step.cap=100", log)
+
+    def test_the_leak_check_comes_first_even_for_a_constant(self):
+        cap = (self.PROG % "10\u00b0C").replace("to 0\u00b0C", "to 100\u00b0C")
+        out, log = views_gate.gate(cap, self.ctx("heat", answers=(100.0,)))
+        self.assertIsNone(out)
+        self.assertIn("s:leak:Step.cap=100", log)
+
+    def test_a_tag_with_the_key_is_a_leak_under_heat(self):
+        out, log = views_gate.gate(self.PROG % "375\u00b0C", self.ctx("heat", answers=(375.0,)))
+        self.assertIsNone(out)
+        self.assertIn("s:leak:Step.tags=375", log)
+        out, log = views_gate.gate(self.PROG % "375\u00b0C", self.ctx("heat", answers=(999.0,)))
+        self.assertIn("s:not-given:Step.tags=375", log, "an invented temperature is not a given")
 
 
 class Stream(unittest.TestCase):

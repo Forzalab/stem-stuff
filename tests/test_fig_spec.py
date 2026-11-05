@@ -55,18 +55,62 @@ class FigSpec(unittest.TestCase):
         self.assertIn(serve.FIG_SPECS["heat"], serve.v4_fig_howto(ctx))
         self.assertEqual(serve.fig_ctx(serve.problems()["PHYS_TA1"], "b").spec, "forces", "only a heat item gets the heat rules")
 
-    def test_heat_example_passes_the_gate_and_speaks_in_the_house_voice(self):
-        g = json.loads(serve.HEAT_EXAMPLE)
-        ctx = serve.livefig.context("PHYS_YNJ", "A filament radiates into ice. How long until it is steam?", "", [999.0], subject="physics.mechanics",
-                                    spec=serve.fig_spec("PHYS_YNJ"))
-        self.assertIsNone(serve.livefig.check(g, ctx))
-        caps = [m["text"] for m in g["marks"] if m["mark"] == "text"]
-        self.assertEqual(len(caps), 2)
+    def heat_parts(self):
+        """(ctx, program, parsed Steps props) of the worked example, on a question that gives the ice's start (-10 C)"""
+        import oui
+        import views_gate
+        ctx = serve.livefig.context("PHYS_YNJ", "A filament radiates into ice at -10 C. How long (in s) until it is steam at 120 C?", "", [999.0],
+                                    subject="physics.mechanics", spec=serve.fig_spec("PHYS_YNJ"))
+        prog = serve.HEAT_EXAMPLE
+        res = oui.parse(prog, views_gate.catalog(), "View")
+        steps = next(e for e in views_gate._elements(res["root"], []) if e["typeName"] == "Steps")["props"]
+        return ctx, prog, steps
+
+    def test_heat_example_is_a_stepper_that_passes_the_gate(self):
+        import views_gate
+        ctx, prog, steps = self.heat_parts()
+        self.assertEqual(views_gate.gate(prog, ctx), (prog, ["ok"]))
+        self.assertEqual(steps["fig"]["typeName"], "Graph", "a stepper needs its figure (steps-nofig)")
+        n_edges = len([e for e in steps["fig"]["props"]["edges"].split(",") if e.strip()])
+        self.assertEqual(len(steps["steps"]), n_edges, "one step per piece of the curve")
+        self.assertLessEqual(len(steps["steps"]), 8)
+        self.assertIn("```openui", serve.FIG_SPECS["heat"])
+        self.assertNotIn("```fig", serve.FIG_SPECS["heat"], "the static fig curve is gone")
+
+    def test_heat_captions_speak_in_the_house_voice(self):
+        _, _, steps = self.heat_parts()
+        caps = [s["props"]["cap"] for s in steps["steps"]]
         for c in caps:                                   # cluck-v4.txt SUBJECTS: "you" first, no [inanimate object] + [verb]
-            self.assertRegex(c, r"^You \w+ it\. No temp change\.$")
-        self.assertNotRegex(serve.FIG_SPECS["heat"].split("Example")[0].replace("Never \"the heat goes\"", "").replace("never \"temp stays flat\"", ""),
+            self.assertRegex(c, r"^Q[\u2081-\u2085] = (mc\u0394T|mL)\. You (warm|melt|boil) .+\.$|^Q[\u2081-\u2085] = (mc\u0394T|mL)\. You \w+ it\. No temp change\.$")
+            self.assertNotRegex(c, r"(?i)\b(heat|temp|ice|water|energy) (goes|stays|wants|needs)\b")
+            self.assertLessEqual(len(c), 140)
+        self.assertEqual([c.split(".")[0] for c in caps], ["Q\u2081 = mc\u0394T", "Q\u2082 = mL", "Q\u2083 = mc\u0394T", "Q\u2084 = mL", "Q\u2085 = mc\u0394T"])
+        self.assertIn("You take heat out", serve.FIG_SPECS["heat"], "cooling = the same walk reversed")
+        self.assertNotRegex(serve.FIG_SPECS["heat"].replace("Never \"the heat goes\"", "").replace("never \"temp stays flat\"", ""),
                             r"(?i)\b(heat|temp|ice|water|energy) (goes|stays|wants|needs)\b")
-        self.assertNotRegex(json.dumps(g["marks"]), r"\b(334|2265|4186|2090)\b", "no bank number in the example")
+        self.assertNotRegex(serve.HEAT_EXAMPLE, r"\b(334|2265|4186|2090)\b", "no bank number in the example")
+
+    def test_heat_last_step_has_the_total_row_and_rows_grow(self):
+        _, _, steps = self.heat_parts()
+        rows = [s["props"]["rows"] for s in steps["steps"]]
+        for k, r in enumerate(rows[:-1], 1):
+            self.assertEqual(len(r), k)
+            self.assertNotIn("total", [c.lower() for row in r for c in row])
+        self.assertEqual(rows[-1][-1], ["total", "Q\u2081+Q\u2082+Q\u2083+Q\u2084+Q\u2085"])
+        self.assertEqual(rows[-1][:-2], rows[-2], "each step keeps every earlier row")
+        self.assertEqual(steps["head"], ["chunk", "what you do"])
+        self.assertNotRegex(str(rows), r"\d", "rows are symbolic, never the student's numbers")
+
+    def test_heat_chunk_equal_to_the_key_is_dropped_as_a_leak(self):
+        import views_gate
+        _, prog, _ = self.heat_parts()
+        ctx = serve.livefig.context("PHYS_YNJ", "A filament radiates into ice at -10 C. How long until it is steam at 120 C?", "", [375.0],
+                                    subject="physics.mechanics", spec="heat")
+        bad = prog.replace('["Q\u2082 = mL", "melt it"]', '["Q\u2082 = 375", "melt it"]')
+        self.assertNotEqual(bad, prog)
+        out, log = views_gate.gate(bad, ctx)
+        self.assertIsNone(out)
+        self.assertTrue(any("leak:Step.rows=375" in x for x in log), log)
 
     def test_only_that_spec_goes_in_the_tail(self):
         ctx = serve.fig_ctx(serve.problems()["PHYS_TA1"], "b")
