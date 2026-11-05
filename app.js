@@ -676,8 +676,9 @@ async function load(code) {
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
   render();
-  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type, mode: modeOf() });   // telemetry (design/plans/TELEMETRY.md)
+  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type, mode: modeOf(), tries: maxTries(prob) });   // telemetry (design/plans/TELEMETRY.md)
   if (rec) paint(rec);
+  window.stemLockHelp?.resume(code);   // LOCK-HELP: a stored lock offer for this item shows again after a reload / when the student returns
   if (!off()) syncServer(S);
   retryTag();
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
@@ -1548,6 +1549,7 @@ function record(a, r) {
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
   rewardTry(a, r);
   if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
+
 }
 
 /* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
@@ -2645,6 +2647,7 @@ function clBack() {
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
+window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
 window.stemCluckModal = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
 window.stemLayout = () => { if (S) layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
 window.stemIdleTap = () => {

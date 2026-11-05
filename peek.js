@@ -84,7 +84,7 @@
     if (window.stemMock && window.stemMock.on()) return false;          // the night-before mock (nav.js, W103b): no Cluck until it ends
     return c.contains("sugar") && !c.contains("start") && !!(window.stemBank && window.stemBank.code) &&
       !c.contains("ql-open") && !c.contains("bar-open") && !c.contains("kb") && !document.querySelector(".fx-ov") &&
-      !(window.stemCluckOpen && window.stemCluckOpen()) && !(window.stemDuck.up && !mine);   // AMA 10: one duck per screen
+      !(window.stemCluckOpen && window.stemCluckOpen()) && !(window.stemLockHelp && window.stemLockHelp.up) && !(window.stemDuck.up && !mine);   // AMA 10: one duck per screen
   }
   function arm(ms) { clearTimeout(t); t = n < IDLE.length ? setTimeout(fire, Math.max(0, ms)) : 0; }
   function fire() {
