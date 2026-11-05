@@ -61,6 +61,7 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close
   const phone = vp.width < 500;
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", reducedMotion: motion });
   await ctx.addInitScript(hk => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
+    window.__stemHelpRand = () => 1;   // this spec is about Cluck's sheet: it fails the item on purpose (a lock = HA), so the roll is pinned to miss and Jev's help modal (tests/lockhelp.pw.mjs) stays out of it
     if (hk != null) window.stemHk = n => hk % n; }, hk);
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();

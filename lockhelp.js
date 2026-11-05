@@ -3,7 +3,7 @@
    ("No thanks", "Open help panel"). No backdrop tap, no Escape: only the buttons close it. It persists across reloads (localStorage "stem-lockhelp" =
    {code, item, at, via, m}) and is removed only by a button; leaving the item keeps the key and coming back re-shows it (max age 24 h).
    Telemetry: one event, `lockhelp`, via stemT: phase shown | reshown | no_thanks | open_help | left (Jev sends `held`) + code, item, via, p, roll, gap_s, decide_ms,
-   shown_count (this device), tries_used, after_wrong. No typed text.
+   shown_count (this device), tries_used, after_wrong, scn (the live scenario: ha | nd | ha+nd | none). No typed text.
    window.stemLockHelp = { show(info), resume(code), close(), up }. app.js calls resume() when an item opens. While it is up the peek duck stays down and toasts yield. */
 (function () {
   "use strict";
@@ -27,7 +27,7 @@
   function tel(phase, o) {
     var m = o.m || {};
     try {
-      g.stemT && g.stemT("lockhelp", { phase: phase, code: o.code, item: o.item, via: o.via, p: m.p, roll: m.roll, gap_s: m.gap_s,
+      g.stemT && g.stemT("lockhelp", { phase: phase, code: o.code, item: o.item, via: o.via, scn: m.scn, p: m.p, roll: m.roll, gap_s: m.gap_s,
         decide_ms: phase === "shown" || phase === "reshown" ? undefined : Date.now() - since, shown_count: count(false), tries_used: m.tu, after_wrong: m.aw });
     } catch (e) { /* never break the app */ }
   }
@@ -62,8 +62,8 @@
     el.className = "lockhelp"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "lhSay");
     el.innerHTML = '<div class="lh-col"><p class="lh-say" id="lhSay">Let me help you with that!</p>' +
       '<img class="lh-duck" src="' + LOCKHELP_ART + '" alt="" width="128" height="128">' +
-      '<div class="lh-btns"><button type="button" class="btn btn-label lh-no">No thanks</button>' +
-      '<button type="button" class="btn btn-label btn-go lh-go">Open help panel</button></div></div>';
+      '<div class="lh-btns"><button type="button" class="btn btn-label btn-go lh-go">Open help panel</button>' +
+      '<button type="button" class="btn btn-label lh-no">No thanks</button></div></div>';   // stacked, the primary on top (Tony: buttons stack vertically)
     el.querySelector(".lh-no").addEventListener("click", function () { end("no_thanks"); });
     el.querySelector(".lh-go").addEventListener("click", function () { end("open_help"); });
     document.body.appendChild(el);
@@ -78,7 +78,7 @@
   function show(info) {
     if (el || !info || !info.code) return false;
     var o = { code: info.code, item: info.item || info.code, at: Date.now(), via: info.via,
-      m: { p: info.p, roll: info.roll, gap_s: info.gap_s, tu: info.tries_used, aw: info.after_wrong } };
+      m: { scn: info.scn, p: info.p, roll: info.roll, gap_s: info.gap_s, tu: info.tries_used, aw: info.after_wrong } };
     write(o);
     return build(o, "shown");
   }
