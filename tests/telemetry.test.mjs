@@ -382,3 +382,11 @@ test("dead_tap rule: only a still, short tap (< 10 px travel, < 500 ms) counts; 
   assert.equal(T.tapCheck({ x: 0, y: 0, t: 0 }, { x: 0, y: 0, t: 500 }).dead, false, "a 500 ms hold is not a tap");
   assert.equal(T.tapCheck(null, { x: 0, y: 0, t: 5 }).dead, false);
 });
+
+test("scrub fallback (no regex lookbehind, old Safari): same results as the main path", () => {
+  const T = run().win.__stemTelemetry;
+  const cases = ["my email is a@b.co, why x=2?", "call 555-123-4567 or (555) 123 4567 or +1 555 123 4567 now", "5551234567", "3x+2=5", "6.02e23", "v = 9.81 m/s, KE = 80 J",
+    "1,000,000 J", "2024 - 1999 = 25", "123456 + 654321", "0.000001234567", "x ".repeat(5) + "555-1234 end"];
+  for (const c of cases) assert.equal(T.scrub(c, 1000, true), T.scrub(c, 1000), c);
+  assert.equal(T.scrub("call 555-123-4567 now", 1000, true), "call [phone] now");
+});

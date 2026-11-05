@@ -63,10 +63,15 @@
   /* scrub (cluck_ask / cluck_reply text): e-mails -> "[email]", phone-like digit runs (7+ digits; spaces / dashes / parens between groups, or one
      bare run) -> "[phone]". Math is never touched: no "." "," joins, and "2024 - 1999" / "123456 + 654321" / "6.02e23" are not phone shapes. */
   var PH_A = "(?:\\+\\d{1,3}[ -]?)?(?:\\(\\d{2,4}\\)[ -]?|\\d{2,4}[ -])\\d{3}[ -]\\d{3,4}", PH_B = "\\d{3}[ -]\\d{4}", PH_C = "\\+?\\d{7,15}";
-  var PHONE_SCRUB = new RegExp("(?<![\\w.,])(?:" + PH_A + "|" + PH_B + "|" + PH_C + ")(?![\\w]|[.,]\\d)", "g");
-  function scrub(text, max) {
+  var PH_ALT = PH_A + "|" + PH_B + "|" + PH_C, PH_TAIL = "(?![\\w]|[.,]\\d)";
+  var PHONE_SCRUB = null;   // lookbehind: Safari < 16.4 throws on it, which must not kill this file; null = the fallback below
+  try { PHONE_SCRUB = new RegExp("(?<![\\w.,])(?:" + PH_ALT + ")" + PH_TAIL, "g"); } catch (e) { PHONE_SCRUB = null; }
+  var PHONE_FB = new RegExp("(^|[^\\w.,])(?:" + PH_ALT + ")" + PH_TAIL, "g");   // same pattern, the boundary as a leading group kept by the replace
+  function scrub(text, max, noLookbehind) {
     if (typeof text !== "string" || !text) return "";
-    return text.replace(EMAIL, "[email]").replace(PHONE_SCRUB, "[phone]").slice(0, max > 0 ? max : 1000);
+    var t = text.replace(EMAIL, "[email]");
+    t = PHONE_SCRUB && !noLookbehind ? t.replace(PHONE_SCRUB, "[phone]") : t.replace(PHONE_FB, function (m, lead) { return lead + "[phone]"; });
+    return t.slice(0, max > 0 ? max : 1000);
   }
   /* a Cluck reply as readable text: fenced blocks (fig / openui / code) and HTML tags out, slot / stage markers out */
   function plainReply(t) {
