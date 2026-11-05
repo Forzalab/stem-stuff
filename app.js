@@ -396,6 +396,8 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
 
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
+let mtForced = false;                                                          // phone: the split opened by itself for a proof item (isProof), not by the Open notes button
+const isProof = () => !!S && S.prob.type === "proof";
 let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
@@ -715,6 +717,7 @@ function render() {
     }
   }
   drawFigures();
+  proofHome();
   renderQuestion();
   $("#fb").innerHTML = "";
   mountBox();
@@ -724,7 +727,17 @@ function render() {
   lastEdit = null; padPeekText();
   clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
   applyMT();
+  if (isProof()) layoutDock();                                                    // the split opened by itself: the dock steps away as it does for the pad page
   layoutFreeze();
+}
+/* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the multitask split (design/MULTITASK.md
+   Pick 9 + stage 2). #q (the how line, the box, the chips, the reference proof) and #fb (the verdict) live in #work, the pad's pane; the
+   notes pad (#xb) is not shown. Any other item: both go back into the question card. Same #sash, same anchors (applyMT). */
+function proofHome() {
+  const on = isProof(), fi = $("#freezeIn"), w = $("#work");
+  if (on && !w.contains($("#q"))) w.append($("#q"), $("#fb"));
+  else if (!on && !fi.contains($("#q"))) fi.append($("#q"), $("#fb"));
+  root.classList.toggle("proof-split", on);
 }
 /* ---------- the Twist chip + its one-time toast (W133, todo 133; copy LOCKED, Tony Oct 29, verbatim) ----------
    An item with `twist: true` (SCHEMA.md) gets a small "Twist" chip in the card's header, left of the title (the title row when sugar
@@ -3562,6 +3575,9 @@ const padGone = () => !sideMQ.matches && root.classList.contains("no-pad");   //
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind(), gone = side && clGone;
   if (sideMQ.matches || !S) mtOpen = false;
+  const pf = isProof();
+  if (pf && !sideMQ.matches) { mtOpen = true; mtForced = true; }                // a proof item: always the split (question tile on top, the proof pane below)
+  else if (mtForced) { mtOpen = false; mtForced = false; }
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
   root.classList.toggle("cl-gone", gone);                                      // Cluck's column dismissed: one centred column (DISMISS.md)
@@ -3573,13 +3589,13 @@ function applyMT() {
   root.classList.toggle("mt-r0", on && !gone && !fit && dragR == null && r === 0);
   root.classList.toggle("mt-drag", dragR != null);
   root.style.setProperty("--r", r);
-  root.classList.toggle("mt-q", mtOpen && mtTile === "q");
-  root.classList.toggle("mt-a", mtOpen && mtTile === "a");
+  root.classList.toggle("mt-q", mtOpen && !pf && mtTile === "q");
+  root.classList.toggle("mt-a", mtOpen && !pf && mtTile === "a");
   root.classList.toggle("pad-off", !!S && !sideMQ.matches && !mtOpen);         // phones: no pad on the page, the button opens it
-  sash.hidden = !on || gone; mtMode.hidden = !mtOpen; pstrip.hidden = !(side && !gone && r === 0 && dragR == null);
+  sash.hidden = !on || gone; mtMode.hidden = !mtOpen || pf; pstrip.hidden = !(side && !gone && r === 0 && dragR == null);
   mtMode.dataset.pane = mtTile === "q" ? "problem" : "scratch";
   mtMode.setAttribute("aria-label", mtTile === "q" ? "Show answer" : "Show question");
-  mtExp.hidden = side || !mtOpen;                                               // the collapse corner of the pad page only
+  mtExp.hidden = side || !mtOpen || pf;                                               // the collapse corner of the pad page only
   mtExp.querySelector("use").setAttribute("href", mtOpen ? "#i-collapse" : "#i-expand");
   mtExp.setAttribute("aria-label", mtOpen ? "Close notes" : "Open notes");
   mtExp.title = mtExp.getAttribute("aria-label");
@@ -3605,7 +3621,7 @@ function layoutMT() {
     root.style.setProperty("--vv-h", Math.round(h) + "px");
     root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
     if (mtFit) {                                                                 // hug: what the tile shows, at most 1/3 of a short screen, 45% of a tall one
-      const parts = mtTile === "q" ? [problemEl] : [$("#fb"), $("#q")];
+      const parts = mtTile === "q" || isProof() ? [problemEl] : [$("#fb"), $("#q")];
       root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
       const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
       const cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
@@ -3675,7 +3691,7 @@ function openMT() {
 }
 let mtSkipPop = false;
 function shutMT() {
-  if (!mtOpen) return;
+  if (!mtOpen || isProof()) return;                                              // a proof item's split is its page: nothing closes it
   mtOpen = false;
   applyMT(); layoutDock();
   if (scrollY !== swapY) scrollTo(0, swapY);

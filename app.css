@@ -1599,3 +1599,22 @@ html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dv
 @media (prefers-reduced-motion: reduce) { #cluck .wswap { animation: none; } }
 html.side .cl:is(.wbusy, :has(.wtext.wrun)) .cl-ft .ask::after { border-radius: 0; border-bottom-left-radius: max(0px, calc(var(--ask-r) - 1.5px)); border-bottom-right-radius: max(0px, calc(var(--ask-r) - 1.5px)); }   /* the sheet's field is round at its foot only */
 .cue-chip .dk.ico { width: 32px; height: 32px; color: var(--help); }   /* the chip off the drawer: the tangerine duck on the sheet */
+
+/* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the split. app.js proofHome moves #q (the
+   how line, the box, the chips, the reference) and #fb (the verdict) into #work; the pane (#q there) is the one bordered box. */
+html.proof-split #xb { display: none; }
+html.proof-split #stage > #work { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
+html.proof-split #work > #q { position: relative; flex: 1 1 auto; min-height: 0; margin: 0; padding: var(--s3); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
+  background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; }
+html.proof-split #work > #q:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+html.proof-split #work > #q.closed { opacity: 1; }
+html.proof-split #work > #fb { flex: none; margin: 0; max-height: 34%; overflow-y: auto; }
+html.proof-split #work > #fb:empty { display: none; }
+html.proof-split #q .ff.proof { flex: 1 0 auto; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+html.proof-split #q .ff.proof textarea { min-height: 6rem; resize: none; padding-right: calc(var(--btn) + var(--s2)); }
+html.proof-split #q > .how { flex: none; }
+html.proof-split:not(.side) #q:has(.ans:focus, #ansGo:active) > .how { display: none; }   /* phone, keyboard up in the proof box: the grey hint goes, the box gets the room. :active holds it through the Check tap: the tap blurs the box first, and the hint coming back mid-tap moved Check out from under the finger (no click, no /check) */
+/* the answer strip's drawer (strip.css) hangs below the bar, and the bar is the pane's last row: #q is a clipper, so after a verdict the pane keeps the drawer's height free under the bar (open or shut, so closing it moves nothing) */
+html.proof-split #work > #q:has(> #ff.strip) { padding-bottom: calc(var(--s3) + 3.5rem); }
+html.side.proof-split #work.cl-on > #q { display: flex; }
+html.side.proof-split #work.cl-on > #fb:not(:empty) { display: block; }
