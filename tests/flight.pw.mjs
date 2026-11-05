@@ -80,10 +80,15 @@ const waitFor = async (page, f, n = 1) => { for (let i = 0; i < 60 && page.beaco
 const LAYOUT = ["vp", "scroll", "box", "mq"];
 const KEYS = /^(char|other|Space|Enter|Tab|Escape|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown|Process|Unidentified|[a-zA-Z]+)$/;
 /* the sentinel is nowhere: reports, stemT calls, server log lines, any request but the three that carry it by design (privacy.html: Cluck gets them; Check grades) */
-async function noSentinel(page, what) {
+async function noSentinel(page, what, { askOk = false } = {}) {
   const calls = await page.evaluate(() => window.__stemTcalls);
   assert.ok(calls.length > 0, "stemT was called");
-  for (const c of calls) assert.ok(!c.includes(SENTINEL), what + ": a stemT call carried it: " + c.slice(0, 300));
+  /* askOk (chat step only): a cluck_ask event may carry it, in its text property alone (privacy.html: what you type to Cluck is recorded, emails/phones scrubbed) */
+  for (const c of calls) {
+    if (!c.includes(SENTINEL)) continue;
+    const [n, p] = JSON.parse(c);
+    assert.ok(askOk && n === "cluck_ask" && typeof p?.text === "string" && p.text.includes(SENTINEL) && !JSON.stringify({ ...p, text: "" }).includes(SENTINEL), what + ": a stemT call carried it: " + c.slice(0, 300));
+  }
   for (const b of page.beacons) assert.ok(!JSON.stringify(b).includes(SENTINEL), what + ": the report carried it");
   for (const [path, body] of page.bodies) if (!["/explain", "/chat", "/check"].includes(path)) assert.ok(!body.includes(SENTINEL), what + ": " + path);
   for (const l of logs) assert.ok(!l.includes(SENTINEL), what + ": a server log line carried it: " + l.slice(0, 300));
@@ -170,7 +175,7 @@ await step("chat fails after a typed question: its report has the chat field's k
   assert.ok(b.fr.kb.some(e => /^textarea/.test(e[3] || "") && e[4] === "char"), "the chat field's keys, as classes: " + JSON.stringify(b.fr.kb.slice(-5)));
   assert.ok(b.fr.ring.some(e => e[1] === "net" && e[2] === "chat" && e[3] === "h" && e[4] === 500));
   assert.equal(await page.evaluate(() => document.querySelectorAll(".inc-diag").length), 0, "no diag line outside debug mode");
-  await noSentinel(page, "chat");
+  await noSentinel(page, "chat", { askOk: true });
   await page.context().close();
 });
 
