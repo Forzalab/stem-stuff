@@ -130,6 +130,7 @@
     }
     function judge(s, v, right, said) {                                         // said: the server's {error, hint} line for this miss (a slip family), else ""
       const st = s.st;
+      if (right && variant === "repair" && s === S[S.length - 1]) { const p = st.kind === "pick" && optsOf(st).find(p => p.id === v); emit("repair_answer", { value: v, md: p ? p.md : String(v) }); }   // opt-in: the final answer graded right (app.js repairPick)
       if (right) { s.ok = true; s.val = v; if (welcome) s.missGone = true; else s.miss = ""; }   // welcome: the hint line keeps its room, emptied (a row never shrinks)
       else {
         s.tried.add(String(v)); missed = true; s.missGone = false;

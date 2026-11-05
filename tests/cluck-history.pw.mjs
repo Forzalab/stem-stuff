@@ -21,12 +21,18 @@ mkdirSync(banks); mkdirSync(SHOTS, { recursive: true });
 const VALUES = ["1.20 J", "1.80 J", "2.40 J", "3.60 J"];
 const PROBS = [{ code: "CALC1_CHIST1", title: "History", type: "mc", shuffle: false, body: [{ type: "text", md: "A force does work on a block. How much work? Pick one." }], correct: "b",
   choices: VALUES.map((md, i) => ({ id: "abcd"[i], md })), saccharine: { title: "History", key: "Tick: b", slip: { c: "Three is not two." } } }];
+const LONGC = "for (int i = 0; i < n; i++) { total += fib(i) * 2; } return total;";   // 63 chars of code
+PROBS.push({ code: "CALC1_CHIST2", title: "Long", type: "mc", shuffle: false, body: [{ type: "text", md: "Which line? Pick one." }], correct: "a",
+  choices: [{ id: "a", md: "return 1;" }, { id: "b", md: LONGC }, { id: "c", md: "x" }, { id: "d", md: "y" }], saccharine: { title: "Long", key: "Tick: a", slip: { b: "No loop." } } });
+PROBS.push({ code: "CALC1_CHIST3", title: "Grid", type: "mc", pick: "all", grid: true, shuffle: false, body: [{ type: "text", md: "Tick every true option." }], correct: ["a"],
+  choices: [{ id: "a", md: "Good base" }, { id: "b", md: "Good step" }], saccharine: { title: "Grid", key: "Tick: a", slip: { b: "The step is not good." } } });
 writeFileSync(join(banks, "BANK_CHIST.json"), JSON.stringify({ v: 1, problems: PROBS }));
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
   if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }
   res.writeHead(200, { "Content-Type": "text/event-stream" });
-  const parts = ["POOF! A reply with some words in it.\n", "Tick: b. Egg-cellent."]; let i = 0;
+  const tick = (/Tick: ([a-d])/.exec(body) || [, "b"])[1];                // the stub's reply names the item's own key letter (the server's leak gate checks it)
+  const parts = ["POOF! A reply with some words in it.\n", `Tick: ${tick}. Egg-cellent.`]; let i = 0;
   const t = setInterval(() => {
     if (i < parts.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: parts[i++] } }] })}\n\n`);
     else { res.end("data: [DONE]\n\n"); clearInterval(t); }
@@ -94,6 +100,56 @@ for (const [tag, vp] of [["390", { width: 390, height: 844 }], ["1280", { width:
     assert.ok(r.v !== "", "--ask-r is set on the field: " + JSON.stringify(r));
     await page.waitForTimeout(500);
     await page.screenshot({ path: join(SHOTS, `w2-ring-${tag}.png`), clip: { x: 0, y: vp.height - 130, width: vp.width, height: 130 } });
+    await page.context().close();
+  });
+}
+/* status line edge cases (BANK_CER-shaped fixtures): long code choice, pick-all joins, empty selection, no line for a proof */
+async function openAt(vp, code) {
+  const phone = vp.width < 500;
+  const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+  await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
+  const page = await ctx.newPage();
+  await page.goto(BASE + "/#BANK_CHIST");
+  await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
+  await page.evaluate(c => { location.hash = "#" + c; }, code);
+  await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !!document.querySelector("#q .opt"), code, { timeout: 8000 });
+  await page.waitForTimeout(300);
+  return page;
+}
+async function sheetLine(page) {
+  await page.waitForTimeout(2500);                                       // the prefetch has started (the line needs the try, not the reply)
+  await page.evaluate(() => window.stemIdleTap());
+  await page.waitForFunction(() => window.stemCluckOpen() && !!document.querySelector("#cluck .cl-st"), null, { timeout: 5000 });
+  return page.evaluate(() => { const st = document.querySelector("#cluck .cl-st"), b = st.querySelector(".cl-st-b"), r = b.getBoundingClientRect(), cs = getComputedStyle(b);
+    return { text: st.textContent.trim(), title: b.title, h: r.height, lh: parseFloat(cs.lineHeight) || 17, right: r.right, vw: innerWidth, cut: b.scrollWidth > b.clientWidth + 1 }; });
+}
+for (const [tag, vp] of [["390", { width: 390, height: 844 }]]) {
+  await step(`${tag}: a long code choice is cut near 28 chars with an ellipsis, the full text in the title, the mark stays visible on one line`, async () => {
+    const page = await openAt(vp, "CALC1_CHIST2");
+    await pick(page, "b");
+    const g = await sheetLine(page);
+    assert.match(g.text, /^chose .{1,29}… ✗$/u, g.text);
+    assert.equal(g.title, `chose ${LONGC} ✗`);
+    assert.ok(g.h < g.lh * 1.6, "one line: " + JSON.stringify(g)); assert.ok(g.right <= g.vw - 8 && !g.cut, "the mark is inside the screen: " + JSON.stringify(g));
+    await page.context().close();
+  });
+  await step(`${tag}: pick-all joins with ", " (cut the same way); an empty selection reads "chose none"`, async () => {
+    let page = await openAt(vp, "CALC1_CHIST3");
+    await page.click('.opt[data-id="a"]'); await page.click('.opt[data-id="b"]'); await page.click("#mcGo");
+    await page.waitForFunction(() => window.__drill.state.tries.length === 1, null, { timeout: 5000 });
+    let g = await sheetLine(page);
+    assert.equal(g.text, "chose Good base, Good step ✗");
+    await page.context().close();
+    page = await openAt(vp, "CALC1_CHIST3");                               // Check is disabled with nothing ticked here, so the label is asked directly
+    const none = await page.evaluate(() => ({ w: window.__clTry({ v: "wrong", c: [] }), r: window.__clTry({ v: "correct", c: [] }) }));
+    assert.equal(none.w.label, "chose none"); assert.equal(none.r.label, "chose none"); assert.equal(none.r.v, "correct");
+    await page.context().close();
+  });
+  await step(`${tag}: a proof gets no status line`, async () => {
+    const page = await openAt(vp, "CALC1_CHIST1");
+    const r = await page.evaluate(() => { const p = window.__drill.state.prob, ty = p.type; const ok = window.__clTry({ v: "wrong", c: "a" }); p.type = "proof"; const pr = window.__clTry({ v: "wrong", a: "Base case: ..." }); p.type = ty; return { ok, pr }; });
+    assert.ok(r.ok && /^chose /.test(r.ok.label), JSON.stringify(r)); assert.equal(r.pr, null);
     await page.context().close();
   });
 }

@@ -146,6 +146,7 @@ tags() {
     tray-matrix|ladderwire) echo "@layout @real-time" ;;   # repair ladder wired after a miss (own serve.py, fixture bank)
     welcome-app) echo "@layout @real-time" ;;   # todo 119: the welcome Q1 wired into the app (own serve.py, fixture bank)
     fcard-reveal) echo "@logic @real-time" ;;   # key formulas reveal with no ladder (own serve.py, fixture bank)
+    cluck-history|w3) echo "@logic @real-time" ;;   # the Cluck history lines + the W3 polish (own serve.py, stub OpenRouter)
     minicluck) echo "@layout @real-time" ;;
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
@@ -296,7 +297,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|cluck-lost) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|cluck-lost|cluck-history|w3) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

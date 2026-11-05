@@ -23,6 +23,9 @@
   padding: 0; border-radius: 14px;   /* no gold frame (Tony, Oct 5 clutter pass C1): it was the loudest thing on the page */
   font-family: var(--rw-font); font-weight: 600; color: var(--ink); user-select: none; -webkit-user-select: none;
 }
+.rw-hud { touch-action: pan-x; transition: transform .2s ease-out, opacity .2s ease-out; }   /* a vertical drag is the swipe-away, not a page scroll */
+.rw-hud.rw-away { transform: translateY(-120%); opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .rw-hud { transition: none; } }
 .qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 3; justify-self: stretch; }
 /* no question list (a question opened by link): the HUD lines up with the content under it, not the window's edge */
 html:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { width: min(100% - 2 * var(--gut), var(--col) - 2 * var(--gut)); margin: var(--s2, 8px) auto 0; box-sizing: border-box; }
