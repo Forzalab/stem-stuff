@@ -2009,15 +2009,18 @@ function wishOnWrong() {
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
+/* telemetry (cluck_ask / cluck_reply): where the student is when Cluck is asked. code = the bank, item = the question; telemetry.js scrubs the text */
+const ckTel = () => ({ code: bank ? bank.code : null, item: S ? S.code : null, tries_left: S ? Math.max(0, maxTries(S.prob) - S.tries.length) : null, after_wrong: !!S && S.tries.some(x => x.v === "wrong") });
 async function wishStart(auto) {
   const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
   w.key = key; w.tr = clTry(t);                                                           // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
+  if (!auto) window.stemT?.("cluck_ask", { kind: "explain", ...ckTel(), item: w.code, text: "" });   // telemetry: an Explain press (the background ask is not the student's)
   if (auto) wishLogAdd();
   const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
-  let r = null, bytes = 0, err = null;
+  let r = null, bytes = 0, err = null, ftok = null;
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
@@ -2039,6 +2042,7 @@ async function wishStart(auto) {
         for (const e of c.events) e.error ? (err = e) : typeof e.replace === "string" ? (swap = e.replace) : w.stg.event(e);       // an {"error": "S-XXXXX"} line: the server's in-band failure (status was 200 already); {"replace"}: the subject pass's fixed text
         w.text += c.text;
         window.stemT?.("_tok");   // telemetry: first chunk time
+        if (ftok == null) ftok = Date.now() - t0;
         if (wish === w && w.open) wishText();
         if (wish === w) peekText();
       }
@@ -2053,6 +2057,7 @@ async function wishStart(auto) {
   w.done = true;
   if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
+  window.stemT?.("cluck_reply", { kind: auto ? "wish" : "explain", ...ckTel(), item: w.code, ok: !w.failed && !!w.text && !w.ctl.signal.aborted, error: w.ctl.signal.aborted ? "aborted" : w.failed ? (err ? String(err.why || err.error || "stream") : "status " + w.failed) : "", chars: w.text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: !!auto, text: w.text });   // telemetry
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
   wishPaint();
@@ -2846,10 +2851,11 @@ async function clCompare(w) {
   if (st) th.append(st);
   th.append(box); clHist(); top(st || box);
   const ty = { text: ckGet(key), pos: 0, shown: 0, done: false }, typed = wishType(re, ty);
+  window.stemT?.("cluck_ask", { kind: "other", ...ckTel(), item: w.code, text: "" });   // telemetry: the Compare press
   if (ty.text) { ty.done = true; typed.then(() => top(st || box)); return; }    // this browser has it: no call
   w.busy = true; clAsk();
   const t0 = Date.now(), tp = traceparent(), fr = frReq("explain", tp);
-  let r = null, bytes = 0, inc = null;
+  let r = null, bytes = 0, inc = null, ftok = null;
   const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
@@ -2859,11 +2865,12 @@ async function clCompare(w) {
     if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
     else {
       const rd = r.body.getReader(), dec = new TextDecoder();
-      for (;;) { const { value, done } = await rd.read(); if (done) break; bytes += value.length; fr.f(); ty.text += dec.decode(value, { stream: true }); }
+      for (;;) { const { value, done } = await rd.read(); if (done) break; if (ftok == null) ftok = Date.now() - t0; bytes += value.length; fr.f(); ty.text += dec.decode(value, { stream: true }); }
       fr.e(bytes);
       if (!ty.text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
     }
   } catch (e) { fr.x(e); fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  window.stemT?.("cluck_reply", { kind: "other", ...ckTel(), item: w.code, ok: !!r && r.ok && !!ty.text.trim() && !inc, error: inc ? String(inc.why || inc.status || "fail") : r && r.status === 429 ? "429" : "", chars: ty.text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text: ty.text });   // telemetry
   if (wish !== w) return;
   const ok = !!r && r.ok && ty.text.trim() && !inc;
   if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(st || box); say(speakable(stripFigs(ty.text))); }
@@ -2879,9 +2886,10 @@ async function clSend(msg) {
   const re = box.lastChild;
   th.append(me, box);
   w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
+  window.stemT?.("cluck_ask", { kind: "ask", ...ckTel(), item: w.code, text: msg });   // telemetry: the student's typed question (telemetry.js scrubs it)
   re.scrollIntoView({ block: "nearest" });
   w.ctl = w.ctl || new AbortController();
-  let text = "", err = "", inc = null, r = null, bytes = 0;
+  let text = "", err = "", inc = null, r = null, bytes = 0, ftok = null;
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
   const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
   try {
@@ -2895,6 +2903,7 @@ async function clSend(msg) {
       const rd = r.body.getReader(), dec = new TextDecoder();
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
+        if (ftok == null) ftok = Date.now() - t0;
         bytes += value.length; fr.f();
         text += dec.decode(value, { stream: true });
         ty.text = text;
@@ -2903,6 +2912,7 @@ async function clSend(msg) {
       if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
     }
   } catch (e) { fr.x(e); if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  window.stemT?.("cluck_reply", { kind: "ask", ...ckTel(), item: w.code, ok: !err, error: err, chars: text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text });   // telemetry
   if (wish !== w) return;
   if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
   w.busy = false;
