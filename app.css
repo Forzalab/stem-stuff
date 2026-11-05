@@ -527,12 +527,15 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
    short "Answer" (the long "Ex: ..." placeholder goes), and comes back on blur when empty. CSS only: the label is the input's next sibling.
    Its fill covers the border line only (transparent above it), so it needs no knowledge of the card's colour */
 .ff > .fl { position: absolute; left: calc(var(--s3) - 4px); top: 50%; padding: 0 4px; transform: translateY(-50%); pointer-events: none;
-  font-size: var(--t-md); line-height: 1.2; color: var(--hint); opacity: 0; white-space: nowrap;
+  font-size: var(--t-md); line-height: 1.2; color: var(--hint); opacity: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box;
+  max-width: calc(100% - var(--s3) - var(--btn) - var(--s3));   /* one line, stops short of Check */
   background: linear-gradient(transparent calc(50% - 1px), var(--field) calc(50% - 1px));
   transition: top var(--d-fast, 150ms) ease-out, font-size var(--d-fast, 150ms) ease-out, opacity var(--d-fast, 150ms) ease-out; }
 .ff input:is(:focus, :not(:placeholder-shown)) ~ .fl { top: 0; font-size: var(--t-xs); opacity: 1; color: var(--muted); }
 .ff input:focus ~ .fl { color: var(--focus); }
 .ff input:focus::placeholder { color: transparent; }
+/* the grey hint line steps aside while the label floats on the border (Tony, Nov 4); only boxes with a .fl */
+#q:has(.ff input:is(:focus, :not(:placeholder-shown)) ~ .fl) > .how { display: none; }
 .ff.ok { border-color: var(--correct); }   /* V1: a 1px --correct edge, no fill */
 .ff.done input { color: var(--correct); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
@@ -620,6 +623,9 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
+.ff:is(.bad, .ok, .done, .shut, .lock) input::placeholder { color: transparent; }
+.ff:is(.bad, .ok, .done, .shut, .lock) input ~ .fl { opacity: 0 !important; }   /* a box with a verdict shows no placeholder and no border label (Tony, Nov 4) */
+#q:has(#ansGo:not([hidden], :disabled)) .ff > .vk[data-v="i-x"] { display: none; }   /* editing after a miss: the arrow replaces the x (still in the DOM) */
 .ff.bad { border: var(--bw) dashed var(--wrong-rim); }   /* 1px like every line: the dash is what says "not accepted" (survives greyscale) */
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }

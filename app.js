@@ -889,7 +889,7 @@ function renderQuestion() {
     const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Ex: 9/2, 5e-4, sqrt(3), dne" : "";
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
-          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">Your answer</span>` : ""}
+          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">${ph}</span>` : ""}
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
@@ -1268,7 +1268,7 @@ function wireFF() {
   for (const inp of ins) {
     inp.addEventListener("input", () => {
       go.disabled = ins.some(x => !x.value.trim());
-      const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); vmark(ff, null); go.hidden = false; }
+      const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); go.hidden = false; }
       if (!pv) return;
       if (xOn(null)) { xPreview(pv, inp.value, null); const ln = $("#xline"); if (ln && ln.classList.contains("bad")) { ln.className = "xline"; ln.textContent = X_PROMPT; } return; }   // W137: the working + its value
       pv.innerHTML = "";
@@ -1385,6 +1385,7 @@ async function submitFF() {
   if (vals.some(v => !v) || S.finished || busy) return;
   busy = true;
   const t = vals.join(" , ");
+  vmark($("#ff"), null);   // a new verdict replaces the old mark, never stacks on it
   try {
     const mine = S, r = await check(S.code, { answer: vals[0] });
     if (S !== mine) return;
@@ -1409,7 +1410,7 @@ function wireProof() {
   const inp = $("#ans"), go = $("#ansGo");
   inp.addEventListener("input", () => {
     go.disabled = !inp.value.trim();
-    const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); vmark(ff, null); go.hidden = false; }
+    const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); go.hidden = false; }
   });
   go.addEventListener("click", submitProof);
 }
@@ -1875,7 +1876,7 @@ function feedback(r, typed) {
   /* right / wrong / out: the answer box (or the MC badge) shows the icon; no words on the page */
   const ff = S.prob.type === "mc" ? null : $("#ff");
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
-  else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
+  else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); ff.classList.add("lock"); vmark(ff, "i-lock"); }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
