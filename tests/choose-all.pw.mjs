@@ -29,6 +29,11 @@ const FILE2 = { v: 1, problems: [{ code: "CSCI26_U02", type: "mc", pick: "all", 
     wrong: [{ choice: "b", error: "misread", hint: "QUACK. U02 b", fix: { answer: "9" } }, { choice: "d", error: "misread", hint: "QUACK. U02 d", fix: { answer: "16" } },
       { choice: "c", error: "other", hint: "QUACK. U02 none" }] }] };
 
+/* a quiz grid (CHOOSE-ALL.md §2b): 2 rows, the key is "neither" (nothing ticked); its own file, as above */
+const FILE3 = { v: 1, problems: [{ code: "CSCI26_U03", type: "mc", pick: "all", grid: true, shuffle: false, body: [{ type: "text", md: "Base and step?" }],
+  choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }], correct: [], miss: "QUACK. U03 miss",
+  wrong: ["a", "b"].map(c => ({ choice: c, error: "misread", hint: `QUACK. U03 ${c}` })) }] };
+
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -301,6 +306,22 @@ try {
     assert.equal(await p4.locator('#q .opt.kept[data-id="c"]').count(), 0, "the unticked right row never keeps");
   });
   await c4.close();
+  const c5 = await newCtx({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }), p5 = await c5.newPage();
+  await step("upload grid: 2 rows get two tries, the how line says any set of ticks is an answer, nothing ticked can be right", async () => {
+    await p5.goto(BASE + "/");
+    const [fc] = await Promise.all([p5.waitForEvent("filechooser"), p5.click("#upload")]);
+    await fc.setFiles({ name: "grid.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE3)) });
+    await opened(p5, "CSCI26_U03");
+    assert.match(await p5.textContent("#how"), /You may submit an answer with none, some, or all ticks\./);
+    await row(p5, "b").click(); await check(p5);
+    let s = await st(p5); assert.deepEqual(s.wrong, ["b"]); assert.match(s.fb, /U03 b/); assert.equal(s.finished, false, "a 2-row grid keeps two tries");
+    assert.equal(await p5.evaluate(() => window.__drill.state.triesLeft), 1);
+    await p5.click("#mcGo");                                      // nothing ticked now: the key (no right row lights up, so no check() wait)
+    await p5.waitForFunction(() => window.__drill.state.finished, null, { timeout: 4000 });
+    s = await st(p5); assert.equal(s.finished, true); assert.deepEqual(s.wrong, ["b"]);
+    assert.equal(await p5.evaluate(() => window.__drill.state.tries.at(-1).c.length), 0);
+  });
+  await c5.close();
 } finally { await browser.close(); srv.kill(); }
 if (fails) { console.log(`${fails} failing`); process.exit(1); }
 console.log("all ok");

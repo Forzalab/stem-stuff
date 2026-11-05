@@ -263,7 +263,7 @@ async function staged(r, st) {
 }
 /* mirror of serve.py grade(): keep the two in step */
 const PROOF_TRIES = 3;                                     // serve.py PROOF_TRIES (W107, Tony Oct 27: a proof gets 3 Checks)
-const maxTries = p => p.tries ?? (p.type === "proof" ? PROOF_TRIES : p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
+const maxTries = p => p.tries ?? (p.type === "proof" ? PROOF_TRIES : p.type === "mc" && !p.grid && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try (a grid: two), else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
 const FIX_NUDGE = "All ducks almost in a row... check your math carefully.";   // serve.py FIX_NUDGE
 const WRONG_MISS = "QUACK. At least one ticked row is wrong.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
@@ -1003,8 +1003,10 @@ const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autoc
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).
    It shows on the first choose-all question of the visit only (clutter C6, Tony Oct 5); an authored how always shows */
 let howAt = null;
+const GRID_HOW = "Tick all correct options. You may submit an answer with none, some, or all ticks.";   // a grid item with no how (SCHEMA.md grid)
 const howLine = p => {
   let h = p.how;
+  if (!h && all(p) && p.grid) h = GRID_HOW;                                    // a grid: say that nothing ticked is an answer too, in both modes
   if (!h && all(p) && modeOf() === "sugar" && (howAt ??= p.code) === p.code) h = "Tick all true options.";
   return h ? `<p class="how" id="how">${md(h, true)}</p>` : "";
 };
@@ -1173,7 +1175,7 @@ function keptTap(o) {
   S.keptTold = true;
   if (!toast("That one's already correct!", o)) S.keptTold = false;            // kept A: on the row; no place (the cover rule) = the next tap tries again
 }
-/* Check is live with 1+ ticks (empty is invalid: never sent); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
+/* Check is live with nothing ticked too (that is the answer "none of them": design/EASY.md); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
   S.selected = ticked().map(x => x.dataset.id);
   const proved = !S.prob.fix || opts().every(o => o.hasAttribute("data-lock") || markOf(o) === "on" || (markOf(o) === "x" && fixOf(o).querySelector("input").value.trim()));

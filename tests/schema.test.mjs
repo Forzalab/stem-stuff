@@ -64,6 +64,20 @@ test("multi with mc parts: each part an mc (unfold: code + A, B, C...), up to 26
   assert.ok(validate(withParts([box, box, box, box])), JSON.stringify(validate.errors));
   assert.ok(!validate(withParts([box, box, box, box, box])), "a typed multi keeps 2-4 boxes");
 });
+test("grid (CHOOSE-ALL.md §2b): a 2-row pick-all keyed [] or every row validates only with grid: true", () => {
+  const rows = [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }];
+  const item = (extra) => ({ ...B, problems: [{ code: "CSCI26_G2D", type: "mc", pick: "all", body: [{ type: "text", md: "Base and step?" }], choices: rows,
+    miss: "QUACK. Look again.", ...extra }] });
+  const hint = c => ({ choice: c, error: "misread", hint: "QUACK. Plug in the start." });
+  assert.ok(validate(item({ grid: true, correct: [], wrong: [hint("a"), hint("b")] })), JSON.stringify(validate.errors));
+  assert.ok(validate(item({ grid: true, correct: ["a", "b"], wrong: [] })), JSON.stringify(validate.errors));
+  assert.ok(validate(item({ grid: true, correct: ["b"], wrong: [hint("a")] })), JSON.stringify(validate.errors));
+  assert.ok(!validate(item({ correct: [], wrong: [hint("a"), hint("b")] })), "no grid: [] is still rejected");
+  assert.ok(!validate(item({ grid: true, pick: "one", correct: "a", wrong: [hint("b")] })), "grid needs pick all");
+  const { pick: _p, miss: _m, ...one } = item({}).problems[0];
+  assert.ok(!validate({ ...B, problems: [{ ...one, grid: true, correct: "a", wrong: [hint("b")] }] }), "grid needs pick all (no pick)");
+  assert.ok(!validate(item({ grid: false, correct: [], wrong: [hint("a"), hint("b")] })), "grid is true or absent");
+});
 test("problems.json: has problems", () => assert.ok(problems.length > 0));
 /* the bank flag rule (SCHEMA.md "Codes"), as a list of faults: [] = sound. id = the flag, else the file stem (hosted banks need no flag).
    Built-in prefixes are free; every other prefix must equal the id minus BANK_ and may not be reserved. */
@@ -307,7 +321,7 @@ for (const p of problems) {
       const got = p.wrong.map(w => w.choice);
       assert.ok(got.every(Boolean), "mc wrong entries use choice, not match/re");
       assert.deepEqual([...got].sort(), ids.filter(i => !right.includes(i)).sort());
-      if (p.pick === "all") assert.ok(right.length < Math.min(5, ids.length), "pick all: ticking everything must lose");
+      if (p.pick === "all" && !p.grid) assert.ok(right.length < Math.min(5, ids.length), "pick all: ticking everything must lose");   // a grid: any set (CHOOSE-ALL.md §2b)
       if (p.fix) for (const w of p.wrong) {                               // prove mode: every false, unlocked row has a fix
         const locked = p.choices.find(c => c.id === w.choice).lock;
         assert.ok(locked ? !w.fix : w.fix, `${w.choice}: ${locked ? "locked rows take no fix" : "missing fix"}`);

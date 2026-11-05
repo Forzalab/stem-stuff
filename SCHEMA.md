@@ -80,7 +80,8 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
 | `tol` | `num`, `expr` | relative tolerance: right when \|typed − answer\| ≤ tol × \|answer\|. Child over parent (WebAssign-style): this question's `tol` > its topic's `tol` (the question's `topic` names an entry of the bank's top-level `topics`: `{"kin": {"tol": 0.01, "tol_why": "..."}}`) > the bank's `tol` (top level, next to `v`) > `0.02` for `num` (WebAssign's default) / `1e-6` for `expr` and a hard-mode fix box. A zero answer is absolute: \|typed\| ≤ 1e-9. Right to 3 s.f. still counts. `wrong` matches and repeats use the question's `tol` or `1e-6`. Slips use their own window, `SLIP_WIN` (slips.py / slips.mjs: within 0.5% of the slip or equal at 3 s.f.; Tony D2), never the grading tol. | **no** |
 | `tol_why` | with `tol` (question or bank) | one line: why this window fits the question and the topic quizzed ("counting: an off-by-one is the error"). `python3 tools/tol.py --write` writes `tol: 1e-4` with its own line on a definitive key (the wiggle test: g 9.8/9.81, π 3.14/3.1416, each decimal datum ±1 in its last digit leave the key unchanged; integers and fractions are exact, the 5 in 5! is 5). A form that is not definitive and has no author `tol` at any level gets the nested-wiggle tol with `tol_src: "auto"`: every student rounding profile (each rounding site kept or at 3 s.f., g 9.8/9.81, π 3.14/3.1416, the final at 3 or 4 s.f.) gives E, the worst miss 3 s.f. does not already pass; tol = min(cap, max(0.5%, 1.25 E)), cap = min(2%, half the gap to the nearest one-change slip). An author `tol` at question, topic or bank level beats auto. `tools/tol.py` and `tools/slips.py` warn (never fail) on a bank with num units and no `tol` at any level, and on an integer key with integer-only inputs and no `tol`; tol.py also warns CAP, CANCEL, NONLINEAR, FALLBACK and SF2 (a 2 s.f. student misses the tol: report only). Every warning prints and appends one JSONL line `{ts, bank, item, kind, tol, E, E2, top_site, note}` to `--log PATH` (tol.py default: brain `projects/calc/_files/tol-warnings.jsonl` when that dir exists, else `./tol-warnings.jsonl`; `--no-log` prints only; slips.py logs only with `--log`). Why a rule at all: the old window `tol*max(1,|answer|)` was absolute below 1, so 0 was right for 0.00624. | **no** |
-| `correct` | `mc` | id of the right choice | **no** |
+| `correct` | `mc` | id of the right choice (`pick: "all"`: a list of 1+ ids; with `grid`: 0+ ids, `[]` = none of the rows) | **no** |
+| `grid` | `mc` with `pick: "all"`, optional | `true` = a quiz grid (design/CHOOSE-ALL.md §2b, e.g. rows "Good base case" / "Good inductive step"): any set may be the key, the empty set and every row included; 2 rows are fine; tries are TWO (not the 2-choice ONE); the repair answer step offers one chip per set. Off = the usual choose-all rules | yes |
 | `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
 | `noob` | all, optional | `{ "tier": 1 \| 2 \| 3 }`: the noob ramp's author tier (see "Repair ladder, noob tier, welcome, twins") | yes |
@@ -109,7 +110,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 - Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
 ## Grading (server `POST /check`, or in the browser for an uploaded file)
-- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text` get TWO; a `multi` gets TWO **per part**; a `proof` gets **THREE** Checks (Tony, Oct 27). There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
+- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text` get TWO; a `multi` gets TWO **per part**; a `proof` gets **THREE** Checks (Tony, Oct 27); a `grid` choose-all gets TWO even with 2 rows (its 2 rows make 4 answers). There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
 - `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` **or to 3 significant figures** (Tony, Oct 3; the prompt asks for at least 4. $15.59$ counts for $9\sqrt3$; `expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
 - `multi`: **each part is graded alone.** `POST /check` takes `{ code, part: i, answer }` (`i` = 0 for a, 1 for b...) and the reply carries `part: i`. Each part has its own tries (the `num`/`expr`/`text` rule: TWO), its own repeat check and its own lockout, keyed by (browser, code, part): a part locks by itself when its tries run out and never locks the others. The old whole-set body `{ parts: [...] }` is not accepted (`invalid`). Every box has its own inline submit arrow, off while that box is empty; Enter in a box submits that box. A right part turns green and read-only; a wrong part shows the hint of the first of *its own* `wrong` entries it matched, else the problem `nudge`, else the default nudge. The problem is finished when every part is right or locked, and counts as correct only if every part is right.
@@ -579,6 +580,11 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         {
           "if": {"properties": {"type": {"const": "mc"}}, "not": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]}},
           "then": {"properties": {"how": false}}
+        },
+        {
+          "if": {"not": {"properties": {"grid": {"const": true}}, "required": ["grid"]}},
+          "then": {"properties": {"correct": {"minItems": 1}}},
+          "else": {"required": ["pick"], "properties": {"pick": {"const": "all"}, "fix": false}}
         }]},
     "mcpart": {"type": "object", "required": ["type", "choices", "correct", "wrong"], "additionalProperties": false,
       "description": "a multi part that is a choice: loaded as its own mc question, code + A, B, C... (codes.mjs / serve.py unfold); its fields are the mc problem's",
@@ -830,7 +836,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             },
             {
               "type": "array",
-              "minItems": 1,
+              "minItems": 0,
               "uniqueItems": true,
               "items": {
                 "type": "string",
@@ -838,7 +844,11 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
               }
             }
           ],
-          "description": "mc: id of the right choice (pick all: every right id)"
+          "description": "mc: id of the right choice (pick all: every right id, 1+; a grid: 0+, [] = none of them)"
+        },
+        "grid": {
+          "const": true,
+          "description": "pick all only, opt-in: a quiz grid (design/CHOOSE-ALL.md §2b). Any set may be the key: [] (none), one row, or every row; 2+ rows; tries as 3+ choices (two)"
         },
         "fix": {
           "type": "object",
