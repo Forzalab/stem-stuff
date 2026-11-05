@@ -110,13 +110,14 @@ for (const [vn, vp] of Object.entries(VPS)) {
           const sr = document.createRange(); sr.selectNodeContents(document.getElementById("lhSay")); const tx = sr.getBoundingClientRect();
           return { sayText: tx.left + tx.width / 2, art: im.left + im.width / 2, ys: bs.map(b => Math.round(b.top)), ws: bs.map(b => Math.round(b.width)), colw: Math.round(colw), lefts: bs.map(b => Math.round(b.left)) }; })(), kids: [...col.children].map(c => c.tagName), focus: a && a.textContent.trim(),
         chip: !!document.querySelector(":is(#wish, .rbox) .wchip"), img: !!e.querySelector("img[src*='duck-calm-nod-128']"), imgW: e.querySelector("img").getBoundingClientRect().width,
-        scroll: getComputedStyle(document.body).overflow, boxed, bd: getComputedStyle(e).backgroundColor }; }, DLG);
+        scroll: getComputedStyle(document.body).overflow, boxed, bd: getComputedStyle(e).backgroundColor, bdA: (m => m ? +m[1] : 1)(getComputedStyle(e).backgroundColor.match(/\/\s*([\d.]+)\s*\)/)) }; }, DLG);
     assert.equal(s.say, "Let me help you with that!"); assert.equal(s.lab, s.say); assert.equal(s.modal, "true");
     assert.deepEqual(s.btns, ["Open help panel", "No thanks"]); assert.deepEqual(s.kids, ["P", "IMG", "DIV"]);
     assert.ok(Math.abs(s.geo.sayText - s.geo.art) <= 2, "the say-line text is centred over the art " + JSON.stringify(s.geo));
     assert.ok(s.geo.ys[0] < s.geo.ys[1], "stacked: the primary on top"); assert.ok(s.geo.ws.every(w => Math.abs(w - s.geo.colw) <= 2), "full width " + JSON.stringify(s.geo)); assert.equal(s.geo.lefts[0], s.geo.lefts[1]);
     assert.equal(s.focus, "Open help panel"); assert.ok(s.chip, "the strip chip is drawn before the modal"); assert.ok(s.img); assert.ok(s.imgW <= 128);
     assert.equal(s.scroll, "hidden"); assert.deepEqual(s.boxed, [], "no box / border / background between the backdrop and the art + buttons"); assert.notEqual(s.bd, "rgba(0, 0, 0, 0)");
+    assert.ok(s.bdA >= 0.88, "Tony Nov 5 'darker': the backdrop is the page at 88%, so nothing behind reads through (alpha " + s.bdA + ")");
     if (vn === "phone") await page.screenshot({ path: join(SHOTS, "lockhelp-390-dpr2.png") });
     const e = await lhev(page); assert.deepEqual(e.map(x => [x.phase, x.reason]), [["held", "scn"], ["shown", undefined]]); assert.equal(e[1].via, "lock");
     assert.ok((await lines(page)).some(l => /help p=0\.95 via=lock scn=ha fired/.test(l)));

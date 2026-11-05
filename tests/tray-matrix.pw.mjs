@@ -70,7 +70,8 @@ const browser = await pw[process.env.PW_BROWSER || "chromium"].launch({ args: ["
 async function open(w, hash = "#BANK_CVT", h) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: h || (phone ? 852 : 800) }, hasTouch: phone && !process.env.PW_BROWSER, isMobile: phone && !process.env.PW_BROWSER, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+  await ctx.addInitScript(() => { window.__stemHelpRand = () => 1;   /* this spec fails items on purpose (HA is live): the help roll is pinned to miss so Jev's help modal (tests/lockhelp.pw.mjs) stays out of it */
+    try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
