@@ -1,4 +1,4 @@
-// TRAY MATRIX (Tony, Nov 3 19:31 / 19:32, Nov 4: the tray SLIPS FROM UNDER the answer/choices box, bottom-LEFT, left edge = the box's, never on top of it or below Next; it keeps flow room only while shown, so what lies below moves down with it): it must not break its neighbours. Per cell
+// TRAY OVERLAY MATRIX (Tony, Nov 3 19:31 / 19:32): the strip tray may overlay the content below it, but it must not break its neighbours. Per cell
 // (width x item type x state): (1) zero reflow of the neighbours when it opens and when it is dismissed (no room kept, none left behind);
 // (2) it is never UNDER a sibling (4 points inside it hit the tray: no stale host z, no clipping parent); (3) it never covers the current
 // answer / verdict row (only the 8px tuck under it) or the Next control; (4) it stays inside the window; (5) its Ask Cluck takes focus.
@@ -100,10 +100,9 @@ const probe = page => page.evaluate(() => {
   const cp = document.querySelector("#q .ansl .mcopy, #preview .ansl .mcopy");   // the revealed answer's copy: a 44px tap area that nothing else may take
   let copy = null;
   if (cp && vis(cp)) { const r = cp.getBoundingClientRect(), x = r.left + r.width / 2; copy = { w: Math.round(r.width), h: Math.round(r.height), hit: [r.top - 12, r.top + r.height / 2, r.bottom + 12].map(y => !!document.elementFromPoint(x, y)?.closest(".mcopy")) }; }
-  const bx = document.querySelector("#q .choices, #q #ff.ff");   // Tony, Nov 4: the tray hangs from this box's left edge
-  return { boxLeft: bx ? bx.getBoundingClientRect().left : null, near, copy, drawer: dr && dr.toJSON(), hits, host, nextHit, focus, vw: innerWidth, stale: [...document.querySelectorAll("#q .vd-host")].length };
+  return { near, copy, drawer: dr && dr.toJSON(), hits, host, nextHit, focus, vw: innerWidth, stale: [...document.querySelectorAll("#q .vd-host")].length };
 });
-const same = (a, b, what) => assert.ok(a.near.length === b.near.length && a.near.every(([id, y], i) => id === b.near[i][0] && Math.abs(y - b.near[i][1]) <= 2), what + " moved a neighbour: " + JSON.stringify([a.near, b.near]));   // +-2px: the tray keeps flow room while shown (Tony, Nov 4), a centred column (721) re-seats by a pixel
+const same = (a, b, what) => assert.deepEqual(a.near, b.near, what + " moved a neighbour");
 const kinds = {
   "figure": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT6"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT6" && !!document.querySelector('#q .opt[data-id="e"]')); await p.waitForTimeout(400); },
     miss: async p => { await p.click('.opt[data-id="d"]'); await p.click('.ch[data-id="d"] .send'); }, second: "c" },
@@ -132,7 +131,6 @@ for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, 
     assert.ok(a.hits && a.hits.every(Boolean), `${w} ${kind}: the tray is under something (clipped or a sibling over it): ` + JSON.stringify(a.hits));
     assert.ok(!a.host || a.host.overlap <= 10, `${w} ${kind}: the tray covers the answer / verdict row by ${a.host?.overlap}px`);
     assert.ok(a.nextHit !== false, `${w} ${kind}: the tray covers Next`);
-    if (a.boxLeft !== null) assert.ok(Math.abs(a.drawer.left - a.boxLeft) <= 1, `${w} ${kind}: the tray is not left-aligned to the box (Tony, Nov 4): ${a.drawer.left} vs ${a.boxLeft}`);
     assert.ok(a.drawer.left >= -1 && a.drawer.right <= a.vw + 1, `${w} ${kind}: outside the window ` + JSON.stringify(a.drawer));
     assert.ok(a.focus !== false, `${w} ${kind}: Ask Cluck cannot take focus`);
     await page.click(".vdrawer .vd-x"); await page.waitForTimeout(600);

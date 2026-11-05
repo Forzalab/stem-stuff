@@ -69,35 +69,20 @@
     d.dataset.kind = h.kind;
     return d;
   }
-  /* Tony, Nov 4 (live #415 shots 1-3): the tray SLIPS FROM UNDER the answer box, anchored to its BOTTOM-LEFT: left edge = the box's left edge, top tucked behind the box's bottom edge.
-     The box = the typed bar plus its verdict line (.ansl, when it sits below the bar), or the whole choices list (mc / choose-all). The tray takes its flow room only while it is
-     shown (a .vd-room spacer right after the box, gone with the tray: no orphan gap); what comes later (the choose-all Next row) is pushed down below it, never under it. */
-  var room = null;
+  /* Tony, Nov 5: "i want the cluck panel to come from under the input box, OVERLAPPING any other element". The tray hangs from the INPUT box (the typed bar .ff; mc / choose-all: the choices box):
+     its top is tucked 2px behind the box's bottom edge, the box paints above it (.vd-host z 3 > tray z 2), and it floats OVER whatever follows (the verdict line, Next, the Cluck card).
+     It is absolute and keeps no flow room: opening or closing it moves nothing. Side (Tony, same day): "only go left IFF the form is choose all/tick box, bcs the next button is not
+     convenient. otherwise, all stay at right": choose-all = the box's left edge; every other form = the box's right edge. */
   function boxOf(h) {
-    var b = boxOf1(h);
-    if (D.documentElement.classList.contains("proof-split")) { b.free = true; b.after = null; }   // the proof pane (#418) is a scrolling flex column that already keeps room under the bar (#q:has(> #ff.strip) padding-bottom): a spacer there would resize the growing box
-    return b;
+    var el = h.g || h.at;
+    return { left: el.offsetLeft, w: el.offsetWidth, bottom: el.offsetTop + el.offsetHeight, tuck: 2, side: h.kind === "list" ? "left" : "right" };
   }
-  function boxOf1(h) {                                         // the box the tray hangs from: its left, width, bottom, the element the room goes after, and how far the top tucks behind the bottom edge
-    var g = h.g, at = h.at, pv = h.kind === "ff" && at.id === "ff" ? D.querySelector("#q #preview") : null;
-    if (g) return { left: g.offsetLeft, w: g.offsetWidth, bottom: g.offsetTop + g.offsetHeight, after: h.kind === "row" ? null : g, tuck: 2 };   // a single mc's drawer already sits right after the list (sync keeps it there): its room goes after the drawer, or the two would keep swapping places
-    if (pv && pv.querySelector(".ansl") && pv.getClientRects().length) return { left: at.offsetLeft, w: at.offsetWidth, bottom: pv.offsetTop + pv.offsetHeight, after: pv, tuck: 0 };   // the verdict line is part of the box: the tray starts under its text
-    return { left: at.offsetLeft, w: at.offsetWidth, bottom: at.offsetTop + at.offsetHeight, after: null, tuck: 2, free: true };   // a bar with no verdict line under it (a wrong try): the tray may lie over what is below it (Tony, Nov 3 19:31), no room is kept
-  }
-  function reserve(after, d, h) {                             // flow room for the open tray (it is absolute): a spacer after the box, the tray's height less its tuck, + the 8px the row below has
-    if (!room) { room = D.createElement("div"); room.className = "vd-room"; room.setAttribute("aria-hidden", "true"); }
-    var anchorEl = after || d;
-    if (room.previousElementSibling !== anchorEl || !room.isConnected) anchorEl.after(room);
-    room.style.height = Math.max(0, d.offsetHeight - h) + 8 + "px";
-  }
-  function unreserve() { if (room) { room.remove(); room = null; } }
   function place(h, d) {
     var b = boxOf(h), w = b.w, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
     d.style.width = dw + "px";
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
-    d.style.width = dw + "px"; d.style.left = b.left + "px"; d.style.top = b.bottom - b.tuck + "px";
+    d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
     d.style.setProperty("--vd-tuck", b.tuck + "px");
-    if (!d.hidden && !b.free) reserve(b.after, d, b.tuck); else unreserve();
   }
   function show(d, still) {
     clearTimeout(shutT);
@@ -106,7 +91,7 @@
   }
   /* only the host that owns the OPEN drawer is lifted above it (.vd-host, z 3); every other verdict host (.strip) stays under it, so the tray may lie over the rows
      below (Tony, Nov 3 19:31) and no stale host paints over it. It drops when the drawer is gone: nothing stays lifted after the tray shuts. */
-  function unlift() { D.querySelectorAll("#q .vd-host").forEach(function (e) { e.classList.remove("vd-host"); }); unreserve(); }
+  function unlift() { D.querySelectorAll("#q .vd-host").forEach(function (e) { e.classList.remove("vd-host"); }); }
   function hide(d, instant) {
     clearTimeout(shutT);
     if (d.hidden) return;
@@ -190,8 +175,9 @@
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
     if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
-      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (e !== h.el && e !== h.at && e !== h.g) e.classList.remove("vd-host"); });
-      [h.el, h.at, h.g].forEach(function (e) { if (e && !e.classList.contains("vd-host")) e.classList.add("vd-host"); });
+      var lift = h.kind === "list" ? [h.g] : [h.el, h.at, h.g];   // choose-all: only the choices box (the anchor); its Check / Next row stays under the tray
+      D.querySelectorAll("#q .vd-host").forEach(function (e) { if (lift.indexOf(e) < 0) e.classList.remove("vd-host"); });
+      lift.forEach(function (e) { if (e && !e.classList.contains("vd-host")) e.classList.add("vd-host"); });
     }
     drawer.dataset.st = h.v;
     if (st.key !== h.key) {                                   // a new verdict: the drawer opens. Live it slides out; a closed question restored at first sight opens at rest

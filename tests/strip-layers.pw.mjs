@@ -90,8 +90,7 @@ async function reach(page, code, state) {
 const geo = page => page.evaluate(() => {
   const R = e => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
   const bar = document.querySelector("#ff"), d = document.querySelector("#q .vdrawer");
-  const al = document.querySelector("#q #preview:has(.ansl)");   // Tony, Nov 4: the box = the bar + the verdict line / reveal under it (the preview that holds the .ansl)
-  return { bar: R(bar), d: d && !d.hidden && getComputedStyle(d).display !== "none" ? R(d) : null, box: al && al.getClientRects().length ? Math.max(bar.getBoundingClientRect().bottom, al.getBoundingClientRect().bottom) : bar.getBoundingClientRect().bottom };
+  return { bar: R(bar), d: d && !d.hidden && getComputedStyle(d).display !== "none" ? R(d) : null };
 });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -144,11 +143,11 @@ for (const [W, H] of VPS) {
       });
       assert.deepEqual(out, []);
     });
-    await step(`${T}: shape: 2/3 of the bar (wider only when the label needs it), LEFT-aligned to the box (Tony, Nov 4), top at the box bottom (2px behind the bar's edge)`, async () => {
+    await step(`${T}: shape: 2/3 of the bar (wider only when the label needs it), right-aligned, top tucked 2px behind the bar bottom edge, over everything below (Tony, Nov 5)`, async () => {
       assert.ok(g.d.w >= g.bar.w * 2 / 3 - 1.5 && g.d.w <= g.bar.w + 0.5, `drawer ${g.d.w} vs 2/3 of ${g.bar.w}`);
       if (W >= 1000) assert.ok(Math.abs(g.d.w - g.bar.w * 2 / 3) <= 1.5, `at ${W} the label fits in 2/3: drawer ${g.d.w} vs ${g.bar.w * 2 / 3}`);
-      assert.ok(Math.abs(g.d.l - g.bar.l) <= 1, `left edges ${g.d.l} vs ${g.bar.l}`);
-      assert.ok(Math.abs(g.d.t - g.box) <= 2.5, `top ${g.d.t} vs the box bottom ${g.box} (+-2: the tray is tucked behind the box's bottom edge, never over its verdict line)`);
+      assert.ok(Math.abs(g.d.r - g.bar.r) <= 1, `right edges ${g.d.r} vs ${g.bar.r}`);
+      assert.ok(g.d.t >= g.bar.b - 8 && g.d.t <= g.bar.b + 2, `top ${g.d.t} vs bar bottom ${g.bar.b} (-8..+2: tucked behind the bar border, never below it)`);
     });
     await step(`${T}: contents: Ask Cluck + a 44px+ close, full words, nothing cut, no Next inside`, async () => {
       const c = await pg.evaluate(() => {
@@ -174,14 +173,13 @@ for (const [W, H] of VPS) {
       });
       assert.deepEqual(l.out, []); assert.equal(l.edge, l.line, "drawer edge colour"); assert.equal(l.left, l.line); assert.equal(l.bw, "1px"); assert.equal(l.bs, "solid");
     });
-    await step(`${T}: reflow: closing the drawer moves nothing above it (field, Next, the verdict line) and gives its room back (no orphan gap)`, async () => {
+    await step(`${T}: reflow 0: closing the drawer moves nothing (field, card, the line under it)`, async () => {
       const m = () => pg.evaluate(() => { const t = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : null; };
-        return { ff: t("#ff"), pv: document.querySelector("#q #preview:has(.ansl)") ? t("#preview") : null, nx: t("#q .nx"), rooms: document.querySelectorAll("#q .vd-room").length, q: Math.round(document.querySelector("#q").getBoundingClientRect().height) }; });
+        return { ff: t("#ff"), pv: t("#preview"), q: Math.round(document.querySelector("#q").getBoundingClientRect().height), nx: t("#q .nx"), fb: t("#fb"), wish: t("#wish") }; });
       const a = await m();
       await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(SETTLE);
       const b = await m();
-      assert.deepEqual({ ff: b.ff, pv: b.pv, nx: b.nx }, { ff: a.ff, pv: a.pv, nx: a.nx }, "something above the tray moved when the drawer closed");   // Tony, Nov 4: the tray reserves flow room under the box while it is shown
-      assert.equal(b.rooms, 0, "the tray's room is still reserved after it closed"); assert.ok(b.q <= a.q, `the card grew when the tray closed: ${a.q} -> ${b.q}`);
+      assert.deepEqual(b, a, "something moved when the drawer closed");
       assert.equal((await geo(pg)).d, null, "the drawer is still showing after close");
       assert.equal(await pg.evaluate(() => document.activeElement && document.activeElement.matches("#ff .vk")), true, "focus returns to the verdict icon");
     });

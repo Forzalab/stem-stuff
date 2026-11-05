@@ -320,8 +320,9 @@ flow(23, "cluck-errors", async (page, w) => {
   const sheetTxt = () => page.evaluate(() => (document.querySelector("#cluck .wtext")?.textContent || "").trim());
   const tappable = sel => page.evaluate(s => { const b = document.querySelector(s); if (!b || !b.getClientRects().length || b.closest("[hidden]")) return false;
     const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!e && b.contains(e); }, sel);
+  // Nov 5: the tray now floats over the page under the box, so the chip has room for the one-time "Cluck lives in Ask Cluck" note on the first close and it would eat the next Escape; this flow is about the error lines, so that note is marked seen
   // (a) the local hourly cap: 5 auto asks this hour -> no auto-open, no request, the chip says "Explain my mistake"
-  await page.addInitScript(() => { try { if (!sessionStorage.getItem("ux23")) { sessionStorage.setItem("ux23", "1"); localStorage.setItem("stem-wish", JSON.stringify([1, 2, 3, 4, 5].map(() => Date.now()))); } } catch { /* */ } });
+  await page.addInitScript(() => { try { if (!sessionStorage.getItem("ux23")) { sessionStorage.setItem("ux23", "1"); localStorage.setItem("stem-ob-cluck", "1"); localStorage.setItem("stem-wish", JSON.stringify([1, 2, 3, 4, 5].map(() => Date.now()))); } } catch { /* */ } });
   let asks = 0;
   await page.route("**/explain", r => { asks++; r.fulfill({ status: 500, body: "" }); });
   await go(page, C.single);

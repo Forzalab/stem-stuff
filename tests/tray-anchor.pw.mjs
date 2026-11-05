@@ -1,9 +1,10 @@
-// TRAY ANCHOR + ANSWER-VALUE MARGINS (Tony, Nov 4, live #415 shots 1-3): the "See steps" tray (.vdrawer, Ask Cluck + ^) SLIPS FROM UNDER the answer box,
-// anchored to its BOTTOM-LEFT, never on top of it and never below Next:
-//   typed   the box = the answer bar #ff plus its verdict line (.ansl "That's it! The answer is <value>"); the tray's top is tucked behind that bottom edge,
-//           its left edge = the box's left edge (+-1px), it never paints over the verdict text, and Next sits below it (tray bottom <= Next top)
-//   choose-all  the box = the choices list; same anchor; the Next row moves down below the tray
-//   room    the tray reserves flow room only while it is shown: after the dismiss the gap under the box = the gap before the tray (+-1px)
+// TRAY ANCHOR + ANSWER-VALUE MARGINS (Tony, Nov 5: "i want the cluck panel to come from under the input box, OVERLAPPING any other element"):
+// the "See steps" tray (.vdrawer, Ask Cluck + ^) slides out from under the INPUT box and floats OVER whatever is below it:
+//   anchor  typed: the bar .ff that holds the input; mc / choose-all: the choices box (.choices)
+//   edges   (Tony: "the tray shall only go left IFF the form is choose all/tick box, bcs the next button is not convenient. otherwise, all stay at right")
+//           choose-all: tray LEFT = anchor left; every other form: tray RIGHT = anchor right (+-1px); tray top = anchor bottom, tucked a few px BEHIND the anchor's border (-8..+2px); the anchor paints above the tray
+//   over    elementFromPoint inside the open tray = the tray: it is on top of the verdict line (.ansl), Next, the Cluck card, the choose-all Next row
+//   reflow  0: opening / closing the tray moves nothing (.ansl, Next, the next card, #q keep their rects); there is no .vd-room spacer
 //   margin  the inline answer value in the .ansl line: gap before the value = gap after it (+-1px)
 // 390 phone (touch, dpr 2). Own serve.py + a throwaway bank + a stub OpenRouter.   node tests/tray-anchor.pw.mjs <port> [shots dir]
 import { createRequire } from "node:module";
@@ -30,10 +31,14 @@ const PROBS = [
   { code: "PHYS_TA2", title: "Cups", type: "mc", pick: "all", shuffle: false, body: txt(STEM + " Tick all correct options."),
     choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }, { id: "c", md: "Good claim" }], correct: ["b"],
     wrong: [{ choice: "a", error: "misread", hint: "QUACK. Look at the base." }], saccharine: { title: "Cups", key: "Tick: b", slip: { a: "The base." } } },
+  { code: "PHYS_TA3", title: "Pick", type: "mc", pick: "one", shuffle: false, body: txt(STEM + " Which is right?"),
+    choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }, { id: "c", md: "Good claim" }], correct: ["b"],
+    wrong: [{ choice: "a", error: "misread", hint: "QUACK. Look at the base." }], saccharine: { title: "Pick", key: "Pick: b", slip: { a: "The base." } } },
 ];
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_TAA.json"), JSON.stringify({ v: 1, problems: [PROBS[0]] }));
 writeFileSync(join(BANKS, "BANK_TAB.json"), JSON.stringify({ v: 1, problems: [PROBS[1]] }));
+writeFileSync(join(BANKS, "BANK_TAC.json"), JSON.stringify({ v: 1, problems: [PROBS[2]] }));
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
   if (!JSON.parse(body || "{}").stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }
@@ -57,7 +62,7 @@ async function open(code) {
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
-  await page.goto(BASE + "/#" + (code === "PHYS_TA1" ? "BANK_TAA" : "BANK_TAB"));
+  await page.goto(BASE + "/#" + ({ PHYS_TA1: "BANK_TAA", PHYS_TA2: "BANK_TAB", PHYS_TA3: "BANK_TAC" })[code]);
   try { await page.waitForFunction(() => !document.getElementById("splash") && /^#PHYS_TA/.test(location.hash) && !!document.querySelector("#q .opt, #ff input, #ff textarea"), null, { timeout: 10000 }); } catch (e) { console.log(await page.evaluate(() => location.hash + " " + !!document.getElementById("splash") + " " + document.body.innerText.slice(0, 200))); throw e; }
   return page;
 }
@@ -79,62 +84,56 @@ const shot = (page, n) => SHOTS ? page.screenshot({ path: join(SHOTS, n) }) : nu
 const near = (a, b, t, what) => assert.ok(Math.abs(a - b) <= t, `${what}: ${a.toFixed(1)} vs ${b.toFixed(1)} (tol ${t})`);
 
 try {
-  await step("390 typed right: the tray's top is at the box bottom (box = bar + verdict line), its left = the box left, it never paints over the verdict line, no overlap with Next", async () => {
+  const prove = async (page, anchorSel, name, side) => {
+    await trayOpen(page);
+    const pick = () => page.evaluate(aSel => {
+      const R = e => { if (!e || !e.getClientRects().length) return "-"; const r = e.getBoundingClientRect(); return [r.left, r.top + scrollY, r.width, r.height].map(x => Math.round(x * 10) / 10).join(","); };
+      const q = document.querySelector("#q"), a = q.querySelector(aSel), d = q.querySelector(".vdrawer:not([hidden])");
+      const r = e => { const k = e.getBoundingClientRect(); return { left: k.left, right: k.right, top: k.top + scrollY, bottom: k.bottom + scrollY }; };
+      return { a: r(a), d: d ? r(d) : null, rooms: document.querySelectorAll(".vd-room").length,
+        flow: [".ansl", ".nx", ".chk", "#preview"].map(s => R(q.querySelector(s))).concat([R(q), R(q.nextElementSibling), R(q.parentElement), String(document.documentElement.scrollHeight)]).join("|") };
+    }, anchorSel);
+    const m = await pick();
+    await shot(page, name);
+    assert.ok(m.d, "an open tray");
+    if (side === "left") near(m.d.left, m.a.left, 1, "tray left vs anchor left (choose-all: the tray goes left, Next is on the right)");
+    else near(m.d.right, m.a.right, 1, "tray right vs anchor right (every form but choose-all: the tray stays right)");
+    assert.ok(m.d.top >= m.a.bottom - 8 && m.d.top <= m.a.bottom + 2, `tray top ${m.d.top.toFixed(1)} is not at the anchor bottom ${m.a.bottom.toFixed(1)} (-8..+2)`);
+    const hits = await page.evaluate(() => { const d = document.querySelector("#q .vdrawer:not([hidden])"), r = d.getBoundingClientRect(); return [[.15, .6], [.5, .75], [.85, .6]].map(([fx, fy]) => { const e = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy); return !!e && !!e.closest(".vdrawer"); }); });
+    assert.deepEqual(hits, [true, true, true], "elementFromPoint inside the open tray is not the tray (something paints over it)");
+    const top = await page.evaluate(sel => { const a = document.querySelector("#q " + sel), r = a.getBoundingClientRect(), d = document.querySelector("#q .vdrawer:not([hidden])"), dr = d.getBoundingClientRect(); const e = document.elementFromPoint(Math.max(r.left, dr.left) + 12, r.bottom - 1); return { in: !!e && a.contains(e), tag: e && (e.tagName + "." + e.className) }; }, anchorSel);
+    assert.ok(top.in, "the anchor does not paint above the tray at its bottom border: " + JSON.stringify(top));
+    assert.equal(m.rooms, 0, "a .vd-room spacer is in the flow");
+    await page.click("#q .vdrawer .vd-x"); await page.waitForTimeout(SETTLE);
+    const shut = await pick();
+    assert.equal(shut.d, null, "the tray did not close");
+    assert.equal(shut.flow, m.flow, "reflow: opening/closing the tray moved something\n open " + m.flow + "\n shut " + shut.flow);
+    assert.deepEqual(page.errs, []);
+  };
+  await step("390 typed right: the tray slides from under the input bar (.ff), right = bar right, paints over the verdict line / Next, reflow 0", async () => {
     const page = await open("PHYS_TA1");
     try {
       await typeAnswer(page, "18");
       await page.waitForSelector("#q .ansl b", { timeout: 6000 });
-      await trayOpen(page);
-      const m = await geo(page);
-      await shot(page, "ta-typed.png");
-      assert.ok(m.d && m.ansl, "an open tray and the verdict line: " + JSON.stringify(m));
-      near(m.d.left, m.box.left, 1, "tray left vs box left");
-      const bb = boxBottom(m);
-      assert.ok(m.d.top >= bb - 2 && m.d.top <= bb + 2, `tray top ${m.d.top.toFixed(1)} is not at the box bottom ${bb.toFixed(1)} (+-2; the box includes the verdict line)`);
-      const hit = await page.evaluate(() => { const b = document.querySelector("#q .ansl"); const r = b.getBoundingClientRect(); return [0.1, 0.5, 0.9].every(f => { const e = document.elementFromPoint(r.left + r.width * f, r.top + r.height / 2); return !!e && !!e.closest(".ansl"); }); });
-      assert.ok(hit, "the tray paints over the verdict line");
-      if (m.nx) {                                                          // Next in the bar's row (beside the box): the tray may not lie on it; when they share a column the tray ends above Next
-        const sameCol = !(m.d.right <= m.nx.left || m.d.left >= m.nx.right);
-        if (sameCol) assert.ok(m.d.bottom <= m.nx.top + 0.5, `tray bottom ${m.d.bottom.toFixed(1)} is not above Next top ${m.nx.top.toFixed(1)}`);
-        else assert.ok(m.d.top >= m.nx.bottom - 0.5 || m.d.right <= m.nx.left, "tray lies on Next");
-      }
-      assert.deepEqual(page.errs, []);
+      await prove(page, "#ff", "ta-typed.png", "right");
     } finally { await page.context().close(); }
   });
-  await step("390 typed right: the tray takes flow room only while shown (dismissed = the layout with no tray at all, +-1px; reopen/close repeats)", async () => {
-    const page = await open("PHYS_TA1");
-    try {
-      await typeAnswer(page, "18");
-      await page.waitForSelector("#q .ansl b", { timeout: 6000 });
-      await trayOpen(page);
-      const bottom = () => page.evaluate(() => { const r = document.querySelector("#q").getBoundingClientRect(); const f = document.querySelector("#fb"), n = document.querySelector("#blocks, #card, #main"); return { q: r.bottom + scrollY, below: (document.querySelector("#q").parentElement.getBoundingClientRect().bottom + scrollY), rooms: document.querySelectorAll("#q .vd-room").length }; });
-      const open1 = await bottom();
-      assert.equal(open1.rooms, 1, "one room spacer while the tray is shown");
-      await page.click("#q .vdrawer .vd-x"); await page.waitForTimeout(SETTLE);
-      const shut = await bottom();
-      assert.equal(shut.rooms, 0, "the room spacer outlives the tray");
-      await page.addStyleTag({ content: ".vdrawer, .vd-room { display: none !important; }" });   // baseline: the layout with no tray at all
-      const none = await bottom();
-      near(shut.q, none.q, 1, "the box column's bottom after the dismiss vs no tray");
-      near(shut.below, none.below, 1, "the card's bottom after the dismiss vs no tray");
-      assert.ok(open1.q > shut.q + 20, `while shown the tray has its room (${open1.q.toFixed(1)} vs ${shut.q.toFixed(1)})`);
-    } finally { await page.context().close(); }
-  });
-  await step("390 choose-all right: the tray's top is tucked under the choices box bottom, its left = the box left, the Next row is below the tray (no vertical overlap)", async () => {
+  await step("390 choose-all right: the tray slides from under the choices box (LEFT edge = box left), paints over the Next row, reflow 0", async () => {
     const page = await open("PHYS_TA2");
     try {
       await page.click('#q .opt[data-id="b"]');
       await page.click("#q .chk .go, #q #mcGo, #q .chk button");
       await page.waitForSelector("#q .nx", { timeout: 6000 });
-      await trayOpen(page);
-      const m = await geo(page);
-      if (process.env.TA_PROBE) console.log(JSON.stringify(m));
-      await shot(page, "ta-pickall.png");
-      assert.ok(m.d && m.nx, "an open tray and Next: " + JSON.stringify(m));
-      near(m.d.left, m.box.left, 1, "tray left vs the choices box left");
-      assert.ok(m.d.top >= m.box.bottom - 2 && m.d.top <= m.box.bottom + 2, `tray top ${m.d.top.toFixed(1)} is not tucked at the choices box bottom ${m.box.bottom.toFixed(1)}`);
-      assert.ok(m.d.bottom <= m.nx.top + 0.5, `tray bottom ${m.d.bottom.toFixed(1)} is not above Next top ${m.nx.top.toFixed(1)}`);
-      assert.deepEqual(page.errs, []);
+      await prove(page, ".choices", "ta-pickall.png", "left");
+    } finally { await page.context().close(); }
+  });
+  await step("390 single mc right: the tray slides from under the choices box (right edge = box right), paints over what follows, reflow 0", async () => {
+    const page = await open("PHYS_TA3");
+    try {
+      await page.click('#q .opt[data-id="b"]');
+      await page.click('#q .ch:has(.opt[data-id="b"]) .send');
+      await page.waitForFunction(() => window.__drill.state.tries.length >= 1, null, { timeout: 6000 });
+      await prove(page, ".choices", "ta-mc.png", "right");
     } finally { await page.context().close(); }
   });
   await step("390 typed right: the gap before the answer value = the gap after it (+-1px)", async () => {

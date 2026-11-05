@@ -205,10 +205,9 @@ await step(`@${w < 720 ? "phone" : "desk"} ${w}: wrong MC pick -> tray -> dismis
   await wrong(page);
   await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
   await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) settles
-  const t1 = await tops();   // Tony, Nov 4: the tray keeps flow room under the choices box while shown, so a centred column may re-seat by a pixel; no row may jump
-  assert.ok(t1.every(([id, y], i) => id === t0[i][0] && Math.abs(y - t0[i][1]) <= 2), "opening the tray moved a row" + JSON.stringify([t0, t1]));
+  assert.deepEqual(await tops(), t0, "opening the tray moved a row");
   await page.click(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(500);
-  const t2 = await tops(); assert.ok(t2.every(([id, y], i) => id === t0[i][0] && Math.abs(y - t0[i][1]) <= 2), "dismissing the tray left a gap / moved a row" + JSON.stringify([t0, t2]));   // +-2px: a centred column re-seats by a pixel (Tony, Nov 4: the tray keeps room while shown)
+  assert.deepEqual(await tops(), t0, "dismissing the tray left a gap / moved a row");
   await page.context().close();
 });
 }

@@ -101,9 +101,8 @@ const drawerOpen = page => page.evaluate(() => { const d = document.querySelecto
 /* where the reopen target lives per kind */
 const ICON = { mc: "#q .ch:has(.opt.wrong, .opt.right) .vkb", inl: "#q .ch:has(.opt.wrong, .opt.right) .vkb", all: "#q .ch:has(.opt.wrong, .opt.right) .vkb", multi: "#q .part .ff .vk[role=button]" };
 const move = page => page.evaluate(() => {
-  const rooms = document.querySelectorAll("#q .vd-room").length;
   const t = s => [...document.querySelectorAll(s)].map(e => Math.round(e.getBoundingClientRect().top + scrollY));
-  return { q: Math.round(document.querySelector("#q").getBoundingClientRect().height), ch: t("#q .ch"), chk: t("#q .chk"), part: t("#q .part"), ff: t("#q .part .ff"), nx: t("#q .nx"), fb: t("#fb"), wish: t("#wish"), choices: t("#q .choices"), rooms };
+  return { q: Math.round(document.querySelector("#q").getBoundingClientRect().height), ch: t("#q .ch"), chk: t("#q .chk"), part: t("#q .part"), ff: t("#q .part .ff"), nx: t("#q .nx"), fb: t("#fb"), wish: t("#wish"), choices: t("#q .choices") };
 });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -149,13 +148,11 @@ for (const [kind, widths, states] of CASES) {
         assert.ok(c.chip && c.x && c.chip.h >= 44 && c.x.h >= 44 && c.x.w >= 44 && !c.cut && c.in && c.inx, JSON.stringify(c));
         assert.equal(c.nx, null, "a Next / Skip inside the Cluck tray: " + JSON.stringify(c.nx));
       });
-      await step(`${T}: reflow: closing the drawer moves nothing above it and gives its room back (Tony, Nov 4: the tray keeps flow room under the choices box only while shown); focus returns to the reopen target`, async () => {
+      await step(`${T}: reflow 0: closing the drawer moves nothing; focus returns to the reopen target`, async () => {
         const a = await move(pg);
         await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(SETTLE);
         const b = await move(pg);
-        const above = o => ({ ch: o.ch, choices: o.choices, part: o.part, ff: o.ff, nx: kind === "all" ? null : o.nx });   // pick-all: its Next row sits BELOW the tray (it moves up when the tray closes); every row above stays
-        assert.deepEqual(above(b), above(a), "something above the tray moved when the drawer closed");
-        assert.equal(b.rooms, 0, "the tray's room is still reserved after it closed"); assert.ok(b.q <= a.q && b.fb.every((v, i) => v <= a.fb[i]) && b.chk.every((v, i) => v <= a.chk[i]), "something below the tray moved down when it closed: " + JSON.stringify([a, b]));
+        assert.deepEqual(b, a, "something moved when the drawer closed");
         assert.equal(await drawerOpen(pg), false, "still showing after close");
         assert.equal(await pg.evaluate(sel => { const e = document.activeElement; return !!e && e.matches(sel); }, ICON[kind]), true, "focus must return to the reopen target");
       });
