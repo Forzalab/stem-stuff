@@ -57,6 +57,21 @@
   /* the spot gate (Tony Oct 24, SLIP_TIE): /check's `spot` (a hint that points at a place in the formula) instead of the plain `hint`, only
      when the student is (a) genuinely improving AND (b) nearly there. All "ours" (J3 bench start values) */
   var SPOT = { MIN_N: 4, WIN: 3, IMP: 0, WRONG: 1, FAST_S: FAST_ERR_S };
+  /* HELP_MODAL (Tony Nov 5, lockhelp.js "Let me help you with that!"): the action `help_modal`, drawn at the same J5 seam beside cluck_say. LIBERAL on purpose
+     (Tony: "easily triggered ... VERY high probability bcs our userbase is low"; this overrides art. 7 for this action). Triggers: lock = the 2nd wrong on a 2-try
+     item, s5, s6, s2 (depth >= S2_DEPTH), q. One roll per item, only while a scenario is live (HELP_SCN below), p by the scenario. Caps (checked BEFORE the roll; a
+     cap holds, spends nothing, and the next live trigger re-checks): sugar + a 2-try typed / single mc / choose-all item (reason mode) · not hidden · not
+     typing (a lock skips this: the pick itself ends the typing) · >= the gap since the last show (HELP_GAP_S; "No thanks" doubles it up to HELP_GAP_MAX_S, "Open
+     help panel" resets it). Only an rng fail or a show spends the item (max 1 per item). Setting HELP_P_BOTH and HELP_P_ONE to 0 turns it off; ?jev=0 = no Jev at all */
+  var HELP_P_BOTH = 0.95, HELP_P_ONE = 0.8, HELP_GAP_S = 60, HELP_GAP_MAX_S = 600, HELP_DELAY_MS = 600;
+  /* W2 v2 (Tony Nov 5: "define a threshold/scenario (Jev prompable) that is considered help avoidance + nag dismiss -> applies that, instead of blind .9"): a
+     trigger may roll ONLY while a scenario is live; none live = held reason=scn. Every number of both scenarios lives in this one block.
+       HA help avoidance: >= HA_WRONG wrong SUBMITS over the last HA_ITEMS items (this one counts), and on none of those items Cluck was opened by hand
+          (a strip / hint chip tap opens Cluck, so it is the same event) -> a lock (2 wrong on one item) is HA by itself unless help was taken
+       ND nag dismiss: >= ND_N J5 nudges (cluck_say peeks) this session ended without a tap (dismiss / ignore), none followed by a Cluck open within ND_AFTER_S s
+     p: both live HELP_P_BOTH · exactly one HELP_P_ONE · a lock with either HELP_P_BOTH. Both P at 0 turns it off */
+  var HELP_SCN = { HA_WRONG: 2, HA_ITEMS: 3, ND_N: 2, ND_AFTER_S: 120 };
+  var HELP_VIA = ["lock", "s5", "s6", "s2", "q"];
   var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2, MISS_S: 5 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
@@ -159,6 +174,7 @@
     var on = (o.on || NUDGE.STATES).filter(function (s) { return NUDGE.STATES.indexOf(s) >= 0; });
     var pk = chance(on.length), rand = o.rand || Math.random, pool = o.lines || {}, quits = o.quits || {};
     var nz = { n: 0, at: -Infinity, gap: NUDGE.GAP_S, dismissed: 0, taps: 0, last: null, prev: {}, up: false, awayAt: -Infinity };
+    var hl = { n: 0, at: -Infinity, gap: HELP_GAP_S, up: false }, itemsWH = [], nds = [];   // itemsWH: [{ w, h }] wrong submits + a hand Cluck open per finished item (HA) · nds: [{ at, rescued }] nudges that ended with no tap (ND)      // help_modal: shows, the last show's clock, the current gap
     var sz = { n: 0, used: {}, last: null }, ring = [], sid = o.sid || "s", itemNo = 0, aw = null;   // aw: the away episode { at, via }
     var fams = {}, recs = [], out = [];                                 // J6 tree, this session: families wrong on earlier items · [{ ok: first-try right, gap }] per item · out: lines not shipped yet, [{ i, c, l }] per item (take)
     function sec(t) { return (t - q.open) / 1000; }
@@ -181,6 +197,7 @@
     function hit(st, why) {
       counts[st]++; if (st === "S5") q.s5 = true; last = { state: st, action: ACT[st], src: "home", why: why };
       log("jev", st + " " + why);
+      if (st === "S5") mark("s5"); else if (st === "S6") mark("s6"); else if (st === "Q") mark("q"); else if (st === "S2" && q.depth >= NUDGE.S2_DEPTH) mark("s2");
     }
     function input(kind) {
       var t = now();
@@ -199,7 +216,7 @@
         items++;
         q = { code: p.code, open: t, from: t, step: t, depth: 0, ok: false, bad: false, help: false, picks: [], fast: 0, errAt: 0,
           wrong: 0, first: null, solved: false, firstItem: items === 1, nudged: false, rolled: {}, s6: false, q: false,
-          errs: [], gaps: [], deep: 0, s5: false, hold: { on: false, n: 0, at: -Infinity }, sheet: false };
+          errs: [], gaps: [], deep: 0, s5: false, mode: p.mode, tries: p.tries, type: p.type, hl: {}, hnew: 0, hdone: false, hheld: {}, hold: { on: false, n: 0, at: -Infinity }, sheet: false };
         itemNo++;
         lines = []; log("q_open", (p.code || "?") + " " + (p.type || "?") + dims(p.code));
         if (flowRun) hit("F", "run=" + flowRun);
@@ -228,12 +245,15 @@
         else { q.solved = true; if (!q.bad && !q.help && sec(t) < FLOW_S) q.ok = true; }
         q.from = q.step = t; q.depth = 0; q.hold.on = false;               // checked: the held pick is gone
         if (!q.s6 && s6()) { q.s6 = true; hit("S6", "wrong=" + q.wrong); }
+        if (p.verdict === "wrong" && typeof p.tries_left === "number" && p.tries_left <= 0 && q.tries === 2) { log("jev", "lock"); mark("lock"); }
         nudges();
+        helpGate();
         return p.verdict === "correct" ? seen() : undefined;
       }
       if (name === "cluck_open") {
         if (p.auto) return;                                              // the desktop opens it by itself: not a help request
         q.help = true; q.ok = false; q.sheet = true;
+        nds.forEach(function (d) { if (!d.rescued && t >= d.at && (t - d.at) / 1000 <= HELP_SCN.ND_AFTER_S) d.rescued = true; });   // ND: Cluck opened soon after a swatted nudge
         if (nz.up) nudgeEnd(true);                                       // Cluck opened with the nudge still up: it worked
         else if ((t - nz.awayAt) / 1000 < NUDGE.TAKE_S) {                // the tap that opened Cluck put the nudge away first (Tony's dump, Oct 19): taken, not a dismiss
           nz.awayAt = -Infinity; nz.gap /= 2; nz.dismissed--; nz.taps++; log("jev", "nudge took cluck gap=" + nz.gap + "s");
@@ -286,6 +306,7 @@
       }
       if (!q.q && qRule()) { q.q = true; hit("Q", q.firstItem && !q.picks.length ? "first item, no pick" : "left before x" + quits[q.code]); }
       nudges();
+      helpGate();
     }
     /* lane 4: the held-pick nudge (see the head comment). The clock = the later of the last input and the last hold nudge */
     function held() {
@@ -315,6 +336,7 @@
       tlog(tree({ node: "end", items: recs }));
       if (q.first != null) { firsts.push(q.first); if (firsts.length > SKILL_N) firsts.shift(); }
       helps.push(q.help); if (helps.length > S6_HELP_N) helps.shift();
+      itemsWH.push({ w: q.wrong, h: q.help }); if (itemsWH.length > HELP_SCN.HA_ITEMS) itemsWH.shift();
     }
     function s6() {
       if (q.wrong < S6_WRONG || q.help || q.solved || helps.indexOf(true) >= 0) return false;
@@ -326,6 +348,54 @@
       return (q.firstItem && !q.picks.length && q.depth >= 1) || ((quits[q.code] || 0) >= 1 && q.depth >= NUDGE.Q_DEPTH);
     }
 
+    /* ---- help_modal: the gate (see HELP_SCN). mark() = a trigger went live; helpGate() runs once per event that marked one ---- */
+    function mark(v) { if (!q.hl[v]) { q.hl[v] = 1; q.hnew++; } }
+    function helpRand() { return (o.helpRand || rand)(); }
+    function hprops(via, p, roll, why, scn) {
+      return { code: q.code, item: q.code, via: via, scn: scn, p: p, roll: roll, reason: why || undefined, gap_s: hl.gap, tries_used: q.gaps.length, after_wrong: q.wrong };
+    }
+    function helpHeld(via, p, roll, why, scn) {                              // one held line + event per (item, reason): a blocked trigger does not spam
+      if (q.hheld[why]) return;
+      q.hheld[why] = 1;
+      log("jev", "help p=" + p + " via=" + via + " scn=" + scn + " held reason=" + why);
+      if (o.helpTel) o.helpTel("held", hprops(via, p, roll, why, scn));
+    }
+    /* the live scenarios now: "ha" · "nd" · "ha+nd" · "none" */
+    function scenario() {
+      var hist3 = itemsWH.slice(-(HELP_SCN.HA_ITEMS - 1)).concat([{ w: q.wrong, h: q.help }]), w = 0, h = false;
+      hist3.forEach(function (r) { w += r.w; if (r.h) h = true; });
+      var ha = w >= HELP_SCN.HA_WRONG && !h, nd = nds.filter(function (d) { return !d.rescued; }).length >= HELP_SCN.ND_N;
+      return ha && nd ? "ha+nd" : ha ? "ha" : nd ? "nd" : "none";
+    }
+    function helpGate() {
+      if (!o.helpShow || !q || !q.hnew || q.mode == null) return;   // no mode on q_open = a caller that does not know it (old tests): silent
+      q.hnew = 0;
+      var live = HELP_VIA.filter(function (v) { return q.hl[v]; }), via = live[0], t = now();
+      var scn = scenario(), p = scn === "none" ? 0 : scn === "ha+nd" || via === "lock" ? HELP_P_BOTH : HELP_P_ONE, why = "";
+      if (!(HELP_P_BOTH > 0 || HELP_P_ONE > 0)) return;                  // every P at 0 = switched off
+      if (q.mode !== "sugar" || q.tries !== 2 || q.type === "proof" || q.type === "multi" || (o.helpBlock && o.helpBlock(via))) why = "mode";
+      else if (q.hdone) why = "item";
+      else if (hidden) why = "hidden";
+      else if (via !== "lock" && (t - keyAt) / 1000 < NUDGE.TYPING_S) why = "typing";
+      else if ((t - hl.at) / 1000 < hl.gap) why = "gap";
+      else if (scn === "none") why = "scn";                              // no scenario live: nothing to offer yet (spends nothing; a later trigger re-checks)
+      if (why) { helpHeld(via, p, null, why, scn); return; }
+      var roll = Math.round(helpRand() * 100) / 100;
+      q.hdone = true;                                                    // an rng fail or a show spends the item
+      if (roll >= p) { log("jev", "help p=" + p + " via=" + via + " scn=" + scn + " held reason=rng"); if (o.helpTel) o.helpTel("held", hprops(via, p, roll, "rng", scn)); return; }
+      hl.n++; hl.at = t; hl.up = true; q.nudged = true;
+      log("jev", "help p=" + p + " via=" + via + " scn=" + scn + " fired");
+      var info = hprops(via, p, roll, "", scn);
+      info.delay = via === "s2" || via === "q" ? 0 : HELP_DELAY_MS;
+      last = { state: via, action: "help_modal", src: "home", why: "help via=" + via };
+      o.helpShow(info);
+    }
+    /* the modal's outcome (lockhelp.js): No thanks doubles the gap (max HELP_GAP_MAX_S), Open help panel resets it */
+    function helpEnd(kind) {
+      if (kind === "no_thanks") hl.gap = Math.min(hl.gap * 2, HELP_GAP_MAX_S); else if (kind === "open_help") hl.gap = HELP_GAP_S;
+      hl.up = false;
+      log("jev", "help " + kind + " gap=" + hl.gap + "s");
+    }
     /* ---- J5: the nudge gate. The live states in table order; each rolls once per item; the caps hold a roll for later ---- */
     function live() {
       if (q.help || q.solved) return [];
@@ -367,7 +437,7 @@
       if (!nz.up) return;
       nz.up = false;
       if (tapped) { nz.taps++; log("jev", "nudge tap"); }
-      else { nz.dismissed++; nz.gap *= 2; nz.awayAt = now(); log("jev", "nudge away gap=" + nz.gap + "s"); }   // undone if Cluck opens within TAKE_S (cluck_open)
+      else { nz.dismissed++; nz.gap *= 2; nz.awayAt = now(); nds.push({ at: now(), rescued: false }); log("jev", "nudge away gap=" + nz.gap + "s"); }   // undone if Cluck opens within TAKE_S (cluck_open)
     }
     /* ---- J6: the seen fire path. Consumes tree's candidates; never looks at the rule's internals ---- */
     function words(x) { return x.split(/\s+/).filter(Boolean).length; }
@@ -418,17 +488,18 @@
       return true;
     }
     return {
-      ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave, take: take, spot: spot,
+      helpEnd: helpEnd, ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave, take: take, spot: spot,
       dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/bench_seen.mjs
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
           nudge: { n: nz.n, gap: nz.gap, dismissed: nz.dismissed, taps: nz.taps, last: nz.last, p: pk, on: on.slice() },
           seen: { n: sz.n, used: Object.keys(sz.used), last: sz.last },
+          help: { n: hl.n, gap: hl.gap, up: hl.up },
           hold: q ? { code: q.code, n: q.hold.n } : null };
       }
     };
   }
-  W.__stemJev = { create: create, p75: p75, stemWords: stemWords, comeback: comeback, S6_WRONG: S6_WRONG, AWAY_STALL_S: AWAY_STALL_S, ACT: ACT, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN, SPOT: SPOT, spotOk: spotOk };
+  W.__stemJev = { create: create, p75: p75, stemWords: stemWords, comeback: comeback, S6_WRONG: S6_WRONG, AWAY_STALL_S: AWAY_STALL_S, ACT: ACT, HELP_P_BOTH: HELP_P_BOTH, HELP_P_ONE: HELP_P_ONE, HELP_SCN: HELP_SCN, HELP_GAP_S: HELP_GAP_S, HELP_GAP_MAX_S: HELP_GAP_MAX_S, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN, SPOT: SPOT, spotOk: spotOk };
 
   /* ---- on for all (art. 11); ?jev=0 = off on this device, ?jev=1 = back on ---- */
   var on = false;
@@ -474,6 +545,26 @@
       return L.step() ? (mids() > m ? "mid" : "arrow") : "";
     },
     rand: typeof W.__stemJevRand === "function" ? W.__stemJevRand : Math.random,   // tests pin the roll; the app never sets it
+    helpRand: function () { return (typeof W.__stemHelpRand === "function" ? W.__stemHelpRand : Math.random)(); },   // tests pin the help roll (one function); the app never sets it
+    helpBlock: function (via) {                                      // "mode": another overlay is up, or the item is already closed (a restored locked item; the lock itself is the one trigger that sees it open)
+      var L = W.stemLockHelp, d = W.__drill && W.__drill.state;
+      return !L || L.up || (via !== "lock" && !!(d && d.finished));
+    },
+    helpTel: function (phase, props) {                              // out of this stemT call (jev.ev runs inside it), through the full chain: telemetry.js + the flight recorder
+      setTimeout(function () { try { W.stemT("lockhelp", Object.assign({ phase: phase }, props)); } catch (e) { /* never break the app */ } }, 0);
+    },
+    helpShow: function (info) {                                      // after the verdict UI settles (the strip chip has drawn; 3 s at most) for lock / s5 / s6, at once for s2 / q
+      var code = info.code, t0 = Date.now();
+      function go() {
+        try {
+          if (jev.state().code !== code || document.hidden) return;
+          var chip = !!(document.querySelector && document.querySelector(":is(#wish, .rbox) .wchip"));
+          if (info.delay && !chip && Date.now() - t0 < 3000) { setTimeout(go, 150); return; }
+          if (W.stemLockHelp) W.stemLockHelp.show(info);
+        } catch (e) { /* never break the app */ }
+      }
+      info.delay ? setTimeout(go, info.delay) : go();
+    },
     say: function (line) {
       var d = W.stemDuck;
       return !!(d && d.say && d.say(line, { onTap: function () { jev.nudgeEnd(true); }, onAway: function () { jev.nudgeEnd(false); } }));
@@ -531,5 +622,6 @@
   }
   setInterval(jev.tick, 5000);
   W.stemJev = jev.state; W.stemJev.dump = jev.dump;
+  W.stemJev.helpEnd = function (kind) { try { jev.helpEnd(kind); } catch (e) { /* ignore */ } };   // lockhelp.js tells how the modal went
   W.stemJev.spot = function () { try { return jev.spot(); } catch (e) { return { ok: false, why: "spot=hold why=error" }; } };   // app.js asks (record); off = no stemJev = the plain hint
 })();

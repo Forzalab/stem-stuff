@@ -62,7 +62,8 @@ async function open(vp, code, touch = false, diet = false) {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: touch, isMobile: touch, serviceWorkers: "block" });
   if (diet) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch / Copy my work
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+  await ctx.addInitScript(() => { window.__stemHelpRand = () => 1;   /* this spec fails items on purpose (HA is live): the help roll is pinned to miss so Jev's help modal (tests/lockhelp.pw.mjs) stays out of it */
+    try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));

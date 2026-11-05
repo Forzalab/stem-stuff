@@ -1632,3 +1632,15 @@ html.proof-split:not(.side) #q:has(.ans:focus, #ansGo:active) > .how { display: 
 html.proof-split #work > #q:has(> #ff.strip) { padding-bottom: calc(var(--s3) + 3.5rem); }
 html.side.proof-split #work.cl-on > #q { display: flex; }
 html.side.proof-split #work.cl-on > #fb:not(:empty) { display: block; }
+
+/* ---------- LOCK-HELP (lockhelp.js; Tony Nov 5): "Let me help you with that!". Jev's help_modal. A dimmed full screen; ON it (no box, no card, no border, no
+   background): Cluck's say-line, the big Cluck, two buttons. No backdrop tap, no Escape. Art: LOCKHELP_ART in lockhelp.js (placeholder until Tony's new Cluck). ---------- */
+html.lh-on, html.lh-on body { overflow: hidden; }
+.lockhelp { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: var(--gut, 16px);
+  background: color-mix(in srgb, var(--page) 88%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.lh-col { display: grid; justify-items: center; gap: var(--s3); width: min(22rem, 100%); text-align: center; }
+.lh-say { margin: 0; width: 100%; text-align: center; color: var(--help-muted); font-size: var(--t-md, 1.125rem); font-weight: var(--w-em); line-height: 1.3; }   /* the .ck-say tokens, in the flow (not the peek's absolute spot) */
+.lh-duck { width: 128px; height: auto; max-width: 100%; aspect-ratio: 122 / 128; object-fit: contain;
+  filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
+.lh-btns { display: flex; flex-direction: column; align-items: stretch; gap: var(--s3); width: 100%; margin-top: var(--s2); }   /* stacked, full width, the primary on top */
+.lh-btns .btn { width: 100%; min-width: 0; padding: 0 var(--s3); font: inherit; font-weight: var(--w-em); text-align: center; justify-content: center; }

@@ -483,3 +483,178 @@ test("W96 r2: no nudge in the MISS_S right after a wrong pick (the page's own mi
   j.at(10 + W96.NUDGE.MISS_S - 0.5).tick(); assert.deepEqual(said, [], "still inside MISS_S");
   j.at(10 + W96.NUDGE.MISS_S).tick(); assert.deepEqual(said, ["S6"], "after it: the roll was held, not spent");
 });
+
+/* help_modal (Tony Nov 5, lockhelp.js): Jev's "Let me help you with that!" action. W2 v2: a trigger rolls ONLY while help avoidance (HA) or nag dismiss (ND) is live
+   (HELP_SCN), p .95 both / .8 one / lock .95; caps are checked BEFORE the roll */
+function helper(roll = 0.1, hist, extra) {
+  const shows = [], tel = [];
+  let r = roll;
+  const j = session(hist, { helpShow: i => shows.push({ ...i }), helpTel: (ph, p) => tel.push({ phase: ph, ...p }), helpRand: () => r, ...extra });
+  j.shows = shows; j.tel = tel; j.roll = v => { r = v; };
+  const open = (code, o = {}) => j.ev("q_open", { code, type: "mc", mode: "sugar", tries: 2, ...o });
+  j.open = open;
+  return j;
+}
+const JL = (j, re) => j.state().lines.filter(l => re.test(l));
+/* HA established: one finished item with 2 wrong submits and no help (a 3-try item, so the modal itself stays out of it), ending at t=10 s */
+function ha(j) {
+  j.at(0); j.open("HA0", { tries: 3 });
+  j.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 2 }); j.at(9).ev("pick", { choice: "c", verdict: "wrong", tries_left: 1 });
+  j.tel.length = 0; j.shows.length = 0;
+}
+/* ND established: two idle nudges (S2 peeks, no wrong submits so HA stays out) put away without a tap, on two diet items (the modal holds on mode),
+   the first ending at t=100 s, the last at t=ND_END s */
+const ND_END = 400;
+function nd(j) {
+  j.at(0); j.open("ND0", { mode: "diet" }); j.at(100).tick(); j.nudgeEnd(false);
+  j.at(300); j.open("ND1", { mode: "diet" }); j.at(ND_END).tick(); j.nudgeEnd(false);
+  j.tel.length = 0; j.shows.length = 0;
+}
+const NUDGER = { on: ["S2"], rand: () => 0, say: () => true, lines: { S2: ["x"] } };
+test("help: constants are the spec's (HELP_SCN, HELP_P_BOTH / ONE, gap)", () => {
+  const J = load().win.__stemJev;
+  assert.deepEqual(JSON.parse(JSON.stringify(J.HELP_SCN)), { HA_WRONG: 2, HA_ITEMS: 3, ND_N: 2, ND_AFTER_S: 120 });
+  assert.equal(J.HELP_P_BOTH, 0.95); assert.equal(J.HELP_P_ONE, 0.8);
+  assert.equal(J.HELP_GAP_S, 60); assert.equal(J.HELP_GAP_MAX_S, 600);
+});
+test("help (m): a fresh student's first wrong (S6 live, no HA / ND) holds reason=scn: no modal, the item is not spent", () => {
+  const j = helper(); j.at(0); j.open("A1");
+  j.at(10).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 0);
+  assert.deepEqual([j.tel.length, j.tel[0].phase, j.tel[0].reason, j.tel[0].scn, j.tel[0].via], [1, "held", "scn", "none", "s6"]);
+  assert.equal(JL(j, /help p=0 via=s6 scn=none held reason=scn/).length, 1);
+  j.at(30).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });   // the 2nd wrong on the item = HA by itself: the lock now rolls (the item was not spent)
+  assert.equal(j.shows.length, 1); assert.deepEqual([j.shows[0].via, j.shows[0].scn, j.shows[0].p], ["lock", "ha", 0.95]);
+});
+test("help (lock): 2 wrong submits with no help taken = HA on its own, fires at .95; a lock AFTER a hand Cluck open holds reason=scn", () => {
+  const j = helper(); j.at(0); j.open("A1");
+  j.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 0);
+  j.at(40).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(j.shows.length, 1);
+  assert.deepEqual([j.shows[0].via, j.shows[0].p, j.shows[0].roll, j.shows[0].delay, j.shows[0].tries_used, j.shows[0].after_wrong], ["lock", 0.95, 0.1, 600, 2, 2]);
+  assert.match(JL(j, /help /).at(-1), /jev {2}help p=0.95 via=lock scn=ha fired/);
+  const k = helper(); k.at(0); k.open("A1");
+  k.at(20).ev("cluck_open", { tab: "x" });                           // they reached for help
+  k.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 }); k.at(40).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(k.shows.length, 0); assert.deepEqual([k.tel.at(-1).phase, k.tel.at(-1).reason, k.tel.at(-1).scn, k.tel.at(-1).via], ["held", "scn", "none", "lock"]);
+});
+test("help (n): HA across items - 1 wrong on the item before + the first wrong here, no Cluck / chip -> S6 fires at p .8 (one scenario)", () => {
+  const j = helper(); j.at(0); j.open("A0", { tries: 3 });
+  j.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 2 });
+  j.at(20); j.open("A1");
+  j.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 1); assert.deepEqual([j.shows[0].via, j.shows[0].scn, j.shows[0].p], ["s6", "ha", 0.8]);
+  const k = helper(); ha(k); k.at(20); k.open("A1");
+  k.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(k.shows.length, 1); assert.equal(k.shows[0].scn, "ha");
+});
+test("help (n2): HA looks back HA_ITEMS (3) items only - a wrong 3 items ago does not count", () => {
+  const j = helper(); j.at(0); j.open("W0", { tries: 3 }); j.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 2 });
+  for (const [t, c] of [[10, "R1"], [20, "R2"], [30, "R3"]]) { j.at(t); j.open(c, { tries: 3 }); }
+  j.at(40); j.open("A1");
+  j.at(45).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });   // W0 is 4 items back: only A1's own 1 wrong counts
+  assert.equal(j.shows.length, 0); assert.equal(j.tel.at(-1).reason, "scn");
+});
+test("help (o): ND - 2 swatted peeks (no Cluck within 120 s), then an S6 first wrong fires at p .8 scn=nd", () => {
+  const j = helper(0.1, undefined, NUDGER); nd(j);
+  j.at(ND_END + 100); j.open("A1");
+  j.at(ND_END + 110).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 1); assert.deepEqual([j.shows[0].via, j.shows[0].scn, j.shows[0].p], ["s6", "nd", 0.8]);
+  assert.match(JL(j, /help /).at(-1), /help p=0.8 via=s6 scn=nd fired/);
+  const k = helper(0.1, undefined, NUDGER); nd(k);                   // ND + HA = .95
+  k.at(ND_END + 100); k.open("A0", { tries: 3 }); k.at(ND_END + 105).ev("pick", { choice: "b", verdict: "wrong", tries_left: 2 });   // HA too: 1 wrong before + 1 here
+  k.at(ND_END + 120); k.open("A1"); k.at(ND_END + 130).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(k.shows.length, 1); assert.deepEqual([k.shows[0].scn, k.shows[0].p], ["ha+nd", 0.95]);
+});
+test("help (o2): ND needs 2 - one swatted peek is not enough; a Cluck open within ND_AFTER_S of a swatted peek rescues it; a tap never counts", () => {
+  const one = helper(0.1, undefined, NUDGER);
+  one.at(0); one.open("ND0", { mode: "diet" }); one.at(100).tick(); one.nudgeEnd(false);
+  one.at(300); one.open("A1"); one.at(310).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(one.shows.length, 0); assert.equal(one.tel.at(-1).scn, "none");
+  const resc = helper(0.1, undefined, NUDGER);
+  resc.at(0); resc.open("ND0", { mode: "diet" }); resc.at(100).tick(); resc.nudgeEnd(false);
+  resc.at(150).ev("cluck_open", { tab: "x" });                       // within 120 s of the swatted peek
+  resc.at(300); resc.open("ND1", { mode: "diet" }); resc.at(ND_END).tick(); resc.nudgeEnd(false);
+  resc.at(600); resc.open("A1"); resc.at(610).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(resc.shows.length, 0, "ND0 was rescued: 1 swat left"); assert.equal(resc.tel.at(-1).scn, "none");
+  const tap = helper(0.1, undefined, NUDGER);
+  tap.at(0); tap.open("ND0", { mode: "diet" }); tap.at(100).tick(); tap.nudgeEnd(true);
+  assert.equal(tap.state().nudge.taps, 1);
+});
+test("help (p): HA is blocked by a hand Cluck open on any of the last 3 items -> held reason=scn", () => {
+  const j = helper(); j.at(0); j.open("A0", { tries: 3 });
+  j.at(2).ev("cluck_open", { tab: "x" });                             // one hand open on an earlier item
+  j.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 2 });
+  j.at(20); j.open("A1"); j.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 }); j.at(40).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(j.shows.length, 0); assert.deepEqual([j.tel.at(-1).reason, j.tel.at(-1).scn, j.tel.at(-1).via], ["scn", "none", "lock"]);
+  const k = helper(); ha(k); k.at(20); k.open("A1"); k.at(25).ev("cluck_open", { tab: "x" });   // ... or on this item
+  k.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 }); k.at(40).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(k.shows.length, 0); assert.equal(k.tel.at(-1).reason, "scn");
+});
+test("help (q): the jev line and every lockhelp event carry scn (held scn / held rng / fired)", () => {
+  const j = helper(0.99); ha(j); j.at(20); j.open("A1");
+  j.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });   // HA, one scenario: p .8, roll .99 -> held rng
+  assert.equal(j.tel.at(-1).scn, "ha"); assert.equal(j.tel.at(-1).reason, "rng");
+  assert.match(JL(j, /help /).at(-1), /jev {2}help p=0.8 via=s6 scn=ha held reason=rng/);
+  const k = helper(); k.at(0); k.open("A1"); k.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.match(JL(k, /help /).at(-1), /jev {2}help p=0 via=s6 scn=none held reason=scn/);
+  const f = helper(); ha(f); f.at(20); f.open("A1"); f.at(30).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(f.shows[0].scn, "ha");
+});
+test("help: a roll >= p holds reason=rng and spends the item", () => {
+  const j = helper(0.96); j.at(0); j.open("A1");
+  j.at(11).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 }); j.at(12).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });   // S5 + lock
+  assert.equal(j.shows.length, 0);
+  assert.deepEqual([j.tel.at(-1).phase, j.tel.at(-1).reason, j.tel.at(-1).roll, j.tel.at(-1).p, j.tel.at(-1).via], ["held", "rng", 0.96, 0.95, "lock"]);
+  j.roll(0.01); j.at(20).ev("pick", { choice: "d", verdict: "wrong", tries_left: 0 });
+  assert.equal(j.shows.length, 0, "the item is spent: no second roll");
+});
+test("help: caps before the roll hold WITHOUT spending: gap, then a later trigger shows; No thanks doubles the gap (max 600), Open help resets it", () => {
+  const j = helper(); ha(j); j.at(20); j.open("A1");
+  j.at(25).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 1); j.helpEnd("no_thanks");
+  assert.equal(j.state().help.gap, 120);
+  j.at(40); j.open("A2");
+  j.at(45).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 1); assert.equal(j.tel.at(-1).reason, "gap");
+  j.at(70).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });   // 45 s after the show: still < 120
+  assert.equal(j.shows.length, 1);
+  j.at(80); j.open("A3"); j.at(150).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });   // 125 s after the show; 4 wrongs in the last 3 items
+  assert.equal(j.shows.length, 2, "past the doubled gap");
+  j.helpEnd("no_thanks"); j.helpEnd("no_thanks"); j.helpEnd("no_thanks"); j.helpEnd("no_thanks"); j.helpEnd("no_thanks");
+  assert.equal(j.state().help.gap, 600, "capped at HELP_GAP_MAX_S");
+  j.helpEnd("open_help"); assert.equal(j.state().help.gap, 60);
+});
+test("help: d2 - a gap hold keeps the item live; a later trigger on the same item after the gap shows", () => {
+  const j = helper(); ha(j); j.at(12); j.open("A1");
+  j.at(15).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 }); j.helpEnd("open_help");
+  j.at(20); j.open("A2"); j.at(25).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(j.shows.length, 1);
+  j.at(90).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(j.shows.length, 2); assert.equal(j.shows[1].via, "lock");
+});
+test("help: mode (diet, 1-try mc, proof, multi), hidden and typing hold; a lock skips typing; S2 / Q show at once (no delay)", () => {
+  const diet = helper(); diet.at(0); diet.open("A1", { mode: "diet" }); diet.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(diet.shows.length, 0); assert.equal(diet.tel[0].reason, "mode");
+  for (const o of [{ tries: 1 }, { type: "proof" }, { type: "multi" }]) {
+    const j = helper(); j.at(0); j.open("A1", o); j.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 0 });
+    assert.equal(j.shows.length, 0); assert.equal(j.tel[0].reason, "mode");
+  }
+  const ty = helper(); ty.at(0); ty.open("A1"); ty.at(4.9).input("keydown"); ty.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });   // S6 while typing
+  assert.equal(ty.shows.length, 0); assert.equal(ty.tel[0].reason, "typing");
+  ty.at(6).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(ty.shows.length, 1); assert.equal(ty.shows[0].via, "lock", "the lock skips the typing cap");
+  const hi = helper(); hi.at(0); hi.open("A1"); hi.at(2).vis(true); hi.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 1 });
+  assert.equal(hi.shows.length, 0); assert.equal(hi.tel[0].reason, "hidden");
+  const s2 = helper(0.1, { A2: [10] }); ha(s2); s2.at(12); s2.open("A2"); s2.at(112).tick();
+  assert.equal(s2.shows.length, 1); assert.equal(s2.shows[0].via, "s2"); assert.equal(s2.shows[0].delay, 0); assert.equal(s2.shows[0].p, 0.8);
+  const s2n = helper(0.1, { A2: [10] }); s2n.at(0); s2n.open("A2"); s2n.at(100).tick();   // a fresh student idling: S2 alone does not offer
+  assert.equal(s2n.shows.length, 0); assert.equal(s2n.tel.at(-1).reason, "scn");
+});
+test("help: no helpShow seat (or both P_* at 0 - the kill switch is the constants) = nothing happens; ?jev=0 has no Jev", () => {
+  const j = session(); j.at(0).ev("q_open", { code: "A1", type: "mc", mode: "sugar", tries: 2 });
+  j.at(5).ev("pick", { choice: "b", verdict: "wrong", tries_left: 0 });
+  assert.equal(JL(j, /help /).length, 0);
+  assert.equal(typeof load({ search: "?jev=0" }).win.stemJev, "undefined");
+});
