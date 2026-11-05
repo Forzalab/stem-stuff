@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,7 @@ const PORT = +(process.argv[2] || 8873), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "proof-")), BANKS = join(TMP, "banks");
 mkdirSync(BANKS);
 copyFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), join(BANKS, "BANK_PRF.json"));
+writeFileSync(join(BANKS, "BANK_NUM.json"), JSON.stringify({ v: 1, problems: [{ code: "NUM_ONE", title: "Plain number", type: "num", answer: "4", body: [{ type: "text", md: "What is 2 + 2?" }], noob: { tier: 1 } }] }));   // the non-proof control
 const FIX = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), "utf8")).problems[0];
 
 /* the stub grader: the proof's own words pick the rubric. NOBASE -> base missing, BADSTEP -> prove wrong, DOWN -> a 500 */
@@ -126,6 +127,68 @@ try {
     assert.ok(r.go.right <= r.w && r.go.width >= 44, JSON.stringify(r.go));
     await ctx.close();
   });
+
+/* ---------- proof split (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the multitask split ---------- */
+const nearestBordered = (page, sel) => page.$eval(sel, el => {
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    const cs = getComputedStyle(e);
+    if (parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== "none" && cs.borderTopColor !== "rgba(0, 0, 0, 0)") {
+      return { id: e.id || e.className, inFreeze: !!e.closest("#freeze"), inWork: !!e.closest("#work") };
+    }
+  }
+  return null;
+});
+const rect = (page, sel) => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; });
+for (const mode of ["diet", "sugar"]) {
+  await step(`${mode} 390: the proof field's nearest bordered ancestor is the pane (in #work), never the question card`, async () => {
+    const { ctx, page, errs } = await open(mode, { width: 390, height: 844 });
+    const b = await nearestBordered(page, "#ans");
+    assert.ok(b && b.inWork && !b.inFreeze, "nested box: nearest bordered ancestor = " + JSON.stringify(b));
+    const [pr, ta, sh] = [await rect(page, "#problem"), await rect(page, "#ans"), await rect(page, "#sash")];
+    assert.ok(ta.t >= pr.b - 1, `proof pane is not below the question: ${JSON.stringify({ pr, ta })}`);
+    assert.ok(sh.h > 0 && sh.t >= pr.b - 1 && sh.b <= ta.t + 1, "the sash is not between the question and the proof pane: " + JSON.stringify(sh));
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
+  await step(`${mode} 390: focus in the proof box hides the hint line; unfocused it shows`, async () => {
+    const { ctx, page } = await open(mode, { width: 390, height: 844 });
+    assert.ok((await rect(page, "#how")).h > 0, "the hint is not shown before focus");
+    await page.click("#ans");
+    assert.equal(await page.$eval("#how", h => h.getClientRects().length), 0, "the hint stays while typing");
+    await page.keyboard.type("Base case");
+    await page.$eval("#ans", t => t.blur());
+    assert.ok((await rect(page, "#how")).h > 0, "the hint does not come back on blur");
+    await ctx.close();
+  });
+}
+for (const mode of ["diet", "sugar"]) {
+  await step(`${mode} 1024: the proof pane is right of the question, same sash between, no nested box`, async () => {
+    const { ctx, page } = await open(mode, { width: 1024, height: 800 });
+    const [pr, ta, sh] = [await rect(page, "#problem"), await rect(page, "#ans"), await rect(page, "#sash")];
+    assert.ok(ta.l >= pr.r, `proof pane is not right of the question: ${JSON.stringify({ pr, ta })}`);
+    assert.ok(sh.w > 0 && sh.l >= pr.r - 1 && sh.r <= ta.l + 1, "sash not between: " + JSON.stringify(sh));
+    const b = await nearestBordered(page, "#ans");
+    assert.ok(b && b.inWork && !b.inFreeze, "nested box: " + JSON.stringify(b));
+    await ctx.close();
+  });
+}
+await step("a non-proof item is unchanged: answer box inside the question card, pad off the page at 390, notes pad right at 1024", async () => {
+  const mk = async (vp) => { const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
+    const page = await ctx.newPage(); await page.goto(BASE + "/#NUM_ONE"); await page.waitForSelector("#ans", { state: "attached", timeout: 8000 });
+    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "NUM_ONE"); return { ctx, page }; };
+  let { ctx, page } = await mk({ width: 390, height: 844 });
+  let b = await nearestBordered(page, "#ans");
+  assert.ok(b && b.inFreeze && !b.inWork, "the number box left the card: " + JSON.stringify(b));
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "phone: the split opened by itself");
+  assert.equal(await page.$eval("#work", w => getComputedStyle(w).display), "none", "phone: the pad is on the page");
+  await ctx.close();
+  ({ ctx, page } = await mk({ width: 1024, height: 800 }));
+  const [pr, w] = [await rect(page, "#problem"), await rect(page, "#xb")];
+  assert.ok(w.l >= pr.r && w.h > 0, "desktop: the notes pad moved " + JSON.stringify({ pr, w }));
+  await ctx.close();
+});
 } finally {
   await browser.close();
   srv.kill();
