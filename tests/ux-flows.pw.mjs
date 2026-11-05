@@ -161,8 +161,15 @@ async function dwell(page) {
   throw new Error("fast-time dwell: the 2.1 s gate never passed after 3 jumps (start keeps moving, or the jump does not move the app's time)");
 }
 /* one graded mc pick by ids; returns the verdict */
+/* the second try waits 10 s (retry-wait.pw.mjs): a fast-time page jumps it with its fake clock, the others wait it out for real */
+async function skipWait(page) {
+  if (!(await page.evaluate(() => !!window.__drill.state.wait))) return;
+  if (await page.evaluate(() => !!globalThis.__pwClock)) { await page.clock.fastForward(10100); return; }
+  await page.waitForFunction(() => !window.__drill.state.wait, null, { timeout: 12000 });
+}
 async function pick(page, ids, all) {
   const n = await nTries(page);
+  await skipWait(page);
   for (const id of ids) await tap(page, `#q .opt[data-id="${id}"]`);
   await page.waitForFunction(([ids, all, id0]) => ids.every(i => document.querySelector(`#q .opt[data-id="${i}"]`)?.getAttribute("aria-checked") === "true")
     && (all ? !document.querySelector("#mcGo")?.disabled : !document.querySelector(`#q .ch[data-id="${id0}"] .send`)?.hidden), [ids, all, ids[0]], { timeout: 3000 });

@@ -843,6 +843,7 @@ try {
       const a = await g();
       await p.fill("#ans", "5"); await p.press("#ans", "Enter");
       await p.waitForFunction(() => document.getElementById("ff").classList.contains("bad") || window.__drill?.state?.tries?.length >= 1, null, { timeout: 6000 }); await p.waitForTimeout(1500);
+      await p.waitForFunction(() => !window.__drill.state.wait, null, { timeout: 12000 });   // the second try waits 10 s (retry-wait.pw.mjs)
       await p.fill("#ans", "4"); await p.waitForTimeout(300);
       const pre = await g();
       await p.press("#ans", "Enter");
