@@ -456,3 +456,35 @@ test("familiesMet, the SCHEMA twin shape: a twin's family is its template's exam
   assert.deepEqual(familiesMet([X("CALC1_R01", "Practice Exam 2, Question 1"), X("CALC1_R02", "")], clean("CALC1_R01")), { met: 0, of: 0 }, "a non-family bank");
   assert.deepEqual(familiesMet([], {}), { met: 0, of: 0 });
 });
+
+/* ---------- Exam-3 family spacing (Tony Nov 5: two cards of one exam question never within 3 slots) ----------
+   60 picks over the real BANK_P3X (tests/fixtures/p3x-queue.json, a slim copy of the built bank) through ramp() and qPick(). */
+import { readFileSync } from "node:fs";
+import { ramp, rampAnswer, twinGate, familyOf } from "../shuffle.mjs";
+const P3X = JSON.parse(readFileSync(new URL("./fixtures/p3x-queue.json", import.meta.url), "utf8"));
+const P3X_BY = new Map(P3X.map(p => [p.code, p]));
+const FAMKEY = familyOf(c => P3X_BY.get(c), family);
+const P3X_TIER = c => P3X_BY.get(c).noob.tier;
+function famSim(picker, k = 60, salt = "fam") {
+  const st = qNew(salt), served = [], bad = [], pairs = [];
+  for (let i = 0; i < k; i++) {
+    const pool = twinGate(P3X.map(p => p.code), c => P3X_BY.get(c), st.seen);
+    const recent = served.slice(-3).map(FAMKEY);
+    const p = picker(st, pool), f = FAMKEY(p.code);
+    if (recent.includes(f)) { pairs.push(i); if (pool.some(c => !recent.includes(FAMKEY(c)))) bad.push(`slot ${i + 1}: ${p.code} (${f}) after ${served.slice(-3).join(",")}`); }
+    qShow(st, p.code); served.push(p.code);
+    const right = i % 3 !== 0;                                   // a mix of right and wrong first picks, so reviews and redos happen
+    if (qAnswer(st, p.code, right)) rampAnswer(st, p.code, right, P3X_TIER);
+  }
+  return { bad, pairs, served };
+}
+for (const salt of ["fam", "a", "b", "c"]) {
+  test(`family spacing: ramp, 60 picks, no card of a family within 3 slots of its family (${salt})`, () => {
+    const r = famSim((st, pool) => ramp(st, pool, P3X_TIER, FAMKEY), 60, salt);
+    assert.deepEqual(r.bad, []);
+  });
+  test(`family spacing: qPick, 60 picks, no card of a family within 3 slots of its family (${salt})`, () => {
+    const r = famSim((st, pool) => qPick(st, pool, family, FAMKEY), 60, salt);
+    assert.deepEqual(r.bad, []);
+  });
+}
