@@ -1,5 +1,5 @@
 // The second try costs 10 s (Tony Nov 5; sugar, 2-try items): after the first wrong verdict the submit IS a CCW clock-sweep progress bar,
-// disabled for 10 s (typed Check, choose-all Check; a single MC's options + ring). Diet: no wait. Reload mid-wait: restarts. Reduced motion: no sweep.
+// disabled for 10 s (typed Check, choose-all Check); a single MC's live, un-picked options each drain 100% -> 0% (no ring). One neutral subtle tone, no blue (Tony Nov 5). Diet: no wait. Reload mid-wait: restarts. Reduced motion: no sweep.
 // /check is answered by the test (route); page.clock moves Date / timers (CSS animations run in real time).
 //   STEM_TODAY=2026-10-23 python3 serve.py 8813 &   then   STEM_TODAY=2026-10-23 node tests/retry-wait.pw.mjs http://localhost:8813
 import { createRequire } from "node:module";
@@ -34,6 +34,10 @@ const sweep = (page, sel) => page.$eval(sel, e => parseFloat(getComputedStyle(e,
 const dis = (page, sel) => page.$eval(sel, e => e.getAttribute("aria-disabled"));
 const label = (page, sel) => page.$eval(sel, e => e.getAttribute("aria-label"));
 const ff = (page, ms) => page.clock.fastForward(ms);
+/* the option's current --drain (percent), read off the computed gradient's first colour stop (-1 = no gradient) */
+const drain = (page, sel) => page.$eval(sel, e => { const m = /\)\s+([\d.]+)%/.exec(getComputedStyle(e).backgroundImage); return m ? parseFloat(m[1]) : -1; });
+/* does the painted layer use the --action blue (#5aa9ff = rgb(90, 169, 255))? */
+const blue = (page, sel, pseudo) => page.$eval(sel, (e, ps) => /90,\s*169,\s*255/.test(getComputedStyle(e, ps || null).backgroundImage), pseudo);
 
 async function typedFirstWrong(page, code = "CALC1_T6B") {
   page.q = [WRONG, RIGHT]; page.sc = code;
@@ -50,6 +54,7 @@ await step("(a) typed num: wrong -> Check is a disabled CCW sweep for 10 s", asy
   await page.waitForTimeout(700);
   const sw = await sweep(page, "#ansGo"); assert.ok(sw > 0 && sw < 360, "--sweep advances: " + sw);
   assert.equal(await page.$eval("#ansGo", e => getComputedStyle(e, "::before").transform !== "none"), true, "mirrored layer");
+  assert.equal(await blue(page, "#ansGo", "::before"), false, "the sweep is the neutral tone, no --action blue");
   await page.fill("#ans", "2");                                   // typing stays allowed
   await ff(page, 5000);
   await page.click("#ansGo", { force: true }); await page.press("#ans", "Enter"); await page.waitForTimeout(200);
@@ -73,18 +78,23 @@ await step("(b) choose-all: Check is the sweep", async () => {
   await page.context().close();
 });
 
-await step("(c) single MC: options ignore taps for 10 s, ring sweeps", async () => {
+await step("(c) single MC: options ignore taps for 10 s; each live un-picked option drains 100% -> 0%, no ring", async () => {
   const page = await mk(b); page.q = [WRONG, RIGHT];
   await open(page, "CALC1_X2P");
   const live = () => page.$$("#q .opt:not(:disabled)");
   let o = await live(); await o[0].click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await graded(page, 1);
-  assert.ok(await page.$eval("#q .choices", e => e.classList.contains("waiting")), "ring on .choices");
-  await page.waitForTimeout(700); assert.ok(await sweep(page, "#q .choices") > 0, "--sweep advances");
+  assert.equal(await page.$eval("#q .choices", e => getComputedStyle(e, "::before").content), "none", "no ring on .choices");
+  await page.waitForTimeout(700);
+  const d0 = await drain(page, "#q .opt:not(:disabled)"); assert.ok(d0 > 0 && d0 < 100, "--drain is falling: " + d0);
+  assert.equal(await page.$eval("#q .opt:disabled", e => getComputedStyle(e).backgroundImage), "none", "the struck wrong pick shows no drain");
+  assert.equal(await blue(page, "#q .opt:not(:disabled)"), false, "the drain is the neutral tone, no --action blue");
+  await page.waitForTimeout(600); const d1 = await drain(page, "#q .opt:not(:disabled)"); assert.ok(d1 < d0, `drains (CSS animations run in real time): ${d0} -> ${d1}`);
   o = await live(); assert.equal(await o[0].getAttribute("aria-disabled"), "true");
   await ff(page, 5000); await o[0].click({ force: true }); await page.keyboard.press("Enter"); await page.waitForTimeout(200);
   assert.equal(await page.locator("#q .opt[aria-checked=true]").count(), 0, "a tap at 5 s selects nothing"); assert.equal(page.checks, 1);
   await ff(page, 5100);
   o = await live(); assert.equal(await o[0].getAttribute("aria-disabled"), null);
+  assert.equal(await page.$eval("#q .opt:not(:disabled)", e => getComputedStyle(e).backgroundImage), "none", "the drain is gone at 10 s");
   await o[0].click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await graded(page, 2); assert.equal(page.checks, 2);
   await page.context().close();
 });

@@ -257,16 +257,18 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 /* freeform arrow with nothing typed yet: visible, dimmed, not clickable */
 .btn-go:disabled { opacity: 0.45; cursor: default; }
 .btn-go:disabled:hover { background: var(--action); border-color: var(--action); }
-/* the second try's 10 s (app.js startWait): the submit is the progress bar. A CCW clock sweep from 12 o'clock, --line (dim) then --action (active), mirrored on the ::before layer; the icon is not mirrored */
+/* the second try's 10 s (app.js startWait): the submit is the progress bar. A CCW clock sweep from 12 o'clock, mirrored on the ::before layer; the icon is not mirrored */
 @property --sweep { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 @keyframes sweep { to { --sweep: 360deg; } }
-.btn-go.waiting, .btn-go.waiting:hover { background: transparent; border-color: var(--line); color: var(--ink); cursor: default; overflow: hidden; isolation: isolate; }
-.btn-go.waiting::before, .choices.waiting::before { content: ""; position: absolute; transform: scaleX(-1); pointer-events: none; background: conic-gradient(from 0deg, var(--action) var(--sweep), var(--line) 0); animation: sweep 10s linear var(--wd, 0s) forwards; }
-.btn-go.waiting::before { inset: 0; z-index: -1; }
-.choices.waiting { position: relative; }
-.choices.waiting::before { inset: -5px; padding: 3px; border-radius: 12px; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
-.choices.waiting .opt[data-w] { cursor: default; opacity: .7; }
-@media (prefers-reduced-motion: reduce) { .btn-go.waiting::before, .choices.waiting::before { animation: none; } }
+@property --drain { syntax: '<percentage>'; initial-value: 100%; inherits: false; }
+@keyframes drain { to { --drain: 0%; } }
+/* ONE neutral subtle tone for the whole wait (Tony Nov 5: the blue looked out of place): --wait-fill = --line at 40%, no new colour.
+   Typed / choose-all: the Check fills CCW with it. Single MC: each live, un-picked option's fill drains 100% -> 0% (the struck wrong pick shows none). */
+:root { --wait-fill: color-mix(in srgb, var(--line) 40%, transparent); }
+.btn-go.waiting, .btn-go.waiting:hover { background: var(--sheet); border-color: var(--line); color: var(--ink); cursor: default; overflow: hidden; isolation: isolate; }
+.btn-go.waiting::before { content: ""; position: absolute; inset: 0; z-index: -1; transform: scaleX(-1); pointer-events: none; background: conic-gradient(from 0deg, var(--wait-fill) var(--sweep), transparent 0); animation: sweep 10s linear var(--wd, 0s) forwards; }
+.choices.waiting .opt[data-w]:not(:disabled, .wrong) { cursor: default; background-image: linear-gradient(to right, var(--wait-fill) var(--drain), transparent 0); animation: drain 10s linear var(--wd, 0s) forwards; }
+@media (prefers-reduced-motion: reduce) { .btn-go.waiting::before, .choices.waiting .opt[data-w]:not(:disabled, .wrong) { animation: none; } }
 .btn[hidden] { display: none; }
 
 /* ---------- main column ---------- */

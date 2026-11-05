@@ -1221,7 +1221,7 @@ function nudge(o, cls) {
 }
 /* ---------- the second try costs 10 s (Tony Nov 5; sugar, 2-try items only) ----------
    The first wrong verdict starts S.wait = { until }. The submit is the progress bar: a typed item's #ansGo and a choose-all's #mcGo get a CCW clock sweep (app.css .waiting),
-   a single MC's .choices gets the same sweep as a ring and its options ignore taps (aria-disabled + .waiting only: o.disabled means "struck wrong"). Typing / ticking stay allowed.
+   a single MC's live, un-picked options drain 100% -> 0% in the same neutral tone and ignore taps (aria-disabled + .waiting only: o.disabled means "struck wrong"). Typing / ticking stay allowed.
    No stored timer: a reload with one try left restarts the 10 s (paintRec); leaving the item cancels it. Telemetry retry_wait {code, item, phase, waited_ms}. */
 const WAIT_MS = 10000;
 let waitTimer = 0, waitTick = 0;

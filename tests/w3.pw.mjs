@@ -15,6 +15,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -70,11 +71,12 @@ async function open(vp, code, o = {}) {
 }
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
 async function pick(page, id) {
+  await skipRetryWait(page);
   const n = await tries(page);
   await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
 }
-const miss = async page => { const n = await tries(page); await page.fill("#ans", "999"); await page.press("#ans", "Enter");
+const miss = async page => { await skipRetryWait(page); const n = await tries(page); await page.fill("#ans", "999"); await page.press("#ans", "Enter");
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 8000 }); await page.waitForTimeout(150); };
 const replied = page => page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000, polling: 100 });
 const VPS = [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 800 }]];
@@ -104,6 +106,7 @@ for (const [tag, vp] of VPS) {
   if (ONLY.includes("3")) await step(`${tag} 3: a right "Final answer" chip picks and checks the same option in the main box`, async () => {
     const page = await open(vp, "CALC1_W3MC");
     await pick(page, "c"); await page.waitForSelector('#rpHost .rp-chip[data-v="b"]', { timeout: 5000 });
+    await skipRetryWait(page);                                    // the chip is the second try: it waits the 10 s too
     await page.click('#rpHost .rp-chip[data-v="b"]');
     await page.waitForFunction(() => window.__drill.state.tries.length === 2 && window.__drill.state.tries.at(-1).v === "correct", null, { timeout: 5000 });
     assert.equal(await page.evaluate(() => window.__drill.state.tries.at(-1).c), "b");

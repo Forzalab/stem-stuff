@@ -12,6 +12,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -224,7 +225,7 @@ try {
     o = await st(); assert.ok(o.fl > 0.5 && !o.bad && !o.cue && o.arrow && o.marks === 1 && !o.vkShown, "edit: label back, neutral, arrow, x hidden but in DOM " + JSON.stringify(o)); await shot("edit");
     await page.fill("#ans", ""); await page.waitForTimeout(300);
     o = await st(); assert.ok(o.vkShown, "cleared: the x shows again " + JSON.stringify(o));
-    await page.clock.fastForward(10100);
+    await skipRetryWait(page);
     await page.fill("#ans", "2"); await page.click("#ansGo");
     await page.waitForFunction(() => document.querySelectorAll("#ff .vk").length >= 1); await page.waitForTimeout(300);
     o = await st(); assert.equal(o.marks, 1, "check again: one mark " + JSON.stringify(o));

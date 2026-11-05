@@ -8,6 +8,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -37,7 +38,7 @@ async function open(w, scheme, hash, redeem) {
   await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
   return page;
 }
-const typeAnswer = async (page, v) => { const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
+const typeAnswer = async (page, v) => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
 /* the reveal line's duck: there, boxed, not hidden/transparent, and its paint vs the first opaque background behind it >= 3:1 */
 const duckOf = (page, line) => page.evaluate(sel => {
   const host = document.querySelector(sel), d = host && host.querySelector(".rv-duck"), ic = d && d.querySelector("svg");

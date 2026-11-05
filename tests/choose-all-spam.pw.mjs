@@ -8,6 +8,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -69,7 +70,7 @@ try {
       assert.equal(await page.locator("#toast.on").count() <= 1, true);
     });
     await step(`${name}: second set spammed = one more request, then closed`, async () => {
-      await page.clock.fastForward(10100);                       // past the second try's 10 s wait
+      await skipRetryWait(page);                       // past the second try's 10 s wait
       await burst(page, touch);                                  // ticks a + d stay: a new set (a subset of right = miss)
       const s = await st(page);
       assert.equal(sent.length, 2, `requests sent: ${sent.length}`); assert.equal(s.tries, 2); assert.equal(s.finished, true);

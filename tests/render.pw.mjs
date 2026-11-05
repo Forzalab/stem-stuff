@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 import { qNew, qPick, qShow } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
@@ -119,7 +120,7 @@ async function run(browserType, label, opts = {}) {
       await a.click(); await sendA.click();
       await page.waitForSelector(".opt.wrong");
       assert.ok(await page.locator(".cluck").isVisible(), "no Cluck hint");
-      await page.clock.fastForward(10100);                              // the second try's 10 s wait
+      await skipRetryWait(page);                              // the second try's 10 s wait
       // keyboard: arrow keys move + select, Enter submits
       await page.locator('.opt[data-id="b"]').focus();
       await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowUp");
@@ -156,7 +157,7 @@ async function run(browserType, label, opts = {}) {
       await inp.fill("12");
       assert.ok(!(await page.locator("#ff .vk").isVisible()) && await go.isVisible(), "typing: the x stays in the DOM but is hidden, the arrow is visible");
       assert.ok(await go.isVisible() && Math.abs((await inp.boundingBox()).width - iw) < 0.5, "nothing moved");
-      await page.clock.fastForward(10100);
+      await skipRetryWait(page);
       await inp.press("Enter");
       await page.waitForSelector('#ff .vk[data-v="i-ok"]');
       assert.ok(await inp.isDisabled(), "a right answer closes the box");
@@ -470,7 +471,7 @@ async function run(browserType, label, opts = {}) {
       assert.match(await page.locator("#how").textContent(), /Type ~ for/);
       await page.fill("#ans", "q -> p"); await page.press("#ans", "Enter");
       await page.locator("#fb .cluck").waitFor();
-      await page.clock.fastForward(10100);
+      await skipRetryWait(page);
       await page.fill("#ans", "~Q->~P"); await page.press("#ans", "Enter");
       await page.locator('#ff .vk[data-v="i-ok"]').waitFor();
 

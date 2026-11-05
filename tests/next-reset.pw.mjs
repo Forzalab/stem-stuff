@@ -11,6 +11,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -56,6 +57,7 @@ async function moved(page, from) {
 async function answer(page, right) {
   const code = await cur(page), p = KEY.get(code);
   await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
+  await skipRetryWait(page);
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   const tap = sel => page.$eval(sel, b => b.click());                 // a DOM click: an FX layer may sit over the row
   if (p.type === "num") { await page.fill("#ans", right ? "4" : String(5 + n)); await tap("#ansGo"); }

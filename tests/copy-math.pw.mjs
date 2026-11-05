@@ -14,6 +14,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -210,6 +211,7 @@ for (const [tag, vp, touch] of [["1280", DESK, false], ["390", PHONE, true]]) {
   await step(`${tag}: revealed answer: copy button + paste-back grades correct on /check`, async () => {
     const { ctx, page } = await open(vp, "CALC1_CM1", touch);
     for (let i = 0; i < 6 && !(await page.evaluate(() => window.__drill.state.finished)); i++) {
+      await skipRetryWait(page);
       const n = await page.evaluate(() => window.__drill.state.tries.length);
       await page.fill("#ans", `${i + 7}*x`); await page.press("#ans", "Enter");
       await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 6000 });

@@ -18,3 +18,12 @@ export async function jump(page, how, ms) {
   await freeze(page);
   try { await page.clock[how](ms); } finally { await page.clock.resume(); }
 }
+
+/* The second try on a sugar 2-try item waits 10 s (app.js startWait; tests/retry-wait.pw.mjs is the spec of the wait itself). Every other
+   spec that answers wrong and then acts on the SAME item calls this first: a page with a fake clock jumps the 10 s (frozen jump, see above),
+   a real-time page waits it out. A no-op when no wait is running (diet, 1-try items, first try). The wait stays real: nothing here turns it off. */
+export async function skipRetryWait(page) {
+  if (!(await page.evaluate(() => !!window.__drill?.state?.wait))) return;
+  if (await page.evaluate(() => !!globalThis.__pwClock)) { await jump(page, "fastForward", 10100); return; }
+  await page.waitForFunction(() => !window.__drill.state.wait, null, { timeout: 12000 });
+}
