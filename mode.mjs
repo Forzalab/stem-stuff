@@ -67,7 +67,7 @@ export const NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ
 export function hidden(p, mode) {
   if (mode !== "sugar") return !!(p && p.sugar_only);
   const lk = locks(p), sg = p.saccharine && typeof p.saccharine === "object" ? p.saccharine : {};
-  return !!sg.hide || (lk.size > 0 && !sg.split && [...rightsOf(p)].every(id => lk.has(id)));   // pruned, or None as the key (unsplit)
+  return !!sg.hide || (lk.size > 0 && !sg.split && !p.grid && [...rightsOf(p)].every(id => lk.has(id)));   // pruned, or None as the key (unsplit; a grid's key may be empty)
 }
 /* both modes: no "None of these" (an mc that had it becomes tick-every-true-one; None as the key = the empty set); prove mode (X + typed fix) is gone in both. tries = the authored list's count (2-choice mc = 1, else 2). Untouched problems come back as they are. */
 const LAYER = ["tip", "part", "key", "slip", "narration", "saccharine"];
@@ -87,7 +87,7 @@ export function view(p, mode) {
   if (p.type !== "mc") return p;
   const lk = locks(p);
   if (!lk.size && !p.fix) return p;
-  const sh = shown(p), q = { ...p, choices: sh.filter(c => !c.lock), tries: sh.length === 2 ? 1 : 2 };
+  const sh = shown(p), q = { ...p, choices: sh.filter(c => !c.lock), tries: sh.length === 2 && !p.grid ? 1 : 2 };
   if (lk.size) {
     q.pick = "all";
     q.correct = [...rightsOf(p)].filter(id => !lk.has(id)).sort();

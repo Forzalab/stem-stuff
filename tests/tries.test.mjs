@@ -85,6 +85,18 @@ test("multi: the whole-set body, a missing or bad part, and unreadable text are 
 const pickAll = (code, extra = {}) => ({ type: "mc", pick: "all", code, correct: ["a", "c"], miss: "QUACK. Missing one.",
   choices: [{ id: "a", md: "A" }, { id: "b", md: "B" }, { id: "c", md: "C" }, { id: "d", md: "D" }, { id: "e", md: "None", lock: true }],
   wrong: ["b", "d", "e"].map(c => ({ choice: c, error: "misread", hint: `QUACK. ${c}` })), ...extra });
+test("grid (CHOOSE-ALL.md §2b): 2 rows still get two tries; [] and every row are real keys", () => {
+  const g = (code, correct) => ({ type: "mc", pick: "all", grid: true, code, correct, miss: "QUACK. Missing one.",
+    choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }], wrong: ["a", "b"].filter(c => !correct.includes(c)).map(c => ({ choice: c, error: "misread", hint: `QUACK. ${c}` })) });
+  assert.equal(maxTries(g("T_g0", [])), 2);
+  assert.equal(maxTries({ ...g("T_g1", []), grid: undefined }), 1, "unflagged 2-choice mc: one try, as before");
+  assert.equal(gradeLocal(g("T_g2", []), { choices: [] }).verdict, "correct");
+  const r = gradeLocal(g("T_g3", []), { choices: ["a"] });
+  assert.deepEqual([r.verdict, r.struck], ["wrong", "a"]);
+  assert.equal(r.triesLeft, 1);
+  assert.equal(gradeLocal(g("T_g4", ["a", "b"]), { choices: ["b", "a"] }).verdict, "correct");
+  assert.equal(gradeLocal(g("T_g5", ["a", "b"]), { choices: [] }).error, "incomplete");
+});
 test("pick all: the set must match; any order", () => {
   assert.equal(maxTries(pickAll("T_a0")), 2);
   assert.equal(gradeLocal(pickAll("T_a1"), { choices: ["c", "a"] }).verdict, "correct");

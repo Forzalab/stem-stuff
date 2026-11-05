@@ -39,7 +39,8 @@ SKIP = [("relation", re.compile(r"=|<|>|\\(le|ge|ne|neq|leq|geq|approx|equiv|sim
         ("mod/binom", re.compile(r"\\(pmod|bmod|binom)")),
         ("other", re.compile(r"[!%']|\\Delta")),
         ("operator fragment", re.compile(r"^\s*\\(times|cdot|div)|^\s*[-+*/^=]\s*$")),   # "$\times 2$" in a sentence: half an expression
-        ("digit string", re.compile(r"^0\d"))]                                            # "$01$": a bit string, not a number
+        ("digit string", re.compile(r"^0\d")),                                           # "$01$": a bit string, not a number
+        ("fill blank", re.compile("\u25a2"))]                                           # a repair fill's tex: its blank is a chip slot, not a box
 
 
 def grammar(plain):

@@ -18,9 +18,9 @@ Takeaways we adopt:
 - **All-or-nothing** grading, which is the default in PrairieLearn, Canvas "exact match" and Khan. This is a drill site, not a gradebook (MC.md §1). Partial credit would just reward guessing.
 - **Square checkboxes**, so the control itself says "many". Radio rows stay circles.
 - **A "Choose all that apply" line** (Khan wording), shown in the `how` slot.
-- **Empty = invalid**, never graded, as PrairieLearn does with `min-select` 1.
+- ~~Empty = invalid~~ (superseded Oct 3, design/EASY.md): nothing ticked is a real, graded answer ("none of them").
 - **Per-choice hints**, which our `wrong` already does for `mc`.
-- **"None of these" as a locked choice** (Khan) instead of allowing an empty answer.
+- ~~"None of these" as a locked choice~~ (superseded Oct 3): the None row is dropped in both modes; nothing ticked is the answer.
 
 ## 2. Problem shape (public file)
 
@@ -56,6 +56,7 @@ Same `mc` problem, one new key. Reuse everything: `choices`, `lock`, `shuffle`, 
 Authoring rules (to be enforced in `tests/schema.test.mjs`):
 - Shown choices: 4–5. At least 2 correct **or** a locked "None of these" that can be the only right answer, so the set is never a pure guess between "tick one" and "tick all".
 - Never make **all** shown choices correct: "tick everything" must lose.
+- A `grid` item (§2b) is the one opt-in exception to these three rules.
 - Pool (`shown()`, 6–8 authored): keep **every** correct id plus locked ones, then fill to 5 with distractors. Today's `shown()` keeps `c.id === p.correct`, which becomes `ids(p.correct).includes(c.id)`.
 - "None of these" (locked) is exclusive. Ticking it clears the others, and ticking another clears it, so "none" + "a" is never sent.
 
@@ -67,9 +68,25 @@ Schema delta for `SCHEMA.md` (the `problem` schema; `additionalProperties: false
 ```
 plus an `if pick=all then correct is array and miss is required` rule. The key file schema needs the same change.
 
+## 2b. Quiz grid (`grid: true`, opt-in per item; Tony, Nov 5, BANK_CER)
+
+A quiz-style grid: a few fixed rows the student ticks or leaves, where **any** set can be the key. The case it was made for: Kerney's
+"does this have a good base case, a good inductive step, neither, or both?" as two rows `["Good base case", "Good inductive step"]`:
+nothing ticked = neither, both ticked = both.
+
+`grid: true` (only with `pick: "all"`, never with `fix`) relaxes exactly these rules, for that item only:
+- `correct` may be `[]` (none of the rows) or every row (the never-all-correct rule is off);
+- 2 shown rows are fine (no 4–5 minimum, no "at least 2 correct");
+- tries are TWO, not the 2-choice ONE (2 rows make 4 answers: `serve.py max_tries`, `app.js maxTries`, `mode.mjs view`);
+- sugar never hides it for its key (`hidden()`: the None-key prune is for locked None rows);
+- its repair answer step (one tap) offers one chip per set: Neither / A only / B only / Both (`repair.js gridOpts`; `"none"` = the empty set in `/repair/<code>/check`, shown as "Neither");
+- with no `how`, the page writes "Tick all correct options. You may submit an answer with none, some, or all ticks." (both modes).
+
+Grading, hints and kept rows are the §3 rules unchanged: an empty tick on a non-empty key is a `miss`; a ticked false row is struck with its `wrong` hint. Every other choose-all keeps the rules above.
+
 ## 3. Grading (server, `serve.py`; local twin `gradeLocal`)
 
-- Request: `POST /check { code, choices: ["a","c"] }`. Ids, not letters (MC.md §3). Empty array, unknown id, duplicate, or "none" + another → `invalid` (no try spent).
+- Request: `POST /check { code, choices: ["a","c"] }`. Ids, not letters (MC.md §3). Unknown id, duplicate, or "none" + another → `invalid` (no try spent). An empty array is a real try (Oct 3: "none of them").
 - **Correct** = the set equals `correct` exactly.
 - **Wrong**: pick the hint in this order:
   1. The first ticked distractor in **authored order** (of the shown choices, not the per-browser shuffle, so the same set always gets the same hint) that has a `wrong` entry → that entry's `error` + `hint`. Its row gets struck through and disabled, like a wrong `mc` row. This reveals the same amount as today's mc: one known-wrong option.
@@ -88,7 +105,7 @@ plus an `if pick=all then correct is array and miss is required` rule. The key f
   - Space toggles, A–E and 1–5 toggle that row, arrows move focus;
   - Enter = Check;
   - the label/row is the click target (NN/g #11).
-- **Check** stays disabled until ≥1 row is ticked (empty = invalid, so never send it).
+- **Check** is live with nothing ticked (Oct 3: that is the answer "none of them").
 - After a wrong try:
   - the **ticks stay** (the student edits the set rather than starting over);
   - the struck row is unticked + disabled;

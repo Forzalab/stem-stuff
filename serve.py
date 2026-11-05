@@ -63,7 +63,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q", "grid")
 DEFAULT_NUDGE = "Time to consult the duck oracle."
 FIX_NUDGE = "All ducks almost in a row... check your math carefully."
 NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ"
@@ -365,6 +365,8 @@ def max_tries(p):
         return p["tries"]
     if p.get("type") == "proof":                             # W107 (Tony, Oct 27): a proof gets 3 Checks
         return PROOF_TRIES
+    if p.get("grid"):                                        # a quiz grid (pick all, 2+ rows, any set is the key): 2 rows still make 4 answers
+        return MAX_TRIES
     return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
 
 
@@ -402,7 +404,7 @@ def hidden(p, mode):
         return bool(p.get("sugar_only"))
     lk = locks(p)
     sg = sugar(p)
-    return bool(sg.get("hide")) or (bool(lk) and rights(p) <= lk and not sg.get("split"))   # split rows answer for themselves
+    return bool(sg.get("hide")) or (bool(lk) and rights(p) <= lk and not sg.get("split") and not p.get("grid"))   # split rows answer for themselves; a grid's key may be empty
 
 
 # ---- sugar split (Tony, Oct 3: "sugar = no choose-all"): a choose-all becomes one True/False question per row, in its place ----
@@ -1027,7 +1029,8 @@ def seen(code, sid):
             _save_tries()
 
 
-KEY_STEP = ("ok", "tol", "opts", "miss")    # the answer step's key: never served (Tony #29.7), POST /repair/<code>/check grades it
+KEY_STEP = ("ok", "tol", "opts", "miss")
+GRID_NONE, GRID_NONE_MD = "none", "Neither"   # a grid item's answer step (repair.js keyless): the chip for the empty set, and its display text    # the answer step's key: never served (Tony #29.7), POST /repair/<code>/check grades it
 
 
 def _ladder(p, sid):
@@ -1091,8 +1094,8 @@ def repair_check(p, u, sid, body):
             fam = {"hint": line}
     else:
         g = {**u, "type": "num", "answer": step["ok"], **({"tol": step["tol"]} if "tol" in step else {})} if own else u
-        if g["type"] == "mc":
-            ok = {x.strip() for x in value.split(",") if x.strip()} == rights(g)
+        if g["type"] == "mc":                                # a grid's answer chip "none" = nothing ticked (repair.js keyless)
+            ok = {x.strip() for x in value.split(",") if x.strip()} - ({GRID_NONE} if g.get("grid") else set()) == rights(g)
         elif g["type"] == "multi":
             return 400, {"error": "invalid"}
         else:
@@ -1110,6 +1113,8 @@ def repair_check(p, u, sid, body):
     if own and step.get("kind") == "pick" or not own and u["type"] == "mc":                 # display text: the right options' md
         ids = {step["ok"]} if own else rights(u)
         a = ", ".join(c.get("md", c["id"]) for c in (step.get("opts") if own else None) or u.get("choices") or [] if c["id"] in ids)
+        if not a and u.get("grid"):
+            a = GRID_NONE_MD
     else:
         a = step["ok"] if own else answer_of(u)
     return 200, {"ok": False, "answer": a + (" " + step["unit"] if step.get("kind") == "num" and step.get("unit") else ""), **fam}

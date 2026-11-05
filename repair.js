@@ -59,6 +59,10 @@
   const fillTex = (st, v) => "$" + String(st.tex).replace("▢", v == null ? "\\square" : (TEXOP[v] || v)) + "$";
   const num = s => parseFloat(String(s).replace(/−/g, "-").replace(/,/g, "").trim());
 
+  /* a 2-row quiz grid (`grid: true`, SCHEMA.md): the answer step is one tap, so each of the 4 sets is a chip. "none" = nothing ticked
+     (serve.py GRID_NONE); "a,b" = both, the id list /repair/<code>/check splits */
+  const gridOpts = ([a, b]) => [{ id: "none", md: "Neither" }, { id: a.id, md: `${a.md} only` }, { id: b.id, md: `${b.md} only` }, { id: `${a.id},${b.id}`, md: "Both" }];
+
   function mount(host, item, o = {}) {
     const variant = o.variant || "repair";
     if (root.stemMock && root.stemMock.on() && variant !== "welcome") return { el: null, destroy() {} };   // the night-before mock (W103b): no ladder until it ends
@@ -69,6 +73,7 @@
     const fam = steps.findIndex(s => s.why && s.fam);
     const whyAt = full ? -1 : blank ? steps.findIndex(s => s.id === blank) : welcome && fam >= 0 ? fam : 0;
     const keyless = st => st.id !== "answer" || st.ok != null ? st             // a twin shares its template's ladder (todo 117): the answer step
+      : item.type === "mc" && item.grid && (item.choices || []).length === 2 ? { ...st, kind: "pick", opts: gridOpts(item.choices) }   // a 2-row grid: one chip per set
       : item.type === "mc" ? { ...st, kind: "pick", opts: item.choices }        // with no key takes the SHOWN item's type, not the ladder's kind
       : item.type === "num" ? { ...st, kind: "num", opts: undefined, tol: item.tol } : st;
     const S = steps.map(keyless).map((st, i) => ({

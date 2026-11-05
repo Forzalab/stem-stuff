@@ -29,6 +29,21 @@ import serve  # noqa: E402
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
 
 
+class NoCensorInProd(unittest.TestCase):
+    def test_served_files_carry_no_screenshot_censor(self):
+        """The bank flow screenshots black-bar the keys with CSS injected at runtime by a script outside this repo (brain
+        csci26-ce-recursion-bank/flow_shots.mjs). None of it may ship: no served or tracked file holds its marker."""
+        mark = "cer-" + "censor"                                                # split, so this test is not a hit itself
+        out = subprocess.run(["git", "grep", "-l", "-i", mark], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(out.stdout.strip(), "", out.stdout)
+        for dirpath, dirs, files in os.walk(ROOT):
+            dirs[:] = [d for d in dirs if d not in (".git", "node_modules", "vendor")]
+            for f in files:
+                if f.endswith((".js", ".mjs", ".css", ".html", ".json", ".py")):
+                    with open(os.path.join(dirpath, f), encoding="utf-8", errors="ignore") as fh:
+                        self.assertNotIn(mark, fh.read().lower(), os.path.join(dirpath, f))
+
+
 class TriesIsolation(unittest.TestCase):
     def test_suite_never_uses_the_repo_tries_json(self):
         # serve.TRIES is fixed at serve's first import, by whichever test module loads it first: every module that
@@ -103,6 +118,31 @@ class Grade(unittest.TestCase):
         pub = serve.public(BANK["CSCI26_A7K"], "k1")
         self.assertEqual(pub["pick"], "all")
         self.assertFalse({"correct", "wrong", "miss"} & set(pub))
+
+    GRID = {"code": "CSCI26_G2D", "type": "mc", "pick": "all", "grid": True, "body": [{"type": "text", "md": "Base and step?"}],
+            "choices": [{"id": "a", "md": "Good base case"}, {"id": "b", "md": "Good inductive step"}], "correct": [], "miss": "QUACK. Look again.",
+            "wrong": [{"choice": "a", "error": "misread", "hint": "QUACK. Plug in the start."}, {"choice": "b", "error": "fallacy", "hint": "QUACK. Assume P(k)."}]}
+
+    def test_grid_any_set_is_a_key(self):                                       # design/CHOOSE-ALL.md §2b: [] = neither, every row = both
+        g = lambda p, sid, ids: serve.grade(p, sid, {"choices": ids})            # noqa: E731
+        self.assertEqual(g(self.GRID, "gr1", [])["verdict"], "correct")         # nothing ticked = "neither": right
+        r = g(self.GRID, "gr2", ["a"])
+        self.assertEqual((r["verdict"], r["struck"], r["triesLeft"]), ("wrong", "a", 1))   # 2 rows, still two tries
+        self.assertEqual(g(self.GRID, "gr2", ["b"])["triesLeft"], 0)
+        both = dict(self.GRID, code="CSCI26_G2E", correct=["a", "b"], wrong=[])
+        self.assertEqual(g(both, "gr3", ["b", "a"])["verdict"], "correct")
+        r = g(both, "gr4", [])
+        self.assertEqual((r["verdict"], r["error"], r["triesLeft"]), ("wrong", "incomplete", 1))
+        self.assertEqual(serve.max_tries(self.GRID), 2)
+        self.assertEqual(serve.max_tries({k: v for k, v in self.GRID.items() if k != "grid"}), 1)   # unflagged 2-choice: one try, as before
+        self.assertIs(serve.public(self.GRID, "gr5")["grid"], True)
+        for mode in ("sugar", "diet"):
+            self.assertFalse(serve.hidden(self.GRID, mode), mode)
+            self.assertEqual(serve.view(self.GRID, mode)["correct"], [])
+        locked = dict(self.GRID, code="CSCI26_G2F", choices=self.GRID["choices"] + [{"id": "c", "md": "None of these", "lock": True}], correct=["c"],
+                      wrong=self.GRID["wrong"])
+        self.assertTrue(serve.hidden({k: v for k, v in locked.items() if k != "grid"}, "sugar"))   # unflagged None key: still hidden in sugar
+        self.assertFalse(serve.hidden(locked, "sugar"))
 
     def test_public_twin_fields(self):                                          # the night-before mock (nav.js mockList, W103b) reads them on the client
         p = {**BANK["CSCI26_A7K"], "code": "TWIN_A", "twin": "a", "parent_template": "CSCI26_A7K", "exam_q": 8}
@@ -884,6 +924,29 @@ class Repair(unittest.TestCase):
             self.assertEqual(self.check(code, "r-chk", wrong), (200, {"ok": False}), code)
         self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.35"), (200, {"ok": True}))     # the step's tol (2%), not 3 s.f.
         self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.37"), (200, {"ok": False}))
+
+    def test_grid_answer_step_chips(self):
+        """a 2-row grid's answer step is one tap per set (repair.js gridOpts): "none" = nothing ticked, "a,b" = both; its 2nd miss shows
+        "Neither" for an empty key (never a blank answer)."""
+        steps = [{"id": "start", "label": "Plug in the start", "kind": "pick", "opts": [{"id": "a", "md": "true"}, {"id": "b", "md": "false"}], "ok": "b",
+                  "why": {"q": "Why?", "opts": ["x", "y", "z"], "ok": 0}},
+                 {"id": "step", "label": "Is the next one forced?", "kind": "pick", "opts": [{"id": "a", "md": "yes"}, {"id": "b", "md": "no"}], "ok": "b"},
+                 {"id": "answer", "label": "Pick the answer", "kind": "pick"}]
+        g = dict(Grade.GRID, repair={"steps": steps})
+        both = dict(g, code="CSCI26_G2E", correct=["a", "b"], wrong=[])
+        fix = {**self.FIX, g["code"]: g, both["code"]: both}
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            for p in (g, both):
+                st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid('r-grid')}", json.dumps({"code": p["code"], "choices": ["a"]}).encode())
+                self.assertEqual(json.loads(raw)["verdict"], "wrong")
+            def check(code, value, n=None):
+                body = {"value": value, **({} if n is None else {"n": n})}
+                return json.loads(serve.dispatch("POST", f"/repair/{code}/check", f"sid={self.sid('r-grid')}", json.dumps(body).encode())[2])
+            self.assertEqual(check(g["code"], "none"), {"ok": True})
+            self.assertEqual(check(g["code"], "a"), {"ok": False})
+            self.assertEqual(check(g["code"], "a", 2), {"ok": False, "answer": "Neither"})
+            self.assertEqual(check(both["code"], "a,b"), {"ok": True})
+            self.assertEqual(check(both["code"], "none"), {"ok": False})
 
     def test_second_miss_returns_the_answer(self):
         """TONY-DECISIONS #33 A: a miss with n >= 2 (the client's 1-based attempt count on the answer step) carries the answer;
