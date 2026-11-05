@@ -10,6 +10,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -37,6 +38,7 @@ const nTries = page => page.evaluate(() => window.__drill.state.tries.length);
 const dwell = page => page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
 const item = page => page.evaluate(() => window.stemQueue && JSON.parse(JSON.stringify(window.stemQueue.item())));
 async function pick(page, id) {
+  await skipRetryWait(page);
   const n = await nTries(page);
   await page.$eval(`#q .opt[data-id="${id}"]`, b => b.click());
   await page.waitForTimeout(80);

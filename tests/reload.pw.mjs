@@ -8,6 +8,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { shuffled } from "../shuffle.mjs";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -78,6 +79,7 @@ async function run(type, label, launchOpts) {
     await page.route("**/check", r => { n++; if (stall) return; r.continue(); });
     await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");
     const before = await page.evaluate(() => window.__drill.state.tries.length);   // (b)'s try is kept across reloads (design/DONE.md)
+    await skipRetryWait(page);                                    // (b)'s kept wrong try = a second try here: the 10 s wait (retry-wait.pw.mjs) runs before the request this step times
     const t0 = Date.now();
     await answer(page, "7");
     await page.waitForSelector("#retry", { timeout: 12000 });

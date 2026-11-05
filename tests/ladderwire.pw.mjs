@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -39,6 +40,7 @@ async function open(code, viewport) {
   return { ctx, page, log, errs };
 }
 async function miss(page, v) {
+  await skipRetryWait(page);
   await page.fill("#q #ans", v); await page.press("#q #ans", "Enter");
   await page.waitForSelector("#q .pips, #fb .verdict, #q .ff.bad, #q .ff .i-lock, #q [data-verdict], #q .ff", { timeout: 4000 });
   await page.waitForTimeout(600);
@@ -110,6 +112,7 @@ try {
         ? r.fulfill({ json: { verdict: "wrong", triesLeft: 2 - ++nCheck, error: nCheck === 1 ? "famA" : "famB" } }) : r.fallback());
       await page.route("**/repair/PHYS_LW3", async r => { const mine = ++nRep; if (mine === 1) await new Promise(x => setTimeout(x, 1500)); await r.fulfill({ json: ladder(mine === 1 ? "Ladder A" : "Ladder B") }); });
       await page.fill("#q #ans", "3"); await page.press("#q #ans", "Enter"); await page.waitForTimeout(300);
+      await skipRetryWait(page);
       await page.fill("#q #ans", "5"); await page.press("#q #ans", "Enter");
       await page.waitForSelector("section.rp", { timeout: 4000 }); await page.waitForTimeout(2200);
       assert.equal(nRep, 2, "two families = two fetches");

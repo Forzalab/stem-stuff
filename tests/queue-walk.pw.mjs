@@ -11,6 +11,7 @@ import { existsSync, readFileSync, readdirSync, symlinkSync, writeFileSync, mkdt
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -55,6 +56,7 @@ async function answer(page, code, right) {
   if (!pickIds.length) return null;
   /* a pick under 2 s is a guess the queue logs but never weights (nav.js SPAM_MS): think like a student first */
   await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
+  await skipRetryWait(page);
   const n = await tries(page);
   const tap = sel => page.$eval(sel, b => b.click());                // a DOM click: a send bubble from the last pick may sit over the row
   for (const id of pickIds) await tap(`#q .opt[data-id="${id}"]`);

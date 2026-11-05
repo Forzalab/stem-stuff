@@ -12,6 +12,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -210,6 +211,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
     let page = await ctx.newPage();
+    await page.clock.install();                                   // the second try waits 10 s (retry-wait.pw.mjs): fast-forwarded below
     await page.goto(`http://localhost:${OFFP}/#PHYS_XH1`); await opened(page, "PHYS_XH1");
     const st = () => page.evaluate(() => { const ff = document.querySelector("#ff"), fl = ff.querySelector(".fl"), vk = ff.querySelectorAll(".vk"), go = document.querySelector("#ansGo");
       return { fl: +getComputedStyle(fl).opacity, ph: getComputedStyle(ff.querySelector("input"), "::placeholder").color, marks: vk.length, vkShown: !!vk[0] && getComputedStyle(vk[0]).display !== "none",
@@ -218,11 +220,12 @@ try {
     const hidden = o => o.fl === 0 && /rgba\(.*, 0\)|transparent/.test(o.ph);
     await page.fill("#ans", "1"); await page.click("#ansGo");
     await page.waitForFunction(() => document.querySelector("#ff .vk")); await page.waitForTimeout(300);
-    let o = await st(); assert.ok(hidden(o) && o.vkShown && o.marks === 1, "wrong: label+placeholder gone, x shown " + JSON.stringify(o)); await shot("wrong");
+    let o = await st(); assert.ok(hidden(o) && o.arrow && !o.vkShown && o.marks === 1, "wrong: label+placeholder gone; the 10 s wait keeps the arrow up (the sweep), x under it " + JSON.stringify(o)); await shot("wrong");
     await page.fill("#ans", "12"); await page.waitForTimeout(300);
     o = await st(); assert.ok(o.fl > 0.5 && !o.bad && !o.cue && o.arrow && o.marks === 1 && !o.vkShown, "edit: label back, neutral, arrow, x hidden but in DOM " + JSON.stringify(o)); await shot("edit");
     await page.fill("#ans", ""); await page.waitForTimeout(300);
     o = await st(); assert.ok(o.vkShown, "cleared: the x shows again " + JSON.stringify(o));
+    await skipRetryWait(page);
     await page.fill("#ans", "2"); await page.click("#ansGo");
     await page.waitForFunction(() => document.querySelectorAll("#ff .vk").length >= 1); await page.waitForTimeout(300);
     o = await st(); assert.equal(o.marks, 1, "check again: one mark " + JSON.stringify(o));

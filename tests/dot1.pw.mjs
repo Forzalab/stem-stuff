@@ -12,6 +12,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -77,14 +78,15 @@ async function goTo(page, code) {
   await page.waitForSelector("#q .opt, #q .ans");
 }
 const tap = (page, sel) => page.evaluate(s => document.querySelector(s).click(), sel);   // a DOM click: an open drawer may sit over the row (it is not what this spec tests)
-const pickMC = async (page, id) => { await tap(page, `#q .opt[data-id="${id}"]`); await tap(page, `#q .ch:has(.opt[data-id="${id}"]) .send`); };
+const pickMC = async (page, id) => { await skipRetryWait(page); await tap(page, `#q .opt[data-id="${id}"]`); await tap(page, `#q .ch:has(.opt[data-id="${id}"]) .send`); };
 async function pickAll(page, ids) {
+  await skipRetryWait(page);
   for (const id of ids) if ((await page.getAttribute(`#q .opt[data-id="${id}"]`, "aria-checked")) !== "true") await tap(page, `#q .opt[data-id="${id}"]`);
   await tap(page, "#mcGo");
 }
 async function part(page, i, v) { await page.fill(`#q .part[data-i="${i}"] .ans`, v); await tap(page, `#go${i}`); }
 const verdictCount = (page, n) => page.waitForFunction(k => window.__drill.state.tries.length >= k, n);
-const submitNum = async (page, v) => { await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };
+const submitNum = async (page, v) => { await skipRetryWait(page); await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };
 /* kind x state: wrong (a try left), out (a second miss, same page), right (a miss, then right: a page of its own) */
 async function reach(page, kind, state) {
   const code = { mc: "DOT_MCQ", all: "DOT_ALL", num: "DOT_NUM", multi: "DOT_MUL" }[kind];
