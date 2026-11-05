@@ -148,7 +148,7 @@ tags() {
     tray-matrix|ladderwire) echo "@layout @real-time" ;;   # repair ladder wired after a miss (own serve.py, fixture bank)
     welcome-app) echo "@layout @real-time" ;;   # todo 119: the welcome Q1 wired into the app (own serve.py, fixture bank)
     fcard-reveal) echo "@logic @real-time" ;;   # key formulas reveal with no ladder (own serve.py, fixture bank)
-    cluck-history|w3) echo "@logic @real-time" ;;   # the Cluck history lines + the W3 polish (own serve.py, stub OpenRouter)
+    cluck-history|cluck-telemetry|w3) echo "@logic @real-time" ;;   # the Cluck history lines + the W3 polish + the Cluck telemetry events (own serve.py, stub OpenRouter)
     minicluck) echo "@layout @real-time" ;;
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
