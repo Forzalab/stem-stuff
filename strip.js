@@ -73,7 +73,12 @@
      The box = the typed bar plus its verdict line (.ansl, when it sits below the bar), or the whole choices list (mc / choose-all). The tray takes its flow room only while it is
      shown (a .vd-room spacer right after the box, gone with the tray: no orphan gap); what comes later (the choose-all Next row) is pushed down below it, never under it. */
   var room = null;
-  function boxOf(h) {                                         // the box the tray hangs from: its left, width, bottom, the element the room goes after, and how far the top tucks behind the bottom edge
+  function boxOf(h) {
+    var b = boxOf1(h);
+    if (D.documentElement.classList.contains("proof-split")) { b.free = true; b.after = null; }   // the proof pane (#418) is a scrolling flex column that already keeps room under the bar (#q:has(> #ff.strip) padding-bottom): a spacer there would resize the growing box
+    return b;
+  }
+  function boxOf1(h) {                                         // the box the tray hangs from: its left, width, bottom, the element the room goes after, and how far the top tucks behind the bottom edge
     var g = h.g, at = h.at, pv = h.kind === "ff" && at.id === "ff" ? D.querySelector("#q #preview") : null;
     if (g) return { left: g.offsetLeft, w: g.offsetWidth, bottom: g.offsetTop + g.offsetHeight, after: h.kind === "row" ? null : g, tuck: 2 };   // a single mc's drawer already sits right after the list (sync keeps it there): its room goes after the drawer, or the two would keep swapping places
     if (pv && pv.querySelector(".ansl") && pv.getClientRects().length) return { left: at.offsetLeft, w: at.offsetWidth, bottom: pv.offsetTop + pv.offsetHeight, after: pv, tuck: 0 };   // the verdict line is part of the box: the tray starts under its text

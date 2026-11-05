@@ -143,6 +143,7 @@ try {
       await typeAnswer(page, "18");
       await page.waitForSelector("#q .ansl b", { timeout: 6000 });
       await page.waitForTimeout(SETTLE);
+      await shot(page, "ta-ansl.png");
       const g = await page.evaluate(() => {
         const l = document.querySelector("#q .ansl"), v = l.querySelector(".ansv, :scope > b"), b = v.querySelector("b") || v, u = l.querySelector(".ansu");
         const ink = (el, last) => { const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n, out = null; while ((n = w.nextNode())) { if (!n.data.trim()) continue; const r = document.createRange(); r.selectNodeContents(n); const rs = [...r.getClientRects()]; const k = last ? rs[rs.length - 1] : rs[0]; if (last || !out) out = k; } return out; };

@@ -146,7 +146,7 @@ tags() {
     cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
     cluck-lost) echo "@layout @real-time" ;;   # the clean error line after a mid-reply failure
-    tray-anchor) echo "@layout" ;;   # TRAY-ANCHOR: own serve.py + a stub OpenRouter, no real-time waits
+    tray-anchor) echo "@layout @real-time" ;;   # TRAY-ANCHOR: own serve.py + a stub OpenRouter, no real-time waits
     tray-matrix|ladderwire) echo "@layout @real-time" ;;   # repair ladder wired after a miss (own serve.py, fixture bank)
     welcome-app) echo "@layout @real-time" ;;   # todo 119: the welcome Q1 wired into the app (own serve.py, fixture bank)
     fcard-reveal) echo "@logic @real-time" ;;   # key formulas reveal with no ladder (own serve.py, fixture bank)
