@@ -87,7 +87,8 @@ try {
     /* the slow path, every run: say() (app.js) blanks #sr and writes the line 30 ms later; CI block 4 under load read it inside that gap
        (Oct 31, 56efe32). Stretch that one 30 ms timer to 600 ms so a read that does not wait for the spoken line fails every time */
     await ctx.addInitScript(() => { const st = window.setTimeout; window.setTimeout = function (f, ms, ...a) { return st.call(this, f, ms === 30 ? 600 : ms, ...a); }; });
-    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    await ctx.addInitScript(() => { window.__stemHelpRand = () => 1;   /* this spec fails items on purpose (HA is live): the help roll is pinned to miss so Jev's help modal (tests/lockhelp.pw.mjs) stays out of it */
+      try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     const page = await ctx.newPage();
     let hUnit = NaN;
     await openBank(page);
