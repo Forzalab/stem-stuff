@@ -142,7 +142,7 @@ try {
   });
 
   await step("EXPR_MODE off: today's box (a second number is graded, no prompt, no exprMode)", async () => {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block" });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
     const page = await ctx.newPage();
     await page.goto(`http://localhost:${OFFP}/#PHYS_XG2`); await opened(page, "PHYS_XG2");
@@ -200,6 +200,7 @@ try {
     assert.equal(f.howShown, false, "focus: the hint is hidden");
     assert.ok(f.right <= f.goLeft, "label right edge clear of Check: " + JSON.stringify(f));
     assert.equal(f.ell, "ellipsis"); assert.ok(f.h < 24, "one line: " + JSON.stringify(f));
+    await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
     await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
     await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
     assert.equal((await read()).howShown, true, "blur, empty: the hint is back");

@@ -151,7 +151,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(Math.abs((await page.locator("#q").boundingBox()).height - qH) < 1, "the answer area grew after the wrong try (a ghost pips row)");
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");
-      assert.equal(await page.locator("#ff .vk").count(), 0, "typing clears the x");
+      assert.ok(!(await page.locator("#ff .vk").isVisible()) && await go.isVisible(), "typing: the x stays in the DOM but is hidden, the arrow is visible");
       assert.ok(await go.isVisible() && Math.abs((await inp.boundingBox()).width - iw) < 0.5, "nothing moved");
       await inp.press("Enter");
       await page.waitForSelector('#ff .vk[data-v="i-ok"]');
