@@ -19,7 +19,7 @@ const PORT = +(process.argv[2] || 8873), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "proof-")), BANKS = join(TMP, "banks");
 mkdirSync(BANKS);
 copyFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), join(BANKS, "BANK_PRF.json"));
-writeFileSync(join(BANKS, "BANK_NUM.json"), JSON.stringify({ v: 1, problems: [{ code: "NUM_ONE", title: "Plain number", type: "num", answer: "4", body: [{ type: "text", md: "What is 2 + 2?" }], noob: { tier: 1 } }] }));   // the non-proof control
+writeFileSync(join(BANKS, "BANK_NUM.json"), JSON.stringify({ v: 20261022, problems: [{ code: "NUM_ONE", title: "Plain number", type: "num", answer: "4", body: [{ type: "text", md: "What is 2 + 2?" }], noob: { tier: 1 } }] }));   // the non-proof control
 const FIX = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), "utf8")).problems[0];
 
 /* the stub grader: the proof's own words pick the rubric. NOBASE -> base missing, BADSTEP -> prove wrong, DOWN -> a 500 */
@@ -161,6 +161,18 @@ for (const mode of ["diet", "sugar"]) {
     await ctx.close();
   });
 }
+await step("phone touch: a tap on Check while the box has focus still sends the proof (the tap blurs the box; the hint must not move Check mid-tap)", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: "block" });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+  const page = await ctx.newPage(); await page.goto(BASE + "/#" + CODE); await opened(page);
+  const n = await page.evaluate(() => window.__drill.state.tries.length);
+  await page.fill("#ans", GOOD);                                   // focused: the hint is hidden
+  const before = await rect(page, "#ansGo");
+  await page.tap("#ansGo");
+  await page.waitForFunction(n => window.__drill.state.tries.length > n || document.querySelector("#fb .verdict.wait"), n, { timeout: 6000 });
+  assert.ok(before.t > 0 && before.b <= 844, "Check is on screen: " + JSON.stringify(before));
+  await ctx.close();
+});
 for (const mode of ["diet", "sugar"]) {
   await step(`${mode} 1024: the proof pane is right of the question, same sash between, no nested box`, async () => {
     const { ctx, page } = await open(mode, { width: 1024, height: 800 });

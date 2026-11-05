@@ -24,7 +24,7 @@ const tmp = mkdtempSync(join(tmpdir(), "stages-")), banks = join(tmp, "banks");
 mkdirSync(banks);
 copyFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), join(banks, "BANK_PRF.json"));
 const PROOF = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), "utf8")).problems[0].code;
-writeFileSync(join(banks, "BANK_STG.json"), JSON.stringify({ v: 1, problems: [{ code: "CALC1_STG1", title: "Stages", type: "mc", shuffle: false,
+writeFileSync(join(banks, "BANK_STG.json"), JSON.stringify({ v: 20261022, problems: [{ code: "CALC1_STG1", title: "Stages", type: "mc", shuffle: false,
   body: [{ type: "text", md: "A car rounds a flat curve. Pick one." }], correct: "a", choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })),
   saccharine: { title: "Stages", key: "Tick: a", slip: { b: "Two is not one." } } }] }));
 
