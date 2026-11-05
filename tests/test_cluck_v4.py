@@ -1257,11 +1257,20 @@ class Visuals(unittest.TestCase):
         import views_gate
         ex = serve.V4_VIEWS.split("Examples:\n")[1].split("\nNumbers in a view")[0]
         progs = ["root" + x for x in ex.split("root")[1:]]
-        self.assertEqual(len(progs), 4, "Tug, Flip, Table, Steps")
+        self.assertEqual(len(progs), 5, "Tug, Tug battery, Flip, Table, Steps")
         ctx = serve.livefig.context("CPA", "for (int i = 1; i < n; i++) s += i; the weight W acts at the middle, the arm L", "", [10.0])
         for prog in progs:
             out, log = views_gate.gate(prog.strip(), ctx)
             self.assertEqual(log, ["ok"], prog)
+
+    def test_energy_is_a_tug_battery_not_bars(self):
+        row = next(r for r in serve.V4_VIEWS.split("\n") if r.startswith("- energy"))
+        self.assertIn("Tug as an energy battery", row)
+        self.assertIn("one row per chunk, all \"up\"", row)
+        self.assertNotIn("```fig bars", serve.V4_VIEWS.split("Never a markdown pipe table")[0], "bars is no longer the VISUALS pick")
+        self.assertNotIn("energy before and after: ```fig", serve.V4_VIEWS)
+        self.assertIn("2 to 5 rows", serve.V4_VIEWS)
+        self.assertNotIn("2 to 4 rows", serve.V4_VIEWS)
 
     def test_reveal_yes_view_may_show_the_answer(self):
         self.assertIn(13.0, serve.fig_ctx(P1, "a").answers)
