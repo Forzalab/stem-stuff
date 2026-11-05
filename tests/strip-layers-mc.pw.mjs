@@ -12,6 +12,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -75,8 +76,8 @@ async function goTo(page, code) {
   assert.equal(await page.textContent("#pcode"), code);
   await page.waitForSelector("#q .opt, #q .ans");
 }
-const pickMC = async (page, id) => { await page.click(`#q .opt[data-id="${id}"]`); await page.click(`#q .ch:has(.opt[data-id="${id}"]) .send`); };
-async function pickAll(page, ids) { for (const id of ids) await page.click(`#q .opt[data-id="${id}"]`); await page.click("#mcGo"); }
+const pickMC = async (page, id) => { await skipRetryWait(page); await page.click(`#q .opt[data-id="${id}"]`); await page.click(`#q .ch:has(.opt[data-id="${id}"]) .send`); };
+async function pickAll(page, ids) { await skipRetryWait(page); for (const id of ids) await page.click(`#q .opt[data-id="${id}"]`); await page.click("#mcGo"); }
 async function part(page, i, v) { await page.fill(`#q .part[data-i="${i}"] .ans`, v); await page.click(`#go${i}`); }
 const verdictCount = (page, n) => page.waitForFunction(k => window.__drill.state.tries.length >= k, n);
 /* drive a question to a state: wrong (a try left), out (a second miss, same page), right (fresh page) */

@@ -14,6 +14,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -74,6 +75,7 @@ const rng = (page, v) => page.evaluate(v => sessionStorage.setItem("__rng", Stri
 const skew = (page, s) => page.evaluate(s => sessionStorage.setItem("__skew", String((+sessionStorage.getItem("__skew") || 0) + s)), s);
 const go = async (page, code) => { await page.evaluate(c => { location.hash = "#" + c; }, code); await ready(page, code); };
 async function wrong(page, id) {
+  await skipRetryWait(page);                                           // a 2nd wrong on one item waits the 10 s (retry-wait.pw.mjs); explicit, not Playwright's actionability retry
   const k = await page.evaluate(() => window.__drill.state.tries.length);
   if (await page.locator(".vdrawer:not([hidden]) .vd-x").first().isVisible()) await page.click(".vdrawer:not([hidden]) .vd-x", { timeout: 2000 }).catch(() => {});
   if (await page.locator("#toast.on").first().isVisible()) await page.click("#toast.on", { timeout: 2000 }).catch(() => {});
@@ -168,6 +170,7 @@ await step("(d)(d2) the next item within 60 s -> held reason=gap; the same item,
   await wrong(page, "b"); await up(page); await noThanks(page);                // item 1: shown (S6, HA), No thanks (gap 120 s)
   await go(page, "CALC1_LHP2"); await wrong(page, "b");
   assert.ok(await gone(page)); assert.ok((await lines(page)).some(l => /held reason=gap/.test(l)), (await lines(page)).join("|"));
+  await skipRetryWait(page);                                                    // the 10 s second-try wait first: a skew before it lets a trigger fire (S6) during the wait, and the test wants the lock to be the one
   await skew(page, 130); await wrong(page, "c");                                // item 2 again, the lock after the gap: the roll was not spent
   await up(page); assert.equal((await lhev(page)).filter(e => e.phase === "shown").pop().via, "lock");
   await page.context().close();
@@ -181,11 +184,20 @@ await step("(e) after No thanks the next fire needs >= 120 s", async () => {
   await up(page);
   await page.context().close();
 });
-await step("(f) S5 double wrong within 3 s -> shown", async () => {
+/* (f) was "S5 double wrong within 3 s -> shown". The 10 s second-try wait (retry-wait.pw.mjs) makes that unreachable on a sugar 2-try item: the 2nd submit cannot land
+   before 10 s, so a double wrong is never "fast" (intent.test.mjs keeps S5 at the unit level). What this pins now: the 2nd tap during the wait is ignored (still one
+   try), the lock after the wait shows the modal via the lock, and there is no S5 line. */
+await step("(f) S5 double wrong within 3 s is unreachable behind the 10 s wait: the 2nd tap is ignored, the lock after it -> shown via lock, no S5 line", async () => {
   const page = await open(VPS.phone, "CALC1_LHP1");
-  await wrong(page, "b"); await wrong(page, "c");
+  await wrong(page, "b");
+  await page.evaluate(() => document.querySelector('.opt[data-id="c"]').click());
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => window.__drill.state.tries.length), 1, "a tap during the wait is ignored");
+  await wrong(page, "c");                                              // waits the 10 s out, then the lock
   await up(page);
-  assert.ok((await page.evaluate(() => window.stemJev().lines)).some(l => /jev {2}S5 fast x2/.test(l)));
+  const ls = await page.evaluate(() => window.stemJev().lines);
+  assert.ok(!ls.some(l => /jev {2}S5/.test(l)), "no S5: the 2nd wrong is >= 10 s after the 1st, never fast");
+  assert.equal(JSON.parse(await key(page)).via, "lock");
   await page.context().close();
 });
 await step("(g) reload -> re-shown (reshown); leaving the item keeps the key, coming back re-shows it", async () => {
