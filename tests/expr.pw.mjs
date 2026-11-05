@@ -183,7 +183,7 @@ try {
   });
   /* Tony, Nov 4: the floating label IS the placeholder; the grey hint line hides while the label floats; one line, clear of Check, at 390 */
   for (const code of ["PHYS_XH1", "PHYS_XH2"]) await step("390 floating label = placeholder, hint hides while it floats, label clear of Check: " + code, async () => {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
     const page = await ctx.newPage();
     await page.goto(`http://localhost:${OFFP}/#${code}`); await opened(page, code);
@@ -192,12 +192,15 @@ try {
       return { fl: fl.textContent, ph: document.querySelector("#ans").placeholder, howShown: getComputedStyle(how).display !== "none", right: r.right, goLeft: go.left, h: r.height, ell: getComputedStyle(fl).textOverflow };
     });
     assert.equal((await read()).howShown, true, "idle: the hint shows");
-    await page.focus("#ans"); await page.waitForTimeout(250);
+    const sh = n => (SHOTS && code === "PHYS_XH1") ? page.screenshot({ path: join(SHOTS, `fl-${n}-390.png`) }) : null;
+    await sh("idle");
+    await page.focus("#ans"); await page.waitForTimeout(250); await sh("focus");
     const f = await read();
     assert.equal(f.fl, f.ph, "label text is the placeholder: " + JSON.stringify(f));
     assert.equal(f.howShown, false, "focus: the hint is hidden");
     assert.ok(f.right <= f.goLeft, "label right edge clear of Check: " + JSON.stringify(f));
     assert.equal(f.ell, "ellipsis"); assert.ok(f.h < 24, "one line: " + JSON.stringify(f));
+    await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
     await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
     assert.equal((await read()).howShown, true, "blur, empty: the hint is back");
     await ctx.close();
