@@ -24,7 +24,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "a1e9cfe844d32b4a09510dd28f4c8770cf1e68985951c7c5996c47faac63fe8a"
+SHA = "5cac0fbdf1558e5712c6ace4e571fdd4311b7e4940b670a742560260df85557c"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -81,6 +81,15 @@ def feed_all(parts, cls=serve.Xyz):
 
 
 class PromptFile(unittest.TestCase):
+    def test_correct_cheer_names_the_value_not_the_letter(self):
+        # W2: the model wrote "Yes! d is right!" in prod; the correct scene's example names the value and a rule forbids the letter
+        with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8") as f:
+            txt = f.read()
+        i = txt.index("- RESULT: correct")
+        scene = txt[i:txt.index("- RESULT: wrong")]
+        self.assertIsNone(re.search(r"\b[a-eA-E] is right", scene))
+        self.assertIn("Never name a choice letter when RESULT is correct.", txt)
+
     def test_byte_equal(self):
         with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), "rb") as f:
             mine = f.read()

@@ -1919,7 +1919,7 @@ function ckPut(key, text) {
 function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
   const key = S && S.code === w.code ? ckKey(w.code, S.tries.at(-1)) : "", text = key ? ckGet(key) : "";
   if (!text) return false;
-  Object.assign(w, { key, text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
+  Object.assign(w, { key, tr: clTry(S.tries.at(-1)), text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
   return true;
 }
 function wishEl() {
@@ -1962,7 +1962,7 @@ const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the
 const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
 async function wishStart(auto) {
   const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
-  w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
+  w.key = key; w.tr = clTry(t);                                                           // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
@@ -2623,6 +2623,7 @@ function clTab(tab, focus) {
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: w.shown is kept, so the text is redrawn whole, not typed again
+  clHist(!!(w && w.open && !was));
   if (w && !w.open && was) w.tick = 0;
   if (S && S.orig) {
     S.orig.open = cl.open && has.steps && cl.fold;
@@ -2649,6 +2650,8 @@ function clReset() {                                                        // a
   clClose(false, true);
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
+  cl.el.querySelector("#clTabEP > .cl-st")?.remove();
+  cl.el.querySelectorAll("#clTabEP [hidden]").forEach(e => { e.hidden = false; });
   cl.el.querySelector(".cl-fi").innerHTML = "";
 }
 /* the scroll-down hint (Tony, Oct 19, variant A): while more than 8px of the text is under the ask field, .cl-bd.below shows a fade over the
@@ -2722,6 +2725,46 @@ function askFit(ta) {
   ta.style.height = Math.min(h, max) + "px";
   ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
 }
+/* Cluck's history (W2, Nov 5): each Cluck turn that answers a graded pick or typed answer starts with a status line (rules either side, small
+   muted text, no box): "chose 1.80 J ✓" / "typed 6 ✗", the choice's VALUE, never its letter. Lines build up in order = the history. Once a
+   later turn exists, an earlier WRONG reply folds under its line (the line is the toggle); the latest reply and every right one stay open */
+const clPlain = md => String(md ?? "").replace(/\\(?:text|mathrm|mathbf|textbf)\{([^}]*)\}/g, "$1").replace(/\\circ/g, "°").replace(/\\cdot/g, "·").replace(/\\times/g, "×").replace(/\\pi/g, "π")
+  .replace(/\\[,;:! ]|~/g, " ").replace(/\\([%$&#_{}])/g, "$1").replace(/\\(?:left|right|mathit)\b/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[$*`{}]/g, "").replace(/\s+/g, " ").trim();
+function clTry(t) {                                                         // { v, label } of a graded try; null = no status line (no grade, or no value to show)
+  if (!t || (t.v !== "correct" && t.v !== "wrong") || !S) return null;
+  const p = S.prob, u = p.type === "multi" && Number.isInteger(t.part) ? p.parts?.[t.part] || p : p;
+  const val = t.c != null ? [].concat(t.c).map(id => clPlain((u.choices || []).find(c => c.id === id)?.md ?? "")).filter(Boolean).join(", ") : String(t.a ?? "").trim();
+  return val ? { v: t.v, label: (t.c != null ? "chose " : "typed ") + val } : null;
+}
+function clStatus(tr) {
+  const d = document.createElement("div"); d.className = "cl-st"; d.dataset.v = tr.v; d.dataset.t = `${tr.label} ${tr.v === "correct" ? "✓" : "✗"}`;
+  d.innerHTML = '<i aria-hidden="true"></i><span class="cl-st-b"></span><i aria-hidden="true"></i>';
+  return d;
+}
+function clHist(land) {                                                     // idempotent: add the first line, fold/open each turn, land on the latest
+  if (!cl) return;
+  const pane = cl.el.querySelector("#clTabEP");
+  if (wish?.tr && !pane.querySelector(":scope > .cl-st")) pane.querySelector(":scope > .msg")?.before(clStatus(wish.tr));
+  const segs = [];
+  for (const e of pane.querySelectorAll(":scope > .cl-st, :scope > .msg, .cl-thread > *")) {
+    if (e.classList.contains("cl-st")) segs.push({ st: e, items: [] }); else segs.at(-1)?.items.push(e);
+  }
+  segs.forEach(({ st, items }, i) => {
+    const fold = st.dataset.v === "wrong" && i < segs.length - 1, open = !fold || !!st._open, lab = st.dataset.t;
+    items.forEach(e => { e.hidden = !open; });
+    const b = document.createElement(fold ? "button" : "span"); b.className = "cl-st-b";
+    if (fold) {
+      b.type = "button"; b.setAttribute("aria-expanded", String(open));
+      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; b.append(lab);
+      b.addEventListener("click", () => { st._open = !open; clHist(); st.querySelector(".cl-st-b").focus({ preventScroll: true }); });
+    } else b.textContent = lab;
+    st.children[1].replaceWith(b);
+  });
+  if (land && segs.length > 1 && !pane.hidden) {                           // the sheet opens on the latest reply
+    const bd = cl.el.querySelector(".cl-bd"), st = segs.at(-1).st;
+    bd.scrollTop += st.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8;
+  }
+}
 /* "See Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
    right answer comes as a NEW message under it (the miss stays above as history), typed like a chat reply and scrolled into view inside the
    sheet (the page does not move). One /explain (not auto) per right answer, cached like the box text; a re-press scrolls to it. Not in the
@@ -2729,13 +2772,15 @@ function askFit(ta) {
 async function clCompare(w) {
   const t = S.tries.at(-1) || {}, key = ckKey(w.code, t), th = cl.el.querySelector(".cl-thread");
   const bd = cl.el.querySelector(".cl-bd"), top = el => { bd.scrollTop += el.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8; };   // the message's top at the body's top
-  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.el); return; }
+  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.st || w.cmp.el); return; }
+  const tr = clTry(t), st = tr && clStatus(tr);
   const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
   const re = box.lastChild;
-  w.cmp = { key, el: box };
-  th.append(box); top(box);
+  w.cmp = { key, el: box, st };
+  if (st) th.append(st);
+  th.append(box); clHist(); top(st || box);
   const ty = { text: ckGet(key), pos: 0, shown: 0, done: false }, typed = wishType(re, ty);
-  if (ty.text) { ty.done = true; typed.then(() => top(box)); return; }    // this browser has it: no call
+  if (ty.text) { ty.done = true; typed.then(() => top(st || box)); return; }    // this browser has it: no call
   w.busy = true; clAsk();
   const t0 = Date.now(), tp = traceparent(), fr = frReq("explain", tp);
   let r = null, bytes = 0, inc = null;
@@ -2755,7 +2800,7 @@ async function clCompare(w) {
   } catch (e) { fr.x(e); fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
   if (wish !== w) return;
   const ok = !!r && r.ok && ty.text.trim() && !inc;
-  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(box); say(speakable(stripFigs(ty.text))); }
+  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(st || box); say(speakable(stripFigs(ty.text))); }
   else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Oh duck, Cluck is tired! Come back later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
   w.busy = false; clAsk();
 }
