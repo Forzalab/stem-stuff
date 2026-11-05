@@ -362,3 +362,31 @@ test("T36 non-owner: pick payload byte-for-byte as before (no typed / trail / fa
     for (const s of ["typed", "leftover", "collide", "spot", "fraction", "drop", "\"19\"", "\"43\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s);
   }
 });
+
+test("scrub (cluck_ask / cluck_reply text): e-mail and phone-like runs are masked, math is never touched, capped", () => {
+  const T = run().win.__stemTelemetry;
+  assert.equal(T.scrub("my email is a@b.co, why x=2?", 1000), "my email is [email], why x=2?");
+  assert.equal(T.scrub("call 555-123-4567 or (555) 123 4567 or +1 555 123 4567 now", 1000), "call [phone] or [phone] or [phone] now");
+  assert.equal(T.scrub("5551234567", 1000), "[phone]");
+  for (const m of ["3x+2=5", "6.02e23", "v = 9.81 m/s, KE = 80 J", "1,000,000 J", "2024 - 1999 = 25", "x^2+3x-4=0", "123456 + 654321", "0.000001234567"]) assert.equal(T.scrub(m, 1000), m, m);
+  assert.equal(T.scrub("x".repeat(1500), 1000).length, 1000);
+  assert.equal(T.scrub(null, 1000), ""); assert.equal(T.scrub(undefined, 5), "");
+});
+
+test("dead_tap rule: only a still, short tap (< 10 px travel, < 500 ms) counts; travel_px is reported", () => {
+  const T = run().win.__stemTelemetry;
+  assert.deepEqual({ ...T.tapCheck({ x: 10, y: 10, t: 100 }, { x: 10, y: 10, t: 180 }) }, { dead: true, travel_px: 0 });
+  assert.equal(T.tapCheck({ x: 0, y: 0, t: 0 }, { x: 3, y: 4, t: 100 }).travel_px, 5);
+  assert.equal(T.tapCheck({ x: 0, y: 0, t: 0 }, { x: 0, y: 40, t: 120 }).dead, false, "a 40 px scroll-like move");
+  assert.equal(T.tapCheck({ x: 0, y: 0, t: 0 }, { x: 0, y: 10, t: 120 }).dead, false, "10 px is not < 10");
+  assert.equal(T.tapCheck({ x: 0, y: 0, t: 0 }, { x: 0, y: 0, t: 500 }).dead, false, "a 500 ms hold is not a tap");
+  assert.equal(T.tapCheck(null, { x: 0, y: 0, t: 5 }).dead, false);
+});
+
+test("scrub fallback (no regex lookbehind, old Safari): same results as the main path", () => {
+  const T = run().win.__stemTelemetry;
+  const cases = ["my email is a@b.co, why x=2?", "call 555-123-4567 or (555) 123 4567 or +1 555 123 4567 now", "5551234567", "3x+2=5", "6.02e23", "v = 9.81 m/s, KE = 80 J",
+    "1,000,000 J", "2024 - 1999 = 25", "123456 + 654321", "0.000001234567", "x ".repeat(5) + "555-1234 end"];
+  for (const c of cases) assert.equal(T.scrub(c, 1000, true), T.scrub(c, 1000), c);
+  assert.equal(T.scrub("call 555-123-4567 now", 1000, true), "call [phone] now");
+});

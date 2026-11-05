@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # One click to Vercel: demo (a private preview URL) or live (stem-stuff.vercel.app).
-# usage: tools/ship.sh [--no-brain] [--print-banks] demo|live [banks-dir]     (then it smoke-tests the deployment; exit 1 = red)
+# usage: tools/ship.sh [--no-brain] [--print-banks] [--pin BANK_X@sha]... [--local|--remote [--wait]] demo|live [banks-dir]
+#   (then it smoke-tests the deployment; exit 1 = red)
+# On Termux ($PREFIX has com.termux, or $TERMUX_VERSION is set) or with --remote, `ship.sh demo|live` does not deploy here: it hands
+# off to tools/press.sh, which queues the ship workflow on GitHub (the runner runs this script, local mode). --wait watches the run.
+# --local forces the local path anywhere. A [banks-dir] cannot go to the runner: with --remote it is an error.
+# Pins: $SHIP_PINS="BANK_P3X@cd581738[,BANK_Y22@sha]" and/or --pin BANK_X@sha (repeatable) ship that bank at that brain commit; all
+# other banks stay at main/the clone's checkout. The source line reads BANK_P3X(brain@cd581738). A pin the brain does not have at
+# that sha = nothing deployed. Today's use: BANK_P3X@cd581738 until the `vary` field is in SCHEMA.md (lane A6).
 #   demo  = `vercel deploy`        → prints the preview URL (log in to Vercel to open it)
 #   live  = `vercel deploy --prod` → the public site
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub. Banks, per file name, first hit
@@ -42,17 +49,38 @@ xoff() { { set +x; } 2>/dev/null; }          # around anything that expands $BRA
 xon() { if [ -n "$XT" ]; then set -x; fi; }
 if [ -f "$ROOT/.env" ]; then xoff; set -a; . "$ROOT/.env"; set +a; xon; fi
 
-usage() { echo "usage: tools/ship.sh [--no-brain] [--print-banks] demo|live [banks-dir]" >&2; exit 2; }
+usage() { echo "usage: tools/ship.sh [--no-brain] [--print-banks] [--pin BANK_X@sha]... [--local|--remote [--wait]] demo|live [banks-dir]" >&2; exit 2; }
 MODE=; BANKS=; PRINT=; NOBRAIN="${SHIP_NO_BRAIN:-}"; [ "$NOBRAIN" = 0 ] && NOBRAIN=
-for a in "$@"; do
+WHERE=; WAIT=; SHIP_PINS="${SHIP_PINS:-}"
+while [ $# -gt 0 ]; do
+  a="$1"; shift
   case "$a" in
     --no-brain) NOBRAIN=1 ;;
     --print-banks) PRINT=1 ;;
+    --local) WHERE=local ;;
+    --remote) WHERE=remote ;;
+    --wait) WAIT=--wait ;;
+    --pin) [ $# -gt 0 ] || usage; SHIP_PINS="${SHIP_PINS:+$SHIP_PINS,}$1"; shift ;;
     -*) usage ;;
     demo|live) if [ -z "$MODE" ] && [ -z "$BANKS" ]; then MODE="$a"; else BANKS="$a"; fi ;;
     *) [ -z "$BANKS" ] || usage; BANKS="$a" ;;
   esac
 done
+# --- remote: Termux (or --remote) queues the GitHub run instead of deploying here. SHIP_PRESS = test hook (a stub press.sh) ---
+if [ -z "$WHERE" ]; then
+  case "${PREFIX:-}" in *com.termux*) WHERE=remote ;; esac
+  [ -z "${TERMUX_VERSION:-}" ] || WHERE=remote
+fi
+if [ "$WHERE" = remote ] && [ -z "$PRINT" ]; then
+  [ -n "$MODE" ] || usage
+  [ -z "$BANKS" ] || { echo "ship: a banks-dir cannot go to the GitHub runner (use --local)" >&2; exit 2; }
+  export SHIP_PINS   # --pin args were folded into it; press.sh validates and sends it as the workflow's `pins` input
+  exec bash "${SHIP_PRESS:-$ROOT/tools/press.sh}" ${WAIT:+"$WAIT"} "$MODE"
+fi
+if [ -n "$SHIP_PINS" ]; then
+  python3 "$ROOT/tools/brain_banks.py" --check-pins "$SHIP_PINS" || exit 2
+  export SHIP_PINS
+fi
 case "$MODE" in
   demo) PROD=() ;;
   live) PROD=(--prod) ;;
@@ -94,9 +122,27 @@ for f in "$ROOT"/banks/*.json; do add 2 0 repo "$f"; done   # rank 2: a stale lo
 if [ -z "$NOBRAIN" ]; then
   brain_dir
   if [ -n "$BRAIN" ]; then
+    PINNED=" $(tr ',' ' ' <<<"$SHIP_PINS" | sed 's/\.json//g; s/@[^ ]*//g') "
     for f in "$BRAIN"/projects/*/_files/*-bank/BANK_*.json "$BRAIN"/projects/*/_files/*-bank/formula-sheet.json; do   # + the formula sheet (design/EASY.md)
+      case "$PINNED" in *" $(basename "$f" .json) "*) continue ;; esac   # pinned: only the pinned sha counts
       t="$(git -C "$BRAIN" log -1 --format=%ct -- "${f#"$BRAIN"/}" 2>/dev/null || true)"
       add 1 "${t:-0}" brain "$f"
+    done
+    # pinned banks: `git show <sha>:<path>` (the newest commit's path wins if the name sits in several *-bank folders, as above)
+    for pin in $(tr ',' ' ' <<<"$SHIP_PINS"); do
+      pname="${pin%%@*}"; pname="${pname%.json}"; psha="${pin#*@}"
+      git -C "$BRAIN" cat-file -e "$psha^{commit}" 2>/dev/null || { warn "pin $pin: no such commit in the brain clone, nothing deployed"; exit 1; }
+      [ -n "$BTMP" ] || BTMP="$(mktemp -d)"
+      ppath=; pt=-1
+      while IFS= read -r q; do
+        [ -n "$q" ] || continue
+        qt="$(git -C "$BRAIN" log -1 --format=%ct "$psha" -- "$q" 2>/dev/null || true)"
+        if [ "${qt:-0}" -gt "$pt" ]; then ppath="$q"; pt="${qt:-0}"; fi
+      done < <(git -C "$BRAIN" ls-tree -r --name-only "$psha" -- projects | grep -E "^projects/[^/]+/_files/[^/]+-bank/$pname\.json$" || true)
+      [ -n "$ppath" ] || { warn "pin $pin: no $pname.json in the brain at $psha, nothing deployed"; exit 1; }
+      mkdir -p "$BTMP/$pname"
+      git -C "$BRAIN" show "$psha:$ppath" >"$BTMP/$pname/$pname.json" || { warn "pin $pin: git show failed, nothing deployed"; exit 1; }
+      add 1 "$pt" "brain@$psha" "$BTMP/$pname/$pname.json"
     done
     # a BANK_*.json anywhere else in the clone never ships: one warning line each (builder copies like px2/BANK_P2X.json are expected)
     (cd "$BRAIN" && find . -name .git -prune -o -name 'BANK_*.json' -print) | sed 's|^\./||' | LC_ALL=C sort |
@@ -105,7 +151,7 @@ if [ -z "$NOBRAIN" ]; then
     BTMP="$(mktemp -d)"; rc=0
     HATCH="$(python3 "$ROOT/tools/brain_banks.py" "$BTMP")" || rc=$?
     [ "$rc" -eq 0 ] || { warn "bank hatch failed, nothing deployed (see the line above)"; exit 1; }
-    while IFS="$(printf '\t')" read -r t f; do [ -n "$f" ] && add 1 "$t" brain "$f"; done <<<"$HATCH"
+    while IFS="$(printf '\t')" read -r t f src; do [ -n "$f" ] && add 1 "$t" "${src:-brain}" "$f"; done <<<"$HATCH"
   else
     warn "brain: no clone (BRAIN_DIR, ~/brain, /home/claude/brain) and no BRAIN_TOKEN, skipped"
   fi

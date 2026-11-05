@@ -60,6 +60,30 @@
     if (typeof text !== "string" || !text) return text;
     return text.replace(EMAIL, function (m) { return m.replace(/[^@.]/g, "*"); }).replace(PHONE, function (m) { return m.replace(/\d/g, "*"); });
   }
+  /* scrub (cluck_ask / cluck_reply text): e-mails -> "[email]", phone-like digit runs (7+ digits; spaces / dashes / parens between groups, or one
+     bare run) -> "[phone]". Math is never touched: no "." "," joins, and "2024 - 1999" / "123456 + 654321" / "6.02e23" are not phone shapes. */
+  var PH_A = "(?:\\+\\d{1,3}[ -]?)?(?:\\(\\d{2,4}\\)[ -]?|\\d{2,4}[ -])\\d{3}[ -]\\d{3,4}", PH_B = "\\d{3}[ -]\\d{4}", PH_C = "\\+?\\d{7,15}";
+  var PH_ALT = PH_A + "|" + PH_B + "|" + PH_C, PH_TAIL = "(?![\\w]|[.,]\\d)";
+  var PHONE_SCRUB = null;   // lookbehind: Safari < 16.4 throws on it, which must not kill this file; null = the fallback below
+  try { PHONE_SCRUB = new RegExp("(?<![\\w.,])(?:" + PH_ALT + ")" + PH_TAIL, "g"); } catch (e) { PHONE_SCRUB = null; }
+  var PHONE_FB = new RegExp("(^|[^\\w.,])(?:" + PH_ALT + ")" + PH_TAIL, "g");   // same pattern, the boundary as a leading group kept by the replace
+  function scrub(text, max, noLookbehind) {
+    if (typeof text !== "string" || !text) return "";
+    var t = text.replace(EMAIL, "[email]");
+    t = PHONE_SCRUB && !noLookbehind ? t.replace(PHONE_SCRUB, "[phone]") : t.replace(PHONE_FB, function (m, lead) { return lead + "[phone]"; });
+    return t.slice(0, max > 0 ? max : 1000);
+  }
+  /* a Cluck reply as readable text: fenced blocks (fig / openui / code) and HTML tags out, slot / stage markers out */
+  function plainReply(t) {
+    return String(t == null ? "" : t).replace(/```[\s\S]*?(?:```|$)/g, " ").replace(/<[^>]*>/g, " ").replace(/[\u0001\u0002]/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  }
+  /* dead_tap: a tap is a pointerup < 10 px and < 500 ms from its pointerdown (a scroll or a drag is not one) */
+  function tapCheck(d, u) {
+    if (!d || !u) return { dead: false, travel_px: null };
+    var px = Math.hypot(u.x - d.x, u.y - d.y);
+    return { dead: px < 10 && u.t - d.t < 500, travel_px: Math.round(px) };
+  }
   /* the viewer's own switch (privacy.html "Don't record me"): DNT/GPC never fire on iOS Safari, so this is the real opt-out */
   function userOff(ls) { try { return ls.getItem("stem-t-off") === "1"; } catch (e) { return false; } }
   /* dead_tap context: where (% of viewport), which stage, tries left on this item. Never the tapped text (privacy default, Tony Oct 18).
@@ -122,7 +146,7 @@
   }
   W.stemFP = stemFP;
   try { var mq = new URLSearchParams(location.search).get("me"); if (mq === "1" || mq === "test" || mq === "0") W.localStorage.setItem("stem-me", mq); } catch (e) { /* blocked */ }
-  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff, bucket: bucket };
+  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, scrub: scrub, plainReply: plainReply, tapCheck: tapCheck, userOff: userOff, bucket: bucket };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
@@ -219,6 +243,10 @@
           if (p.first_token_ms == null) p.first_token_ms = st.askAt && st.tokAt ? Math.round(st.tokAt - st.askAt) : null;
           if (lt && st.askAt) { var ls = ltSum(lt, st.askAt, t); p.lt_n = ls.n; p.lt_ms = ls.ms; }   // long tasks while Cluck streamed
           st.askAt = 0; break;
+        case "cluck_ask":                                                                    // the student's question (Ask box) or an Explain / Compare press: the typed text, scrubbed
+          p.text = scrub(p.text, 1000); break;
+        case "cluck_reply":                                                                  // a reply stream ended: ok, error, size, timing, and its plain text, scrubbed
+          p.text = scrub(plainReply(p.text), 2000); if (p.error) p.error = String(p.error).slice(0, 200); else delete p.error; break;
         case "cluck_dwell":
           if (!st.clAt) return;
           p.ms = Math.round(t - st.clAt); p.scrolled_pct = Math.round(Math.max(st.clPct, clScroll()) * 100); st.clAt = 0; break;
@@ -257,13 +285,26 @@
   }
   var LIVE = "a,button,input,textarea,select,label,summary,[role=button],[role=radio],[role=checkbox],[role=separator],[tabindex],.opt,.pad-fab,.sash,.more";
   var DEAD = ".fig,.katex,.md,.pcode,.ptitle,.chg-chip";
+  var downAt = null;   // the pointerdown on a dead target, waiting for its pointerup (dead_tap fires there, only for a still, short tap)
   D.addEventListener("pointerdown", function (e) {
     try {
+      downAt = null;
       if (rageCheck(st.taps, now(), e.clientX, e.clientY)) send("rage_tap", { el: label(e.target), stage: st.stage, code: st.code });
       var tg = e.target && e.target.closest ? e.target : null;
-      if (tg && tg.closest(DEAD) && !tg.closest(LIVE)) send("dead_tap", deadProps(tg, label(tg.closest(DEAD)), e.clientX, e.clientY, W.innerWidth, W.innerHeight, st.stage, st.code, st.tries));
+      if (tg && tg.closest(DEAD) && !tg.closest(LIVE)) downAt = { x: e.clientX, y: e.clientY, t: now(), el: label(tg.closest(DEAD)), id: e.pointerId };
     } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });
+  D.addEventListener("pointerup", function (e) {
+    try {
+      var d = downAt; downAt = null;
+      if (!d || (d.id != null && e.pointerId != null && d.id !== e.pointerId)) return;
+      var c = tapCheck(d, { x: e.clientX, y: e.clientY, t: now() });
+      if (!c.dead) return;
+      var p = deadProps(null, d.el, d.x, d.y, W.innerWidth, W.innerHeight, st.stage, st.code, st.tries); p.travel_px = c.travel_px;
+      send("dead_tap", p);
+    } catch (x) { /* ignore */ }
+  }, { capture: true, passive: true });
+  D.addEventListener("pointercancel", function () { downAt = null; }, { capture: true, passive: true });
   D.addEventListener("click", function (e) {
     try { if (e.target && e.target.closest && e.target.closest("#qnext")) stemT("next", {}); } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });
