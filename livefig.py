@@ -27,6 +27,8 @@ FIGS_MAX = 2                       # visuals per reply, ```fig and ```openui tog
 GEOM_MAX = 1e4                     # any number in the figure: finite, |v| <= this
 # Fields whose numbers are DATA (shown, or drawn from as a value): they must come from the givens and never be the answer.
 # Every other number is free layout geometry (positions, sizes, axis ranges), only capped.
+HEAT_LABELS = 10                  # a heating curve (spec "heat"): 5 piece labels + 2 axis labels + 2 flat captions = 9; every other figure keeps MAX_LABELS
+HEAT_CONST = (0, 100, 334, 2265, 4.2, 4186, 2.1, 2090)   # the sheet's constants (0 and 100 C, L_f, L_v, c of water / ice): the sheet's rows hold no numbers, a heat item's givens may not list them
 DATA_KEYS = {"label", "text", "alt", "unit", "value", "w", "y", "f", "g", "of"}
 EXPR_KEYS = {"y", "f", "g", "of"}     # math.js strings (cartesian fn / shade)
 NUM_RE = re.compile(r"\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
@@ -158,11 +160,12 @@ class Ctx:
     """one reply's figure context: the numbers it may show (givens) and the ones it must not (the hidden unknown), the kinds this
     subject allows and the question's vertex labels (a network may only name those); drawn = the question has its own network figure
     (already on screen: a live copy of it is dropped)"""
-    def __init__(self, code, givens, answers, kinds=DEFAULT_KINDS, verts=(), drawn=False):
+    def __init__(self, code, givens, answers, kinds=DEFAULT_KINDS, verts=(), drawn=False, spec=None):
         self.code, self.givens, self.answers, self.kinds, self.verts, self.drawn = code, givens, answers, kinds, set(verts), drawn
+        self.spec = spec                         # the topic figure spec ("heat", ...), from serve.fig_spec; None = the plain rules
 
 
-def context(code, question, key, answer_values, more="", subject=None, verts=(), drawn=False):
+def context(code, question, key, answer_values, more="", subject=None, verts=(), drawn=False, spec=None):
     """givens = numbers in the question text, `more` (shown choices, sheet formulas) and the KEY's work, plus 0-10; answers = the hidden
     unknown's value(s) (and a \\boxed{} in the KEY) that the question text itself does not already show"""
     q = nums(question) + [float(WORD_NUMS[w]) for w in re.findall(r"[a-z]+", str(question).lower()) if w in WORD_NUMS]   # "five miles" is given
@@ -172,7 +175,7 @@ def context(code, question, key, answer_values, more="", subject=None, verts=(),
     # loop-trace table that wrote the code's own "i = 1" was dropped as a leak)
     ans += [s for s in (a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10) if not any(_eq(s, g) for g in q)]
     givens = set(q) | set(nums(more)) | set(nums(key)) | set(range(0, 11))
-    return Ctx(code, givens, sorted(set(ans)), kinds_for(subject), verts, drawn)
+    return Ctx(code, givens, sorted(set(ans)), kinds_for(subject), verts, drawn, spec)
 
 
 # ---------------- the gate ----------------
@@ -468,7 +471,7 @@ def check(g, ctx, warn=None):
         return "size"
     if len(g.get("groups", [])) > MAX_GROUPS or any(len(gr["bars"]) > MAX_BARS for gr in g.get("groups", [])) or len(g["alt"]) > MAX_ALT:
         return "size"
-    if _labels(g) > MAX_LABELS:
+    if _labels(g) > (HEAT_LABELS if ctx.spec == "heat" else MAX_LABELS):
         return "labels"
     if kind == "scene":
         marks, found = fix(marks)
@@ -503,7 +506,7 @@ def check(g, ctx, warn=None):
         for x in vals:
             if any(_sig3(abs(x), a) for a in ctx.answers):
                 return f"leak:{k}={x:g}"         # the field and the number only: never the model's text
-            if not any(_eq(abs(x), n) for n in ctx.givens):
+            if not any(_eq(abs(x), n) for n in ctx.givens) and not (ctx.spec == "heat" and any(_eq(abs(x), n) for n in HEAT_CONST)):
                 return f"not-given:{k}={x:g}"
     if kind == "scene" and not any(m.get("mark") == "force" and tuple(m["at"]) in bodies for m in marks):
         return "no-force"                    # a physics scene is the forces on a body: at least one

@@ -1,6 +1,7 @@
 """views_gate.py (P4.1, spec H): Cluck's ```openui fence: parse -> schema -> checker -> leak -> stage, a bad statement dropped, a bad root
 drops the fence, one figure per reply across ```fig and ```openui, CLUCK_VIEWS=0 strips."""
 import os
+import re
 import sys
 import unittest
 from unittest import mock
@@ -77,6 +78,22 @@ class TugFlip(unittest.TestCase):
         self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
         f = 't = Flip([["arm of W", "L", "half of L"], ["KE", "x", "y"]])'
         self.assertEqual(self.one(f), ("root = View([t])\n" + f, ["ok"]))
+
+    BATTERY = ["Q₁ | warm the ice | up 1", "Q₂ | melt the ice | up 2", "Q₃ | warm the water | up 3", "Q₄ | boil it | up 9", "Q₅ | warm the steam | up 1"]
+
+    def test_five_row_all_up_battery_passes(self):
+        t = "t = Tug(" + str(self.BATTERY).replace("'", '"') + ', "Q", "the energy battery")'
+        self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
+
+    def test_battery_example_rows_pass_the_grammar_and_a_value_size_does_not(self):
+        import serve
+        ex = serve.V4_VIEWS.split("Examples:\n")[1]
+        rows = re.search(r'"Q₁ \| [^\]]*', ex).group(0).split('", "')
+        self.assertEqual(len(rows), 4)
+        for r in rows:
+            self.assertTrue(views_gate.TUG_ROW.match(r.strip('"')), r)
+        self.assertFalse(views_gate.TUG_ROW.match("Q₁ | melt the ice | up 334"))
+        self.assertEqual(self.one('t = Tug(["Q₁ | warm | up 334", "Q₂ | melt | up 2"])')[1][0], "t:tug:row")
 
     def test_seven_rows_drop_the_whole_statement(self):
         rows = ", ".join(['"V | m | up"'] * 7)

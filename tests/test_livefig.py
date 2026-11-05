@@ -175,6 +175,28 @@ class Geom(unittest.TestCase):
             why = livefig.check(case["fig"], ctx())
             self.assertEqual(why.split(":")[0] if why else why, case["why"], case["name"])
 
+    def test_heat_spec_lifts_the_label_cap_only_for_heat(self):
+        g = json.loads(serve.HEAT_EXAMPLE)
+        self.assertEqual(livefig._labels(g), 9)
+        heat = livefig.context("H1", "Ice warms to steam.", "", [999.0], subject="physics.mechanics", spec="heat")
+        self.assertIsNone(livefig.check(g, heat))
+        self.assertEqual(livefig.check(g, livefig.context("H1", "Ice warms to steam.", "", [999.0], subject="physics.mechanics")), "labels")
+        g["x"]["ticks"] = [{"at": 0, "label": "0"}, {"at": 5, "label": "5"}]                        # two more labels = 11
+        self.assertEqual(livefig.check(g, heat), "labels", "11 labels: the heat cap is 10, not unlimited")
+
+    def test_heat_curve_still_drops_a_key_chunk(self):
+        g = json.loads(serve.HEAT_EXAMPLE)
+        g["marks"][-1]["label"] = "$Q_5 = 375$"
+        heat = livefig.context("H1", "Ice warms to steam.", "", [375.0], subject="physics.mechanics", spec="heat")
+        self.assertEqual(livefig.check(g, heat), "leak:label=375")
+
+    def test_heat_constants_count_as_givens_only_under_heat(self):
+        g = json.loads(serve.HEAT_EXAMPLE)
+        g["marks"] = [g["marks"][1], {"mark": "text", "at": [1, 2], "text": "$L_v = 2265$"}]
+        mk = lambda spec: livefig.context("H1", "Ice warms to steam.", "", [999.0], subject="physics.mechanics", spec=spec)   # noqa: E731
+        self.assertIsNone(livefig.check(g, mk("heat")))
+        self.assertEqual(livefig.check(g, mk(None)), "not-given:text=2265")
+
     def test_geometry_labels_count_toward_the_cap(self):
         g = FIX["geom"]["valid"][0]
         self.assertEqual(livefig._labels(g), 2)                          # the angle and the dim label
