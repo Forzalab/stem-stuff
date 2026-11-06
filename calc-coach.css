@@ -70,3 +70,29 @@
 .cc-sym { font-size: var(--t-sm); white-space: nowrap; width: 2.4rem; height: 2.4rem; border-radius: 10px; }
 .cc-const { grid-template-columns: 2.6rem 1fr; min-height: 56px; padding: var(--s2) var(--s3); }
 .cc-ic { width: 24px; height: 24px; }
+
+/* Hail Mary deck */
+.cc-ov-deck { overflow: hidden; }
+.cc-deckwrap { position: relative; display: block; height: 100dvh; max-width: none; padding: 0; margin: 0; }
+.cc-deck { height: 100dvh; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
+.cc-deck::-webkit-scrollbar { display: none; }
+.cc-deck:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -4px; }
+.cc-slide { box-sizing: border-box; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s4);
+  padding: calc(var(--s7) + 8px) 56px var(--s6) 24px; text-align: center; max-width: 32rem; margin: 0 auto; }
+.cc-kick { position: absolute; top: var(--s4); left: 24px; margin: 0; color: var(--cc-muted); font-size: var(--t-sm); font-weight: var(--w-em); }
+.cc-media { display: grid; place-items: center; width: min(62vw, 240px); height: min(62vw, 240px); flex: none; }
+.cc-anim { width: 100%; height: 100%; object-fit: contain; }
+.cc-n.cc-big { width: 120px; height: 120px; } .cc-n.cc-big .cc-ic { width: 64px; height: 64px; }
+.cc-st-t { margin: 0; font-size: var(--t-xl); line-height: var(--lh-title); }
+.cc-st-b { margin: 0; font-size: var(--t-lg); line-height: var(--lh); color: var(--cc-ink); max-width: 22rem; }
+.cc-swipe { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: var(--s4) 0 0; color: var(--cc-muted); font-size: var(--t-sm); }
+.cc-bob { animation: cc-bob 1.4s ease-in-out infinite; }
+@keyframes cc-bob { 50% { transform: translateY(5px); } }
+@media (prefers-reduced-motion: reduce) { .cc-bob { animation: none; } }
+.cc-odds { margin-top: var(--s2); } .cc-back { flex: none; width: min(100%, 20rem); }
+.cc-rail { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.cc-rail i { width: 6px; height: 6px; border-radius: 50%; background: var(--cc-line); transition: height .15s; }
+.cc-rail i.on { height: 22px; border-radius: 3px; background: var(--cc-hi); }
+@media (prefers-reduced-motion: reduce) { .cc-rail i { transition: none; } .cc-deck { scroll-behavior: auto; } }
+.cc-deck-x { position: absolute; top: var(--s2); right: var(--s2); }
+.cc-st-b, .cc-sub, .cc-cw { text-wrap: pretty; } .cc-st-t { text-wrap: balance; }

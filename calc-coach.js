@@ -230,7 +230,7 @@
   /* ---- cram panel (the Hail Mary card; data per bank in calc/cram.json) ---- */
   function cramFor(bank) { var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && FLAGS.hailMary && Date.now() < Date.parse(e.until) ? e : null; }
   function loadCram() { return CRAM ? Promise.resolve(CRAM) : g.fetch('calc/cram.json').then(function (r) { return r.json(); }).then(function (j) { CRAM = j; return j; }); }
-  var ICON = { approx: ['M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0', 'M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0'], x: ['M6 6l12 12M18 6L6 18'], bars: ['M4 20v-5M8 20v-9M12 20v-4M16 20v-12M20 20v-7'], dot: [] };
+  var ICON = { approx: ['M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0', 'M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0'], x: ['M6 6l12 12M18 6L6 18'], bars: ['M4 20v-5M8 20v-9M12 20v-4M16 20v-12M20 20v-7'], dot: [], chev: ['M6 9l6 6 6-6'] };
   function icon(name) {
     var s = d.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'cc-ic');
     s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', '2'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
@@ -238,13 +238,37 @@
     if (name === 'dot') { var c = d.createElementNS(NS, 'circle'); c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '6'); c.setAttribute('fill', 'currentColor'); s.appendChild(c); }
     return s;
   }
+  /* the Hail Mary deck: a vertical swipe deck, one full-height slide per tip (CSS scroll-snap, no library). Animated SVG per slide
+     (calc/hm/*.svg via <img>, aria-hidden), the static icon until it loads. */
   function buildCram(host, e, onClose) {
-    var root = h('section', 'cc'); root.setAttribute('data-theme', 'dark'); root.setAttribute('aria-label', e.title); host.appendChild(root);
-    var hd = h('div', 'cc-hd'); hd.append(h('h2', 'cc-t', e.title));
-    if (onClose) { var x = h('button', 'cc-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '×'; x.onclick = onClose; hd.append(x); }
-    root.append(hd, h('p', 'cc-sub', e.intro));
-    e.cards.forEach(function (c, n) { var k = h('div', 'cc-card cc-static'), bd = h('span', 'cc-n'); if (c.icon) bd.append(icon(c.icon)); else bd.textContent = String(n + 1); k.append(bd, h('span', 'cc-ct', c.t), h('span', 'cc-cw', c.b)); root.append(k); });
-    root.append(h('p', 'cc-tag', e.odds));
+    var root = h('section', 'cc cc-deckwrap'); root.setAttribute('data-theme', 'dark'); root.setAttribute('aria-label', e.title); host.appendChild(root);
+    var sc = h('div', 'cc-deck'); sc.tabIndex = 0; sc.setAttribute('role', 'region'); sc.setAttribute('aria-label', e.title + ', tips. Swipe or use the arrow keys.');
+    var n = e.cards.length, live = h('p', 'sr-only'); live.setAttribute('role', 'status');
+    e.cards.forEach(function (c, i) {
+      var sl = h('section', 'cc-slide'); sl.setAttribute('aria-label', 'Tip ' + (i + 1) + ' of ' + n);
+      sl.append(h('p', 'cc-kick', e.title));
+      var md = h('div', 'cc-media'); md.setAttribute('aria-hidden', 'true');
+      var fall = function () { md.replaceChildren(h('span', 'cc-n cc-big')); md.firstChild.append(icon(c.icon)); };
+      if (c.anim) { var im = d.createElement('img'); im.src = c.anim; im.alt = ''; im.className = 'cc-anim'; im.onerror = fall; md.append(im); } else fall();
+      sl.append(md, h('h3', 'cc-st-t', c.t), h('p', 'cc-st-b', c.b));
+      if (i < n - 1) { var sw = h('p', 'cc-swipe'); sw.append(h('span', null, 'Swipe up to see more')); var ch = icon('chev'); ch.setAttribute('class', 'cc-ic cc-bob'); sw.append(ch); sl.append(sw); }
+      else {
+        sl.append(h('p', 'cc-tag cc-odds', e.odds));
+        var bk = h('button', 'cc-btn cc-go cc-back', 'Back to the question'); bk.type = 'button'; bk.onclick = onClose || function () { sc.scrollTo({ top: 0 }); }; sl.append(bk);
+      }
+      sc.append(sl);
+    });
+    var rail = h('div', 'cc-rail'); rail.setAttribute('aria-hidden', 'true'); var dots = [];
+    for (var i = 0; i < n; i++) { var dt = h('i'); dots.push(dt); rail.append(dt); }
+    var cur = -1, sync = function () { var k = Math.max(0, Math.min(n - 1, Math.round(sc.scrollTop / Math.max(1, sc.clientHeight)))); if (k === cur) return; cur = k; dots.forEach(function (x, j) { x.className = j === k ? 'on' : ''; }); live.textContent = 'Tip ' + (k + 1) + ' of ' + n; };
+    sc.addEventListener('scroll', sync); sync();
+    sc.addEventListener('keydown', function (ev) {
+      var dir = ev.key === 'ArrowDown' || ev.key === 'PageDown' ? 1 : ev.key === 'ArrowUp' || ev.key === 'PageUp' ? -1 : 0;
+      if (!dir) return;
+      ev.preventDefault(); sc.scrollTo({ top: Math.max(0, Math.min(n - 1, cur + dir)) * sc.clientHeight, behavior: reduced() ? 'auto' : 'smooth' });
+    });
+    root.append(sc, rail, live);
+    if (onClose) { var x = h('button', 'cc-x cc-deck-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '×'; x.onclick = onClose; root.append(x); }
     return root;
   }
   function openCram(bank) {
@@ -253,9 +277,9 @@
       if (ov) close();
       var from = d.activeElement;
       ov = h('div', 'cc-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', e.title); ov._from = from;
-      d.body.appendChild(ov); d.documentElement.classList.add('cc-open');
+      ov.classList.add('cc-ov-deck'); d.body.appendChild(ov); d.documentElement.classList.add('cc-open');
       ov.addEventListener('keydown', function (k) { if (k.key === 'Escape') { k.stopPropagation(); close(); } });
-      buildCram(ov, e, close); ov.tabIndex = -1; ov.focus({ preventScroll: true });
+      var dk = buildCram(ov, e, close); dk.firstChild.focus({ preventScroll: true });
     });
   }
   var curBank = null;
@@ -264,6 +288,7 @@
   var SYMKEY = { 'σ': 'sigma' };
   function constPath(m, r) {
     var map = DATA.keys[m] && DATA.keys[m].constants_map, e = map && map[SYMKEY[r.sym] || r.sym], tail = ' and scroll to the name.';
+    if (m === 'ti36xpro' && r.sym === 'σ') return 'Store 5.67e-8 yourself (sto→), typed with EE.';
     if (e && e.available === false) return e.screen_notes.replace(/^No (physics )?constants? menu on this model[^.]*\.\s*/i, 'No constants menu on this model. ').replace(/ \(its "Constant" feature[^)]*\)/, '');
     if (m === 'ti36xpro') return r.sym === 'g' ? '2nd, (, then item 2' : r.sym === 'σ' ? 'Not in the list. Type 5.670374e-8 (use EE) and store it with sto→.' : 'Open 2nd, (' + tail;
     if (m === 'fx115esplus') return 'SHIFT, 7, ' + r.casio + ', =';

@@ -105,6 +105,18 @@ try {
     await page.goto(BASE + "/calc.html?model=nomodel&routine=R1"); await page.waitForSelector(".cc-note");
     assert.match(await page.textContent(".cc-note"), /Check your manual/); await ctx.close();
   });
+  await step("Hail Mary deck: 4 full-height snap slides, rail, keyboard moves a slide; reduced motion = static chevron", async () => {
+    const { ctx, page } = await fresh({}, undefined, { reducedMotion: "reduce" });
+    await page.goto(BASE + "/calc.html?cram=BANK_P3X"); await page.waitForSelector(".cc-slide");
+    const m = await page.evaluate(() => { const sc = document.querySelector(".cc-deck"), cs = getComputedStyle(sc), sl = document.querySelector(".cc-slide");
+      return { snap: cs.scrollSnapType, n: document.querySelectorAll(".cc-slide").length, full: Math.abs(sl.offsetHeight - sc.clientHeight) <= 1, bob: getComputedStyle(document.querySelector(".cc-bob")).animationName, dots: document.querySelectorAll(".cc-rail i").length }; });
+    assert.match(m.snap, /y mandatory/); assert.deepEqual([m.n, m.full, m.bob, m.dots], [4, true, "none", 4]);
+    await page.focus(".cc-deck"); await page.keyboard.press("ArrowDown");
+    await page.waitForFunction(() => { const sc = document.querySelector(".cc-deck"); return Math.abs(sc.scrollTop - sc.clientHeight) <= 2; });
+    assert.equal(await page.$eval(".cc-rail i.on", e => [...e.parentNode.children].indexOf(e)), 1);
+    await page.keyboard.press("PageUp"); await page.waitForFunction(() => document.querySelector(".cc-deck").scrollTop <= 2);
+    assert.equal(await noH(page), true); await ctx.close();
+  });
   await step("Cluck chrome: the Calc Coach link opens the panel, and sits outside the reply body", async () => {
     const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti-36x-pro" });
     await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page);
