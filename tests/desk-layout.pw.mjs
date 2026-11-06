@@ -73,6 +73,7 @@ async function context(browser, size, init) {
     localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9");
     for (const [k, v] of Object.entries(init)) localStorage.setItem(k, v);
   } catch { /* blocked */ }
+  addEventListener("DOMContentLoaded", () => { const s = document.createElement("style"); s.textContent = ".cc-cta::after { animation: none !important; display: none !important; }"; document.head.append(s); });   // the CTA shine is a deliberate animation, not jank (calc-coach.css)
   window.__cls = []; try { new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls.push({ v: e.value,
     nodes: (e.sources || []).map(s => s.node && s.node.nodeType === 1 ? s.node : s.node && s.node.parentElement).filter(Boolean) }); }).observe({ type: "layout-shift", buffered: true }); } catch { /* no layout-shift (firefox / webkit) */ } }, init);
   const page = await ctx.newPage(), errs = [];

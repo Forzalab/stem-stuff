@@ -4662,13 +4662,16 @@ def calc_route(method, cookie_header, body):
     sid, cookie = new_sid(cookie_header)
     try:
         if method == "GET":
-            return _json(200, {"model": acct.get_calc(sid)}, cookie)
+            return _json(200, {"model": acct.get_calc(sid), "welcomed": acct.get_welcomed(sid)}, cookie)
         try:
             b = json.loads(body) if 0 < len(body) <= 256 else None
         except (ValueError, UnicodeDecodeError):
             b = None
         if not isinstance(b, dict):
             return _json(400, {"error": "invalid"}, cookie)
+        if b.get("welcomed") is True and "model" not in b:   # welcome-first.js: the once-per-user flag
+            acct.put_welcomed(sid)
+            return _json(200, {"welcomed": True}, cookie)
         try:
             acct.put_calc(sid, b.get("model"))
         except ValueError:

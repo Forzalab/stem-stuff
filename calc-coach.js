@@ -373,7 +373,12 @@
   function slots() {
     var on = !!cramFor(curBank);
     d.querySelectorAll('.cc-slot').forEach(function (sl) {
-      sl.hidden = !on; if (on && !sl.firstChild) { sl.append(linkEl('Hail Mary', sl.parentNode.classList.contains('cc-cl') ? 'cc-link' : 'cc-chip', function () { openCram(curBank, sl.parentNode.classList.contains('cc-cl') ? 'cluck' : 'chip'); })); }
+      sl.hidden = !on; if (on && !sl.firstChild) sl.append(linkEl('Hail Mary', 'cc-link', function () { openCram(curBank, 'cluck'); }));
+    });
+    d.querySelectorAll('.cc-row').forEach(function (row) {
+      var hm = row.querySelector('.cc-cta-hm');
+      if (on && !hm) { hm = ctaEl('Hail Mary guess', 'cc-cta cc-cta-hm', function () { openCram(curBank, 'chip'); }); hm.setAttribute('aria-label', 'Hail Mary: 4 moves for a smart guess'); row.append(hm); }
+      else if (!on && hm) hm.remove();
     });
   }
 
@@ -385,6 +390,8 @@
     e.onkeydown = function (k) { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); fn(); } };
     return e;
   }
+  /* the item card's two call-to-action buttons (Tony Nov 6): role=link spans (toast cover rule), 44px+, amber (Calc) and pink (Hail Mary), calc-coach.css */
+  function ctaEl(text, cls, fn) { var b = linkEl('', cls, fn); b.append(h('span', 'cc-cta-t', text)); return b; }   // role=link, not <button>: toast.js LIVE keeps toasts off buttons, and these sit where the HUD tip / start-line toast lands (toast-note HUD tip B)
   function openBtn(text, cls, from) { var b = h('button', cls, text); b.type = 'button'; b.setAttribute('data-calc-from', from); b.onclick = function () { open({ from: from }); }; return b; }
   function welcomeCard(host) {
     if (!host || host.querySelector('.cc-welcome')) return;
@@ -424,19 +431,10 @@
     var pr = d.getElementById('problem'); if (!pr) return;
     curBank = bank; clearTimeout(itemT); clearTimeout(toastT);
     var pc = d.getElementById('pcode'); curItem = pc ? pc.textContent : null;
-    pr.querySelectorAll('.cc-row, .cc-strip').forEach(function (e) { e.remove(); });
-    var row = h('div', 'cc-row'), strip = null;
-    var p = promo();
-    if (bank === 'BANK_P3X' && p.exam && ls(KEY_STRIP) !== '1') {
-      var s = h('div', 'cc-strip'); var tl = h('button', 'cc-st cc-link', p.title); tl.type = 'button'; tl.onclick = function () { open({ from: 'strip' }); }; s.append(tl, openBtn('Show me', 'cc-btn', 'strip'));
-      var hm = CRAM && CRAM.banks[bank]; if (hm && cramFor(bank)) { var li = h('button', 'cc-link cc-hm', hm.promo); li.type = 'button'; li.onclick = function () { openCram(bank, 'promo'); }; s.append(li); }
-      var x = h('button', 'cc-x'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×';
-      x.onclick = function () { ls(KEY_STRIP, '1'); s.remove(); }; s.append(x); strip = s;
-    }
-    var chip = linkEl('Calc', 'cc-chip', function () { open({ from: 'chip' }); }); chip.setAttribute('aria-label', 'Calc Coach: calculator help'); row.append(chip);
-    var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; row.append(slot);
-    pr.insertBefore(row, d.getElementById('rtag') || d.getElementById('blocks') || null);                // floats right: it adds no height, so the question column is as tall as without it
-    if (strip) pr.insertBefore(strip, d.getElementById('rtag') || d.getElementById('blocks') || null);
+    pr.querySelectorAll('.cc-row').forEach(function (e) { e.remove(); });
+    var row = h('div', 'cc-row'), p = promo();
+    var chip = ctaEl('TI/Casio tricks', 'cc-cta cc-cta-calc', function () { open({ from: 'chip' }); }); chip.setAttribute('aria-label', 'Calc Coach: TI and Casio calculator tricks'); row.append(chip);
+    pr.insertBefore(row, d.getElementById('rtag') || d.getElementById('blocks') || null);                // before #rtag (the reveal tray's #rtag + .blocks adjacency)
     loadCram().then(slots, function () { /* no cram data */ });
     if (bank !== 'BANK_P3X') return;
     var me = curItem;

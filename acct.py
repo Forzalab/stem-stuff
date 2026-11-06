@@ -16,6 +16,7 @@ keep(token) -> bool                  False = unknown/expired token
 get_rewards(sid) -> dict | None      None = no account for this sid
 put_rewards(sid, blob) -> bool       False = no account (nothing stored for a bare sid); ValueError = not a dict / over REWARDS_MAX
 get_calc(sid) -> str | None          the calculator model (calc-pick.js; Tony Nov 6), key calc:<sid>; None = never picked
+get_welcomed(sid) -> bool / put_welcomed(sid)   the "sent to the welcome page once" flag (welcome-first.js; Tony Nov 6), key wlc:<sid>, same lifetime as calc
 put_calc(sid, model)                 any sid, account or not (like progress); ValueError = bad sid / model. Same lifetime rule as the
                                      record: SID_MAX_AGE, pushed out by login / put; none once the sid's account is kept (keep())
 KV errors (OSError, ValueError) propagate: the caller tells a store outage from an unknown token."""
@@ -178,3 +179,14 @@ def put_calc(sid, model):
         raise ValueError("calc: bad model id")
     _, rec = _rec(sid)
     _set("calc:" + sid, model, None if rec and rec.get("kept") else SID_MAX_AGE)
+
+
+def get_welcomed(sid):
+    return bool(_get("wlc:" + sid)) if isinstance(sid, str) and SID_RE.fullmatch(sid) else False
+
+
+def put_welcomed(sid):
+    if not (isinstance(sid, str) and SID_RE.fullmatch(sid)):
+        raise ValueError("bad sid")
+    _, rec = _rec(sid)
+    _set("wlc:" + sid, "1", None if rec and rec.get("kept") else SID_MAX_AGE)

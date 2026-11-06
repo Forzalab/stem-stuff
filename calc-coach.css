@@ -11,7 +11,7 @@
 .cc-hd { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
 .cc-t { margin: 0; font-size: var(--t-lg); font-weight: var(--w-em); }
 .cc-x { min-width: 44px; min-height: 44px; border: 0; background: none; color: var(--cc-muted); font: inherit; font-size: 1.6rem; cursor: pointer; }
-.cc :is(button):focus-visible, .cc-row :is(button):focus-visible, .cc-welcome button:focus-visible, .cc-cl button:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cc :is(button):focus-visible, .cc-welcome button:focus-visible, .cc-cl button:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cc-model { margin: 0; color: var(--cc-muted); font-size: var(--t-sm); font-weight: var(--w-em); }
 .cc-pre, .cc-ph { margin: 0; padding: var(--s2) var(--s3); border: 1px dashed var(--cc-line); border-radius: 8px; font-size: var(--t-sm); }
 .cc-ph { padding: var(--s1) var(--s3); font-size: var(--t-xs); color: var(--cc-muted); }
@@ -44,17 +44,11 @@
 .cc-welcome { display: grid; gap: var(--s2); margin: var(--s4) 0; padding: var(--s4); background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); }
 .cc-welcome .cc-wt { margin: 0; font-size: var(--t-md); } .cc-welcome .cc-wb { margin: 0; font-size: var(--t-sm); color: var(--muted); }
 .cc-welcome .cc-btn { flex: none; justify-self: start; }
-.cc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); }
-.cc-strip { flex: 1 0 100%; display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s3); background: color-mix(in srgb, var(--help) 8%, var(--card)); border: 1px solid var(--ai-line, var(--line)); border-radius: 10px; }
-.cc-strip .cc-st { flex: 1; font-size: var(--t-sm); } .cc-strip .cc-btn { flex: none; min-height: 44px; }
-.cc-row .cc-x, .cc-strip .cc-x { color: var(--muted); }
-.cc-chip { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 var(--s4); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
 .cc-cl { display: none; flex-wrap: wrap; gap: var(--s2); margin: var(--s1) 0 0; }
 .cl:has(.wtext:not(:empty)) .cc-cl { display: flex; }
 .cc-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0; font: inherit; font-size: var(--t-xs); color: var(--help-on, var(--help-muted)); background: none; border: 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
 
 .cc-static { cursor: default; }
-.cc-strip { flex-wrap: wrap; } .cc-strip .cc-hm { flex: 1 0 100%; min-height: 44px; font-size: var(--t-sm); }
 
 .cc-pad { display: block; width: 100%; height: auto; }
 .cc-key .cc-kr { fill: var(--cc-key); stroke: var(--cc-line); stroke-width: 1; }
@@ -99,24 +93,13 @@
 .cc-ex { margin: 0; max-width: 22rem; padding: var(--s2) var(--s3); border-radius: 10px; background: var(--cc-card); border: 1px solid var(--cc-line); color: var(--cc-ink); font-size: var(--t-sm); line-height: var(--lh); text-wrap: pretty; }
 .cc-slide { gap: var(--s3); } .cc-media { width: min(62vw, 220px); height: min(40vw, 132px); }
 .cc-media { width: min(78vw, 300px); height: min(47vw, 180px); }
-.cc-chip:focus-visible, .cc-link:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.cc-chip, .cc-link { cursor: pointer; }
 
 /* the Calc chip row floats at the question card's top right: no added height (the start-line toast and the Next note need the column's foot free, toast-note img3) */
-.cc-row { float: right; flex-wrap: nowrap; margin: 0 0 var(--s2) var(--s2); }
-.cc-strip { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); clear: both; flex-wrap: wrap; }
 
 /* the Calc chip row (Tony Nov 6): phone = its own line above the question (never beside the title: the Twist / Pity roll tags and wrapped math keep their line);
-   desktop (>= 720) = out of the flow at the card's top right, so a late row or Hail Mary slot moves nothing (desk-layout L4/L6) */
-.cc-row { float: right; flex-wrap: nowrap; margin: 0 0 var(--s2) var(--s2); }
-#problem:has(.twist-chip) > .cc-row { float: none; justify-content: flex-end; margin: 0 0 var(--s2); }   /* a twist item (the Twist chip leads its title line): the chips take their own line, never beside the title */
-@media (min-width: 720px) {
-  #problem:has(> .cc-row) { position: relative; }
-  #problem > .cc-row { position: absolute; top: 0; right: 0; margin: 0; z-index: 1; }
-}
+   desktop (>= 720) = out of the flow at the card's top right (above the stem), so a late row or Hail Mary slot moves nothing (desk-layout L4/L6) */
 
 /* the promo line is the link */
-.cc-strip .cc-st.cc-link { font-size: var(--t-sm); color: var(--ink); justify-content: flex-start; text-decoration: none; font-weight: var(--w-em); }
 .cc-welcome .cc-wt { cursor: pointer; }
 
 /* the routine deck: Hail Mary's deck, 2 slides, each in its own hue (figure palette: amber = SOLVE, cyan = STO / Ans) */
@@ -145,4 +128,33 @@
 /* legibility polish (Tony Nov 6): the DEG pill, the swipe hint */
 .cc-deg { font-size: var(--t-sm); border-style: solid; color: var(--cc-ink); padding: 3px var(--s3); }
 .cc-swipe { font-size: var(--t-sm); color: var(--cc-ink); }
-@media (max-width: 359px) { .cc-row { float: none; justify-content: flex-end; margin: 0 0 var(--s2); } }   /* a 320 phone: the chips take their own line (a float narrows the math lines: katex-wrap); 375+ keeps the float (fab) */
+
+.cc-link:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+
+/* the item card's two call-to-action buttons (Tony Nov 6): "TI/Casio tricks" (amber, the SOLVE slide's hue) and "Hail Mary guess" (pink; the exam window only).
+   Figure palette hues (--fig-amber-1, --fig-pink-1, app.css) with dark ink: amber 13:1, pink 8:1 on the fill (AA is 4.5). Squircle (16px radius), 44px tall, equal widths
+   (a lone Calc button is the same width, centred). Phone = its own line at the card's top, 44px + the old chip row's margin; desktop (>= 720) = out of the flow at the
+   card's top right (above the stem), so a late row or Hail Mary button moves nothing (desk-layout L4/L6). A slow diagonal shine every ~5 s (CSS only; none under reduced motion). */
+.cc-row { --gap: 10px; display: flex; justify-content: center; gap: var(--gap); margin: 0 0 var(--s2); }
+.cc-cta { --h1: var(--fig-amber-1); --h2: color-mix(in srgb, var(--fig-amber-1) 62%, var(--fig-orange-1)); --ink: #1d1400; --glow: var(--fig-amber-1); --dur: 5s; --dl: 1.2s;
+  position: relative; overflow: hidden; isolation: isolate; box-sizing: border-box; flex: 0 1 calc(50% - var(--gap) / 2); min-width: 0; height: 44px; padding: 0 12px;
+  display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 16px; cursor: pointer;
+  font: inherit; font-size: var(--t-sm); font-weight: 800; letter-spacing: .01em; white-space: nowrap; color: var(--ink);
+  background: linear-gradient(155deg, var(--h1), var(--h2)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--h1) 70%, #fff) inset, 0 2px 14px color-mix(in srgb, var(--glow) 38%, transparent);
+  -webkit-tap-highlight-color: transparent; }
+.cc-cta-hm { --h1: var(--fig-pink-1); --h2: color-mix(in srgb, var(--fig-pink-1) 66%, var(--fig-violet-1)); --ink: #2b0825; --glow: var(--fig-pink-1); --dur: 5.8s; --dl: 3.1s; }
+.cc-cta-t { position: relative; z-index: 1; overflow: hidden; text-overflow: ellipsis; }
+.cc-cta::after { content: ""; position: absolute; z-index: 0; top: -20%; bottom: -20%; left: 0; width: 42%; pointer-events: none; transform: translateX(-160%) skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent); animation: cc-shine var(--dur) ease-in-out var(--dl) infinite; }
+@keyframes cc-shine { 0%, 62% { transform: translateX(-160%) skewX(-20deg); } 88%, 100% { transform: translateX(380%) skewX(-20deg); } }
+.cc-cta:active { transform: scale(.98); filter: brightness(.96); }
+.cc-cta:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .cc-cta::after { animation: none; display: none; } .cc-cta:active { transform: none; } }
+/* phone: the row is its own line (never beside the stem: katex-wrap keeps full-width math lines, twist keeps the Twist chip + title on one line). It pulls 10px into the stem's
+   own top gap so the choices sit lower by the button's 44px less 10 (fab: the floating button's spot is decided by the choices' height) */
+@media (max-width: 719px) { .cc-row { margin: 0 0 -10px; } .cc-row:has(.cc-cta-hm) { margin: 0 0 var(--s2); } }
+@media (min-width: 720px) {
+  #problem:has(> .cc-row) { position: relative; }
+  #problem > .cc-row { position: absolute; bottom: calc(100% + 6px); right: 0; margin: 0; z-index: 1; }   /* above the card, beside the "Question" label: it never covers the stem */
+  #problem > .cc-row .cc-cta { flex: 0 0 156px; }
+}
