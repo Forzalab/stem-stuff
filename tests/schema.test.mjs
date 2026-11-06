@@ -571,6 +571,28 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
   });
 }
 
+// vary (SCHEMA.md "vary"): BANK_P3X's review number sets. 1-3 overlays per mc item, each a fresh body + choices (same ids as the item), its
+// own wrong/saccharine. Server only: the answer-bearing parts (wrong, saccharine.key) never ride to the browser.
+test("schema: vary overlays on an mc item", () => {
+  const mc = JSON.parse(JSON.stringify(problems.find(p => p.type === "mc" && p.wrong && p.choices)));
+  const set = () => ({ body: JSON.parse(JSON.stringify(mc.body)), choices: JSON.parse(JSON.stringify(mc.choices)),
+    wrong: JSON.parse(JSON.stringify(mc.wrong)), saccharine: { key: "$I=9.8(51.8)=508$.", tip: "Use the parallel axis idea.", slip: { a: "Slip (misread): wrong axis." } } });
+  const ok = (f) => { const d = { ...B, problems: [{ ...mc }] }; f(d.problems[0]); return validate(d); };
+  assert.ok(ok(p => { p.vary = [set(), set(), set()]; }), "a valid vary passes: " + JSON.stringify(validate.errors));
+  assert.ok(ok(p => { p.vary = [{ body: set().body, choices: set().choices }]; }), "body + choices alone pass");
+  const bad = {
+    "empty list": p => { p.vary = []; }, "four sets": p => { p.vary = [set(), set(), set(), set()]; }, "a set that is {}": p => { p.vary = [{}]; },
+    "a set that is a string": p => { p.vary = ["x"]; }, "not an array": p => { p.vary = { body: [] }; },
+    "no choices": p => { const v = set(); delete v.choices; p.vary = [v]; }, "no body": p => { const v = set(); delete v.body; p.vary = [v]; },
+    "a bad choice id": p => { const v = set(); v.choices[0].id = "A"; p.vary = [v]; },
+    "a correct field": p => { const v = set(); v.correct = "b"; p.vary = [v]; }, "an unknown field": p => { const v = set(); v.answer = "5"; p.vary = [v]; },
+    "a choice with correct": p => { const v = set(); v.choices[0].correct = true; p.vary = [v]; },
+    "an unknown saccharine field": p => { const v = set(); v.saccharine.extra = 1; p.vary = [v]; },
+    "a wrong with no error": p => { const v = set(); delete v.wrong[0].error; p.vary = [v]; },
+  };
+  for (const [name, f] of Object.entries(bad)) assert.ok(!ok(f), name);
+});
+
 // unit + twist (W132a, SCHEMA.md "One problem"): unit = an optional answer unit on a num item or a num part (<= 16 chars, "" = unitless);
 // twist = an optional boolean on any item. The schema only: nothing renders them yet.
 {

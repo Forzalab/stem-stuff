@@ -1191,6 +1191,18 @@ class Persist(unittest.TestCase):
         self.restart()
         self.assertLessEqual(serve.state(p, "r4")["gen"], g)     # page keeps its lock: not a reset
 
+class VaryNeverServed(unittest.TestCase):
+    """`vary` (SCHEMA.md "vary": review number sets with their own wrong/saccharine keys) is server only: public() is an allowlist."""
+    def test_public_has_no_vary(self):
+        p = next(q for q in BANK.values() if q.get("type") == "mc")
+        p = dict(p, vary=[{"body": p["body"], "choices": p["choices"], "wrong": p.get("wrong", []),
+                           "saccharine": {"key": "VARYKEY_9137 answer b"}}])
+        for mode in ("diet", "sugar"):
+            out = serve.public(serve.view(p, mode), "s")
+            self.assertNotIn("vary", out)
+            self.assertNotIn("VARYKEY_9137", json.dumps(out))
+
+
 
 if __name__ == "__main__":
     unittest.main()
