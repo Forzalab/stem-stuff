@@ -50,9 +50,11 @@
     if (text != null) put(el, text);
     return el;
   }
+  const links = () => !!(root.Links && root.Links.on());                       // LINK-FEATURES S1, ?links=1, default off (links.mjs)
   function put(el, s) {
     s = String(s);
-    if (s.includes("$") && root.Graph && root.Graph.tex) el.innerHTML = root.Graph.tex(s);   // Graph.tex escapes everything outside $..$
+    if (links() && root.Links.has(s)) el.innerHTML = root.Links.html(s);        // [words]{#id} + \htmlClass{ln-id}: authored link markup
+    else if (s.includes("$") && root.Graph && root.Graph.tex) el.innerHTML = root.Graph.tex(s);   // Graph.tex escapes everything outside $..$
     else el.textContent = s;
   }
   const TEXOP = { "−": "-", "×": "\\times", "÷": "\\div", "·": "\\cdot" };
@@ -179,7 +181,7 @@
       return String(ok) + (st.unit ? " " + st.unit : "");
     }
     function chip(text, data, onTap, s, key, tried) {
-      const b = h("button", "rp-chip", text);
+      const b = h("button", "rp-chip", links() ? root.Links.plain(String(text)) : text);   // chips sit on --sheet: no link hue there (S1)
       b.type = "button"; Object.assign(b.dataset, data);
       if (tried.has(key) && !welcome) { b.disabled = true; b.append(h("span", "rp-x", "✗")); }
       b.addEventListener("click", () => onTap(s, data.why != null ? Number(data.why) : data.v));
@@ -315,6 +317,7 @@
       }
       kids.push(foot);
       el.replaceChildren(...kids);
+      if (links()) root.Links.sync(el, '.rp-step:not([data-state="future"])');   // newest revealed step lit, older ones settle (S1)
     }
 
     if (full) {                                                                 // #36: the full card fills in the answer
