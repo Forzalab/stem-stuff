@@ -93,6 +93,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `exam_q` | all, optional | integer 1–20: the item's Practice Exam position. A non-twin item with `exam_q` counts as that position's template (shuffle.mjs `isTpl`, the night-before mock, families met) even when its title says twin or twist | yes |
 | `proof` | `proof` (required) | the key of a proof item: `reference`, `rubric`, `keys`, `hints` (see "Proof items") | **no** |
 | `repair` | all, optional | the repair ladder `{ steps, alt? }`, served by `GET /repair/<code>` after a recorded wrong try (`alt` only after a twin miss) | **no** |
+| `vary` | `mc`, optional | 1-3 alternate number sets for a redo: `[{ body, choices, wrong?, saccharine? }]`. Each set is the item's `body` and `choices` with new givens (same choice ids; `correct` stays the item's), its own `wrong` hints and `saccharine` `{ key, tip?, slip? }`. Built by the brain bank builder (BANK_P3X, `vary_p3x.py`); the server does not read it yet. It holds keys (`wrong`, `saccharine.key`), so it is never in `PUBLIC` | **no** |
 
 **Never put the answer in `body`, a graph's `alt`, `title`, `how`, a part's `prompt`, a choice's text beyond the choice itself, or a hint.**
 
@@ -729,6 +730,14 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "properties": {"steps": {"$ref": "#/$defs/rsteps"},
             "alt": {"type": "object", "required": ["steps"], "additionalProperties": false, "description": "server only: the other-representation ladder (units/sanity or diagram), served only after a twin miss",
               "properties": {"steps": {"$ref": "#/$defs/rsteps"}}}}},
+        "vary": {"type": "array", "minItems": 1, "maxItems": 3, "description": "mc only: alternate number sets for a redo (SCHEMA.md \"vary\"). Server only: public() never sends it",
+          "items": {"type": "object", "required": ["body", "choices"], "additionalProperties": false, "description": "one overlay: the item's body and choices with new givens. Choice ids and `correct` never change (the item's own `correct` stands)",
+            "properties": {
+              "body": {"$ref": "#/$defs/problem/properties/body"},
+              "choices": {"$ref": "#/$defs/problem/properties/choices"},
+              "wrong": {"$ref": "#/$defs/problem/properties/wrong"},
+              "saccharine": {"type": "object", "required": ["key"], "additionalProperties": false, "description": "the set's own solution layer; same fields as the item's saccharine",
+                "properties": {"key": {"$ref": "#/$defs/problem/properties/saccharine/properties/key"}, "tip": {"$ref": "#/$defs/problem/properties/saccharine/properties/tip"}, "slip": {"$ref": "#/$defs/problem/properties/saccharine/properties/slip"}}}}}},
         "tip": {
           "type": "string",
           "minLength": 3,
