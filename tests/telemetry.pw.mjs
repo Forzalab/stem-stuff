@@ -169,7 +169,7 @@ for (const [mode, cookies] of [["sugar", []], ["diet", [{ name: "stem-mode", val
   });
 }
 
-await step("footer: a real 'privacy' link to privacy.html; the page has 7 plain lines", async () => {
+await step("footer: a real 'privacy' link to privacy.html; the page has 8 plain lines", async () => {
   const { ctx, page } = await open({});
   const a = await page.$("a#privacy");
   assert.ok(a, "no #privacy link");
@@ -177,7 +177,8 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 7 plain 
   assert.ok(await a.isVisible(), "link hidden on the start page");
   await a.click();
   await page.waitForURL(/privacy\.html$/);
-  assert.equal((await page.$$("main > p")).length, 7);
+  assert.equal((await page.$$("main > p")).length, 8);
+  assert.match(await page.textContent("main"), /never sell your data/, "pledge listed (Tony, Nov 5)");
   for (const [re, what] of [[/you see an error code/, "error codes"], [/short log of its last steps/, "on-device flight log"], [/our server still notes the error code/, "server error lines under DNT"], [/The duck:/, "the duck"]])
     assert.match(await page.textContent("main"), re, "privacy lists " + what);   // a merge once dropped these: the page must stay true
   assert.match(await page.textContent("main"), /duck may react to how you work/, "Jev (on for all) listed");

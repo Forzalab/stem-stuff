@@ -85,6 +85,16 @@ await step("privacy.html: one plain line says which privacy signal this browser 
   await ctx2.close();
 });
 
+await step("privacy.html: the pledge line stays (never sell data, not for profit)", async () => {
+  const ctx = await phone(), page = await ctx.newPage();
+  await page.goto(BASE + "/privacy.html");
+  const t = (await page.textContent("main.pv")).replace(/\s+/g, " ");
+  assert.match(t, /never sell your data/i);
+  assert.match(t, /not for profit/i);
+  assert.doesNotMatch(t, /non-?profit/i, "Tony chose 'not for profit' on purpose");
+  await ctx.close();
+});
+
 await browser.close();
 console.log(failures ? `${failures} FAIL` : "all ok");
 process.exit(failures ? 1 : 0);
