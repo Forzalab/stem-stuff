@@ -70,7 +70,13 @@
   function setData(x) { DATA = x; }
 
   /* ---- the student's calculator ---- */
-  function model() { try { var p = g.stemCalcPick; if (p && p.get) { var v = p.get(); if (v) return v.id || v; } } catch (e) { /* picker */ } return ls(KEY_MODEL) || null; }
+  var IDS = { 'ti-36x-pro': 'ti36xpro', 'ti-30xs-multiview': 'ti30xsmv', 'fx-115es-plus': 'fx115esplus', 'fx-300es-plus': 'fx300esplus', 'fx-991cw': 'fx991cw', 'fx-991ex': 'fx991ex' };   // the picker's ids (calc-pick.js) -> calc-steps.json's
+  function model() {
+    var v = null;
+    try { var p = g.stemCalcPick; if (p && p.get) { v = p.get(); v = v && (v.id || v); } } catch (e) { /* picker */ }
+    v = v || ls(KEY_MODEL); if (!v || v === 'skip') return null;
+    return IDS[v] || v;
+  }
 
   /* ---- the keypad: approximate, drawn from calc/calc-pad.json (TI-36X Pro from Tony's photo; the rest are typical layouts: enough to find the key).
      The keys to press come from calc-steps.json only. A press token becomes lit key(s): "165" lights 1, 6, 5; "x y z t ..." the letter key;

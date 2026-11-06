@@ -59,6 +59,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="offline.js" defer></script>
 <script src="brainrot.js" defer></script>
 <script src="lockhelp.js" defer></script><!-- the lock-out modal "Let me help you with that!" (lockhelp.js, Tony Nov 5) -->
+<script src="calc-pick.js" defer></script><script>addEventListener("DOMContentLoaded", function () { window.stemCalcPick && window.stemCalcPick.auto(); });</script><!-- the calculator model picker (calc-pick.js, Tony Nov 6): a fresh device sees it once, after the splash -->
 <script src="peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (design/IDLE-PEEK.md) -->
 <script src="strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
 <!-- sugar rewards (design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
@@ -114,6 +115,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="repair.css">
 <link rel="stylesheet" href="welcome.css">
 <link rel="stylesheet" href="calc-coach.css"><!-- Calc Coach panel (design/CALC-COACH.md): app chrome, not a reply format -->
+<link rel="stylesheet" href="calc-pick.css"><!-- the calculator model picker (calc-pick.js) -->
 <link rel="stylesheet" href="views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
 <link rel="modulepreload" href="views.js">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
