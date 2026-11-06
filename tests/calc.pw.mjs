@@ -100,9 +100,9 @@ try {
     await page.click(".cc-go"); await page.waitForSelector(".cc-try"); assert.match(await page.textContent(".cc-tt"), /Try it on yours/);
     assert.equal(await noH(page), true); await ctx.close();
   });
-  await step("panel: a model with no verified source says check your manual", async () => {
+  await step("panel: a model Calc Coach does not have says check your manual", async () => {
     const { ctx, page } = await fresh();
-    await page.goto(BASE + "/calc.html?model=fx991ex&routine=R1"); await page.waitForSelector(".cc-note");
+    await page.goto(BASE + "/calc.html?model=nomodel&routine=R1"); await page.waitForSelector(".cc-note");
     assert.match(await page.textContent(".cc-note"), /Check your manual/); await ctx.close();
   });
   await step("Cluck chrome: the Calc Coach link opens the panel, and sits outside the reply body", async () => {

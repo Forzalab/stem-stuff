@@ -14,7 +14,7 @@
      "enter",
      "clear"
     ],
-    "screen_notes": "Mode screen row 1 reads DEG RAD GRAD; the highlighted one is active (DEG is the default). A DEG/RAD/GRAD indicator also shows at the top of the Home screen. Press clear or 2nd quit to go back.",
+    "screen_notes": "Mode screen row 1 reads DEG RAD GRAD; the highlighted one is active (DEG is the default). A DEG/RAD/GRAD indicator also shows at the top of the Home screen. Press clear or 2nd quit to go back. quit = 2nd + mode (photo). The photo shows the DEG indicator at the top of the screen; the other photo shows RAD and ENG.",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
     "source_loc": "p.6-7 (Modes); p.5 indicator table",
     "verified": true
@@ -23,7 +23,7 @@
     "keys": [
      "EE"
     ],
-    "screen_notes": "Enter a number like 6.02 EE 23. Display format: mode, then move to row 2 and pick NORM / SCI / ENG, enter, clear. Result then shows in that format.",
+    "screen_notes": "Enter a number like 6.02 EE 23. Display format: mode, then move to row 2 and pick NORM / SCI / ENG, enter, clear. Result then shows in that format. EE is its own key: row 3, column 2 on the photo.",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
     "source_loc": "p.7 (Modes: NORM SCI ENG; note that EE is the shortcut key for scientific notation)",
     "verified": true
@@ -31,7 +31,7 @@
    "quadratic_direct": {
     "keys": [
      "2nd",
-     "poly-solv",
+     "cos",
      "enter",
      "a",
      "DOWN",
@@ -42,9 +42,9 @@
      "enter",
      "DOWN"
     ],
-    "screen_notes": "2nd poly-solv opens a menu (1: ax2+bx+c=0, 2: cubic). enter picks 1. Type a (screen shows a=), DOWN, b, DOWN, c (screen shows SOLVE at bottom right), enter, enter shows x1=; DOWN shows x2=. Negative numbers use the (-) key. Guide example 1,-2,2 gives x1=1+1i, x2=1-1i. For 165, -2.712, -0.0334 the guide shows no screen, so the two real roots are not shown by the guide (hand-checked: 0.024643 and -0.008213).",
+    "screen_notes": "poly-solv is 2nd + the cos key (legend printed above cos; photo). 2nd poly-solv opens a menu (1: ax2+bx+c=0, 2: cubic). enter picks 1. Type a (screen shows a=), DOWN, b, DOWN, c (screen shows SOLVE at bottom right), enter, enter shows x1=; DOWN shows x2=. Negative numbers use the (-) key. Guide example 1,-2,2 gives x1=1+1i, x2=1-1i. For 165, -2.712, -0.0334 the guide shows no screen, so the two real roots are not shown by the guide (hand-checked: 0.024643 and -0.008213). Screens (78-page edition p.58, same example 1,-2,2): menu \"POLY SOLVER 1: ax2+bx+c=0 / 2: ax3+bx2+cx+d=0\"; \"a=1\"; \"b=-2\"; \"c=2\" with SOLVE at bottom right; \"x1=1+1i\"; DOWN: \"x2=1-1i\"; DOWN: \"Store x1 / Store x2 / Quad(Ed.) f(x)?  NO YES\" (stores the polynomial to f(x) for the table); DOWN DOWN RIGHT enter: vertex-form screen with SOLVE AGAIN and QUIT. r toggles the format of the solutions.",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
-    "source_loc": "p.59-60 (Polynomial solver, quadratic example)",
+    "source_loc": "p.59-60 (Polynomial solver, quadratic example); 78-page edition p.58",
     "verified": true,
     "unverified_parts": [
      "numeric roots for 165/-2.712/-0.0334 not shown in guide"
@@ -53,43 +53,43 @@
    "numeric_solve": {
     "keys": [
      "2nd",
-     "num-solv",
+     "sin",
      "[left side]",
      "enter",
      "[right side]",
      "enter",
-     "[value for each variable, DOWN between]",
-     "[move to unknown on the SOLVE line with arrows]",
-     "enter"
+     "[edit stored value of the unknown = your starting guess]",
+     "[arrows: move to SOLVE: line, pick unknown]",
+     "enter",
+     "[SOLVE AGAIN = enter / QUIT]"
     ],
-    "screen_notes": "2nd num-solv asks for the equation (max 40 characters): type the left side, enter, type the right side, enter. A variable-values screen lists every letter in the equation; fill the knowns with DOWN between them; a SOLVE: line picks the unknown (guide example: SOLVE: x>b, then enter). The answer screen shows the variable and a Left-Right line (how far the two sides are apart at the answer; near 0 is good). Letters come from the x y z t / a b c d key (press repeatedly). Guide says: if variables are already stored the solver uses those values. Errors \"No sign change Change guess\" / \"Max Iterations Change guess\" show a guess matters. The guide NEVER says that the unknown's value is the starting guess, and shows NO lower/upper bound prompt -> seed mechanism and bounds are UNVERIFIED. Cluck wording: \"type a guess first if it asks\".",
-    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
-    "source_loc": "p.58-59 (Numeric equation solver); p.76-77 (error messages)",
+    "screen_notes": "num-solv is 2nd + the sin key (legend printed above sin). Type left side, enter, type right side, enter (guide p.58). The input screen reads \"ENTER AND SOLVE / X=0.8 / SOLVE: X\": every variable shows its stored value and the value you edit for the unknown IS the starting guess (video still; the person says the answer is \"closer to this number\"). Press enter to solve. Answer screen reads \"SOLUTION / X=2.607737541 / L - R =0\" with options SOLVE AGAIN and QUIT: L - R near 0 = good; use SOLVE AGAIN with a new guess to look for the other root (the photo's notebook shows both 2.607 and 3.169; how the second guess is typed is not shown: UNVERIFIED). Real example screen shows RAD and ENG: a reminder to check mode first. No lower/upper bound prompt is shown anywhere: bounds UNVERIFIED/none. Guide p.58-59 and error text \"Change guess\" agree. Both guide editions: no lower/upper bound field in the solver (LOWERbnd/UPPERbnd appear only for normalcdf); the SOLVE AGAIN / QUIT soft options appear on the SOLUTION screen but neither guide explains them in words. Num-solv example screens (p.57 of the 78-page edition): input screen ENTER AND SOLVE with a list of variable values and a SOLVE: line; solution screen SOLUTION / b=6.208333333 / L - R = 3.33E-10 / SOLVE AGAIN QUIT.",
+    "source_url": "Tony video still 2026-11-06 (f87d534a-image.png) ; Tony photo 2026-11-06 (39f9cf97-image.jpg) ; https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
+    "source_loc": "still: ENTER AND SOLVE screen; solution photo; guidebook p.58-59",
     "verified": true,
     "unverified_parts": [
-     "seed = unknown's stored value",
-     "lower/upper bounds",
-     "exact arrow count to choose the unknown"
+     "how SOLVE AGAIN takes the second guess",
+     "lower/upper bounds (none shown)"
     ]
    },
    "store_recall": {
     "keys": [
      "[value]",
      "sto->",
-     "x y z t a b c d (press until the letter shows)",
+     "x yzt abcd (press until the letter shows)",
      "enter"
     ],
-    "screen_notes": "Store: 15 sto-> x y z t a b c d (press that key until x shows), enter; screen shows 15->x. Recall: 2nd recall, pick the variable, enter (value goes into your entry); or press the x y z t a b c d key to insert the name. 8 variables: x y z t a b c d. Ans: press 2nd answer (key shown as [answer] in the guide), or start with an operator and ans is put in front. Clear all variables: 2nd clear var, 1:Yes.",
+    "screen_notes": "Store: 15 sto-> x y z t a b c d (press that key until x shows), enter; screen shows 15->x. Recall: 2nd recall, pick the variable, enter (value goes into your entry); or press the x y z t a b c d key to insert the name. 8 variables: x y z t a b c d. Ans: press 2nd answer (key shown as [answer] in the guide), or start with an operator and ans is put in front. Clear all variables: 2nd clear var, 1:Yes. Keys from photo: recall = 2nd + sto->; clear var = 2nd + x yzt abcd; answer = 2nd + (-).",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
-    "source_loc": "p.33-34 (Memory and stored variables); p.11 (Last answer)",
+    "source_loc": "p.33-34 (Memory and stored variables); p.11 (Last answer); legends Tony photo 2026-11-06 (55c02456-image.jpg)",
     "verified": true
    },
    "ans_chain": {
     "keys": [
      "2nd",
-     "answer"
+     "(-)"
     ],
-    "screen_notes": "Last entry result is stored in ans. Pressing an operator key first (+, -, x ...) puts ans in front automatically.",
+    "screen_notes": "The legend \"answer\" is printed above the (-) key, so answer = 2nd + (-). Last entry result is stored in ans. Pressing an operator key first (+, -, x ...) puts ans in front automatically.",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
     "source_loc": "p.11 (Last answer)",
     "verified": true
@@ -97,13 +97,13 @@
    "constants": {
     "keys": [
      "2nd",
-     "constants",
+     "(",
      "[scroll/pick]",
      "enter"
     ],
-    "screen_notes": "NAMES/UNITS menus list 20 constants: c, g, h, NA, R, me, mp, mn, mmu, G, F, a0, re, k, e, u, atm, eps0, mu0, Cc. Screen shows 1: c Speed Light, 2: g GravityAccel, 3: h Planck Const, so g is item 2 (menu numbers beyond the first 3 are not shown by the guide; scroll with UP/DOWN). g = 9.80665 m/s2, G = 6.6743e-11, R = 8.314462618, k = 1.380649e-23, NA = 6.02214076e23. NO Stefan-Boltzmann sigma in this list.",
-    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
-    "source_loc": "p.67-68 (Constants)",
+    "screen_notes": "constants = 2nd + the ( key (legend above it; photo). NAMES/UNITS menus list 20 constants: c, g, h, NA, R, me, mp, mn, mmu, G, F, a0, re, k, e, u, atm, eps0, mu0, Cc. Screen shows 1: c Speed Light, 2: g GravityAccel, 3: h Planck Const, so g is item 2 (menu numbers beyond the first 3 are not shown by the guide; scroll with UP/DOWN). g = 9.80665 m/s2, G = 6.6743e-11, R = 8.314462618, k = 1.380649e-23, NA = 6.02214076e23. NO Stefan-Boltzmann sigma in this list. Constants menu order (guide table, both editions): c, g, h, NA, R, me, mp, mn, mmu, G, F, a0, re, k, e, u, atm, eps0, mu0, Cc. Only items 1-3 (c, g, h) are shown with numbers on a screen (g = 2); the others follow the table order (NA 4, R 5, G 10, k 14, atm 17) = inferred, so pick by scrolling and reading the name. sigma (Stefan-Boltzmann) is NOT in the list. Values differ by edition: 83-page guide g=9.80665, G=6.6743e-11, R=8.314462618, k=1.380649e-23, NA=6.02214076e23; 78-page guide G=6.67428e-11, R=8.314472, k=1.3806504e-23, NA=6.02214179e23.",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf ; Tony-uploaded TI-36X Pro Guidebook EN (78 pp, older edition: printed page = PDF page - 1; CODATA 2006 constants)",
+    "source_loc": "p.67-68 (Constants); 78-page edition p.64-65",
     "verified": true,
     "unverified_parts": [
      "menu index numbers other than c=1,g=2,h=3"
@@ -112,12 +112,12 @@
    "conversions": {
     "keys": [
      "2nd",
-     "convert",
+     "8",
      "2",
      "[pick F>C or C>F]",
      "enter"
     ],
-    "screen_notes": "Menu: 1 English-Metric, 2 Temperature, 3 Speed and Length, 4 Pressure, 5 Power and Energy. Temperature list: F>C, C>F, C>K, K>C (guide shows the list, not item numbers).",
+    "screen_notes": "convert = 2nd + the 8 key (photo). Then 2 = Temperature. Menu: 1 English-Metric, 2 Temperature, 3 Speed and Length, 4 Pressure, 5 Power and Energy. Temperature list: F>C, C>F, C>K, K>C (item numbers not shown). 78-page edition p.66-67 says the same: 2nd 8, press 1-5 or scroll to a submenu, Temperature is 2; the F>C item number is not shown on any screen in either guide.",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
     "source_loc": "p.68-70 (Conversions)",
     "verified": true
@@ -125,10 +125,10 @@
    "reset": {
     "keys": [
      "2nd",
-     "reset",
+     "0",
      "2"
     ],
-    "screen_notes": "Resets to default settings; clears memory variables, history, ans, stats, stored operation. Guide prints \"2nd reset 2\" (the \"2\" answers the confirm prompt; the prompt screen is not shown). Variables only: 2nd clear var, 1.",
+    "screen_notes": "reset = 2nd + the 0 key (legend above 0; photo); then 2 as printed in the guide (confirm screen not shown). Variables only: 2nd + x yzt abcd (clear var), then 1.",
     "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
     "source_loc": "p.14 (Clearing and correcting)",
     "verified": true,
@@ -147,6 +147,76 @@
   "routines": {
    "R1": "Solve One Equation",
    "R2": "Store Don't Retype"
+  },
+  "constants_map": {
+   "g": {
+    "keys": [
+     "2nd",
+     "(",
+     "2",
+     "enter"
+    ],
+    "screen_notes": "Item 2 on the NAMES menu (screen shows 1: c Speed Light, 2: g GravityAccel, 3: h Planck Const). 9.80665 m/s2.",
+    "verified": true,
+    "source_loc": "guide p.67 screen; p.68 table",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf"
+   },
+   "sigma": {
+    "keys": [],
+    "screen_notes": "NOT AVAILABLE: no Stefan-Boltzmann constant in the 20-constant list. Store 5.670374e-8 yourself (sto->), typed with EE.",
+    "verified": true,
+    "source_loc": "constants table (both editions)",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf",
+    "available": false
+   },
+   "R": {
+    "keys": [
+     "2nd",
+     "(",
+     "[scroll to R]",
+     "enter"
+    ],
+    "screen_notes": "R ideal gas constant: 5th in the table order (inferred item number); scroll and check the name.",
+    "verified": false,
+    "source_loc": "guide p.67-68; 78-page edition p.64-65; photo legend",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf ; Tony-uploaded TI-36X Pro Guidebook EN (78 pp, older edition: printed page = PDF page - 1; CODATA 2006 constants)"
+   },
+   "k": {
+    "keys": [
+     "2nd",
+     "(",
+     "[scroll to k]",
+     "enter"
+    ],
+    "screen_notes": "k Boltzmann: 14th in the table order (inferred); scroll and check the name.",
+    "verified": false,
+    "source_loc": "guide p.67-68; 78-page edition p.64-65; photo legend",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf ; Tony-uploaded TI-36X Pro Guidebook EN (78 pp, older edition: printed page = PDF page - 1; CODATA 2006 constants)"
+   },
+   "N_A": {
+    "keys": [
+     "2nd",
+     "(",
+     "[scroll to NA]",
+     "enter"
+    ],
+    "screen_notes": "NA Avogadro: 4th in the table order (inferred); scroll and check the name.",
+    "verified": false,
+    "source_loc": "guide p.67-68; 78-page edition p.64-65; photo legend",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf ; Tony-uploaded TI-36X Pro Guidebook EN (78 pp, older edition: printed page = PDF page - 1; CODATA 2006 constants)"
+   },
+   "atm": {
+    "keys": [
+     "2nd",
+     "(",
+     "[scroll to atm]",
+     "enter"
+    ],
+    "screen_notes": "atm standard atmosphere: 17th in the table order (inferred); scroll and check the name.",
+    "verified": false,
+    "source_loc": "guide p.67-68; 78-page edition p.64-65; photo legend",
+    "source_url": "https://education.ti.com/download/en/ed-tech/858D1A4A484E493DBA150F4F3BD1DC9D/86DCDB61D56D40F79E597C4AEEDD24AD/TI-36XPro_Guidebook_EN.pdf ; Tony-uploaded TI-36X Pro Guidebook EN (78 pp, older edition: printed page = PDF page - 1; CODATA 2006 constants)"
+   }
   }
  },
  "ti30xsmv": {
@@ -250,6 +320,56 @@
   "routines": {
    "R1": "Store, Then Formula",
    "R2": "Store Don't Retype"
+  },
+  "constants_map": {
+   "g": {
+    "keys": [],
+    "screen_notes": "No physics constants menu on this model (its \"Constant\" feature is K, a repeated operation). Store the value in a letter.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "sigma": {
+    "keys": [],
+    "screen_notes": "No physics constants menu on this model (its \"Constant\" feature is K, a repeated operation). Store the value in a letter.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "R": {
+    "keys": [],
+    "screen_notes": "No physics constants menu on this model (its \"Constant\" feature is K, a repeated operation). Store the value in a letter.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "k": {
+    "keys": [],
+    "screen_notes": "No physics constants menu on this model (its \"Constant\" feature is K, a repeated operation). Store the value in a letter.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "N_A": {
+    "keys": [],
+    "screen_notes": "No physics constants menu on this model (its \"Constant\" feature is K, a repeated operation). Store the value in a letter.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "atm": {
+    "keys": [],
+    "screen_notes": "No physics constants menu on this model (its \"Constant\" feature is K, a repeated operation). Store the value in a letter.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   }
   }
  },
  "fx115esplus": {
@@ -378,6 +498,80 @@
   "routines": {
    "R1": "Solve One Equation",
    "R2": "Store Don't Retype"
+  },
+  "constants_map": {
+   "g": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "3",
+     "5"
+    ],
+    "screen_notes": "Prompt shows \"CONSTANT Number 01~40? [__]\"; type the two digits. g: standard acceleration of gravity. In a calculation the constant appears as its symbol; press = alone to see its value.",
+    "verified": true,
+    "source_loc": "Scientific Constants; Tony screenshots of Casio support page (casio-const-howto.png, casio-const-list.jpg)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-115ESPLUS_991ESPLUSC_en/function_calculations/scientific_constants.html"
+   },
+   "sigma": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "3",
+     "1"
+    ],
+    "screen_notes": "Prompt shows \"CONSTANT Number 01~40? [__]\"; type the two digits. sigma: Stefan-Boltzmann constant. In a calculation the constant appears as its symbol; press = alone to see its value.",
+    "verified": true,
+    "source_loc": "Scientific Constants; Tony screenshots of Casio support page (casio-const-howto.png, casio-const-list.jpg)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-115ESPLUS_991ESPLUSC_en/function_calculations/scientific_constants.html"
+   },
+   "R": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "2",
+     "7"
+    ],
+    "screen_notes": "Prompt shows \"CONSTANT Number 01~40? [__]\"; type the two digits. R: molar gas constant. In a calculation the constant appears as its symbol; press = alone to see its value.",
+    "verified": true,
+    "source_loc": "Scientific Constants; Tony screenshots of Casio support page (casio-const-howto.png, casio-const-list.jpg)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-115ESPLUS_991ESPLUSC_en/function_calculations/scientific_constants.html"
+   },
+   "k": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "2",
+     "5"
+    ],
+    "screen_notes": "Prompt shows \"CONSTANT Number 01~40? [__]\"; type the two digits. k: Boltzmann constant. In a calculation the constant appears as its symbol; press = alone to see its value.",
+    "verified": true,
+    "source_loc": "Scientific Constants; Tony screenshots of Casio support page (casio-const-howto.png, casio-const-list.jpg)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-115ESPLUS_991ESPLUSC_en/function_calculations/scientific_constants.html"
+   },
+   "N_A": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "2",
+     "4"
+    ],
+    "screen_notes": "Prompt shows \"CONSTANT Number 01~40? [__]\"; type the two digits. NA: Avogadro constant. In a calculation the constant appears as its symbol; press = alone to see its value.",
+    "verified": true,
+    "source_loc": "Scientific Constants; Tony screenshots of Casio support page (casio-const-howto.png, casio-const-list.jpg)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-115ESPLUS_991ESPLUSC_en/function_calculations/scientific_constants.html"
+   },
+   "atm": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "4",
+     "0"
+    ],
+    "screen_notes": "Prompt shows \"CONSTANT Number 01~40? [__]\"; type the two digits. atm: standard atmosphere. In a calculation the constant appears as its symbol; press = alone to see its value.",
+    "verified": true,
+    "source_loc": "Scientific Constants; Tony screenshots of Casio support page (casio-const-howto.png, casio-const-list.jpg)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-115ESPLUS_991ESPLUSC_en/function_calculations/scientific_constants.html"
+   }
   }
  },
  "fx300esplus": {
@@ -477,6 +671,56 @@
   "routines": {
    "R1": "Store, Then Formula",
    "R2": "Store Don't Retype"
+  },
+  "constants_map": {
+   "g": {
+    "keys": [],
+    "screen_notes": "No CONST menu in the fx-300ES PLUS manual.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "sigma": {
+    "keys": [],
+    "screen_notes": "No CONST menu in the fx-300ES PLUS manual.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "R": {
+    "keys": [],
+    "screen_notes": "No CONST menu in the fx-300ES PLUS manual.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "k": {
+    "keys": [],
+    "screen_notes": "No CONST menu in the fx-300ES PLUS manual.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "N_A": {
+    "keys": [],
+    "screen_notes": "No CONST menu in the fx-300ES PLUS manual.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   },
+   "atm": {
+    "keys": [],
+    "screen_notes": "No CONST menu in the fx-300ES PLUS manual.",
+    "verified": true,
+    "source_loc": "table of contents",
+    "source_url": "",
+    "available": false
+   }
   }
  },
  "fx991cw": {
@@ -624,82 +868,324 @@
   "routines": {
    "R1": "Solve One Equation",
    "R2": "Store Don't Retype"
+  },
+  "constants_map": {
+   "g": {
+    "keys": [
+     "TOOLS",
+     "[Sci Constants]",
+     "OK",
+     "[Adopted Values]",
+     "OK",
+     "[constant]",
+     "OK",
+     "EXE"
+    ],
+    "screen_notes": "listed as gn (standard gravity). Pick the constant from the list on screen.",
+    "verified": true,
+    "source_loc": "Scientific Constants (menu names)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-570CW_991CW_en/advanced_calculations/scientific_constants.html"
+   },
+   "sigma": {
+    "keys": [
+     "TOOLS",
+     "[Sci Constants]",
+     "OK",
+     "[Physico-Chem]",
+     "OK",
+     "[constant]",
+     "OK",
+     "EXE"
+    ],
+    "screen_notes": "sigma. Pick the constant from the list on screen.",
+    "verified": true,
+    "source_loc": "Scientific Constants (menu names)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-570CW_991CW_en/advanced_calculations/scientific_constants.html"
+   },
+   "R": {
+    "keys": [
+     "TOOLS",
+     "[Sci Constants]",
+     "OK",
+     "[Physico-Chem]",
+     "OK",
+     "[constant]",
+     "OK",
+     "EXE"
+    ],
+    "screen_notes": "R. Pick the constant from the list on screen.",
+    "verified": true,
+    "source_loc": "Scientific Constants (menu names)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-570CW_991CW_en/advanced_calculations/scientific_constants.html"
+   },
+   "k": {
+    "keys": [
+     "TOOLS",
+     "[Sci Constants]",
+     "OK",
+     "[Physico-Chem]",
+     "OK",
+     "[constant]",
+     "OK",
+     "EXE"
+    ],
+    "screen_notes": "k. Pick the constant from the list on screen.",
+    "verified": true,
+    "source_loc": "Scientific Constants (menu names)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-570CW_991CW_en/advanced_calculations/scientific_constants.html"
+   },
+   "N_A": {
+    "keys": [
+     "TOOLS",
+     "[Sci Constants]",
+     "OK",
+     "[Physico-Chem]",
+     "OK",
+     "[constant]",
+     "OK",
+     "EXE"
+    ],
+    "screen_notes": "NA. Pick the constant from the list on screen.",
+    "verified": true,
+    "source_loc": "Scientific Constants (menu names)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-570CW_991CW_en/advanced_calculations/scientific_constants.html"
+   },
+   "atm": {
+    "keys": [
+     "TOOLS",
+     "[Sci Constants]",
+     "OK",
+     "[Adopted Values]",
+     "OK",
+     "[constant]",
+     "OK",
+     "EXE"
+    ],
+    "screen_notes": "atm. Pick the constant from the list on screen.",
+    "verified": true,
+    "source_loc": "Scientific Constants (menu names)",
+    "source_url": "https://support.casio.com/global/en/calc/manual/fx-570CW_991CW_en/advanced_calculations/scientific_constants.html"
+   }
   }
  },
  "fx991ex": {
   "name": "Casio fx-991EX ClassWiz",
   "aliases": [
-   "fx-570EX"
+   "fx-570EX",
+   "ClassWiz fx-991EX"
   ],
   "class_": "non-graphing scientific",
   "tasks": {
    "degree_mode": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "SHIFT",
+     "MENU",
+     "[Angle Unit item number shown at its left on the setup screen]",
+     "1"
+    ],
+    "screen_notes": "SHIFT MENU (SETUP) opens the setup menu; scroll with DOWN/UP and press the number shown to the left of the item; Angle Unit options 1 Degree (default), 2 Radian, 3 Gradian. Item number is on the screen, not in the text, so we do not hard-code it.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.6 (Configuring the Calculator Setup)",
+    "verified": true,
+    "unverified_parts": [
+     "item number of Angle Unit"
+    ]
    },
    "sci_notation": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "x10^x"
+    ],
+    "screen_notes": "Entry key: the key printed x10^x (SHIFT + that key = pi, shown in the guide p.14 with the key icon). The guide shows the key but no worked \"6.02 x10^x 23\" example, so entry usage is by key label only. Display: SHIFT MENU (SETUP), Number Format, then 1 Fix / 2 Sci / 3 Norm (Norm 1 or 2); Sci takes 0-9 digits. Engineering display: ENG key (p.12).",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.6-7 (Number Format); p.14 (key icon x10^x); p.12",
+    "verified": true,
+    "unverified_parts": [
+     "worked entry example",
+     "Number Format item number"
+    ]
    },
    "quadratic_direct": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "MENU",
+     "[Equation/Func icon]",
+     "=",
+     "2",
+     "2",
+     "a",
+     "=",
+     "b",
+     "=",
+     "c",
+     "=",
+     "="
+    ],
+    "screen_notes": "MENU, pick the Equation/Func icon, =. Press 2 (Polynomial), then 2 for degree 2. Type each coefficient then =; negatives use the (-) key. Guide example 2x2+x-3=0 is 2 = 1 = (-) 3 =. Then press = to see the solution(s). How the second root is scrolled was on the next page (not read).",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.24 (Equation Calculations)",
+    "verified": true,
+    "unverified_parts": [
+     "how to reach root 2"
+    ]
    },
    "numeric_solve": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "[equation: ALPHA letters, ALPHA CALC for =]",
+     "SHIFT",
+     "CALC",
+     "[initial value of x]",
+     "=",
+     "[values for other letters: number then =]",
+     "UP (move highlight to the unknown)",
+     "="
+    ],
+    "screen_notes": "Guide example x2 + B = 0, B = -2: type ALPHA ) (x), x2, +, ALPHA (-)(B), ALPHA CALC (=), 0. Press SHIFT CALC (SOLVE). Screen lists the letters with values: type an initial value for x (guide: 1 =), assign B (-) 2 =, move the highlight to x with UP, press =. Answer screen: x= 1.414213562 and L-R= 0 (Left Side - Right Side; closer to 0 = better). The initial value of x IS the starting guess; change it if no answer or to reach another root: SOLVE returns only ONE solution (Newton method). A \"Continue:[=]\" screen can appear (= continue, AC cancel). Use linear input while solving. SOLVE works in Calculate mode only.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.19-20 (Using SOLVE)",
+    "verified": true
    },
    "store_recall": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "[value]",
+     "=",
+     "STO",
+     "(-)"
+    ],
+    "screen_notes": "Store: do the calculation, press STO and the letter key (A = (-) key); guide: 3 + 5 then STO (-)(A) gives 8. Use in an expression: ALPHA then the letter key. Recall: SHIFT STO (RECALL) lists A B C D E F M x y; or RCL-style: SHIFT STO then the letter key. Letters: A B C D E F M x y (no z). x can also be the x key. M: M+ key adds to M.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.13 (Using Memory Functions)",
+    "verified": true
    },
    "ans_chain": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "Ans"
+    ],
+    "screen_notes": "Ans key puts the last result in; starting with an operator also uses it: 14 x 13 = then / 7 =. Guide: 789 - Ans = 210.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.13 (Answer Memory)",
+    "verified": true
    },
    "constants": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "SHIFT",
+     "7",
+     "[category]",
+     "[item]"
+    ],
+    "screen_notes": "SHIFT 7 (CONST), then category: 1 Universal, 2 Electromagnetic, 3 Atomic&Nuclear, 4 Physico-Chem (more below: Adopted Values, Other). Universal screen shows 1:h 2:hbar 3:c0 4:eps0 5:mu0 6:Z0 7:G 8:lP 9:tP, so G = SHIFT 7, 1, 7 (guide shows c0 as 1,3 then =). Physico-Chem order: u, F, NA, k, Vm, R, c1, c2, sigma. Adopted Values: g (gn), atm, RK-90, KJ-90. Item numbers beyond the Universal screen are by list order on the reference sheet and are not shown on screen in the guide: UNVERIFIED, so read the number off the screen. 47 constants, CODATA 2010.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.37 (Scientific Constants); p.44 reference sheet",
+    "verified": false,
+    "unverified_parts": [
+     "item numbers for g, sigma, k, R, NA; category numbers 5 and 6"
+    ]
    },
    "conversions": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "[value]",
+     "SHIFT",
+     "8",
+     "[Temperature category: scroll to the last]",
+     "[pick F>C or C>F]",
+     "="
+    ],
+    "screen_notes": "SHIFT 8 (CONV) opens categories: 1 Length, 2 Area, 3 Volume, 4 Mass ... Temperature (F>C, C>F) is the last category on the reference sheet. The guide example converts 5 cm: AC 5 SHIFT 8 (CONV) 1 (Length) 2 (cm>in) =.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.37; p.44 reference sheet (Temperature: F>C, C>F)",
+    "verified": false,
+    "unverified_parts": [
+     "category and item numbers for temperature"
+    ]
    },
    "reset": {
-    "keys": [],
-    "screen_notes": "Official fx-991EX guide could not be fetched (support.casio.com PDF 404, edu.casio.com 403). The fx-570ES/991ES guide I found is a different model and was NOT used. (UNVERIFIED: no official source retrieved; keys left empty)",
-    "source_url": "",
-    "source_loc": "",
-    "verified": false
+    "keys": [
+     "SHIFT",
+     "9",
+     "3",
+     "="
+    ],
+    "screen_notes": "SHIFT 9 (RESET) 3 (Initialize All) = (Yes): default settings (not contrast) and clears memory. Setup only: SHIFT 9 1 =. Memory only: SHIFT 9 2 (Memory) =.",
+    "source_url": "Tony-supplied official Casio fx-570EX/fx-991EX User's Guide (46 pp, SA1412-A, file 5fa1145e-fx-570_991EX_EN1.pdf)",
+    "source_loc": "p.2 (Initializing); p.7; p.14",
+    "verified": true
    }
   },
   "routines": {
    "R1": "Solve One Equation",
    "R2": "Store Don't Retype"
+  },
+  "constants_map": {
+   "g": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "Adopted Values (scroll below 4)",
+     "[item]"
+    ],
+    "screen_notes": "g is listed first in Adopted Values (g, atm, RK-90, KJ-90); item numbers and the category number for Adopted Values are not shown by the guide.",
+    "verified": false,
+    "source_loc": "p.37; p.44",
+    "source_url": "Tony-supplied official fx-570EX/991EX guide, p.37 and p.44 reference sheet"
+   },
+   "sigma": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "4 (Physico-Chem)",
+     "[item]"
+    ],
+    "screen_notes": "Order: u, F, NA, k, Vm, R, c1, c2, sigma (sigma last = item 9 by list order, not shown on a screen).",
+    "verified": false,
+    "source_loc": "p.37; p.44",
+    "source_url": "Tony-supplied official fx-570EX/991EX guide, p.37 and p.44 reference sheet"
+   },
+   "R": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "4 (Physico-Chem)",
+     "[item]"
+    ],
+    "screen_notes": "R is 6th by list order (not shown on a screen).",
+    "verified": false,
+    "source_loc": "p.37; p.44",
+    "source_url": "Tony-supplied official fx-570EX/991EX guide, p.37 and p.44 reference sheet"
+   },
+   "k": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "4 (Physico-Chem)",
+     "[item]"
+    ],
+    "screen_notes": "k is 4th by list order (not shown on a screen).",
+    "verified": false,
+    "source_loc": "p.37; p.44",
+    "source_url": "Tony-supplied official fx-570EX/991EX guide, p.37 and p.44 reference sheet"
+   },
+   "N_A": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "4 (Physico-Chem)",
+     "[item]"
+    ],
+    "screen_notes": "NA is 3rd by list order (not shown on a screen).",
+    "verified": false,
+    "source_loc": "p.37; p.44",
+    "source_url": "Tony-supplied official fx-570EX/991EX guide, p.37 and p.44 reference sheet"
+   },
+   "atm": {
+    "keys": [
+     "SHIFT",
+     "7",
+     "Adopted Values (scroll below 4)",
+     "[item]"
+    ],
+    "screen_notes": "atm is 2nd in Adopted Values by list order.",
+    "verified": false,
+    "source_loc": "p.37; p.44",
+    "source_url": "Tony-supplied official fx-570EX/991EX guide, p.37 and p.44 reference sheet"
+   }
   }
  },
  "appendix_graphing": {

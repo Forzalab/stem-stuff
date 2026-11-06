@@ -21,7 +21,7 @@ test("schema: catches a step with no press, a missing screen_verified flag and a
 });
 test("only verified shown: a model with no source = nothing (check your manual); a step sourced UNVERIFIED is a hidden stub", () => {
   const d = data();
-  assert.equal(CC.shownSteps(d, "fx991ex", "R1"), null, "fx-991EX has no verified source");
+  assert.ok(CC.shownSteps(d, "fx991ex", "R1").length >= 3, "fx-991EX shows its verified steps now");
   assert.equal(CC.shownSteps(d, "nomodel", "R1"), null);
   const steps = CC.shownSteps(d, "ti36xpro", "R1"); assert.ok(steps.length >= 7); assert.ok(steps.every(s => !s.hidden && s.press.length));
   d.steps.ti36xpro.R1_alt_quadratic_direct = d.steps.ti36xpro.R1_solve_one_equation__energy_for_d; d.steps.ti36xpro.R1_solve_one_equation__energy_for_d[1].source_loc = "key positions: UNVERIFIED";

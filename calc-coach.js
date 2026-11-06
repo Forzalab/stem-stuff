@@ -230,12 +230,20 @@
   /* ---- cram panel (the Hail Mary card; data per bank in calc/cram.json) ---- */
   function cramFor(bank) { var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && FLAGS.hailMary && Date.now() < Date.parse(e.until) ? e : null; }
   function loadCram() { return CRAM ? Promise.resolve(CRAM) : g.fetch('calc/cram.json').then(function (r) { return r.json(); }).then(function (j) { CRAM = j; return j; }); }
+  var ICON = { approx: ['M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0', 'M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0'], x: ['M6 6l12 12M18 6L6 18'], bars: ['M4 20v-5M8 20v-9M12 20v-4M16 20v-12M20 20v-7'], dot: [] };
+  function icon(name) {
+    var s = d.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'cc-ic');
+    s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', '2'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+    (ICON[name] || []).forEach(function (p) { var e = d.createElementNS(NS, 'path'); e.setAttribute('d', p); s.appendChild(e); });
+    if (name === 'dot') { var c = d.createElementNS(NS, 'circle'); c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '6'); c.setAttribute('fill', 'currentColor'); s.appendChild(c); }
+    return s;
+  }
   function buildCram(host, e, onClose) {
     var root = h('section', 'cc'); root.setAttribute('data-theme', 'dark'); root.setAttribute('aria-label', e.title); host.appendChild(root);
     var hd = h('div', 'cc-hd'); hd.append(h('h2', 'cc-t', e.title));
     if (onClose) { var x = h('button', 'cc-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '×'; x.onclick = onClose; hd.append(x); }
     root.append(hd, h('p', 'cc-sub', e.intro));
-    e.cards.forEach(function (c, n) { var k = h('div', 'cc-card cc-static'); k.append(h('span', 'cc-n', String(n + 1)), h('span', 'cc-ct', c.t), h('span', 'cc-cw', c.b)); root.append(k); });
+    e.cards.forEach(function (c, n) { var k = h('div', 'cc-card cc-static'), bd = h('span', 'cc-n'); if (c.icon) bd.append(icon(c.icon)); else bd.textContent = String(n + 1); k.append(bd, h('span', 'cc-ct', c.t), h('span', 'cc-cw', c.b)); root.append(k); });
     root.append(h('p', 'cc-tag', e.odds));
     return root;
   }
@@ -252,10 +260,14 @@
   }
   var curBank = null;
   /* "Constants for this exam": per-bank rows in cram.json; the key path only where verified (Casio ES PLUS: SHIFT 7, two digits, =; TI-36X Pro: 2nd, (, g is item 2) */
+  /* the path comes from calc-keys.json constants_map (research); unverified or missing = "scroll to the symbol" */
+  var SYMKEY = { 'σ': 'sigma' };
   function constPath(m, r) {
-    if (m === 'fx115esplus' || m === 'fx300esplus') return r.casio ? 'SHIFT, 7, ' + r.casio + ', =' : 'SHIFT, 7, then the two-digit code';
-    if (m === 'ti36xpro') return r.ti === 'none' ? 'Not in this menu.' : r.ti ? '2nd, (, then item ' + r.ti : 'Open 2nd, ( and scroll to the symbol.';
-    if (m === 'ti30xsmv') return 'No constants menu. Type the value or store it.';
+    var map = DATA.keys[m] && DATA.keys[m].constants_map, e = map && map[SYMKEY[r.sym] || r.sym], tail = ' and scroll to the name.';
+    if (e && e.available === false) return e.screen_notes.replace(/^No (physics )?constants? menu on this model[^.]*\.\s*/i, 'No constants menu on this model. ').replace(/ \(its "Constant" feature[^)]*\)/, '');
+    if (m === 'ti36xpro') return r.sym === 'g' ? '2nd, (, then item 2' : r.sym === 'σ' ? 'Not in the list. Type 5.670374e-8 (use EE) and store it with sto→.' : 'Open 2nd, (' + tail;
+    if (m === 'fx115esplus') return 'SHIFT, 7, ' + r.casio + ', =';
+    if (e && e.verified && e.keys && e.keys.length) return e.keys.map(function (k) { return k.replace(/^\[(.*)\]$/, '$1'); }).join(', ');
     return 'Open the CONST menu (SHIFT 7) and scroll to the symbol.';
   }
   function constantsFor(bank) { var e = cramFor(bank); return e && e.constants || null; }

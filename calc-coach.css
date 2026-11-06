@@ -69,3 +69,4 @@
 .cc-key.on .cc-2 { fill: var(--cc-hi-ink); }
 .cc-sym { font-size: var(--t-sm); white-space: nowrap; width: 2.4rem; height: 2.4rem; border-radius: 10px; }
 .cc-const { grid-template-columns: 2.6rem 1fr; min-height: 56px; padding: var(--s2) var(--s3); }
+.cc-ic { width: 24px; height: 24px; }
