@@ -12,6 +12,8 @@
 .ch.strip, .chk.strip, .choices.strip { position: relative; z-index: 1; }
 .choices.vd-host, .chk.vd-host { position: relative; }   /* a choices list lifts above its tray (z needs a positioned box) */
 .vd-host { z-index: 3 !important; }   /* the host of the OPEN drawer (strip.js): bar 3 > drawer 2 > every other host and later row 1 (Tony, Nov 3 19:31: the tray may lie over them; a stale host used to paint over it) */   /* B2: a single mc's picked row, pick-all's Check row, an inline pill group: the host of an open drawer lifts (bar > drawer 2 > later content, even a later row's Next at z 1) */
+/* a single mc's tray hangs flush from the last option card: while it is open that card's bottom corners are square, so the card's edge runs straight into the tray's sides (rounded corners left a dark notch at the seam; Tony, Nov 6) */
+.choices.vd-host:not(.all, .inline) > .ch:last-child .opt { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .ff.strip.bad { background: var(--wrong-fill); }
 .ff.strip.ok { background: var(--correct-fill); }
 /* the verdict icon is the way back to the drawer (STYLE §3: "the verdict icon reopens it") */
