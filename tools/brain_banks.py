@@ -10,13 +10,15 @@ exit: 0 ok, 3 no BRAIN_TOKEN (skipped), 1 error (bad token, network, a file that
 Pins: $SHIP_PINS="BANK_P3X@cd581738[,BANK_Y22@sha]" fetches that bank at that brain commit (ref=<sha>) instead of main; every other bank
   stays at main. A pinned name that is not in the brain at that sha = error, nothing is written. --check-pins only validates SPEC.
 env: BRAIN_TOKEN (GitLab token with read_api; from stem-stuff/.env), BRAIN_API (default https://gitlab.com/api/v4),
-  BRAIN_PROJECT (default Forzalab-bravo/brain), BRAIN_REF (default main).
+  BRAIN_PROJECT (default Forzalab-bravo/brain), BRAIN_REF (default main),
+  SHIP_BACKOFF_SCALE (default 1; 0 = no waiting between GitLab 429/5xx retries, for tests).
 The token goes in one header, only to BRAIN_API's host, never across a redirect, and is never printed."""
 import datetime
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -50,18 +52,32 @@ def parse_pins(spec):
     return pins
 
 
+RETRIES = (10, 30, 60)   # seconds before retry 1, 2, 3 when GitLab sends no Retry-After; max 3 retries
+RETRY_CAP = 90           # a Retry-After longer than this is cut to it
+SCALE = float(os.environ.get("SHIP_BACKOFF_SCALE", "1"))   # tests set 0: no real sleeping
+
+
 def get(endpoint, token, **query):   # not "path": GitLab's own query field is called path
     url = f"{API}/projects/{PROJECT}/{endpoint}" + ("?" + urllib.parse.urlencode(query) if query else "")
-    req = urllib.request.Request(url)
-    req.add_unredirected_header("PRIVATE-TOKEN", token)   # not re-sent if GitLab redirects elsewhere
-    try:
-        return urllib.request.urlopen(req, timeout=20)
-    except urllib.error.HTTPError as e:
-        if e.code in (401, 403):
-            raise Fail("BRAIN_TOKEN rejected (it needs read_api on the brain project)") from None
-        raise Fail(f"GitLab answered {e.code} for {endpoint}") from None
-    except OSError as e:
-        raise Fail(f"GitLab unreachable: {getattr(e, 'reason', e)}") from None
+    for attempt in range(len(RETRIES) + 1):
+        req = urllib.request.Request(url)
+        req.add_unredirected_header("PRIVATE-TOKEN", token)   # not re-sent if GitLab redirects elsewhere
+        try:
+            return urllib.request.urlopen(req, timeout=20)
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                raise Fail("BRAIN_TOKEN rejected (it needs read_api on the brain project)") from None
+            if (e.code == 429 or e.code >= 500) and attempt < len(RETRIES):
+                try:
+                    wait = min(max(float(e.headers.get("Retry-After", "")), 0), RETRY_CAP)
+                except (TypeError, ValueError):
+                    wait = RETRIES[attempt]
+                print(f"brain: GitLab answered {e.code} for {endpoint}, retry {attempt + 1}/{len(RETRIES)} in {wait * SCALE:g}s", file=sys.stderr)
+                time.sleep(wait * SCALE)
+                continue
+            raise Fail(f"GitLab answered {e.code} for {endpoint}") from None
+        except OSError as e:
+            raise Fail(f"GitLab unreachable: {getattr(e, 'reason', e)}") from None
 
 
 def bank_paths(token, ref=None):
