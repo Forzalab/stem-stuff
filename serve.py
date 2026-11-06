@@ -2637,6 +2637,19 @@ def _read_prompt_v4():
 
 
 PROMPT_V4 = _read_prompt_v4()
+
+
+def _read_style_v4():
+    """prompts/cluck-style.txt: the style card + good/bad pairs + two whole replies (PERMANENT, every bank; no expiry). "" when missing."""
+    try:
+        with open(os.path.join(ROOT, "prompts", "cluck-style.txt"), encoding="utf-8", newline="") as f:
+            return f.read().strip()
+    except OSError as e:
+        log("prompts/cluck-style.txt missing:", e)
+        return ""
+
+
+STYLE_V4 = _read_style_v4()
 V4_MAX = 700                                 # the bench's max_tokens (the XYZ notes spend some of it)
 WISH_QUERY = "hi cluck <3"                   # the USER QUERY of a first wish (a wrong pick, no student text)
 LAMP = "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conversational. REVEAL: "
@@ -3497,13 +3510,77 @@ def fig_spec(code):
     return next((name for name, rx in _SPEC_RULES if re.search(rx, text)), None)
 
 
+# ---------------- cram day (TEMPORARY, Tony Nov 6): per-item guidance for Exam 3 (Phys 2A), server side only ----------------
+# banks/cram/intel.json (banks/ is blocked from the web) -> one extra uncached system block per Cluck turn for the BANK_P3X items it names, plus a
+# generic "draw first, stage by stage" add-on for every PHYS_ item of the bank. Generic physics only (no exam stems, no keys). It never reaches
+# the client, and the answer guards are untouched (REVEAL: no still holds the final number back). Ends CRAM_UNTIL; CRAM_INTEL=0 turns it off early.
+# peek.js has the same instant for the cram-day idle peek and toast (tests/test_cram.py checks they match).
+CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
+CRAM_BANK = "BANK_P3X"
+_cram_cache = {"sig": None, "data": {}}
+
+
+def cram_data():
+    """banks/cram/intel.json parsed (re-read when it changes); {} on any problem"""
+    path = os.path.join(ROOT, "banks", "cram", "intel.json")
+    try:
+        sig = os.stat(path).st_mtime_ns
+        if _cram_cache["sig"] != sig:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            _cram_cache.update(sig=sig, data=d if isinstance(d, dict) else {})
+    except (OSError, ValueError):
+        _cram_cache.update(sig=None, data={})
+    return _cram_cache["data"]
+
+
+def cram_on(now=None):
+    if os.environ.get("CRAM_INTEL", "1").strip().lower() in ("0", "off", "false", "no"):
+        return False
+    now = now or datetime.datetime.now(PT)
+    return now <= CRAM_UNTIL
+
+
+def cram_note(code, now=None):
+    """the cram-day block for this item ("" outside the window, off, another bank, or no text)"""
+    if not code or not cram_on(now) or bank_of(code) != CRAM_BANK:
+        return ""
+    d = cram_data()
+    it = (d.get("items") or {}).get(code)
+    if not it:                                                   # a new item with no entry: a match rule (a spring-and-ramp stem) borrows an entry's text
+        stem = " ".join(str(b.get("md", "")) for b in (problems().get(code) or {}).get("body", []) if b.get("type") == "text").lower()
+        for r in d.get("match") or []:
+            if re.search(str(r.get("re", "^$")), stem):
+                it = (d.get("items") or {}).get(r.get("as"))
+                break
+    if not it and not str(code).startswith("PHYS_"):
+        return ""
+    parts = ["CRAM DAY GUIDE for this question (private; say every fact as your own, never name this guide)."]
+    if d.get("generic"):
+        parts.append(str(d["generic"]))
+    if isinstance(it, dict):
+        for k, h in (("scene", "SCENE"), ("plan", "PLAN"), ("stages", "STAGES (in order)"), ("formulas", "FORMULAS"), ("traps", "TRAPS"), ("say", "SAY IT LIKE THIS")):
+            if it.get(k):
+                parts.append(f"{h}: {it[k]}")
+        for g in it.get("diagrams") or []:
+            dg = (d.get("diagrams") or {}).get(g)
+            if dg:
+                parts.append("DIAGRAMS (checked patterns, each stage one fence; copy the shape, keep this question's own symbols and givens):\n" + str(dg))
+    return "\n".join(parts)
+
+
 def _v4_claude_system(v4):
     """the Claude arm's system blocks; fig_reask sends the same ones, so it reads the cache the reply just wrote"""
     fig = v4.get("fig")
-    system = [{"type": "text", "text": PROMPT_V4 + (V4_FIG_FIXED if fig is not None else ""), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
-              {"type": "text", "text": v4["bank"], "cache_control": CACHE}]
+    system = [{"type": "text", "text": PROMPT_V4 + (V4_FIG_FIXED if fig is not None else ""), "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
+    system.append({"type": "text", "text": v4["bank"], "cache_control": CACHE})
     if fig is not None:                                          # the per-question how-to tail: last, uncached, so the cached prefix stays the same
         system.append({"type": "text", "text": v4_fig_howto(fig)})
+    cram = cram_note(v4.get("code"))                             # TEMPORARY cram-day guide (Exam 3 bank): after the how-to, uncached
+    if cram:
+        system.append({"type": "text", "text": cram})
+    if STYLE_V4:                                                 # the permanent style card + few-shots, LAST (nearest the turn, where the model follows it best); no breakpoint of its own
+        system.append({"type": "text", "text": STYLE_V4})
     return system
 
 
@@ -3532,6 +3609,8 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     """DeepSeek v4.1 flash through OpenRouter, the same system and turns (blocks joined: the same text), prefix cache on one pinned host"""
     fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
     head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
+    head += ("\n\n" + cram_note(v4.get("code"))) if cram_note(v4.get("code")) else ""
+    head += ("\n\n" + STYLE_V4) if STYLE_V4 else ""              # the permanent style card, last
     msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
     # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,

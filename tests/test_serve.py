@@ -2779,6 +2779,11 @@ class DrawRule(unittest.TestCase):
     """spec H: the letter says draw readily; the Claude arm gets the figure how-to split in two (Tony, Oct 22): the fixed part (livefig.RULE +
     the Geometry line) inside the cached letter block, the per-question tail (livefig.rule_tail) as a last, uncached block; the bank block stays
     byte-identical; the DeepSeek arm gets the same text in one system message (fixed part first, tail last)"""
+    def setUp(self):                         # the permanent style card (prompts/cluck-style.txt) has its own tests (test_cluck_style.py); here the layering is letter | bank | how-to
+        p = unittest.mock.patch.object(serve, "STYLE_V4", "")
+        p.start()
+        self.addCleanup(p.stop)
+
     def ctx(self):
         return serve.livefig.context("T_DR", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
 
