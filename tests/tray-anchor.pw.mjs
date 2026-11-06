@@ -57,7 +57,7 @@ for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } 
 
 let failures = 0;
 async function step(name, fn) {
-  try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
+  try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 1800)); }
 }
 const SETTLE = 600;   // > the drawer's 380 ms slide
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -144,7 +144,10 @@ try {
   /* single mc, five options (Tony, Nov 6): the tray hangs under the PICKED card and lies over the cards below it */
   const mc5 = async (code, pickId, width, last) => {
     const page = await open(code, width);
-    await page.click(`#q .opt[data-id="${pickId}"]`);
+    try { await page.click(`#q .opt[data-id="${pickId}"]`, { timeout: 8000 }); } catch (e) {   // DIAGNOSTIC (CI-only failure: the locator matched nothing for 30 s): say what the page really holds
+      const d = await page.evaluate(() => ({ url: location.href, q: window.__drill?.state?.prob?.code, opts: [...document.querySelectorAll("#q .opt")].map(o => o.dataset.id + ":" + (o.textContent || "").trim().slice(0, 30)), body: document.body.innerText.slice(0, 300) }));
+      throw new Error(`${code} pick ${pickId} @${width}: ${String(e.message).split("\n")[0]}; page ${JSON.stringify(d)}; pageerrors ${JSON.stringify(page.errs)}`);
+    }
     await page.click(`#q .ch:has(.opt[data-id="${pickId}"]) .send`);
     await trayOpen(page);
     const m = await page.evaluate(id => {
