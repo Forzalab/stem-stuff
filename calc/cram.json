@@ -1,0 +1,32 @@
+{
+ "v": 1,
+ "note": "Cram skeleton: one entry per bank. A panel shows only while Date.now() < until and CalcCoach.FLAGS.hailMary is true. Generic study moves, no exam stems.",
+ "banks": {
+  "BANK_P3X": {
+   "id": "hailmary",
+   "title": "Stuck? Hail Mary",
+   "until": "2026-11-10T08:00:00Z",
+   "promo": "Stuck on one? Hail Mary: 4 moves for a smart guess.",
+   "intro": "You lose nothing for a wrong bubble, so you fill in every one. Here is how to make the guess a good one.",
+   "cards": [
+    {
+     "t": "Estimate first (30 s)",
+     "b": "Round every number to one digit. Use g = 10. Work in powers of ten. Cross off any choice more than about 1.5 times away from your estimate. Example: the sun puts out about 4e26 W. For 1 microsecond that is 4e20 J, about 1e14 kWh, about 1e13 dollars. Cross off every choice far from 10 trillion. In 42 of 60 practice questions, you could cross off 2 or more choices this way."
+    },
+    {
+     "t": "Cross off what held up",
+     "b": "Skip a number copied straight from the question. It was a wrong choice in 3 of 20 Exam 1 questions. With two-number vector choices, work out the direction. The choices often differ only by sign or order. Ignore middle, biggest, smallest, double and odd-one-out. Each scored about 20%, the same as a blind pick."
+    },
+    {
+     "t": "Still stuck: least-used letter",
+     "b": "Count the letters of the answers you trust. Pick the letter you used least. In the practice exams each letter was the key 3 to 5 times out of 20. One stuck question: about 45% if the rest are right. Three stuck: about 40%. If you doubt the rest: near 20%."
+    },
+    {
+     "t": "Never leave a bubble blank",
+     "b": "A wrong bubble costs you nothing. Save 2 minutes at the end and fill every one."
+    }
+   ],
+   "odds": "Honest odds: a blind guess is 20%. Estimate plus cross-off is about 50% on questions you can set up. The least-used letter is about 40 to 45% when the rest is right. Practice exams are not the real exam."
+  }
+ }
+}

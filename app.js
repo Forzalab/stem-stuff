@@ -731,6 +731,7 @@ function render() {
   renderQuestion();
   $("#fb").innerHTML = "";
   mountBox();
+  window.CalcCoach?.onItem(bank && bank.code);                                   // Calc chip, cram strip + toast on BANK_P3X (calc-coach.js)
   $("#freezeIn").scrollTop = 0;
   scrollTo({ top: 0 });
   $("#pstripCode").textContent = code;
@@ -825,6 +826,7 @@ function welcomeQ(q) {
     window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
     if (!$("#qnav").hidden) { const nx = nextBtn(); w.el.append(nx); nx.focus({ preventScroll: true }); }
   } });
+  window.CalcCoach?.welcomeCard(q);                                              // Calc Coach's welcome entry (calc-coach.js): app chrome under the ladder, never a reply
 }
 
 /* ---------- the repair ladder after a miss (brain design-round-66 DESIGN-v3 §3, T8; Tony Nov 3) ----------
@@ -2446,6 +2448,7 @@ function clEl() {
       <div class="cl-pane" id="clTabSP"></div></div>
     <div class="cl-ft"><button type="button" class="cl-more" aria-label="Scroll down">${icon("i-down")}</button><div class="cl-fi"></div></div>`;   // .cl-fi: the ask field / done row (clAsk); the hint stays
   cl = { el, tab: "explain", open: false, from: null, fold: false };
+  window.CalcCoach?.chrome(el);                                                  // the Calc Coach link in Cluck's chrome, under his text (calc-coach.js)
   el.querySelector(".cl-fold").addEventListener("click", () => {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) origPeeked();   // folded away after a solve: looking again is a peek
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);

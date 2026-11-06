@@ -1,0 +1,403 @@
+{
+ "_note": "layout_verified=false for all models: no official full keypad diagram was retrievable. Only key labels and legends that appear in the cited guide text/screens are listed; row/col are null. Panel builder must not invent positions from this file.",
+ "ti36xpro": {
+  "layout_verified": false,
+  "keys": [
+   {
+    "id": "mode",
+    "label": "mode",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "2nd",
+    "label": "2nd",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "second"
+   },
+   {
+    "id": "enter",
+    "label": "enter",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "enter"
+   },
+   {
+    "id": "clear",
+    "label": "clear",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "sto",
+    "label": "sto->",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "var",
+    "label": "x y z t a b c d",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "var"
+   },
+   {
+    "id": "recall",
+    "label": "recall (above sto)",
+    "legend_2nd": "2nd recall",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "numsolv",
+    "label": "num-solv",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "solver"
+   },
+   {
+    "id": "polysolv",
+    "label": "poly-solv",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "solver"
+   },
+   {
+    "id": "ee",
+    "label": "EE",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "answer",
+    "label": "answer",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "neg",
+    "label": "(-)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "num"
+   },
+   {
+    "id": "consts",
+    "label": "constants",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "convert",
+    "label": "convert",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "reset",
+    "label": "reset",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   }
+  ]
+ },
+ "ti30xsmv": {
+  "layout_verified": false,
+  "keys": [
+   {
+    "id": "mode",
+    "label": "mode",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "2nd",
+    "label": "2nd",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "second"
+   },
+   {
+    "id": "enter",
+    "label": "enter",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "enter"
+   },
+   {
+    "id": "clear",
+    "label": "clear",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "sto",
+    "label": "sto->",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "var",
+    "label": "x y z t a b c",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "var"
+   },
+   {
+    "id": "recall",
+    "label": "recall",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "x10n",
+    "label": "x10^n",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "answer",
+    "label": "answer",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "reset",
+    "label": "reset",
+    "legend_2nd": "2nd then key",
+    "grid": null,
+    "class_": "fn"
+   }
+  ]
+ },
+ "fx115esplus": {
+  "layout_verified": false,
+  "keys": [
+   {
+    "id": "SHIFT",
+    "label": "SHIFT",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "second"
+   },
+   {
+    "id": "ALPHA",
+    "label": "ALPHA",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "alpha"
+   },
+   {
+    "id": "MODE",
+    "label": "MODE",
+    "legend_2nd": "SETUP",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "CALC",
+    "label": "CALC",
+    "legend_2nd": "SOLVE (SHIFT), = (ALPHA)",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "RCL",
+    "label": "RCL",
+    "legend_2nd": "STO (SHIFT)",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "neg",
+    "label": "(-)",
+    "legend_2nd": "A (ALPHA)",
+    "grid": null,
+    "class_": "num"
+   },
+   {
+    "id": "rpar",
+    "label": ")",
+    "legend_2nd": "X (ALPHA)",
+    "grid": null,
+    "class_": "num"
+   },
+   {
+    "id": "dms",
+    "label": "deg-min-sec",
+    "legend_2nd": "B (ALPHA)",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "mplus",
+    "label": "M+",
+    "legend_2nd": "M (ALPHA)",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "AC",
+    "label": "AC",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "clear"
+   },
+   {
+    "id": "eq",
+    "label": "=",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "enter"
+   },
+   {
+    "id": "Ans",
+    "label": "Ans",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   }
+  ]
+ },
+ "fx300esplus": {
+  "layout_verified": false,
+  "keys": [
+   {
+    "id": "SHIFT",
+    "label": "SHIFT",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "second"
+   },
+   {
+    "id": "ALPHA",
+    "label": "ALPHA",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "alpha"
+   },
+   {
+    "id": "MODE",
+    "label": "MODE",
+    "legend_2nd": "SETUP",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "RCL",
+    "label": "RCL",
+    "legend_2nd": "STO (SHIFT)",
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "neg",
+    "label": "(-)",
+    "legend_2nd": "A (ALPHA)",
+    "grid": null,
+    "class_": "num"
+   },
+   {
+    "id": "AC",
+    "label": "AC",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "clear"
+   },
+   {
+    "id": "eq",
+    "label": "=",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "enter"
+   }
+  ]
+ },
+ "fx991cw": {
+  "layout_verified": false,
+  "keys": [
+   {
+    "id": "HOME",
+    "label": "HOME (house icon)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "SETTINGS",
+    "label": "SETTINGS (sliders icon)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "TOOLS",
+    "label": "TOOLS (book icon)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "OK",
+    "label": "OK",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "enter"
+   },
+   {
+    "id": "EXE",
+    "label": "EXE",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "enter"
+   },
+   {
+    "id": "SHIFT",
+    "label": "SHIFT (up-arrow icon)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "second"
+   },
+   {
+    "id": "VARS",
+    "label": "variables key (x with arrows icon)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   },
+   {
+    "id": "AC",
+    "label": "AC",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "clear"
+   },
+   {
+    "id": "BACK",
+    "label": "back (return-arrow icon)",
+    "legend_2nd": null,
+    "grid": null,
+    "class_": "fn"
+   }
+  ]
+ },
+ "fx991ex": {
+  "layout_verified": false,
+  "keys": []
+ }
+}

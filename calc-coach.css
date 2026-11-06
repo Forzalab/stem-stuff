@@ -1,0 +1,69 @@
+/* calc-coach.css: Calc Coach panel (calc-coach.js, design/CALC-COACH.md). App chrome on app.css tokens; `.cc[data-theme=light]` has its own set
+   (the app itself is dark only; light is for calc.html). 44px+ targets, text >= 12px, a short pulse on the lit key (none under reduced motion). */
+.cc { --cc-bg: var(--page); --cc-card: var(--card); --cc-ink: var(--ink); --cc-muted: var(--muted); --cc-line: var(--line); --cc-key: #1b2b40; --cc-key-fn: #14233a; --cc-key-sh: #3a2a14;
+  --cc-hi: var(--help); --cc-hi-ink: var(--help-ink); --cc-ring: #fff; --cc-lcd: #c9d6a8; --cc-lcd-ink: #1c2412; --cc-act: var(--action); --cc-act-ink: var(--action-ink);
+  box-sizing: border-box; display: flex; flex-direction: column; gap: var(--s2); min-height: 100%; max-width: 32rem; margin: 0 auto; padding: var(--s3) 16px calc(var(--s4) + env(safe-area-inset-bottom));
+  background: var(--cc-bg); color: var(--cc-ink); font-family: var(--font); font-size: var(--t-md); line-height: var(--lh); }
+.cc[data-theme="light"] { --cc-bg: #f5f7fa; --cc-card: #fff; --cc-ink: #0b1422; --cc-muted: #3d4d63; --cc-line: #7d8ea6; --cc-key: #e4eaf2; --cc-key-fn: #d2dbe8; --cc-key-sh: #f2dfc0;
+  --cc-hi: #ffb04a; --cc-hi-ink: #2a1500; --cc-ring: #0b1422; --cc-act: #0b5cc2; --cc-act-ink: #fff; }
+.cc-ov { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: var(--page); overscroll-behavior: contain; }
+.cc-ov:focus { outline: none; }
+.cc-hd { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.cc-t { margin: 0; font-size: var(--t-lg); font-weight: var(--w-em); }
+.cc-x { min-width: 44px; min-height: 44px; border: 0; background: none; color: var(--cc-muted); font: inherit; font-size: 1.6rem; cursor: pointer; }
+.cc :is(button):focus-visible, .cc-row :is(button):focus-visible, .cc-welcome button:focus-visible, .cc-cl button:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cc-model { margin: 0; color: var(--cc-muted); font-size: var(--t-sm); font-weight: var(--w-em); }
+.cc-pre, .cc-ph { margin: 0; padding: var(--s2) var(--s3); border: 1px dashed var(--cc-line); border-radius: 8px; font-size: var(--t-sm); }
+.cc-ph { padding: var(--s1) var(--s3); font-size: var(--t-xs); color: var(--cc-muted); }
+.cc-card { display: grid; grid-template-columns: 2.25rem 1fr; gap: 2px var(--s3); min-height: 72px; padding: var(--s3) var(--s4); text-align: left; font: inherit; color: inherit;
+  background: var(--cc-card); border: 1px solid var(--cc-line); border-radius: 12px; cursor: pointer; }
+.cc-n { grid-row: 1 / 3; align-self: center; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--cc-hi); color: var(--cc-hi-ink); font-weight: var(--w-em); }
+.cc-ct { font-weight: var(--w-em); } .cc-cw { color: var(--cc-muted); font-size: var(--t-sm); }
+.cc-count { margin: 0; color: var(--cc-muted); font-size: var(--t-sm); font-weight: var(--w-em); }
+.cc-bar { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--cc-line) 40%, transparent); } .cc-bar i { display: block; height: 100%; border-radius: 2px; background: var(--cc-hi); }
+.cc-say { margin: 0; font-size: var(--t-md); font-weight: var(--w-em); } .cc-sub { margin: 0; color: var(--cc-muted); font-size: var(--t-sm); }
+.cc-note { padding: var(--s3) var(--s4); background: var(--cc-card); border: 1px solid var(--cc-line); border-radius: 12px; display: grid; gap: var(--s2); }
+.cc-lcd { padding: var(--s3) var(--s4); border-radius: 8px; background: var(--cc-lcd); color: var(--cc-lcd-ink); font-family: var(--mono); font-size: 1rem; line-height: 1.4; min-height: 4.2rem; box-shadow: inset 0 2px 4px rgb(0 0 0 / .35); overflow-wrap: anywhere; }
+.cc-ln:last-child { text-align: right; font-weight: 700; font-size: 1.125rem; }
+.cc-caps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cc-then { color: var(--cc-muted); font-size: var(--t-md); }
+.cc-cap { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 var(--s3); font-size: var(--t-md); font-weight: var(--w-em); color: var(--cc-ink);
+  background: var(--cc-key); border: 1px solid var(--cc-line); border-bottom-width: 3px; border-radius: 8px; }
+.cc-cap.cc-fn, .cc-cap.cc-solver, .cc-cap.cc-enter { background: var(--cc-key-fn); }
+.cc-cap.cc-shift, .cc-cap.cc-second { background: var(--cc-hi); border-color: var(--cc-hi); color: var(--cc-hi-ink); }
+.cc-cap.cc-pill { border-style: dashed; border-radius: 999px; background: none; font-weight: 400; font-size: var(--t-sm); }
+.cc-cap:last-child { box-shadow: 0 0 0 2px var(--cc-ring); animation: cc-pulse 1.1s ease-in-out 3; }
+.cc-tag { margin: 0; color: var(--cc-muted); font-size: var(--t-xs); font-style: italic; }
+@keyframes cc-pulse { 50% { box-shadow: 0 0 0 2px transparent; } }
+@media (prefers-reduced-motion: reduce) { .cc-cap:last-child { animation: none; } }
+.cc-ft { position: sticky; bottom: 0; display: flex; gap: var(--s3); padding: var(--s3) 0; margin-top: auto; background: var(--cc-bg); }
+.cc-btn { flex: 1; min-height: 48px; padding: 0 var(--s4); font: inherit; font-weight: var(--w-em); color: var(--cc-ink); background: var(--cc-card); border: 1px solid var(--cc-line); border-radius: 10px; cursor: pointer; }
+.cc-btn.cc-go { background: var(--cc-act); border-color: var(--cc-act); color: var(--cc-act-ink); }
+.cc-try { padding: var(--s4); background: var(--cc-card); border: 1px solid var(--cc-hi); border-radius: 12px; display: grid; gap: var(--s2); } .cc-tt { margin: 0; font-size: var(--t-lg); }
+/* promos */
+.cc-welcome { display: grid; gap: var(--s2); margin: var(--s4) 0; padding: var(--s4); background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); }
+.cc-welcome .cc-wt { margin: 0; font-size: var(--t-md); } .cc-welcome .cc-wb { margin: 0; font-size: var(--t-sm); color: var(--muted); }
+.cc-welcome .cc-btn { flex: none; justify-self: start; }
+.cc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s3); }
+.cc-strip { flex: 1 0 100%; display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s3); background: color-mix(in srgb, var(--help) 8%, var(--card)); border: 1px solid var(--ai-line, var(--line)); border-radius: 10px; }
+.cc-strip .cc-st { flex: 1; font-size: var(--t-sm); } .cc-strip .cc-btn { flex: none; min-height: 44px; }
+.cc-row .cc-x, .cc-strip .cc-x { color: var(--muted); }
+.cc-chip { min-height: 44px; min-width: 44px; padding: 0 var(--s4); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.cc-cl { display: none; flex-wrap: wrap; gap: var(--s2); margin: var(--s1) 0 0; }
+.cl:has(.wtext:not(:empty)) .cc-cl { display: flex; }
+.cc-link { min-height: 44px; padding: 0; font: inherit; font-size: var(--t-xs); color: var(--help-on, var(--help-muted)); background: none; border: 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
+
+.cc-static { cursor: default; }
+.cc-strip { flex-wrap: wrap; } .cc-strip .cc-hm { flex: 1 0 100%; min-height: 44px; font-size: var(--t-sm); }
+
+.cc-pad { display: block; width: 100%; height: auto; }
+.cc-key .cc-kr { fill: var(--cc-key); stroke: var(--cc-line); stroke-width: 1; }
+.cc-key.cc-k-fn .cc-kr, .cc-key.cc-k-solver .cc-kr { fill: var(--cc-key-fn); } .cc-key.cc-k-second .cc-kr { fill: var(--cc-key-sh); }
+.cc-kl { fill: var(--cc-ink); font: 600 17px var(--font); } .cc-2 { fill: var(--cc-muted); font: 600 10px var(--font); }
+.cc-key.on .cc-kr { fill: var(--cc-hi); stroke: var(--cc-ring); stroke-width: 2; } .cc-key.on .cc-kl { fill: var(--cc-hi-ink); font-weight: 800; }
+.cc-ring { fill: none; stroke: var(--cc-ring); stroke-width: 2.5; animation: cc-pulse 1.1s ease-in-out 3; }
+.cc-bd { fill: var(--cc-ring); } .cc-bn { fill: var(--cc-bg); font: 800 11px var(--font); }
+@media (prefers-reduced-motion: reduce) { .cc-ring { animation: none; } }
+.cc-kls { font-size: 12px; } .cc-key.cc-k-op .cc-kr { fill: var(--cc-key-fn); } .cc-key.cc-k-enter .cc-kr { stroke-width: 2; } .cc-key.cc-k-second .cc-kl { fill: var(--cc-hi); }
+.cc-key.cc-k-second.on .cc-kl { fill: var(--cc-hi-ink); }
+.cc-key.on .cc-2 { fill: var(--cc-hi-ink); }
