@@ -51,7 +51,8 @@ class Cram(unittest.TestCase):
         for c in INTEL:
             n = serve.cram_note(c, IN)
             self.assertIn("CRAM DAY GUIDE", n, c)
-            self.assertIn("TOP-DOWN", n, c)
+            self.assertIn("OVERVIEW REPLY", n, c)
+            self.assertIn("EXACTLY ONE stage", n, c)
             self.assertIn("SCENE:", n, c)
             self.assertIn("STAGES", n, c)
             self.assertIn("TRAPS:", n, c)
@@ -71,7 +72,8 @@ class Cram(unittest.TestCase):
 
     def test_generic_addon_for_other_phys_items_of_the_bank(self):
         n = serve.cram_note("PHYS_ZZ9", IN)
-        self.assertIn("TOP-DOWN", n)
+        self.assertIn("OVERVIEW REPLY", n)
+        self.assertIn("EXACTLY ONE stage", n)
         self.assertNotIn("SCENE:", n)
 
     def test_answer_guard_text_and_leak_guard_untouched(self):
@@ -112,6 +114,21 @@ class Cram(unittest.TestCase):
                 self.assertIsNotNone(prog, (g, log))
                 n += 1
         self.assertGreater(n, 20)
+
+    def test_reveal_turn_is_later_on_cram_items_only_and_never_sooner(self):
+        p = serve.problems()["PHYS_MC4"]
+        other = serve.problems()["CALC1_ZZ9"]
+        with mock.patch.object(serve, "v4_on", return_value=True):
+            got = {}
+            for name, prob, now in (("cram", p, IN), ("plain", other, IN)):
+                with mock.patch.object(serve, "cram_on", return_value=True):
+                    sid = "sid-" + name
+                    got[name] = [serve.cluck_begin(prob, sid, "b")[1] for _ in range(8)]
+            with mock.patch.object(serve, "cram_on", return_value=False):
+                got["expired"] = [serve.cluck_begin(p, "sid-expired", "b")[1] for _ in range(4)]
+        self.assertEqual(got["cram"], [False] * 6 + [True] * 2, "a cram item opens at turn 7")
+        self.assertEqual(got["plain"][:4], [False, False, True, True], "any other item still opens at turn 3")
+        self.assertEqual(got["expired"][:4], [False, False, True, True], "after the window the old rule is back")
 
     def test_match_rule_gives_a_new_spring_and_ramp_item_the_roll_text(self):
         newp = item("PHYS_NEW1")

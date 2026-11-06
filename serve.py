@@ -2795,7 +2795,7 @@ def cluck_begin(p, sid, pick):
         _load_tries()
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
-        reveal = out or solved or n >= 3
+        reveal = out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3)   # cram items: the stage-by-stage walk (overview + up to 5 stages) is not the "3rd ask" give-up; only later (stricter), tries-out and solved still open it
         rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))   # [4] = True only on a locked item (tries used up, not solved): the reply must not invite a retry
         del rows[:-CLUCK_KEEP]
         _save_tries()
@@ -3517,6 +3517,7 @@ def fig_spec(code):
 # peek.js has the same instant for the cram-day idle peek and toast (tests/test_cram.py checks they match).
 CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
 CRAM_BANK = "BANK_P3X"
+CRAM_REVEAL_TURN = 7                         # REVEAL: yes from this Cluck turn on a cram item (3 elsewhere)
 _cram_cache = {"sig": None, "data": {}}
 
 
