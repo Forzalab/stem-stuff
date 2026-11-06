@@ -145,4 +145,4 @@
 /* legibility polish (Tony Nov 6): the DEG pill, the swipe hint */
 .cc-deg { font-size: var(--t-sm); border-style: solid; color: var(--cc-ink); padding: 3px var(--s3); }
 .cc-swipe { font-size: var(--t-sm); color: var(--cc-ink); }
-@media (max-width: 360px) { .cc-row { margin-left: var(--s1); } .cc-row .cc-chip { padding: 0 var(--s2); } }   /* a 320 phone: the floated chip takes the least width it can (katex-wrap) */
+@media (max-width: 359px) { .cc-row { float: none; justify-content: flex-end; margin: 0 0 var(--s2); } }   /* a 320 phone: the chips take their own line (a float narrows the math lines: katex-wrap); 375+ keeps the float (fab) */
