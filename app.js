@@ -842,7 +842,7 @@ function rpUnmount() {                                                          
   $("#rpHost")?.remove();
 }
 function repairAfterMiss(r) {
-  if (!S || S.wl || !S.prob.has_repair || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
+  if (!S || S.wl || !S.prob.has_repair || S.prob.type === "proof" || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
   const mine = S, code = S.code, fam = r.error || "";
   if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
   const host = (() => { let h = $("#rpHost"); if (!h) { h = document.createElement("div"); h.id = "rpHost"; $("#fb").after(h); } return h; })();

@@ -186,6 +186,16 @@ class Proof(unittest.TestCase):
         self.assertEqual((st, json.loads(data)["verdict"]), (200, "correct"))
 
 
+    def test_proof_never_serves_a_repair_ladder(self):
+        """a proof has no slip family, so its authored steps would all start worked and hand over the answers: /repair is 404"""
+        self.assertTrue(P["repair"]["steps"], "the fixture proof must carry an authored ladder")
+        r, _ = self.check("NOBASE " + GOOD, said(base="missing", hint="QUACK. Where do you check n = 1?"))
+        self.assertEqual(r["verdict"], "wrong")
+        self.assertEqual(serve.repair_of(P, self.sid)[0], 404)
+        self.assertEqual(serve.repair_check(P, P, self.sid, {"value": "LEAKANS", "n": 1})[0], 404)
+        self.assertNotIn("LEAK", json.dumps([r, serve.repair_of(P, self.sid), serve.public(P) if hasattr(serve, "public") else {}]))
+
+
 class FK(unittest.TestCase):
     def test_grades(self):
         self.assertLessEqual(serve.fk_grade("QUACK. Start at n = 1. Do both sides match?"), 3)
