@@ -353,6 +353,11 @@ class Arm(unittest.TestCase):
 
 class CacheShape(unittest.TestCase):
     """the request each arm sends: one system, one static block, replayed turns"""
+    def setUp(self):                         # the permanent style card has its own tests (test_cluck_style.py); the shape here is letter | bank
+        p = mock.patch.object(serve, "STYLE_V4", "")
+        p.start()
+        self.addCleanup(p.stop)
+
     def rows(self, *specs):
         return [[i + 1, int(r), x, "a"] for i, (r, x) in enumerate(specs)]
 
@@ -485,6 +490,11 @@ class CacheShape(unittest.TestCase):
 
 class Layers(unittest.TestCase):
     """Tony's cache layers: system 1 (letter) | system 2 (bank) | block A (question) | block B (dynamic)"""
+    def setUp(self):                         # the permanent style card sits between letter and bank without a breakpoint; test_cluck_style.py covers it
+        p = mock.patch.object(serve, "STYLE_V4", "")
+        p.start()
+        self.addCleanup(p.stop)
+
     def req(self, p, reveal=False, xyz="", text="hi", arm="claude", prof=None):
         v4 = dict(turns=[{"role": "user", "content": serve.v4_user(p, "a", text, reveal, xyz)}], reveal=reveal, facts=serve.leak_facts(p), code=p["code"], arm=arm,
                   bank=None)

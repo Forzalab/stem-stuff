@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120" aria-hidden="true" focusable="false">
+<style>
+.f{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700}
+.m{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+*{transform-box:fill-box;transform-origin:center}
+.g{animation:g 4s ease-in-out infinite}
+.a1{animation:ty 4s steps(1) infinite}
+.a2{animation:ty2 4s steps(1) infinite}
+.a3{animation:ty3 4s steps(1) infinite}
+.a4{animation:ty4 4s steps(1) infinite}
+.a5{animation:ty5 4s steps(1) infinite}
+.gs{animation:gs 4s ease-out infinite}
+.key{animation:key 4s ease-in-out infinite}
+.rs{animation:rs 4s cubic-bezier(.3,1.6,.5,1) infinite}
+.ck{stroke-dasharray:14;animation:ck 4s ease-out infinite}
+.lr{animation:lr 4s ease-out infinite}
+@keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
+@keyframes ty{0%,5%{opacity:0}6%,100%{opacity:1}}
+@keyframes ty2{0%,10%{opacity:0}11%,100%{opacity:1}}
+@keyframes ty3{0%,15%{opacity:0}16%,100%{opacity:1}}
+@keyframes ty4{0%,20%{opacity:0}21%,100%{opacity:1}}
+@keyframes ty5{0%,25%{opacity:0}26%,100%{opacity:1}}
+@keyframes gs{0%,38%{opacity:0;transform:translateX(-6px)}46%,100%{opacity:1;transform:none}}
+@keyframes key{0%,54%{transform:none}60%{transform:scale(1.18)}68%,100%{transform:none}}
+@keyframes rs{0%,64%{opacity:0;transform:scale(.6)}74%,100%{opacity:1;transform:none}}
+@keyframes lr{0%,76%{opacity:0}84%,100%{opacity:1}}
+@keyframes ck{0%,78%{stroke-dashoffset:14}88%,100%{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<g class="g">
+<rect x="10" y="4" width="180" height="82" rx="9" fill="#0b1422" stroke="#ffd23f" stroke-width="2"/>
+<g class="m" font-size="13" fill="#f3f7fc"><text class="a1" x="20" y="26">½</text><text class="a2" x="31" y="26">·40</text><text class="a3" x="59" y="26">·x²</text><text class="a4" x="88" y="26">=</text><text class="a5" x="102" y="26">0.0121</text></g>
+<g class="gs"><text class="m" x="20" y="47" font-size="13" fill="#f3f7fc">x=0.05</text><text class="f" x="180" y="47" font-size="11" fill="#a9b8cc" text-anchor="end">guess</text></g>
+<text class="m rs" x="180" y="69" font-size="17" fill="#ffd23f" text-anchor="end">x = 0.0246</text>
+<g class="lr"><text class="m" x="20" y="81" font-size="11" fill="#a9b8cc">L−R = 0</text></g>
+<path class="ck" d="M96 77l5 5 10-11" fill="none" stroke="#ffd23f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<g class="key"><rect x="62" y="94" width="76" height="22" rx="8" fill="#ffd23f"/><text class="f" x="100" y="110" font-size="13" fill="#1a1300" text-anchor="middle">SOLVE</text></g>
+</g>
+</svg>

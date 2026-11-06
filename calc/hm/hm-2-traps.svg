@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120" aria-hidden="true" focusable="false">
+<style>
+.f{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700}
+*{transform-box:fill-box;transform-origin:center}
+.g{animation:g 5s ease-in-out infinite}
+.q rect{stroke:#ff9a3e;animation:q 5s ease infinite}
+.ln{stroke-dasharray:60;animation:ln 5s ease-in-out infinite}
+.l2{animation-name:l2}
+.far{opacity:.62;animation:far 5s ease infinite}
+.st{stroke-dasharray:20;animation:st 5s ease-in-out infinite}
+.s2{animation-name:s2}
+@keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
+@keyframes q{0%,12%{stroke:#a9b8cc}22%,100%{stroke:#ff9a3e}}
+@keyframes ln{0%,24%{stroke-dashoffset:60}42%,100%{stroke-dashoffset:0}}
+@keyframes l2{0%,30%{stroke-dashoffset:60}48%,100%{stroke-dashoffset:0}}
+@keyframes far{0%,50%{opacity:1}62%,100%{opacity:.62}}
+@keyframes st{0%,52%{stroke-dashoffset:20}64%,100%{stroke-dashoffset:0}}
+@keyframes s2{0%,58%{stroke-dashoffset:20}70%,100%{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<g class="g">
+<g class="q"><rect x="14" y="8" width="32" height="22" rx="11" fill="#0b1422" stroke="#a9b8cc" stroke-width="1.5"/><text class="f" x="30.0" y="23" font-size="12" fill="#f3f7fc" text-anchor="middle">12</text></g><text class="f" x="58" y="23" font-size="11" fill="#a9b8cc" text-anchor="middle">kg</text>
+<g class="q"><rect x="84" y="8" width="32" height="22" rx="11" fill="#0b1422" stroke="#a9b8cc" stroke-width="1.5"/><text class="f" x="100.0" y="23" font-size="12" fill="#f3f7fc" text-anchor="middle">36</text></g><text class="f" x="128" y="23" font-size="11" fill="#a9b8cc" text-anchor="middle">N</text>
+<text class="f" x="168" y="23" font-size="12" fill="#a9b8cc" text-anchor="middle">a = ?</text>
+<path class="ln" d="M32 32L80 82" pathLength="60" fill="none" stroke="#ff9a3e" stroke-width="1.5" stroke-dasharray="3 3"/>
+<path class="ln l2" d="M100 32L128 82" pathLength="60" fill="none" stroke="#ff9a3e" stroke-width="1.5" stroke-dasharray="3 3"/>
+<rect x="8" y="84" width="40" height="22" rx="11" fill="#0b1422" stroke="#a9b8cc" stroke-width="1.5"/><text class="f" x="28.0" y="99" font-size="11" fill="#f3f7fc" text-anchor="middle">3</text><g class="far"><rect x="60" y="84" width="40" height="22" rx="11" fill="#0b1422" stroke="#a9b8cc" stroke-width="1.5"/><text class="f" x="80.0" y="99" font-size="11" fill="#f3f7fc" text-anchor="middle">12</text></g><g class="far"><rect x="108" y="84" width="40" height="22" rx="11" fill="#0b1422" stroke="#a9b8cc" stroke-width="1.5"/><text class="f" x="128.0" y="99" font-size="11" fill="#f3f7fc" text-anchor="middle">36</text></g><rect x="156" y="84" width="40" height="22" rx="11" fill="#0b1422" stroke="#a9b8cc" stroke-width="1.5"/><text class="f" x="176.0" y="99" font-size="11" fill="#f3f7fc" text-anchor="middle">432</text>
+<path class="st" d="M68 102l24-16" pathLength="20" stroke="#ff9a3e" stroke-width="2.2" stroke-linecap="round"/>
+<path class="st s2" d="M116 102l24-16" pathLength="20" stroke="#ff9a3e" stroke-width="2.2" stroke-linecap="round"/>
+</g>
+</svg>

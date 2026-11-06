@@ -14,6 +14,7 @@
 .stoast.out { animation: stoast-out .15s ease-in forwards; }
 .stoast-b { min-width: 0; display: grid; gap: 8px; }
 .stoast-t { margin: 0; overflow-wrap: anywhere; }
+.stoast-h { font-weight: 700; }
 .stoast-n { font-variant-numeric: tabular-nums; }
 .stoast-bar { position: relative; display: block; height: 6px; margin-right: 4px; border-radius: 999px; background: var(--sheet); }
 .stoast-bar i {

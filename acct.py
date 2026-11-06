@@ -15,6 +15,9 @@ login(token) -> sid | None           unknown, malformed or expired token = None
 keep(token) -> bool                  False = unknown/expired token
 get_rewards(sid) -> dict | None      None = no account for this sid
 put_rewards(sid, blob) -> bool       False = no account (nothing stored for a bare sid); ValueError = not a dict / over REWARDS_MAX
+get_calc(sid) -> str | None          the calculator model (calc-pick.js; Tony Nov 6), key calc:<sid>; None = never picked
+put_calc(sid, model)                 any sid, account or not (like progress); ValueError = bad sid / model. Same lifetime rule as the
+                                     record: SID_MAX_AGE, pushed out by login / put; none once the sid's account is kept (keep())
 KV errors (OSError, ValueError) propagate: the caller tells a store outage from an unknown token."""
 import datetime
 import hashlib
@@ -34,6 +37,7 @@ NAME_MAX = 40          # display name only, never a login secret
 REWARDS_MAX = 4096     # bytes of compact JSON: a small XP/streak blob, never a log
 TOKEN_RE = re.compile(r"[A-Za-z0-9_-]{22,64}")   # checked before hashing: junk never reaches the store
 SID_RE = re.compile(r"[0-9a-f]{32}")             # serve.new_sid's shape
+CALC_RE = re.compile(r"[a-z0-9-]{1,32}")         # calc-pick.js model ids ("other", "skip" included)
 
 
 def _kv(*cmd):
@@ -118,6 +122,7 @@ def _touch(k, rec):
     if not rec.get("kept"):
         _expire(k, SID_MAX_AGE)
         _expire("acct:sid:" + rec["sid"], SID_MAX_AGE)
+        _expire("calc:" + rec["sid"], SID_MAX_AGE)
 
 
 def login(token):
@@ -136,6 +141,9 @@ def keep(token):
     rec["kept"] = True
     _set(k, _dump(rec))
     _set("acct:sid:" + rec["sid"], k[len("acct:"):])
+    m = _get("calc:" + rec["sid"])
+    if m:
+        _set("calc:" + rec["sid"], m)   # kept with the record: no TTL
     return True
 
 
@@ -157,3 +165,16 @@ def put_rewards(sid, blob):
     _set(k, _dump(rec), _ttl(rec))   # the write itself refreshes a not-yet-kept record's TTL
     _touch(k, rec)
     return True
+
+
+def get_calc(sid):
+    return _get("calc:" + sid) if isinstance(sid, str) and SID_RE.fullmatch(sid) else None
+
+
+def put_calc(sid, model):
+    if not (isinstance(sid, str) and SID_RE.fullmatch(sid)):
+        raise ValueError("bad sid")
+    if not (isinstance(model, str) and CALC_RE.fullmatch(model)):
+        raise ValueError("calc: bad model id")
+    _, rec = _rec(sid)
+    _set("calc:" + sid, model, None if rec and rec.get("kept") else SID_MAX_AGE)
