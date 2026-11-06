@@ -806,9 +806,11 @@ function drawFigures() {
    ladder from GET /repair/<code>, served for this item before any try) takes the answer box's place, the question stays above it.
    Done: welcome_done (telemetry) + stem-welcome-<bank>, then its Next goes on to the queue (the cue's Next). Not for a returner
    (stem-noob-<bank>: nav.js sets it at the first answer), nor with no ladder (offline, an error): then it is a normal question. */
+let forceWelcome = false;                                                         // set by the boot redirect, cleared when the welcome is done (this page load only)
 const wlKey = () => "stem-welcome-" + bank.code;
 function welcomeDue(p) {
   if (!bank || !p || p.welcome !== true || !bank.codes.includes(p.code) || !window.Welcome) return false;
+  if (forceWelcome) return true;                                                  // the cram-window redirect (welcome-first.js): even an established user sees the welcome once
   try { return !localStorage.getItem(wlKey()) && !localStorage.getItem("stem-noob-" + bank.code); } catch { return false; }
 }
 async function welcomeLadder(code) {
@@ -821,6 +823,7 @@ function welcomeQ(q) {
     credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(r => r.ok ? r.json() : null, () => null);   // no answer: a hint, never a dead tap
   const w = Welcome.mount(q, { ...S.prob, repair: S.wl }, { sheet: S.wl.sheet, grade, on: (name, d) => {
     if (name !== "welcome_done" || S !== mine) return;
+    forceWelcome = false;
     try { localStorage.setItem(wlKey(), "1"); } catch { /* blocked: it shows again next visit */ }
     S.finished = true;
     window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
@@ -3922,6 +3925,7 @@ addEventListener("DOMContentLoaded", async () => {
   /* the live list (design/BANK.md): #BANK_XXX, else the last one used here, else the server's pointer (new browser,
      or storage wiped). A problem in the hash still opens; the bank then only fills the list. */
   try {
+    if (location.hash.length > 1 && window.stemWelcomeFirst && await window.stemWelcomeFirst.check()) { forceWelcome = true; history.replaceState(null, "", location.pathname + location.search); }   // a first-time user on a deep link: the welcome start first, once (welcome-first.js)
     const n = hashCode(), last = src(), q = !!n && n.prefix !== "BANK";
     if (n && n.prefix === "BANK") await openBank(n.code);
     else if (last && last !== "file") await openBank(last, { go: !q, quiet: true });
