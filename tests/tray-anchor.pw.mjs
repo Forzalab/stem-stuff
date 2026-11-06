@@ -32,7 +32,7 @@ const PROBS = [
     choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }, { id: "c", md: "Good claim" }], correct: ["b"],
     wrong: [{ choice: "a", error: "misread", hint: "QUACK. Look at the base." }], saccharine: { title: "Cups", key: "Tick: b", slip: { a: "The base." } } },
   ...[["PHYS_TA4", "b"], ["PHYS_TA5", "d"]].map(([code, ok]) => ({ code, title: "Five", type: "mc", pick: "one", shuffle: false, body: txt(STEM + " Which is right?"),
-    choices: "abcde".split("").map(id => ({ id, md: "Option " + id.toUpperCase() + " with $\\frac{1}{2}$ a few words" })), correct: ok,
+    choices: "abcde".split("").map(id => ({ id, md: "Option " + id.toUpperCase() + " with a few more words" })), correct: ok,
     wrong: "abcde".split("").filter(id => id !== ok).map(id => ({ choice: id, error: "misread", hint: "QUACK. Look again." })), saccharine: { title: "Five", key: "Pick: " + ok, slip: Object.fromEntries("abcde".split("").filter(id => id !== ok).map(id => [id, "Slip."])) } })),
   { code: "PHYS_TA3", title: "Pick", type: "mc", pick: "one", shuffle: false, body: txt(STEM + " Which is right?"),
     choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }, { id: "c", md: "Good claim" }], correct: ["b"],
