@@ -71,13 +71,14 @@ try {
     await page.waitForSelector("#problem .cc-row .cc-chip");
     assert.match(await page.textContent("#problem .cc-strip .cc-st"), /Exam day: 2 calculator moves/);
     await page.waitForSelector("#problem .cc-slot [role=link]");   // the Hail Mary slot is live in exam time
-    await page.waitForFunction(() => Object.keys(localStorage).some(k => /^stem-calc-toast-/.test(k)), null, { timeout: 5000 });
+    await page.waitForTimeout(900);
     const tk = () => page.evaluate(() => Object.keys(localStorage).filter(k => /^stem-calc-toast-/.test(k)));
-    assert.equal((await tk()).length, 1, "the toast was asked for today");
+    assert.equal(await page.evaluate(() => !!(window.stemCram && window.stemCram.on())), true, "cram day on");
+    assert.equal((await tk()).length, 0, "cram day: peek.js's toast is the one; Calc Coach adds no second toast");
     await page.click("#problem .cc-strip .cc-x"); assert.equal(await page.$("#problem .cc-strip"), null);
     await page.reload(); await anyUp(page); await page.waitForSelector("#problem .cc-chip");
     assert.equal(await page.$("#problem .cc-strip"), null, "dismissal is remembered");
-    await page.waitForTimeout(1500); assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false, "no second toast the same day"); assert.equal((await tk()).length, 1);
+    await page.waitForTimeout(1500); assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false, "no second toast the same day");
     await page.click("#problem .cc-chip"); await page.waitForSelector(".cc-ov .cc");
     assert.equal(await noH(page), true); await ctx.close();
   });

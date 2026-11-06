@@ -363,7 +363,7 @@
     if (bank !== 'BANK_P3X') return;
     var me = curItem;
     itemT = setTimeout(function () { if (curItem === me) offer(); }, g.__ccOfferMs || 180000);
-    if (p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast)
+    if (p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast && !(g.stemCram && g.stemCram.on && g.stemCram.on()))   // cram day: peek.js's own once-a-day toast is the one (never two promos back to back)
       toastT = setTimeout(function () {
         if (curItem !== me || busyUI() || ls(KEY_TOAST + day()) === '1') return;
         ls(KEY_TOAST + day(), '1');                                          // asked for once a day; `until` drops it rather than let it hold the queue
