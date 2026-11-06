@@ -86,8 +86,13 @@
 
   /* ---------- 2. the T45 idle peek ---------- */
   var IDLE = [180000, 600000], MOVE = 24;                                   // AMA 1 (3 min), AMA 5 (+10 min, max 2), AMA 8 (24 px of mouse travel)
+  /* TEMPORARY cram day (Tony Nov 6, Phys 2A Exam 3): in BANK_P3X, until CRAM_UNTIL (= serve.py CRAM_UNTIL, 2026-11-09 23:59 PST), the idle peek comes
+     sooner (45 s, then 2 and 5 min more, max 3) and a toast tells the student what Cluck does today. Outside the bank or the window: nothing changes. */
+  var CRAM_UNTIL = Date.parse("2026-11-10T07:59:00Z"), CRAM_IDLE = [45000, 120000, 300000], CRAM_BANK = "BANK_P3X";
+  var cramOn = function (now) { return (now == null ? Date.now() : now) <= CRAM_UNTIL && !!(window.stemBank && window.stemBank.code === CRAM_BANK); };
+  var idleList = function () { return cramOn() ? CRAM_IDLE : IDLE; };
   var last = performance.now(), n = 0, t = 0, mine = false, rest = null, mx = null, my = null;
-  var wait = function () { return IDLE[n]; };
+  var wait = function () { return idleList()[n]; };
   /* AMA 3 sugar only · in a bank · a question open · AMA 9 Cluck closed · nothing over the page (question list, code bar, keyboard, reward FX) */
   function ok() {
     var c = H.classList;
@@ -96,7 +101,7 @@
       !c.contains("ql-open") && !c.contains("bar-open") && !c.contains("kb") && !document.querySelector(".fx-ov") &&
       !(window.stemCluckOpen && window.stemCluckOpen()) && !(window.stemLockHelp && window.stemLockHelp.up) && !(window.stemDuck.up && !mine);   // AMA 10: one duck per screen
   }
-  function arm(ms) { clearTimeout(t); t = n < IDLE.length ? setTimeout(fire, Math.max(0, ms)) : 0; }
+  function arm(ms) { clearTimeout(t); t = n < idleList().length ? setTimeout(fire, Math.max(0, ms)) : 0; }
   function fire() {
     t = 0;
     if (document.visibilityState === "hidden") return;                      // visibilitychange re-arms it
@@ -129,7 +134,7 @@
     last = performance.now(); mx = null;
     clearTimeout(wt); wt = 0;                                               // a try typed before the wrong-answer peek: no peek
     if (mine) { mine = false; down(); }                                     // AMA 14: it stays until any input
-    if (!t && n < IDLE.length) arm(wait());
+    if (!t && n < idleList().length) arm(wait());
   }
   function move(e) {                                                        // a resting hand jitters: count travel, not events
     if (mx == null) { mx = e.clientX; my = e.clientY; return; }
@@ -175,4 +180,23 @@
   ["pointerdown", "keydown", "wheel", "touchstart", "input"].forEach(function (k) { document.addEventListener(k, sayAway, opt); });
   addEventListener("drill:bank", function () { tel("expired"); if (said) { said = null; down(); } });
   window.stemDuck.say = say;
+  /* ---------- 4. TEMPORARY cram-day toast (Tony Nov 6): the one toast (toast.js), BANK_P3X only, until CRAM_UNTIL, once per device per day ---------- */
+  var CRAM_TEXT = "Cram day: tap Cluck. It draws every intel question step by step. QUACK.", CRAM_KEY = "stem-cram-toast", ct = 0;
+  function cramDay() { var x = new Date(); return x.getFullYear() + "-" + (x.getMonth() + 1) + "-" + x.getDate(); }
+  function cramSeen() { try { return localStorage.getItem(CRAM_KEY) === cramDay(); } catch (e) { return false; } }
+  function cramToast() {
+    clearTimeout(ct); ct = 0;
+    if (!cramOn() || cramSeen() || !window.stemToast) return;
+    ct = setTimeout(function () {
+      ct = 0;
+      if (!cramOn() || cramSeen() || !window.stemToast) return;
+      var q = document.getElementById("q");
+      window.stemToast.show({ text: CRAM_TEXT, bar: false, ms: 9000, until: Date.now() + 60000, clear: "#fb",
+        at: function () { return cramOn() ? (document.getElementById("fb") && document.getElementById("fb").textContent.trim() ? document.getElementById("fb") : document.getElementById("q")) : null; },
+        onshow: function () { try { localStorage.setItem(CRAM_KEY, cramDay()); } catch (e) { /* shown, not kept */ } } });
+    }, 2500);
+  }
+  addEventListener("drill:bank", cramToast);
+  cramToast();
+  window.stemCram = { on: cramOn, until: CRAM_UNTIL, text: CRAM_TEXT };
 })();
