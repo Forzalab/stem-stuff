@@ -4566,7 +4566,32 @@ def mini_route(cookie_header, body):
     return _json(200, {"program": prog if ok else mini.authored(mini.AUTHORED[0])}, cookie)
 
 
+def calc_route(method, cookie_header, body):
+    """GET /calc -> {model} (null = never picked); POST /calc {model} -> {model}. The calculator model (calc-pick.js, Tony Nov 6), kept per
+    sid like progress (acct.get_calc / put_calc: it follows an account login and is kept by Save). 400: bad JSON or id; 503: the store is down."""
+    import acct
+    sid, cookie = new_sid(cookie_header)
+    try:
+        if method == "GET":
+            return _json(200, {"model": acct.get_calc(sid)}, cookie)
+        try:
+            b = json.loads(body) if 0 < len(body) <= 256 else None
+        except (ValueError, UnicodeDecodeError):
+            b = None
+        if not isinstance(b, dict):
+            return _json(400, {"error": "invalid"}, cookie)
+        try:
+            acct.put_calc(sid, b.get("model"))
+        except ValueError:
+            return _json(400, {"error": "invalid"}, cookie)
+        return _json(200, {"model": b["model"]}, cookie)
+    except OSError:
+        return _json(503, {"error": "store"}, cookie)
+
+
 def _dispatch(method, path, cookie_header, body, ua):
+    if path == "/calc" and method in ("GET", "POST"):
+        return calc_route(method, cookie_header, body)
     if method == "POST" and path == "/log/incident":
         return log_incident(cookie_header, body, ua)
     if method == "POST" and path == "/mini":
