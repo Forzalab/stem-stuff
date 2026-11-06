@@ -151,7 +151,7 @@ tags() {
     welcome) echo "@layout @real-time" ;;
     calc) echo "@layout @real-time" ;;   # Calc Coach in the app (own serve.py, fixture bank)
     calc-pick) echo "@logic @real-time" ;;   # the calculator model picker smoke, own server
-    welcome-first) echo "@logic" ;;   # the welcome redirect, own server
+    welcome-first) echo "@logic @real-time" ;;   # the welcome redirect, own server
     lockhelp) echo "@logic @real-time" ;;   # no page.clock: time is skewed via performance.now + sessionStorage __skew; real waits
     cluck-lost) echo "@layout @real-time" ;;   # the clean error line after a mid-reply failure
     tray-anchor) echo "@layout @real-time" ;;   # TRAY-ANCHOR: own serve.py + a stub OpenRouter, no real-time waits
