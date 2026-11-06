@@ -108,7 +108,8 @@
 
 /* the Calc chip row (Tony Nov 6): phone = its own line above the question (never beside the title: the Twist / Pity roll tags and wrapped math keep their line);
    desktop (>= 720) = out of the flow at the card's top right, so a late row or Hail Mary slot moves nothing (desk-layout L4/L6) */
-.cc-row { float: none; justify-content: flex-end; margin: 0 0 var(--s2); }
+.cc-row { float: right; flex-wrap: nowrap; margin: 0 0 var(--s2) var(--s2); }
+#problem:has(.twist-chip) > .cc-row { float: none; justify-content: flex-end; margin: 0 0 var(--s2); }   /* a twist item (the Twist chip leads its title line): the chips take their own line, never beside the title */
 @media (min-width: 720px) {
   #problem:has(> .cc-row) { position: relative; }
   #problem > .cc-row { position: absolute; top: 0; right: 0; margin: 0; z-index: 1; }
@@ -140,3 +141,8 @@
 .cc-eq { color: var(--th); font-size: var(--t-md); font-weight: var(--w-em); margin-left: var(--s1); }
 @media (prefers-reduced-motion: reduce) { .cc-kc-last { animation: none; } }
 @media (max-height: 700px) { .cc-routine .cc-media { height: min(40vw, 150px); width: min(66vw, 250px); } }
+
+/* legibility polish (Tony Nov 6): the DEG pill, the swipe hint */
+.cc-deg { font-size: var(--t-sm); border-style: solid; color: var(--cc-ink); padding: 3px var(--s3); }
+.cc-swipe { font-size: var(--t-sm); color: var(--cc-ink); }
+@media (max-width: 360px) { .cc-row { margin-left: var(--s1); } .cc-row .cc-chip { padding: 0 var(--s2); } }   /* a 320 phone: the floated chip takes the least width it can (katex-wrap) */

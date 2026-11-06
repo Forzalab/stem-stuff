@@ -435,8 +435,8 @@
     }
     var chip = linkEl('Calc', 'cc-chip', function () { open({ from: 'chip' }); }); chip.setAttribute('aria-label', 'Calc Coach: calculator help'); row.append(chip);
     var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; row.append(slot);
-    pr.insertBefore(row, d.getElementById('blocks') || null);                // floats right: it adds no height, so the question column is as tall as without it
-    if (strip) pr.insertBefore(strip, d.getElementById('blocks') || null);
+    pr.insertBefore(row, d.getElementById('rtag') || d.getElementById('blocks') || null);                // floats right: it adds no height, so the question column is as tall as without it
+    if (strip) pr.insertBefore(strip, d.getElementById('rtag') || d.getElementById('blocks') || null);
     loadCram().then(slots, function () { /* no cram data */ });
     if (bank !== 'BANK_P3X') return;
     var me = curItem;

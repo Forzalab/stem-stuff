@@ -6,14 +6,14 @@
 .q rect{stroke:#ff9a3e;animation:q 5s ease infinite}
 .ln{stroke-dasharray:60;animation:ln 5s ease-in-out infinite}
 .l2{animation-name:l2}
-.far{opacity:.35;animation:far 5s ease infinite}
+.far{opacity:.62;animation:far 5s ease infinite}
 .st{stroke-dasharray:20;animation:st 5s ease-in-out infinite}
 .s2{animation-name:s2}
 @keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
 @keyframes q{0%,12%{stroke:#a9b8cc}22%,100%{stroke:#ff9a3e}}
 @keyframes ln{0%,24%{stroke-dashoffset:60}42%,100%{stroke-dashoffset:0}}
 @keyframes l2{0%,30%{stroke-dashoffset:60}48%,100%{stroke-dashoffset:0}}
-@keyframes far{0%,50%{opacity:1}62%,100%{opacity:.4}}
+@keyframes far{0%,50%{opacity:1}62%,100%{opacity:.62}}
 @keyframes st{0%,52%{stroke-dashoffset:20}64%,100%{stroke-dashoffset:0}}
 @keyframes s2{0%,58%{stroke-dashoffset:20}70%,100%{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}

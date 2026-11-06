@@ -5,12 +5,12 @@
 .g{animation:g 5s ease-in-out infinite}
 .b{transform-origin:bottom;animation:b 5s cubic-bezier(.3,1.3,.5,1) infinite}
 .b2{animation-delay:.12s}.b3{animation-delay:.24s}
-.gl{opacity:.4;animation:gl 5s ease infinite}
+.gl{opacity:.62;animation:gl 5s ease infinite}
 .lc{animation:lc 5s ease infinite}
 .pk{animation:pk 5s cubic-bezier(.3,1.6,.5,1) infinite}
 @keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
 @keyframes b{0%,8%{transform:scaleY(0)}30%,100%{transform:none}}
-@keyframes gl{0%,44%{opacity:0}56%,100%{opacity:.4}}
+@keyframes gl{0%,44%{opacity:0}56%,100%{opacity:.62}}
 @keyframes lc{0%,44%{fill:#a9b8cc}56%,100%{fill:#ff9a3e}}
 @keyframes pk{0%,62%{transform:scale(0)}74%,100%{transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
