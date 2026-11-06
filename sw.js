@@ -17,7 +17,7 @@ const BASE = ["./", "index.html", "app.js", "app.css", "nav.js", "nav.css", "off
   "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", "vendor/math.min.js", "vendor/marked.min.js",
   "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2",
   "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2",
-  "toast.js", "toast.css", "stages.js", "stages.css", "copy/stage-lines.js", "copy/repair-lines.js", "repair.js", "repair.css", "welcome.js", "welcome.css", "calc-coach.js", "calc-coach.css", "calc/calc-layout.json", "calc/calc-steps.json", "calc/calc-keys.json", "calc/calc-pad.json", "calc/cram.json", "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
+  "toast.js", "toast.css", "stages.js", "stages.css", "copy/stage-lines.js", "copy/repair-lines.js", "repair.js", "repair.css", "welcome.js", "welcome.css", "calc-coach.js", "calc-coach.css", "calc/calc-layout.json", "calc/calc-steps.json", "calc/calc-keys.json", "calc/calc-pad.json", "calc/cram.json", "calc/hm/hm-1-size.svg", "calc/hm/hm-2-traps.svg", "calc/hm/hm-3-letter.svg", "calc/hm/hm-4-blank.svg", "calc/rt/rt-1-solve.svg", "calc/rt/rt-2-store.svg", "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
 
 // Pure routing decision; also used by tests/offline.test.mjs. scope = registration scope URL.
 function route(url, method, scope) {
@@ -31,6 +31,7 @@ function route(url, method, scope) {
     if (/^p\/[A-Za-z0-9_-]+\.json$/.test(rel)) return "problem";
     if (rel === "" || rel === "index.html" || rel === "stem-stuff.html" || rel === "privacy.html") return "shell";   // privacy.html: the footer link works offline too
     if (/^(tests|tools|schema|_vercel)\//.test(rel) || rel === "sw.js") return "pass";   // _vercel/: analytics, never cached
+    if (/^calc\/[\w-]+\.json$/.test(rel)) return "shell";   // Calc Coach data (cram.json loads on every item): precached in BASE, so it must route to the shell cache offline
     if (/^[\w./-]+\.(js|mjs|css|woff2|svg|png|ico)$/.test(rel) && !rel.includes("..")) return "shell";
     return "pass";
   }

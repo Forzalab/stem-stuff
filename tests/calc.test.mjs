@@ -42,7 +42,7 @@ test("promo: exam-day copy until 2026-11-09T23:59 Los Angeles, neutral after; on
   try {
     assert.equal(CC.EXAM_END, Date.parse("2026-11-10T08:00:00Z"));
     Date.now = () => Date.parse("2026-11-10T07:59:59Z"); assert.equal(CC.promo().exam, true);
-    assert.match(CC.promo().title, /^Exam day: 2 calculator moves that save you 5 minutes$/);
+    assert.match(CC.promo().title, /^Stuck\? Click here for TI\/Casio tricks\.$/);
     Date.now = () => Date.parse("2026-11-10T08:00:00Z"); const p = CC.promo();
     assert.equal(p.exam, false); assert.doesNotMatch(p.title + p.body, /exam day|QUACK/i);
   } finally { Date.now = real; }
@@ -55,4 +55,15 @@ test("no new reply format: the reply component library, prompts and renderers do
   for (const f of ["prompts/cluck-v4.txt", "prompts/mini-cluck.txt", "views/registry.json", "views/library.json", "views.js", "oui.py", "views_gate.py"])
     assert.doesNotMatch(readFileSync(join(ROOT, f), "utf8"), /calc[ -_]?coach|CalcCoach|stemCalc/i, f);
   for (const f of readdirSync(join(ROOT, "views/prompt"))) assert.doesNotMatch(readFileSync(join(ROOT, "views/prompt", f), "utf8"), /calc[ -_]?coach/i, f);
+});
+
+test("routine deck: strip keys come from the verified steps; telemetry events carry ids and phases only", () => {
+  CC.setData(data());
+  assert.deepEqual(CC.stripKeys("ti36xpro", "R1"), ["2nd", "sin"]);
+  assert.deepEqual(CC.stripKeys("fx115esplus", "R1"), ["SHIFT", "CALC"]);
+  assert.equal(CC.routineDeck("ti36xpro").cards.length, 2);
+  const seen = []; globalThis.stemT = (n, o) => seen.push([n, o]);
+  CC.routineDeck("ti36xpro").onSlide(1);
+  delete globalThis.stemT;
+  assert.deepEqual(seen, [["calc_coach", { phase: "slide", slide: 2, routine: "R2", model: "ti36xpro" }]]);
 });

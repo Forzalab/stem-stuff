@@ -3542,6 +3542,14 @@ def cram_on(now=None):
     return now <= CRAM_UNTIL
 
 
+CRAM_NOTES = {}                                              # item code -> times a cram_note was attached to a Cluck turn (this process; code only, no prompt text)
+
+
+def cram_count(code):
+    CRAM_NOTES[code] = CRAM_NOTES.get(code, 0) + 1
+    sys.stderr.write("cram_note attached code=%s n=%d\n" % (code, CRAM_NOTES[code]))
+
+
 def cram_note(code, now=None):
     """the cram-day block for this item ("" outside the window, off, another bank, or no text)"""
     if not code or not cram_on(now) or bank_of(code) != CRAM_BANK:
@@ -3579,6 +3587,7 @@ def _v4_claude_system(v4):
         system.append({"type": "text", "text": v4_fig_howto(fig)})
     cram = cram_note(v4.get("code"))                             # TEMPORARY cram-day guide (Exam 3 bank): after the how-to, uncached
     if cram:
+        cram_count(v4.get("code"))
         system.append({"type": "text", "text": cram})
     if STYLE_V4:                                                 # the permanent style card + few-shots, LAST (nearest the turn, where the model follows it best); no breakpoint of its own
         system.append({"type": "text", "text": STYLE_V4})

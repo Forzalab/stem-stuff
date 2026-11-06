@@ -52,10 +52,10 @@ try {
     const { ctx, page, errs } = await fresh({ "stem-calc-model": "ti-36x-pro" });
     await page.goto(BASE + "/"); await anyUp(page);
     await page.waitForSelector("#q .cc-welcome");
-    assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Exam day: 2 calculator moves that save you 5 minutes");
+    assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Stuck? Click here for TI/Casio tricks.");
     assert.equal(await noH(page), true);
     await page.click("#q .cc-welcome button"); await page.waitForSelector(".cc-ov .cc");
-    assert.match(await page.textContent(".cc-ov .cc-t"), /Calc Coach/);
+    await page.waitForSelector(".cc-ov .cc-deck"); assert.equal(await page.$$eval(".cc-ov .cc-slide", e => e.length), 2, "the routine deck: 2 slides");
     assert.equal(await page.getAttribute(".cc-ov", "role"), "dialog");
     await page.keyboard.press("Escape"); assert.equal(await page.$(".cc-ov"), null);
     assert.deepEqual(errs, []); await ctx.close();
@@ -69,7 +69,7 @@ try {
     const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti-36x-pro" });
     await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page);
     await page.waitForSelector("#problem .cc-row .cc-chip");
-    assert.match(await page.textContent("#problem .cc-strip .cc-st"), /Exam day: 2 calculator moves/);
+    assert.match(await page.textContent("#problem .cc-strip .cc-st"), /^Stuck\? Click here for TI\/Casio tricks\.$/);
     await page.waitForSelector("#problem .cc-slot [role=link]");   // the Hail Mary slot is live in exam time
     await page.waitForTimeout(900);
     const tk = () => page.evaluate(() => Object.keys(localStorage).filter(k => /^stem-calc-toast-/.test(k)));
@@ -120,7 +120,7 @@ try {
     await page.waitForTimeout(1300); assert.equal(await shown(page), 0, "one wrong pick is not enough");
     const code = await page.evaluate(() => document.getElementById("pcode").textContent);
     await wrong(page, code); await page.waitForFunction(() => window.__shown.some(t => /Guess smart/.test(t)), null, { timeout: 4000 });
-    assert.equal(await page.evaluate(() => window.__shown.find(t => /Guess smart/.test(t))), "Stuck? Guess smart. Learn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.");
+    assert.equal(await page.evaluate(() => window.__shown.find(t => /Guess smart/.test(t))), "Stuck? Guess smart.\nLearn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.");
     await wrong(page, code); await page.waitForTimeout(1300); assert.equal(await shown(page), 1, "once per item");
     for (const c of ["X2", "X3", "X4"]) { await page.evaluate(c => { document.getElementById("pcode").textContent = c; window.CalcCoach.onItem("BANK_P3X"); }, c); await wrong(page, c); await page.waitForTimeout(1100); }
     assert.equal(await shown(page), 3, "capped at 3 a session");
@@ -154,6 +154,26 @@ try {
     await page.waitForFunction(() => document.querySelectorAll(".cc-rail i")[1].className === "on");
     await page.keyboard.press("PageUp"); await page.waitForFunction(() => document.querySelector(".cc-deck").scrollTop <= 2);
     assert.equal(await noH(page), true); await ctx.close();
+  });
+  await step("Routine deck: 2 snap slides, a theme class per slide, the picked model's verified keys, step button, reduced motion static", async () => {
+    const want = { "ti-36x-pro": ["2nd", "sin"], "fx-115es-plus": ["SHIFT", "CALC"] };
+    for (const [id, keys] of Object.entries(want)) {
+      const { ctx, page } = await fresh({ "stem-calc-model": id }, undefined, { reducedMotion: "reduce" });
+      await page.goto(BASE + "/calc.html"); await page.waitForFunction(() => window.CalcCoach);
+      await page.evaluate(() => window.CalcCoach.open({ force: true })); await page.waitForSelector(".cc-routine .cc-slide");
+      const m = await page.evaluate(() => { const sc = document.querySelector(".cc-deck"), sl = [...document.querySelectorAll(".cc-slide")];
+        return { snap: getComputedStyle(sc).scrollSnapType, n: sl.length, th: sl.map(e => /cc-th-(amber|cyan)/.exec(e.className)[1]), full: sl.every(e => Math.abs(e.offsetHeight - sc.clientHeight) <= 1),
+          caps: [...sl[0].querySelectorAll(".cc-kc")].map(e => e.textContent), r2: sl[1].querySelectorAll(".cc-kc").length,
+          btns: sl.map(e => e.querySelector("button.cc-back")?.textContent), swipe: document.querySelectorAll(".cc-swipe").length, bob: getComputedStyle(document.querySelector(".cc-bob")).animationName,
+          imgs: sl.map(e => e.querySelector("img.cc-anim")?.getAttribute("src")), pulse: getComputedStyle(document.querySelector(".cc-kc-last")).animationName, dots: document.querySelectorAll(".cc-rail i").length }; });
+      assert.match(m.snap, /y mandatory/); assert.deepEqual([m.n, m.th, m.full, m.swipe, m.bob, m.pulse, m.dots], [2, ["amber", "cyan"], true, 1, "none", "none", 2]);
+      assert.deepEqual(m.caps, keys, id + ": the verified keys"); assert.ok(m.r2 >= 1, "slide 2 has its key strip");
+      assert.deepEqual(m.btns, ["Show me step by step", "Show me step by step"]); assert.deepEqual(m.imgs, ["calc/rt/rt-1-solve.svg", "calc/rt/rt-2-store.svg"]);
+      await page.focus(".cc-deck"); await page.keyboard.press("ArrowDown");
+      await page.waitForFunction(() => document.querySelectorAll(".cc-rail i")[1].className === "on");
+      await page.click(".cc-slide:nth-child(2) button.cc-back"); await page.waitForSelector(".cc-ov .cc-count");   // opens the per-step walkthrough
+      assert.equal(await noH(page), true); await ctx.close();
+    }
   });
   await step("Cluck chrome: the Calc Coach link opens the panel, and sits outside the reply body", async () => {
     const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti-36x-pro" });

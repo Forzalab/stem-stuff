@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120" aria-hidden="true" focusable="false">
+<style>
+.f{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700}
+.m{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+*{transform-box:fill-box;transform-origin:center}
+.g{animation:g 4.5s ease-in-out infinite}
+.fly{animation:fly 4.5s cubic-bezier(.5,0,.3,1) infinite}
+.val{animation:val 4.5s ease-out infinite}
+.tag{animation:tag 4.5s ease-out infinite}
+.l1{animation:l1 4.5s ease-out infinite}
+.ar{stroke-dasharray:3 3;animation:ar 4.5s ease-out infinite}
+.res{animation:res 4.5s cubic-bezier(.3,1.6,.5,1) infinite}
+.ans{animation:ans 4.5s cubic-bezier(.5,0,.3,1) infinite}
+.l2{animation:l2 4.5s ease-out infinite}
+@keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
+@keyframes fly{0%,6%{opacity:1;transform:none}24%{opacity:1;transform:translate(0,58px) scale(.8)}28%,100%{opacity:0;transform:translate(0,58px) scale(.8)}}
+@keyframes val{0%,24%{opacity:0}30%,100%{opacity:1}}
+@keyframes tag{0%,8%{opacity:0}16%,100%{opacity:1}}
+@keyframes l1{0%,34%{opacity:0}42%,100%{opacity:1}}
+@keyframes ar{0%,38%{opacity:0}50%,100%{opacity:1}}
+@keyframes res{0%,52%{opacity:0;transform:scale(.6)}60%,100%{opacity:1;transform:none}}
+@keyframes ans{0%,64%{opacity:0;transform:translate(70px,-34px)}80%,100%{opacity:1;transform:none}}
+@keyframes l2{0%,80%{opacity:0}88%,100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<g class="g">
+<text class="f tag" x="32" y="52" font-size="11" fill="#a9b8cc" text-anchor="middle">STO → A</text>
+<rect x="10" y="58" width="44" height="52" rx="8" fill="#0b1422" stroke="#2fd9e6" stroke-width="2"/>
+<text class="f" x="32" y="78" font-size="19" fill="#2fd9e6" text-anchor="middle">A</text>
+<text class="m val" x="32" y="100" font-size="12" fill="#f3f7fc" text-anchor="middle">9.80</text>
+<g class="fly"><rect x="10" y="4" width="44" height="24" rx="12" fill="#2fd9e6"/><text class="m" x="32" y="21" font-size="13" fill="#00262b" text-anchor="middle">9.80</text></g>
+<rect x="66" y="8" width="124" height="102" rx="9" fill="#0b1422" stroke="#2fd9e6" stroke-width="1.5" stroke-opacity=".5"/>
+<g class="l1"><text class="m" x="74" y="36" font-size="12" fill="#f3f7fc"><tspan fill="#2fd9e6">A</tspan>×3 + <tspan fill="#2fd9e6">A</tspan>×2 =</text></g>
+<path class="ar" d="M54 70C70 66 70 44 80 41M54 76C92 80 100 50 126 41" fill="none" stroke="#2fd9e6" stroke-width="1.5" stroke-linecap="round"/>
+<text class="m res" x="182" y="36" font-size="15" fill="#2fd9e6" text-anchor="end">49</text>
+<g class="ans"><rect x="74" y="64" width="38" height="22" rx="11" fill="#2fd9e6"/><text class="f" x="93" y="79" font-size="12" fill="#00262b" text-anchor="middle">Ans</text></g>
+<g class="l2"><text class="m" x="118" y="80" font-size="12" fill="#f3f7fc">÷ 7 =</text><text class="m" x="182" y="100" font-size="17" fill="#2fd9e6" text-anchor="end">7</text></g>
+</g>
+</svg>

@@ -193,7 +193,8 @@
       var q = document.getElementById("q");
       window.stemToast.show({ text: CRAM_TEXT, bar: false, ms: 9000, until: Date.now() + 60000, clear: "#fb",
         at: function () { return cramOn() ? (document.getElementById("fb") && document.getElementById("fb").textContent.trim() ? document.getElementById("fb") : document.getElementById("q")) : null; },
-        onshow: function () { try { localStorage.setItem(CRAM_KEY, cramDay()); } catch (e) { /* shown, not kept */ } } });
+        onshow: function () { try { localStorage.setItem(CRAM_KEY, cramDay()); } catch (e) { /* shown, not kept */ } try { window.stemT && window.stemT("cram_toast", { phase: "shown", code: (window.stemBank && window.stemBank.code) || null }); } catch (e) { /* never the page's problem */ } },
+        onend: function (why) { try { window.stemT && window.stemT("cram_toast", { phase: why, code: (window.stemBank && window.stemBank.code) || null }); } catch (e) { /* */ } } });
     }, 2500);
   }
   addEventListener("drill:bank", cramToast);

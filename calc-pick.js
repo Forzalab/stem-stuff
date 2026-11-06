@@ -44,14 +44,16 @@
     return null;
   }
   function onChange(fn) { if (typeof fn === "function") subs.push(fn); return function () { subs = subs.filter(function (f) { return f !== fn; }); }; }
+  var tel = function (phase, x) { try { var o = { phase: phase, auto: auto0 }; for (var k in x) o[k] = x[k]; g.stemT && g.stemT('calc_pick', o); } catch (e) { /* never the page's problem */ } };   // ids only: no free text (the search box is never sent)
   function pick(id, brand) {
+    tel('model', { model: id, brand: (find(id) || {}).brand || brand || null });
     var m = find(id) || { id: id, brand: brand || null, name: "Other / not sure" };
     save(id); close();
     try { g.dispatchEvent(new CustomEvent(EV, { detail: m })); } catch (e) { /* old browser */ }
     subs.forEach(function (f) { try { f(id, m); } catch (e) { /* a listener's bug is its own */ } });
   }
-  function skip() { save("skip"); close(); }
-  function later() { try { sessionStorage.setItem(LATER, "1"); } catch (e) { /* */ } close(); }
+  function skip() { tel('skip'); save("skip"); close(); }
+  function later() { tel('later'); try { sessionStorage.setItem(LATER, "1"); } catch (e) { /* */ } close(); }
 
   function focusables() { return el ? [].slice.call(el.querySelectorAll("button, input")).filter(function (x) { return !x.disabled && x.offsetParent !== null; }) : []; }
   function keys(e) {
@@ -83,6 +85,7 @@
     row.firstChild.focus({ preventScroll: true });
   }
   function step2(b) {
+    tel("brand", { brand: b });
     el.querySelector(".lh-say").textContent = "Nice! Which " + (b === "ti" ? "TI" : BRANDS[b]) + " do you have?";
     el.querySelector(".lh-col").classList.add("cp-s2");
     var chipLab = node("p", "cp-lab", "Most common"); chipLab.id = "cpChipLab";
@@ -138,6 +141,7 @@
       '<div class="cp-body"></div></div>';
     d.body.appendChild(el);
     d.documentElement.classList.add("cp-on");
+    tel('shown');
     d.addEventListener("keydown", keys, true);
     try { g.stemDuck && g.stemDuck.down && g.stemDuck.down(); } catch (e) { /* */ }
     step1();

@@ -14,7 +14,7 @@
   var FLAGS = { hailMary: true };                         // the cram panel (calc/cram.json, per bank): off = its slot and promo line are hidden. Temporary content, reusable skeleton
   var KEY_MODEL = 'stem-calc-model', KEY_STRIP = 'stem-calc-strip', KEY_TOAST = 'stem-calc-toast-';
   var COPY = {
-    exam: { title: 'Exam day: 2 calculator moves that save you 5 minutes',
+    exam: { title: 'Stuck? Click here for TI/Casio tricks.',
       body: 'Type the whole equation and hit SOLVE. Store a number once and reuse it. Pick your calculator and I will show you the keys. QUACK.' },
     plain: { title: 'Calculator moves', body: 'Two moves worth knowing: solve an equation in one go, and store a number instead of retyping it. Pick your calculator to see the keys.' }
   };
@@ -23,6 +23,8 @@
   function ls(k, v) { try { if (v === undefined) return g.localStorage.getItem(k); if (v === null) g.localStorage.removeItem(k); else g.localStorage.setItem(k, v); } catch (e) { /* blocked */ } return null; }
   var reduced = function () { try { return g.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
   function h(tag, cls, text) { var e = d.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  /* telemetry (telemetry.js stemT; ids, counts and phases only: no free text, no PII) */
+  function tel(name, o) { try { g.stemT && g.stemT(name, o); } catch (e) { /* never the page's problem */ } }
   var day = function () { var t = new Date(); return t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate(); };
 
   /* ---- promo ---- */
@@ -166,6 +168,7 @@
       if (st.view === 'constants') {
         var CC_ = constantsFor(curBank);
         if (!CC_) { st.view = 'routine'; return draw(); }
+        tel('calc_coach', { phase: 'consts', model: m });
         root.append(h('p', 'cc-model', name), h('h3', 'cc-tt', CC_.title), h('p', 'cc-sub', CC_.intro));
         CC_.rows.forEach(function (r) { var k = h('div', 'cc-card cc-static cc-const'); k.append(h('span', 'cc-n cc-sym', r.sym), h('span', 'cc-ct', r.name), h('span', 'cc-cw', constPath(m, r))); root.append(k); });
         ((CC_.tips && /^(fx|casio)/.test(m) && CC_.tips.casio) || []).forEach(function (t) { root.append(h('p', 'cc-tag', t)); });
@@ -176,6 +179,7 @@
       if (!steps) { root.append(h('p', 'cc-model', name)); root.append(msg('Check your manual for this one.', 'I only show steps that are verified for your model.')); root.append(btn('Back', 'cc-btn', function () { st.view = 'routine'; draw(); })); return; }
       var n = steps.length;
       if (st.i >= n) {                                            // the final card
+        tel('calc_coach', { phase: 'done', routine: st.routine, model: m });
         var c2 = h('div', 'cc-try'); c2.append(h('h3', 'cc-tt', 'Try it on yours'), h('p', 'cc-say', st.routine === 'R1' ?
           'Same keys, your numbers. Type your whole equation, check the answer, and if the solver asks for a guess, type one near the size and sign you expect. Want the other root? Try a different guess.' :
           'Pick a result from your own problem, store it in a letter, and use the letter in your next line.'));
@@ -184,6 +188,7 @@
         root.append(f2); return;
       }
       var s = steps[st.i];
+      tel('calc_coach', { phase: 'step', routine: st.routine, step: st.i + 1, of: n, model: m });
       root.append(h('p', 'cc-count', 'Step ' + (st.i + 1) + ' of ' + n + ' · ' + name));
       var bar = h('div', 'cc-bar'); var fill = h('i'); fill.style.width = ((st.i + 1) / n * 100) + '%'; bar.append(fill); root.append(bar);
       if (s.hidden) { root.append(msg('Check your manual for this step.', 'It is not verified for your model yet.')); }
@@ -220,7 +225,15 @@
     ov._from = from;
     ov.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     d.documentElement.classList.add('cc-open');
-    return mount(ov, { onClose: close, routine: o.routine, theme: 'dark', bank: curBank }).then(function (p) { ov.tabIndex = -1; ov.focus({ preventScroll: true }); return p; });
+    tel('calc_coach', { phase: o.routine ? 'steps' : 'open', from: o.from || 'chip', routine: o.routine || null, model: model() });
+    var mine = ov;
+    return load().then(function () {
+      var e = !o.routine && routineDeck(model());                              // the 2-slide swipe deck; no verified routine for this model = the plain panel ("check your manual")
+      if (e && ov === mine) {
+        ov.classList.add('cc-ov-deck'); var dk = buildCram(ov, e, close); dk.firstChild.focus({ preventScroll: true }); return dk;
+      }
+      return mount(ov, { onClose: close, routine: o.routine, theme: 'dark', bank: curBank }).then(function (p) { ov.tabIndex = -1; ov.focus({ preventScroll: true }); return p; });
+    });
   }
   function close() {
     if (!ov) return; var f = ov._from; ov.remove(); ov = null; d.documentElement.classList.remove('cc-open');
@@ -238,29 +251,88 @@
     if (name === 'dot') { var c = d.createElementNS(NS, 'circle'); c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '6'); c.setAttribute('fill', 'currentColor'); s.appendChild(c); }
     return s;
   }
+  /* ---- the routine deck (Tony Nov 6): the same swipe deck as Hail Mary (buildCram), 2 slides, one animated SVG each (calc/rt/*.svg), each routine in its own hue
+     (amber = SOLVE, cyan = STO / Ans: the figure palette, app.css --fig-*), a key strip with this model's verified keys, a button into the per-step walkthrough ---- */
+  var SOLVE_RE = /^(ti36xpro|fx115esplus|fx991cw|fx991ex)$/, NUM = /^-?[\d.]+$/, VARK = /^x y ?z ?t/i, STORE = /^\[?(sto->|sto|rcl|store)\]?$/i;
+  var keyLabel = function (p) { var b = /^\[(.*)\]$/.exec(p); p = b ? b[1] : p; return p.replace('->', '→').replace(/^x2$/i, 'x²').replace('(-)', '(−)'); };
+  var usable = function (M, r) { return (M[r] || []).filter(function (x) { return !UNV.test(x.source_loc || ''); }); };
+  /* the verified keys for the one move this slide teaches, read from calc-steps.json (never typed twice): [label] */
+  function stripKeys(m, kind) {
+    var M = DATA.steps[m], key = M && routineOf(M, kind + '_')[0]; if (!key) return [];
+    var st = usable(M, key), out = [], plainKey = function (p) { return !NUM.test(p) && !VARK.test(p); }, i, ks;
+    if (kind === 'R1' && SOLVE_RE.test(m)) {
+      for (i = 0; i < st.length; i++) {
+        ks = st[i].press; var has = ks.some(function (p) { return !plainKey(p); });
+        if (has) { if (out.length) break; continue; }
+        if (out.length + ks.length > 3) break; out = out.concat(ks);
+      }
+    } else if (kind === 'R1') out = st[0] ? st[0].press.filter(plainKey) : [];
+    else for (i = 0; i < st.length; i++) { var pk = st[i].press; out = out.concat(pk.filter(plainKey)); if (pk.some(function (p) { return STORE.test(p); })) break; }
+    if (out.length > 1 && /^(enter|exe)$/i.test(out[0])) out.shift();
+    return out.slice(0, 5).map(keyLabel);
+  }
+  function degBadge(m) {
+    var ks = []; ((DATA.steps[m] || {}).preflight_deg || []).forEach(function (x) { if (!UNV.test(x.source_loc || '')) ks = ks.concat(x.press); });
+    return ks.length ? 'Check DEG: ' + ks.slice(0, 4).map(keyLabel).join(' → ') : '';
+  }
+  var MOD = /^(2nd|shift|alpha)$/i;
+  function keyStrip(sl, keys, gloss) {
+    if (!keys.length) return;
+    var row = h('div', 'cc-keys'); row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Keys: ' + keys.join(', then '));
+    keys.forEach(function (k, i) {
+      if (i) { var a = h('span', 'cc-arr', '→'); a.setAttribute('aria-hidden', 'true'); row.append(a); }
+      row.append(h('span', 'cc-kc' + (MOD.test(k) ? ' cc-kc-mod' : '') + (i === keys.length - 1 ? ' cc-kc-last' : ''), k));
+    });
+    if (gloss) row.append(h('span', 'cc-eq', '= ' + gloss));
+    sl.append(row);
+  }
+  function routineDeck(m) {
+    var M = m && DATA && DATA.steps[m], K = m && DATA && DATA.keys[m];
+    if (!M || !K || !routineOf(M, 'R1_').length) return null;
+    var solve = SOLVE_RE.test(m), kinds = routineOf(M, 'R2_').length ? ['R1', 'R2'] : ['R1'];
+    var C = {
+      R1: { cls: 'cc-rt cc-th-amber', anim: 'calc/rt/rt-1-solve.svg', icon: 'bars', t: solve ? 'One equation, SOLVE' : 'One equation, stored',
+        b: solve ? 'Type it all. Guess. Hit SOLVE.' : 'Store each number. Type the formula once.', gloss: solve ? 'SOLVE' : 'STO' },
+      R2: { cls: 'cc-rt cc-th-cyan', anim: 'calc/rt/rt-2-store.svg', icon: 'dot', t: TITLE.R2, b: 'Save a number once. Use it twice.', gloss: 'STO' }
+    };
+    var badge = degBadge(m);
+    return { title: K.name, unit: 'Routine', cls: 'cc-routine', cards: kinds.map(function (kind, i) {
+      var c = C[kind];
+      return { cls: c.cls, kick: K.name, anim: c.anim, icon: c.icon, t: c.t, b: c.b,
+        pre: i === 0 && badge ? function (sl) { sl.append(h('p', 'cc-deg', badge)); } : null,
+        extra: function (sl) { keyStrip(sl, stripKeys(m, kind), c.gloss); },
+        foot: function (sl) {
+          if (i < kinds.length - 1) { var sw = h('p', 'cc-swipe'); sw.append(h('span', null, 'Swipe up')); var ch = icon('chev'); ch.setAttribute('class', 'cc-ic cc-bob'); sw.append(ch); sl.append(sw); }
+          var bt = h('button', 'cc-btn cc-go cc-back', 'Show me step by step'); bt.type = 'button';
+          bt.onclick = function () { open({ routine: kind, force: true, from: 'deck' }); }; sl.append(bt);
+        } };
+    }), onSlide: function (k) { tel('calc_coach', { phase: 'slide', slide: k + 1, routine: kinds[k], model: m }); } };
+  }
+
   /* the Hail Mary deck: a vertical swipe deck, one full-height slide per tip (CSS scroll-snap, no library). Animated SVG per slide
      (calc/hm/*.svg via <img>, aria-hidden), the static icon until it loads. */
   function buildCram(host, e, onClose) {
-    var root = h('section', 'cc cc-deckwrap'); root.setAttribute('data-theme', 'dark'); root.setAttribute('aria-label', e.title); host.appendChild(root);
-    var sc = h('div', 'cc-deck'); sc.tabIndex = 0; sc.setAttribute('role', 'region'); sc.setAttribute('aria-label', e.title + ', tips. Swipe or use the arrow keys.');
+    var root = h('section', 'cc cc-deckwrap' + (e.cls ? ' ' + e.cls : '')); root.setAttribute('data-theme', 'dark'); root.setAttribute('aria-label', e.title); host.appendChild(root);
+    var sc = h('div', 'cc-deck'); sc.tabIndex = 0; sc.setAttribute('role', 'region'); sc.setAttribute('aria-label', e.title + ', ' + (e.unit ? e.unit.toLowerCase() + 's' : 'tips') + '. Swipe or use the arrow keys.');
     var n = e.cards.length, live = h('p', 'sr-only'); live.setAttribute('role', 'status');
     e.cards.forEach(function (c, i) {
-      var sl = h('section', 'cc-slide'); sl.setAttribute('aria-label', 'Tip ' + (i + 1) + ' of ' + n);
-      sl.append(h('p', 'cc-kick', e.title));
+      var sl = h('section', 'cc-slide' + (c.cls ? ' ' + c.cls : '')); sl.setAttribute('aria-label', (e.unit || 'Tip') + ' ' + (i + 1) + ' of ' + n);
+      sl.append(h('p', 'cc-kick', c.kick || e.title)); if (c.pre) c.pre(sl);
       var md = h('div', 'cc-media'); md.setAttribute('aria-hidden', 'true');
       var fall = function () { md.replaceChildren(h('span', 'cc-n cc-big')); md.firstChild.append(icon(c.icon)); };
       if (c.anim) { var im = d.createElement('img'); im.src = c.anim; im.alt = ''; im.className = 'cc-anim'; im.onerror = fall; md.append(im); } else fall();
-      sl.append(md, h('h3', 'cc-st-t', c.t), h('p', 'cc-st-b', c.b)); if (c.ex) sl.append(h('p', 'cc-ex', c.ex));
-      if (i < n - 1) { var sw = h('p', 'cc-swipe'); sw.append(h('span', null, 'Swipe up to see more')); var ch = icon('chev'); ch.setAttribute('class', 'cc-ic cc-bob'); sw.append(ch); sl.append(sw); }
+      sl.append(md, h('h3', 'cc-st-t', c.t), h('p', 'cc-st-b', c.b)); if (c.ex) sl.append(h('p', 'cc-ex', c.ex)); if (c.extra) c.extra(sl);
+      if (c.foot) c.foot(sl);
+      else if (i < n - 1) { var sw = h('p', 'cc-swipe'); sw.append(h('span', null, 'Swipe up to see more')); var ch = icon('chev'); ch.setAttribute('class', 'cc-ic cc-bob'); sw.append(ch); sl.append(sw); }
       else {
         sl.append(h('p', 'cc-tag cc-odds', e.odds));
-        var bk = h('button', 'cc-btn cc-go cc-back', 'Back to the question'); bk.type = 'button'; bk.onclick = onClose || function () { sc.scrollTo({ top: 0 }); }; sl.append(bk);
+        var bk = h('button', 'cc-btn cc-go cc-back', 'Back to the question'); bk.type = 'button'; bk.onclick = function () { if (e.onBack) e.onBack(); (onClose || function () { sc.scrollTo({ top: 0 }); })(); }; sl.append(bk);
       }
       sc.append(sl);
     });
     var rail = h('div', 'cc-rail'); rail.setAttribute('aria-hidden', 'true'); var dots = [];
     for (var i = 0; i < n; i++) { var dt = h('i'); dots.push(dt); rail.append(dt); }
-    var cur = -1, sync = function () { var k = Math.max(0, Math.min(n - 1, Math.round(sc.scrollTop / Math.max(1, sc.clientHeight)))); if (k === cur) return; cur = k; dots.forEach(function (x, j) { x.className = j === k ? 'on' : ''; }); live.textContent = 'Tip ' + (k + 1) + ' of ' + n; };
+    var cur = -1, sync = function () { var k = Math.max(0, Math.min(n - 1, Math.round(sc.scrollTop / Math.max(1, sc.clientHeight)))); if (k === cur) return; cur = k; root.setAttribute('data-k', k); dots.forEach(function (x, j) { x.className = j === k ? 'on' : ''; }); live.textContent = (e.unit || 'Tip') + ' ' + (k + 1) + ' of ' + n; if (e.onSlide) e.onSlide(k); };
     sc.addEventListener('scroll', sync); sync();
     sc.addEventListener('keydown', function (ev) {
       var dir = ev.key === 'ArrowDown' || ev.key === 'PageDown' ? 1 : ev.key === 'ArrowUp' || ev.key === 'PageUp' ? -1 : 0;
@@ -271,9 +343,11 @@
     if (onClose) { var x = h('button', 'cc-x cc-deck-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '×'; x.onclick = onClose; root.append(x); }
     return root;
   }
-  function openCram(bank) {
+  function openCram(bank, from) {
     return loadCram().then(function () {
       var e = cramFor(bank); if (!e) return;
+      tel('hail_mary', { phase: 'open', from: from || 'chip' });
+      e = Object.assign({}, e, { unit: 'Tip', onSlide: function (k) { tel('hail_mary', { phase: 'slide', slide: k + 1 }); }, onBack: function () { tel('hail_mary', { phase: 'back' }); } });
       if (ov) close();
       var from = d.activeElement;
       ov = h('div', 'cc-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', e.title); ov._from = from;
@@ -299,7 +373,7 @@
   function slots() {
     var on = !!cramFor(curBank);
     d.querySelectorAll('.cc-slot').forEach(function (sl) {
-      sl.hidden = !on; if (on && !sl.firstChild) { sl.append(linkEl('Hail Mary', sl.parentNode.classList.contains('cc-cl') ? 'cc-link' : 'cc-chip', function () { openCram(curBank); })); }
+      sl.hidden = !on; if (on && !sl.firstChild) { sl.append(linkEl('Hail Mary', sl.parentNode.classList.contains('cc-cl') ? 'cc-link' : 'cc-chip', function () { openCram(curBank, sl.parentNode.classList.contains('cc-cl') ? 'cluck' : 'chip'); })); }
     });
   }
 
@@ -311,11 +385,12 @@
     e.onkeydown = function (k) { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); fn(); } };
     return e;
   }
-  function openBtn(text, cls, from) { var b = h('button', cls, text); b.type = 'button'; b.setAttribute('data-calc-from', from); b.onclick = function () { open(); }; return b; }
+  function openBtn(text, cls, from) { var b = h('button', cls, text); b.type = 'button'; b.setAttribute('data-calc-from', from); b.onclick = function () { open({ from: from }); }; return b; }
   function welcomeCard(host) {
     if (!host || host.querySelector('.cc-welcome')) return;
     var p = promo(), c = h('aside', 'cc-welcome'); c.setAttribute('aria-label', 'Calc Coach');
-    c.append(h('h3', 'cc-wt', p.title), h('p', 'cc-wb', p.body), openBtn('Show me the keys', 'cc-btn cc-go', 'welcome'));
+    var wt = h('h3', 'cc-wt', p.title); if (p.exam) { wt.style.cursor = 'pointer'; wt.onclick = function () { open({ from: 'welcome' }); }; }
+    c.append(wt, h('p', 'cc-wb', p.body), openBtn('Show me the keys', 'cc-btn cc-go', 'welcome'));
     host.insertBefore(c, host.firstChild);                                  // above the ladder: a ladder row that grows or changes never moves it (desk-layout L4/L6)
   }
   /* each item: the persistent Calc chip + hail-mary slot; on BANK_P3X in exam time the cram strip (dismissable) and the once-a-day toast */
@@ -323,22 +398,25 @@
      or after 3 minutes on an item with no correct answer (one timer per item, re-armed by onItem; there is no polling loop). Once per item, 3 per session, never
      while a modal (the deck, the picker, lock-help, Cluck, reward FX) is up. It rides the toast queue (toast.js: one at a time) and expires (`until`) rather than
      wait behind another toast. The toast's own close button is "Not now". */
-  var OFFER = { text: 'Stuck? Guess smart. Learn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.', act: 'Show me' };
+  var OFFER = { text: 'Stuck? Guess smart.\nLearn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.', act: 'Show me' };
   var itemT = 0, toastT = 0, offered = {}, offers = 0, wrongs = {}, finished = {}, curItem = null;
   var busyUI = function () { return !!(d.querySelector('.cc-ov') || (g.stemLockHelp && g.stemLockHelp.up) || (g.stemCluckOpen && g.stemCluckOpen()) || (g.stemCalcPick && g.stemCalcPick.up) || d.querySelector('.fx-ov')); };
-  function offer() {
+  function offer(why) {
+    why = why === 'miss2' || why === 'time3m' ? why : null;
     var code = curItem;
     if (!code || offered[code] || offers >= 3 || finished[code] || curBank !== 'BANK_P3X' || !cramFor(curBank) || !g.stemToast || busyUI() || d.visibilityState === 'hidden') return false;
     offered[code] = 1; offers++;
     g.stemToast.show({ text: OFFER.text, bar: false, until: Date.now() + 15000, at: function () { return d.querySelector('.cc-row') || d.getElementById('problem'); },
-      action: { label: OFFER.act, run: function () { openCram(curBank); } } });
+      onshow: function () { tel('hail_mary', { phase: 'offer_shown', trigger: why }); },
+      onend: function (w) { tel('hail_mary', { phase: 'offer_' + w, trigger: why }); },
+      action: { label: OFFER.act, run: function () { tel('hail_mary', { phase: 'offer_clicked', trigger: why }); openCram(curBank, 'offer'); } } });
     return true;
   }
   if (g.addEventListener) g.addEventListener('drill:answer', function (e) {
     var dt = e.detail || {}, code = dt.code; if (!code) return;
     if (dt.right) { finished[code] = 1; return; }
     wrongs[code] = (wrongs[code] || 0) + 1;
-    if (wrongs[code] === 2) setTimeout(offer, 900);                          // after the feedback settles
+    if (wrongs[code] === 2) setTimeout(function () { offer('miss2'); }, 900);                          // after the feedback settles
   });
   /* each item: the persistent Calc chip + hail-mary slot (top of the question card, out of the way of the toast and the foot); on BANK_P3X in exam time the
      cram strip (dismissable) and, after 45 s on the item, the once-a-day toast */
@@ -350,36 +428,36 @@
     var row = h('div', 'cc-row'), strip = null;
     var p = promo();
     if (bank === 'BANK_P3X' && p.exam && ls(KEY_STRIP) !== '1') {
-      var s = h('div', 'cc-strip'); s.append(h('span', 'cc-st', p.title + '.'), openBtn('Show me', 'cc-btn', 'strip'));
-      var hm = CRAM && CRAM.banks[bank]; if (hm && cramFor(bank)) { var li = h('button', 'cc-link cc-hm', hm.promo); li.type = 'button'; li.onclick = function () { openCram(bank); }; s.append(li); }
+      var s = h('div', 'cc-strip'); var tl = h('button', 'cc-st cc-link', p.title); tl.type = 'button'; tl.onclick = function () { open({ from: 'strip' }); }; s.append(tl, openBtn('Show me', 'cc-btn', 'strip'));
+      var hm = CRAM && CRAM.banks[bank]; if (hm && cramFor(bank)) { var li = h('button', 'cc-link cc-hm', hm.promo); li.type = 'button'; li.onclick = function () { openCram(bank, 'promo'); }; s.append(li); }
       var x = h('button', 'cc-x'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×';
       x.onclick = function () { ls(KEY_STRIP, '1'); s.remove(); }; s.append(x); strip = s;
     }
-    var chip = linkEl('Calc', 'cc-chip', function () { open(); }); chip.setAttribute('aria-label', 'Calc Coach: calculator help'); row.append(chip);
+    var chip = linkEl('Calc', 'cc-chip', function () { open({ from: 'chip' }); }); chip.setAttribute('aria-label', 'Calc Coach: calculator help'); row.append(chip);
     var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; row.append(slot);
     pr.insertBefore(row, d.getElementById('blocks') || null);                // floats right: it adds no height, so the question column is as tall as without it
     if (strip) pr.insertBefore(strip, d.getElementById('blocks') || null);
     loadCram().then(slots, function () { /* no cram data */ });
     if (bank !== 'BANK_P3X') return;
     var me = curItem;
-    itemT = setTimeout(function () { if (curItem === me) offer(); }, g.__ccOfferMs || 180000);
+    itemT = setTimeout(function () { if (curItem === me) offer('time3m'); }, g.__ccOfferMs || 180000);
     if (p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast && !(g.stemCram && g.stemCram.on && g.stemCram.on()))   // cram day: peek.js's own once-a-day toast is the one (never two promos back to back)
       toastT = setTimeout(function () {
         if (curItem !== me || busyUI() || ls(KEY_TOAST + day()) === '1') return;
         ls(KEY_TOAST + day(), '1');                                          // asked for once a day; `until` drops it rather than let it hold the queue
-        g.stemToast.show({ text: p.title + '.', bar: false, until: Date.now() + 8000, at: function () { return row; }, action: { label: 'Show me', run: function () { open(); } } });
+        g.stemToast.show({ text: p.title, bar: false, until: Date.now() + 8000, at: function () { return row; }, action: { label: 'Show me', run: function () { open({ from: 'toast' }); } } });
       }, g.__ccToastMs || 45000);
   }
   /* Cluck's app chrome (not the reply): a link under his text, next to .cl-verify, and the second slot */
   function chrome(el) {
     var pane = el.querySelector('#clTabEP'); if (!pane || pane.querySelector('.cc-cl')) return;
-    var r = h('div', 'cc-cl'); r.append(linkEl('Calc Coach: the keys for your calculator', 'cc-link', function () { open(); }));
+    var r = h('div', 'cc-cl'); r.append(linkEl('Calc Coach: the keys for your calculator', 'cc-link', function () { open({ from: 'cluck' }); }));
     var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; r.append(slot);
     pane.appendChild(r); slots();
   }
 
   var api = { open: open, close: close, mount: mount, load: load, setData: setData, build: build, validate: validate, shownSteps: shownSteps, model: model,
-    promo: promo, plain: plain, offer: offer, OFFER: OFFER, openCram: openCram, cramFor: cramFor, loadCram: loadCram, buildCram: buildCram, welcomeCard: welcomeCard, onItem: onItem, chrome: chrome, FLAGS: FLAGS, EXAM_END: EXAM_END, COPY: COPY, reduced: reduced };
+    promo: promo, plain: plain, offer: offer, routineDeck: routineDeck, stripKeys: stripKeys, OFFER: OFFER, openCram: openCram, cramFor: cramFor, loadCram: loadCram, buildCram: buildCram, welcomeCard: welcomeCard, onItem: onItem, chrome: chrome, FLAGS: FLAGS, EXAM_END: EXAM_END, COPY: COPY, reduced: reduced };
   g.CalcCoach = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
