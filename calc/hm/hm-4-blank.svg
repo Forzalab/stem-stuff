@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120" aria-hidden="true" focusable="false">
+<style>
+.f{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700}
+*{transform-box:fill-box;transform-origin:center}
+.g{animation:g 4s ease-in-out infinite}
+.arc{stroke-dasharray:100;stroke-dashoffset:90;animation:arc 4s linear infinite}
+.d3,.d2,.d1{opacity:0}.d1{opacity:1}
+.d3{animation:d3 4s steps(1,end) infinite}.d2{animation:d2 4s steps(1,end) infinite}.d1{animation:d1 4s steps(1,end) infinite}
+.p3{animation:p3 4s cubic-bezier(.3,1.5,.5,1) infinite}
+.p4{animation:p4 4s cubic-bezier(.3,1.5,.5,1) infinite}
+.p5{animation:p5 4s cubic-bezier(.3,1.5,.5,1) infinite}
+.e5{opacity:0;animation:e5 4s ease-in-out infinite}
+.gw{opacity:.4;animation:gw 4s ease infinite}
+@keyframes g{0%{opacity:0}5%,93%{opacity:1}100%{opacity:0}}
+@keyframes arc{0%,6%{stroke-dashoffset:0}66%,100%{stroke-dashoffset:90}}
+@keyframes d3{0%{opacity:1}26%,100%{opacity:0}}
+@keyframes d2{0%{opacity:0}26%{opacity:1}48%,100%{opacity:0}}
+@keyframes d1{0%{opacity:0}48%,100%{opacity:1}}
+@keyframes p3{0%,14%{transform:scale(0)}22%,100%{transform:none}}
+@keyframes p4{0%,32%{transform:scale(0)}40%,100%{transform:none}}
+@keyframes p5{0%,58%{transform:scale(0)}66%,100%{transform:none}}
+@keyframes e5{0%,40%{opacity:0}46%{opacity:1}52%{opacity:.4}58%{opacity:1}64%,100%{opacity:0}}
+@keyframes gw{0%,60%{opacity:0}68%{opacity:.7}100%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<g class="g">
+<circle cx="100" cy="34" r="22" fill="#1b2b40"/>
+<circle cx="100" cy="34" r="17" fill="none" stroke="#394a61" stroke-width="4"/>
+<circle class="arc" cx="100" cy="34" r="17" fill="none" stroke="#a9b8cc" stroke-width="4" stroke-linecap="round" pathLength="100" transform="rotate(-90 100 34)" style="transform-box:view-box;transform-origin:100px 34px"/>
+<g class="f" font-size="16" fill="#f3f7fc" text-anchor="middle"><text class="d3" x="100" y="39.5">3</text><text class="d2" x="100" y="39.5">2</text><text class="d1" x="100" y="39.5">1</text></g>
+<g fill="none" stroke="#5e7899" stroke-width="1.5">
+<circle cx="32" cy="90" r="12"/><circle cx="66" cy="90" r="12"/><circle cx="100" cy="90" r="12"/><circle cx="134" cy="90" r="12"/>
+</g>
+<circle class="gw" cx="168" cy="90" r="20" fill="#ff8204" filter="url(#bl)"/>
+<circle cx="168" cy="90" r="12" fill="#0b1422" stroke="#5e7899" stroke-width="1.5"/>
+<circle class="e5" cx="168" cy="90" r="12" fill="none" stroke="#ff9a3e" stroke-width="1.5" stroke-dasharray="3 3"/>
+<g fill="#a9b8cc"><circle cx="32" cy="90" r="8.5"/><circle cx="66" cy="90" r="8.5"/><circle class="p3" cx="100" cy="90" r="8.5"/><circle class="p4" cx="134" cy="90" r="8.5"/></g>
+<circle class="p5" cx="168" cy="90" r="8.5" fill="#ff9a3e"/>
+<defs><filter id="bl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="6"/></filter></defs>
+</g>
+</svg>

@@ -1,0 +1,84 @@
+{
+ "v": 1,
+ "note": "Cram skeleton: one entry per bank. A panel shows only while Date.now() < until and CalcCoach.FLAGS.hailMary is true. Generic study moves, no exam stems.",
+ "banks": {
+  "BANK_P3X": {
+   "id": "hailmary",
+   "title": "Stuck? Hail Mary",
+   "until": "2026-11-10T08:00:00Z",
+   "promo": "Stuck on one? Hail Mary: 4 moves for a smart guess.",
+   "intro": "You lose nothing for a wrong bubble. Fill in every one.",
+   "cards": [
+    {
+     "t": "Guess the size",
+     "icon": "approx",
+     "b": "Round each number to one digit and use g = 10. Cross off any choice far from your guess.",
+     "anim": "calc/hm/hm-1-size.svg"
+    },
+    {
+     "t": "Cross off traps",
+     "icon": "x",
+     "b": "Cross off a number copied from the question. The middle, biggest, or odd one is luck.",
+     "anim": "calc/hm/hm-2-traps.svg"
+    },
+    {
+     "t": "Least-used letter",
+     "icon": "bars",
+     "b": "Count the letters you trust. Pick the letter you used least.",
+     "anim": "calc/hm/hm-3-letter.svg"
+    },
+    {
+     "t": "Never blank",
+     "icon": "dot",
+     "b": "Fill every bubble. A blank is always wrong.",
+     "anim": "calc/hm/hm-4-blank.svg"
+    }
+   ],
+   "odds": "Blind pick: 1 in 5. These moves: about 1 in 2.",
+   "constants": {
+    "title": "Constants for this exam",
+    "intro": "Look them up on your calculator instead of typing digits from memory. These are the ones Exam 3 needs.",
+    "rows": [
+     {
+      "sym": "g",
+      "name": "free-fall acceleration",
+      "casio": "35",
+      "ti": "2"
+     },
+     {
+      "sym": "σ",
+      "name": "Stefan-Boltzmann (radiation)",
+      "casio": "31",
+      "ti": "none"
+     },
+     {
+      "sym": "R",
+      "name": "gas constant",
+      "casio": "27"
+     },
+     {
+      "sym": "k",
+      "name": "Boltzmann constant",
+      "casio": "25"
+     },
+     {
+      "sym": "N_A",
+      "name": "Avogadro's number",
+      "casio": "24"
+     },
+     {
+      "sym": "atm",
+      "name": "standard atmosphere (pressure)",
+      "casio": "40"
+     }
+    ],
+    "tips": {
+     "casio": [
+      "Your Casio cover often has the constant list printed inside. Check it before the exam.",
+      "Worst case: press SHIFT 7, then try numbers until the symbol you need shows up. There are only 40."
+     ]
+    }
+   }
+  }
+ }
+}
