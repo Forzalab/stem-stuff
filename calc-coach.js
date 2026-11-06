@@ -299,50 +299,87 @@
   function slots() {
     var on = !!cramFor(curBank);
     d.querySelectorAll('.cc-slot').forEach(function (sl) {
-      sl.hidden = !on; if (on && !sl.firstChild) { var b = h('button', sl.parentNode.classList.contains('cc-cl') ? 'cc-link' : 'cc-chip', 'Hail Mary'); b.type = 'button'; b.onclick = function () { openCram(curBank); }; sl.append(b); }
+      sl.hidden = !on; if (on && !sl.firstChild) { sl.append(linkEl('Hail Mary', sl.parentNode.classList.contains('cc-cl') ? 'cc-link' : 'cc-chip', function () { openCram(curBank); })); }
     });
   }
 
   /* ---- promos ---- */
+  /* a link-like entry (role=link, keyboard: Enter / Space) for the always-there entries (chip, Hail Mary slot, Cluck chrome): they are quiet chrome, not a button the
+     toast / note cover rules must keep clear (toast.js LIVE) */
+  function linkEl(text, cls, fn) {
+    var e = h('span', cls, text); e.setAttribute('role', 'link'); e.tabIndex = 0; e.onclick = fn;
+    e.onkeydown = function (k) { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); fn(); } };
+    return e;
+  }
   function openBtn(text, cls, from) { var b = h('button', cls, text); b.type = 'button'; b.setAttribute('data-calc-from', from); b.onclick = function () { open(); }; return b; }
   function welcomeCard(host) {
     if (!host || host.querySelector('.cc-welcome')) return;
     var p = promo(), c = h('aside', 'cc-welcome'); c.setAttribute('aria-label', 'Calc Coach');
     c.append(h('h3', 'cc-wt', p.title), h('p', 'cc-wb', p.body), openBtn('Show me the keys', 'cc-btn cc-go', 'welcome'));
-    host.appendChild(c);
+    host.insertBefore(c, host.firstChild);                                  // above the ladder: a ladder row that grows or changes never moves it (desk-layout L4/L6)
   }
   /* each item: the persistent Calc chip + hail-mary slot; on BANK_P3X in exam time the cram strip (dismissable) and the once-a-day toast */
+  /* the auto-offer (BANK_P3X, cram window, FLAGS.hailMary): Hail Mary is offered on the 2nd wrong pick on an item (the existing `drill:answer` event, app.js record()),
+     or after 3 minutes on an item with no correct answer (one timer per item, re-armed by onItem; there is no polling loop). Once per item, 3 per session, never
+     while a modal (the deck, the picker, lock-help, Cluck, reward FX) is up. It rides the toast queue (toast.js: one at a time) and expires (`until`) rather than
+     wait behind another toast. The toast's own close button is "Not now". */
+  var OFFER = { text: 'Stuck? Guess smart. Learn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.', act: 'Show me' };
+  var itemT = 0, toastT = 0, offered = {}, offers = 0, wrongs = {}, finished = {}, curItem = null;
+  var busyUI = function () { return !!(d.querySelector('.cc-ov') || (g.stemLockHelp && g.stemLockHelp.up) || (g.stemCluckOpen && g.stemCluckOpen()) || (g.stemCalcPick && g.stemCalcPick.up) || d.querySelector('.fx-ov')); };
+  function offer() {
+    var code = curItem;
+    if (!code || offered[code] || offers >= 3 || finished[code] || curBank !== 'BANK_P3X' || !cramFor(curBank) || !g.stemToast || busyUI() || d.visibilityState === 'hidden') return false;
+    offered[code] = 1; offers++;
+    g.stemToast.show({ text: OFFER.text, bar: false, until: Date.now() + 15000, at: function () { return d.querySelector('.cc-row') || d.getElementById('problem'); },
+      action: { label: OFFER.act, run: function () { openCram(curBank); } } });
+    return true;
+  }
+  if (g.addEventListener) g.addEventListener('drill:answer', function (e) {
+    var dt = e.detail || {}, code = dt.code; if (!code) return;
+    if (dt.right) { finished[code] = 1; return; }
+    wrongs[code] = (wrongs[code] || 0) + 1;
+    if (wrongs[code] === 2) setTimeout(offer, 900);                          // after the feedback settles
+  });
+  /* each item: the persistent Calc chip + hail-mary slot (top of the question card, out of the way of the toast and the foot); on BANK_P3X in exam time the
+     cram strip (dismissable) and, after 45 s on the item, the once-a-day toast */
   function onItem(bank) {
     var pr = d.getElementById('problem'); if (!pr) return;
-    curBank = bank;
-    pr.querySelectorAll('.cc-row').forEach(function (e) { e.remove(); });
-    var row = h('div', 'cc-row');
+    curBank = bank; clearTimeout(itemT); clearTimeout(toastT);
+    var pc = d.getElementById('pcode'); curItem = pc ? pc.textContent : null;
+    pr.querySelectorAll('.cc-row, .cc-strip').forEach(function (e) { e.remove(); });
+    var row = h('div', 'cc-row'), strip = null;
     var p = promo();
     if (bank === 'BANK_P3X' && p.exam && ls(KEY_STRIP) !== '1') {
       var s = h('div', 'cc-strip'); s.append(h('span', 'cc-st', p.title + '.'), openBtn('Show me', 'cc-btn', 'strip'));
       var hm = CRAM && CRAM.banks[bank]; if (hm && cramFor(bank)) { var li = h('button', 'cc-link cc-hm', hm.promo); li.type = 'button'; li.onclick = function () { openCram(bank); }; s.append(li); }
       var x = h('button', 'cc-x'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×';
-      x.onclick = function () { ls(KEY_STRIP, '1'); s.remove(); }; s.append(x); row.append(s);
+      x.onclick = function () { ls(KEY_STRIP, '1'); s.remove(); }; s.append(x); strip = s;
     }
-    var chip = openBtn('Calc', 'cc-chip', 'chip'); chip.setAttribute('aria-label', 'Calc Coach: calculator help'); row.append(chip);
+    var chip = linkEl('Calc', 'cc-chip', function () { open(); }); chip.setAttribute('aria-label', 'Calc Coach: calculator help'); row.append(chip);
     var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; row.append(slot);
-    pr.appendChild(row);
+    pr.insertBefore(row, d.getElementById('blocks') || null);                // floats right: it adds no height, so the question column is as tall as without it
+    if (strip) pr.insertBefore(strip, d.getElementById('blocks') || null);
     loadCram().then(slots, function () { /* no cram data */ });
-    if (bank === 'BANK_P3X' && p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast) {
-      ls(KEY_TOAST + day(), '1');                                            // asked for once a day, whether or not it found room to show (toast.js waits for a free spot)
-      g.stemToast.show({ text: p.title + '.', bar: false, at: function () { return row; }, action: { label: 'Show me', run: function () { open(); } } });
-    }
+    if (bank !== 'BANK_P3X') return;
+    var me = curItem;
+    itemT = setTimeout(function () { if (curItem === me) offer(); }, g.__ccOfferMs || 180000);
+    if (p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast)
+      toastT = setTimeout(function () {
+        if (curItem !== me || busyUI() || ls(KEY_TOAST + day()) === '1') return;
+        ls(KEY_TOAST + day(), '1');                                          // asked for once a day; `until` drops it rather than let it hold the queue
+        g.stemToast.show({ text: p.title + '.', bar: false, until: Date.now() + 8000, at: function () { return row; }, action: { label: 'Show me', run: function () { open(); } } });
+      }, g.__ccToastMs || 45000);
   }
   /* Cluck's app chrome (not the reply): a link under his text, next to .cl-verify, and the second slot */
   function chrome(el) {
     var pane = el.querySelector('#clTabEP'); if (!pane || pane.querySelector('.cc-cl')) return;
-    var r = h('div', 'cc-cl'); r.append(openBtn('Calc Coach: the keys for your calculator', 'cc-link', 'cluck'));
+    var r = h('div', 'cc-cl'); r.append(linkEl('Calc Coach: the keys for your calculator', 'cc-link', function () { open(); }));
     var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; r.append(slot);
     pane.appendChild(r); slots();
   }
 
   var api = { open: open, close: close, mount: mount, load: load, setData: setData, build: build, validate: validate, shownSteps: shownSteps, model: model,
-    promo: promo, plain: plain, openCram: openCram, cramFor: cramFor, loadCram: loadCram, buildCram: buildCram, welcomeCard: welcomeCard, onItem: onItem, chrome: chrome, FLAGS: FLAGS, EXAM_END: EXAM_END, COPY: COPY, reduced: reduced };
+    promo: promo, plain: plain, offer: offer, OFFER: OFFER, openCram: openCram, cramFor: cramFor, loadCram: loadCram, buildCram: buildCram, welcomeCard: welcomeCard, onItem: onItem, chrome: chrome, FLAGS: FLAGS, EXAM_END: EXAM_END, COPY: COPY, reduced: reduced };
   g.CalcCoach = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -44,14 +44,14 @@
 .cc-welcome { display: grid; gap: var(--s2); margin: var(--s4) 0; padding: var(--s4); background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); }
 .cc-welcome .cc-wt { margin: 0; font-size: var(--t-md); } .cc-welcome .cc-wb { margin: 0; font-size: var(--t-sm); color: var(--muted); }
 .cc-welcome .cc-btn { flex: none; justify-self: start; }
-.cc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s3); }
+.cc-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); }
 .cc-strip { flex: 1 0 100%; display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s1) var(--s1) var(--s3); background: color-mix(in srgb, var(--help) 8%, var(--card)); border: 1px solid var(--ai-line, var(--line)); border-radius: 10px; }
 .cc-strip .cc-st { flex: 1; font-size: var(--t-sm); } .cc-strip .cc-btn { flex: none; min-height: 44px; }
 .cc-row .cc-x, .cc-strip .cc-x { color: var(--muted); }
-.cc-chip { min-height: 44px; min-width: 44px; padding: 0 var(--s4); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.cc-chip { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 var(--s4); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
 .cc-cl { display: none; flex-wrap: wrap; gap: var(--s2); margin: var(--s1) 0 0; }
 .cl:has(.wtext:not(:empty)) .cc-cl { display: flex; }
-.cc-link { min-height: 44px; padding: 0; font: inherit; font-size: var(--t-xs); color: var(--help-on, var(--help-muted)); background: none; border: 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
+.cc-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0; font: inherit; font-size: var(--t-xs); color: var(--help-on, var(--help-muted)); background: none; border: 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left; }
 
 .cc-static { cursor: default; }
 .cc-strip { flex-wrap: wrap; } .cc-strip .cc-hm { flex: 1 0 100%; min-height: 44px; font-size: var(--t-sm); }
@@ -99,3 +99,9 @@
 .cc-ex { margin: 0; max-width: 22rem; padding: var(--s2) var(--s3); border-radius: 10px; background: var(--cc-card); border: 1px solid var(--cc-line); color: var(--cc-ink); font-size: var(--t-sm); line-height: var(--lh); text-wrap: pretty; }
 .cc-slide { gap: var(--s3); } .cc-media { width: min(62vw, 220px); height: min(40vw, 132px); }
 .cc-media { width: min(78vw, 300px); height: min(47vw, 180px); }
+.cc-chip:focus-visible, .cc-link:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cc-chip, .cc-link { cursor: pointer; }
+
+/* the Calc chip row floats at the question card's top right: no added height (the start-line toast and the Next note need the column's foot free, toast-note img3) */
+.cc-row { float: right; flex-wrap: nowrap; margin: 0 0 var(--s2) var(--s2); }
+.cc-strip { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); clear: both; flex-wrap: wrap; }

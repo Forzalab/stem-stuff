@@ -32,8 +32,10 @@ let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 async function fresh(init = {}, at = "2026-11-06T18:00:00Z", opts = {}) {
+  init = { ...init };
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", ...opts });
   await ctx.addInitScript(([init, at]) => {                                  // the device's clock, pinned (the exam-day gate): Date.now() and new Date() read it, time still runs
+    window.__ccToastMs = 300; window.__ccOfferMs = 99999999;
     const R = Date, off = R.parse(at) - R.now();
     window.Date = class extends R { constructor(...a) { a.length ? super(...a) : super(R.now() + off); } static now() { return R.now() + off; } };
     try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9");
@@ -68,7 +70,8 @@ try {
     await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page);
     await page.waitForSelector("#problem .cc-row .cc-chip");
     assert.match(await page.textContent("#problem .cc-strip .cc-st"), /Exam day: 2 calculator moves/);
-    await page.waitForSelector("#problem .cc-slot button");   // the Hail Mary slot is live in exam time
+    await page.waitForSelector("#problem .cc-slot [role=link]");   // the Hail Mary slot is live in exam time
+    await page.waitForFunction(() => Object.keys(localStorage).some(k => /^stem-calc-toast-/.test(k)), null, { timeout: 5000 });
     const tk = () => page.evaluate(() => Object.keys(localStorage).filter(k => /^stem-calc-toast-/.test(k)));
     assert.equal((await tk()).length, 1, "the toast was asked for today");
     await page.click("#problem .cc-strip .cc-x"); assert.equal(await page.$("#problem .cc-strip"), null);
@@ -105,6 +108,40 @@ try {
     await page.goto(BASE + "/calc.html?model=nomodel&routine=R1"); await page.waitForSelector(".cc-note");
     assert.match(await page.textContent(".cc-note"), /Check your manual/); await ctx.close();
   });
+  const wrap = page => page.evaluate(() => { window.__shown = []; const o = window.stemToast.show; window.stemToast.show = x => { window.__shown.push(x.text); }; });
+  const wrong = (page, code) => page.evaluate(c => { for (let i = 0; i < 2; i++) dispatchEvent(new CustomEvent("drill:answer", { detail: { code: c, right: false } })); }, code);
+  const shown = page => page.evaluate(() => window.__shown.filter(t => /^Stuck\? Guess smart\./.test(t)).length);
+  await step("auto-offer: 2nd wrong pick offers Hail Mary once per item, 3 per session, not over a modal; copy exact", async () => {
+    const { ctx, page } = await fresh({ ...SEEN });
+    await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page); await page.waitForSelector("#problem .cc-chip"); await wrap(page);
+    await page.waitForFunction(() => window.CalcCoach.cramFor("BANK_P3X"), null, { timeout: 4000 });
+    await page.evaluate(() => dispatchEvent(new CustomEvent("drill:answer", { detail: { code: document.getElementById("pcode").textContent, right: false } })));
+    await page.waitForTimeout(1300); assert.equal(await shown(page), 0, "one wrong pick is not enough");
+    const code = await page.evaluate(() => document.getElementById("pcode").textContent);
+    await wrong(page, code); await page.waitForFunction(() => window.__shown.some(t => /Guess smart/.test(t)), null, { timeout: 4000 });
+    assert.equal(await page.evaluate(() => window.__shown.find(t => /Guess smart/.test(t))), "Stuck? Guess smart. Learn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.");
+    await wrong(page, code); await page.waitForTimeout(1300); assert.equal(await shown(page), 1, "once per item");
+    for (const c of ["X2", "X3", "X4"]) { await page.evaluate(c => { document.getElementById("pcode").textContent = c; window.CalcCoach.onItem("BANK_P3X"); }, c); await wrong(page, c); await page.waitForTimeout(1100); }
+    assert.equal(await shown(page), 3, "capped at 3 a session");
+    await ctx.close();
+  });
+  await step("auto-offer: after 3 minutes on an item (timer shortened here); not while the deck is open; off after the exam window", async () => {
+    const a = await fresh({ ...SEEN });
+    await a.page.addInitScript(() => { window.__ccOfferMs = 700; });
+    await a.page.goto(BASE + "/#PHYS_PA1"); await anyUp(a.page); await a.page.waitForSelector("#problem .cc-chip"); await wrap(a.page);
+    await a.page.evaluate(() => window.CalcCoach.onItem("BANK_P3X"));       // re-arm with the short timer, as a new item does
+    await a.page.waitForFunction(() => window.__shown.some(t => /Guess smart/.test(t)), null, { timeout: 5000 }); await a.ctx.close();
+    const b = await fresh({ ...SEEN, "stem-calc-model": "ti-36x-pro" });
+    await b.page.goto(BASE + "/#PHYS_PA1"); await anyUp(b.page); await b.page.waitForSelector("#problem .cc-chip"); await wrap(b.page);
+    await b.page.waitForFunction(() => window.CalcCoach.cramFor("BANK_P3X"), null, { timeout: 4000 });
+    await b.page.evaluate(() => window.CalcCoach.openCram("BANK_P3X")); await b.page.waitForSelector(".cc-ov");
+    await wrong(b.page, await b.page.evaluate(() => document.getElementById("pcode").textContent)); await b.page.waitForTimeout(1300);
+    assert.equal(await shown(b.page), 0, "not over an open modal"); await b.ctx.close();
+    const c = await fresh({ ...SEEN }, "2026-11-10T09:00:00Z");
+    await c.page.goto(BASE + "/#PHYS_PA1"); await anyUp(c.page); await c.page.waitForSelector("#problem .cc-chip"); await wrap(c.page);
+    await wrong(c.page, await c.page.evaluate(() => document.getElementById("pcode").textContent)); await c.page.waitForTimeout(1300);
+    assert.equal(await shown(c.page), 0, "off after the exam window"); await c.ctx.close();
+  });
   await step("Hail Mary deck: 4 full-height snap slides, rail, keyboard moves a slide; reduced motion = static chevron", async () => {
     const { ctx, page } = await fresh({}, undefined, { reducedMotion: "reduce" });
     await page.goto(BASE + "/calc.html?cram=BANK_P3X"); await page.waitForSelector(".cc-slide");
@@ -113,7 +150,7 @@ try {
     assert.match(m.snap, /y mandatory/); assert.deepEqual([m.n, m.full, m.bob, m.dots], [4, true, "none", 4]);
     await page.focus(".cc-deck"); await page.keyboard.press("ArrowDown");
     await page.waitForFunction(() => { const sc = document.querySelector(".cc-deck"); return Math.abs(sc.scrollTop - sc.clientHeight) <= 2; });
-    assert.equal(await page.$eval(".cc-rail i.on", e => [...e.parentNode.children].indexOf(e)), 1);
+    await page.waitForFunction(() => document.querySelectorAll(".cc-rail i")[1].className === "on");
     await page.keyboard.press("PageUp"); await page.waitForFunction(() => document.querySelector(".cc-deck").scrollTop <= 2);
     assert.equal(await noH(page), true); await ctx.close();
   });
