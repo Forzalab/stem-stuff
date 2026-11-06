@@ -219,7 +219,16 @@ async function net(url, init = {}, ms = TIMEOUT) {
   const ctl = new AbortController(), req = { ctl, ms, t0: Date.now(), ep: url.split(/[/?]/)[0] };
   const t = setTimeout(() => ctl.abort(), ms), fr = frReq(req.ep, init.headers?.traceparent);
   inflight.add(req);
-  try { const r = await fetch(url, { ...init, signal: ctl.signal }); fr.h(r); return r; }
+  try {
+    let r;
+    try { r = await fetch(url, { ...init, signal: ctl.signal }); }
+    catch (e) {   // a GET killed by a non-abort TypeError (Safari "Load failed" as the service worker takes control mid-fetch): once more; never a POST, never a timeout
+      if (!(e instanceof TypeError) || timedOut(e) || ctl.signal.aborted || String(init.method || "GET").toUpperCase() !== "GET") throw e;
+      fr.x(e);
+      r = await fetch(url, { ...init, signal: ctl.signal });
+    }
+    fr.h(r); return r;
+  }
   catch (e) { fr.x(e); throw e; }
   finally { if (!init.stream) clearTimeout(t); inflight.delete(req); }   // init.stream (a staged body): the cut-off also covers the body, headers come first
 }

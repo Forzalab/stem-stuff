@@ -41,10 +41,10 @@ test("reason: only the allowlisted keys, each checked; numbers rounded, junk dro
   const r = reason("explain", "http", { status: 502, phase: "stream", ms: 13001.6, bytes: 0, path: "/explain?x=1", err: new TypeError("network error"),
     q: "CALC1_XP1", v: "abc123", answer: "b", scratch: "my notes", text: "hello", chat: "hi cluck" });
   assert.deepEqual(r, { where: "explain", reason: "http", status: 502, phase: "stream", ms: 13002, bytes: 0, path: "/explain",
-    err: "TypeError: network error", q: "CALC1_XP1", v: "abc123", trace_id: null, ua: null });
+    err: "TypeError: network error", q: "CALC1_XP1", v: "abc123", filename: null, lineno: null, trace_id: null, ua: null });
   assert.deepEqual(Object.keys({ code: 1, ...r }).sort(), [...KEYS].sort());
   const j = reason("Bad Where!", "Not a tag", { status: -1, phase: "nope", ms: NaN, bytes: "9", path: "../../etc passwd", q: "my answer", v: "x y" });
-  assert.deepEqual(j, { where: "other", reason: "error", status: null, phase: null, ms: null, bytes: null, path: null, err: null, q: null, v: null, trace_id: null, ua: null });
+  assert.deepEqual(j, { where: "other", reason: "error", status: null, phase: null, ms: null, bytes: null, path: null, err: null, filename: null, lineno: null, q: null, v: null, trace_id: null, ua: null });
 });
 
 test("the error's whole message (Tony, Oct 19), with a safety net: e-mails and 5+ digit runs blanked, control characters gone, ERR_MAX", () => {

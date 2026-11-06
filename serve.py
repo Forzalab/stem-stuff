@@ -1594,10 +1594,10 @@ INC_ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"   # incident.mjs ALPHA: no 0/O/1/
 INC_CODE = re.compile(r"^[ES]-[2-9A-HJ-NP-Z]{5}$")
 INC_TAG = re.compile(r"^[a-z0-9_/-]{1,40}$")
 INC_PHASES = ("headers", "stream", "parse", "timeout", "abort", "script")
-INC_INTS = ("status", "ms", "bytes")
+INC_INTS = ("status", "ms", "bytes", "lineno")
 INC_STRS = {"path": (re.compile(r"^/?[\w./-]{1,80}$"), 80), "q": (CODE_RE, 40), "v": (re.compile(r"^[\w.#-]{1,40}$"), 40),
             "model": (re.compile(r"^[\w./:-]{1,80}$"), 80), "provider": (INC_TAG, 40), "trace_id": (re.compile(r"^[0-9a-f]{32}$"), 32),
-            "method": (re.compile(r"^[A-Z]{3,7}$"), 7)}
+            "method": (re.compile(r"^[A-Z]{3,7}$"), 7), "filename": (re.compile(r"^[\w.@-]{1,80}$"), 80)}
 INC_KEYS = ("code", "where", "reason", "phase", "err") + INC_INTS + tuple(INC_STRS)   # incident.mjs KEYS (+ model, provider, method: server only)
 # the log line's names follow OpenTelemetry's semantic conventions where one exists (Tony, Oct 19: "the OTel middle path", no SDK)
 OTEL = {"status": "http.response.status_code", "path": "url.path", "method": "http.request.method", "model": "gen_ai.request.model", "err": "exception.message"}

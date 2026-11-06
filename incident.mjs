@@ -12,7 +12,7 @@
 export const ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";   // base32 with no 0/O/1/I: read out loud, never mistyped
 export const CODE_RE = /^[ES]-[2-9A-HJ-NP-Z]{5}$/;
 export const PHASES = ["headers", "stream", "parse", "timeout", "abort", "script"];
-export const KEYS = ["code", "where", "reason", "status", "phase", "ms", "bytes", "path", "err", "q", "v", "ua", "trace_id"];   // serve.py INC_KEYS (ua: from the header there)
+export const KEYS = ["code", "where", "reason", "status", "phase", "ms", "bytes", "path", "err", "q", "v", "ua", "trace_id", "filename", "lineno"];   // serve.py INC_KEYS (ua: from the header there)
 export const FR_MAX = 16384;                                   // a whole report (record + flight snapshot): serve.py INC_BODY_MAX
 const MAX = 20;                                                 // a page that keeps failing (an error loop) sends this many, then only counts
 
@@ -46,6 +46,8 @@ export function reason(where, why, x = {}) {
     status: int(x.status), phase: PHASES.includes(x.phase) ? x.phase : null, ms: int(x.ms), bytes: int(x.bytes),
     path: typeof x.path === "string" && /^\/?[\w./-]{1,80}$/.test(x.path.split("?")[0]) ? x.path.split("?")[0] : null,
     err: errText(x.err),
+    filename: typeof x.filename === "string" && /^[\w.@-]{1,80}$/.test(x.filename) ? x.filename : null,   // the file's name only (no URL, no query)
+    lineno: int(x.lineno),
     q: typeof x.q === "string" && /^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$/.test(x.q) ? x.q : null,
     v: typeof x.v === "string" && /^[\w.#-]{1,40}$/.test(x.v) ? x.v : null,
     trace_id: typeof x.trace_id === "string" && /^[0-9a-f]{32}$/.test(x.trace_id) ? x.trace_id : null,
@@ -126,6 +128,12 @@ export function incident(where, why, x = {}) {
 }
 /* uncaught errors and rejections: logged only (a visible failure that follows logs its own code) */
 if (W && W.addEventListener) {
-  W.addEventListener("error", e => incident("window", "error", { phase: "script", err: e.error || { name: "Error", message: e.message } }));
+  /* an error with no e.error and no filename ("Script error.", line 0: a cross-origin script without CORS, or one the browser / an extension injected)
+     says nothing we can act on and is not ours: flight.js already has it in the ring; no E- code for the student (iPhone E-7LY38 / E-DZY5N, Nov 5) */
+  W.addEventListener("error", e => {
+    if (!e.error && !e.filename) return;
+    incident("window", "error", { phase: "script", err: e.error || { name: "Error", message: e.message },
+      filename: String(e.filename || "").split(/[?#]/)[0].split("/").pop(), lineno: e.lineno });
+  });
   W.addEventListener("unhandledrejection", e => incident("window", "rejection", { phase: "script", err: e && e.reason }));
 }
