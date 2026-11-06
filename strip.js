@@ -7,7 +7,7 @@
    Opens on a new verdict (animated when it lands live, instant when a closed question is restored); closes on the close button, Esc, a tap outside,
    or when the student edits the box; the verdict icon reopens it. No Cluck key / diet / mc / multi: no chip, so no drawer and nothing changes.
    Check and the labelled Next stay in the Check slot until the finger bar (PR-C).
-   PR-B2 hosts (kind): ff = a typed bar or a multi part's box; row = single mc's picked .ch (the drawer follows .choices, never a child of it: fitChoices counts .choices' children) and carries [Ask Cluck][Skip | Next][^] spanning the row; list = pick-all's .chk row (drawer under the whole list).
+   PR-B2 hosts (kind): ff = a typed bar or a multi part's box; row = single mc's picked .ch (the drawer is a sibling after .choices, never a child of it: fitChoices counts .choices' children; it is placed under the picked card, over the cards below) and carries [Ask Cluck][Skip | Next][^] spanning the row; list = pick-all's .chk row (drawer under the whole list).
    mc / pick-all have no verdict icon: a transparent .vkb button over the row's mark (the right-hand check / cross, or pick-all's square) reopens it, and the
    first time a student closes it a one-time toast teaches that. Multi: one chip per question, so one drawer that moves to the part whose verdict is newest
    (or whose icon was tapped). */
@@ -71,14 +71,22 @@
   }
   /* Tony, Nov 5: "i want the cluck panel to come from under the input box, OVERLAPPING any other element". The tray hangs from the INPUT box (the typed bar .ff; mc / choose-all: the choices box):
      its top is tucked 2px behind the box's bottom edge, the box paints above it (.vd-host z 3 > tray z 2), and it floats OVER whatever follows (the verdict line, Next, the Cluck card).
+     Single mc (Tony, Nov 6): the box is the PICKED card, not the list: the tray hangs under it and lies over the cards below (only the picked card is lifted); a last picked card has nothing below, so the box stays the list.
      It is absolute and keeps no flow room: opening or closing it moves nothing. Side (Tony, same day): "only go left IFF the form is choose all/tick box, bcs the next button is not
      convenient. otherwise, all stay at right": choose-all = the box's left edge; every other form = the box's right edge. */
-  function boxOf(h) {
-    var el = h.g || h.at;
+  function boxOf(h, d) {
+    var el = h.g || h.at, u = under(h);
+    if (u) {                                                  // single mc, picked card not the last: the tray hangs from the PICKED card, over the cards below it (Tony, Nov 6)
+      var cb = d.parentElement && containing(d), c = cb.getBoundingClientRect(), r = u.getBoundingClientRect();
+      return { left: r.left - c.left - cb.clientLeft + cb.scrollLeft, w: r.width, bottom: r.bottom - c.top - cb.clientTop + cb.scrollTop, tuck: 2, side: "right" };
+    }
     return { left: el.offsetLeft, w: el.offsetWidth, bottom: el.offsetTop + el.offsetHeight, tuck: 2, side: h.kind === "list" ? "left" : "right" };
   }
+  /* the picked card a single mc's tray hangs under: null for every other form and when the picked card is the last one (the tray then hangs from the box, as before) */
+  function under(h) { return h.kind === "row" && h.g && !h.g.classList.contains("inline") && h.row && h.row !== h.g.lastElementChild ? h.row : null; }
+  function containing(d) { for (var e = d.parentElement; e && e !== D.documentElement; e = e.parentElement) if (getComputedStyle(e).position !== "static") return e; return D.documentElement; }
   function place(h, d) {
-    var b = boxOf(h), w = b.w, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
+    var b = boxOf(h, d), w = b.w, dw = h.kind === "row" ? w : Math.round(w * 2 / 3);
     d.style.width = dw + "px";
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
     d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
@@ -175,7 +183,7 @@
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
     if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
-      var lift = h.kind === "list" ? [h.g] : [h.el, h.at, h.g];   // choose-all: only the choices box (the anchor); its Check / Next row stays under the tray
+      var lift = h.kind === "list" ? [h.g] : under(h) ? [h.el] : [h.el, h.at, h.g];   // choose-all: only the choices box (the anchor); its Check / Next row stays under the tray
       D.querySelectorAll("#q .vd-host").forEach(function (e) { if (lift.indexOf(e) < 0) e.classList.remove("vd-host"); });
       lift.forEach(function (e) { if (e && !e.classList.contains("vd-host")) e.classList.add("vd-host"); });
     }
