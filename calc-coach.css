@@ -134,19 +134,20 @@
 /* the item card's two call-to-action buttons (Tony Nov 6): "TI/Casio tricks" (amber, the SOLVE slide's hue) and "Hail Mary guess" (pink; the exam window only).
    Figure palette hues (--fig-amber-1, --fig-pink-1, app.css) with dark ink: amber 13:1, pink 8:1 on the fill (AA is 4.5). Squircle (16px radius), 44px tall, equal widths
    (a lone Calc button is the same width, centred). Phone = its own line at the card's top, 44px + the old chip row's margin; desktop (>= 720) = out of the flow at the
-   card's top right (above the stem), so a late row or Hail Mary button moves nothing (desk-layout L4/L6). A slow diagonal shine every ~5 s (CSS only; none under reduced motion). */
+   card's top right (above the stem), so a late row or Hail Mary button moves nothing (desk-layout L4/L6). A diagonal shine, 2 sweeps then still (CSS only; none under reduced motion). */
 .cc-row { --gap: 10px; display: flex; justify-content: center; gap: var(--gap); margin: 0 0 var(--s2); }
-.cc-cta { --h1: var(--fig-amber-1); --h2: color-mix(in srgb, var(--fig-amber-1) 62%, var(--fig-orange-1)); --ink: #1d1400; --glow: var(--fig-amber-1); --dur: 5s; --dl: 1.2s;
+.cc-cta { --h1: var(--fig-amber-1); --h2: color-mix(in srgb, var(--fig-amber-1) 62%, var(--fig-orange-1)); --ink: #1d1400; --glow: var(--fig-amber-1); --dur: 3s; --dl: .4s;
   position: relative; overflow: hidden; isolation: isolate; box-sizing: border-box; flex: 0 1 calc(50% - var(--gap) / 2); min-width: 0; height: 44px; padding: 0 12px;
   display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 16px; cursor: pointer;
   font: inherit; font-size: var(--t-sm); font-weight: 800; letter-spacing: .01em; white-space: nowrap; color: var(--ink);
   background: linear-gradient(155deg, var(--h1), var(--h2)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--h1) 70%, #fff) inset, 0 2px 14px color-mix(in srgb, var(--glow) 38%, transparent);
   -webkit-tap-highlight-color: transparent; }
-.cc-cta-hm { --h1: var(--fig-pink-1); --h2: color-mix(in srgb, var(--fig-pink-1) 66%, var(--fig-violet-1)); --ink: #2b0825; --glow: var(--fig-pink-1); --dur: 5.8s; --dl: 3.1s; }
+.cc-cta-hm { --h1: var(--fig-pink-1); --h2: color-mix(in srgb, var(--fig-pink-1) 66%, var(--fig-violet-1)); --ink: #2b0825; --glow: var(--fig-pink-1); --dur: 3s; --dl: .9s; }
 .cc-cta-t { position: relative; z-index: 1; overflow: hidden; text-overflow: ellipsis; }
 .cc-cta::after { content: ""; position: absolute; z-index: 0; top: -20%; bottom: -20%; left: 0; width: 42%; pointer-events: none; transform: translateX(-160%) skewX(-20deg);
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent); animation: cc-shine var(--dur) ease-in-out var(--dl) infinite; }
-@keyframes cc-shine { 0%, 62% { transform: translateX(-160%) skewX(-20deg); } 88%, 100% { transform: translateX(380%) skewX(-20deg); } }
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent); }
+.cc-shine::after { animation: cc-shine 1.4s ease-in-out 1; }   /* calc-coach.js shine(): one button at a time, 2 sweeps each, only while nothing else moves; then still (the glow stays) */
+@keyframes cc-shine { 0% { transform: translateX(-160%) skewX(-20deg); } 45%, 100% { transform: translateX(380%) skewX(-20deg); } }
 .cc-cta:active { transform: scale(.98); filter: brightness(.96); }
 .cc-cta:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .cc-cta::after { animation: none; display: none; } .cc-cta:active { transform: none; } }
