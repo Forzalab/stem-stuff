@@ -107,6 +107,17 @@ try {
     assert.match(await page.$eval("#ans", x => x.value), /^DOWN/);
     await ctx.close();
   });
+  await step("a proof that carries an authored ladder never shows it after a miss: no #rpHost, no step, no check mark, no authored key on the wire", async () => {
+    const { ctx, page, errs } = await open("diet");
+    const bodies = []; page.on("response", async r => { if (/\/(check|repair)/.test(r.url())) bodies.push(await r.text().catch(() => "")); });
+    await prove(page, "NOBASE " + GOOD);
+    await page.waitForTimeout(600);
+    assert.equal(await page.$$eval("#rpHost, .rp-val, .rp-ok, .rp-step", x => x.length), 0, "a repair ladder mounted on a proof miss");
+    assert.equal((await fetch(BASE + "/repair/" + CODE)).status, 404);
+    assert.ok(!bodies.some(b => /LEAK/.test(b)), "an authored answer reached the browser");
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
   await step("sugar: 3 wrong Checks close it and show the reference proof; telemetry never carries the proof text", async () => {
     const { ctx, page, errs } = await open("sugar");
     await page.evaluate(() => { window.__picks = []; const t = window.stemT; window.stemT = (k, o) => { window.__picks.push([k, o]); return t?.(k, o); }; });

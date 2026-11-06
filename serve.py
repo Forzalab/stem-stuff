@@ -542,7 +542,7 @@ def public(p, sid=""):
     if p.get("type") == "num" and "unit" in p:              # W132: the answer line shows it after the value; a unit never gives the number away
         out["unit"] = p["unit"]
     t = (problems().get(p.get("parent_template")) if p.get("twin") else p) or {}
-    if isinstance((t.get("repair") or {}).get("steps"), list) and t["repair"]["steps"]:   # the app asks GET /repair only for these (a miss on the rest sends nothing); the ladder itself never ships
+    if t.get("type") != "proof" and isinstance((t.get("repair") or {}).get("steps"), list) and t["repair"]["steps"]:   # the app asks GET /repair only for these (a miss on the rest sends nothing); the ladder itself never ships
         out["has_repair"] = True
     if p.get("twist") is True:                               # W133: the question header's Twist chip; a twist gives nothing away
         out["twist"] = True
@@ -1039,8 +1039,8 @@ def _ladder(p, sid):
     is served before any try: its ladder IS the question (welcome.js); its answer step stays keyless like every other."""
     t = problems().get(p["parent_template"]) if p.get("twin") else p
     rp = (t or {}).get("repair")
-    if not isinstance(rp, dict) or not rp.get("steps"):
-        return 404, {"error": "no repair"}
+    if not isinstance(rp, dict) or not rp.get("steps") or p.get("type") == "proof" or (t or {}).get("type") == "proof":
+        return 404, {"error": "no repair"}      # a proof never serves an authored ladder: no slip family blanks its steps, so they carry the answers
     with _tries_lock:
         _load_tries()
         missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}

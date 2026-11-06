@@ -35,6 +35,15 @@ try {
       Repair.blankStep(FIX, "SLIP_TIE"), Repair.blankStep(FIX, "power"), Repair.blankStep({}, "sign")]), ["signs", "signs", null, null, null, null]);
   });
 
+  await step("a step with no key on the device never starts worked: no done step, no value, no check mark (a proof ladder would hand over the answer)", async () => {
+    await page.evaluate(() => { const h = document.createElement("div"); h.id = "keyless"; document.body.append(h);
+      Repair.mount(h, { type: "num", repair: { steps: [{ id: "given", label: "Name it", kind: "num" }, { id: "mid", label: "Add it", kind: "num" }, { id: "answer", label: "Final answer", kind: "num" }] } }, { variant: "repair", error: null }); });
+    const st = await page.$$eval("#keyless .rp-step", s => s.map(x => x.dataset.state));
+    assert.ok(st.length === 3 && !st.includes("done"), "a keyless step started done: " + st);
+    assert.equal(await page.$$eval("#keyless .rp-val", x => x.length), 0, "a value is printed");
+    await page.evaluate(() => document.getElementById("keyless").remove());
+  });
+
   await step("sign slip: the fam step is blank with its why, the steps before it ✓, the rest dim", async () => {
     await mount({ variant: "repair", error: "sign" });
     assert.deepEqual(await states(), ["given:done", "sheet:done", "signs:active", "plug:future", "answer:future"]);
