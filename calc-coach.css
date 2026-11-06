@@ -96,3 +96,6 @@
 @media (prefers-reduced-motion: reduce) { .cc-rail i { transition: none; } .cc-deck { scroll-behavior: auto; } }
 .cc-deck-x { position: absolute; top: var(--s2); right: var(--s2); }
 .cc-st-b, .cc-sub, .cc-cw { text-wrap: pretty; } .cc-st-t { text-wrap: balance; }
+.cc-ex { margin: 0; max-width: 22rem; padding: var(--s2) var(--s3); border-radius: 10px; background: var(--cc-card); border: 1px solid var(--cc-line); color: var(--cc-ink); font-size: var(--t-sm); line-height: var(--lh); text-wrap: pretty; }
+.cc-slide { gap: var(--s3); } .cc-media { width: min(62vw, 220px); height: min(40vw, 132px); }
+.cc-media { width: min(78vw, 300px); height: min(47vw, 180px); }

@@ -2,40 +2,31 @@
 <style>
 .f{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700}
 *{transform-box:fill-box;transform-origin:center}
-.g{animation:g 4s ease-in-out infinite}
-.arc{stroke-dasharray:100;stroke-dashoffset:90;animation:arc 4s linear infinite}
-.d3,.d2,.d1{opacity:0}.d1{opacity:1}
-.d3{animation:d3 4s steps(1,end) infinite}.d2{animation:d2 4s steps(1,end) infinite}.d1{animation:d1 4s steps(1,end) infinite}
-.p3{animation:p3 4s cubic-bezier(.3,1.5,.5,1) infinite}
-.p4{animation:p4 4s cubic-bezier(.3,1.5,.5,1) infinite}
-.p5{animation:p5 4s cubic-bezier(.3,1.5,.5,1) infinite}
-.e5{opacity:0;animation:e5 4s ease-in-out infinite}
-.gw{opacity:.4;animation:gw 4s ease infinite}
-@keyframes g{0%{opacity:0}5%,93%{opacity:1}100%{opacity:0}}
-@keyframes arc{0%,6%{stroke-dashoffset:0}66%,100%{stroke-dashoffset:90}}
-@keyframes d3{0%{opacity:1}26%,100%{opacity:0}}
-@keyframes d2{0%{opacity:0}26%{opacity:1}48%,100%{opacity:0}}
-@keyframes d1{0%{opacity:0}48%,100%{opacity:1}}
-@keyframes p3{0%,14%{transform:scale(0)}22%,100%{transform:none}}
-@keyframes p4{0%,32%{transform:scale(0)}40%,100%{transform:none}}
-@keyframes p5{0%,58%{transform:scale(0)}66%,100%{transform:none}}
-@keyframes e5{0%,40%{opacity:0}46%{opacity:1}52%{opacity:.4}58%{opacity:1}64%,100%{opacity:0}}
-@keyframes gw{0%,60%{opacity:0}68%{opacity:.7}100%{opacity:.4}}
+.g{animation:g 5s ease-in-out infinite}
+.tm1{opacity:0;animation:tm1 5s steps(1) infinite}
+.tm2{opacity:0;animation:tm2 5s steps(1) infinite}
+.tm3{animation:tm3 5s steps(1) infinite}
+.fl{animation:fl 5s cubic-bezier(.3,1.6,.5,1) infinite}
+.od{animation:od 5s ease-out infinite}
+@keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
+@keyframes tm1{0%,24%{opacity:1}25%,100%{opacity:0}}
+@keyframes tm2{0%,24%{opacity:0}25%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes tm3{0%,49%{opacity:0}50%,100%{opacity:1}}
+@keyframes fl{0%,60%{transform:scale(0)}72%,100%{transform:none}}
+@keyframes od{0%,72%{opacity:0}84%,100%{opacity:1}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 <g class="g">
-<circle cx="100" cy="34" r="22" fill="#1b2b40"/>
-<circle cx="100" cy="34" r="17" fill="none" stroke="#394a61" stroke-width="4"/>
-<circle class="arc" cx="100" cy="34" r="17" fill="none" stroke="#a9b8cc" stroke-width="4" stroke-linecap="round" pathLength="100" transform="rotate(-90 100 34)" style="transform-box:view-box;transform-origin:100px 34px"/>
-<g class="f" font-size="16" fill="#f3f7fc" text-anchor="middle"><text class="d3" x="100" y="39.5">3</text><text class="d2" x="100" y="39.5">2</text><text class="d1" x="100" y="39.5">1</text></g>
-<g fill="none" stroke="#5e7899" stroke-width="1.5">
-<circle cx="32" cy="90" r="12"/><circle cx="66" cy="90" r="12"/><circle cx="100" cy="90" r="12"/><circle cx="134" cy="90" r="12"/>
+<circle cx="100" cy="34" r="22" fill="none" stroke="#5e7899" stroke-width="3"/>
+<path d="M100 12a22 22 0 1 1-22 22" fill="none" stroke="#ff9a3e" stroke-width="3" stroke-linecap="round"/>
+<g class="f" font-size="14" text-anchor="middle" fill="#f3f7fc"><text class="tm1" x="100" y="39">30 s</text><text class="tm2" x="100" y="39">20 s</text><text class="tm3" x="100" y="39" fill="#ff9a3e">10 s</text></g>
+<g class="f" font-size="12" text-anchor="middle">
+<circle cx="32" cy="88" r="13" fill="#a9b8cc"/><text x="32" y="92" fill="#0b1422">A</text>
+<circle cx="66" cy="88" r="13" fill="#a9b8cc"/><text x="66" y="92" fill="#0b1422">B</text>
+<circle cx="100" cy="88" r="13" fill="#0b1422" stroke="#ff9a3e" stroke-width="2" stroke-dasharray="3 2"/><circle class="fl" cx="100" cy="88" r="13" fill="#ff9a3e"/><text x="100" y="92" fill="#0b1422">C</text>
+<circle cx="134" cy="88" r="13" fill="#a9b8cc"/><text x="134" y="92" fill="#0b1422">D</text>
+<circle cx="168" cy="88" r="13" fill="#a9b8cc"/><text x="168" y="92" fill="#0b1422">E</text>
 </g>
-<circle class="gw" cx="168" cy="90" r="20" fill="#ff8204" filter="url(#bl)"/>
-<circle cx="168" cy="90" r="12" fill="#0b1422" stroke="#5e7899" stroke-width="1.5"/>
-<circle class="e5" cx="168" cy="90" r="12" fill="none" stroke="#ff9a3e" stroke-width="1.5" stroke-dasharray="3 3"/>
-<g fill="#a9b8cc"><circle cx="32" cy="90" r="8.5"/><circle cx="66" cy="90" r="8.5"/><circle class="p3" cx="100" cy="90" r="8.5"/><circle class="p4" cx="134" cy="90" r="8.5"/></g>
-<circle class="p5" cx="168" cy="90" r="8.5" fill="#ff9a3e"/>
-<defs><filter id="bl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="6"/></filter></defs>
+<text class="f od" x="100" y="116" font-size="11" fill="#ff9a3e" text-anchor="middle">1 in 5, not 0</text>
 </g>
 </svg>

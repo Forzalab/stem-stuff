@@ -13,25 +13,29 @@
      "t": "Guess the size",
      "icon": "approx",
      "b": "Round each number to one digit and use g = 10. Cross off any choice far from your guess.",
-     "anim": "calc/hm/hm-1-size.svg"
+     "anim": "calc/hm/hm-1-size.svg",
+     "ex": "Example: F = ma with m = 4.9 kg and a = 9.8. You think 5 × 10 = 50. Keep 48, cross off 4.8 and 480."
     },
     {
      "t": "Cross off traps",
      "icon": "x",
      "b": "Cross off a number copied from the question. The middle, biggest, or odd one is luck.",
-     "anim": "calc/hm/hm-2-traps.svg"
+     "anim": "calc/hm/hm-2-traps.svg",
+     "ex": "Example: a 12 kg box gets a 36 N push. Find a. Cross off 12 and 36. They are copied."
     },
     {
      "t": "Least-used letter",
      "icon": "bars",
      "b": "Count the letters you trust. Pick the letter you used least.",
-     "anim": "calc/hm/hm-3-letter.svg"
+     "anim": "calc/hm/hm-3-letter.svg",
+     "ex": "Example: your sure answers are A, B, B, D, A, D. You used C zero times. Pick C."
     },
     {
      "t": "Never blank",
      "icon": "dot",
      "b": "Fill every bubble. A blank is always wrong.",
-     "anim": "calc/hm/hm-4-blank.svg"
+     "anim": "calc/hm/hm-4-blank.svg",
+     "ex": "Example: 1 bubble is empty and 30 s are left. Fill C. You now have a 1 in 5 shot, not 0."
     }
    ],
    "odds": "Blind pick: 1 in 5. These moves: about 1 in 2.",

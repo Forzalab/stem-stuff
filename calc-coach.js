@@ -250,7 +250,7 @@
       var md = h('div', 'cc-media'); md.setAttribute('aria-hidden', 'true');
       var fall = function () { md.replaceChildren(h('span', 'cc-n cc-big')); md.firstChild.append(icon(c.icon)); };
       if (c.anim) { var im = d.createElement('img'); im.src = c.anim; im.alt = ''; im.className = 'cc-anim'; im.onerror = fall; md.append(im); } else fall();
-      sl.append(md, h('h3', 'cc-st-t', c.t), h('p', 'cc-st-b', c.b));
+      sl.append(md, h('h3', 'cc-st-t', c.t), h('p', 'cc-st-b', c.b)); if (c.ex) sl.append(h('p', 'cc-ex', c.ex));
       if (i < n - 1) { var sw = h('p', 'cc-swipe'); sw.append(h('span', null, 'Swipe up to see more')); var ch = icon('chev'); ch.setAttribute('class', 'cc-ic cc-bob'); sw.append(ch); sl.append(sw); }
       else {
         sl.append(h('p', 'cc-tag cc-odds', e.odds));
