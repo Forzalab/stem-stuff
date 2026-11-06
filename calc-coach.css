@@ -67,3 +67,5 @@
 .cc-kls { font-size: 12px; } .cc-key.cc-k-op .cc-kr { fill: var(--cc-key-fn); } .cc-key.cc-k-enter .cc-kr { stroke-width: 2; } .cc-key.cc-k-second .cc-kl { fill: var(--cc-hi); }
 .cc-key.cc-k-second.on .cc-kl { fill: var(--cc-hi-ink); }
 .cc-key.on .cc-2 { fill: var(--cc-hi-ink); }
+.cc-sym { font-size: var(--t-sm); white-space: nowrap; width: 2.4rem; height: 2.4rem; border-radius: 10px; }
+.cc-const { grid-template-columns: 2.6rem 1fr; min-height: 56px; padding: var(--s2) var(--s3); }

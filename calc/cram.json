@@ -26,7 +26,51 @@
      "b": "A wrong bubble costs you nothing. Save 2 minutes at the end and fill every one."
     }
    ],
-   "odds": "Honest odds: a blind guess is 20%. Estimate plus cross-off is about 50% on questions you can set up. The least-used letter is about 40 to 45% when the rest is right. Practice exams are not the real exam."
+   "odds": "Honest odds: a blind guess is 20%. Estimate plus cross-off is about 50% on questions you can set up. The least-used letter is about 40 to 45% when the rest is right. Practice exams are not the real exam.",
+   "constants": {
+    "title": "Constants for this exam",
+    "intro": "Look them up on your calculator instead of typing digits from memory. Exam 3 uses these.",
+    "rows": [
+     {
+      "sym": "g",
+      "name": "free-fall acceleration",
+      "casio": "35",
+      "ti": "2"
+     },
+     {
+      "sym": "σ",
+      "name": "Stefan-Boltzmann (radiation)",
+      "casio": "31",
+      "ti": "none"
+     },
+     {
+      "sym": "R",
+      "name": "gas constant",
+      "casio": "27"
+     },
+     {
+      "sym": "k",
+      "name": "Boltzmann constant",
+      "casio": "25"
+     },
+     {
+      "sym": "N_A",
+      "name": "Avogadro's number",
+      "casio": "24"
+     },
+     {
+      "sym": "atm",
+      "name": "standard atmosphere (pressure)",
+      "casio": "40"
+     }
+    ],
+    "tips": {
+     "casio": [
+      "Your Casio cover often has the constant list printed inside. Check it before the exam.",
+      "Worst case: press SHIFT 7, then try numbers until the symbol you need shows up. There are only 40."
+     ]
+    }
+   }
   }
  }
 }

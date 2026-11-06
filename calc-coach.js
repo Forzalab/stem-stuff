@@ -129,7 +129,8 @@
   /* ---- the panel ---- */
   function build(host, o) {
     o = o || {};
-    var st = { view: o.routine ? 'steps' : 'routine', routine: o.routine || null, i: o.step || 0, model: o.model || model() };
+    if (o.bank) curBank = o.bank;
+    var st = { view: o.view || (o.routine ? 'steps' : 'routine'), routine: o.routine || null, i: o.step || 0, model: o.model || model() };
     var root = h('section', 'cc'); root.setAttribute('data-theme', o.theme || 'dark'); root.setAttribute('aria-label', 'Calc Coach');
     host.appendChild(root);
     function head() {
@@ -158,6 +159,17 @@
           c.onclick = function () { st.view = 'steps'; st.routine = kind; st.i = 0; draw(); };
           root.append(c);
         });
+        var CN = constantsFor(curBank);
+        if (CN) { var c3 = h('button', 'cc-card'); c3.type = 'button'; c3.append(h('span', 'cc-n', '3'), h('span', 'cc-ct', CN.title), h('span', 'cc-cw', 'Symbol, name and the keys to find it.')); c3.onclick = function () { st.view = 'constants'; draw(); }; root.append(c3); }
+        return;
+      }
+      if (st.view === 'constants') {
+        var CC_ = constantsFor(curBank);
+        if (!CC_) { st.view = 'routine'; return draw(); }
+        root.append(h('p', 'cc-model', name), h('h3', 'cc-tt', CC_.title), h('p', 'cc-sub', CC_.intro));
+        CC_.rows.forEach(function (r) { var k = h('div', 'cc-card cc-static cc-const'); k.append(h('span', 'cc-n cc-sym', r.sym), h('span', 'cc-ct', r.name), h('span', 'cc-cw', constPath(m, r))); root.append(k); });
+        ((CC_.tips && /^(fx|casio)/.test(m) && CC_.tips.casio) || []).forEach(function (t) { root.append(h('p', 'cc-tag', t)); });
+        root.append(h('div', 'cc-ft')); root.lastChild.append(btn('Back', 'cc-btn', function () { st.view = 'routine'; draw(); }));
         return;
       }
       var steps = shownSteps(DATA, m, st.routine);
@@ -195,7 +207,7 @@
     draw();
     return { el: root, draw: draw, state: st, destroy: function () { g.removeEventListener('stem-calc-model', again); root.remove(); } };
   }
-  function mount(host, o) { return load().then(function () { return build(host, o); }); }
+  function mount(host, o) { return Promise.all([load(), loadCram().catch(function () { return null; })]).then(function () { return build(host, o); }); }
 
   /* the overlay: dark, over the bars (60), under the splash (100) */
   function open(o) {
@@ -208,7 +220,7 @@
     ov._from = from;
     ov.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     d.documentElement.classList.add('cc-open');
-    return mount(ov, { onClose: close, routine: o.routine, theme: 'dark' }).then(function (p) { ov.tabIndex = -1; ov.focus({ preventScroll: true }); return p; });
+    return mount(ov, { onClose: close, routine: o.routine, theme: 'dark', bank: curBank }).then(function (p) { ov.tabIndex = -1; ov.focus({ preventScroll: true }); return p; });
   }
   function close() {
     if (!ov) return; var f = ov._from; ov.remove(); ov = null; d.documentElement.classList.remove('cc-open');
@@ -239,6 +251,14 @@
     });
   }
   var curBank = null;
+  /* "Constants for this exam": per-bank rows in cram.json; the key path only where verified (Casio ES PLUS: SHIFT 7, two digits, =; TI-36X Pro: 2nd, (, g is item 2) */
+  function constPath(m, r) {
+    if (m === 'fx115esplus' || m === 'fx300esplus') return r.casio ? 'SHIFT, 7, ' + r.casio + ', =' : 'SHIFT, 7, then the two-digit code';
+    if (m === 'ti36xpro') return r.ti === 'none' ? 'Not in this menu.' : r.ti ? '2nd, (, then item ' + r.ti : 'Open 2nd, ( and scroll to the symbol.';
+    if (m === 'ti30xsmv') return 'No constants menu. Type the value or store it.';
+    return 'Open the CONST menu (SHIFT 7) and scroll to the symbol.';
+  }
+  function constantsFor(bank) { var e = cramFor(bank); return e && e.constants || null; }
   function slots() {
     var on = !!cramFor(curBank);
     d.querySelectorAll('.cc-slot').forEach(function (sl) {
@@ -272,8 +292,8 @@
     pr.appendChild(row);
     loadCram().then(slots, function () { /* no cram data */ });
     if (bank === 'BANK_P3X' && p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast) {
-      g.stemToast.show({ text: p.title + '.', bar: false, at: function () { return row; }, action: { label: 'Show me', run: function () { open(); } },
-        onshow: function () { ls(KEY_TOAST + day(), '1'); } });
+      ls(KEY_TOAST + day(), '1');                                            // asked for once a day, whether or not it found room to show (toast.js waits for a free spot)
+      g.stemToast.show({ text: p.title + '.', bar: false, at: function () { return row; }, action: { label: 'Show me', run: function () { open(); } } });
     }
   }
   /* Cluck's app chrome (not the reply): a link under his text, next to .cl-verify, and the second slot */

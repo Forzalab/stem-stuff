@@ -11,7 +11,7 @@
   document.body.classList.toggle('light', theme === 'light');
   if (q.get('cram')) { CalcCoach.loadCram().then(function () { CalcCoach.buildCram(document.getElementById('host'), CalcCoach.cramFor(q.get('cram')), null); }); return; }
   CalcCoach.load().then(function (D) {
-    CalcCoach.mount(document.getElementById('host'), { model: q.get('model') || CalcCoach.model() || 'ti36xpro', routine: q.get('routine'), step: +q.get('step') || 0, theme: theme });
+    CalcCoach.mount(document.getElementById('host'), { model: q.get('model') || CalcCoach.model() || 'ti36xpro', routine: q.get('routine'), bank: q.get('bank'), view: q.get('view'), step: +q.get('step') || 0, theme: theme });
   });
 })();
 </script></body></html>

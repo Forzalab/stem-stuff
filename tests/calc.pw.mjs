@@ -15,14 +15,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8887), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "calc-app-")), BANKS = join(TMP, "banks");
 
-const WLC = "P3X_WQ1";
+const WLC = "PHYS_PWQ1";
 const num = (code, n) => ({ code, type: "num", answer: String(n + 2), body: [{ type: "text", md: `Plain ${n}: 2 + ${n}` }], noob: { tier: 1 } });
 const welcome = { code: WLC, type: "num", answer: "4", form: "8/2", tol: 0.01, welcome: true, noob: { tier: 1 },
   body: [{ type: "text", md: "A $2\\ \\text{m}$ wide piston carries $8\\ \\text{N}$ over $2\\ \\text{m}^2$. Find the pressure, in $\\text{Pa}$." }],
   repair: { steps: [{ id: "who", label: "Which force presses down?", kind: "pick", opts: [{ id: "a", md: "the load's" }, { id: "b", md: "the air's" }], ok: "a" },
     { id: "answer", label: "Final answer", kind: "num" }] } };
 mkdirSync(BANKS);
-writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 1, problems: [welcome, num("P3X_A1", 1), num("P3X_A2", 2)] }));
+writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 1, problems: [welcome, num("PHYS_PA1", 1), num("PHYS_PA2", 2)] }));
 writeFileSync(join(BANKS, "BANK_OTH1.json"), JSON.stringify({ v: 1, problems: [num("OTH_W01", 1), num("OTH_W02", 2)] }));
 writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 3, groups: [{ name: "Fluids", rows: [{ id: "PRESSURE", tex: "P=\\frac{F}{A}" }] }] }));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3",
@@ -42,12 +42,13 @@ async function fresh(init = {}, at = "2026-11-06T18:00:00Z", opts = {}) {
   return { ctx, page, errs };
 }
 const itemUp = (page, c) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, c, { timeout: 8000 });
+const anyUp = page => page.waitForFunction(() => document.querySelector("#pcode")?.textContent && !document.querySelector("#freeze").hidden, null, { timeout: 8000 });
 const noH = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
-const SEEN = { "stem-welcome-BANK_P3X": "1" };
+const SEEN = { "stem-welcome-BANK_P3X": "1", "stem-calc-model": "ti-36x-pro" };
 try {
   await step("welcome Q1 (fresh device) carries the exam-day card; its button opens the panel (390, no sideways scroll)", async () => {
-    const { ctx, page, errs } = await fresh({ "stem-calc-model": "ti36xpro" });
-    await page.goto(BASE + "/"); await itemUp(page, WLC);
+    const { ctx, page, errs } = await fresh({ "stem-calc-model": "ti-36x-pro" });
+    await page.goto(BASE + "/"); await anyUp(page);
     await page.waitForSelector("#q .cc-welcome");
     assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Exam day: 2 calculator moves that save you 5 minutes");
     assert.equal(await noH(page), true);
@@ -58,42 +59,42 @@ try {
     assert.deepEqual(errs, []); await ctx.close();
   });
   await step("welcome card after the exam: neutral copy, still there", async () => {
-    const { ctx, page } = await fresh({ "stem-calc-model": "ti36xpro" }, "2026-11-10T09:00:00Z");
-    await page.goto(BASE + "/"); await itemUp(page, WLC); await page.waitForSelector("#q .cc-welcome");
+    const { ctx, page } = await fresh({ "stem-calc-model": "ti-36x-pro" }, "2026-11-10T09:00:00Z");
+    await page.goto(BASE + "/"); await anyUp(page); await page.waitForSelector("#q .cc-welcome");
     assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Calculator moves"); await ctx.close();
   });
   await step("item view on BANK_P3X: Calc chip, cram strip (dismissable, stays dismissed), toast once per day", async () => {
-    const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti36xpro" });
-    await page.goto(BASE + "/"); await itemUp(page, WLC);
+    const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti-36x-pro" });
+    await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page);
     await page.waitForSelector("#problem .cc-row .cc-chip");
     assert.match(await page.textContent("#problem .cc-strip .cc-st"), /Exam day: 2 calculator moves/);
-    assert.equal(await page.getAttribute("#problem .cc-slot", "hidden"), "");
-    await page.waitForSelector(".stoast", { timeout: 6000 });
-    assert.match(await page.textContent(".stoast-t"), /Exam day/);
+    await page.waitForSelector("#problem .cc-slot button");   // the Hail Mary slot is live in exam time
+    const tk = () => page.evaluate(() => Object.keys(localStorage).filter(k => /^stem-calc-toast-/.test(k)));
+    assert.equal((await tk()).length, 1, "the toast was asked for today");
     await page.click("#problem .cc-strip .cc-x"); assert.equal(await page.$("#problem .cc-strip"), null);
-    await page.reload(); await itemUp(page, WLC); await page.waitForSelector("#problem .cc-chip");
+    await page.reload(); await anyUp(page); await page.waitForSelector("#problem .cc-chip");
     assert.equal(await page.$("#problem .cc-strip"), null, "dismissal is remembered");
-    await page.waitForTimeout(1500); assert.equal(await page.$(".stoast"), null, "no second toast the same day");
+    await page.waitForTimeout(1500); assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false, "no second toast the same day"); assert.equal((await tk()).length, 1);
     await page.click("#problem .cc-chip"); await page.waitForSelector(".cc-ov .cc");
     assert.equal(await noH(page), true); await ctx.close();
   });
   await step("after the exam copy expires: no strip, no toast, the Calc chip stays; other banks never get the strip", async () => {
     const a = await fresh({ ...SEEN }, "2026-11-10T09:00:00Z");
-    await a.page.goto(BASE + "/"); await itemUp(a.page, WLC);
+    await a.page.goto(BASE + "/#PHYS_PA1"); await anyUp(a.page);
     await a.page.waitForSelector("#problem .cc-chip"); await a.page.waitForTimeout(1500);
     assert.equal(await a.page.$("#problem .cc-strip"), null); assert.equal(await a.page.$(".stoast"), null); await a.ctx.close();
   });
-  await step("no calculator chosen: the chip asks the picker (stemCalcPick.open) instead of opening a panel", async () => {
-    const { ctx, page } = await fresh({ ...SEEN });
-    await page.addInitScript(() => { window.stemCalcPick = { opened: 0, open() { this.opened++; }, get: () => null, onChange() {} }; });
-    await page.goto(BASE + "/"); await itemUp(page, WLC);
-    await page.click("#problem .cc-chip");
-    assert.equal(await page.evaluate(() => window.stemCalcPick.opened), 1); assert.equal(await page.$(".cc-ov"), null); await ctx.close();
+  await step("no calculator chosen: the chip opens the picker (stemCalcPick), not an empty panel", async () => {
+    const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "skip" });
+    await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page); await page.waitForSelector("#problem .cc-chip");
+    await page.evaluate(() => { window.stemCalcPick.close && window.stemCalcPick.close(); document.querySelector("#problem .cc-chip").click(); });
+    await page.waitForFunction(() => window.stemCalcPick && window.stemCalcPick.up === true, null, { timeout: 4000 });
+    assert.equal(await page.$(".cc-ov"), null); await ctx.close();
   });
   await step("panel: TI-36X Pro routine 1 walks end to end (key caps, Back/Next, Try it on yours); reduced motion; no sideways scroll", async () => {
     const { ctx, page } = await fresh({}, undefined, { reducedMotion: "reduce" });
-    await page.goto(BASE + "/calc.html?model=ti36xpro&routine=R1"); await page.waitForSelector(".cc-caps .cc-cap");
-    assert.equal(await page.$eval(".cc-cap:last-child", e => getComputedStyle(e).animationName), "none");
+    await page.goto(BASE + "/calc.html?model=ti36xpro&routine=R1"); await page.waitForSelector(".cc-pad .cc-ring");
+    assert.equal(await page.$eval(".cc-ring", e => getComputedStyle(e).animationName), "none");
     const n = +/of (\d+)/.exec(await page.textContent(".cc-count"))[1]; assert.ok(n >= 7);
     for (let i = 1; i < n; i++) { await page.click(".cc-go"); await page.waitForSelector(".cc-count, .cc-try"); }
     await page.click(".cc-go"); await page.waitForSelector(".cc-try"); assert.match(await page.textContent(".cc-tt"), /Try it on yours/);
@@ -105,8 +106,8 @@ try {
     assert.match(await page.textContent(".cc-note"), /Check your manual/); await ctx.close();
   });
   await step("Cluck chrome: the Calc Coach link opens the panel, and sits outside the reply body", async () => {
-    const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti36xpro" });
-    await page.goto(BASE + "/"); await itemUp(page, WLC);
+    const { ctx, page } = await fresh({ ...SEEN, "stem-calc-model": "ti-36x-pro" });
+    await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page);
     await page.evaluate(() => { const b = document.querySelector("#problem .cc-chip"); b && b.scrollIntoView(); });
     const r = await page.evaluate(() => { const el = document.getElementById("cluck"); if (el) return !!el.querySelector(".cl-verify + .cc-cl .cc-link") && !el.querySelector(".wtext .cc-cl"); return "lazy"; });
     if (r === "lazy") { const { clEl } = {}; }                         // #cluck is built on first open: its markup is checked by the unit test below

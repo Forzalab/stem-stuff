@@ -31,8 +31,10 @@ test("only verified shown: a model with no source = nothing (check your manual);
 test("model choice: the picker's get() wins, else the localStorage key; none = null", () => {
   assert.equal(CC.model(), null);
   localStorage.setItem("stem-calc-model", "ti30xs"); assert.equal(CC.model(), "ti30xs");
-  globalThis.stemCalcPick = { get: () => ({ id: "ti36xpro" }) }; assert.equal(CC.model(), "ti36xpro");
-  globalThis.stemCalcPick = { get: () => "casio" }; assert.equal(CC.model(), "casio");
+  globalThis.stemCalcPick = { get: () => "ti-36x-pro" }; assert.equal(CC.model(), "ti36xpro");
+  globalThis.stemCalcPick = { get: () => "fx-991ex" }; assert.equal(CC.model(), "fx991ex");
+  globalThis.stemCalcPick = { get: () => "other" }; assert.equal(CC.model(), "other");
+  localStorage.setItem("stem-calc-model", "skip"); delete globalThis.stemCalcPick; assert.equal(CC.model(), null);
   delete globalThis.stemCalcPick; localStorage.removeItem("stem-calc-model"); assert.equal(CC.model(), null);
 });
 test("promo: exam-day copy until 2026-11-09T23:59 Los Angeles, neutral after; one QUACK at most", () => {
