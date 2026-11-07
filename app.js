@@ -3596,7 +3596,7 @@ const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                               
 function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
-let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
+let dragR = null, mtFit = true, mtNeed = 0;                                                  // mtFit: the tile hugs its content until the handle is used
 /* desktop sugar: the notes pad steps aside while Cluck has something to show (the hint card, or the sheet open); else the pad is the default
    (Tony, Oct 5: "otherwise default to the scratchpad"; Oct 4's "NO SCRATCHPAD" held for questions with a layer). Diet keeps the pad.
    Phone sugar: no pad at all, so no Scratchpad button, no pad page, no pad peek (Tony, Oct 14: "HIDE THE SCRATCHPAD ON MOBILE SUGAR MODE"). */
@@ -3656,6 +3656,7 @@ function layoutMT() {
       const parts = mtTile === "q" || isProof() ? [problemEl] : [$("#fb"), $("#q")];
       root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
       const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
+      mtNeed = need;                                                           // bug 5: setRatio asks it (a pick taller than the content stays a hug)
       const cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
       root.style.setProperty("--tile-h", Math.round(Math.max(56, Math.min(need, cap))) + "px");
     }
@@ -3701,7 +3702,16 @@ function setRatio(r, animate = true) {
   mtFit = false;
   mtMem[k] = r; if (r > 0) mtMem[k + "Last"] = r;
   mtSave();
-  if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
+  const go = () => {
+    /* bug 5 (Tony, Nov 6): a pick whose tile would be taller than its content stays a hug, no empty space under a short question or proof */
+    if (mtOpen && !sideMQ.matches && r > 0) {
+      mtFit = true; applyMT();                                                   // measures mtNeed from a small tile
+      const cs = getComputedStyle(mainEl), len = mainEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 16;
+      if (r * len <= mtNeed + 8) mtFit = false;                                  // the pick fits inside the content: the ratio rules
+    }
+    applyMT();
+  };
+  if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(go); else go();
 }
 const lastPeek = () => { const k = mtKind(), r = mtMem[k + "Last"]; return typeof r === "number" && r > 0 ? near(k, r) : mtDef(k); };
 function setTile(t, animate = true) {
