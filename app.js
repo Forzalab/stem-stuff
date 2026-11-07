@@ -123,6 +123,10 @@ const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "
   : r.verdict === "wrong" ? "Not quite. One more try, I swear." : "";
 
 /* ================= markdown + TeX ================= */
+/* bug 7: a typed answer as TeX, numbers as typed. math.js toTex prints 222222 as 2.22222·10^{+5} (format upperExp 5);
+   a number JS writes plainly stays plain, a typed e-number (1.2e-7) keeps the ·10^ form */
+const NUM_TEX = n => n.type === "ConstantNode" && typeof n.value === "number" && !/e/i.test(String(n.value)) ? String(n.value) : undefined;
+const answerTex = s => math.parse(s).toTex({ parenthesis: "auto", implicit: "hide", handler: NUM_TEX });
 function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
@@ -1301,7 +1305,7 @@ function wireFF() {
       if (xOn(null)) { xPreview(pv, inp.value, null); const ln = $("#xline"); if (ln && ln.classList.contains("bad")) { ln.className = "xline"; ln.textContent = X_PROMPT; } return; }   // W137: the working + its value
       pv.innerHTML = "";
       const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
-      try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
+      try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(answerTex(t), false); } catch { /* still typing */ }
       pvFit(pv);
     });
     /* Enter: next empty box first, submit when all are filled */
@@ -1795,7 +1799,7 @@ function rboxSync() {
     const u = S.prob, host = $("#preview"), v = $("#ans").value.trim();
     if (host && v) {
       let val = esc(v);
-      if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(v).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
+      if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(answerTex(v), false); } catch { /* the plain text stands */ } }
       const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b> <span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;
       host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden");
       host.insertAdjacentHTML("beforeend", `<p class="ansl">${revDuck()}<span>That's it! The answer is </span>${unit}${mathCopyBtn("Copy answer", v)}</p>`);
@@ -1866,7 +1870,7 @@ function reveal(r, part) {
     return "A proof is shown under your box.";
   }
   let val = esc(c);
-  if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(String(c)).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
+  if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(answerTex(String(c)), false); } catch { /* the plain text stands */ } }
   host.querySelector(".ansl")?.remove();
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
   const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b>\u2009<span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;   // W132: value green + thin space + unit in ink; copy = the value only
