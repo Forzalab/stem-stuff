@@ -1624,6 +1624,9 @@ html.proof-split #work > #q { position: relative; flex: 1 1 auto; min-height: 0;
   background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; }
 html.proof-split #work > #q:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 html.proof-split #work > #q.closed { opacity: 1; }
+html.proof-split #stage > #work { overflow-y: auto; overscroll-behavior: contain; }   /* a ladder under the verdict: the whole column scrolls, so the last step + Skip are reachable on a phone */
+html.proof-split #work > #q { min-height: 8rem; }                                          /* ...and the proof box is never crushed */
+html.proof-split #work > #rpHost { flex: 0 0 auto; }
 html.proof-split #work > #fb { flex: none; margin: 0; max-height: 34%; overflow-y: auto; }
 html.proof-split #work > #fb:empty { display: none; }
 html.proof-split #q .ff.proof { flex: 1 0 auto; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }

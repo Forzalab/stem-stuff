@@ -679,7 +679,7 @@ async function load(code) {
   entryMsg("");
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   remembered(code);
-  if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
+  if (location.hash !== "#" + code) history.replaceState(history.state && history.state.stemD != null ? { stemD: history.state.stemD } : null, "", "#" + code);   // keeps the in-app depth (nav.js iOS Back)
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
   $("#rpHost")?.remove();                                                  // the last question's repair ladder
@@ -858,8 +858,16 @@ function repairAfterMiss(r) {
     if (!rp || !rp.steps) { mine.rp = null; return; }
     const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
       credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
-    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade, on: (name, d) => { if (name === "repair_answer") repairPick(mine, d); } });
+    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade, on: (name, d) => { if (name === "repair_answer") repairPick(mine, d); else if (name === "repair_skip") repairSkip(mine); } });
   });
+}
+
+/* "Skip for now" (repair.js repair_skip): the brown box goes and the focus goes back to the answer box; preventScroll keeps the page where it is */
+function repairSkip(mine) {
+  if (S !== mine) return;
+  rpUnmount();
+  const t = $("#q #ans") || $("#q textarea, #q input:not([disabled])") || $("#q .opt:not(.disabled):not([disabled])");
+  try { t?.focus({ preventScroll: true }); } catch { /* not focusable */ }
 }
 
 /* the ladder's "Final answer" chip, graded right (repair.js repair_answer): the main box takes the same option and checks it, so one tap is not two.
@@ -2648,6 +2656,7 @@ function clOpen(tab, from, auto) {                                        // aut
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
+  dispatchEvent(new CustomEvent("stem:layers"));                            // nav.js: the iOS Back button
   if (sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
     const ft = cl.el.querySelector(".cl-ft"), r = ft.getBoundingClientRect();   // #work.cl-on), so the page moves only when the field is really off screen (W129 L4: "start" scrolled the page under the student)
     if (r.top < 0 || r.bottom > innerHeight) ft.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" });
@@ -2671,6 +2680,7 @@ function clClose(dismiss, force) {                                         // fo
   cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
+  dispatchEvent(new CustomEvent("stem:layers"));
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
   if (dismiss === true && sideMQ.matches && !origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
   if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
@@ -2745,6 +2755,7 @@ function clBack() {
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
+window.stemCluckClose = () => clClose(false);                               // nav.js: the iOS Back button closes the sheet
 window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
 window.stemCluckModal = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
 window.stemLayout = () => { if (S) layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
@@ -3690,6 +3701,7 @@ function applyMT() {
   padRule();
   root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)
   root.classList.toggle("mt", mtOpen);
+  dispatchEvent(new CustomEvent("stem:layers"));                              // nav.js: the iOS Back button
   const fit = mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);
   root.classList.toggle("mt-r0", on && !gone && !fit && dragR == null && r === 0);
@@ -3801,7 +3813,7 @@ function openMT() {
   mtOpen = true; mtTile = "q"; mtFit = true;
   if (noteAt() === fab) hideToast();
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
-  try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
+  try { history.pushState({ mt: 1, stemD: (history.state && history.state.stemD) || 0 }, "", location.href); } catch { /* sandboxed */ }   // stemD: nav.js iOS Back depth, same as the entry under it
   applyMT(); layoutDock();
   setTimeout(() => obToast(2, "Switch question/answer here.", mtMode, { x: true, allow: "#scratch" }), 400);   // pad-mode B (Tony, Oct 28): caret + an X. The pad page is all pad (#scratch, edge to edge): the note may lie on its 2 s of it, never on a button
 }
@@ -3819,6 +3831,7 @@ function closeMT(toAnswer) {
   if (toAnswer) focusField("problem");                                            // after the close (on q the answer was hidden), still in the tap: the keyboard can stay
   if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
 }
+window.stemNotes = { open: () => mtOpen && !isProof(), close: () => closeMT(false) };   // nav.js: the iOS Back button closes the split (a proof item's split is its page: not offered)
 addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (mtOpen) shutMT(); });   // Back closes it, never leaves the page
 for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
 mtExp.addEventListener("click", () => closeMT(false));

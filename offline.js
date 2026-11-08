@@ -8,7 +8,7 @@
   if (window.stemOffline) return;
   const FILE = location.protocol === "file:";
   const CAN_SW = !FILE && "serviceWorker" in navigator && window.isSecureContext;
-  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const IOS = document.documentElement.classList.contains("ios");   // fx.js (it runs first, index.html) holds the one iOS test
   const C = window.stemCodes;   // codes.mjs, set by app.js (it runs before this script, index.html): the one place that knows prefixes
   /* a URL router, on purpose a superset of what codes.mjs accepts (same as serve.py CODE_PATH): the server and load() decide, not this */
   const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$/;
