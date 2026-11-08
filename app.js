@@ -1506,7 +1506,7 @@ async function xDiag(r, text, i) {                                         // a 
   if (!d.pending) return;
   const mine = S, w = wish;
   try {
-    const rd = window.stemRedo.has(S.code) ? { round: window.stemRedo.get().n } : {};
+    const rd = window.stemRedo.has(S.code) ? { redo: window.stemRedo.get().n } : {};
     const res = await net("diagnose", { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() }, credentials: "same-origin",
       body: JSON.stringify({ code: S.code, expr: text, ...(i == null ? {} : { part: i }), ...rd }) });
     const o = res.ok ? await res.json() : null;

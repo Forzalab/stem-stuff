@@ -1166,7 +1166,7 @@ def grade(p, sid, body, reveal=False, on=stage_off):
     idx = body.get("part")
     if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}    # the old whole-set body {parts: [...]} lands here too
-    rnd = body.get("round")                  # "Redo my misses": a round grades in its own namespace, history untouched
+    rnd = body.get("redo")                   # "Redo my misses": a round grades in its own namespace, history untouched
     if rnd is not None and (isinstance(rnd, bool) or not isinstance(rnd, int) or not 0 < rnd < 2 ** 31):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}
     if p["type"] == "proof":                 # W107: Cluck's grader is a network call, so it runs outside the tries lock
