@@ -40,7 +40,7 @@ def serve(fail_first, slow_first=0):
             self.end_headers()
             self.wfile.write(body)
 
-    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv, state
 
