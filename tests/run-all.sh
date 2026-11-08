@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Every test, one command, one verdict. Exit 0 = all green, 1 = something failed (its log is printed).
-# usage: tests/run-all.sh [--quick] [--shard N/M | SHARD=N/M] [--list] [--plan B L]   (or SPECS="a b c" tests/run-all.sh)
+# usage: tests/run-all.sh [--quick] [--fast] [--shard N/M | SHARD=N/M] [--list] [--plan B L]   (or SPECS="a b c" tests/run-all.sh)
 #   --quick      unittest + npm test + the batch tooling smoke (~10 s, the pre-push set)
+#   --fast       the worker pre-push loop: node unit tests + the cheapest strict one-page units (ticket 07).
+#                The units are FAST_UNITS below, cheapest first; the run prints a `fast total` and must stay <60 s on CI.
+#                Run it before every push instead of waiting on the full CI.
 #   SHARD=1/2    run one slice so the halves can run at the same time (locally, or as the CI matrix jobs). No SHARD = everything, as before.
 #                Shard 1 = unittest + npm + part of the .pw specs, shard 2 = the rest; the split is a fixed greedy deal by the rough
 #                per-spec seconds in weight() below (new specs count 5), so it is the same on every machine and the halves end together. Together they run exactly the unsharded set. Each run has its own TMP, port and server,
@@ -15,10 +18,11 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-quick=0; list=0; plan=""; SHARD="${SHARD:-}"; SPECS="${SPECS:-}"
+quick=0; fast=0; list=0; plan=""; SHARD="${SHARD:-}"; SPECS="${SPECS:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --quick) quick=1 ;;
+    --fast) fast=1 ;;
     --list) list=1 ;;
     --plan) plan="${2:-} ${3:-}"; shift 2 ;;
     --shard) shift; SHARD="${1:-}" ;;
@@ -192,6 +196,9 @@ tags() {
   esac
 }
 
+# --fast (ticket 07, scope A): node unit tests + the cheapest strict one-page @layout units, cheapest first (serial wall s from 07-fast-pipe.measure-b.md).
+FAST_UNITS=(layers minicluck popover axis-cross figgap cluck-permanent@phone privacy-reach geomarks livefig)
+
 # the balanced deal: deal <shard-no> prints that shard's .pw spec names (names, no path/extension)
 deal() {
   local load=() k best w n
@@ -236,7 +243,9 @@ fi
 
 # this run's share of the .pw specs: SPECS as given, all of them unsharded, else its part of the balanced deal
 specs=()
-if [ -n "$SPECS" ]; then
+if [ "$fast" -eq 1 ]; then
+  read -ra specs <<<"${FAST_UNITS[*]}"
+elif [ -n "$SPECS" ]; then
   read -ra specs <<<"$SPECS"
   for n in "${specs[@]}"; do
     case "$n" in
@@ -251,8 +260,9 @@ elif [ "$quick" -eq 0 ]; then
     mapfile -t specs < <(deal "$sn")
   fi
 fi
-base=0; [ "$sn" -eq 1 ] && [ -z "$SPECS" ] && base=1   # unittest + npm ride with shard 1 (never with a SPECS lane)
+base=0; [ "$sn" -eq 1 ] && [ -z "$SPECS" ] && [ "$fast" -eq 0 ] && base=1   # unittest + npm ride with shard 1 (never with a SPECS lane)
 if [ "$list" -eq 1 ]; then
+  [ "$fast" -eq 1 ] && { printf '%s\n' npm "${specs[@]}"; exit 0; }
   [ "$base" -eq 1 ] && printf '%s\n' unittest npm
   [ "${#specs[@]}" -gt 0 ] && printf '%s\n' "${specs[@]}"
   exit 0
@@ -308,7 +318,10 @@ run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older script
   fi
 }
 
-if [ "$base" -eq 1 ]; then
+fast_t0="$EPOCHREALTIME"
+if [ "$fast" -eq 1 ]; then
+  run npm bash -c 'cd tests && npm test'
+elif [ "$base" -eq 1 ]; then
   run unittest python3 -m unittest discover -s tests -p 'test_*.py'
   run npm bash -c 'cd tests && npm test'
   run batch bash tests/batch.test.sh
@@ -327,6 +340,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     esac
   done
 fi
+[ "$fast" -eq 1 ] && echo "fast total $(awk -v a="$fast_t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }') s"
 sfx=""; [ "$sm" -gt 1 ] && sfx=" (shard $sn/$sm)"
 # a spec that cannot launch an engine prints "NOT COVERED <engine>: …" and goes on (render, reload): list them, so a missing engine is never silent
 nc="$(grep -H "^NOT COVERED" "$TMP"/*.log 2>/dev/null | sed "s|^$TMP/||; s|\.log:NOT COVERED|:|; s|: no browser.*||")"
