@@ -14,3 +14,4 @@ version.json
 scratch/
 tools/queue.json
 tests/handmaps/auto.tsv
+TRACE.tsv
