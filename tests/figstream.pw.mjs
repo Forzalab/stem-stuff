@@ -51,9 +51,13 @@ const fake = createServer(async (req, res) => {
 await new Promise(r => fake.listen(0, "127.0.0.1", r));
 const FAKE = fake.address().port;
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
-  OPENROUTER_API_KEY: "unused", CLAUDE_API: "fake", CLAUDE_BASE: `http://127.0.0.1:${FAKE}`, CLUCK_LIVE_FIGS: "1", CLUCK_REWRITE: "0" }, stdio: "ignore" });
+  OPENROUTER_API_KEY: "unused", CLAUDE_API: "fake", CLAUDE_BASE: `http://127.0.0.1:${FAKE}`, CLUCK_LIVE_FIGS: "1", CLUCK_REWRITE: "0" }, stdio: ["ignore", "inherit", "inherit"] });
+let srvDied = null; srv.on("exit", c => { srvDied = c; });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
+// fail loudly if OUR server is not the one on the port (a stale server on a fixed port would serve other banks)
+await new Promise(r => setTimeout(r, 300));
+if (srvDied !== null) { console.log("FAIL serve.py exited early (port in use?), code", srvDied); process.exit(1); }
 let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
@@ -77,6 +81,13 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const init = () => {
   try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
   window.__long = []; window.__texts = [];
+  // "never early" instead of "not yet": a status slug / caret while the reply text is still empty, at ANY moment, sets the mark (a count at a node-side wall-clock moment races the prefetched first token + the 900 ms caret delay)
+  window.__earlyMark = false;
+  new MutationObserver(() => {
+    const x = document.querySelector("#cluck .wtext"); if (!x || !x.querySelector(".wcaret, .wtag, .wload")) return;
+    const c = x.cloneNode(true); c.querySelectorAll(".wcaret, .wtag, .wload").forEach(e => e.remove());
+    if (!c.textContent.trim()) window.__earlyMark = true;
+  }).observe(document, { childList: true, subtree: true });
   try { new PerformanceObserver(l => { for (const e of l.getEntries()) window.__long.push([e.startTime, e.duration]); }).observe({ type: "longtask", buffered: true }); } catch { /* no longtask */ }
   const tick = () => { const t = document.querySelector("#cluck .wtext")?.textContent || ""; if (t && window.__texts.at(-1) !== t) window.__texts.push(t); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
@@ -90,9 +101,10 @@ try {
       await ctx.addInitScript(init);
       const page = await ctx.newPage(); const errs = []; page.on("pageerror", e => errs.push(e.message));
       await wish(page);
-      assert.equal(await page.locator("#cluck .wtext .wtag, #cluck .wtext .wload, #cluck .wtext .wcaret").count(), 0, "before the first token: nothing (no status slug, no caret; Tony, Nov 4)");
+      assert.equal(await page.evaluate(() => window.__earlyMark), false, "before the first token: nothing (no status slug, no caret; Tony, Nov 4)");
       await page.waitForFunction(() => /heat, height/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 10000 });
       await page.waitForFunction(() => /stored energy/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 10000 });
+      assert.equal(await page.evaluate(() => window.__earlyMark), false, "no status slug / caret ever showed before the first token");
       // the model is done with the prose; the re-ask (REASK_MS) is still pending: the words are on the page, no figure box, no gap
       const t0 = await page.evaluate(() => performance.now());   // the figure is pending from here (REASK_MS): the main thread stays free
       assert.ok(await page.evaluate(() => window.__texts.length) >= 3, "the prose arrived in >= 3 updates");
