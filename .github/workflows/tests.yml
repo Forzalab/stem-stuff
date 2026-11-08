@@ -12,6 +12,11 @@ on:
       manifest:
         description: "Batch number when fired by tools/batch.sh on batch/<n> (empty = none)"
         default: ""
+      pipe:
+        description: "full = whole suite; fast = tests/run-all.sh --fast only (ticket 07 timing)"
+        type: choice
+        options: [full, fast]
+        default: full
 # a new push to a PR cancels the run still going for its old commit. main (and dispatch) queues every run in order:
 # the default queue keeps 1 pending run and a newer one replaces it, so 3 quick merges left the middle one untested.
 # queue: max + cancel-in-progress: true is a validation error, so both flip on the event.
@@ -24,6 +29,7 @@ env:
   LANES: 3    # run-all.sh processes per runner (Tony's pick, CI plan PR 10): bench B 4x3 vs 5x2 = wall -23 s, runner-min -26%. The 3-lane flow.pw flakes were view transitions eating raw input (todo 55, #302)
 jobs:
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
+    if: inputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
@@ -32,6 +38,7 @@ jobs:
       - id: p
         run: echo "matrix=$(tests/run-all.sh --plan "$BLOCKS" "$LANES")" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
+    if: inputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -85,17 +92,36 @@ jobs:
             grep -E '^(FAIL|NOT COVERED)|FAILED' "lane-$((i + 1)).log" | sed "s/^/lane $((i + 1)): /" || true
           done
           exit "$rc"
+  fast:   # ticket 07 timing: dispatch with pipe=fast runs only run-all.sh --fast, on one runner
+    if: inputs.pipe == 'fast'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install sympy networkx
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - run: |
+          cd tests && npm ci
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --only-shell chromium
+      - shell: bash   # explicit shell = pipefail, so tee keeps run-all's exit code
+        run: tests/run-all.sh --fast 2>&1 | tee fast.log
+      - if: always()
+        run: grep 'fast total' fast.log >>"$GITHUB_STEP_SUMMARY" || true
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   all:
     needs: [plan, unit, block]
-    if: always()
+    if: always() && inputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     steps:
       - run: test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && test "${{ needs.block.result }}" = success
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]
-    if: always() && github.event_name == 'workflow_dispatch'
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     permissions: { actions: read }
     env:
