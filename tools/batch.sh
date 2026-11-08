@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 # Batch queue for the refactor train. Labels are the truth; tools/queue.json is a cache.
 # blame = changed-file name heuristic + tests/handmaps/*.tsv (format TBD by ticket 06) until handmaps land
+# land is not atomic: if a merge fails mid-list, earlier PRs stay merged; finish the rest by hand
+# (rerun refuses because merged PRs are no longer MERGEABLE).
+# red batch + SPLIT: relabel by hand (no un-batch command yet).
 # usage: tools/batch.sh labels | sync | fire [--force] [--dry-run] | status <n> | land <n> | blame <n> <spec...>
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 QUEUE="$ROOT/tools/queue.json"
 FAKE="${BATCH_FAKE:-}"
 WT=""
+TMPQ=""
 die() { echo "batch: $*" >&2; exit 2; }
 need() { command -v "$1" >/dev/null 2>&1 || die "needs $1"; }
-cleanup() { [ -n "$WT" ] && git -C "$ROOT" worktree remove --force "$WT" >/dev/null 2>&1 || true; }
+cleanup() {
+  [ -n "$WT" ] && git -C "$ROOT" worktree remove --force "$WT" >/dev/null 2>&1 || true
+  [ -n "$TMPQ" ] && rm -f "$TMPQ" || true
+}
 trap cleanup EXIT
 warn_fail() { echo "WARN batch: $*" >&2; exit 1; }
 gh_remove_label() { gh pr edit "$1" --remove-label "$2" >/dev/null || warn_fail "could not remove label $2 from PR #$1"; }
@@ -93,7 +100,10 @@ cmd_fire() {
   for a in "$@"; do
     case "$a" in --force) force=1 ;; --dry-run) dry=1 ;; *) die "fire: unknown $a" ;; esac
   done
-  if [ -z "$FAKE" ]; then cmd_sync >/dev/null; fi
+  if [ -z "$FAKE" ]; then
+    if [ "$dry" -eq 1 ]; then TMPQ="$(mktemp)"; QUEUE="$TMPQ"; fi
+    cmd_sync >/dev/null
+  fi
   q="$(load_queue)"
   q="$(jq 'sort_by(.done_at, .pr)' <<<"$q")"
   now="$(date +%s)"; count="$(jq 'length' <<<"$q")"; age=0
@@ -147,10 +157,15 @@ cmd_fire() {
   git -C "$WT" commit -q -m "batch $n: manifest ($(jq length <<<"$manifest") item(s))"
   git -C "$WT" push -q origin "batch/$n"
   git -C "$ROOT" worktree remove --force "$WT"; WT=""
-  while IFS=$'\t' read -r pr sha; do
-    gh_add_label "$pr" batched
-  done < <(jq -r '.[] | [.pr, .sha] | @tsv' <<<"$manifest")
   gh workflow run tests.yml --ref "batch/$n" -f "manifest=$n"
+  local failed=''
+  while IFS=$'\t' read -r pr sha; do
+    gh pr edit "$pr" --add-label batched >/dev/null 2>&1 || failed+=" #$pr"
+  done < <(jq -r '.[] | [.pr, .sha] | @tsv' <<<"$manifest")
+  if [ -n "$failed" ]; then
+    echo "WARN batch: dispatched batch/$n but could not label PR(s):$failed" >&2
+    exit 1
+  fi
   echo "batch $n: fired $(jq length <<<"$manifest") item(s)"
 }
 
