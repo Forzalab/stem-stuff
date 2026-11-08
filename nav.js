@@ -392,7 +392,8 @@ function init() {
   const root = document.documentElement;
   const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
   const modes = $("#qmodes"), mix = $("#qmix"), skip = $("#qskip");
-  const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
+  let theBank = null;                                                // the open bank (app.js window.stemBank), re-read when app.js says it changed
+  const bank = () => theBank;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
   const rd = () => window.stemRedo || null;                          // a Redeem showing's own grading namespace (app.js)
   let codes = [], cur = null;
@@ -670,7 +671,7 @@ function init() {
     update(c);
     if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1 or the night: once the first question has opened, so app.js's first load never overwrites the mock's hash
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
-  addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
+  addEventListener("drill:bank", () => { theBank = window.stemBank && window.stemBank.code ? window.stemBank : null; update(cur); });   // a bank opened or left (app.js)
   /* iOS Back (design/NAV.md "iOS exception"): iOS has no system Back. One tap pops the topmost thing; it never leaves the site.
      Order: Cluck's sheet, the question list, a popover, the notes split, then the in-app previous question; else hidden (the root).
      In-app depth = history.state.stemD: 0 at the first question of the tab, +1 per question pushed (Prev/Next/list rows set the hash).

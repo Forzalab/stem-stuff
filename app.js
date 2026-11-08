@@ -596,7 +596,7 @@ window.stemRedo = {
   },
   clear() { try { localStorage.removeItem(REDO); } catch { /* blocked */ } }
 };
-function leaveBank() { src("file"); if (bank) { bank = null; bankChanged(); } }
+function leaveBank() { src("file"); if (bank) { bankChanged(); bank = null; } }
 /* code: BANK_XXX, or "last" (the server's pointer for this browser). go: open a question (at, else the first).
    quiet (boot): no message, no retry; a bank that is gone just leaves the page as it is. */
 async function openBank(code, o) {
