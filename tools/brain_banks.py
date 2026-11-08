@@ -54,6 +54,7 @@ def parse_pins(spec):
 
 RETRIES = (10, 30, 60)   # seconds before retry 1, 2, 3 when GitLab sends no Retry-After; max 3 retries
 RETRY_CAP = 90           # a Retry-After longer than this is cut to it
+TIMEOUT = float(os.environ.get("SHIP_HTTP_TIMEOUT", "60"))   # per request; the recursive brain tree page can take >20 s when GitLab is slow
 SCALE = float(os.environ.get("SHIP_BACKOFF_SCALE", "1"))   # tests set 0: no real sleeping
 
 
@@ -63,7 +64,7 @@ def get(endpoint, token, **query):   # not "path": GitLab's own query field is c
         req = urllib.request.Request(url)
         req.add_unredirected_header("PRIVATE-TOKEN", token)   # not re-sent if GitLab redirects elsewhere
         try:
-            return urllib.request.urlopen(req, timeout=20)
+            return urllib.request.urlopen(req, timeout=TIMEOUT)
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):
                 raise Fail("BRAIN_TOKEN rejected (it needs read_api on the brain project)") from None
@@ -77,6 +78,11 @@ def get(endpoint, token, **query):   # not "path": GitLab's own query field is c
                 continue
             raise Fail(f"GitLab answered {e.code} for {endpoint}") from None
         except OSError as e:
+            if isinstance(e, TimeoutError) or isinstance(getattr(e, "reason", None), TimeoutError):   # read/connect timeout: retry like a 5xx
+                if attempt < len(RETRIES):
+                    print(f"brain: GitLab timed out for {endpoint}, retry {attempt + 1}/{len(RETRIES)} in {RETRIES[attempt] * SCALE:g}s", file=sys.stderr)
+                    time.sleep(RETRIES[attempt] * SCALE)
+                    continue
             raise Fail(f"GitLab unreachable: {getattr(e, 'reason', e)}") from None
 
 
