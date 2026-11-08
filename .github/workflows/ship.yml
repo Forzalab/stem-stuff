@@ -19,6 +19,7 @@ on:
         required: false
 permissions:
   contents: read
+  actions: read   # the ship gate reads tests.yml run conclusions (no secret of its own)
 concurrency: { group: ship, cancel-in-progress: false }
 jobs:
   ship:
@@ -56,6 +57,21 @@ jobs:
       - run: command -v convert >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }
       # ship.sh runs every Vercel command as `npx -y vercel@latest`: warm that cache once (and log the version)
       - run: npx -y vercel@latest --version
+      # The ship gate (ticket 09, PR 1). Facts only, no new secret: main push runs today are all FULL (tests.yml push: [main]).
+      # Query tests.yml's own runs (the per-workflow endpoint): a green ship/prune/spend run is not a green test run.
+      # tools/ci-gate.mjs refuses (exit 1) unless origin/main itself, or a docs-only diff after it, has a full green run; the
+      # step sits BEFORE tools/ship.sh so a refusal happens before any Vercel call.
+      - name: fetch main test runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?branch=main&event=push&per_page=100" \
+            --jq '[.workflow_runs[] | {head_sha, conclusion, event, status, created_at, head_branch, run_attempt}]' > runs.json
+      - name: ship gate (full green on origin/main)
+        run: |
+          CANDIDATE="$(git rev-parse origin/main)"
+          echo "ship gate: candidate $CANDIDATE"
+          node tools/ci-gate.mjs --candidate "$CANDIDATE" --runs runs.json
       - name: tools/ship.sh
         env:
           MODE: ${{ inputs.mode }}
