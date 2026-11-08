@@ -390,3 +390,14 @@ test("scrub fallback (no regex lookbehind, old Safari): same results as the main
   for (const c of cases) assert.equal(T.scrub(c, 1000, true), T.scrub(c, 1000), c);
   assert.equal(T.scrub("call 555-123-4567 now", 1000, true), "call [phone] now");
 });
+
+test("rage_tap el names the closest control (a tap on a button svg), else the target; dead_tap scrollY + header_visible are numbers/booleans", () => {
+  const T = run().win.__stemTelemetry;
+  const mk = (tag, cls, closest) => ({ tagName: tag, className: cls, closest: () => closest });
+  const btn = mk("BUTTON", "ico-btn", null); btn.closest = () => btn;
+  assert.equal(T.tapLabel(mk("svg", { baseVal: "x" }, btn)), "button.ico-btn");
+  assert.equal(T.tapLabel(mk("DIV", "fig", null)), "div.fig");
+  assert.deepEqual({ ...T.scrollProps(120.4, 0, -5) }, { scrollY: 120, header_visible: false });
+  assert.deepEqual({ ...T.scrollProps(null, 300, 48) }, { scrollY: 300, header_visible: true });
+  assert.deepEqual({ ...T.scrollProps(0, 0, undefined) }, { scrollY: 0, header_visible: null });
+});

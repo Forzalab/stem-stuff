@@ -146,7 +146,7 @@
   }
   W.stemFP = stemFP;
   try { var mq = new URLSearchParams(location.search).get("me"); if (mq === "1" || mq === "test" || mq === "0") W.localStorage.setItem("stem-me", mq); } catch (e) { /* blocked */ }
-  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, scrub: scrub, plainReply: plainReply, tapCheck: tapCheck, userOff: userOff, bucket: bucket };
+  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, scrollProps: scrollProps, tapLabel: tapLabel, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, scrub: scrub, plainReply: plainReply, tapCheck: tapCheck, userOff: userOff, bucket: bucket };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
@@ -283,15 +283,33 @@
     if (typeof el.className === "string" && el.className.trim()) s += "." + el.className.trim().split(/\s+/).slice(0, 2).join(".");
     return s.slice(0, 80);
   }
+  /* a tap on an icon lands on the svg/use inside the control: name the control (rage_tap is the only label(e.target) caller) */
+  var CTRL = "button,a,[role=button],input,label";
+  function tapLabel(t) {
+    var c = t && t.closest ? t.closest(CTRL) : null;
+    return label(c || t);
+  }
+  /* dead_tap scroll context: numbers/booleans only. scTop = the tapped target's scroller scrollTop (null: none), winY = window.scrollY, topBottom = top bar rect.bottom */
+  function scrollProps(scTop, winY, topBottom) {
+    var n = function (v) { return typeof v === "number" && isFinite(v) ? Math.round(v) : null; };
+    return { scrollY: n(scTop != null && scTop > 0 ? scTop : (winY || scTop)), header_visible: typeof topBottom === "number" ? topBottom > 0 : null };
+  }
+  function scrollerOf(el) {
+    for (; el && el.nodeType === 1; el = el.parentElement) {
+      var o = W.getComputedStyle ? W.getComputedStyle(el).overflowY : "";
+      if ((o === "auto" || o === "scroll") && el.scrollHeight > el.clientHeight) return el;
+    }
+    return null;
+  }
   var LIVE = "a,button,input,textarea,select,label,summary,[role=button],[role=radio],[role=checkbox],[role=separator],[tabindex],.opt,.pad-fab,.sash,.more";
   var DEAD = ".fig,.katex,.md,.pcode,.ptitle,.chg-chip";
   var downAt = null;   // the pointerdown on a dead target, waiting for its pointerup (dead_tap fires there, only for a still, short tap)
   D.addEventListener("pointerdown", function (e) {
     try {
       downAt = null;
-      if (rageCheck(st.taps, now(), e.clientX, e.clientY)) send("rage_tap", { el: label(e.target), stage: st.stage, code: st.code });
+      if (rageCheck(st.taps, now(), e.clientX, e.clientY)) send("rage_tap", { el: tapLabel(e.target), stage: st.stage, code: st.code });
       var tg = e.target && e.target.closest ? e.target : null;
-      if (tg && tg.closest(DEAD) && !tg.closest(LIVE)) downAt = { x: e.clientX, y: e.clientY, t: now(), el: label(tg.closest(DEAD)), id: e.pointerId };
+      if (tg && tg.closest(DEAD) && !tg.closest(LIVE)) downAt = { x: e.clientX, y: e.clientY, t: now(), el: label(tg.closest(DEAD)), id: e.pointerId, sc: scrollerOf(tg) };
     } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });
   D.addEventListener("pointerup", function (e) {
@@ -301,6 +319,8 @@
       var c = tapCheck(d, { x: e.clientX, y: e.clientY, t: now() });
       if (!c.dead) return;
       var p = deadProps(null, d.el, d.x, d.y, W.innerWidth, W.innerHeight, st.stage, st.code, st.tries); p.travel_px = c.travel_px;
+      var hd = D.querySelector("header.top"), sp = scrollProps(d.sc ? d.sc.scrollTop : null, W.scrollY, hd ? hd.getBoundingClientRect().bottom : null);
+      p.scrollY = sp.scrollY; p.header_visible = sp.header_visible;
       send("dead_tap", p);
     } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });

@@ -55,8 +55,8 @@ like every other script. `privacy.html` is "pass" (needs the network). No sw.js 
 | `nav_back` | from (cluck/list/popover/notes/question), code, depth (in-app history depth) | nav.js, a tap on the iOS-only Back button (`#qback`, design/NAV.md "iOS Back") |
 | `cluck_dwell` | ms, scrolled_pct, code | app.js `clClose()`; also on bail while open. Scroll measured on `#cluck .cl-bd` |
 | `tab_away` | during (stream/question/start), stage, code | telemetry.js, `visibilitychange` → hidden / `pagehide` |
-| `rage_tap` | el, stage, code | telemetry.js: ≥3 taps in 700 ms within 30 px |
-| `dead_tap` | el, code | telemetry.js: tap on `.fig .katex .md .pcode .ptitle .chg-chip` not inside a control |
+| `rage_tap` | el (the closest button/a/[role=button]/input/label when the tap lands inside one, e.g. its svg), stage, code | telemetry.js: ≥3 taps in 700 ms within 30 px |
+| `dead_tap` | el, code, x, y (viewport %), stage, tries_left, travel_px, scrollY (px: scroller scrollTop, else window.scrollY), header_visible (bool: top bar rect.bottom > 0) | telemetry.js: tap on `.fig .katex .md .pcode .ptitle .chg-chip` not inside a control |
 | `bail` | stage (start/open/wrong/right/cluck/next), via (hidden/pagehide), ms_on_page, code | telemetry.js, `transport: sendBeacon` + `send_instantly`; raw beacon if not loaded |
 | `next` | code | telemetry.js, click on `#qnext` (capture; nav.js untouched) |
 | `fps_probe` | fps_med, frame_p95_ms, dropped_pct, slow (p95 > 24 ms or median > 20 ms), fx (gate state during the sample) | fx.js: 2 s rAF sample once per session, after the first question, on idle |

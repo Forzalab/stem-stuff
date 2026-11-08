@@ -29,3 +29,9 @@ test("a real window error still makes an incident, with filename + lineno", () =
   const [r2] = fire({ message: "no stack", filename: "https://x.test/a.js", lineno: 7 });
   assert.match(r2.code, /^E-/);
 });
+
+test("ResizeObserver loop errors (both messages) make no incident; other errors with a filename still do", () => {
+  for (const message of ["ResizeObserver loop limit exceeded", "ResizeObserver loop completed with undelivered notifications."])
+    assert.deepEqual(fire({ message, filename: "https://x.test/app.js", lineno: 1 }), []);
+  assert.match(fire({ message: "boom", filename: "https://x.test/app.js", lineno: 1 })[0].code, /^E-/);
+});
