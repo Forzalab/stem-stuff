@@ -15,6 +15,7 @@ import { appendFileSync, cpSync, existsSync, readFileSync, readdirSync, writeFil
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 
 const require = createRequire(import.meta.url);
 let pw;
@@ -163,6 +164,7 @@ async function dwell(page) {
 /* one graded mc pick by ids; returns the verdict */
 async function pick(page, ids, all) {
   const n = await nTries(page);
+  await skipRetryWait(page);
   for (const id of ids) await tap(page, `#q .opt[data-id="${id}"]`);
   await page.waitForFunction(([ids, all, id0]) => ids.every(i => document.querySelector(`#q .opt[data-id="${i}"]`)?.getAttribute("aria-checked") === "true")
     && (all ? !document.querySelector("#mcGo")?.disabled : !document.querySelector(`#q .ch[data-id="${id0}"] .send`)?.hidden), [ids, all, ids[0]], { timeout: 3000 });

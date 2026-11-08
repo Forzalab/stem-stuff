@@ -12,6 +12,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -142,6 +143,7 @@ for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, 
     if (K.second) {   // out of tries: a 2nd wrong pick, the tray comes back over the same rows
       await page.waitForTimeout(2200);
       if (await page.locator("#toast.on").count()) await page.click("#toast.on");   // the one-time tray tip (a tap closes it)
+      await skipRetryWait(page);
       await page.click('.opt[data-id="c"]'); await page.click('.ch[data-id="c"] .send');
       await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 7000 });
       await page.waitForTimeout(700);
@@ -152,6 +154,7 @@ for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, 
     }
     if (kind === "freeform") {   // out of tries: the answer is revealed with its copy button; the tray lay over that line and the old reserved room kept its 44px tap area clear (Tony, Nov 3: keep it)
       for (let i = 0; i < 6 && !(await page.evaluate(() => window.__drill.state.finished)); i++) {
+        await skipRetryWait(page);
         const n = await page.evaluate(() => window.__drill.state.tries.length);
         if (await page.locator("#toast.on").count()) await page.click("#toast.on");
         await page.fill("#ans", String(8 + i)); await page.press("#ans", "Enter");

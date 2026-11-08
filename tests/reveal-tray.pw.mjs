@@ -13,6 +13,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -58,6 +59,7 @@ async function open(w, o = {}) {
   return page;
 }
 const typeAnswer = async (page, v) => {
+  await skipRetryWait(page);
   const f = page.locator("#ff :is(input, textarea)").first();
   await f.fill(v); await f.press("Enter");
 };

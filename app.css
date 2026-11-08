@@ -257,6 +257,20 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 /* freeform arrow with nothing typed yet: visible, dimmed, not clickable */
 .btn-go:disabled { opacity: 0.45; cursor: default; }
 .btn-go:disabled:hover { background: var(--action); border-color: var(--action); }
+/* the second try's 10 s (app.js startWait): the submit is the progress bar. A CCW clock sweep from 12 o'clock, mirrored on the ::before layer; the icon is not mirrored */
+@property --sweep { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes sweep { to { --sweep: 360deg; } }
+@property --drain { syntax: '<percentage>'; initial-value: 100%; inherits: false; }
+@keyframes drain { to { --drain: 0%; } }
+/* ONE neutral subtle tone for the whole wait (Tony Nov 5: the blue looked out of place): --wait-fill = --line at 40%, no new colour.
+   Typed / choose-all: the Check fills CCW with it. Single MC: each live, un-picked option's fill drains 100% -> 0% (the struck wrong pick shows none). */
+:root { --wait-fill: color-mix(in srgb, var(--line) 40%, transparent); }
+.btn-go.waiting, .btn-go.waiting:hover { background: var(--sheet); border-color: var(--line); color: var(--ink); cursor: default; overflow: hidden; isolation: isolate; }
+.btn-go.waiting::before { content: ""; position: absolute; inset: 0; z-index: -1; transform: scaleX(-1); pointer-events: none; background: conic-gradient(from 0deg, var(--wait-fill) var(--sweep), transparent 0); animation: sweep 10s linear var(--wd, 0s) forwards; }
+.choices.waiting .opt[data-w]:not(:disabled, .wrong) { cursor: default; background-image: linear-gradient(to right, var(--wait-fill) var(--drain), transparent 0); animation: drain 10s linear var(--wd, 0s) forwards; }
+/* the miss's x (the strip's way back to the drawer) stays up in the same slot during the wait: the sweep is the bar, its arrow steps aside so the x never sits on it */
+#q:has(.ff > .vk[data-v="i-x"]) #ansGo.waiting .ico { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .btn-go.waiting::before, .choices.waiting .opt[data-w]:not(:disabled, .wrong) { animation: none; } }
 .btn[hidden] { display: none; }
 
 /* ---------- main column ---------- */
@@ -625,7 +639,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 }
 .ff:is(.bad, .ok, .done, .shut, .lock) input::placeholder { color: transparent; }
 .ff:is(.bad, .ok, .done, .shut, .lock) input ~ .fl { opacity: 0 !important; }   /* a box with a verdict shows no placeholder and no border label (Tony, Nov 4) */
-#q:has(#ansGo:not([hidden], :disabled)) .ff > .vk[data-v="i-x"] { display: none; }   /* editing after a miss: the arrow replaces the x (still in the DOM) */
+#q:has(#ansGo:not([hidden], :disabled, .waiting)) .ff > .vk[data-v="i-x"] { display: none; }   /* editing after a miss: the arrow replaces the x (still in the DOM) */
 .ff.bad { border: var(--bw) dashed var(--wrong-rim); }   /* 1px like every line: the dash is what says "not accepted" (survives greyscale) */
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }

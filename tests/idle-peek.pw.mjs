@@ -265,6 +265,7 @@ await step("diet, the start page, a lone question: no peek", async () => {
 /* the first wrong answer of a question starts the same sunrise ~0.7 s after the feedback (Tony, Oct 17): once per question, sugar only,
    never over Cluck's sheet, a cooldown between peeks, and the 3 min idle peek still comes */
 const wrongPick = async (page, id = "b") => {
+  if (await page.evaluate(() => !!window.__drill.state.wait)) await idle(page, 10100);   // the second wrong on one question waits 10 s (retry-wait.pw.mjs); this page's clock is paused for good, so runFor (lib/clock.mjs skipRetryWait would re-pause it)
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`.opt[data-id="${id}"]`);
   await page.click(`.ch[data-id="${id}"] .send`);

@@ -683,6 +683,7 @@ async function load(code) {
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
   $("#rpHost")?.remove();                                                  // the last question's repair ladder
+  cancelWait(true);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null, wl };
   qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
@@ -1139,6 +1140,7 @@ function wireMC(q) {
     const send = e.target.closest(".send");
     if (send) { submitMC(); return; }
     const o = e.target.closest(".opt"); if (!o || o.disabled) return;
+    if (waiting() && !all(S.prob)) return;                                   // the 10 s second-try wait: a single MC's options ignore taps
     if (o.classList.contains("kept")) { keptTap(o); return; }
     if (all(S.prob)) tick(o, S.prob.fix && !o.hasAttribute("data-lock") && markOf(o) ? "x" : "on");   // prove: blank -> tick -> X -> blank
     else select(o.getAttribute("aria-checked") === "true" ? null : o);   // tap the selected choice again: deselect
@@ -1156,6 +1158,7 @@ function wireMC(q) {
       return;
     }
     const o = e.target.closest(".opt"); if (!o || !S || S.finished) return;
+    if (waiting() && !all(S.prob)) return;                                   // the second-try wait: no select / Enter on a single MC
     const many = all(S.prob), live = opts().filter(x => !x.disabled && !x.classList.contains("kept")), i = live.indexOf(o);
     const move = d => { const n = live[(i + d + live.length) % live.length]; roving(n); n.focus(); if (!many) select(n); };
     if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); move(1); }
@@ -1243,11 +1246,80 @@ function nudge(o, cls) {
   o.classList.add(cls);
   o.addEventListener("animationend", () => o.classList.remove(cls), { once: true });
 }
+/* ---------- the second try costs 10 s (Tony Nov 5; sugar, 2-try items only) ----------
+   The first wrong verdict starts S.wait = { until }. The submit is the progress bar: a typed item's #ansGo and a choose-all's #mcGo get a CCW clock sweep (app.css .waiting),
+   a single MC's live, un-picked options drain 100% -> 0% in the same neutral tone and ignore taps (aria-disabled + .waiting only: o.disabled means "struck wrong"). Typing / ticking stay allowed.
+   No stored timer: a reload with one try left restarts the 10 s (paintRec); leaving the item cancels it. Telemetry retry_wait {code, item, phase, waited_ms}. */
+const WAIT_MS = 10000;
+let waitTimer = 0, waitTick = 0;
+const waiting = () => !!(S && S.wait);
+function waitLive() {
+  let e = document.getElementById("waitLive");
+  if (!e) { e = document.createElement("div"); e.id = "waitLive"; e.className = "sr-only"; e.setAttribute("aria-live", "polite"); document.body.append(e); }
+  return e;
+}
+const waitReduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function waitEls() {
+  const p = S.prob;
+  if (all(p)) return { btn: $("#mcGo") };
+  if (p.type === "mc") return { box: $("#q .choices") };
+  return { btn: $("#ansGo") };
+}
+function waitPaint() {
+  const { btn, box } = waitEls(), n = Math.max(0, Math.ceil((S.wait.until - Date.now()) / 1000));
+  for (const e of [btn, box]) if (e && !e.style.getPropertyValue("--wd")) e.style.setProperty("--wd", `${-(Date.now() - S.wait.t0)}ms`);   // the sweep's animation-delay: a layer shown late (hidden -> shown) still starts at the elapsed time
+  if (btn) {
+    btn.classList.add("waiting"); btn.setAttribute("aria-disabled", "true"); btn.dataset.w = "1";
+    if (!btn.dataset.lbl) btn.dataset.lbl = btn.getAttribute("aria-label") || "Check";
+    btn.setAttribute("aria-label", `Check (wait ${n} s)`);
+  }
+  if (box) {
+    box.classList.add("waiting");
+    for (const o of opts()) if (!o.disabled) { o.setAttribute("aria-disabled", "true"); o.dataset.w = "1"; }
+  }
+}
+function waitClear() {
+  clearTimeout(waitTimer); clearInterval(waitTick); waitTimer = waitTick = 0;
+  document.querySelectorAll("#q .waiting").forEach(x => { x.classList.remove("waiting"); x.style.removeProperty("--wd"); });
+  document.querySelectorAll("#q [data-w]").forEach(x => {
+    x.removeAttribute("aria-disabled"); delete x.dataset.w;
+    if (x.dataset.lbl) { x.setAttribute("aria-label", x.dataset.lbl); delete x.dataset.lbl; }
+  });
+}
+function startWait() {
+  if (!S || S.finished || modeOf() !== "sugar" || S.triesLeft !== 1 || maxTries(S.prob) !== 2 || /^(proof|multi)$/.test(S.prob.type)) return;
+  const fresh = !S.wait, mine = S;
+  if (fresh) { S.wait = { until: Date.now() + WAIT_MS, t0: Date.now() }; window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "start", waited_ms: 0 }); }
+  clearTimeout(waitTimer); clearInterval(waitTick);
+  waitPaint(); if (S.prob.type !== "mc") $("#ansGo").hidden = false;                // the typed Check is the bar: up even though the miss hid it (a reload paints the miss first)
+  const red = waitReduced(), say = n => { if (red) waitLive().textContent = `Check unlocks in ${n} s`; };
+  say(Math.ceil((S.wait.until - Date.now()) / 1000));
+  waitTick = setInterval(() => {
+    if (S !== mine || !S.wait) return;
+    const n = Math.ceil((S.wait.until - Date.now()) / 1000); waitPaint();
+    if (n === 5) say(5);
+  }, 1000);
+  waitTimer = setTimeout(() => {
+    if (S !== mine || !S.wait) return;
+    const ms = Date.now() - S.wait.t0; S.wait = null; S.waited = ms; waitClear();
+    waitLive().textContent = "Ready";
+    window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "ready", waited_ms: ms });
+  }, Math.max(0, S.wait.until - Date.now()));
+}
+function cancelWait(left) {   // the item closed or another opened: the wait stops (left = the student walked away mid-wait)
+  if (left && S && S.wait) window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "left", waited_ms: Date.now() - S.wait.t0 });
+  if (S) S.wait = null;
+  waitClear();
+}
+function waitSubmitted() {   // the first submit after the unlock
+  if (S && S.waited != null) { window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "submit", waited_ms: S.waited }); S.waited = null; }
+}
 async function submitMC() {
+  if (waiting()) return;
   if (all(S.prob)) return submitAll();
   const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished || busy) return;
   const c = S.prob.choices.find(x => x.id === S.selected), mine = S;
-  busy = true;
+  busy = true; waitSubmitted();
   let r;
   try { r = await check(S.code, { choice: c.id }); } finally { busy = false; }
   if (S !== mine) return;                                   // another problem opened meanwhile
@@ -1268,7 +1340,8 @@ async function submitMC() {
    edits the set); the struck row (if any) is unticked + disabled; a wrong fix turns its box red.
    Copy payload: a = the ticked choices' text, c / l = their ids / letters; prove mode: a = { tick, fix: { letter: text } } */
 async function submitAll() {
-  const on = ticked(), go = $("#mcGo"); if (!go || go.disabled || S.finished || busy) return;
+  const on = ticked(), go = $("#mcGo"); if (!go || go.disabled || S.finished || busy || waiting()) return;
+  waitSubmitted();
   const mine = S, c = on.map(o => o.dataset.id), xs = S.prob.fix ? opts().filter(o => markOf(o) === "x" && fixOf(o)) : [];
   const f = Object.fromEntries(xs.map(o => [o.dataset.id, fixOf(o).querySelector("input").value.trim()]));
   busy = true;
@@ -1422,8 +1495,8 @@ async function xDiag(r, text, i) {                                         // a 
 }
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
-  if (vals.some(v => !v) || S.finished || busy) return;
-  busy = true;
+  if (vals.some(v => !v) || S.finished || busy || waiting()) return;
+  busy = true; waitSubmitted();
   const t = vals.join(" , ");
   vmark($("#ff"), null);   // a new verdict replaces the old mark, never stacks on it
   try {
@@ -1575,7 +1648,7 @@ function record(a, r) {
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
   rewardTry(a, r);
   if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
-
+  if (r.verdict === "wrong") startWait();                                                                                       // the second try costs 10 s (sugar, 2-try items: startWait gates)
 }
 
 /* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
@@ -1678,6 +1751,7 @@ function paintRec(rec) {
   if (u.done !== "open") finish();
   if (u.done === "correct") feedback({ verdict: "correct" });
   else if (u.x > 0) feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined });
+  if (!S.finished && S.triesLeft === 1) startWait();       // a reload / reopen with one try left: the 10 s starts over (no stored timer, no bypass)
 }
 function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
@@ -1744,7 +1818,7 @@ function guard() {
     : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
 function finish() {
-  S.finished = true;
+  S.finished = true; cancelWait();
   $("#q").classList.add("closed");
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
@@ -1918,7 +1992,7 @@ function feedback(r, typed) {
   const ff = S.prob.type === "mc" ? null : $("#ff");
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); ff.classList.add("lock"); vmark(ff, "i-lock"); }
-  else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
+  else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = !waiting(); vmark(ff, "i-x"); }   // the 10 s second-try wait: the Check stays up as the progress bar
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;

@@ -94,7 +94,7 @@ try {
     await step(`${vname}: Next, a wrong try, reload -> same bank, same question, X in the list`, async () => {
       await page.click("#qnext"); await opened(page, "CALC1_B02");
       await page.fill("#ans", "9"); await page.click("#ansGo");
-      await page.waitForSelector("#ff .vk[data-v=i-x]", { timeout: 4000 });   // the verdict is the icon in the box
+      await page.waitForSelector("#ff.bad .vk[data-v=i-x]", { state: "attached", timeout: 4000 });   // the verdict is the icon in the box; the 10 s second-try wait (retry-wait.pw.mjs) keeps the Check bar in its slot, so the x is attached, not shown (render.pw.mjs / expr.pw.mjs)
       await page.goto(BASE + "/"); await opened(page, "CALC1_B02");
       assert.equal(await label(page), "BANK_AB12");
       await page.click("#qlistBtn");

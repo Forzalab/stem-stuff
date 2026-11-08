@@ -19,6 +19,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -80,9 +81,9 @@ async function open(w, hash = "#BANK_CVT") {
 }
 const vis = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)].some(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"), sel);
 const boxText = page => page.evaluate(() => document.querySelector("#cluck")?.innerText || "");
-const wrong = async page => { await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send'); };
-const right = async page => { await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send'); };
-const num = async (page, v) => { await page.fill("#ans", v); await page.press("#ans", "Enter"); };
+const wrong = async page => { await skipRetryWait(page); await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send'); };
+const right = async page => { await skipRetryWait(page); await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send'); };
+const num = async (page, v) => { await skipRetryWait(page); await page.fill("#ans", v); await page.press("#ans", "Enter"); };
 const streamedPick = (page, v) => page.waitForFunction(v => { const t = document.querySelector("#cluck")?.innerText || "", p = document.querySelector("#fb")?.innerText || ""; return t.includes("You picked " + v + ".") && /Egg-cellent/.test(t + p); }, v, { timeout: 10000 });
 const toNum = async page => { await page.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans"), null, { timeout: 8000 }); await page.waitForTimeout(500); };
 const streamed = page => page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
@@ -229,7 +230,7 @@ for (const w of W) for (const early of [true, false]) {
 }
 // GENMISS (Tony Nov 3 16:13, "a generic error still show 'ok but how' when it should show a tray with the cluck button ONLY (one entry)"): on EVERY wrong try, at every width,
 // matched (wrong[] hint) or generic (a value no wrong[] row names), the only Cluck entry is the tray's Ask Cluck chip. No peek card, no "okay, but how?" anywhere.
-const generic = async page => { if (await page.locator('.vdrawer:not([hidden]) .vd-x').count()) await page.click('.vdrawer:not([hidden]) .vd-x'); if (await page.locator('#toast.on').count()) await page.click('#toast.on'); await page.click('.opt[data-id="c"]');   // the one-time tray tip (a tap closes it)
+const generic = async page => { await skipRetryWait(page); if (await page.locator('.vdrawer:not([hidden]) .vd-x').count()) await page.click('.vdrawer:not([hidden]) .vd-x'); if (await page.locator('#toast.on').count()) await page.click('#toast.on'); await page.click('.opt[data-id="c"]');   // the one-time tray tip (a tap closes it)
      // the tray may lie over the rows (Tony, Nov 3 19:31): dismiss it first
    await page.click('.ch[data-id="c"] .send'); };
 const numMiss = async page => { await toNum(page); await num(page, "7"); };

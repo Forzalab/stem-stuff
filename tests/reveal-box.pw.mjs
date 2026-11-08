@@ -10,6 +10,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -55,7 +56,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "out"]) {
   const T = `${W}x${H} ${outcome}`;
   const page = await pageFor(browser, W, H);
-  const go = async v => { await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };
+  const go = async v => { await skipRetryWait(page); await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };
   // "before" = the state the closing Check is pressed in (out: after the first wrong try; its pips row is the tries' own, older, design)
   if (outcome === "out") { await go("1"); await page.waitForSelector("#ff.bad"); await page.waitForTimeout(900); }
   await page.fill("#ans", outcome === "right" ? "3.03" : "2");

@@ -10,6 +10,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -46,7 +47,7 @@ async function open(w, code) {
 }
 const shown = (page, sel) => page.$$eval("#fcard " + sel, es => es.filter(e => !e.hidden && getComputedStyle(e).display !== "none").length);
 const state = async page => [await shown(page, "li.f:not(.mid)"), await shown(page, "li.f.mid"), await shown(page, "li.to")];
-const miss = async page => { const n = await page.evaluate(() => window.__drill?.state?.tries?.length ?? 0); await page.fill("#ans", "999"); await page.press("#ans", "Enter");
+const miss = async page => { await skipRetryWait(page); const n = await page.evaluate(() => window.__drill?.state?.tries?.length ?? 0); await page.fill("#ans", "999"); await page.press("#ans", "Enter");
   await page.waitForFunction(n => (window.__drill?.state?.tries?.length ?? 0) > n, n, { timeout: 8000 }); await page.waitForTimeout(150); };
 const jev = page => page.evaluate(() => window.stemLadder.step());
 for (const w of W) {

@@ -15,6 +15,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -76,13 +77,14 @@ async function goTo(page, code) {
 }
 const fieldSel = "#ans";
 async function submit(page, v) {
+  await skipRetryWait(page);
   await page.fill(fieldSel, v);
   await page.evaluate(() => document.querySelector("#ansGo").click());
 }
 /* drive one question to a state: wrong (1 try left), then out (the second miss, same page), or right (a page of its own) */
 async function reach(page, code, state) {
   if (state !== "out") await goTo(page, code);
-  if (state === "out") { await page.fill(fieldSel, WRONGV[code] + "0"); await page.evaluate(() => document.querySelector("#ansGo").click()); await page.waitForSelector("#q.closed"); }
+  if (state === "out") { await skipRetryWait(page); await page.fill(fieldSel, WRONGV[code] + "0"); await page.evaluate(() => document.querySelector("#ansGo").click()); await page.waitForSelector("#q.closed"); }
   else if (state === "wrong") { await submit(page, WRONGV[code]); await page.waitForFunction(() => window.__drill.state.tries.length >= 1); }
   else { await submit(page, RIGHT[code]); await page.waitForSelector("#q.closed"); }
   await page.waitForTimeout(SETTLE + 300);

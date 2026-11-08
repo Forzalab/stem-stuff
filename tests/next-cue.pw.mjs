@@ -14,6 +14,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -61,7 +62,8 @@ async function ctxFor(browser, { mode, W, H, rm = false }) {
   return ctx;
 }
 async function pageFor(browser, o, at) {
-  const ctx = await ctxFor(browser, o), page = await ctx.newPage();   // a fresh context per question: no done record, rewards or nod record carried over
+  const ctx = await ctxFor(browser, o), page = await ctx.newPage();
+  await page.clock.install();   // the second try waits 10 s (retry-wait.pw.mjs): the miss-then-answer flows fast-forward it   // a fresh context per question: no done record, rewards or nod record carried over
   page.ctx = ctx;
   page.setDefaultTimeout(8000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
@@ -132,7 +134,7 @@ async function close(page, type, outcome, { code } = {}) {
   const right = outcome === "right";
   if (p.type === "mc" && p.pick === "all") {
     const ids = right ? RIGHT_SET : ["c"];
-    if (!right) { await page.tap(`#q .opt[data-id="c"]`); await page.tap("#mcGo"); await page.waitForSelector("#q .opt.wrong"); await page.waitForTimeout(450); await page.tap(`#q .opt[data-id="d"]`); }
+    if (!right) { await page.tap(`#q .opt[data-id="c"]`); await page.tap("#mcGo"); await page.waitForSelector("#q .opt.wrong"); await page.waitForTimeout(450); await skipRetryWait(page); await page.tap(`#q .opt[data-id="d"]`); }
     else for (const id of ids) await page.tap(`#q .opt[data-id="${id}"]`);
     const go = page.locator("#mcGo"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
     await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
@@ -140,7 +142,7 @@ async function close(page, type, outcome, { code } = {}) {
     return { check, before };
   }
   if (p.type === "mc") {
-    if (!right && p.choices.length > 2) { await page.tap(`#q .opt[data-id="c"]`); await page.tap(`#q .ch[data-id="c"] .send`); await page.waitForSelector(`#q .opt.wrong`); await page.waitForTimeout(450);
+    if (!right && p.choices.length > 2) { await page.tap(`#q .opt[data-id="c"]`); await page.tap(`#q .ch[data-id="c"] .send`); await page.waitForSelector(`#q .opt.wrong`); await page.waitForTimeout(450); await skipRetryWait(page);
       if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) { await page.tap(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(450); } }   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
     const id = right ? "a" : p.choices.length > 2 ? "d" : "b";
     await page.tap(`#q .opt[data-id="${id}"]`);
@@ -151,14 +153,14 @@ async function close(page, type, outcome, { code } = {}) {
   }
   if (p.type === "multi") {
     for (let i = 0; i < 3; i++) { await page.fill(`#q .part[data-i="${i}"] .ans`, RIGHT); await page.tap(`#go${i}`); await page.waitForSelector(`#q .part[data-i="${i}"] .ff.shut`); }
-    if (!right) { await page.fill(`#q .part[data-i="3"] .ans`, "1"); await page.tap("#go3"); await page.waitForSelector(`#q .part[data-i="3"] .ff.bad`); await page.waitForTimeout(450); }
+    if (!right) { await page.fill(`#q .part[data-i="3"] .ans`, "1"); await page.tap("#go3"); await page.waitForSelector(`#q .part[data-i="3"] .ff.bad`); await page.waitForTimeout(450); await skipRetryWait(page); }
     await page.fill(`#q .part[data-i="3"] .ans`, right ? RIGHT : "2");
     const go = page.locator("#go3"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
     await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
-  if (!right) { await page.fill("#ans", "1"); await page.tap("#ansGo"); await page.waitForSelector("#ff.bad"); await page.waitForTimeout(450); }
+  if (!right) { await page.fill("#ans", "1"); await page.tap("#ansGo"); await page.waitForSelector("#ff.bad"); await page.waitForTimeout(450); await skipRetryWait(page); }
   await page.fill("#ans", right ? RIGHT : "2");
   const go = page.locator("#ansGo"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
   await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
