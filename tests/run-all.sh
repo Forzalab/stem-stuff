@@ -292,11 +292,17 @@ run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older script
   if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
   else
-    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"
-    local uf=""; [ "$name" = unittest ] && uf="$(unit_fails "$TMP/$name.log" | head -200)"
-    if [ -n "$uf" ] && grep -qE '^(FAIL|ERROR): ' <<<"$uf"; then sed 's/^/     /' <<<"$uf"   # the failing tests, not the log's head
-    else grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'; fi
-    fails=$((fails + 1))
+    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"
+    local qd today; today="$(date -u +%F)"; qd="$(tags "$name" | grep -oE '@quarantine:[^ ]+' | sed 's/.*://' | head -1)"
+    if [ -n "$qd" ] && [[ "$today" < "$qd" || "$today" = "$qd" ]]; then   # in-window: run, don't block; past the date = red
+      printf '\033[33mQUAR %s %s s\033[0m\n' "$name" "$s"
+    else
+      echo "FAIL $name $s s"
+      local uf=""; [ "$name" = unittest ] && uf="$(unit_fails "$TMP/$name.log" | head -200)"
+      if [ -n "$uf" ] && grep -qE '^(FAIL|ERROR): ' <<<"$uf"; then sed 's/^/     /' <<<"$uf"   # the failing tests, not the log's head
+      else grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'; fi
+      fails=$((fails + 1))
+    fi
   fi
 }
 
