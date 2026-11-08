@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Calc Coach</title>
+<link rel="stylesheet" href="vendor/fonts/atkinson.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="calc-coach.css">
+<style>html,body{margin:0;background:var(--page)}body.light{background:#f5f7fa}</style></head>
+<body><main id="host"></main>
+<script src="welcome-first.js"></script><script>window.stemWelcomeFirst.check().then(function (go) { if (go) location.replace("./"); });</script><!-- a first-time user lands on the welcome page first, once -->
+<script src="calc-coach.js"></script>
+<script>
+/* Panel page: ?model=ti36xpro&routine=R1&step=3&theme=light (inline, for the impeccable pass and screenshots) */
+(function () {
+  var q = new URLSearchParams(location.search), theme = q.get('theme') === 'light' ? 'light' : 'dark';
+  document.body.classList.toggle('light', theme === 'light');
+  if (q.get('cram')) { CalcCoach.loadCram().then(function () { CalcCoach.buildCram(document.getElementById('host'), CalcCoach.cramFor(q.get('cram')), null); }); return; }
+  CalcCoach.load().then(function (D) {
+    CalcCoach.mount(document.getElementById('host'), { model: q.get('model') || CalcCoach.model() || 'ti36xpro', routine: q.get('routine'), bank: q.get('bank'), view: q.get('view'), step: +q.get('step') || 0, theme: theme });
+  });
+})();
+</script></body></html>

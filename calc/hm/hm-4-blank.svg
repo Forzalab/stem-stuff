@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120" aria-hidden="true" focusable="false">
+<style>
+.f{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700}
+*{transform-box:fill-box;transform-origin:center}
+.g{animation:g 5s ease-in-out infinite}
+.tm1{opacity:0;animation:tm1 5s steps(1) infinite}
+.tm2{opacity:0;animation:tm2 5s steps(1) infinite}
+.tm3{animation:tm3 5s steps(1) infinite}
+.fl{animation:fl 5s cubic-bezier(.3,1.6,.5,1) infinite}
+.od{animation:od 5s ease-out infinite}
+@keyframes g{0%{opacity:0}4%,94%{opacity:1}100%{opacity:0}}
+@keyframes tm1{0%,24%{opacity:1}25%,100%{opacity:0}}
+@keyframes tm2{0%,24%{opacity:0}25%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes tm3{0%,49%{opacity:0}50%,100%{opacity:1}}
+@keyframes fl{0%,60%{transform:scale(0)}72%,100%{transform:none}}
+@keyframes od{0%,72%{opacity:0}84%,100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<g class="g">
+<circle cx="100" cy="34" r="22" fill="none" stroke="#5e7899" stroke-width="3"/>
+<path d="M100 12a22 22 0 1 1-22 22" fill="none" stroke="#ff9a3e" stroke-width="3" stroke-linecap="round"/>
+<g class="f" font-size="14" text-anchor="middle" fill="#f3f7fc"><text class="tm1" x="100" y="39">30 s</text><text class="tm2" x="100" y="39">20 s</text><text class="tm3" x="100" y="39" fill="#ff9a3e">10 s</text></g>
+<g class="f" font-size="12" text-anchor="middle">
+<circle cx="32" cy="88" r="13" fill="#a9b8cc"/><text x="32" y="92" fill="#0b1422">A</text>
+<circle cx="66" cy="88" r="13" fill="#a9b8cc"/><text x="66" y="92" fill="#0b1422">B</text>
+<circle cx="100" cy="88" r="13" fill="#0b1422" stroke="#ff9a3e" stroke-width="2" stroke-dasharray="3 2"/><circle class="fl" cx="100" cy="88" r="13" fill="#ff9a3e"/><text x="100" y="92" fill="#0b1422">C</text>
+<circle cx="134" cy="88" r="13" fill="#a9b8cc"/><text x="134" y="92" fill="#0b1422">D</text>
+<circle cx="168" cy="88" r="13" fill="#a9b8cc"/><text x="168" y="92" fill="#0b1422">E</text>
+</g>
+<text class="f od" x="100" y="116" font-size="11" fill="#ff9a3e" text-anchor="middle">1 in 5, not 0</text>
+</g>
+</svg>

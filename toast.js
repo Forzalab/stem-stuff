@@ -32,7 +32,7 @@
     el.innerHTML = '<div class="stoast-b"><p class="stoast-t" aria-hidden="true"></p><span class="stoast-bar" aria-hidden="true"><i></i></span>' +
       '<span class="sr-only" role="status"></span></div><button type="button" class="stoast-x" aria-label="Close">' + X + '</button>';
     d.body.appendChild(el);
-    el.querySelector('.stoast-x').addEventListener('click', function () { hide(); });   // (hide's arg would be the event otherwise)
+    el.querySelector('.stoast-x').addEventListener('click', function () { hide(false, 'dismissed'); });   // (hide's arg would be the event otherwise)
     el.addEventListener('pointerenter', hold);
     el.addEventListener('pointerleave', go);
     el.addEventListener('animationend', function (e) { if (e.animationName === 'stoast-out' || e.animationName === 'stoast-fade-out') done(); });
@@ -102,7 +102,7 @@
   function go() { if (left && cur) arm(left); }
   /* its own exit waits for the reward FX too (one blink: never two things moving at once, tests/blink-fx.pw.mjs) */
   var late = 0;
-  function expire() { if (busy() && late++ < 32) { timer = setTimeout(expire, 250); return; } late = 0; hide(); }   // at most 8 s more: a stuck fx-busy never pins it
+  function expire() { if (busy() && late++ < 32) { timer = setTimeout(expire, 250); return; } late = 0; hide(false, 'expired'); }   // at most 8 s more: a stuck fx-busy never pins it
   function arm(ms) { clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(expire, ms); }
   function count(o) {
     var t = el.querySelector('.stoast-t'), i = el.querySelector('.stoast-bar i'), n = o.num || [0, 0];
@@ -143,7 +143,9 @@
     el.classList.remove('out', 'on');
     el.style.width = '';
     actionPut(o);
-    el.querySelector('.stoast-t').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
+    var tt = el.querySelector('.stoast-t'), full = String(o.text).split('{#}').join(o.num ? o.num[1] : ''), nl = full.indexOf('\n');
+    if (nl > 0) { tt.textContent = ''; var hb = d.createElement('b'); hb.className = 'stoast-h'; hb.textContent = full.slice(0, nl); tt.append(hb, d.createElement('br'), full.slice(nl + 1)); }   // "Bold line\nsecond line"
+    else tt.textContent = full;
     if (!place()) { cur = null; actionPut({}); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
     q.shift();
     el.querySelector('.sr-only').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
@@ -174,9 +176,10 @@
     el.querySelector('.stoast-b').appendChild(b);
   }
   function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
-  function hide(quiet) {
+  function hide(quiet, why) {
     clearTimeout(timer); left = 0;
     if (!cur || !el) return;
+    if (cur.onend && why) { var oe = cur.onend; cur.onend = null; try { oe(why); } catch (e) { /* the caller's */ } }   // onend('dismissed' | 'expired'), once
     if (quiet || busy() || reduced() || !el.classList.contains('on')) { done(); return; }
     el.classList.add('out');
   }

@@ -1,6 +1,6 @@
 // TRAY ANCHOR + ANSWER-VALUE MARGINS (Tony, Nov 5: "i want the cluck panel to come from under the input box, OVERLAPPING any other element"):
 // the "See steps" tray (.vdrawer, Ask Cluck + ^) slides out from under the INPUT box and floats OVER whatever is below it:
-//   anchor  typed: the bar .ff that holds the input; mc / choose-all: the choices box (.choices)
+//   anchor  typed: the bar .ff that holds the input; choose-all: the choices box (.choices); single mc: the PICKED card (.ch), or the choices box when the picked card is the last one (Tony, Nov 6)
 //   edges   (Tony: "the tray shall only go left IFF the form is choose all/tick box, bcs the next button is not convenient. otherwise, all stay at right")
 //           choose-all: tray LEFT = anchor left; every other form: tray RIGHT = anchor right (+-1px); tray top = anchor bottom, tucked a few px BEHIND the anchor's border (-8..+2px); the anchor paints above the tray
 //   over    elementFromPoint inside the open tray = the tray: it is on top of the verdict line (.ansl), Next, the Cluck card, the choose-all Next row
@@ -31,6 +31,9 @@ const PROBS = [
   { code: "PHYS_TA2", title: "Cups", type: "mc", pick: "all", shuffle: false, body: txt(STEM + " Tick all correct options."),
     choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }, { id: "c", md: "Good claim" }], correct: ["b"],
     wrong: [{ choice: "a", error: "misread", hint: "QUACK. Look at the base." }], saccharine: { title: "Cups", key: "Tick: b", slip: { a: "The base." } } },
+  ...[["PHYS_TA4", "b"], ["PHYS_TA5", "d"]].map(([code, ok]) => ({ code, title: "Five", type: "mc", pick: "one", shuffle: false, body: txt(STEM + " Which is right?"),
+    choices: "abcde".split("").map(id => ({ id, md: "Option " + id.toUpperCase() + " with a few more words" })), correct: ok,
+    wrong: "abcde".split("").filter(id => id !== ok).map(id => ({ choice: id, error: "misread", hint: "QUACK. Look again." })), saccharine: { title: "Five", key: "Pick: " + ok, slip: Object.fromEntries("abcde".split("").filter(id => id !== ok).map(id => [id, "Slip."])) } })),
   { code: "PHYS_TA3", title: "Pick", type: "mc", pick: "one", shuffle: false, body: txt(STEM + " Which is right?"),
     choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }, { id: "c", md: "Good claim" }], correct: ["b"],
     wrong: [{ choice: "a", error: "misread", hint: "QUACK. Look at the base." }], saccharine: { title: "Pick", key: "Pick: b", slip: { a: "The base." } } },
@@ -38,7 +41,9 @@ const PROBS = [
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_TAA.json"), JSON.stringify({ v: 1, problems: [PROBS[0]] }));
 writeFileSync(join(BANKS, "BANK_TAB.json"), JSON.stringify({ v: 1, problems: [PROBS[1]] }));
-writeFileSync(join(BANKS, "BANK_TAC.json"), JSON.stringify({ v: 1, problems: [PROBS[2]] }));
+writeFileSync(join(BANKS, "BANK_TAC.json"), JSON.stringify({ v: 1, problems: [PROBS.find(p => p.code === "PHYS_TA3")] }));
+writeFileSync(join(BANKS, "BANK_TAD.json"), JSON.stringify({ v: 1, problems: [PROBS.find(p => p.code === "PHYS_TA4")] }));
+writeFileSync(join(BANKS, "BANK_TAE.json"), JSON.stringify({ v: 1, problems: [PROBS.find(p => p.code === "PHYS_TA5")] }));
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
   if (!JSON.parse(body || "{}").stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }
@@ -52,17 +57,17 @@ for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } 
 
 let failures = 0;
 async function step(name, fn) {
-  try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
+  try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 1800)); }
 }
 const SETTLE = 600;   // > the drawer's 380 ms slide
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-async function open(code) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+async function open(code, width = 390) {
+  const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
-  await page.goto(BASE + "/#" + ({ PHYS_TA1: "BANK_TAA", PHYS_TA2: "BANK_TAB", PHYS_TA3: "BANK_TAC" })[code]);
+  await page.goto(BASE + "/#" + ({ PHYS_TA1: "BANK_TAA", PHYS_TA2: "BANK_TAB", PHYS_TA3: "BANK_TAC", PHYS_TA4: "BANK_TAD", PHYS_TA5: "BANK_TAE" })[code]);
   try { await page.waitForFunction(() => !document.getElementById("splash") && /^#PHYS_TA/.test(location.hash) && !!document.querySelector("#q .opt, #ff input, #ff textarea"), null, { timeout: 10000 }); } catch (e) { console.log(await page.evaluate(() => location.hash + " " + !!document.getElementById("splash") + " " + document.body.innerText.slice(0, 200))); throw e; }
   return page;
 }
@@ -127,13 +132,59 @@ try {
       await prove(page, ".choices", "ta-pickall.png", "left");
     } finally { await page.context().close(); }
   });
-  await step("390 single mc right: the tray slides from under the choices box (right edge = box right), paints over what follows, reflow 0", async () => {
+  await step("390 single mc right (picked card B, not last): the tray slides from under the PICKED card (right edge = card right), paints over what follows, reflow 0", async () => {
     const page = await open("PHYS_TA3");
     try {
       await page.click('#q .opt[data-id="b"]');
       await page.click('#q .ch:has(.opt[data-id="b"]) .send');
       await page.waitForFunction(() => window.__drill.state.tries.length >= 1, null, { timeout: 6000 });
-      await prove(page, ".choices", "ta-mc.png", "right");
+      await prove(page, '.ch:has(.opt[data-id="b"])', "ta-mc.png", "right");
+    } finally { await page.context().close(); }
+  });
+  /* single mc, five options (Tony, Nov 6): the tray hangs under the PICKED card and lies over the cards below it */
+  const mc5 = async (code, pickId, width, last) => {
+    const page = await open(code, width);
+    try { await page.click(`#q .opt[data-id="${pickId}"]`, { timeout: 8000 }); } catch (e) {   // DIAGNOSTIC (CI-only failure: the locator matched nothing for 30 s): say what the page really holds
+      const d = await page.evaluate(() => ({ url: location.href, q: window.__drill?.state?.prob?.code, opts: [...document.querySelectorAll("#q .opt")].map(o => o.dataset.id + ":" + (o.textContent || "").trim().slice(0, 30)), body: document.body.innerText.slice(0, 300) }));
+      throw new Error(`${code} pick ${pickId} @${width}: ${String(e.message).split("\n")[0]}; page ${JSON.stringify(d)}; pageerrors ${JSON.stringify(page.errs)}`);
+    }
+    await page.click(`#q .ch:has(.opt[data-id="${pickId}"]) .send`);
+    await trayOpen(page);
+    const m = await page.evaluate(id => {
+      const q = document.querySelector("#q"), cs = [...q.querySelectorAll(".choices > .ch")], row = q.querySelector(`.ch:has(.opt[data-id="${id}"])`), d = q.querySelector(".vdrawer:not([hidden])");
+      const r = row.getBoundingClientRect(), dr = d.getBoundingClientRect(), g = q.querySelector(".choices"), gr = g.getBoundingClientRect(), i = cs.indexOf(row);
+      const hit = (x, y) => { const e = document.elementFromPoint(x, y); return e; };
+      const nx = row.querySelector(".nx, .send"), nr = nx && nx.getClientRects().length ? nx.getBoundingClientRect() : null;
+      const nh = nr ? hit(nr.left + nr.width / 2, nr.top + nr.height / 2) : null;
+      const below = cs.slice(i + 1).map(c => c.getBoundingClientRect()).filter(c => c.top < dr.bottom - 4 && c.bottom > dr.top + 4);
+      const cov = below.map(c => { const y = Math.max(c.top, dr.top) + 6, e = hit(dr.left + dr.width / 2, y); return !!e && !!e.closest(".vdrawer"); });
+      const edge = hit(Math.max(r.left, dr.left) + 12, r.bottom - 1);
+      return { top: dr.top, bottom: r.bottom, left: dr.left, right: dr.right, rl: r.left, rr: r.right, gb: gr.bottom, gl: gr.left, gr: gr.right, offTop: g.offsetTop + g.offsetHeight, dTopCss: parseFloat(d.style.top), nextOk: nr ? !!nh && !!nh.closest(".nx, .send") : null, cov, nBelow: below.length, edgeInRow: !!edge && row.contains(edge), n: cs.length, i };
+    }, pickId);
+    return { page, m };
+  };
+  for (const w of [360, 393, 721, 1280]) for (const [code, pick, what] of [["PHYS_TA4", "b", "right on B"], ["PHYS_TA5", "b", "wrong on B"], ["PHYS_TA5", "c", "wrong on C"]]) {
+    await step(`${w} five-option mc, ${what}: the tray hangs under the picked card, over C-E, Next stays hittable`, async () => {
+      const { page, m } = await mc5(code, pick, w);
+      try {
+        near(m.top, m.bottom, 2.6, "tray top vs the picked card's bottom (2px tuck)");
+        assert.ok(m.top <= m.bottom + 0.5, `a gap under the picked card: tray ${m.top} card ${m.bottom}`);
+        near(m.left, m.rl, 1, "tray left vs picked card left"); near(m.right, m.rr, 1, "tray right vs picked card right");
+        assert.ok(m.nBelow >= 1, "the tray overlaps no card below it: " + JSON.stringify(m));
+        assert.deepEqual(m.cov, m.cov.map(() => true), "a card below the picked one paints over the tray");
+        assert.ok(m.edgeInRow, "the picked card does not paint above the tray at its bottom edge");
+        if (m.nextOk !== null) assert.ok(m.nextOk, "Next / the send arrow on the picked card is covered");
+        assert.ok(m.top < m.gb - 20, `the tray still hangs from the end of the list: tray ${m.top}, list bottom ${m.gb}`);
+        await page.mouse.click(w > 500 ? 5 : 3, 3); await page.waitForTimeout(SETTLE);
+        assert.equal(await page.locator("#q .vdrawer:not([hidden])").count(), 0, "a tap outside did not close the tray");
+      } finally { await page.context().close(); }
+    });
+  }
+  await step("390 five-option mc, wrong on the LAST card (E): the tray hangs from the list end exactly as before (box = .choices)", async () => {
+    const { page, m } = await mc5("PHYS_TA5", "e", 390);
+    try {
+      assert.equal(m.dTopCss, m.offTop - 2, "the tray top is not the list's offset bottom - 2px: " + JSON.stringify(m));
+      near(m.top, m.gb, 2.6, "tray top vs the list bottom"); near(m.left, m.gl, 1, "tray left vs list left"); near(m.right, m.gr, 1, "tray right vs list right");
     } finally { await page.context().close(); }
   });
   await step("390 typed right: the gap before the answer value = the gap after it (+-1px)", async () => {

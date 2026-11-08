@@ -7,7 +7,7 @@
 # --local forces the local path anywhere. A [banks-dir] cannot go to the runner: with --remote it is an error.
 # Pins: $SHIP_PINS="BANK_P3X@cd581738[,BANK_Y22@sha]" and/or --pin BANK_X@sha (repeatable) ship that bank at that brain commit; all
 # other banks stay at main/the clone's checkout. The source line reads BANK_P3X(brain@cd581738). A pin the brain does not have at
-# that sha = nothing deployed. Today's use: BANK_P3X@cd581738 until the `vary` field is in SCHEMA.md (lane A6).
+# that sha = nothing deployed. (The BANK_P3X@cd581738 pin for the `vary` field is no longer needed: SCHEMA.md has `vary`, lane A6.)
 #   demo  = `vercel deploy`        → prints the preview URL (log in to Vercel to open it)
 #   live  = `vercel deploy --prod` → the public site
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub. Banks, per file name, first hit

@@ -17,7 +17,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{serve.py,expr.py,slips.py,livefig.py,views_gate.py,oui.py,views/registry.json,views/library.json,SCHEMA.md,prompts/**,problems.json,skills.json,banks/**}",
+      "includeFiles": "{serve.py,acct.py,expr.py,slips.py,livefig.py,views_gate.py,oui.py,views/registry.json,views/library.json,SCHEMA.md,prompts/**,problems.json,skills.json,banks/**}",
       "maxDuration": 60
     }
   },
@@ -73,6 +73,10 @@
     {
       "source": "/health",
       "destination": "/api/index?path=/health"
+    },
+    {
+      "source": "/calc",
+      "destination": "/api/index?path=/calc"
     },
     {
       "source": "/mini",

@@ -77,7 +77,7 @@
       : item.type === "mc" ? { ...st, kind: "pick", opts: item.choices }        // with no key takes the SHOWN item's type, not the ladder's kind
       : item.type === "num" ? { ...st, kind: "num", opts: undefined, tol: item.tol } : st;
     const S = steps.map(keyless).map((st, i) => ({
-      st, i, worked: full || (!welcome && st.id !== "answer" && st.id !== blank),
+      st, i, worked: full || (!welcome && st.ok != null && st.id !== "answer" && st.id !== blank),
       ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
     }));
     let whyOk = true, autos = 0, finished = full, timer = 0, gone = false, solved = null;   // solved = { wrong, answer } once the server sends it

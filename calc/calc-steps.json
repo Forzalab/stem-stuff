@@ -1,0 +1,927 @@
+{
+ "ti36xpro": {
+  "preflight_deg": [
+   {
+    "press": [
+     "mode"
+    ],
+    "screen": [
+     "DEG RAD GRAD",
+     "NORM SCI ENG",
+     "FLOAT 0123456789"
+    ],
+    "note": "You press mode. Row 1: the highlighted word is your angle mode. You want DEG.",
+    "screen_verified": true,
+    "source_loc": "p.6-7"
+   },
+   {
+    "press": [
+     "enter",
+     "clear"
+    ],
+    "screen": [
+     ""
+    ],
+    "note": "If DEG is not lit, move to it with the arrows, press enter, then clear (or 2nd mode = quit). Real example photo showed RAD and ENG on screen.",
+    "screen_verified": true,
+    "source_loc": "p.6"
+   }
+  ],
+  "R1_solve_one_equation__energy_for_d": [
+   {
+    "press": [
+     "2nd",
+     "sin"
+    ],
+    "screen": [
+     "Enter equation",
+     "to solve."
+    ],
+    "note": "You press 2nd, then sin (num-solv is printed above sin). It asks for the equation.",
+    "screen_verified": true,
+    "source_loc": "guide p.58; photo legends"
+   },
+   {
+    "press": [
+     "1",
+     "6",
+     "5",
+     "x yzt abcd (until d)",
+     "x2",
+     "-",
+     "2",
+     ".",
+     "7",
+     "1",
+     "2",
+     "x yzt abcd (until d)"
+    ],
+    "screen": [
+     "165d^2-2.712d (inferred)"
+    ],
+    "note": "Left side: 165 d x-squared minus 2.712 d. Press the x yzt abcd key until d shows.",
+    "screen_verified": false,
+    "source_loc": "guide p.33"
+   },
+   {
+    "press": [
+     "enter"
+    ],
+    "screen": [
+     "(right side prompt)"
+    ],
+    "note": "Press enter, then type the right side.",
+    "screen_verified": false,
+    "source_loc": "guide p.58"
+   },
+   {
+    "press": [
+     "0",
+     ".",
+     "0",
+     "3",
+     "3",
+     "4",
+     "enter"
+    ],
+    "screen": [
+     "ENTER AND SOLVE",
+     "d=0",
+     "SOLVE: d"
+    ],
+    "note": "Type 0.0334, enter. The next screen lists every letter with its stored value. Edit the value of d to your guess (0.05); this is the starting guess.",
+    "screen_verified": true,
+    "source_loc": "video still: ENTER AND SOLVE / X=0.8 / SOLVE: X"
+   },
+   {
+    "press": [
+     "0",
+     ".",
+     "0",
+     "5",
+     "[SOLVE: pick d]",
+     "enter"
+    ],
+    "screen": [
+     "SOLUTION",
+     "d=0.02465 (expected)",
+     "L - R =0 (expected)",
+     "SOLVE AGAIN   QUIT"
+    ],
+    "note": "Type 0.05 for d, make sure SOLVE: shows d, press enter. L - R near 0 means a good answer.",
+    "screen_verified": false,
+    "source_loc": "solution photo shows this layout for X"
+   },
+   {
+    "press": [
+     "[SOLVE AGAIN]",
+     "-0.05",
+     "enter"
+    ],
+    "screen": [
+     "d=-0.00821 (expected)"
+    ],
+    "note": "For the other root choose SOLVE AGAIN and use -0.05 as the guess. How the guess is typed on that screen is not shown (UNVERIFIED).",
+    "screen_verified": false,
+    "source_loc": "solution photo (SOLVE AGAIN option)"
+   }
+  ],
+  "R1_alt_quadratic_direct": [
+   {
+    "press": [
+     "2nd",
+     "cos"
+    ],
+    "screen": [
+     "POLY SOLVER",
+     "1: ax2+bx+c=0",
+     "2: ax3+bx2+cx+d=0"
+    ],
+    "note": "Press 2nd, then cos (poly-solv).",
+    "screen_verified": true,
+    "source_loc": "guide p.60; 78-pp p.58"
+   },
+   {
+    "press": [
+     "enter"
+    ],
+    "screen": [
+     "a=1"
+    ],
+    "note": "Press enter to pick the quadratic. Type a (guide example uses 1).",
+    "screen_verified": true,
+    "source_loc": "p.60"
+   },
+   {
+    "press": [
+     "DOWN",
+     "(-)",
+     "2"
+    ],
+    "screen": [
+     "b=-2"
+    ],
+    "note": "DOWN, then b. Negative numbers use the (-) key.",
+    "screen_verified": true,
+    "source_loc": "p.60"
+   },
+   {
+    "press": [
+     "DOWN",
+     "2",
+     "enter"
+    ],
+    "screen": [
+     "c=2",
+     "SOLVE"
+    ],
+    "note": "DOWN, then c; SOLVE shows at the bottom right.",
+    "screen_verified": true,
+    "source_loc": "p.60"
+   },
+   {
+    "press": [
+     "enter"
+    ],
+    "screen": [
+     "x1=1+1i"
+    ],
+    "note": "Press enter for x1.",
+    "screen_verified": true,
+    "source_loc": "p.60"
+   },
+   {
+    "press": [
+     "DOWN"
+    ],
+    "screen": [
+     "x2=1-1i"
+    ],
+    "note": "DOWN for x2. For 165, -2.712, -0.0334 expect x1=0.02465 and x2=-0.00821 (hand-checked, not a guide screen).",
+    "screen_verified": true,
+    "source_loc": "p.60"
+   }
+  ],
+  "R2_store_dont_retype__g_and_M": [
+   {
+    "press": [
+     "9",
+     ".",
+     "8",
+     "0",
+     "sto->"
+    ],
+    "screen": [
+     "9.80->"
+    ],
+    "note": "Type 9.80, press sto->.",
+    "screen_verified": true,
+    "source_loc": "p.33-34"
+   },
+   {
+    "press": [
+     "x y z t a b c d (until g letter shows: use a)"
+    ],
+    "screen": [
+     "9.80->a"
+    ],
+    "note": "Press the x y z t a b c d key until your letter shows (here a).",
+    "screen_verified": true,
+    "source_loc": "p.33"
+   },
+   {
+    "press": [
+     "enter"
+    ],
+    "screen": [
+     "9.80->a",
+     "9.80"
+    ],
+    "note": "Press enter. The value is saved. Do the same for mass M in letter b.",
+    "screen_verified": true,
+    "source_loc": "p.34"
+   },
+   {
+    "press": [
+     "2nd",
+     "sto->"
+    ],
+    "screen": [
+     "Recall Var",
+     "1: x=0",
+     "..."
+    ],
+    "note": "To use it later: 2nd then sto-> (recall), pick the letter, enter.",
+    "screen_verified": true,
+    "source_loc": "p.34"
+   },
+   {
+    "press": [
+     "2nd",
+     "(-)"
+    ],
+    "screen": [
+     "ans"
+    ],
+    "note": "ans chain: 2nd then (-) (answer is printed above it), or press an operator first.",
+    "screen_verified": true,
+    "source_loc": "p.11"
+   }
+  ]
+ },
+ "ti30xsmv": {
+  "preflight_deg": [
+   {
+    "press": [
+     "mode"
+    ],
+    "screen": [
+     "DEG RAD GRAD",
+     "NORM SCI ENG",
+     "FLOAT 0123456789",
+     "CLASSIC MATHPRINT"
+    ],
+    "note": "You press mode. You want DEG highlighted.",
+    "screen_verified": true,
+    "source_loc": "Getting Started p.2"
+   },
+   {
+    "press": [
+     "enter",
+     "clear"
+    ],
+    "screen": [
+     ""
+    ],
+    "note": "Move to DEG, press enter, then clear.",
+    "screen_verified": true,
+    "source_loc": "p.2"
+   }
+  ],
+  "R1_store_then_formula__quadratic": [
+   {
+    "press": [
+     "1",
+     "6",
+     "5",
+     "sto->",
+     "x y z t a b c (5 presses = a)",
+     "enter"
+    ],
+    "screen": [
+     "165->a",
+     "165"
+    ],
+    "note": "Store 165 in a: type 165, press sto->, press the letter key until a shows, press enter.",
+    "screen_verified": true,
+    "source_loc": "p.10-11"
+   },
+   {
+    "press": [
+     "(-)",
+     "2",
+     ".",
+     "7",
+     "1",
+     "2",
+     "sto->",
+     "x y z t a b c (6 presses = b)",
+     "enter"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): -2.712->b"
+    ],
+    "note": "Store b the same way. Use the (-) key for the minus sign.",
+    "screen_verified": false,
+    "source_loc": "p.10-11"
+   },
+   {
+    "press": [
+     "(-)",
+     "0",
+     ".",
+     "0",
+     "3",
+     "3",
+     "4",
+     "sto->",
+     "x y z t a b c (7 presses = c)",
+     "enter"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): -0.0334->c"
+    ],
+    "note": "Store c.",
+    "screen_verified": false,
+    "source_loc": "p.10-11"
+   },
+   {
+    "press": [
+     "(",
+     "(-)",
+     "b",
+     "+",
+     "sqrt",
+     "b",
+     "x2",
+     "-",
+     "4",
+     "a",
+     "c",
+     ")",
+     "/",
+     "(",
+     "2",
+     "a",
+     ")",
+     "enter"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): 0.02465 expected"
+    ],
+    "note": "Type the formula once with the letters: (-b + sqrt(b^2 - 4ac)) / (2a). Letters come from the same key, or 2nd recall. This sequence is composed from verified pieces, not shown whole in the guide. This is the slower fallback; the 30XS has no solver.",
+    "screen_verified": false,
+    "source_loc": "composed"
+   },
+   {
+    "press": [
+     "[edit + to -]",
+     "enter"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): -0.00821 expected"
+    ],
+    "note": "For the other root, go back (up arrow) and change + to -.",
+    "screen_verified": false,
+    "source_loc": "composed"
+   }
+  ],
+  "R2_store_dont_retype__g_and_M": [
+   {
+    "press": [
+     "9",
+     ".",
+     "8",
+     "0",
+     "sto->",
+     "x y z t a b c",
+     "enter"
+    ],
+    "screen": [
+     "9.80->x",
+     "9.80"
+    ],
+    "note": "Type 9.80, sto->, press the letter key until x shows, enter. Guide screen shows 15->x then 15.",
+    "screen_verified": true,
+    "source_loc": "p.10"
+   },
+   {
+    "press": [
+     "2nd",
+     "recall"
+    ],
+    "screen": [
+     "Recall Var",
+     "1: x=15",
+     "2: y=0",
+     "3: z=0"
+    ],
+    "note": "Later: 2nd recall, pick the letter, enter.",
+    "screen_verified": true,
+    "source_loc": "p.10"
+   },
+   {
+    "press": [
+     "[operator]",
+     "enter"
+    ],
+    "screen": [
+     "Ans+..."
+    ],
+    "note": "Use the last answer by starting with an operator.",
+    "screen_verified": true,
+    "source_loc": "p.7, p.11"
+   }
+  ]
+ },
+ "fx115esplus": {
+  "preflight_deg": [
+   {
+    "press": [
+     "SHIFT",
+     "MODE",
+     "3"
+    ],
+    "screen": [
+     "1:MthIO 2:LineIO",
+     "3:Deg 4:Rad",
+     "5:Gra 6:Fix",
+     "7:Sci 8:Norm"
+    ],
+    "note": "You press SHIFT, MODE (SETUP), then 3 for Deg.",
+    "screen_verified": true,
+    "source_loc": "Configuring the Calculator Setup; screen 06_Setup_01"
+   }
+  ],
+  "R1_solve_one_equation__energy_for_d": [
+   {
+    "press": [
+     "165",
+     "ALPHA",
+     ")",
+     "x2",
+     "-",
+     "2.712",
+     "ALPHA",
+     ")",
+     "ALPHA",
+     "CALC",
+     "0.0334"
+    ],
+    "screen": [
+     "165X^2-2.712X=0.0334"
+    ],
+    "note": "Type the whole equation. X is ALPHA then the ) key. The = sign is ALPHA then CALC. (Unknown is called X on this model.) Use LineIO-style input while solving.",
+    "screen_verified": true,
+    "source_loc": "Using SOLVE (key sequence for y=ax2+b)"
+   },
+   {
+    "press": [
+     "SHIFT",
+     "CALC"
+    ],
+    "screen": [
+     "Solve for X",
+     "0"
+    ],
+    "note": "Press SHIFT then CALC (SOLVE). It may ask for other letters first (shows \"Y?\"-style prompts); press = to accept each. Then \"Solve for X\" shows the starting value.",
+    "screen_verified": true,
+    "source_loc": "Using SOLVE; screens SOLVE_9 and SOLVE_10"
+   },
+   {
+    "press": [
+     "0.05",
+     "="
+    ],
+    "screen": [
+     "165X^2-2.712X=0.0334",
+     "X= 0.02464872...",
+     "L-R= 0"
+    ],
+    "note": "Type your guess 0.05, press =. The answer screen shows X= and L-R=. L-R near 0 means a good answer. Expected X=0.02465.",
+    "screen_verified": false,
+    "source_loc": "screen layout from SOLVE_4 (example numbers differ)"
+   },
+   {
+    "press": [
+     "AC"
+    ],
+    "screen": [
+     ""
+    ],
+    "note": "To find the other root: press SHIFT CALC again, press = on the prompts, type -0.05 and =. Expected X=-0.00821. SOLVE returns only ONE root, the one near your guess.",
+    "screen_verified": false,
+    "source_loc": "Using SOLVE (Newton method note)"
+   }
+  ],
+  "R2_store_dont_retype__g_and_M": [
+   {
+    "press": [
+     "9.80",
+     "SHIFT",
+     "RCL",
+     "(-)"
+    ],
+    "screen": [
+     "9.80",
+     "(STO) A"
+    ],
+    "note": "Type 9.80, press SHIFT, RCL (STO), then the (-) key (that key is A).",
+    "screen_verified": true,
+    "source_loc": "Using Memory Functions"
+   },
+   {
+    "press": [
+     "[mass]",
+     "SHIFT",
+     "RCL",
+     "M+"
+    ],
+    "screen": [
+     "M"
+    ],
+    "note": "Store the mass in M with SHIFT RCL M+.",
+    "screen_verified": true,
+    "source_loc": "Using Memory Functions"
+   },
+   {
+    "press": [
+     "ALPHA",
+     "(-)",
+     "x",
+     "RCL",
+     "M+"
+    ],
+    "screen": [
+     "A x M"
+    ],
+    "note": "Use them: ALPHA (-) is A; RCL M+ gives M. The Ans key chains answers.",
+    "screen_verified": true,
+    "source_loc": "Using Memory Functions"
+   }
+  ]
+ },
+ "fx300esplus": {
+  "preflight_deg": [
+   {
+    "press": [
+     "SHIFT",
+     "MODE",
+     "3"
+    ],
+    "screen": [
+     "3:Deg 4:Rad 5:Gra"
+    ],
+    "note": "You press SHIFT, MODE (SETUP), then 3 for Deg.",
+    "screen_verified": true,
+    "source_loc": "fx-300ES PLUS manual: Configuring the Calculator Setup"
+   }
+  ],
+  "R1_store_then_formula__quadratic": [
+   {
+    "press": [
+     "165",
+     "SHIFT",
+     "RCL",
+     "(-)"
+    ],
+    "screen": [
+     "165",
+     "STO A"
+    ],
+    "note": "Store a in A: 165, SHIFT RCL (STO), (-) key.",
+    "screen_verified": true,
+    "source_loc": "Using Memory Functions"
+   },
+   {
+    "press": [
+     "(-)",
+     "2.712",
+     "SHIFT",
+     "RCL",
+     "DMS"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): STO B"
+    ],
+    "note": "Store b in B with the key printed with B (the degrees-minutes-seconds key).",
+    "screen_verified": false,
+    "source_loc": "letter-key positions same as 115 manual"
+   },
+   {
+    "press": [
+     "(-)",
+     "0.0334",
+     "SHIFT",
+     "RCL",
+     "hyp"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): STO C"
+    ],
+    "note": "Store c in C (hyp key is C).",
+    "screen_verified": false,
+    "source_loc": "key positions: UNVERIFIED"
+   },
+   {
+    "press": [
+     "[type formula with ALPHA letters]",
+     "="
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): 0.02465"
+    ],
+    "note": "Type (-B + sqrt(B^2 - 4AC)) / (2A), =. Slower fallback: this model has no EQN and no SOLVE. Replay (LEFT) lets you change + to - for the other root.",
+    "screen_verified": false,
+    "source_loc": "composed"
+   }
+  ],
+  "R2_store_dont_retype__g_and_M": [
+   {
+    "press": [
+     "9.80",
+     "SHIFT",
+     "RCL",
+     "(-)"
+    ],
+    "screen": [
+     "STO A"
+    ],
+    "note": "Type 9.80, SHIFT RCL, (-) key (A).",
+    "screen_verified": true,
+    "source_loc": "fx-300ES PLUS: Using Memory Functions"
+   }
+  ]
+ },
+ "fx991cw": {
+  "preflight_deg": [
+   {
+    "press": [
+     "SETTINGS"
+    ],
+    "screen": [
+     "(settings menu)"
+    ],
+    "note": "You press the SETTINGS key (sliders icon). Pick Calc Settings > Angle Unit > Degree.",
+    "screen_verified": false,
+    "source_loc": "using_the_settings_menu.html"
+   }
+  ],
+  "R1_solve_one_equation__energy_for_d": [
+   {
+    "press": [
+     "HOME"
+    ],
+    "screen": [
+     "(app list)"
+    ],
+    "note": "Press HOME, pick Equation, press OK.",
+    "screen_verified": true,
+    "source_loc": "equation_calculations.html (Using Solver step 1)"
+   },
+   {
+    "press": [
+     "[Solver]",
+     "OK"
+    ],
+    "screen": [
+     "(Solver equation input)"
+    ],
+    "note": "Pick Solver, press OK.",
+    "screen_verified": true,
+    "source_loc": "Using Solver step 2"
+   },
+   {
+    "press": [
+     "165",
+     "x",
+     "x2",
+     "-",
+     "2.712",
+     "x",
+     "SHIFT",
+     "(",
+     "0.0334"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): 165x^2-2.712x=0.0334"
+    ],
+    "note": "Type the whole equation. The unknown is x (the x key). The = sign is SHIFT then the ( key. Press EXE to register it.",
+    "screen_verified": false,
+    "source_loc": "Using Solver step 4 (manual example x2-B2=0)"
+   },
+   {
+    "press": [
+     "EXE",
+     "OK"
+    ],
+    "screen": [
+     "Solve Target",
+     "[x]"
+    ],
+    "note": "EXE registers it. On Solve Target confirm x, press OK.",
+    "screen_verified": true,
+    "source_loc": "Using Solver steps 5-6"
+   },
+   {
+    "press": [
+     "0.05",
+     "EXE",
+     "EXE"
+    ],
+    "screen": [
+     "UNVERIFIED (inferred): x=0.02465",
+     "Left-Right=0"
+    ],
+    "note": "Type 0.05 as the starting x, EXE, then with [Execute] selected press EXE. Answer shows x= and (Left Side)-(Right Side) near 0. Only ONE root. For the other root press back (return key) and use -0.05.",
+    "screen_verified": false,
+    "source_loc": "Using Solver steps 7-9"
+   }
+  ],
+  "R2_store_dont_retype__g_and_M": [
+   {
+    "press": [
+     "9.80",
+     "EXE"
+    ],
+    "screen": [
+     "9.80"
+    ],
+    "note": "Type 9.80 and press EXE.",
+    "screen_verified": true,
+    "source_loc": "using_memory_functions.html Example 1"
+   },
+   {
+    "press": [
+     "VARS",
+     "[A=]",
+     "[Store]"
+    ],
+    "screen": [
+     "A=9.80"
+    ],
+    "note": "Press the variables key, pick [A=] then [Store].",
+    "screen_verified": true,
+    "source_loc": "using_memory_functions.html Example 1"
+   },
+   {
+    "press": [
+     "VARS",
+     "[A=]",
+     "[Recall]",
+     "EXE"
+    ],
+    "screen": [
+     "A"
+    ],
+    "note": "Later: the same key, [A=], [Recall].",
+    "screen_verified": true,
+    "source_loc": "Example 3"
+   }
+  ]
+ },
+ "fx991ex": {
+  "preflight_deg": [
+   {
+    "press": [
+     "SHIFT",
+     "MENU"
+    ],
+    "screen": [
+     "(setup menu)"
+    ],
+    "note": "You press SHIFT, MENU (SETUP). Pick Angle Unit by its number on screen, then 1 for Degree.",
+    "screen_verified": false,
+    "source_loc": "guide p.6"
+   }
+  ],
+  "R1_solve_one_equation__energy_for_d": [
+   {
+    "press": [
+     "165",
+     "ALPHA",
+     ")",
+     "x2",
+     "-",
+     "2.712",
+     "ALPHA",
+     ")",
+     "ALPHA",
+     "CALC",
+     "0.0334"
+    ],
+    "screen": [
+     "165x^2-2.712x=0.0334"
+    ],
+    "note": "Type the whole equation. x is ALPHA then ) . The = is ALPHA then CALC.",
+    "screen_verified": true,
+    "source_loc": "guide p.19 (key pattern; example x2+B=0)"
+   },
+   {
+    "press": [
+     "SHIFT",
+     "CALC"
+    ],
+    "screen": [
+     "(list of letters with values: x=0)"
+    ],
+    "note": "Press SHIFT then CALC (SOLVE). A list shows the letters and their values.",
+    "screen_verified": true,
+    "source_loc": "guide p.19"
+   },
+   {
+    "press": [
+     "0.05",
+     "="
+    ],
+    "screen": [
+     "x =0.05"
+    ],
+    "note": "Type your guess for x (guide uses 1 =). The initial value of x is the starting guess.",
+    "screen_verified": true,
+    "source_loc": "guide p.19 (\"Input an initial value for x\")"
+   },
+   {
+    "press": [
+     "UP",
+     "="
+    ],
+    "screen": [
+     "x= 0.02464872",
+     "L-R= 0 (expected)"
+    ],
+    "note": "Move the highlight to x with UP, press =. Answer shows x= and L-R=. Near 0 is good. Expected 0.02465.",
+    "screen_verified": false,
+    "source_loc": "guide p.19 screen layout (x= 1.414213562, L-R= 0)"
+   },
+   {
+    "press": [
+     "SHIFT",
+     "CALC",
+     "-0.05",
+     "UP",
+     "="
+    ],
+    "screen": [
+     "x= -0.00821 (expected)"
+    ],
+    "note": "Other root: SOLVE again with -0.05. SOLVE gives only one root, the one near your guess.",
+    "screen_verified": false,
+    "source_loc": "guide p.20"
+   }
+  ],
+  "R2_store_dont_retype__g_and_M": [
+   {
+    "press": [
+     "9.80",
+     "STO",
+     "(-)"
+    ],
+    "screen": [
+     "9.80 -> A"
+    ],
+    "note": "Type 9.80, press STO, then the (-) key (A). Guide: 3+5 STO (-)(A) gives 8.",
+    "screen_verified": true,
+    "source_loc": "guide p.13"
+   },
+   {
+    "press": [
+     "[mass]",
+     "STO",
+     "M+"
+    ],
+    "screen": [
+     "M"
+    ],
+    "note": "Store the mass in M: value, STO, M+ key.",
+    "screen_verified": true,
+    "source_loc": "guide p.13 (0 STO M+ (M))"
+   },
+   {
+    "press": [
+     "ALPHA",
+     "(-)",
+     "x",
+     "SHIFT",
+     "STO"
+    ],
+    "screen": [
+     "A x ..."
+    ],
+    "note": "Use letters: ALPHA (-) is A. SHIFT STO (RECALL) lists all stored values.",
+    "screen_verified": true,
+    "source_loc": "guide p.13"
+   }
+  ]
+ }
+}

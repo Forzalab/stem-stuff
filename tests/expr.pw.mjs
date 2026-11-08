@@ -153,6 +153,20 @@ try {
     assert.equal(await page.$("#xline"), null);
     await ctx.close();
   });
+  /* bug 7 (Nov 6): the live preview shows a number as typed. math.js toTex printed 222222 as 2.22222·10^{+5} (upperExp 5) */
+  await step("EXPR_MODE off: the preview shows numbers as typed (222222 stays 222222, 3.5 stays 3.5, a typed 1.2e-7 keeps its 10^)", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    const page = await ctx.newPage();
+    await page.goto(`http://localhost:${OFFP}/#PHYS_XG2`); await opened(page, "PHYS_XG2");
+    const pv = async v => { await page.fill("#ans", v); await page.waitForSelector("#preview .katex"); return page.$eval("#preview annotation", e => e.textContent); };
+    const big = await pv("222222");
+    assert.ok(big.includes("222222") && !big.includes("10^"), "222222 previews as " + big);
+    assert.equal((await pv("3.5")).trim(), "3.5");
+    assert.match(await pv("1.2e-7"), /10\^/, "a typed e-number still reads as ·10^");
+    assert.ok((await pv("222222*x")).includes("222222"), "a big number inside a formula previews as typed");
+    await ctx.close();
+  });
   /* v49 (Tony, Nov 3 18:14): Material floating label. Empty + no focus: the placeholder inside. Focus, or text in it: a SHORTER label sits on
      the top border (the placeholder goes); blur while empty: back inside */
   await step("393 answer box: the placeholder floats onto the border as a shorter label on focus / with text, back on blur when empty", async () => {

@@ -1,0 +1,39 @@
+/* calc-pick.css: the calculator model picker (calc-pick.js; Tony Nov 6). The lock-help look (app.css LOCK-HELP: .lh-col / .lh-say / .lh-duck / .lh-btns
+   are reused as is): a dimmed full screen and, on it, Cluck's line, the art and the buttons. Only the picker's own parts are here. Dark only. */
+html.cp-on, html.cp-on body { overflow: hidden; }
+.cpick { position: fixed; inset: 0; z-index: 210; display: grid; place-items: start center; overflow-y: auto; padding: max(var(--s6), 12vh) var(--gut, 16px) var(--s5);   /* top-anchored: filtering the list never moves the line or the field */
+  background: var(--page);   /* opaque: the first screen a device sees, nothing half-read behind it */
+  animation: cp-in .16s ease-out backwards; }
+@keyframes cp-in { from { opacity: 0; } }
+.cpick .lh-say { text-wrap: balance; }
+.cp-body { display: grid; gap: var(--s3); width: 100%; margin-top: var(--s2); text-align: left; }
+.cp-s2 .lh-duck { width: 80px; }
+
+.cpick .btn { width: 100%; height: auto; min-height: 48px; padding: var(--s2) var(--s4); font: inherit; font-weight: var(--w-em); line-height: 1.25; justify-content: center; text-align: center; }
+.cp-brands { display: grid; gap: var(--s3); }
+.cpick .cp-brand { min-height: 64px; font-size: var(--t-lg); background: var(--float); border-color: var(--line); }
+.cpick .cp-brand:hover { background: var(--sheet); border-color: var(--action); }
+.cpick .cp-skip, .cpick .cp-back { background: transparent; color: var(--muted); }
+.cpick .cp-skip:hover, .cpick .cp-back:hover { background: var(--sheet); color: var(--ink); }
+
+.cp-chips + .cp-lab { margin-top: var(--s2); }
+.cp-lab { color: var(--muted); font-size: var(--t-sm); font-weight: var(--w-em); line-height: var(--lh-ui); margin-bottom: calc(-1 * var(--s2)); }
+.cp-q { box-sizing: border-box; width: 100%; height: 48px; padding: 0 var(--s3); font: inherit; font-size: max(1rem, var(--t-sm)); color: var(--ink);
+  background: var(--field); border: var(--bw) solid var(--line); border-radius: 8px; caret-color: var(--focus); }
+.cp-q::placeholder { color: var(--muted); opacity: 1; }
+.cp-q:focus { outline: none; border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.cp-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }   /* the ladder's chips (repair.css .rp-chip): the help colours, 44px */
+.cpick .cp-chip { min-height: 44px; padding: var(--s2) var(--s3); font-weight: var(--w-em); line-height: 1.25; }
+.cpick .cp-chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cp-list { display: grid; gap: var(--s1); margin-top: calc(-1 * var(--s2)); }
+.cp-list[hidden] { display: none; }
+.cpick .cp-opt { justify-content: start; text-align: left; place-items: center start; background: var(--sheet); }
+.cpick .cp-opt:hover { background: var(--float); }
+.cpick .cp-other { color: var(--muted); background: transparent; border-color: var(--line); border-style: dashed; }
+.cpick .cp-other:hover { color: var(--ink); }
+.cpick .cp-opt[hidden] { display: none; }
+.cp-none { margin: 0; padding: var(--s2) 0; color: var(--muted); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.cp-foot { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+.cp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) { .cpick { animation: none; } .cpick .btn { transition: none; } .cpick .btn:active { transform: none; } }

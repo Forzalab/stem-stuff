@@ -1191,6 +1191,18 @@ class Persist(unittest.TestCase):
         self.restart()
         self.assertLessEqual(serve.state(p, "r4")["gen"], g)     # page keeps its lock: not a reset
 
+class VaryNeverServed(unittest.TestCase):
+    """`vary` (SCHEMA.md "vary": review number sets with their own wrong/saccharine keys) is server only: public() is an allowlist."""
+    def test_public_has_no_vary(self):
+        p = next(q for q in BANK.values() if q.get("type") == "mc")
+        p = dict(p, vary=[{"body": p["body"], "choices": p["choices"], "wrong": p.get("wrong", []),
+                           "saccharine": {"key": "VARYKEY_9137 answer b"}}])
+        for mode in ("diet", "sugar"):
+            out = serve.public(serve.view(p, mode), "s")
+            self.assertNotIn("vary", out)
+            self.assertNotIn("VARYKEY_9137", json.dumps(out))
+
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -2779,6 +2791,11 @@ class DrawRule(unittest.TestCase):
     """spec H: the letter says draw readily; the Claude arm gets the figure how-to split in two (Tony, Oct 22): the fixed part (livefig.RULE +
     the Geometry line) inside the cached letter block, the per-question tail (livefig.rule_tail) as a last, uncached block; the bank block stays
     byte-identical; the DeepSeek arm gets the same text in one system message (fixed part first, tail last)"""
+    def setUp(self):                         # the permanent style card (prompts/cluck-style.txt) has its own tests (test_cluck_style.py); here the layering is letter | bank | how-to
+        p = unittest.mock.patch.object(serve, "STYLE_V4", "")
+        p.start()
+        self.addCleanup(p.stop)
+
     def ctx(self):
         return serve.livefig.context("T_DR", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
 

@@ -21,6 +21,11 @@
     }
    ],
    "how": "Write the base case, then what you assume for $k$, then prove it for $k+1$.",
+   "repair": {"steps": [
+    {"id": "given", "label": "Name the base case", "kind": "num", "ok": "LEAKBASE"},
+    {"id": "step", "label": "Add the next term", "kind": "num", "ok": "LEAKSTEP"},
+    {"id": "answer", "label": "Final answer", "kind": "num", "ok": "LEAKANS"}
+   ]},
    "proof": {
     "reference": [
      "Base case: Let $n=1$. The left side is just $2$, and the right side is $\\frac{1\\cdot 4}{2}=2$, so the two sides match.",

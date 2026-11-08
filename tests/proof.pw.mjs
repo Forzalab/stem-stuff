@@ -107,6 +107,17 @@ try {
     assert.match(await page.$eval("#ans", x => x.value), /^DOWN/);
     await ctx.close();
   });
+  await step("a proof that carries an authored ladder never shows it after a miss: no #rpHost, no step, no check mark, no authored key on the wire", async () => {
+    const { ctx, page, errs } = await open("diet");
+    const bodies = []; page.on("response", async r => { if (/\/(check|repair)/.test(r.url())) bodies.push(await r.text().catch(() => "")); });
+    await prove(page, "NOBASE " + GOOD);
+    await page.waitForTimeout(600);
+    assert.equal(await page.$$eval("#rpHost, .rp-val, .rp-ok, .rp-step", x => x.length), 0, "a repair ladder mounted on a proof miss");
+    assert.equal((await fetch(BASE + "/repair/" + CODE)).status, 404);
+    assert.ok(!bodies.some(b => /LEAK/.test(b)), "an authored answer reached the browser");
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
   await step("sugar: 3 wrong Checks close it and show the reference proof; telemetry never carries the proof text", async () => {
     const { ctx, page, errs } = await open("sugar");
     await page.evaluate(() => { window.__picks = []; const t = window.stemT; window.stemT = (k, o) => { window.__picks.push([k, o]); return t?.(k, o); }; });
@@ -184,6 +195,24 @@ for (const mode of ["diet", "sugar"]) {
     await ctx.close();
   });
 }
+/* bug 5 (Nov 6): phone proof item, short question. The tile hugs its content; a sash drag set a ratio and the tile kept the empty space under the text.
+   Tony: a drag past the content snaps back to hugging (not a taller box). Drag UP still shrinks via the ratio. */
+await step("393 phone: drag the sash down past a short proof question -> the tile hugs it (no empty space), as before the drag", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.removeItem("stem-mt"); } catch { /* blocked */ } });
+  const page = await ctx.newPage();
+  await page.goto(BASE + "/#" + CODE); await opened(page);
+  const h = () => page.$eval("#problem", e => Math.round(e.getBoundingClientRect().height));
+  const h0 = await h();                                                       // the hug height (scrollHeight can't be the content: it never reports less than the box)
+  assert.ok(h0 > 56 && h0 < 852 * 0.45, "the proof tile starts hugging: " + h0);
+  const sh = await rect(page, "#sash"), x = sh.l + sh.w / 2, y = sh.t + sh.h / 2;
+  await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + 40, { steps: 4 });
+  await page.mouse.move(x, 852 * 0.5 + 20, { steps: 8 }); await page.mouse.up();
+  await page.waitForTimeout(500);
+  const h1 = await h();
+  assert.ok(h1 <= h0 + 8, `after dragging down the tile keeps empty space: ${h1}px vs its content ${h0}px`);
+  await ctx.close();
+});
 await step("a non-proof item is unchanged: answer box inside the question card, pad off the page at 390, notes pad right at 1024", async () => {
   const mk = async (vp) => { const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });

@@ -542,7 +542,7 @@ def public(p, sid=""):
     if p.get("type") == "num" and "unit" in p:              # W132: the answer line shows it after the value; a unit never gives the number away
         out["unit"] = p["unit"]
     t = (problems().get(p.get("parent_template")) if p.get("twin") else p) or {}
-    if isinstance((t.get("repair") or {}).get("steps"), list) and t["repair"]["steps"]:   # the app asks GET /repair only for these (a miss on the rest sends nothing); the ladder itself never ships
+    if t.get("type") != "proof" and isinstance((t.get("repair") or {}).get("steps"), list) and t["repair"]["steps"]:   # the app asks GET /repair only for these (a miss on the rest sends nothing); the ladder itself never ships
         out["has_repair"] = True
     if p.get("twist") is True:                               # W133: the question header's Twist chip; a twist gives nothing away
         out["twist"] = True
@@ -1039,8 +1039,8 @@ def _ladder(p, sid):
     is served before any try: its ladder IS the question (welcome.js); its answer step stays keyless like every other."""
     t = problems().get(p["parent_template"]) if p.get("twin") else p
     rp = (t or {}).get("repair")
-    if not isinstance(rp, dict) or not rp.get("steps"):
-        return 404, {"error": "no repair"}
+    if not isinstance(rp, dict) or not rp.get("steps") or p.get("type") == "proof" or (t or {}).get("type") == "proof":
+        return 404, {"error": "no repair"}      # a proof never serves an authored ladder: no slip family blanks its steps, so they carry the answers
     with _tries_lock:
         _load_tries()
         missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
@@ -1594,10 +1594,10 @@ INC_ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"   # incident.mjs ALPHA: no 0/O/1/
 INC_CODE = re.compile(r"^[ES]-[2-9A-HJ-NP-Z]{5}$")
 INC_TAG = re.compile(r"^[a-z0-9_/-]{1,40}$")
 INC_PHASES = ("headers", "stream", "parse", "timeout", "abort", "script")
-INC_INTS = ("status", "ms", "bytes")
+INC_INTS = ("status", "ms", "bytes", "lineno")
 INC_STRS = {"path": (re.compile(r"^/?[\w./-]{1,80}$"), 80), "q": (CODE_RE, 40), "v": (re.compile(r"^[\w.#-]{1,40}$"), 40),
             "model": (re.compile(r"^[\w./:-]{1,80}$"), 80), "provider": (INC_TAG, 40), "trace_id": (re.compile(r"^[0-9a-f]{32}$"), 32),
-            "method": (re.compile(r"^[A-Z]{3,7}$"), 7)}
+            "method": (re.compile(r"^[A-Z]{3,7}$"), 7), "filename": (re.compile(r"^[\w.@-]{1,80}$"), 80)}
 INC_KEYS = ("code", "where", "reason", "phase", "err") + INC_INTS + tuple(INC_STRS)   # incident.mjs KEYS (+ model, provider, method: server only)
 # the log line's names follow OpenTelemetry's semantic conventions where one exists (Tony, Oct 19: "the OTel middle path", no SDK)
 OTEL = {"status": "http.response.status_code", "path": "url.path", "method": "http.request.method", "model": "gen_ai.request.model", "err": "exception.message"}
@@ -2637,6 +2637,19 @@ def _read_prompt_v4():
 
 
 PROMPT_V4 = _read_prompt_v4()
+
+
+def _read_style_v4():
+    """prompts/cluck-style.txt: the style card + good/bad pairs + two whole replies (PERMANENT, every bank; no expiry). "" when missing."""
+    try:
+        with open(os.path.join(ROOT, "prompts", "cluck-style.txt"), encoding="utf-8", newline="") as f:
+            return f.read().strip()
+    except OSError as e:
+        log("prompts/cluck-style.txt missing:", e)
+        return ""
+
+
+STYLE_V4 = _read_style_v4()
 V4_MAX = 700                                 # the bench's max_tokens (the XYZ notes spend some of it)
 WISH_QUERY = "hi cluck <3"                   # the USER QUERY of a first wish (a wrong pick, no student text)
 LAMP = "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conversational. REVEAL: "
@@ -2782,7 +2795,7 @@ def cluck_begin(p, sid, pick):
         _load_tries()
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
-        reveal = out or solved or n >= 3
+        reveal = out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3)   # cram items: the stage-by-stage walk (overview + up to 5 stages) is not the "3rd ask" give-up; only later (stricter), tries-out and solved still open it
         rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))   # [4] = True only on a locked item (tries used up, not solved): the reply must not invite a retry
         del rows[:-CLUCK_KEEP]
         _save_tries()
@@ -3497,13 +3510,87 @@ def fig_spec(code):
     return next((name for name, rx in _SPEC_RULES if re.search(rx, text)), None)
 
 
+# ---------------- cram day (TEMPORARY, Tony Nov 6): per-item guidance for Exam 3 (Phys 2A), server side only ----------------
+# banks/cram/intel.json (banks/ is blocked from the web) -> one extra uncached system block per Cluck turn for the BANK_P3X items it names, plus a
+# generic "draw first, stage by stage" add-on for every PHYS_ item of the bank. Generic physics only (no exam stems, no keys). It never reaches
+# the client, and the answer guards are untouched (REVEAL: no still holds the final number back). Ends CRAM_UNTIL; CRAM_INTEL=0 turns it off early.
+# peek.js has the same instant for the cram-day idle peek and toast (tests/test_cram.py checks they match).
+CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
+CRAM_BANK = "BANK_P3X"
+CRAM_REVEAL_TURN = 7                         # REVEAL: yes from this Cluck turn on a cram item (3 elsewhere)
+_cram_cache = {"sig": None, "data": {}}
+
+
+def cram_data():
+    """banks/cram/intel.json parsed (re-read when it changes); {} on any problem"""
+    path = os.path.join(ROOT, "banks", "cram", "intel.json")
+    try:
+        sig = os.stat(path).st_mtime_ns
+        if _cram_cache["sig"] != sig:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            _cram_cache.update(sig=sig, data=d if isinstance(d, dict) else {})
+    except (OSError, ValueError):
+        _cram_cache.update(sig=None, data={})
+    return _cram_cache["data"]
+
+
+def cram_on(now=None):
+    if os.environ.get("CRAM_INTEL", "1").strip().lower() in ("0", "off", "false", "no"):
+        return False
+    now = now or datetime.datetime.now(PT)
+    return now <= CRAM_UNTIL
+
+
+CRAM_NOTES = {}                                              # item code -> times a cram_note was attached to a Cluck turn (this process; code only, no prompt text)
+
+
+def cram_count(code):
+    CRAM_NOTES[code] = CRAM_NOTES.get(code, 0) + 1
+    sys.stderr.write("cram_note attached code=%s n=%d\n" % (code, CRAM_NOTES[code]))
+
+
+def cram_note(code, now=None):
+    """the cram-day block for this item ("" outside the window, off, another bank, or no text)"""
+    if not code or not cram_on(now) or bank_of(code) != CRAM_BANK:
+        return ""
+    d = cram_data()
+    it = (d.get("items") or {}).get(code)
+    if not it:                                                   # a new item with no entry: a match rule (a spring-and-ramp stem) borrows an entry's text
+        stem = " ".join(str(b.get("md", "")) for b in (problems().get(code) or {}).get("body", []) if b.get("type") == "text").lower()
+        for r in d.get("match") or []:
+            if re.search(str(r.get("re", "^$")), stem):
+                it = (d.get("items") or {}).get(r.get("as"))
+                break
+    if not it and not str(code).startswith("PHYS_"):
+        return ""
+    parts = ["CRAM DAY GUIDE for this question (private; say every fact as your own, never name this guide)."]
+    if d.get("generic"):
+        parts.append(str(d["generic"]))
+    if isinstance(it, dict):
+        for k, h in (("scene", "SCENE"), ("plan", "PLAN"), ("stages", "STAGES (in order)"), ("formulas", "FORMULAS"), ("traps", "TRAPS"), ("say", "SAY IT LIKE THIS")):
+            if it.get(k):
+                parts.append(f"{h}: {it[k]}")
+        for g in it.get("diagrams") or []:
+            dg = (d.get("diagrams") or {}).get(g)
+            if dg:
+                parts.append("DIAGRAMS (checked patterns, each stage one fence; copy the shape, keep this question's own symbols and givens):\n" + str(dg))
+    return "\n".join(parts)
+
+
 def _v4_claude_system(v4):
     """the Claude arm's system blocks; fig_reask sends the same ones, so it reads the cache the reply just wrote"""
     fig = v4.get("fig")
-    system = [{"type": "text", "text": PROMPT_V4 + (V4_FIG_FIXED if fig is not None else ""), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
-              {"type": "text", "text": v4["bank"], "cache_control": CACHE}]
+    system = [{"type": "text", "text": PROMPT_V4 + (V4_FIG_FIXED if fig is not None else ""), "cache_control": {"type": "ephemeral", "ttl": "1h"}}]
+    system.append({"type": "text", "text": v4["bank"], "cache_control": CACHE})
     if fig is not None:                                          # the per-question how-to tail: last, uncached, so the cached prefix stays the same
         system.append({"type": "text", "text": v4_fig_howto(fig)})
+    cram = cram_note(v4.get("code"))                             # TEMPORARY cram-day guide (Exam 3 bank): after the how-to, uncached
+    if cram:
+        cram_count(v4.get("code"))
+        system.append({"type": "text", "text": cram})
+    if STYLE_V4:                                                 # the permanent style card + few-shots, LAST (nearest the turn, where the model follows it best); no breakpoint of its own
+        system.append({"type": "text", "text": STYLE_V4})
     return system
 
 
@@ -3532,6 +3619,8 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     """DeepSeek v4.1 flash through OpenRouter, the same system and turns (blocks joined: the same text), prefix cache on one pinned host"""
     fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
     head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
+    head += ("\n\n" + cram_note(v4.get("code"))) if cram_note(v4.get("code")) else ""
+    head += ("\n\n" + STYLE_V4) if STYLE_V4 else ""              # the permanent style card, last
     msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
     # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
@@ -4566,7 +4655,35 @@ def mini_route(cookie_header, body):
     return _json(200, {"program": prog if ok else mini.authored(mini.AUTHORED[0])}, cookie)
 
 
+def calc_route(method, cookie_header, body):
+    """GET /calc -> {model} (null = never picked); POST /calc {model} -> {model}. The calculator model (calc-pick.js, Tony Nov 6), kept per
+    sid like progress (acct.get_calc / put_calc: it follows an account login and is kept by Save). 400: bad JSON or id; 503: the store is down."""
+    import acct
+    sid, cookie = new_sid(cookie_header)
+    try:
+        if method == "GET":
+            return _json(200, {"model": acct.get_calc(sid), "welcomed": acct.get_welcomed(sid)}, cookie)
+        try:
+            b = json.loads(body) if 0 < len(body) <= 256 else None
+        except (ValueError, UnicodeDecodeError):
+            b = None
+        if not isinstance(b, dict):
+            return _json(400, {"error": "invalid"}, cookie)
+        if b.get("welcomed") is True and "model" not in b:   # welcome-first.js: the once-per-user flag
+            acct.put_welcomed(sid)
+            return _json(200, {"welcomed": True}, cookie)
+        try:
+            acct.put_calc(sid, b.get("model"))
+        except ValueError:
+            return _json(400, {"error": "invalid"}, cookie)
+        return _json(200, {"model": b["model"]}, cookie)
+    except OSError:
+        return _json(503, {"error": "store"}, cookie)
+
+
 def _dispatch(method, path, cookie_header, body, ua):
+    if path == "/calc" and method in ("GET", "POST"):
+        return calc_route(method, cookie_header, body)
     if method == "POST" and path == "/log/incident":
         return log_incident(cookie_header, body, ua)
     if method == "POST" and path == "/mini":
