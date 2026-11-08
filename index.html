@@ -59,6 +59,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="offline.js" defer></script>
 <script src="brainrot.js" defer></script>
 <script src="lockhelp.js" defer></script><!-- the lock-out modal "Let me help you with that!" (lockhelp.js, Tony Nov 5) -->
+<script src="login.js" defer></script><!-- the My Cluck save + login dialog (login.js): the footer #loginBtn opens it -->
 <script src="welcome-first.js"></script><script src="calc-pick.js" defer></script><script>addEventListener("DOMContentLoaded", function () { window.stemCalcPick && window.stemCalcPick.auto(); });</script><!-- the calculator model picker (calc-pick.js, Tony Nov 6): a fresh device sees it once, after the splash -->
 <script src="peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (design/IDLE-PEEK.md) -->
 <script src="strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
@@ -116,6 +117,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="welcome.css">
 <link rel="stylesheet" href="calc-coach.css"><!-- Calc Coach panel (design/CALC-COACH.md): app chrome, not a reply format -->
 <link rel="stylesheet" href="calc-pick.css"><!-- the calculator model picker (calc-pick.js) -->
+<link rel="stylesheet" href="login.css"><!-- the My Cluck save + login dialog (login.js) -->
 <link rel="stylesheet" href="views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
 <link rel="modulepreload" href="views.js">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
@@ -276,9 +278,13 @@ html.bar-open:not(.ql-open) #privacy { visibility: hidden; }
 /* G3 (an opt-out reachable mid-question on a phone, 2 taps): it comes back with the question list (list button, then this), right under
    the list's bottom-right corner (nav.js sets --ql-bottom), in the dimmed gap above the code bar, over the dim (46). Covers nothing. */
 html.dock-bottom.ql-open:not(.start) #privacy { z-index: 48; top: var(--ql-bottom, 50svh); bottom: auto; right: var(--gut); align-items: flex-start; padding: var(--s2) var(--s1) 0; }
+#loginBtn { position: fixed; z-index: 21; right: calc(max(var(--s2), env(safe-area-inset-right)) + 7.5em); bottom: max(0px, env(safe-area-inset-bottom)); }   /* beside #privacy, its 48px .btn on the footer line */
+.dock-bottom:not(.start):not(.ql-open) #loginBtn { display: none; }   /* phones over a question: the bottom belongs to the bar, as #privacy */
+html.bar-open:not(.ql-open) #loginBtn { visibility: hidden; }
 #privacy::after { content: "privacy"; }   /* drawn by CSS like #ver: not page text, never in a copy or a text check */
 #cluck .cl-verify::after { content: ", and pls no private shit in it xoxo"; }   /* D20: next to Cluck's "verify b4 use lol" */
 </style>
+<button type="button" id="loginBtn" class="btn btn-label">Keep your progress</button>
 <a id="privacy" href="privacy.html" aria-label="Privacy"></a>
 </body>
 </html>

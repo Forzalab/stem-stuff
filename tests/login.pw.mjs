@@ -260,6 +260,22 @@ try {
     await ctx.close();
   });
 
+  await step("the real /: the footer trigger opens the dialog (POST /acct/new)", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 360, height: 760 }, serviceWorkers: "block" });
+    const page = await ctx.newPage();
+    const reqs = [];
+    page.on("request", r => { if (/^https?:/.test(r.url())) reqs.push({ url: r.url(), method: r.method() }); });
+    await page.goto(BASE + "/");
+    await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 5000 });
+    assert.equal((await page.textContent("#loginBtn")).trim(), "Keep your progress");
+    await page.click("#loginBtn");
+    await page.waitForSelector("dialog.lg[open]", { timeout: 5000 });
+    assert.match(await page.textContent("dialog.lg .lg-title"), /Save progress/);
+    assert.deepEqual(reqs.filter(r => r.url.includes("/acct/")).map(r => [r.method, new URL(r.url).pathname]), [["POST", "/acct/new"]]);
+    assert.equal((await page.textContent("#loginBtn")).trim(), "Show my Cluck", "the label follows stemLogin.signedIn()");
+    await ctx.close();
+  });
+
   await step("Restore my Cluck, login fails: Tony's error line", async () => {
     const { ctx, page } = await fresh(browser, "none", "ok", { login: "fail" });
     await page.goto(LAB);

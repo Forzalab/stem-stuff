@@ -392,6 +392,15 @@ function init() {
   const root = document.documentElement;
   const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
   const modes = $("#qmodes"), mix = $("#qmix"), skip = $("#qskip");
+  /* My Cluck (login.js): the one footer trigger; its label follows this device's account (login.js is a deferred classic script, after this module) */
+  const login = $("#loginBtn");
+  if (login) {
+    const show = () => { if (window.stemLogin) login.textContent = window.stemLogin.signedIn() ? "Show my Cluck" : "Keep your progress"; };
+    login.addEventListener("click", () => window.stemLogin && window.stemLogin.open());
+    addEventListener("stem:login", show);
+    addEventListener("load", show, { once: true });
+    show();
+  }
   const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
   const rd = () => window.stemRedo || null;                          // a Redeem showing's own grading namespace (app.js)
