@@ -1,0 +1,13 @@
+diff --git a/app.js b/app.js
+index bd0ced0..11e5dcd 100644
+--- a/app.js
++++ b/app.js
+@@ -360,7 +360,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
+         || (key.fix && (!fx || typeof fx !== "object" || Array.isArray(fx) || Object.keys(fx).length !== need.length
+             || need.some(id => typeof fx[id] !== "string" || !fx[id].trim())))) return { verdict: "invalid", triesLeft: left() };
+     sig = [...ch].sort().join(",");
+-    correct = ch.length === right.length && ch.every(x => right.includes(x));
++    correct = ch.every(x => right.includes(x));
+     const w = key.wrong || [];
+     if (!correct) {
+       const c = sh.find(c => ch.includes(c.id) && !right.includes(c.id) && w.some(x => x.choice === c.id));
