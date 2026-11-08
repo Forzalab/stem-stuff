@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Every test, one command, one verdict. Exit 0 = all green, 1 = something failed (its log is printed).
-# usage: tests/run-all.sh [--quick] [--fast] [--shard N/M | SHARD=N/M] [--list] [--plan B L]   (or SPECS="a b c" tests/run-all.sh)
+# usage: tests/run-all.sh [--quick] [--fast] [--shard N/M | SHARD=N/M] [--list] [--plan B L] [--affected <file>... [--report]]   (or SPECS="a b c" tests/run-all.sh)
 #   --quick      unittest + npm test + the batch tooling smoke (~10 s, the pre-push set)
 #   --fast       the worker pre-push loop: node unit tests + the cheapest strict one-page units (ticket 07).
 #                The units are FAST_UNITS below, cheapest first; the run prints a `fast total` and must stay <60 s on CI.
@@ -19,6 +19,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 quick=0; fast=0; list=0; plan=""; SHARD="${SHARD:-}"; SPECS="${SPECS:-}"
+affected=0; report=0; affected_files=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --quick) quick=1 ;;
@@ -27,10 +28,14 @@ while [ $# -gt 0 ]; do
     --plan) plan="${2:-} ${3:-}"; shift 2 ;;
     --shard) shift; SHARD="${1:-}" ;;
     --shard=*) SHARD="${1#--shard=}" ;;
-    *) echo "unknown argument: $1" >&2; exit 2 ;;
+    --affected) affected=1 ;;
+    --report) report=1 ;;
+    -*) echo "unknown argument: $1" >&2; exit 2 ;;
+    *) if [ "$affected" -eq 1 ]; then affected_files+=("$1"); else echo "unknown argument: $1" >&2; exit 2; fi ;;
   esac
   shift
 done
+[ "$report" -eq 1 ] && [ "$affected" -eq 0 ] && { echo "--report needs --affected <file>..." >&2; exit 2; }
 sn=1; sm=1; lead=55   # lead: shard 1 also runs unittest + npm (CI median: unittest 50 s + npm 4 s)
 if [ -n "$plan" ]; then
   read -r pb pl <<<"$plan"
@@ -72,6 +77,71 @@ units() {   # every schedulable name: a spec's parts if it has any, else the spe
   local f n p
   for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; p="$(parts_of "$n")"; if [ -n "$p" ]; then echo "$p"; else echo "$n"; fi; done
 }
+
+# --affected (ticket 06): print the units these changed files need; run nothing. auto+hand are a union;
+# a file with no row is unmapped -> every unit of its pipe (more specs, never fewer).
+if [ "$affected" -eq 1 ]; then
+  if [ "${#affected_files[@]}" -eq 0 ]; then echo "usage: tests/run-all.sh --affected <file>... [--report]" >&2; exit 2; fi
+  node tests/handmaps/gen-auto.mjs >/dev/null || { echo "gen-auto failed" >&2; exit 1; }
+  mapfile -t layout_units < <(units)
+  logic_units=(unittest npm)
+  pipe_of() {   # extension first; an unknown kind under tests/ is never fewer than both pipes
+    case "$1" in
+      *.js|*.css|*.html) echo layout ;;
+      *.py) echo logic ;;
+      *.mjs) case "$1" in tools/*|tests/*) echo logic ;; *) echo layout ;; esac ;;
+      tests/*) echo "layout logic" ;;
+      *) echo layout ;;
+    esac
+  }
+  all_of() {
+    local p; p=" $(pipe_of "$1") "
+    case "$p" in *" logic "*) printf '%s\n' "${logic_units[@]}" ;; esac
+    case "$p" in *" layout "*) printf '%s\n' "${layout_units[@]}" ;; esac
+  }
+  norm() { local f="$1"; while [ "${f#./}" != "$f" ]; do f="${f#./}"; done; printf '%s' "${f#"$PWD"/}"; }
+  declare -A auto_units=() hand_units=() file_units=()
+  load_map() {   # load_map <tsv> <auto|hand>
+    local file="$1" kind="$2" key names n u
+    [ -f "$file" ] || return 0
+    while IFS=$'\t' read -r key names; do
+      [ -n "$key" ] || continue; key="${key#./}"; case "$key" in \#*) continue ;; esac
+      for n in $names; do
+        if [ "$n" = ALL ]; then
+          if [ "$kind" = auto ]; then auto_units[$key]+=" $(all_of "$key" | paste -sd' ' -)"; else hand_units[$key]+=" $(all_of "$key" | paste -sd' ' -)"; fi
+        elif [ "$kind" = auto ]; then auto_units[$key]+=" $n"; else hand_units[$key]+=" $n"; fi
+      done
+    done < "$file"
+  }
+  load_map tests/handmaps/auto.tsv auto
+  load_map tests/handmaps/hand.tsv hand
+  for key in "${!auto_units[@]}"; do file_units[$key]="${auto_units[$key]}"; done
+  for key in "${!hand_units[@]}"; do file_units[$key]="${file_units[$key]:-} ${hand_units[$key]}"; done
+  selected=(); counts=(); all_files=(); declare -A seen=()
+  for raw in "${affected_files[@]}"; do
+    key="$(norm "$raw")"; names="${file_units[$key]:-}"
+    if [ -z "${names// /}" ]; then
+      guess="$(printf '%s\n' ${auto_units[$key]:-} | sed '/^$/d' | LC_ALL=C sort -u | paste -sd' ' -)"
+      echo "unmapped: $raw -> all $(pipe_of "$key") (best guess: ${guess:-none})"
+      mapfile -t add < <(all_of "$key")
+    else
+      mapfile -t add < <(printf '%s\n' $names | sed '/^$/d' | LC_ALL=C sort -u)
+    fi
+    seen=(); for u in "${add[@]}"; do seen[$u]=1; done
+    mapfile -t need < <(all_of "$key")   # ALL = every unit of this file's pipe (logic too)
+    is_all=1; for u in "${need[@]}"; do [ -n "${seen[$u]:-}" ] || { is_all=0; break; }; done
+    counts+=("${#add[@]}"); [ "$is_all" -eq 1 ] && all_files+=("$raw")
+    for u in "${add[@]}"; do selected+=("$u"); done
+  done
+  if [ "$report" -eq 1 ]; then
+    median="$(printf '%s\n' "${counts[@]}" | LC_ALL=C sort -n | awk '{a[NR]=$1} END { if (NR == 0) print 0; else if (NR % 2) printf "%d", a[(NR + 1) / 2]; else printf "%.1f", (a[NR / 2] + a[NR / 2 + 1]) / 2 }')"
+    printf 'report: %d files, median %s units/file\n' "${#counts[@]}" "$median"
+    printf 'all (%d): %s\n' "${#all_files[@]}" "${all_files[*]:-none}"
+    exit 0
+  fi
+  printf '%s\n' "${selected[@]}" | sed '/^$/d' | LC_ALL=C sort -u
+  exit 0
+fi
 
 # CI-measured seconds per .pw spec: median of 12 green CI runs, 2026-10-23 (timings-ci.json, brain projects/calc/_files/ci-plan-2026-10-23/); refresh with extract.py there on newer CI logs.
 # ux-flows / next-cue / next-dead / rewards = the CI median minus what S3 removed (estimates until the next CI timings). overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run; part-feedback 5 = its local run, ~4 s). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
