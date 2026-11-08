@@ -15,6 +15,7 @@ window.__stemRepairLines = {
     /* *waddles over* = an italic aside (app chrome: <em>) */
     repair: "*waddles over* Let's fix this together—QUACKK!",
     fallback: "QUACK. Let's walk it through, one step at a time.",
+    proof: "QUACK. Let's fix it one step at a time.",   // a generated proof ladder (STEM_PROOF_LADDER; app.js genLadder)
     alt: "QUACK. Let's waddle a different path!",
     welcome: "Ready to waddle through this one?",     // topic-neutral (Tony, vet w-4): it opens any bank's welcome item
     full: ""                                       // cut (#36): no intro line on the full card

@@ -111,6 +111,7 @@
       if (!finished) { finished = true; emit("repair_done", { why_ok: whyOk, variant, ladder: el.dataset.ladder, auto: autos }); }
     }
     function fillIn(s) {                                                         // out of tries: the step fills itself in, its why shown
+      if (o.gen) { s.ok = true; s.skipped = true; s.miss = ""; return; }         // a generated step has no answer here: it is skipped, nothing revealed
       s.ok = true; s.auto = true; autos++;
       if (s.ask && s.why == null) { s.why = s.st.why.ok; whyOk = false; }
       s.miss = L().auto || "";
@@ -120,9 +121,14 @@
       if (st.ok == null && o.grade) {                                            // the key is on the server: one grade in flight at a time
         if (s.busy) return;
         s.busy = true; s.n = (s.n || 0) + 1;
-        Promise.resolve(o.grade(v, s.n)).then(r => {
+        Promise.resolve(o.grade(v, s.n, st.id)).then(r => {
           s.busy = false;
           if (gone) return;
+          if (o.gen) {                                                           // a generated proof step: the reply is {ok} only, never an answer
+            if (r && r.expired) return emit("repair_expired", {});              // the keys are gone (404): the host says so and unmounts
+            if (!r || typeof r.ok !== "boolean") return;                         // a network blip is not a wrong try
+            return judge(s, v, r.ok);
+          }
           if (!r || r.ok === true || r.answer == null) return judge(s, v, !!r && r.ok === true, r && typeof r.hint === "string" ? r.hint : "");   // todo 130: the server's slip / wrong line
           const p = st.kind === "pick" && optsOf(st).find(p => p.id === v);         // the step fills in with it; no miss / auto line under it
           solved = { wrong: p ? p.md : String(v), answer: String(r.answer) };
@@ -187,9 +193,10 @@
     }
     function valueUi(s) {
       const st = s.st, box = h("div", "rp-val-ui");
-      if (st.kind === "num") {
+      if (st.kind === "num" || st.kind === "expr") {                             // expr (generated proof steps): the same box, a text keyboard
         const f = h("form", "rp-num"), inp = h("input", "rp-in"), go = h("button", "rp-check", L().check || "Check");
-        inp.type = "text"; inp.inputMode = "decimal"; inp.autocomplete = "off"; inp.setAttribute("aria-label", st.label);
+        inp.type = "text"; inp.inputMode = st.kind === "expr" ? "text" : "decimal"; inp.autocomplete = "off";
+        if (st.kind === "expr") inp.placeholder = "e.g. 2" + (st.var || "k") + "+4"; inp.setAttribute("aria-label", st.label);
         go.type = "submit";
         f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) tryValue(s, inp.value); });   // Enter submits natively: no key handler
         f.append(inp, go); box.append(f);
@@ -257,19 +264,20 @@
     function stepEl(s) {
       if (welcome) return keptEl(s);
       const st = s.st, li = h("li", "rp-step");
-      li.dataset.id = st.id; li.dataset.state = s.state;
+      li.dataset.id = st.id; li.dataset.state = s.skipped ? "skipped" : s.state;   // skipped (generated step, tries out): muted, no ✓, no value
       if (s.state === "active") li.setAttribute("aria-current", "step");
       const head = h("div", "rp-head");
       const n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
       head.append(n, h("span", "rp-label", st.label));
-      if (s.state === "done" || (s.state === "active" && s.ok)) head.append(h("span", "rp-val", shown(s)));
-      if (s.state === "done") head.append(h("span", "rp-ok", "✓"));
+      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) head.append(h("span", "rp-val", shown(s)));
+      if (s.state === "done" && !s.skipped) head.append(h("span", "rp-ok", "✓"));
       li.append(head);
       if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
       if (s.state === "active") {
         const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not
         s.seen = true;
+        if (st.ask && !s.ok) body.append(h("p", "rp-ask", st.ask));             // a generated step's one question (the label names it)
         if (!s.ok) body.append(valueUi(s));
         if (s.ask && s.why == null) body.append(whyUi(s));
         li.append(body);
@@ -279,7 +287,7 @@
     }
     function introEl() {                                                         // Cluck's line; a leading *action* is italic, the rest text
       const I = L().intro || {}, many = String(o.error).split("+").length > 1;
-      const key = variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
+      const key = o.gen ? "proof" : variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
       const t = String(I[key] || "");
       const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line");
       if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
