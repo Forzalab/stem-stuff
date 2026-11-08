@@ -115,10 +115,16 @@ for (const [tag, vp] of VPS) {
     await settle(page); await page.clock.runFor(1000); await settle(page);
     const duck = await page.evaluate(() => { const b = document.querySelector(".ck-peek").getBoundingClientRect(); return { op: +getComputedStyle(document.querySelector(".ck-duck")).opacity, top: b.top, bottom: b.bottom }; });
     assert.ok(duck.op === 1 && duck.top < vp.height && duck.bottom > 0, "the duck is up, on screen: " + JSON.stringify(duck));
+    const dim = await page.evaluate(() => { const r = document.querySelector(".ck-rise"), s = getComputedStyle(r, "::before");
+      const t = document.elementFromPoint(20, innerHeight - 200);   /* bottom third, away from the duck: the page, never the rise */
+      return { pe: s.pointerEvents, op: +s.opacity, h: parseFloat(s.height) / innerHeight, hit: !!t && !r.contains(t) }; });
+    assert.ok(dim.pe === "none" && dim.op > 0 && dim.h > 0.3 && dim.h < 0.37 && dim.hit, "the bottom-third dim shows while risen, never blocks taps: " + JSON.stringify(dim));
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
-    await page.click(".ck-peek");                                       // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
+    await page.click(".ck-peek");                                     // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
+    await page.clock.runFor(400);
+    assert.equal(await page.evaluate(() => document.querySelector(".ck-rise").hidden), true, "the dim is gone with the rise (the box is hidden)");
     await reopen(page); await page.click(".vdrawer .wchip");                                // the way in is the tray's Ask Cluck (GENMISS, Tony Nov 3: no "okay, but how?" peek)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the hint card CTA opens Cluck");
