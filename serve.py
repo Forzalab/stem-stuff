@@ -1077,6 +1077,8 @@ def repair_check(p, u, sid, body):
     else the item's (answer_of), a num with the step's unit; a pick / mc: the right option's md (the answer step ships no opts, so the
     client cannot map an id), pick all: the right options' md joined ", " in option order. A num miss graded by the item's key also carries
     /check's {error, hint} (todo 130): its `wrong` entries, then the slips of its `form` (a g=10 answer -> "g"); never a value."""
+    if p.get("type") == "proof":                              # the generated ladder (proof_grade): graded from the server-held keys, never the item's
+        return proof_step_check(p, sid, body)
     got = _ladder(p, sid)
     if len(got) == 2:
         return got
@@ -4327,6 +4329,27 @@ PROOF_ROWS = ("base", "assume", "prove")
 OPENROUTER_PROOF_MODELS = [m for m in os.environ.get("OPENROUTER_PROOF_MODELS", "deepseek/deepseek-v4.1-flash").split(",") if m.strip()]
 PROOF_SCHEMA = {"type": "object", "additionalProperties": False, "required": [*PROOF_ROWS, "hint"],
                 "properties": {**{r: {"type": "string", "enum": ["ok", "missing", "wrong"]} for r in PROOF_ROWS}, "hint": {"type": "string"}}}
+# The fill-in ladder (STEM_PROOF_LADDER=1, Nov 7): on a miss the SAME grader call also writes 2-4 fill-in steps from THIS student's proof. The
+# expected answers (`ok`) never leave the server: they live in Upstash stem:pl:<sid hash>:<code>:<att> for PROOF_LADDER_TTL (an in-process dict
+# without KV), and POST /repair/<code>/check {value, step, att} answers {ok} only. Any LLM / parse / store failure = the Cluck message alone.
+PROOF_LADDER_TTL, PROOF_LADDER_MAX = 3600, 4
+PROOF_LADDER_ITEM = {"type": "object", "additionalProperties": False, "required": ["id", "label", "kind", "ask", "ok", "var", "opts"],
+                     "properties": {"id": {"type": "string"}, "label": {"type": "string"}, "kind": {"type": "string", "enum": ["num", "expr", "pick"]},
+                                    "ask": {"type": "string"}, "ok": {"type": "string"}, "var": {"type": "string"},
+                                    "opts": {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["id", "md"],
+                                                                         "properties": {"id": {"type": "string"}, "md": {"type": "string"}}}}}}
+PROOF_LADDER_SCHEMA = {**PROOF_SCHEMA, "required": [*PROOF_SCHEMA["required"], "ladder"],
+                       "properties": {**PROOF_SCHEMA["properties"], "ladder": {"type": "array", "maxItems": PROOF_LADDER_MAX, "items": PROOF_LADDER_ITEM}}}
+CLUCK_PROOF_LADDER = """
+When any row is not ok, also write 2-4 fill-in steps in `ladder`, aimed at the first wrong or missing row, starting from what THIS proof already says. Each step asks ONE thing with ONE machine-checkable answer: a number (kind num), an expression in one variable n, k or m (kind expr, `var` = that letter), or one option id (kind pick, 2-4 opts). `ask` <= 120 chars, plain words, $...$ allowed. Never copy lines of the reference proof. If every row is ok, ladder = []."""
+PROOF_LADDER_PTS = [1.3, 2.7, 4.1]
+_pl_mem = {}                                 # no KV (local dev): key -> (expires, json)
+
+
+def proof_ladder_on():
+    return os.environ.get("STEM_PROOF_LADDER", "").strip() == "1"
+
+
 PROOF_REPEAT = "QUACK. That is the same proof as before. Change the part I asked about, then check again."
 CLUCK_PROOF = """You grade ONE student's proof by induction for Cluck, a duck tutor. Answer only as the JSON the schema asks for.
 Grade it casual: only three rows count, and each is ok, missing or wrong.
@@ -4374,6 +4397,141 @@ def proof_hint(p, gap, said):
     return (pk["hints"][gap], "authored") if bad else (h, "model")
 
 
+def _ref_sigs(pk):
+    """the reference proof's math as comparable values: every side of every `=` inside $..$ that reads as an expression in n, k or m"""
+    ref = pk["reference"]
+    text = "\n".join(ref) if isinstance(ref, list) else str(ref)
+    out = []
+    for chunk in re.findall(r"\$([^$]+)\$", text):
+        c = re.sub(r"\\(?:left|right)|\\,|\\!", "", chunk)
+        for _ in range(4):
+            c = re.sub(r"\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", r"((\1)/(\2))", c)
+        c = c.replace("\\cdot", "*").replace("\\times", "*").replace("{", "(").replace("}", ")")
+        for side in re.split(r"=|\\le|\\ge|<|>", c):
+            side = side.strip()
+            for v in ("n", "k", "m"):
+                if re.search(rf"(?<![a-z]){v}(?![a-z])", side):
+                    try:
+                        out.append(signature({"type": "expr", "var": v, "points": PROOF_LADDER_PTS}, side))
+                    except UNREADABLE:
+                        pass
+                    break
+    return out
+
+
+def proof_ladder_ok(raw, pk=None):
+    """the clean steps of the grader's `ladder` as [(public step, private key {kind, ok, var?, opt_ids?})], [] unless >= 2 survive.
+    Drops every bad step; never raises; never touches the verdict. pk (the item's proof): an expr step's ok must also match a side of an `=`
+    in the reference proof (generation-time check, Tony's default YES: a step that fails it is dropped)."""
+    if not isinstance(raw, list):
+        return []
+    keys = [_proof_norm(k) for k in (pk or {}).get("keys", []) if _proof_norm(k)]
+    refs, seen, out = None, set(), []
+
+    def text_ok(t, lo, hi, ok):
+        if not isinstance(t, str) or not lo <= len(t) <= hi or t.count("$") % 2 or emoji_cut(t) != t or t != t.strip():
+            return False
+        n = _proof_norm(t)
+        return not (leak_scan(t) or INJECT_RE.search(t) or fk_grade(t) > PROOF_FK_MAX or any(k in n for k in keys)
+                    or (len(_proof_norm(ok)) >= 3 and _proof_norm(ok) in n))
+    for st in raw[:PROOF_LADDER_MAX]:
+        try:
+            if not isinstance(st, dict) or not all(isinstance(st.get(k), str) for k in ("id", "label", "kind", "ask", "ok", "var")):
+                continue
+            sid_, kind, ok, var, opts = st["id"], st["kind"], st["ok"].strip(), st["var"], st.get("opts")
+            if (not re.fullmatch(r"[a-z][a-z0-9_]{0,23}", sid_) or sid_ in seen or not ok or len(ok) > 200
+                    or not text_ok(st["label"], 1, 60, ok) or not text_ok(st["ask"], 1, 120, ok)):
+                continue
+            priv = {"kind": kind, "ok": ok}
+            if kind == "num":
+                if not math.isfinite(evaluate(numtext(ok), "x")):
+                    continue
+            elif kind == "expr":
+                if var not in ("n", "k", "m"):
+                    continue
+                sig = signature({"type": "expr", "var": var, "points": PROOF_LADDER_PTS}, ok)
+                if not all(math.isfinite(x) for x in sig):
+                    continue
+                if pk is not None:
+                    refs = _ref_sigs(pk) if refs is None else refs
+                    if not any(same(sig, r, 1e-6) for r in refs):
+                        continue
+                priv["var"] = var
+            elif kind == "pick":
+                if (not isinstance(opts, list) or not 2 <= len(opts) <= 4 or not all(isinstance(o, dict) and isinstance(o.get("id"), str)
+                                                                                     and isinstance(o.get("md"), str) for o in opts)):
+                    continue
+                ids = [o["id"] for o in opts]
+                if (len(set(ids)) != len(ids) or ok not in ids or not all(re.fullmatch(r"[a-z0-9_]{1,24}", i) for i in ids)
+                        or not all(text_ok(o["md"], 1, 80, "") for o in opts)):
+                    continue
+                priv["opt_ids"] = ids
+            else:
+                continue
+            seen.add(sid_)
+            out.append(({"id": sid_, "label": st["label"], "kind": kind, "ask": st["ask"], "var": var if kind == "expr" else "",
+                         "opts": [{"id": o["id"], "md": o["md"]} for o in opts] if kind == "pick" else []}, priv))
+        except Exception:  # noqa: BLE001 - UNREADABLE and anything else: the step is dropped, the verdict untouched
+            continue
+    return out if len(out) >= 2 else []
+
+
+def _pl_key(sid, code, att):
+    return "stem:pl:" + hashlib.sha256(str(sid).encode()).hexdigest()[:16] + ":" + code + ":" + str(att)
+
+
+def pl_put(sid, code, att, keys):
+    """keep a ladder's private keys for PROOF_LADDER_TTL; raises on a KV failure"""
+    key, val, now = _pl_key(sid, code, att), json.dumps(keys), time.time()
+    if all(KV):
+        _kv("SET", key, val, "EX", PROOF_LADDER_TTL)
+        return
+    for k in [k for k, (exp, _) in _pl_mem.items() if exp <= now]:
+        _pl_mem.pop(k, None)
+    _pl_mem[key] = (now + PROOF_LADDER_TTL, val)
+
+
+def pl_get(sid, code, att):
+    """the kept keys {step id: {kind, ok, ...}} or None (missing, expired, KV down)"""
+    key = _pl_key(sid, code, att)
+    try:
+        if all(KV):
+            raw = _kv("GET", key)
+        else:
+            exp, raw = _pl_mem.get(key, (0, None))
+            raw = raw if exp > time.time() else None
+        got = json.loads(raw) if raw else None
+    except (OSError, ValueError):
+        return None
+    return got if isinstance(got, dict) else None
+
+
+def proof_step_check(p, sid, body):
+    """POST /repair/<code>/check {value, step, att} on a proof: (status, {ok}). 404 {error: expired} when the keys are gone or are not this
+    browser's; 400 invalid. Not a try. The reply is {ok} ONLY, at any try number; nothing but the code, step and verdict is logged."""
+    if not isinstance(body, dict) or "step" not in body and "att" not in body:    # the old {value, n} body: a proof serves no authored ladder
+        return 404, {"error": "no repair"}
+    value, step, att = (body.get(k) for k in ("value", "step", "att")) 
+    if (not isinstance(value, str) or not value.strip() or len(value) > 200 or not isinstance(step, str) or len(step) > 40
+            or type(att) is not int or not 0 <= att < 1000):
+        return 400, {"error": "invalid"}
+    st = (pl_get(sid, p["code"], att) or {}).get(step)
+    if not isinstance(st, dict):
+        return 404, {"error": "expired"}
+    try:
+        if st["kind"] == "pick":
+            ok = value.strip() == st["ok"]
+        elif st["kind"] == "expr":
+            u = {"type": "expr", "var": st["var"], "points": PROOF_LADDER_PTS}
+            ok = same(signature(u, value), signature(u, st["ok"]), 1e-6)
+        else:
+            ok = same(signature({"type": "num"}, value), signature({"type": "num"}, st["ok"]), tol_of({"type": "num"}))
+    except UNREADABLE:
+        return 400, {"error": "invalid"}
+    log(f"proof {p['code']} step={step} ok={ok}")
+    return 200, {"ok": ok}
+
+
 def proof_judge(p, text, key, out=None, on=stage_off):
     """the grader's rows {base, assume, prove, hint} for one proof; raises on any failure (the caller makes it busy)"""
     pk, tag = p["proof"], "student_" + secrets.token_hex(4)
@@ -4386,10 +4544,11 @@ def proof_judge(p, text, key, out=None, on=stage_off):
         left = t_end - time.time()
         if left <= 0.05:
             raise err or TimeoutError("proof budget spent")
-        payload = dict(_model_params(m, 300), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
+        lad = proof_ladder_on()
+        payload = dict(_model_params(m, 900 if lad else 300), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
                        provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
-                       response_format={"type": "json_schema", "json_schema": {"name": "proof", "strict": True, "schema": PROOF_SCHEMA}},
-                       messages=[{"role": "system", "content": system_for(CLUCK_PROOF, p)}, {"role": "user", "content": user}])
+                       response_format={"type": "json_schema", "json_schema": {"name": "proof", "strict": True, "schema": PROOF_LADDER_SCHEMA if lad else PROOF_SCHEMA}},
+                       messages=[{"role": "system", "content": system_for(CLUCK_PROOF + (CLUCK_PROOF_LADDER if lad else ""), p)}, {"role": "user", "content": user}])
         try:
             on("grade", "start")
             with _or_post(payload, key, min(PROOF_TIMEOUT, left)) as r:
@@ -4454,6 +4613,7 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
         return busy(why, incident("proof", "budget_cap" if why == "budget" else "upstream", provider="openrouter",
                                   err=type(e).__name__, ms=(time.time() - t0) * 1000, q=p["code"], status=getattr(e, "code", None)))
     rubric = {r: g[r] for r in PROOF_ROWS}
+    put = None
     on("record", "start")
     with _tries_lock:
         _load_tries()
@@ -4470,11 +4630,20 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
             gap = next(r for r in PROOF_ROWS if rubric[r] != "ok")
             hint, src = proof_hint(p, gap, g["hint"])
             res = {"verdict": "wrong", "triesLeft": max_tries(p) - len(st["wrong"]), "rubric": rubric, "gap": gap, "hint": hint}
+            lad = proof_ladder_ok(g.get("ladder"), p["proof"]) if proof_ladder_on() else []
+            put = (len(st["wrong"]), lad) if lad else None
             if res["triesLeft"] <= 0 and reveal:
                 res["correct"] = answer_of(p)
             log(f"proof {p['code']}: " + " ".join(f"{r}={v}" for r, v in rubric.items()) + f" hint={src}")   # rows and a source, no free text
         res["gen"] = st["gen"]
         _save_tries()
+    if put:                                                  # the keys go to KV outside the lock; a failed store = no ladder (the Cluck message stays)
+        att, lad = put
+        try:
+            pl_put(sid, p["code"], att, {s_["id"]: k_ for s_, k_ in lad})
+            res["repair"] = {"gen": True, "att": att, "steps": [s_ for s_, _ in lad]}
+        except Exception as e:  # noqa: BLE001
+            incident("proof_ladder_store", "kv", err=type(e).__name__, q=p["code"])
     on("record", "end")
     return res
 
