@@ -81,6 +81,18 @@
     {
       "source": "/mini",
       "destination": "/api/index?path=/mini"
+    },
+    {
+      "source": "/acct/new",
+      "destination": "/api/index?path=/acct/new"
+    },
+    {
+      "source": "/acct/login",
+      "destination": "/api/index?path=/acct/login"
+    },
+    {
+      "source": "/acct/keep",
+      "destination": "/api/index?path=/acct/keep"
     }
   ]
 }

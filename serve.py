@@ -4860,9 +4860,38 @@ def calc_route(method, cookie_header, body):
         return _json(503, {"error": "store"}, cookie)
 
 
+def acct_route(path, cookie_header, body):
+    """POST /acct/new -> {token} (minted for this device's sid); /acct/login {token} -> {ok} (sets the sid cookie to the account's sid);
+    /acct/keep {token} -> {ok} (Save makes it permanent). login.js sends JSON and needs only token / ok. 400: bad JSON or token;
+    404: unknown token; 503: the store is down. The account is a token over the sid cookie, exactly as calc_route uses it (acct.py)."""
+    import acct
+    sid, cookie = new_sid(cookie_header)
+    try:
+        if path == "/acct/new":
+            return _json(200, {"token": acct.mint(sid)}, cookie)
+        try:
+            b = json.loads(body) if 0 < len(body) <= 256 else None
+        except (ValueError, UnicodeDecodeError):
+            b = None
+        if not isinstance(b, dict) or not isinstance(b.get("token"), str):
+            return _json(400, {"error": "invalid"}, cookie)
+        if path == "/acct/login":
+            s = acct.login(b["token"])
+            if not s:
+                return _json(404, {"error": "not found"}, cookie)
+            return _json(200, {"ok": True}, f"sid={s}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly")
+        if not acct.keep(b["token"]):
+            return _json(404, {"error": "not found"}, cookie)
+        return _json(200, {"ok": True}, cookie)
+    except OSError:
+        return _json(503, {"error": "store"}, cookie)
+
+
 def _dispatch(method, path, cookie_header, body, ua):
     if path == "/calc" and method in ("GET", "POST"):
         return calc_route(method, cookie_header, body)
+    if method == "POST" and path in ("/acct/new", "/acct/login", "/acct/keep"):
+        return acct_route(path, cookie_header, body)
     if method == "POST" and path == "/log/incident":
         return log_incident(cookie_header, body, ua)
     if method == "POST" and path == "/mini":

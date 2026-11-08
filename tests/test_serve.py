@@ -843,6 +843,26 @@ class Http(unittest.TestCase):
         self.assertIsNone(r2.headers["Set-Cookie"])
         self.assertEqual(json.load(r2)["triesLeft"], 1)   # same wrong value again: a repeat
 
+    def test_acct_round_trip(self):
+        def post(path, body, cookie=None):
+            r = urllib.request.urlopen(urllib.request.Request(
+                self.base + path, data=json.dumps(body).encode(), method="POST",
+                headers={"Content-Type": "application/json", **({"Cookie": cookie} if cookie else {})}))
+            return r.headers.get("Set-Cookie"), json.load(r)
+        set_cookie, minted = post("acct/new", {})
+        sid, token = set_cookie.split(";")[0], minted["token"]
+        self.assertTrue(sid.startswith("sid="))
+        self.assertRegex(token, r"^[A-Za-z0-9_-]{22,64}$")
+        other = "sid=" + "ab" * 16
+        set_cookie, login = post("acct/login", {"token": token}, other)   # another device restores this Cluck
+        self.assertEqual(login, {"ok": True})
+        self.assertEqual(set_cookie.split(";")[0], sid, "login hands back the account's sid")
+        _, kept = post("acct/keep", {"token": token}, sid)
+        self.assertEqual(kept, {"ok": True})
+        with self.assertRaises(urllib.error.HTTPError) as e:
+            post("acct/login", {"token": "x" * 22}, other)
+        self.assertEqual(e.exception.code, 404)
+
     def test_check_redo_round_after_lockout(self):
         def post(body, cookie=None):
             r = urllib.request.urlopen(urllib.request.Request(
