@@ -118,9 +118,9 @@ function vmark(box, id) {
   if (!m) { m = document.createElement("span"); m.className = "vk"; m.setAttribute("aria-hidden", "true"); box.append(m); }
   m.dataset.v = id; m.innerHTML = icon(id);
 }
-/* the words the screen reader hears (the page shows only the icon) */
-const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries, fight it later."
-  : r.verdict === "wrong" ? "Not quite. One more try, I swear." : "";
+/* the words the screen reader hears (the page shows only the icon): srwords.js loads on its own, nothing paints with it */
+let verdictWords = () => "";
+import("./srwords.js").then(m => { verdictWords = m.verdictWords; });
 
 /* ================= markdown + TeX ================= */
 /* bug 7: a typed answer as TeX, numbers as typed. math.js toTex prints 222222 as 2.22222·10^{+5} (format upperExp 5);
