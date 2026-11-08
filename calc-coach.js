@@ -11,7 +11,7 @@
   'use strict';
   var d = g.document;
   var EXAM_END = Date.parse('2026-11-10T08:00:00Z');   // 2026-11-09T23:59 America/Los_Angeles is the last minute of the exam-day copy
-  var FLAGS = { hailMary: true };                         // the cram panel (calc/cram.json, per bank): off = its slot and promo line are hidden. Temporary content, reusable skeleton
+  var FLAGS = { hailMary: true };                         // the cram panel (calc/cram.json, per bank): off = its slot and promo line are hidden. Temporary content, reusable skeleton. The ONE cram flag lives in calc/cram.json (`enabled`); FLAGS.hailMary stays as the manual escape hatch
   var KEY_MODEL = 'stem-calc-model', KEY_STRIP = 'stem-calc-strip', KEY_TOAST = 'stem-calc-toast-';
   var COPY = {
     exam: { title: 'Stuck? Click here for TI/Casio tricks.',
@@ -241,7 +241,7 @@
   }
 
   /* ---- cram panel (the Hail Mary card; data per bank in calc/cram.json) ---- */
-  function cramFor(bank) { var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && FLAGS.hailMary && Date.now() < Date.parse(e.until) ? e : null; }
+  function cramFor(bank) { var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && CRAM.enabled !== false && FLAGS.hailMary && Date.now() < Date.parse(e.until) ? e : null; }
   function loadCram() { return CRAM ? Promise.resolve(CRAM) : g.fetch('calc/cram.json').then(function (r) { return r.json(); }).then(function (j) { CRAM = j; return j; }); }
   var ICON = { approx: ['M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0', 'M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0'], x: ['M6 6l12 12M18 6L6 18'], bars: ['M4 20v-5M8 20v-9M12 20v-4M16 20v-12M20 20v-7'], dot: [], chev: ['M6 9l6 6 6-6'] };
   function icon(name) {

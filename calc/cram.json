@@ -1,11 +1,12 @@
 {
  "v": 1,
- "note": "Cram skeleton: one entry per bank. A panel shows only while Date.now() < until and CalcCoach.FLAGS.hailMary is true. Generic study moves, no exam stems.",
+ "note": "Cram skeleton: one entry per bank. A panel shows only while enabled is not false, Date.now() < until and CalcCoach.FLAGS.hailMary is true. Generic study moves, no exam stems.",
  "banks": {
   "BANK_P3X": {
    "id": "hailmary",
    "title": "Stuck? Hail Mary",
    "until": "2026-11-10T08:00:00Z",
+   "enabled": true,
    "promo": "Stuck on one? Hail Mary: 4 moves for a smart guess.",
    "intro": "You lose nothing for a wrong bubble. Fill in every one.",
    "cards": [

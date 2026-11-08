@@ -21,6 +21,11 @@ const today = () => {
 // Each constant is read from its source file at test time (CANARY_ROOT overrides the repo root, for the scratch-copy proof).
 // A source holds either a UTC instant (-> Pacific date) or a Pacific wall-clock datetime (-> its date as is).
 const ROOT = process.env.CANARY_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// the one cram flag (calc/cram.json): off means no cram date can fire, so every source below is green on any calendar
+const CRAM_ENABLED = (() => {
+  try { return JSON.parse(readFileSync(path.join(ROOT, "calc/cram.json"), "utf8")).enabled !== false; }
+  catch (e) { throw new Error(`calc/cram.json: cannot read the cram flag (${e.message})`); }
+})();
 // the instant is an exclusive bound (Date.now() < X): the last valid moment is X-1ms
 const utcToPT = (iso) => {
   const t = Date.parse(iso);
@@ -49,7 +54,8 @@ function readExpiries() {
 }
 
 test("no code-held expiry date has passed in the real Pacific calendar", () => {
+  if (!CRAM_ENABLED) return;                        // flag off: green regardless of the dates
   const now = today();
   const late = readExpiries().filter(([, end]) => now > end);
-  assert.equal(late.length, 0, late.map(([where, end]) => `${where}: ${end} passed, renew or retire`).join("\n"));
+  assert.equal(late.length, 0, late.map(([where, end]) => `${where}: ${end} passed, renew the date or turn the flag off`).join("\n"));
 });

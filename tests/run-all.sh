@@ -88,6 +88,7 @@ weight() {
     calc) echo 18 ;;   # Calc Coach smoke (calc-coach.js), own server + fixture bank, 390 only
     calc-pick) echo 8 ;;   # the calculator model picker smoke (calc-pick.js), own server, 390 only; local ~6 s
     welcome-first) echo 8 ;;   # the once-per-user welcome redirect (welcome-first.js), own server; local ~5 s
+    cram-off) echo 8 ;;   # ticket 03: the one cram flag off hides every cram surface, own server + temp cram.json; local ~7 s
     lockhelp) echo 51 ;;   # local estimate: 50.2 s, STEM_TODAY=2026-10-23, own server (not CI-measured)
     geomarks) echo 12 ;;  # wgeo U1: + the ramp contact check on chromium/firefox/webkit at 1440 + 390; U3: + labels at 1440/390/360 (graph.js + Geometry); local run ~12.5 s (CI has chromium only: ~5 s)
     reveal-box) echo 12 ;;   # W114f: own server, 4 pages (390 + 1280, right + out), local run ~12 s
@@ -154,6 +155,7 @@ tags() {
     calc) echo "@layout @real-time" ;;   # Calc Coach in the app (own serve.py, fixture bank)
     calc-pick) echo "@logic @real-time" ;;   # the calculator model picker smoke, own server
     welcome-first) echo "@logic @real-time" ;;   # the welcome redirect, own server
+    cram-off) echo "@logic @real-time" ;;   # ticket 03: every cram surface off with one flag, own server + temp cram.json
     lockhelp) echo "@logic @real-time" ;;   # no page.clock: time is skewed via performance.now + sessionStorage __skew; real waits
     cluck-lost) echo "@layout @real-time" ;;   # the clean error line after a mid-reply failure
     tray-anchor) echo "@layout @real-time" ;;   # TRAY-ANCHOR: own serve.py + a stub OpenRouter, no real-time waits
