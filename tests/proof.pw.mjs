@@ -184,6 +184,34 @@ await step("phone touch: a tap on Check while the box has focus still sends the 
   assert.ok(before.t > 0 && before.b <= 844, "Check is on screen: " + JSON.stringify(before));
   await ctx.close();
 });
+/* PR2 (Nov 7): on a phone the proof column is clipped (html.mt grid, #work overflow visible): a ladder under the verdict pushed its last step and
+   Skip off screen and squashed #q. Proofs get no ladder from the server now, so the test mounts the num ladder layout by hand under #fb. */
+for (const [w, h] of [[390, 700], [360, 640]]) {
+  await step(`${w}x${h} phone: a ladder under a proof miss: #work scrolls, the last step + Skip are reachable, the proof box keeps 8rem`, async () => {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, serviceWorkers: "block" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+    const page = await ctx.newPage(); await page.goto(BASE + "/#" + CODE); await opened(page);
+    await prove(page, "NOBASE " + GOOD);
+    await page.evaluate(() => { const host = document.createElement("div"); host.id = "rpHost"; document.querySelector("#fb").after(host);
+      Repair.mount(host, { type: "num", repair: { steps: ["a", "b", "c", "d", "e"].map(id => ({ id, label: "Step " + id + " of the fix", kind: "num" })) } }, { variant: "repair", error: null }); });
+    await page.waitForSelector("#rpHost .rp-skip");
+    await page.$eval("#work", e => { e.scrollTop = e.scrollHeight; });
+    await page.waitForTimeout(100);
+    const hit = await page.evaluate(() => {
+      const vh = innerHeight, steps = [...document.querySelectorAll("#rpHost .rp-step")], out = {};
+      for (const [k, el] of [["last", steps.at(-1)], ["skip", document.querySelector("#rpHost .rp-skip")]]) {
+        const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, t = document.elementFromPoint(x, y);
+        out[k] = { top: r.top, bottom: r.bottom, inView: r.top >= 0 && r.bottom <= vh, hit: !!t && (el === t || el.contains(t)) };
+      }
+      out.qh = document.querySelector("#q").getBoundingClientRect().height; out.rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      return out;
+    });
+    assert.ok(hit.last.inView && hit.last.hit, "last step not reachable: " + JSON.stringify(hit.last));
+    assert.ok(hit.skip.inView && hit.skip.hit, "Skip not reachable: " + JSON.stringify(hit.skip));
+    assert.ok(hit.qh >= 8 * hit.rem - 1, "the proof box is squashed: " + hit.qh);
+    await ctx.close();
+  });
+}
 for (const mode of ["diet", "sugar"]) {
   await step(`${mode} 1024: the proof pane is right of the question, same sash between, no nested box`, async () => {
     const { ctx, page } = await open(mode, { width: 1024, height: 800 });

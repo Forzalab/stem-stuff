@@ -21,7 +21,7 @@ try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8879", BASE = `http://127.0.0.1:${PORT}`;
-const ONLY = (process.argv[3] || "1,2,3,4,5,6,7,8").split(",");
+const ONLY = (process.argv[3] || "1,2,3,4,5,6,7,8,9").split(",");
 const tmp = mkdtempSync(join(tmpdir(), "w3-")), banks = join(tmp, "banks");
 mkdirSync(banks);
 const doc = { purpose: "Work is force times distance.", sym: [{ s: "W", m: "work", u: "J" }], when: "A force moves something.", ex: "5 N over 2 m is 10 J." };
@@ -91,6 +91,15 @@ for (const [tag, vp] of VPS) {
     await page.waitForFunction(() => /Cluck lives in Ask Cluck/.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 3000 });
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-ob-cluck")), "1", "the flag is set once the note was placed");
     assert.deepEqual(page.errs, []);
+    await page.context().close();
+  });
+  if (ONLY.includes("9")) await step(`${tag} 9: "Skip for now" removes the repair box and puts the focus back in the answer box`, async () => {
+    const page = await open(vp, "CALC1_W3MC");
+    await pick(page, "c"); await page.waitForSelector("#rpHost .rp-skip", { timeout: 5000 });
+    await page.click("#rpHost .rp-skip");
+    await page.waitForTimeout(200);
+    assert.equal(await page.locator("#rpHost").count(), 0, "Skip left the repair box up");
+    assert.equal(await page.evaluate(() => !!document.activeElement?.closest("#q")), true, "the focus is not in the question box");
     await page.context().close();
   });
   if (ONLY.includes("2")) await step(`${tag} 2: a right main answer unmounts the repair box`, async () => {

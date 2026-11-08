@@ -857,8 +857,16 @@ function repairAfterMiss(r) {
     if (!rp || !rp.steps) { mine.rp = null; return; }
     const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
       credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
-    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade, on: (name, d) => { if (name === "repair_answer") repairPick(mine, d); } });
+    mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade, on: (name, d) => { if (name === "repair_answer") repairPick(mine, d); else if (name === "repair_skip") repairSkip(mine); } });
   });
+}
+
+/* "Skip for now" (repair.js repair_skip): the brown box goes and the focus goes back to the answer box; preventScroll keeps the page where it is */
+function repairSkip(mine) {
+  if (S !== mine) return;
+  rpUnmount();
+  const t = $("#q #ans") || $("#q textarea, #q input:not([disabled])") || $("#q .opt:not(.disabled):not([disabled])");
+  try { t?.focus({ preventScroll: true }); } catch { /* not focusable */ }
 }
 
 /* the ladder's "Final answer" chip, graded right (repair.js repair_answer): the main box takes the same option and checks it, so one tap is not two.
