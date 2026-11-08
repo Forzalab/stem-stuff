@@ -23,6 +23,9 @@ const DAY = 86400000;
 // the body of a bash function `name() { ... }` (up to the first line that is just "}")
 const fnBody = (src, name) => src.match(new RegExp(`^${name}\\(\\)\\s*\\{\\n([\\s\\S]*?)^\\}`, "m"))?.[1];
 
+// the own-server launch list in run(): `a|b|c) run "$name" env ... node "$f" "$(free_port)" ;;` (null when absent)
+const launchList = src => src.match(/^\s*([a-z0-9@-]+(?:\|[a-z0-9@-]+)*)\)\s*run "\$name" env\b.*node "\$f" "\$\(free_port\)"/m)?.[1]?.split("|");
+
 // parse run-all.sh: the tags() table ({name: [tags]}, duplicates listed) and the PART_ENV part names
 export function parseRunAll(src) {
   const parts = [...(src.match(/^declare -A PART_ENV=\(\n([\s\S]*?)^\)/m)?.[1] ?? "").matchAll(/^\s*\[([^\]]+)\]=/gm)].map(m => m[1]);
@@ -60,6 +63,11 @@ export function lint({ runAll, specs, today = ymd(new Date()) }) {
     if (units.includes(n)) continue;
     if (n in specs) errs.push(`${n}: has parts (${partsOf(n).join(" ")}): tag each part, not the whole spec`);
     else errs.push(`${n}: tags() line for a spec that does not exist (no tests/${n.split("@")[0]}.pw.mjs${n.includes("@") ? " part " + n : ""})`);
+  }
+  const launch = launchList(runAll);
+  if (launch) for (const n of launch) {
+    if (tags.has(n) || [...tags.keys()].some(t => t.startsWith(n + "@"))) continue;
+    errs.push(`${n}: in the run() launch list but has no tags() line (want ${n} or ${n}@<part>)`);
   }
   const t0 = Date.parse(today + "T00:00:00Z");
   for (const u of units) {

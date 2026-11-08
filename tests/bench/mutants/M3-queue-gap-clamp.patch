@@ -1,0 +1,13 @@
+diff --git a/shuffle.mjs b/shuffle.mjs
+index 3117c1b..f6293f0 100644
+--- a/shuffle.mjs
++++ b/shuffle.mjs
+@@ -126,7 +126,7 @@ export function qAnswer(st, code, right, { spam = false } = {}) {
+   if (spam && !right) { s.first = "spam"; s.spam = (s.spam || 0) + 1; return false; }   // a wrong guess in under 2 s (nav.js): logged, the showing counts as a skip; a fast RIGHT pick counts (a Redeem gets paid off)
+   s.first = right ? "right" : "wrong";
+   if (right) { s.right += 1; s.owe = false; s.gapIdx = 0; s.wait = FAR; }
+-  else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = Math.min(s.gapIdx + 1, GAPS.length - 1); }
++  else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = GAPS.length - 2; }
+   return true;
+ }
+ /* what a fresh queue with this salt plays when every showing is skipped (tests pin a salt, like they pinned the old seed) */
