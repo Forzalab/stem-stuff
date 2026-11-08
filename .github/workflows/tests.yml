@@ -9,6 +9,9 @@ on:
       mutant:
         description: "Fault to seed: applies tests/bench/mutants/<name>.patch from the run's branch (empty = none)"
         default: ""
+      manifest:
+        description: "Batch number when fired by tools/batch.sh on batch/<n> (empty = none)"
+        default: ""
 # a new push to a PR cancels the run still going for its old commit. main (and dispatch) queues every run in order:
 # the default queue keeps 1 pending run and a newer one replaces it, so 3 quick merges left the middle one untested.
 # queue: max + cancel-in-progress: true is a validation error, so both flip on the event.

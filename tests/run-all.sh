@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Every test, one command, one verdict. Exit 0 = all green, 1 = something failed (its log is printed).
 # usage: tests/run-all.sh [--quick] [--shard N/M | SHARD=N/M] [--list] [--plan B L]   (or SPECS="a b c" tests/run-all.sh)
-#   --quick      unittest + npm test only (~10 s, the pre-push set)
+#   --quick      unittest + npm test + the batch tooling smoke (~10 s, the pre-push set)
 #   SHARD=1/2    run one slice so the halves can run at the same time (locally, or as the CI matrix jobs). No SHARD = everything, as before.
 #                Shard 1 = unittest + npm + part of the .pw specs, shard 2 = the rest; the split is a fixed greedy deal by the rough
 #                per-spec seconds in weight() below (new specs count 5), so it is the same on every machine and the halves end together. Together they run exactly the unsharded set. Each run has its own TMP, port and server,
@@ -303,6 +303,7 @@ run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older script
 if [ "$base" -eq 1 ]; then
   run unittest python3 -m unittest discover -s tests -p 'test_*.py'
   run npm bash -c 'cd tests && npm test'
+  run batch bash tests/batch.test.sh
 fi
 if [ "${#specs[@]}" -gt 0 ]; then
   PORT="$(free_port)"
