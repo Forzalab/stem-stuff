@@ -1276,9 +1276,10 @@ def _grade(p, st, body, multi, idx, reveal=False):
         return reply({"verdict": "correct", "triesLeft": left(), "families": fams})   # J6 trap_beaten: the item's distractor families, sent only once it is right (no choice -> family map)
     tol = (p["parts"][idx] if multi else p).get("tol", 1e-6)
     repeat = any(same(sig, x, tol) for x in st["wrong"])
+    tries_left = left()
     if not repeat:
         st["wrong"].append(sig)
-    out = {"verdict": "wrong", "triesLeft": left(), "hint": (hit or {}).get("hint") or p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
+    out = {"verdict": "wrong", "triesLeft": tries_left, "hint": (hit or {}).get("hint") or p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
     if hit:
         out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide", "spot", "diag") if k in hit})
     if p["type"] in ("num", "multi") and expr_unit(p, p["parts"][idx] if multi else p) and left() > 0:

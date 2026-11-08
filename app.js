@@ -395,8 +395,9 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   if (correct) { st.done = true; return R({ verdict: "correct", triesLeft: left() }); }
   const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
   const repeat = st.wrong.some(w => same(sig, w, tol));
+  const triesLeft = left();
   if (!repeat) st.wrong.push(sig);
-  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "Time to consult the duck oracle.") };
+  const out = { verdict: "wrong", triesLeft, hint: hit && hit.hint ? hit.hint : (key.nudge || "Time to consult the duck oracle.") };
   if (hit && hit.error) out.error = hit.error;
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
