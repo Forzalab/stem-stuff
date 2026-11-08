@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Batch queue for the refactor train. Labels are the truth; tools/queue.json is a cache.
+# blame = changed-file name heuristic + tests/handmaps/*.tsv (format TBD by ticket 06) until handmaps land
 # usage: tools/batch.sh labels | sync | fire [--force] [--dry-run] | status <n> | land <n> | blame <n> <spec...>
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -10,13 +11,17 @@ die() { echo "batch: $*" >&2; exit 2; }
 need() { command -v "$1" >/dev/null 2>&1 || die "needs $1"; }
 cleanup() { [ -n "$WT" ] && git -C "$ROOT" worktree remove --force "$WT" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
+warn_fail() { echo "WARN batch: $*" >&2; exit 1; }
+gh_remove_label() { gh pr edit "$1" --remove-label "$2" >/dev/null || warn_fail "could not remove label $2 from PR #$1"; }
+gh_add_label() { gh pr edit "$1" --add-label "$2" >/dev/null || warn_fail "could not add label $2 to PR #$1"; }
+gh_comment() { gh pr comment "$1" --body "$2" >/dev/null || warn_fail "could not comment on PR #$1"; }
 
 fake_queue() {
-  local n="${BATCH_FAKE_COUNT:-3}" i ts
+  local n="${BATCH_FAKE_COUNT:-3}" i ts age="${BATCH_FAKE_AGE:-0}"
   local now; now="$(date +%s)"
   printf '['
   for ((i = 1; i <= n; i++)); do
-    ts=$((now - i * 60))
+    ts=$((now - age - (n - i + 1) * 60))
     printf '%s{"pr":%d,"sha":"fake%04d","done_at":"%s"}' \
       "$([ "$i" -gt 1 ] && echo ,)" "$((100 + i))" "$i" "$(date -u -d "@$ts" +%Y-%m-%dT%H:%M:%SZ)"
   done
@@ -29,6 +34,7 @@ load_queue() {
 ensure_labels() {
   gh label create building --force --color FBCA04 --description "Orc is building this PR" >/dev/null
   gh label create done --force --color 0E8A16 --description "Done; queued for a batch" >/dev/null
+  gh label create batched --force --color 1D76DB --description "Fired into a batch; wait for land" >/dev/null
 }
 
 cmd_labels() {
@@ -37,7 +43,13 @@ cmd_labels() {
 }
 
 cmd_sync() {
-  if [ -n "$FAKE" ]; then fake_queue >"$QUEUE"; echo "batch: wrote $QUEUE (fake)"; return; fi
+  if [ -n "$FAKE" ]; then
+    local tmp; tmp="$(mktemp)"
+    fake_queue >"$tmp"
+    echo "batch: wrote $tmp (fake)"
+    rm -f "$tmp"
+    return
+  fi
   need gh; need jq
   local pr sha at out='[]'
   while IFS=$'\t' read -r pr sha; do
@@ -47,8 +59,8 @@ cmd_sync() {
     [ -n "$at" ] || at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     out="$(jq --arg pr "$pr" --arg sha "$sha" --arg at "$at" \
       '. + [{pr: ($pr | tonumber), sha: $sha, done_at: $at}]' <<<"$out")"
-  done < <(gh pr list --state open --label done --limit 200 --json number,headRefOid \
-    --jq '.[] | [.number, .headRefOid] | @tsv')
+  done < <(gh pr list --state open --label done --limit 200 --json number,headRefOid,labels \
+    --jq '.[] | select([.labels[].name] | index("batched") | not) | [.number, .headRefOid] | @tsv')
   printf '%s\n' "$(jq 'sort_by(.done_at, .pr)' <<<"$out")" >"$QUEUE"
   echo "batch: $(jq length "$QUEUE") done PR(s) in $QUEUE"
 }
@@ -68,22 +80,31 @@ next_n() {
 drop_item() {
   local pr="$1" n="$2" why="$3"
   if [ -z "$FAKE" ]; then
-    gh pr edit "$pr" --remove-label done >/dev/null 2>&1 || true
-    gh pr edit "$pr" --add-label building >/dev/null 2>&1 || true
-    gh pr comment "$pr" --body "Batch $n: $why; back to building." >/dev/null 2>&1 || true
+    gh_remove_label "$pr" done
+    gh_remove_label "$pr" batched
+    gh_add_label "$pr" building
+    gh_comment "$pr" "Batch $n: $why; back to building."
   fi
   echo "batch $n: dropped PR #$pr ($why)"
 }
 
 cmd_fire() {
-  local force=0 dry=0 a q count oldest age now fire=0 take
+  local force=0 dry=0 a q count oldest age now fire=0 take parsed
   for a in "$@"; do
     case "$a" in --force) force=1 ;; --dry-run) dry=1 ;; *) die "fire: unknown $a" ;; esac
   done
-  q="$(load_queue)"; now="$(date +%s)"; count="$(jq 'length' <<<"$q")"; age=0
+  if [ -z "$FAKE" ]; then cmd_sync >/dev/null; fi
+  q="$(load_queue)"
+  q="$(jq 'sort_by(.done_at, .pr)' <<<"$q")"
+  now="$(date +%s)"; count="$(jq 'length' <<<"$q")"; age=0
   if [ "$count" -gt 0 ]; then
     oldest="$(jq -r 'map(.done_at) | min' <<<"$q")"
-    age=$((now - $(date -u -d "$oldest" +%s 2>/dev/null || echo 0)))
+    if parsed="$(date -u -d "$oldest" +%s 2>/dev/null)" && [[ "$parsed" =~ ^-?[0-9]+$ ]]; then
+      age=$((now - parsed)); [ "$age" -lt 0 ] && age=0
+    else
+      age=0
+      echo "WARN batch: bad done_at '$oldest'; not firing on age" >&2
+    fi
     [ "$age" -ge 18000 ] && fire=1
   fi
   [ "$count" -ge 4 ] && fire=1
@@ -126,6 +147,9 @@ cmd_fire() {
   git -C "$WT" commit -q -m "batch $n: manifest ($(jq length <<<"$manifest") item(s))"
   git -C "$WT" push -q origin "batch/$n"
   git -C "$ROOT" worktree remove --force "$WT"; WT=""
+  while IFS=$'\t' read -r pr sha; do
+    gh_add_label "$pr" batched
+  done < <(jq -r '.[] | [.pr, .sha] | @tsv' <<<"$manifest")
   gh workflow run tests.yml --ref "batch/$n" -f "manifest=$n"
   echo "batch $n: fired $(jq length <<<"$manifest") item(s)"
 }
@@ -162,19 +186,41 @@ cmd_land() {
   local n="${1:-}"; [ -n "$n" ] || die "land: need n"
   if [ -n "$FAKE" ]; then echo "batch $n: land needs a real repo"; return 2; fi
   need gh; need git
-  local state sealed id at co manifest pr sha
+  local state sealed id at co got manifest pr sha i base mer
   IFS=$'\t' read -r state sealed id at co < <(state_row "$n")
   if [ "$state" != green ]; then
     echo "batch $n: refusing to land (state $state; need a full green run on the sealed sha)" >&2
     return 1
   fi
   git fetch -q origin "refs/heads/batch/$n:refs/remotes/origin/batch/$n"
+  got="$(git rev-parse "origin/batch/$n")"
+  if [ "$got" != "$sealed" ]; then
+    echo "batch $n: refusing to land (origin/batch/$n is $got, sealed is $sealed)" >&2
+    return 1
+  fi
   manifest="$(git show "$sealed:batch/manifest.json")"
-  while IFS=$'\t' read -r pr sha; do
+  local -a prs=() shas=()
+  while IFS=$'\t' read -r pr sha; do prs+=("$pr"); shas+=("$sha"); done \
+    < <(jq -r '.[] | [.pr, .sha] | @tsv' <<<"$manifest")
+  for i in "${!prs[@]}"; do
+    IFS=$'\t' read -r base mer < <(gh pr view "${prs[$i]}" --json baseRefName,mergeable \
+      --jq '[.baseRefName, .mergeable] | @tsv')
+    if [ "$base" != main ]; then
+      echo "batch $n: refusing to land (PR #${prs[$i]} targets $base, not main)" >&2
+      return 1
+    fi
+    if [ "$mer" != MERGEABLE ]; then
+      echo "batch $n: refusing to land (PR #${prs[$i]} is not mergeable: $mer)" >&2
+      return 1
+    fi
+  done
+  for i in "${!prs[@]}"; do
+    pr="${prs[$i]}"; sha="${shas[$i]}"
     gh pr merge "$pr" --merge --match-head-commit "$sha" || { echo "land: PR #$pr failed" >&2; return 1; }
-    gh pr edit "$pr" --remove-label done >/dev/null 2>&1 || true
+    gh_remove_label "$pr" done
+    gh_remove_label "$pr" batched
     echo "landed PR #$pr"
-  done < <(jq -r '.[] | [.pr, .sha] | @tsv' <<<"$manifest")
+  done
 }
 
 declare -A HM
@@ -200,9 +246,6 @@ file_feeds() {
   esac
   bn="$(basename "$file")"
   grep -qF -- "$bn" "$ROOT/tests/$base.pw.mjs" 2>/dev/null && return 0
-  if grep -q -- '--affected' "$ROOT/tests/run-all.sh" 2>/dev/null; then
-    "$ROOT/tests/run-all.sh" --affected "$file" 2>/dev/null | grep -qxF "$spec" && return 0
-  fi
   return 1
 }
 manifest_rows() {
@@ -218,7 +261,7 @@ manifest_rows() {
 }
 
 cmd_blame() {
-  local n="${1:-}" manifest item pr files f s hit
+  local n="${1:-}" manifest item pr files f s hit sealed got
   [ -n "$n" ] || die "blame: need a batch number"
   shift || true
   [ "$#" -gt 0 ] || die "blame: need a spec"
@@ -229,6 +272,10 @@ cmd_blame() {
   else
     need gh; need git
     git fetch -q origin "refs/heads/batch/$n:refs/remotes/origin/batch/$n"
+    sealed="$(git ls-remote origin "refs/heads/batch/$n" | awk '{print $1}')"
+    [ -n "$sealed" ] || die "blame: no branch batch/$n"
+    got="$(git rev-parse "origin/batch/$n")"
+    [ "$sealed" = "$got" ] || die "blame: origin/batch/$n is $got, sealed is $sealed"
     manifest="$(git show "origin/batch/$n:batch/manifest.json")"
     load_handmap
   fi
@@ -245,9 +292,10 @@ cmd_blame() {
   if [ "${#cand[@]}" -eq 1 ]; then
     echo "blame: PR #${cand[0]} <- $*"
     if [ -z "$FAKE" ]; then
-      gh pr edit "${cand[0]}" --remove-label done >/dev/null 2>&1 || true
-      gh pr edit "${cand[0]}" --add-label building >/dev/null 2>&1 || true
-      gh pr comment "${cand[0]}" --body "Batch $n: blamed for $*; back to building." >/dev/null 2>&1 || true
+      gh_remove_label "${cand[0]}" done
+      gh_remove_label "${cand[0]}" batched
+      gh_add_label "${cand[0]}" building
+      gh_comment "${cand[0]}" "Batch $n: blamed for $*; back to building."
     fi
     return 0
   fi
