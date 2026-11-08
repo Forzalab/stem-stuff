@@ -28,10 +28,13 @@ let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const FLAG = "cram-welcome-2026-11";
+// Pin the page clock inside welcome-first.js's window (2026-11-05T08:00Z..2026-11-10T07:59:59Z): the real clock made this spec go red after the window ended.
+const PIN = new Date(process.env.WELCOME_PIN || "2026-11-07T12:00:00Z");
+const newCtx = async () => { const c = await browser.newContext({ serviceWorkers: "block" }); await c.clock.setFixedTime(PIN); return c; };
 const code = page => page.waitForFunction(() => document.querySelector("#pcode")?.textContent, null, { timeout: 8000 }).then(() => page.textContent("#pcode"));
 try {
   await step("a first visit on a deep link lands on the welcome item once; the flag is set; a later deep link works", async () => {
-    const ctx = await browser.newContext({ serviceWorkers: "block" });
+    const ctx = await newCtx();
     await ctx.addInitScript(() => { window.__welcomeFirst = true; try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-welcome-BANK_P3X", "1"); } catch { /* */ } });   // an established user: the old keys do not exempt
     const page = await ctx.newPage();
     await page.goto(BASE + "/#PHYS_PA1");
@@ -44,7 +47,7 @@ try {
     await ctx.close();
   });
   await step("the server flag follows the sid: cleared localStorage, same cookie, no second redirect", async () => {
-    const ctx = await browser.newContext({ serviceWorkers: "block" });
+    const ctx = await newCtx();
     await ctx.addInitScript(() => { window.__welcomeFirst = true; });
     const page = await ctx.newPage();
     await page.goto(BASE + "/#OTH_W01"); assert.equal(await code(page), "PHYS_PWQ1");
@@ -55,7 +58,7 @@ try {
     await ctx.close();
   });
   await step("automated browsers (webdriver) are never redirected", async () => {
-    const ctx = await browser.newContext({ serviceWorkers: "block" }), page = await ctx.newPage();
+    const ctx = await newCtx(), page = await ctx.newPage();
     await page.goto(BASE + "/#PHYS_PA1"); assert.equal(await code(page), "PHYS_PA1"); await ctx.close();
   });
 } finally { await browser.close(); srv.kill(); }
