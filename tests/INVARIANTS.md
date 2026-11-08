@@ -19,18 +19,18 @@ Check before DONE: node --test tests/handmaps.test.mjs
 I4 boot-files-all-layout [ONE, P]
 Rule: index.html and sw.js select ALL layout units (hand.tsv seed); every index.html asset selects >=1 .pw unit.
 Why: fx.js (loaded by index.html) once selected no layout unit.
-Test: tests/invariants.test.mjs "index.html asset -> affected (ALL)" + tests/handmaps/hand.tsv
-Check before DONE: node --test tests/invariants.test.mjs tests/handmaps.test.mjs
+Test: tests/invariants.slow.mjs "index.html asset -> affected (ALL)" + tests/handmaps/hand.tsv
+Check before DONE: node --test tests/invariants.slow.mjs tests/handmaps.test.mjs
 I5 sw-precache [ALL, E]
 Rule: every client .js/.mjs that index.html loads (script src, modulepreload) or those import, recursively, is in sw.js BASE.
 Why: offline start breaks for a file missing from BASE (login.js, mycluck.mjs misses).
-Test: tests/invariants.test.mjs "I5" (all files) + tests/rails/side-artifacts.mjs (new files vs a base)
-Check before DONE: node tests/rails/side-artifacts.mjs; node --test tests/invariants.test.mjs
+Test: tests/invariants.slow.mjs "I5" (all files) + tests/rails/side-artifacts.mjs (new files vs a base)
+Check before DONE: node tests/rails/side-artifacts.mjs; node --test tests/invariants.slow.mjs
 I6 run-all-flags [ALL, P]
 Rule: old run-all.sh flags keep their behavior: --list, --plan B L, SHARD=N/M (CI: tests.yml uses --plan and --quick).
 Why: a flag rewrite once broke callers and nothing went red. --quick, SPECS, --fast: shape not tested.
-Test: tests/invariants.test.mjs "I6" + tests/run-all.test.mjs (FAIL_RE, SIGTERM)
-Check before DONE: node --test tests/invariants.test.mjs tests/run-all.test.mjs
+Test: tests/invariants.slow.mjs "I6" + tests/run-all.test.mjs (FAIL_RE, SIGTERM)
+Check before DONE: node --test tests/invariants.slow.mjs tests/run-all.test.mjs
 I7 schedule-once [ALL, E]
 Rule: every .pw spec has a weight() line and is scheduled exactly once across the shards.
 Why: a spec with no weight line or a double deal silently skips or repeats in CI.
@@ -44,7 +44,7 @@ Check before DONE: node --test tests/lint-tags.test.mjs
 I9 route-url-agree [ONE, N]
 Rule: every path the client fetches is a route serve.py serves.
 Why: a python route and a JS URL are a hidden edge no tool shows.
-Test: none yet (tests/invariants.test.mjs is the place to add it)
+Test: none yet (tests/invariants.slow.mjs is the place to add it)
 Check before DONE: say "I9 not enforced" in the DONE note
 I10 mirrored-constants [ONE, E]
 Rule: mirrored constants/logic agree (serve.py PROOF_BUDGET = client 25 s; mode.mjs mirrors serve.py hidden()/view()).

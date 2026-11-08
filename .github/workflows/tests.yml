@@ -53,6 +53,7 @@ jobs:
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: cd tests && npm ci
       - run: tests/run-all.sh --quick
+      - run: node --test tests/invariants.slow.mjs   # ~50 s whole-repo invariant loops (tests/INVARIANTS.md); kept out of npm test so --fast/--quick stay fast
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: plan
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
