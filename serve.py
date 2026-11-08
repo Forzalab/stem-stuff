@@ -3531,6 +3531,7 @@ CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
 CRAM_BANK = "BANK_P3X"
 CRAM_REVEAL_TURN = 7                         # REVEAL: yes from this Cluck turn on a cram item (3 elsewhere)
 _cram_cache = {"sig": None, "data": {}}
+_cram_json_cache = {"sig": None, "data": {}}
 
 
 def cram_data():
@@ -3547,8 +3548,24 @@ def cram_data():
     return _cram_cache["data"]
 
 
+def cram_json():
+    """calc/cram.json parsed (re-read when it changes); {} on any problem. STEM_CRAM points at a test copy."""
+    path = os.environ.get("STEM_CRAM") or os.path.join(ROOT, "calc", "cram.json")
+    try:
+        sig = (path, os.stat(path).st_mtime_ns)
+        if _cram_json_cache["sig"] != sig:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            _cram_json_cache.update(sig=sig, data=d if isinstance(d, dict) else {})
+    except (OSError, ValueError):
+        _cram_json_cache.update(sig=None, data={})
+    return _cram_json_cache["data"]
+
+
 def cram_on(now=None):
     if os.environ.get("CRAM_INTEL", "1").strip().lower() in ("0", "off", "false", "no"):
+        return False
+    if cram_json().get("enabled", True) is False:            # the one cram flag (calc/cram.json): off = no cram surface
         return False
     now = now or datetime.datetime.now(PT)
     return now <= CRAM_UNTIL
@@ -4841,7 +4858,10 @@ def calc_route(method, cookie_header, body):
     sid, cookie = new_sid(cookie_header)
     try:
         if method == "GET":
-            return _json(200, {"model": acct.get_calc(sid), "welcomed": acct.get_welcomed(sid)}, cookie)
+            out = {"model": acct.get_calc(sid), "welcomed": acct.get_welcomed(sid)}
+            if cram_on():
+                out["cram"] = {"enabled": True, "until": CRAM_UNTIL.isoformat()}
+            return _json(200, out, cookie)
         try:
             b = json.loads(body) if 0 < len(body) <= 256 else None
         except (ValueError, UnicodeDecodeError):

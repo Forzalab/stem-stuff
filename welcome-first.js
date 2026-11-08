@@ -21,7 +21,8 @@
     var get = fetch("calc", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; });
     var cap = new Promise(function (r) { setTimeout(function () { r(null); }, 2500); });
     return Promise.race([get, cap]).catch(function () { return null; }).then(function (j) {
-      if (j && j.welcomed) { try { localStorage.setItem(FLAG, "1"); } catch (e) { /* */ } return false; }
+      if (!j || !j.cram) return false;                                   // /calc says the cram flag is off (or unknown): no redirect
+      if (j.welcomed) { try { localStorage.setItem(FLAG, "1"); } catch (e) { /* */ } return false; }
       mark();
       return true;
     });

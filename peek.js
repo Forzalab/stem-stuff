@@ -89,7 +89,14 @@
   /* TEMPORARY cram day (Tony Nov 6, Phys 2A Exam 3): in BANK_P3X, until CRAM_UNTIL (= serve.py CRAM_UNTIL, 2026-11-09 23:59 PST), the idle peek comes
      sooner (45 s, then 2 and 5 min more, max 3) and a toast tells the student what Cluck does today. Outside the bank or the window: nothing changes. */
   var CRAM_UNTIL = Date.parse("2026-11-10T07:59:00Z"), CRAM_IDLE = [45000, 120000, 300000], CRAM_BANK = "BANK_P3X";
-  var cramOn = function (now) { return (now == null ? Date.now() : now) <= CRAM_UNTIL && !!(window.stemBank && window.stemBank.code === CRAM_BANK); };
+  var CRAM_ENABLED = typeof window.fetch !== "function";                   // calc/cram.json's `enabled` (the one cram flag); no fetch (the vm tests) = old behavior
+  if (typeof window.fetch === "function") {                                // one-time read like calc-coach.js loadCram(): off until it resolves
+    CRAM_ENABLED = false;
+    try { window.fetch("calc/cram.json", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.enabled !== false) CRAM_ENABLED = true; }).catch(function () { /* stay off */ })
+      .then(function () { clearTimeout(t); arm(wait()); cramToast(); }); } catch (e) { /* stay off */ }
+  }
+  var cramOn = function (now) { return CRAM_ENABLED !== false && (now == null ? Date.now() : now) <= CRAM_UNTIL && !!(window.stemBank && window.stemBank.code === CRAM_BANK); };
   var idleList = function () { return cramOn() ? CRAM_IDLE : IDLE; };
   var last = performance.now(), n = 0, t = 0, mine = false, rest = null, mx = null, my = null;
   var wait = function () { return idleList()[n]; };

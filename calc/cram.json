@@ -1,6 +1,7 @@
 {
  "v": 1,
- "note": "Cram skeleton: one entry per bank. A panel shows only while Date.now() < until and CalcCoach.FLAGS.hailMary is true. Generic study moves, no exam stems.",
+ "enabled": true,
+ "note": "Cram skeleton: one entry per bank. The top-level enabled flag is the ONE cram switch: a cram surface shows only while enabled is not false and Date.now() < until. Generic study moves, no exam stems.",
  "banks": {
   "BANK_P3X": {
    "id": "hailmary",
