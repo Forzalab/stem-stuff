@@ -1,0 +1,13 @@
+diff --git a/app.js b/app.js
+index bd0ced0..97c4371 100644
+--- a/app.js
++++ b/app.js
+@@ -2951,7 +2951,7 @@ function clHist(land) {                                                     // i
+     if (e.classList.contains("cl-st")) segs.push({ st: e, items: [] }); else segs.at(-1)?.items.push(e);
+   }
+   segs.forEach(({ st, items }, i) => {
+-    const fold = st.dataset.v === "wrong" && i < segs.length - 1, open = !fold || !!st._open, lab = st.dataset.t;
++    const fold = st.dataset.v === "correct" && i < segs.length - 1, open = !fold || !!st._open, lab = st.dataset.t;
+     items.forEach(e => { e.hidden = !open; });
+     const b = document.createElement(fold ? "button" : "span"); b.className = "cl-st-b"; b.title = st.dataset.full; if (st.dataset.full !== lab) b.setAttribute("aria-label", st.dataset.full);
+     if (fold) {
