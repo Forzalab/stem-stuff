@@ -1182,14 +1182,17 @@
    "body": [
     {
      "type": "text",
-     "md": "Torrance's Navy crews reported the pilot's answer this percent of the time."
+     "md": "Torrance's Navy crews reported the pilot's answer how often? One or two words."
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "91%",
+   "answer": "nearly always",
    "accept": [
-    "91",
-    "91 percent"
+    "almost always",
+    "nearly all the time",
+    "almost all the time",
+    "91%",
+    "91"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1200,14 +1203,19 @@
    "body": [
     {
      "type": "text",
-     "md": "Torrance's Navy crews reported the gunner's answer this percent of the time."
+     "md": "Torrance's Navy crews reported the gunner's answer a bit over what fraction of the time?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "61%",
+   "answer": "half",
    "accept": [
-    "61",
-    "61 percent"
+    "a half",
+    "one-half",
+    "1/2",
+    "50%",
+    "about half",
+    "61%",
+    "63%"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1395,18 +1403,16 @@
    "body": [
     {
      "type": "text",
-     "md": "Psychiatrists predicted about this share would go all the way: 1/10 of what?"
+     "md": "Psychiatrists predicted that fewer than this percent would go all the way."
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "1/10 of 1%",
+   "answer": "1",
    "accept": [
-    "0.1%",
-    "1/10 of 1 percent",
-    "one tenth of one percent",
-    "0.1 percent",
-    "one-tenth of 1%",
-    "1/10 of one percent"
+    "one",
+    "1%",
+    "1 percent",
+    "one percent"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1434,14 +1440,19 @@
    "body": [
     {
      "type": "text",
-     "md": "Remote-feedback condition: this percent obeyed."
+     "md": "Remote-feedback condition: obedience was about this fraction."
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "65%",
+   "answer": "two-thirds",
    "accept": [
+    "2/3",
+    "two thirds",
+    "about two-thirds",
+    "65%",
+    "66%",
     "65",
-    "65 percent"
+    "66"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1452,14 +1463,15 @@
    "body": [
     {
      "type": "text",
-     "md": "The Bridgeport variation had this obedience rate."
+     "md": "The Bridgeport variation had obedience that was higher or lower than the original?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "47.5%",
+   "answer": "lower",
    "accept": [
-    "47.5",
-    "47.5 percent"
+    "less",
+    "reduced",
+    "smaller"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1470,14 +1482,17 @@
    "body": [
     {
      "type": "text",
-     "md": "Experiment 15, where the participant did not press the switches: this obedience rate."
+     "md": "Experiment 15, where the participant did not press the switches: obedience was nearly all or about half?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "90%",
+   "answer": "nearly all",
    "accept": [
+    "almost all",
+    "most",
+    "90%",
     "90",
-    "90 percent"
+    "about 90%"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1556,14 +1571,18 @@
    "body": [
     {
      "type": "text",
-     "md": "Burger (2009): this percent were willing to continue past that point."
+     "md": "Burger (2009): most or few were willing to continue past that point?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "70%",
+   "answer": "most",
    "accept": [
+    "a majority",
+    "majority",
+    "70%",
     "70",
-    "70 percent"
+    "70 percent",
+    "seven in ten"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -1574,14 +1593,17 @@
    "body": [
     {
      "type": "text",
-     "md": "Milgram's rate past 150 volts, as shown on the slide, compared with Burger's 70%."
+     "md": "Milgram's rate past 150 volts, as shown on the slide, compared with Burger's 70%: how did they compare?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "82.5%",
+   "answer": "about the same",
    "accept": [
-    "82.5",
-    "82.5 percent"
+    "similar",
+    "not significantly different",
+    "slightly higher",
+    "a bit higher",
+    "higher"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -2767,16 +2789,16 @@
    "body": [
     {
      "type": "text",
-     "md": "Conformity pressure grows with group size only up to a point. On the slides it plateaus beyond this many others."
+     "md": "Conformity pressure grows with group size only up to a point. After that point the curve does what?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "4 to 5",
+   "answer": "plateaus",
    "accept": [
-    "4-5",
-    "four to five",
-    "5",
-    "4 or 5"
+    "levels off",
+    "flattens",
+    "stops rising",
+    "levels out"
    ],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
@@ -2876,7 +2898,7 @@
    "body": [
     {
      "type": "text",
-     "md": "Ana reads a pill ad closely. It is about her own health, and she checks the facts. Which route is she using?"
+     "md": "Ana is picking a pill. She compares the claims in two ads and checks each fact. Which route is she using?"
     }
    ],
    "choices": [
@@ -2886,18 +2908,18 @@
     },
     {
      "id": "b",
-     "md": "the central route"
+     "md": "the hostile media phenomenon"
     },
     {
      "id": "c",
-     "md": "subliminal priming"
+     "md": "mere exposure"
     },
     {
      "id": "d",
-     "md": "the sleeper effect"
+     "md": "the central route"
     }
    ],
-   "correct": "b",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -2905,12 +2927,12 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -2929,25 +2951,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "central route: the ad had strong arguments"
-    },
-    {
-     "id": "b",
      "md": "peripheral route: he used a fame cue"
     },
     {
+     "id": "b",
+     "md": "normative influence: he feared being left out"
+    },
+    {
      "id": "c",
-     "md": "central route: the star made him study the facts"
+     "md": "central route: the ad had strong arguments"
     },
     {
      "id": "d",
-     "md": "reactance: he felt his freedom was cut"
+     "md": "the sleeper effect: he forgot the source"
     }
    ],
-   "correct": "b",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -2970,25 +2992,25 @@
    "body": [
     {
      "type": "text",
-     "md": "Under the ELM, which students should care MOST about argument quality in a message on a new exam rule?"
+     "md": "A school plans a new exam rule. Whose opinion will depend MOST on how strong the arguments are?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "those told the exam starts next year"
+     "md": "students told the rule starts next year"
     },
     {
      "id": "b",
-     "md": "those who hear a high school student"
+     "md": "students who hear it from a famous expert"
     },
     {
      "id": "c",
-     "md": "those told it starts in ten years"
+     "md": "students told the rule starts in ten years"
     },
     {
      "id": "d",
-     "md": "those who are not paying attention"
+     "md": "students who are not paying attention"
     }
    ],
    "correct": "a",
@@ -3023,22 +3045,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "a Missouri senator"
+     "md": "a newspaper called Pravda"
     },
     {
      "id": "b",
-     "md": "a high school student"
+     "md": "a Princeton professor"
     },
     {
      "id": "c",
-     "md": "a Princeton professor"
+     "md": "a high school student"
     },
     {
      "id": "d",
      "md": "a physicist named Oppenheimer"
     }
    ],
-   "correct": "c",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -3046,7 +3068,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3064,13 +3086,13 @@
    "body": [
     {
      "type": "text",
-     "md": "A TV ad flashes the word thirst for a blink. What is the best-supported effect?"
+     "md": "A film flashes the word thirst too fast to notice. Which result is best supported?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "it has no effect on any attitude"
+     "md": "it changes behavior as much as a clear ad does"
     },
     {
      "id": "b",
@@ -3078,11 +3100,11 @@
     },
     {
      "id": "c",
-     "md": "it forces people to change their vote"
+     "md": "it reliably changes strong, firm attitudes"
     },
     {
      "id": "d",
-     "md": "it makes people buy things they oppose"
+     "md": "it has no effect on any attitude"
     }
    ],
    "correct": "b",
@@ -3117,7 +3139,7 @@
    "choices": [
     {
      "id": "a",
-     "md": "the hostile media phenomenon"
+     "md": "mere exposure"
     },
     {
      "id": "b",
@@ -3125,14 +3147,14 @@
     },
     {
      "id": "c",
-     "md": "the Oz effect"
+     "md": "the halo effect"
     },
     {
      "id": "d",
-     "md": "the identifiable victim effect"
+     "md": "the Oz effect"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -3145,7 +3167,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -3158,28 +3180,28 @@
    "body": [
     {
      "type": "text",
-     "md": "Holland & Weiss gave students the same essay. Some thought it came from Oppenheimer, others from Pravda. Who was more persuaded right away?"
+     "md": "Two groups read the same essay. One is told a famed physicist wrote it. The other is told a Soviet paper did. Right away, who agrees more?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "neither group changed"
+     "md": "neither group, since one essay rarely moves anyone"
     },
     {
      "id": "b",
-     "md": "those told Pravda wrote it"
+     "md": "those told the physicist wrote it"
     },
     {
      "id": "c",
-     "md": "those told Oppenheimer wrote it"
+     "md": "those told the Soviet paper wrote it"
     },
     {
      "id": "d",
-     "md": "both groups equally"
+     "md": "both equally, since the essay was the same"
     }
    ],
-   "correct": "c",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -3187,7 +3209,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3215,62 +3237,15 @@
     },
     {
      "id": "b",
+     "md": "the message became more vivid"
+    },
+    {
+     "id": "c",
+     "md": "mere exposure made the blogger likable"
+    },
+    {
+     "id": "d",
      "md": "he links the message less to its source"
-    },
-    {
-     "id": "c",
-     "md": "he felt more fear"
-    },
-    {
-     "id": "d",
-     "md": "the message got more vivid"
-    }
-   ],
-   "correct": "b",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "d",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
-   "code": "PSY_8HD",
-   "title": "Ch7 MC 9",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "Two weeks after an essay, which source shows persuasion that grows with time?"
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "a high-credibility source"
-    },
-    {
-     "id": "b",
-     "md": "an expert who is certain"
-    },
-    {
-     "id": "c",
-     "md": "an attractive source"
-    },
-    {
-     "id": "d",
-     "md": "a low-credibility source"
     }
    ],
    "correct": "d",
@@ -3293,31 +3268,31 @@
    ]
   },
   {
-   "code": "PSY_8HE",
-   "title": "Ch7 MC 10",
+   "code": "PSY_8HD",
+   "title": "Ch7 MC 9",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "A careless reader sees two reviews. One says best meal ever. One says maybe the best. Which is more persuasive?"
+     "md": "Two weeks after an essay, which source shows persuasion that grows with time?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "the sure one, because people use confidence as a cue"
+     "md": "a low-credibility source"
     },
     {
      "id": "b",
-     "md": "the unsure one, because it seems more honest"
+     "md": "a high-credibility source"
     },
     {
      "id": "c",
-     "md": "neither, because reviews never persuade"
+     "md": "a source the reader finds attractive"
     },
     {
      "id": "d",
-     "md": "both the same, because the facts match"
+     "md": "a source who sounded very confident"
     }
    ],
    "correct": "a",
@@ -3329,6 +3304,53 @@
     },
     {
      "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_8HE",
+   "title": "Ch7 MC 10",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A rushed reader skims two reviews. One says best meal ever. One says maybe the best. Which is more persuasive?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the unsure one, because it seems more honest"
+    },
+    {
+     "id": "b",
+     "md": "the unsure one, because hedging sounds expert"
+    },
+    {
+     "id": "c",
+     "md": "the sure one, because people use confidence as a cue"
+    },
+    {
+     "id": "d",
+     "md": "both the same, because the facts match"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3352,22 +3374,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "see the seller as more attractive"
+     "md": "trust the seller more, as a hurried buyer would"
     },
     {
      "id": "b",
-     "md": "feel more fear"
+     "md": "feel a duty to repay the seller"
     },
     {
      "id": "c",
-     "md": "grow skeptical, and trust drops"
+     "md": "follow the crowd"
     },
     {
      "id": "d",
-     "md": "trust the seller more"
+     "md": "grow skeptical, and trust drops"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -3380,7 +3402,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -3399,113 +3421,19 @@
    "choices": [
     {
      "id": "a",
-     "md": "the mere exposure effect"
-    },
-    {
-     "id": "b",
-     "md": "agenda control"
-    },
-    {
-     "id": "c",
-     "md": "the sleeper effect"
-    },
-    {
-     "id": "d",
      "md": "the identifiable victim effect"
-    }
-   ],
-   "correct": "d",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "b",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
-   "code": "PSY_8HH",
-   "title": "Ch7 MC 13",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "A health ad shows scary lung damage but gives no way to quit. Why might it fail?"
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "the images were not vivid enough"
     },
     {
      "id": "b",
-     "md": "fear never gets attention"
+     "md": "the halo effect"
     },
     {
      "id": "c",
-     "md": "people trust scary sources less"
+     "md": "the Oz effect"
     },
     {
      "id": "d",
-     "md": "without things to do, people may avoid or deny the message"
-    }
-   ],
-   "correct": "d",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "b",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
-   "code": "PSY_8HJ",
-   "title": "Ch7 MC 14",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "Sam is in a great mood. Per the slides, he is MORE likely to..."
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "rely on peripheral cues like catchy slogans"
-    },
-    {
-     "id": "b",
-     "md": "reject all weak arguments"
-    },
-    {
-     "id": "c",
-     "md": "process only by the central route"
-    },
-    {
-     "id": "d",
-     "md": "scrutinize every argument"
+     "md": "the mere exposure effect"
     }
    ],
    "correct": "a",
@@ -3528,6 +3456,100 @@
    ]
   },
   {
+   "code": "PSY_8HH",
+   "title": "Ch7 MC 13",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A health ad shows scary lung damage but gives no way to quit. Why might it fail?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "fear appeals only work when people are in a good mood"
+    },
+    {
+     "id": "b",
+     "md": "the images made the source seem less credible"
+    },
+    {
+     "id": "c",
+     "md": "without things to do, people may avoid or deny the message"
+    },
+    {
+     "id": "d",
+     "md": "scary ads trigger reactance in everyone"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_8HJ",
+   "title": "Ch7 MC 14",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Sam is in a great mood while a weak ad plays. Per the slides, he is MORE likely to..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "use the central route, since good moods boost effort"
+    },
+    {
+     "id": "b",
+     "md": "reject the ad, because he feels reactance"
+    },
+    {
+     "id": "c",
+     "md": "catch the flaws, because he is relaxed"
+    },
+    {
+     "id": "d",
+     "md": "rely on peripheral cues like catchy slogans"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
    "code": "PSY_8HK",
    "title": "Ch7 MC 15",
    "type": "mc",
@@ -3540,25 +3562,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "a person who is half asleep"
-    },
-    {
-     "id": "b",
      "md": "a person in a negative mood"
     },
     {
+     "id": "b",
+     "md": "a person who likes the speaker"
+    },
+    {
      "id": "c",
-     "md": "a person in a good mood"
+     "md": "a person in a hurry"
     },
     {
      "id": "d",
-     "md": "a person who likes the speaker"
+     "md": "a person in a good mood"
     }
    ],
-   "correct": "b",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3581,13 +3603,13 @@
    "body": [
     {
      "type": "text",
-     "md": "Lee loves puzzles and deep thought. Which appeal should work best on Lee?"
+     "md": "Lee enjoys working through hard problems. Which appeal should work best on Lee?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "a confident tone"
+     "md": "a famous face"
     },
     {
      "id": "b",
@@ -3595,7 +3617,7 @@
     },
     {
      "id": "c",
-     "md": "a famous face"
+     "md": "a confident tone"
     },
     {
      "id": "d",
@@ -3634,25 +3656,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "young people are more open, and older adults hold firmer attitudes"
+     "md": "age matters only for people on the central route"
     },
     {
      "id": "b",
-     "md": "early life does not shape later attitudes"
+     "md": "young people are more open, and older adults hold firmer attitudes"
     },
     {
      "id": "c",
-     "md": "older adults change attitudes more easily"
+     "md": "older adults are more open because they have more life experience"
     },
     {
      "id": "d",
-     "md": "age has no link to persuasion"
+     "md": "teens and older adults are equally open to change"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3685,18 +3707,18 @@
     },
     {
      "id": "b",
-     "md": "agenda control"
+     "md": "reactance"
     },
     {
      "id": "c",
-     "md": "partisan identity over policy"
+     "md": "agenda control"
     },
     {
      "id": "d",
-     "md": "the sleeper effect"
+     "md": "partisan identity over policy"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -3709,7 +3731,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -3722,28 +3744,28 @@
    "body": [
     {
      "type": "text",
-     "md": "Iyengar & Kinder showed newscasts on inflation 0, 3, or 6 times. After 6 viewings, about what share named inflation the top problem?"
+     "md": "After six newscasts stressing inflation, how many viewers named inflation the top problem?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "15%"
+     "md": "about one in four, a small rise"
     },
     {
      "id": "b",
-     "md": "60%"
+     "md": "nearly everyone"
     },
     {
      "id": "c",
-     "md": "65%"
+     "md": "most viewers, far more than before the newscasts"
     },
     {
      "id": "d",
-     "md": "35%"
+     "md": "a few viewers, about the same as before"
     }
    ],
-   "correct": "b",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -3751,7 +3773,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3779,7 +3801,7 @@
     },
     {
      "id": "b",
-     "md": "a subliminal effect"
+     "md": "the identifiable victim effect"
     },
     {
      "id": "c",
@@ -3787,7 +3809,7 @@
     },
     {
      "id": "d",
-     "md": "the sleeper effect"
+     "md": "mere exposure"
     }
    ],
    "correct": "c",
@@ -3830,11 +3852,11 @@
     },
     {
      "id": "c",
-     "md": "the Oz effect"
+     "md": "the sleeper effect"
     },
     {
      "id": "d",
-     "md": "the identifiable victim effect"
+     "md": "partisan identity over policy"
     }
    ],
    "correct": "a",
@@ -3869,25 +3891,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "they attend selectively to what fits their attitude"
+     "md": "they gave the report too little air time"
     },
     {
      "id": "b",
-     "md": "they saw the report as too vivid"
+     "md": "they attend selectively to what fits their attitude"
     },
     {
      "id": "c",
-     "md": "they were swayed by a sleeper effect"
+     "md": "they were low in need for cognition"
     },
     {
      "id": "d",
-     "md": "they were low in need for cognition"
+     "md": "they were swayed by a sleeper effect"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -3916,22 +3938,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "more swayed by peripheral cues"
+     "md": "just as persuadable as novices"
     },
     {
      "id": "b",
-     "md": "easier to persuade"
+     "md": "more swayed by peripheral cues"
     },
     {
      "id": "c",
-     "md": "unaffected by arguments"
+     "md": "more resistant to persuasion"
     },
     {
      "id": "d",
-     "md": "more resistant to persuasion"
+     "md": "easier to persuade"
     }
    ],
-   "correct": "d",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -3944,7 +3966,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -3963,22 +3985,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "neither: it was subliminal"
-    },
-    {
-     "id": "b",
      "md": "central: personal relevance"
     },
     {
-     "id": "c",
+     "id": "b",
      "md": "central: strong logic"
     },
     {
-     "id": "d",
+     "id": "c",
      "md": "peripheral: fame as a cue"
+    },
+    {
+     "id": "d",
+     "md": "central: fear of fines"
     }
    ],
-   "correct": "d",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -3991,7 +4013,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4014,11 +4036,11 @@
     },
     {
      "id": "b",
-     "md": "conformity"
+     "md": "compliance"
     },
     {
      "id": "c",
-     "md": "compliance"
+     "md": "conformity"
     },
     {
      "id": "d",
@@ -4051,28 +4073,28 @@
    "body": [
     {
      "type": "text",
-     "md": "If a friend of your friend is happy, you are about how much more likely to be happy (Christakis & Fowler)?"
+     "md": "A friend of your friend is happy (Christakis & Fowler). Compared with a happy direct friend, your own odds of being happy are..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "15%"
+     "md": "raised by the same amount"
     },
     {
      "id": "b",
-     "md": "6%"
+     "md": "not raised at all"
     },
     {
      "id": "c",
-     "md": "25%"
+     "md": "raised, but by less"
     },
     {
      "id": "d",
-     "md": "10%"
+     "md": "raised even more, since the network spreads it"
     }
    ],
-   "correct": "d",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -4085,7 +4107,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4104,30 +4126,30 @@
    "choices": [
     {
      "id": "a",
-     "md": "mimicry builds rapport"
+     "md": "the halo effect"
     },
     {
      "id": "b",
-     "md": "informational influence"
+     "md": "the norm of reciprocity"
     },
     {
      "id": "c",
-     "md": "foot-in-the-door"
+     "md": "mimicry builds rapport"
     },
     {
      "id": "d",
-     "md": "the norm of reciprocity"
+     "md": "informational influence"
     }
    ],
-   "correct": "a",
+   "correct": "c",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -4151,15 +4173,15 @@
    "choices": [
     {
      "id": "a",
-     "md": "matched the true movement"
+     "md": "grew wildly different as people defended their own view"
     },
     {
      "id": "b",
-     "md": "grew further apart"
+     "md": "fell back to each person's alone guess"
     },
     {
      "id": "c",
-     "md": "stayed the same as alone"
+     "md": "matched the dot's actual movement"
     },
     {
      "id": "d",
@@ -4192,7 +4214,7 @@
    "body": [
     {
      "type": "text",
-     "md": "At a fancy dinner you copy others to pick a fork. Which kind of influence is this?"
+     "md": "At a fancy dinner you do not know which fork to use, so you copy others. Which kind of influence is this?"
     }
    ],
    "choices": [
@@ -4202,15 +4224,62 @@
     },
     {
      "id": "b",
-     "md": "normative"
+     "md": "informational"
     },
     {
      "id": "c",
-     "md": "reactance"
+     "md": "normative"
     },
     {
      "id": "d",
-     "md": "informational"
+     "md": "compliance"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_8JA",
+   "title": "Ch8 MC 30",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Asch's people said they knew the group was wrong but did not want to stand out. This shows..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "internalization"
+    },
+    {
+     "id": "b",
+     "md": "informational influence"
+    },
+    {
+     "id": "c",
+     "md": "obedience"
+    },
+    {
+     "id": "d",
+     "md": "normative influence"
     }
    ],
    "correct": "d",
@@ -4233,125 +4302,31 @@
    ]
   },
   {
-   "code": "PSY_8JA",
-   "title": "Ch8 MC 30",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "Asch's people said they knew the group was wrong but did not want to stand out. This shows..."
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "obedience"
-    },
-    {
-     "id": "b",
-     "md": "normative influence"
-    },
-    {
-     "id": "c",
-     "md": "internalization"
-    },
-    {
-     "id": "d",
-     "md": "informational influence"
-    }
-   ],
-   "correct": "b",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "d",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
    "code": "PSY_8JB",
    "title": "Ch8 MC 31",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "On the slides, conformity pressure stops growing once the group goes beyond about..."
+     "md": "As an Asch-type group gets bigger, conformity..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "14 people"
+     "md": "needs a crowd of a dozen or more to start"
     },
     {
      "id": "b",
-     "md": "4 to 5 people"
+     "md": "peaks in a mid-size group, then falls"
     },
     {
      "id": "c",
-     "md": "7 to 8 people"
+     "md": "levels off once the group is fairly small"
     },
     {
      "id": "d",
-     "md": "1 to 2 people"
-    }
-   ],
-   "correct": "b",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "d",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
-   "code": "PSY_8JC",
-   "title": "Ch8 MC 32",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "One person in Asch's group gives a different answer, even a wrong one. Conformity..."
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "reverses"
-    },
-    {
-     "id": "b",
-     "md": "rises"
-    },
-    {
-     "id": "c",
-     "md": "drops"
-    },
-    {
-     "id": "d",
-     "md": "stays the same"
+     "md": "keeps rising with every added person"
     }
    ],
    "correct": "c",
@@ -4374,31 +4349,31 @@
    ]
   },
   {
-   "code": "PSY_8JD",
-   "title": "Ch8 MC 33",
+   "code": "PSY_8JC",
+   "title": "Ch8 MC 32",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "Torrance's Navy crews: the gunner had the right answer. On the slides, how often did the crew report it?"
+     "md": "In Asch's study, one confederate breaks from the group, even with a different wrong answer. Conformity..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "91%"
+     "md": "rises, since the odd answer adds doubt"
     },
     {
      "id": "b",
-     "md": "61%"
+     "md": "drops"
     },
     {
      "id": "c",
-     "md": "80%"
+     "md": "drops only if the ally is right"
     },
     {
      "id": "d",
-     "md": "33%"
+     "md": "stays the same, since the group is still the majority"
     }
    ],
    "correct": "b",
@@ -4421,6 +4396,53 @@
    ]
   },
   {
+   "code": "PSY_8JD",
+   "title": "Ch8 MC 33",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Torrance's Navy crews: the gunner had the right answer. How often did the crew report it?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "nearly every time, like the pilot's answer"
+    },
+    {
+     "id": "b",
+     "md": "about a third of the time"
+    },
+    {
+     "id": "c",
+     "md": "almost never"
+    },
+    {
+     "id": "d",
+     "md": "a bit over half the time, far less than a pilot's answer"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
    "code": "PSY_8JE",
    "title": "Ch8 MC 34",
    "type": "mc",
@@ -4433,25 +4455,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "United States, UK, Canada"
-    },
-    {
-     "id": "b",
      "md": "Hong Kong, Mexico, Fiji"
     },
     {
+     "id": "b",
+     "md": "United States, UK, Canada"
+    },
+    {
      "id": "c",
-     "md": "Brazil, Greece, Israel"
+     "md": "Germany, Japan, Austria"
     },
     {
      "id": "d",
-     "md": "Germany, Japan, Austria"
+     "md": "Brazil, Greece, Israel"
     }
    ],
-   "correct": "b",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -4474,13 +4496,13 @@
    "body": [
     {
      "type": "text",
-     "md": "A country has strong rules and little patience for odd behavior. It is..."
+     "md": "In Country X, breaking a small rule brings harsh looks and punishment. Its culture is..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "pluralistic"
+     "md": "reactant"
     },
     {
      "id": "b",
@@ -4488,14 +4510,14 @@
     },
     {
      "id": "c",
-     "md": "tight"
+     "md": "pluralistic"
     },
     {
      "id": "d",
-     "md": "independent"
+     "md": "tight"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -4508,7 +4530,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4521,25 +4543,25 @@
    "body": [
     {
      "type": "text",
-     "md": "Homeowners agreed to a small window sign. Two weeks later, about how many agreed to a huge yard sign (Freedman & Fraser)?"
+     "md": "Homeowners agreed to a small window sign. Two weeks later, how many agreed to a huge yard sign (Freedman & Fraser)?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "17%"
+     "md": "about the same as people asked cold"
     },
     {
      "id": "b",
-     "md": "76%"
+     "md": "most, far more than people asked cold"
     },
     {
      "id": "c",
-     "md": "50%"
+     "md": "about half, a small rise"
     },
     {
      "id": "d",
-     "md": "100%"
+     "md": "nearly all"
     }
    ],
    "correct": "b",
@@ -4568,28 +4590,28 @@
    "body": [
     {
      "type": "text",
-     "md": "Agreeing to a small request raises later yes to a big one. Which BEST explains this?"
+     "md": "A woman signs a small petition for clean parks. Days later she agrees to a bigger request. Which BEST explains this?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "the asker conceded to a smaller ask"
-    },
-    {
-     "id": "b",
      "md": "they think others agreed"
     },
     {
+     "id": "b",
+     "md": "they owe the asker a favor"
+    },
+    {
      "id": "c",
-     "md": "they want to act consistently with their first yes"
+     "md": "the asker conceded to a smaller ask"
     },
     {
      "id": "d",
-     "md": "they owe the asker a favor"
+     "md": "they want to act consistently with their first yes"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -4602,7 +4624,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4621,25 +4643,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "reactance"
-    },
-    {
-     "id": "b",
      "md": "pluralistic ignorance"
     },
     {
-     "id": "c",
+     "id": "b",
      "md": "diffusion of responsibility"
+    },
+    {
+     "id": "c",
+     "md": "reactance"
     },
     {
      "id": "d",
      "md": "normative compliance"
     }
    ],
-   "correct": "b",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -4668,7 +4690,7 @@
    "choices": [
     {
      "id": "a",
-     "md": "did not read it"
+     "md": "used more"
     },
     {
      "id": "b",
@@ -4676,22 +4698,22 @@
     },
     {
      "id": "c",
-     "md": "used more"
+     "md": "did not read it"
     },
     {
      "id": "d",
      "md": "stayed the same"
     }
    ],
-   "correct": "c",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -4715,7 +4737,7 @@
    "choices": [
     {
      "id": "a",
-     "md": "it frees visitors from responsibility"
+     "md": "it creates reactance toward rangers"
     },
     {
      "id": "b",
@@ -4723,14 +4745,14 @@
     },
     {
      "id": "c",
-     "md": "it makes stealing look like the norm"
+     "md": "it frees visitors from responsibility"
     },
     {
      "id": "d",
-     "md": "it creates reactance toward rangers"
+     "md": "it makes stealing look like the norm"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -4743,7 +4765,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4756,17 +4778,17 @@
    "body": [
     {
      "type": "text",
-     "md": "Most students cram the night before exams. This describes a..."
+     "md": "Most students at Mia's school cram the night before exams. This describes a..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "prescriptive norm"
+     "md": "injunctive norm"
     },
     {
      "id": "b",
-     "md": "reciprocity norm"
+     "md": "tight norm"
     },
     {
      "id": "c",
@@ -4774,7 +4796,7 @@
     },
     {
      "id": "d",
-     "md": "tight norm"
+     "md": "reciprocity norm"
     }
    ],
    "correct": "c",
@@ -4809,11 +4831,11 @@
    "choices": [
     {
      "id": "a",
-     "md": "doubled the effect"
+     "md": "had no effect on buying"
     },
     {
      "id": "b",
-     "md": "reversed the effect"
+     "md": "lowered buying"
     },
     {
      "id": "c",
@@ -4821,16 +4843,11 @@
     },
     {
      "id": "d",
-     "md": "had no effect on buying"
+     "md": "raised buying a little"
     }
    ],
-   "correct": "d",
+   "correct": "a",
    "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
     {
      "choice": "b",
      "error": "misread",
@@ -4838,6 +4855,11 @@
     },
     {
      "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4856,22 +4878,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "an authority told you to"
+     "md": "most buyers say yes"
     },
     {
      "id": "b",
-     "md": "you were unsure what is correct"
-    },
-    {
-     "id": "c",
      "md": "you want to act consistently"
     },
     {
-     "id": "d",
+     "id": "c",
      "md": "you feel you should match his concession"
+    },
+    {
+     "id": "d",
+     "md": "an authority told you to"
     }
    ],
-   "correct": "d",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -4884,7 +4906,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -4903,19 +4925,19 @@
    "choices": [
     {
      "id": "a",
-     "md": "50%"
+     "md": "about half, well above people asked only for the small trip"
     },
     {
      "id": "b",
-     "md": "17%"
+     "md": "almost nobody, since they had refused once"
     },
     {
      "id": "c",
-     "md": "0%"
+     "md": "nearly all"
     },
     {
      "id": "d",
-     "md": "76%"
+     "md": "about the same as people asked only for the small trip"
     }
    ],
    "correct": "a",
@@ -4950,30 +4972,30 @@
    "choices": [
     {
      "id": "a",
-     "md": "the order of small and large requests"
+     "md": "whether an authority is present"
     },
     {
      "id": "b",
-     "md": "whether the answer is private"
-    },
-    {
-     "id": "c",
      "md": "whether a gift is given"
     },
     {
+     "id": "c",
+     "md": "the order of small and large requests"
+    },
+    {
      "id": "d",
-     "md": "whether an authority is present"
+     "md": "whether the answer is private"
     }
    ],
-   "correct": "a",
+   "correct": "c",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -4997,22 +5019,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "about 65% would go all the way"
+     "md": "about a third would go all the way"
     },
     {
      "id": "b",
-     "md": "about 1/10 of 1% would go all the way"
+     "md": "about half would go all the way"
     },
     {
      "id": "c",
-     "md": "about 90% would go all the way"
+     "md": "about 1 in 10 would go all the way"
     },
     {
      "id": "d",
-     "md": "about half would go all the way"
+     "md": "only a tiny few, around 1 in 100 or fewer, would go all the way"
     }
    ],
-   "correct": "b",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -5020,12 +5042,12 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -5038,29 +5060,34 @@
    "body": [
     {
      "type": "text",
-     "md": "The Bridgeport variation of Milgram's study found obedience of..."
+     "md": "The Bridgeport variation of Milgram's study found obedience that was..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "47.5%"
+     "md": "far lower, almost nobody obeyed"
     },
     {
      "id": "b",
-     "md": "65%"
+     "md": "higher than the original"
     },
     {
      "id": "c",
-     "md": "90%"
+     "md": "unchanged from the original"
     },
     {
      "id": "d",
-     "md": "62.5%"
+     "md": "lower than the original, but still a large share"
     }
    ],
-   "correct": "a",
+   "correct": "d",
    "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
     {
      "choice": "b",
      "error": "misread",
@@ -5068,11 +5095,6 @@
     },
     {
      "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -5085,36 +5107,36 @@
    "body": [
     {
      "type": "text",
-     "md": "In Experiment 15, the participant only read word pairs. Someone else pressed the switch. Obedience was..."
+     "md": "In Experiment 15, the participant only read word pairs. Someone else pressed the switch. Compared with the original, obedience was..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "90%"
+     "md": "about half"
     },
     {
      "id": "b",
-     "md": "65%"
+     "md": "about two-thirds, the same as the original"
     },
     {
      "id": "c",
-     "md": "47.5%"
+     "md": "nearly all, higher than the original"
     },
     {
      "id": "d",
-     "md": "10%"
+     "md": "few, far below the original"
     }
    ],
-   "correct": "a",
+   "correct": "c",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5142,18 +5164,18 @@
     },
     {
      "id": "b",
-     "md": "release from responsibility"
+     "md": "failed disobedience"
     },
     {
      "id": "c",
-     "md": "failed disobedience"
+     "md": "release from responsibility"
     },
     {
      "id": "d",
      "md": "pluralistic ignorance"
     }
    ],
-   "correct": "c",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -5161,7 +5183,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5179,31 +5201,31 @@
    "body": [
     {
      "type": "text",
-     "md": "On the slides, how many of Burger's participants continued past 150 volts?"
+     "md": "Burger stopped his replication at 150 volts. How many continued past that point, compared with Milgram's participants?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "70%"
+     "md": "few, since modern people disobey more"
     },
     {
      "id": "b",
-     "md": "65%"
+     "md": "most, close to Milgram's rate"
     },
     {
      "id": "c",
-     "md": "82.5%"
+     "md": "about half, far below Milgram's rate"
     },
     {
      "id": "d",
-     "md": "47.5%"
+     "md": "nearly all, well above Milgram's rate"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5226,25 +5248,25 @@
    "body": [
     {
      "type": "text",
-     "md": "Moscovici's consistent minority called blue slides green. About how often did others say green?"
+     "md": "Moscovici's consistent minority called blue slides green. How often did others say green?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "8%"
+     "md": "rarely, but more than in control groups"
     },
     {
      "id": "b",
-     "md": "33%"
+     "md": "never, the majority never budged"
     },
     {
      "id": "c",
-     "md": "75%"
+     "md": "about a third of the time"
     },
     {
      "id": "d",
-     "md": "1%"
+     "md": "most of the time"
     }
    ],
    "correct": "a",
@@ -5273,34 +5295,29 @@
    "body": [
     {
      "type": "text",
-     "md": "Reserve Police Battalion 101 men often shot because others did. Which idea does this show MOST?"
+     "md": "Men in a police battalion could opt out of shooting. Many shot because their peers did. Which idea does this show MOST?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "reactance"
+     "md": "conformity"
     },
     {
      "id": "b",
-     "md": "reciprocity"
+     "md": "door-in-the-face"
     },
     {
      "id": "c",
-     "md": "the autokinetic effect"
+     "md": "reciprocity"
     },
     {
      "id": "d",
-     "md": "conformity"
+     "md": "reactance"
     }
    ],
-   "correct": "d",
+   "correct": "a",
    "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
     {
      "choice": "b",
      "error": "misread",
@@ -5308,6 +5325,11 @@
     },
     {
      "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -5326,25 +5348,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "contact comfort matters, not just feeding"
-    },
-    {
-     "id": "b",
      "md": "feeding is the base of bonding"
     },
     {
+     "id": "b",
+     "md": "contact comfort matters, not just feeding"
+    },
+    {
      "id": "c",
-     "md": "isolation is harmless"
+     "md": "monkeys chose the cloth mother only because it was closer"
     },
     {
      "id": "d",
-     "md": "monkeys prefer wire"
+     "md": "monkeys weigh rewards and costs like a market"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5373,25 +5395,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "the need to belong"
-    },
-    {
-     "id": "b",
-     "md": "the halo effect"
-    },
-    {
-     "id": "c",
      "md": "mere exposure"
     },
     {
-     "id": "d",
+     "id": "b",
+     "md": "the need to belong"
+    },
+    {
+     "id": "c",
      "md": "social exchange theory"
+    },
+    {
+     "id": "d",
+     "md": "the proximity effect"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5420,30 +5442,30 @@
    "choices": [
     {
      "id": "a",
-     "md": "an exchange relationship"
-    },
-    {
-     "id": "b",
-     "md": "an attachment"
-    },
-    {
-     "id": "c",
      "md": "a complementary one"
     },
     {
-     "id": "d",
+     "id": "b",
      "md": "a communal relationship"
+    },
+    {
+     "id": "c",
+     "md": "an exchange relationship"
+    },
+    {
+     "id": "d",
+     "md": "an attachment"
     }
    ],
-   "correct": "a",
+   "correct": "c",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5467,22 +5489,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "men felt no duty to help"
+     "md": "men dislike anyone who accepts help"
     },
     {
      "id": "b",
-     "md": "she looked more attractive"
-    },
-    {
-     "id": "c",
      "md": "repaying signals she wants to settle a debt, not get close"
     },
     {
+     "id": "c",
+     "md": "repaying showed she was too eager to be close"
+    },
+    {
      "id": "d",
-     "md": "she was married"
+     "md": "she broke a descriptive norm"
     }
    ],
-   "correct": "c",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -5490,7 +5512,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5514,22 +5536,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "an exchange"
+     "md": "an investment"
     },
     {
      "id": "b",
-     "md": "a halo"
-    },
-    {
-     "id": "c",
      "md": "a contract"
     },
     {
-     "id": "d",
+     "id": "c",
      "md": "a communal tie, like family"
+    },
+    {
+     "id": "d",
+     "md": "an exchange"
     }
    ],
-   "correct": "d",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -5542,7 +5564,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -5555,28 +5577,28 @@
    "body": [
     {
      "type": "text",
-     "md": "Sofia is happy with her partner. She then meets someone much better. By the slides, she is likely to..."
+     "md": "Sofia is fairly happy with her partner and has put little into the tie. She then meets someone much better. By the slides, she is likely to..."
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "stay, since costs are high"
+     "md": "stay, since leaving costs a lot"
     },
     {
      "id": "b",
-     "md": "stay, since rewards are high"
+     "md": "leave, since a better alternative exists"
     },
     {
      "id": "c",
-     "md": "leave, since a better alternative exists"
+     "md": "stay, since she is satisfied"
     },
     {
      "id": "d",
      "md": "leave, since she is secure"
     }
    ],
-   "correct": "c",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -5584,7 +5606,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5608,22 +5630,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "strange situation"
-    },
-    {
-     "id": "b",
      "md": "working model"
     },
     {
+     "id": "b",
+     "md": "secure base"
+    },
+    {
      "id": "c",
-     "md": "contact comfort"
+     "md": "strange situation"
     },
     {
      "id": "d",
-     "md": "secure base"
+     "md": "contact comfort"
     }
    ],
-   "correct": "d",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -5631,12 +5653,12 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -5663,11 +5685,11 @@
     },
     {
      "id": "c",
-     "md": "signal poor health"
+     "md": "help babies explore safely"
     },
     {
      "id": "d",
-     "md": "teach babies to explore"
+     "md": "make babies seem healthy and attractive"
     }
    ],
    "correct": "b",
@@ -5706,15 +5728,15 @@
     },
     {
      "id": "b",
-     "md": "complementary"
+     "md": "secure"
     },
     {
      "id": "c",
-     "md": "avoidant"
+     "md": "complementary"
     },
     {
      "id": "d",
-     "md": "secure"
+     "md": "avoidant"
     }
    ],
    "correct": "a",
@@ -5743,13 +5765,13 @@
    "body": [
     {
      "type": "text",
-     "md": "At MIT housing, people living near each other became friends. Which BEST explains this?"
+     "md": "Freshmen in a dorm become friends mostly with neighbors on their own floor. Which BEST explains this?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "a halo effect"
+     "md": "proximity lowers the effort of contact"
     },
     {
      "id": "b",
@@ -5757,58 +5779,11 @@
     },
     {
      "id": "c",
+     "md": "a halo effect"
+    },
+    {
+     "id": "d",
      "md": "reproductive fitness"
-    },
-    {
-     "id": "d",
-     "md": "proximity lowers the effort of contact"
-    }
-   ],
-   "correct": "d",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "b",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
-   "code": "PSY_8KK",
-   "title": "Ch9 MC 63",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "A song you hated now grows on you after many plays. Which term fits MOST precisely?"
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "the mere exposure effect"
-    },
-    {
-     "id": "b",
-     "md": "consensual validation"
-    },
-    {
-     "id": "c",
-     "md": "the proximity effect"
-    },
-    {
-     "id": "d",
-     "md": "the halo effect"
     }
    ],
    "correct": "a",
@@ -5831,6 +5806,53 @@
    ]
   },
   {
+   "code": "PSY_8KK",
+   "title": "Ch9 MC 63",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A song you hated now grows on you after many plays. Which term fits MOST precisely?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the proximity effect"
+    },
+    {
+     "id": "b",
+     "md": "consensual validation"
+    },
+    {
+     "id": "c",
+     "md": "the halo effect"
+    },
+    {
+     "id": "d",
+     "md": "the mere exposure effect"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
    "code": "PSY_8KL",
    "title": "Ch9 MC 64",
    "type": "mc",
@@ -5843,25 +5865,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "mere exposure"
-    },
-    {
-     "id": "b",
      "md": "similarity"
     },
     {
+     "id": "b",
+     "md": "mere exposure"
+    },
+    {
      "id": "c",
-     "md": "social exchange"
+     "md": "the halo effect"
     },
     {
      "id": "d",
-     "md": "the halo effect"
+     "md": "social exchange"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5890,22 +5912,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "sensitivity"
+     "md": "leadership"
     },
     {
      "id": "b",
-     "md": "social class and looks"
+     "md": "sensitivity"
     },
     {
      "id": "c",
-     "md": "leadership"
+     "md": "social class and looks"
     },
     {
      "id": "d",
      "md": "humor"
     }
    ],
-   "correct": "b",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -5913,7 +5935,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5937,22 +5959,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "the halo effect"
+     "md": "consensual validation"
     },
     {
      "id": "b",
-     "md": "the complementarity hypothesis"
-    },
-    {
-     "id": "c",
      "md": "mere exposure"
     },
     {
+     "id": "c",
+     "md": "the complementarity hypothesis"
+    },
+    {
      "id": "d",
-     "md": "consensual validation"
+     "md": "the matching hypothesis"
     }
    ],
-   "correct": "b",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -5960,7 +5982,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -5984,22 +6006,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "mere exposure"
+     "md": "the complementarity hypothesis"
     },
     {
      "id": "b",
-     "md": "the halo effect"
+     "md": "consensual validation"
     },
     {
      "id": "c",
-     "md": "consensual validation"
+     "md": "the halo effect"
     },
     {
      "id": "d",
      "md": "reproductive fitness"
     }
    ],
-   "correct": "b",
+   "correct": "c",
    "wrong": [
     {
      "choice": "a",
@@ -6007,7 +6029,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -6031,11 +6053,11 @@
    "choices": [
     {
      "id": "a",
-     "md": "longer trials"
+     "md": "the same sentences, since law ignores looks"
     },
     {
      "id": "b",
-     "md": "no hearing"
+     "md": "more guilty verdicts"
     },
     {
      "id": "c",
@@ -6078,11 +6100,11 @@
    "choices": [
     {
      "id": "a",
-     "md": "they show higher status"
+     "md": "they are more familiar to all"
     },
     {
      "id": "b",
-     "md": "faces far from average may signal health problems"
+     "md": "they show higher status"
     },
     {
      "id": "c",
@@ -6090,10 +6112,10 @@
     },
     {
      "id": "d",
-     "md": "they are more familiar to all"
+     "md": "faces far from average may signal health problems"
     }
    ],
-   "correct": "b",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -6101,12 +6123,12 @@
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -6172,30 +6194,30 @@
    "choices": [
     {
      "id": "a",
-     "md": "men grew choosier"
-    },
-    {
-     "id": "b",
-     "md": "fertility fell"
-    },
-    {
-     "id": "c",
      "md": "social roles shape what each sex wants"
     },
     {
-     "id": "d",
+     "id": "b",
      "md": "genes changed quickly"
+    },
+    {
+     "id": "c",
+     "md": "arranged marriages became more common"
+    },
+    {
+     "id": "d",
+     "md": "men grew choosier"
     }
    ],
-   "correct": "c",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -6227,14 +6249,14 @@
     },
     {
      "id": "c",
-     "md": "companionate love"
+     "md": "exchange love"
     },
     {
      "id": "d",
-     "md": "exchange love"
+     "md": "companionate love"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -6247,7 +6269,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -6266,11 +6288,11 @@
    "choices": [
     {
      "id": "a",
-     "md": "contempt"
+     "md": "criticism"
     },
     {
      "id": "b",
-     "md": "criticism"
+     "md": "contempt"
     },
     {
      "id": "c",
@@ -6281,10 +6303,10 @@
      "md": "stonewalling"
     }
    ],
-   "correct": "a",
+   "correct": "b",
    "wrong": [
     {
-     "choice": "b",
+     "choice": "a",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -6364,62 +6386,15 @@
     },
     {
      "id": "b",
+     "md": "investments"
+    },
+    {
+     "id": "c",
      "md": "alternatives"
     },
     {
-     "id": "c",
+     "id": "d",
      "md": "attachment"
-    },
-    {
-     "id": "d",
-     "md": "investments"
-    }
-   ],
-   "correct": "d",
-   "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "b",
-     "error": "misread",
-     "hint": "QUACK."
-    },
-    {
-     "choice": "c",
-     "error": "misread",
-     "hint": "QUACK."
-    }
-   ]
-  },
-  {
-   "code": "PSY_8KY",
-   "title": "Ch9 MC 76",
-   "type": "mc",
-   "body": [
-    {
-     "type": "text",
-     "md": "Which is a way to build stronger bonds?"
-    }
-   ],
-   "choices": [
-    {
-     "id": "a",
-     "md": "keeping score of favors"
-    },
-    {
-     "id": "b",
-     "md": "finding the good in your partner"
-    },
-    {
-     "id": "c",
-     "md": "avoiding all play"
-    },
-    {
-     "id": "d",
-     "md": "hiding good news"
     }
    ],
    "correct": "b",
@@ -6442,40 +6417,35 @@
    ]
   },
   {
-   "code": "PSY_8KZ",
-   "title": "Ch8 MC 77",
+   "code": "PSY_8KY",
+   "title": "Ch9 MC 76",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "Participants write their answers down privately instead of speaking aloud. Conformity..."
+     "md": "Which is a way to build stronger bonds?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "flips to reactance"
+     "md": "finding the good in your partner"
     },
     {
      "id": "b",
-     "md": "stays the same"
+     "md": "shrugging off good news to stay humble"
     },
     {
      "id": "c",
-     "md": "rises sharply"
+     "md": "trading favors to keep things fair"
     },
     {
      "id": "d",
-     "md": "drops sharply"
+     "md": "going quiet when upset"
     }
    ],
-   "correct": "d",
+   "correct": "a",
    "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
     {
      "choice": "b",
      "error": "misread",
@@ -6483,6 +6453,58 @@
     },
     {
      "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_8KZ",
+   "title": "Ch8 MC 77",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Asch participants write their answers down privately instead of speaking aloud. Conformity..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "drops sharply"
+    },
+    {
+     "id": "b",
+     "md": "rises sharply"
+    },
+    {
+     "id": "c",
+     "md": "stays the same"
+    },
+    {
+     "id": "d",
+     "md": "drops only a little"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -6501,25 +6523,25 @@
    "choices": [
     {
      "id": "a",
-     "md": "love marriages are the most common worldwide"
+     "md": "arranged marriages are more common worldwide, though love marriages dominate in the West"
     },
     {
      "id": "b",
-     "md": "arranged marriages are more common by numbers, even though love marriages dominate in the West"
+     "md": "love marriages are most common worldwide, since the West sets the trend"
     },
     {
      "id": "c",
-     "md": "arranged marriages vanished with industry"
+     "md": "arranged marriages are rare outside the West and fading elsewhere"
     },
     {
      "id": "d",
-     "md": "arranged marriages are rare outside the West"
+     "md": "arranged marriages vanished once societies industrialized"
     }
    ],
-   "correct": "b",
+   "correct": "a",
    "wrong": [
     {
-     "choice": "a",
+     "choice": "b",
      "error": "misread",
      "hint": "QUACK."
     },
@@ -6552,18 +6574,18 @@
     },
     {
      "id": "b",
-     "md": "the halo effect"
+     "md": "consensual validation"
     },
     {
      "id": "c",
-     "md": "capitalizing on the good"
+     "md": "social exchange"
     },
     {
      "id": "d",
-     "md": "complementarity"
+     "md": "capitalizing on the good"
     }
    ],
-   "correct": "c",
+   "correct": "d",
    "wrong": [
     {
      "choice": "a",
@@ -6576,7 +6598,7 @@
      "hint": "QUACK."
     },
     {
-     "choice": "d",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -6595,22 +6617,22 @@
    "choices": [
     {
      "id": "a",
-     "md": "more love marriages"
-    },
-    {
-     "id": "b",
-     "md": "less need for kin"
-    },
-    {
-     "id": "c",
      "md": "higher bride prices"
     },
     {
-     "id": "d",
+     "id": "b",
      "md": "cooperative trade between groups"
+    },
+    {
+     "id": "c",
+     "md": "less need for kin"
+    },
+    {
+     "id": "d",
+     "md": "more love marriages"
     }
    ],
-   "correct": "d",
+   "correct": "b",
    "wrong": [
     {
      "choice": "a",
@@ -6618,12 +6640,12 @@
      "hint": "QUACK."
     },
     {
-     "choice": "b",
+     "choice": "c",
      "error": "misread",
      "hint": "QUACK."
     },
     {
-     "choice": "c",
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
