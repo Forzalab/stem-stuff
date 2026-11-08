@@ -155,9 +155,12 @@ async function run(browserType, label, opts = {}) {
       assert.ok(Math.abs((await page.locator("#q").boundingBox()).height - qH) < 1, "the answer area grew after the wrong try (a ghost pips row)");
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");
-      assert.ok(!(await page.locator("#ff .vk").isVisible()) && await go.isVisible(), "typing: the x stays in the DOM but is hidden, the arrow is visible");
+      /* Tony Nov 7 (option A): during the 10 s wait the x stays up (the strip's way back to the drawer) and the waiting Check hides its arrow glyph; the sweep is the bar */
+      const glyph = () => go.evaluate(e => getComputedStyle(e.querySelector(".ico")).visibility);
+      assert.ok(await page.locator("#ff .vk").isVisible() && await go.isVisible() && await glyph() === "hidden", "typing during the wait: the x is shown, the arrow glyph is hidden");
       assert.ok(await go.isVisible() && Math.abs((await inp.boundingBox()).width - iw) < 0.5, "nothing moved");
       await skipRetryWait(page);
+      assert.ok(!(await page.locator("#ff .vk").isVisible()) && await go.isVisible() && await glyph() === "visible", "after the wait, typing: the x stays in the DOM but is hidden, the arrow is visible");
       await inp.press("Enter");
       await page.waitForSelector('#ff .vk[data-v="i-ok"]');
       assert.ok(await inp.isDisabled(), "a right answer closes the box");
