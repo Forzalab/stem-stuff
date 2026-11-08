@@ -52,6 +52,7 @@ like every other script. `privacy.html` is "pass" (needs the network). No sw.js 
 | `guess_spam` | code, why (`fast` = pick <2 s after open, `burst` = 3rd pick in 10 s), ms_since_open, picks_10s | telemetry.js, on a graded pick |
 | `cluck_open` | tab, auto, code | app.js `clOpen()` |
 | `cluck_stream` | code, chars, failed, auto, first_token_ms, lt_n + lt_ms (long tasks while it streamed; absent where the browser has no longtask timing) | app.js `wishStart()` end; `_ask` / `_tok` marks (not sent) time the first chunk |
+| `nav_back` | from (cluck/list/popover/notes/question), code, depth (in-app history depth) | nav.js, a tap on the iOS-only Back button (`#qback`, design/NAV.md "iOS Back") |
 | `cluck_dwell` | ms, scrolled_pct, code | app.js `clClose()`; also on bail while open. Scroll measured on `#cluck .cl-bd` |
 | `tab_away` | during (stream/question/start), stage, code | telemetry.js, `visibilitychange` → hidden / `pagehide` |
 | `rage_tap` | el, stage, code | telemetry.js: ≥3 taps in 700 ms within 30 px |

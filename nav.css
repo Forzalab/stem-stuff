@@ -15,6 +15,9 @@
 
 /* two groups, both layouts: the bank side (list, shuffle) left, Prev/Next pushed to the right edge */
 .qnav #qprev { margin-left: auto; }
+/* iOS Back (nav.js backTarget; design/NAV.md "iOS exception"): phones and touch only, so the desktop grid above never has it */
+#qback { display: none; }
+html.ios.dock-bottom.qnav-on #qback:not([hidden]) { display: inline-grid; }
 
 /* phones and touch (entry dock at the bottom): the nav is the top bar. */
 .dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
@@ -104,7 +107,7 @@ html.ql-open .top::after { opacity: 1; }
 /* the bar's live controls (list button, code box, Prev / Next, the message) sit over that dim: they work, so they never look disabled (STYLE.md: dim = disabled; Tony, Oct 21).
    Flex / grid items, so z-index needs no position. .code-box holds .code-sug (its own 31 over the list, z 30): a z-index on the box makes it the
    suggestions' stacking context, so the box takes 31 itself, or a tap on a suggestion lands on the list (ux-flows code-suggestions). Only the XP strip (an outside tap) stays dimmed */
-html.ql-open .top :is(#qlistBtn, #qprev, #qnext, .entry-msg, .entry > :not(.code-box)) { z-index: 11; }
+html.ql-open .top :is(#qback, #qlistBtn, #qprev, #qnext, .entry-msg, .entry > :not(.code-box)) { z-index: 11; }
 html.ql-open .top .entry > .code-box { z-index: 31; }
 html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, filter .45s ease-out, z-index .225s step-end; transition-behavior: allow-discrete; }
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.

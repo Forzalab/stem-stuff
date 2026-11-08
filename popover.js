@@ -12,6 +12,7 @@
 (function (root) {
   "use strict";
   const GAP = 6, EDGE = 16;                                                     // 6px off the anchor; 16px from the viewport edge (360: max-width 100vw - 32px)
+  const layers = () => dispatchEvent(new CustomEvent("stem:layers"));       // nav.js: the iOS Back button follows the topmost layer
   let cur = null, seq = 0;                                                      // { el, anchor, align }
 
   function make(o) {
@@ -28,6 +29,7 @@
     el.addEventListener("focusout", e => { if (cur && cur.el === el && !el.contains(e.relatedTarget) && e.relatedTarget !== anchor) close(); });   // Tab out closes
     anchor.setAttribute("aria-haspopup", "dialog"); anchor.setAttribute("aria-expanded", "true"); anchor.setAttribute("aria-controls", el.id);
     cur = { el, anchor, align: o.align || anchor };
+    layers();
     place();
     el.focus({ preventScroll: true });                                          // a screen reader reads it; Esc brings focus back
     return el;
@@ -36,6 +38,7 @@
     if (!cur) return;
     const { el, anchor } = cur; cur = null;
     el.remove(); anchor.setAttribute("aria-expanded", "false"); anchor.removeAttribute("aria-controls");
+    layers();
     if (focusBack && anchor.isConnected) anchor.focus();
   }
   const toggle = (anchor, o) => cur && cur.anchor === anchor ? (close(), null) : open(anchor, o);
@@ -59,7 +62,7 @@
   }
 
   addEventListener("pointerdown", e => {                                        // a tap outside (not on its own anchor: that is the second tap) closes it
-    if (cur && !cur.el.contains(e.target) && !cur.anchor.contains(e.target)) close();
+    if (cur && !cur.el.contains(e.target) && !cur.anchor.contains(e.target) && !(e.target.closest && e.target.closest("#qback"))) close();   // #qback (nav.js, iOS Back) pops it on its own click
   }, true);
   addEventListener("keydown", e => {                                            // Esc closes the popover first, and only it
     if (e.key !== "Escape" || !cur) return;

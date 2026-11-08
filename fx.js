@@ -10,6 +10,8 @@
   var W = window, N = navigator, H = document.documentElement;
 
   /* ---- pure helpers (exported for tests/fx.test.mjs) ---- */
+  /* iPhone / iPad / iPod, or an iPad that says Macintosh (touch points > 1): html.ios, the one test (offline.js reads the class) */
+  function isIOS(ua, touch) { ua = ua || ""; return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1); }
   function iosMajor(ua) { var m = /(?:iPhone|iPad|iPod)[^)]*? OS (\d+)_/.exec(ua || ""); return m ? +m[1] : null; }
   /* in-app browsers (Instagram, Facebook, TikTok, …) and bare iOS web views (no "Safari/" in the UA) */
   function webview(ua) {
@@ -39,7 +41,7 @@
     return { fps_med: Math.round(1000 / med), frame_p95_ms: Math.round(p95 * 10) / 10, dropped_pct: Math.round(dropped / dt.length * 100), bad: p95 > 24 || med > 20 };
   }
 
-  var api = { gate: gate, iosMajor: iosMajor, webview: webview, frameStats: frameStats };
+  var api = { gate: gate, isIOS: isIOS, iosMajor: iosMajor, webview: webview, frameStats: frameStats };
   W.__stemFx = api;
 
   var mq = function (q) { try { return matchMedia(q).matches; } catch (e) { return false; } };
@@ -61,6 +63,7 @@
     H.classList.toggle("fx-blur", g.fx === "blur");
     st.fx = g.fx; st.tier = g.tier; st.why = g.why;
   }
+  try { H.classList.toggle("ios", isIOS(ua, N.maxTouchPoints)); } catch (e) { /* no class: no iOS-only chrome */ }
   var st = { info: info, fps: null };
   W.stemFx = st;
   try { apply(latched); } catch (e) { H.classList.add("fx-dim"); }

@@ -138,6 +138,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h9A1.5 1.5 0 0 1 20 4.5v11a1.5 1.5 0 0 1-1.5 1.5H16M7.4 11.2a2.1 2.1 0 1 1 2.9 1.95c-.5.25-.8.65-.8 1.2v.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="6" width="13" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="17.6" r=".95" fill="currentColor"/></symbol>
     <symbol id="i-min" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol><!-- Lucide "minus" (ISC): make the video small -->
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M12 19l-7-7 7-7M19 12H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol><!-- Lucide "arrow-left" (ISC): iOS Back (nav.js; iOS has no system Back) -->
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol><!-- Lucide "chevron-left" (ISC): previous question -->
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol><!-- Lucide "chevron-right" (ISC): next question -->
     <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M18 14l4 4-4 4M18 2l4 4-4 4M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-7.6a4 4 0 0 1 3.3-1.7H22M2 6h1.972a4 4 0 0 1 3.6 2.2M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol><!-- Lucide "shuffle" (ISC): the queue menu's Shuffle -->
@@ -184,6 +185,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
   <!-- question nav (design/NAV.md): only with a list (a practice bank, design/BANK.md, or an uploaded problems.json). Top bar on phones, beside the entry box on desktop.
        The list opens in the flow under it (it pushes the problem down; nothing is covered). -->
   <nav class="qnav" id="qnav" aria-label="Questions" hidden>
+    <button type="button" class="btn" id="qback" aria-label="Back" title="Back" hidden><svg class="ico" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
     <button type="button" class="btn btn-label" id="qlistBtn" aria-expanded="false" aria-controls="qlist">
       <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span id="qlistName"></span>
     </button>

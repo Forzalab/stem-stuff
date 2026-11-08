@@ -671,6 +671,47 @@ function init() {
     if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1 or the night: once the first question has opened, so app.js's first load never overwrites the mock's hash
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
+  /* iOS Back (design/NAV.md "iOS exception"): iOS has no system Back. One tap pops the topmost thing; it never leaves the site.
+     Order: Cluck's sheet, the question list, a popover, the notes split, then the in-app previous question; else hidden (the root).
+     In-app depth = history.state.stemD: 0 at the first question of the tab, +1 per question pushed (Prev/Next/list rows set the hash).
+     Kept on every replaceState (app.js load, the query-param strips above), so it survives a reload; Back shows only at depth > 0. */
+  const backBtn = $("#qback");
+  let depth = 0, lastHash = location.hash;
+  const dstate = d => ({ ...(history.state && typeof history.state === "object" ? history.state : null), stemD: d });
+  try { const d = history.state && history.state.stemD; depth = typeof d === "number" ? d : 0; if (typeof d !== "number") history.replaceState(dstate(0), ""); } catch { /* sandboxed: no depth, Back stays hidden */ }
+  function backTarget() {
+    if (window.stemCluckModal && window.stemCluckModal()) return "cluck";
+    if (!panel.hidden) return "list";
+    if (window.Pop && window.Pop.anchor()) return "popover";
+    if (window.stemNotes && window.stemNotes.open()) return "notes";
+    return depth > 0 ? "question" : null;
+  }
+  function syncBack() { if (backBtn) backBtn.hidden = backTarget() == null; }
+  function reconcile() {                                             // hashchange / popstate: read the depth the entry carries; a new entry (no depth yet) is one deeper
+    try {
+      const d = history.state && history.state.stemD;
+      if (typeof d === "number") depth = d;
+      else if (location.hash !== lastHash) { depth++; history.replaceState(dstate(depth), ""); }
+    } catch { /* sandboxed */ }
+    lastHash = location.hash; syncBack();
+  }
+  addEventListener("hashchange", reconcile); addEventListener("popstate", reconcile);
+  for (const ev of ["drill:qlist", "stem:layers", "drill:problem", "drill:bank"]) addEventListener(ev, syncBack);   // list, Cluck, popover and notes open / close (app.js, popover.js)
+  /* the press decides the target: a tap outside closes the list / popover on pointerdown, and a tap moves focus out of a popover (it closes on that),
+     both before the click lands, so the click would read "question" and pop one layer too many */
+  let armed = null;
+  addEventListener("pointerdown", e => { armed = e.target.closest && e.target.closest("#qback") ? backTarget() : null; }, true);
+  backBtn?.addEventListener("click", () => {
+    const from = armed || backTarget(); armed = null;
+    window.stemT?.("nav_back", { from, code: cur, depth });
+    if (from === "cluck") window.stemCluckClose();
+    else if (from === "list") close(true);
+    else if (from === "popover") window.Pop.close(true);
+    else if (from === "notes") window.stemNotes.close();
+    else if (from === "question") history.back();
+    syncBack();
+  });
+  syncBack();
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
   if (s) { if (all().includes(s.code)) shown(s.code); update(s.code); }
   window.stemMock = { on: () => !!cur && mockOn(Q().mock, cur), state: () => Q().mock || null, again: c => { const y = reload === c; reload = null; return y; } };   // app.js / peek.js / repair.js: the mock phase holds the hints

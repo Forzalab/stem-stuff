@@ -29,7 +29,7 @@ The nav exists **only when problems were uploaded** (a `problems.json` read by `
 
 Why not "codes this browser already opened" in server mode:
 - The code is the gate. Tony hands out codes, and the server never lists them. A history list would be a second, partial, per-device list that disagrees with what Tony assigned.
-- Order would be visit order, so "next" would mean "the one I opened after this one last week". That is Back, and the browser already has it.
+- Order would be visit order, so "next" would mean "the one I opened after this one last week". That is Back, and the browser already has it (except on iOS, which has no system Back: see "iOS Back" below).
 - Titles aren't served (`serve.py` sends `code, type, var, body`), so rows would be codes or text scraped from the body: more to build, for less.
 - It needs new storage (localStorage) and a way to clear it. Extreme simplicity says no.
 
@@ -128,6 +128,16 @@ Solved marks in the list: not built (out of scope). Grading state is private to 
 | Escape | in the list | close it, focus back on the list button |
 
 Not Alt+Left/Right: that is the browser's Back/Forward on Windows and Linux. `[` and `]` are free on the page (MC keys are A–E and arrows), need no modifier, and AltGr layouts still produce `[` / `]`. Ctrl/Cmd combos are ignored. The buttons carry `aria-keyshortcuts`, and their tooltips say the key.
+
+## iOS Back (Tony, Nov 6)
+
+The "browser already has Back" argument above holds everywhere but iOS: Safari has no system Back button (only an edge swipe), and phone students tap the top-left corner reaching for "‹ Back". So on iOS only there is an app Back, an icon-only `.btn` (`#qback`, `i-arrow-left`, 48px) as the first child of `#qnav`, left of the question-bank button.
+
+- **Shown only** under `html.ios.dock-bottom.qnav-on` (`html.ios` is set by `fx.js`: an iPhone / iPad / iPod UA, or a Macintosh UA with touch points > 1; `offline.js` reads the class). Elsewhere `display: none`; the desktop grid never has it.
+- **One tap pops the topmost thing**, in this order (`nav.js` `backTarget()`): Cluck's sheet (`stemCluckClose`), the question list, a popover (`Pop.close`), the notes split (`stemNotes.close`), then the in-app previous question (`history.back()`). Nothing else: the lock-help modal (only its two buttons close it), the verdict tray and the repair ladder are not touched. With Cluck's sheet open its dim (z 44) lies over the top bar and already closes it on a tap, so a finger on Back's corner does the same thing; the button itself does it for keyboard / VoiceOver.
+- **Never leaves the site.** In-app depth lives in `history.state.stemD`: 0 at the first question of the tab, +1 for each question pushed (Prev / Next / list rows set the hash; `nav.js` `reconcile()` on `hashchange` / `popstate`). `app.js` `load()`'s `replaceState`, the notes split's `pushState({ mt: 1, stemD })` and the query-param strips keep it, so it survives a reload. Back shows only when a layer is open or `stemD > 0`; at depth 0 (a deep link, a page opened from another site) it is hidden, so `history.back()` never runs into another page.
+- **Telemetry:** `nav_back { from: cluck|list|popover|notes|question, code, depth }` via `stemT` (identity: the existing `stem-tid`; nothing new; DNT / opt-out = no event).
+- Test: `tests/ios-back.pw.mjs`.
 
 ## Accessibility
 
