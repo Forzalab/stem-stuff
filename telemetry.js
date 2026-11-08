@@ -225,7 +225,7 @@
         case "q_open":
           st.code = p.code || null; st.openAt = t; st.picks = []; st.tries = null; st.stage = "open"; st.own = {}; break;
         case "pick":
-          st.tries = typeof p.tries_left === "number" ? p.tries_left : null;
+          st.tries = typeof p.triesLeft === "number" ? p.triesLeft : null;
           if (p.ms_since_open == null && st.openAt) p.ms_since_open = Math.round(t - st.openAt);
           if (!("sure" in p)) p.sure = null;                                                // the bet (D52) fills it later
           if (me && ownFP && (p.verdict === "correct" || p.verdict === "wrong")) ownerTry(p, t);   // T36: Tony's own devices only (me tag AND an OWNER_FP hit): the full try trail + slip family

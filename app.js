@@ -1659,7 +1659,7 @@ function record(a, r) {
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
-  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null, error: r.error, collide: r.collide, families: r.families, typed: a.c == null && typeof a.a === "string" && S.prob.type !== "proof" ? a.a : null });   // W107: a proof never rides in telemetry   // telemetry (telemetry.js drops error + collide + families + typed: on device only, except Tony's own devices, T36)
+  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, triesLeft: r.triesLeft ?? null, error: r.error, collide: r.collide, families: r.families, typed: a.c == null && typeof a.a === "string" && S.prob.type !== "proof" ? a.a : null });   // W107: a proof never rides in telemetry   // telemetry (telemetry.js drops error + collide + families + typed: on device only, except Tony's own devices, T36)
   /* SLIP_TIE spot: the reply's `spot` (a place in the formula) shows instead of `hint` only when Jev's gate says so (intent.js spotOk:
      improving + nearly there). Asked once, after the pick line; Jev off (no stemJev) = the plain hint. hintOf(r) reads the result */
   if (r.verdict === "wrong" && typeof r.spot === "string" && r.spot) r.shown = window.stemJev?.spot?.()?.ok === true ? "spot" : "hint";
