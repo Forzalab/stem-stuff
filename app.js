@@ -992,7 +992,7 @@ function ladClock() {
   let n = 0;
   ladTimer = setInterval(() => {
     if (S !== mine || !$("#fcard")) { clearInterval(ladTimer); ladTimer = 0; return; }
-    if (document.visibilityState === "hidden" || window.stemCluckModal?.()) return;
+    if (document.visibilityState === "hidden" || window.stemCluckSheet?.()) return;
     if (++n >= LAD_S) ladderStep();                                                // reveals, then ladClock() restarts (or stops when all are out)
   }, 1000);
 }
@@ -2780,7 +2780,7 @@ function clBack() {
 window.stemCluckOpen = () => !!cl && cl.open;
 window.stemCluckClose = () => clClose(false);                               // nav.js: the iOS Back button closes the sheet
 window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
-window.stemCluckModal = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
+window.stemCluckSheet = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
 window.stemLayout = () => { if (S) layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
 window.stemIdleTap = () => {
   const w = wish;

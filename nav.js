@@ -680,7 +680,7 @@ function init() {
   const dstate = d => ({ ...(history.state && typeof history.state === "object" ? history.state : null), stemD: d });
   try { const d = history.state && history.state.stemD; depth = typeof d === "number" ? d : 0; if (typeof d !== "number") history.replaceState(dstate(0), ""); } catch { /* sandboxed: no depth, Back stays hidden */ }
   function backTarget() {
-    if (window.stemCluckModal && window.stemCluckModal()) return "cluck";
+    if (window.stemCluckSheet && window.stemCluckSheet()) return "cluck";
     if (!panel.hidden) return "list";
     if (window.Pop && window.Pop.anchor()) return "popover";
     if (window.stemNotes && window.stemNotes.open()) return "notes";
