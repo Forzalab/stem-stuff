@@ -15,6 +15,8 @@
 .rp-val { margin-left: auto; overflow-wrap: anywhere; }
 .rp-ok { flex: none; color: var(--correct); font-weight: var(--w-em); }
 .rp-step[data-state="done"] .rp-label { color: var(--muted); }
+.rp-step[data-state="skipped"] { color: var(--muted); opacity: 0.6; }           /* a generated step whose tries ran out: muted, no ✓, no value */
+.rp-ask { margin: 0 0 var(--s2); }
 .rp-step[data-state="future"] { color: var(--muted); opacity: 0.6; }
 .rp-step[data-state="active"] .rp-label { font-weight: var(--w-em); }
 .rp-step[data-state="active"] .rp-n::before { content: "▸ "; }

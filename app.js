@@ -844,9 +844,10 @@ function welcomeQ(q) {
    the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. */
 function rpUnmount() {                                                          // the brown repair box goes: Cluck's close, a right main answer
   if (S?.rp) { S.rp.m?.destroy(); S.rp = null; }
-  $("#rpHost")?.remove();
+  $("#rpHost")?.remove(); $("#rpGone")?.remove();
 }
 function repairAfterMiss(r) {
+  if (r.repair && r.repair.gen === true && S?.prob.type === "proof") return genLadder(r.repair);   // the server's generated proof ladder (PR3): steps in the reply, no GET
   if (!S || S.wl || !S.prob.has_repair || S.prob.type === "proof" || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
   const mine = S, code = S.code, fam = r.error || "";
   if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
@@ -860,6 +861,28 @@ function repairAfterMiss(r) {
       credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(x => x.ok ? x.json() : null, () => null);
     mine.rp.m = Repair.mount(host, { ...mine.prob, repair: rp }, { variant: "repair", error: fam || null, sheet: rp.sheet, grade, on: (name, d) => { if (name === "repair_answer") repairPick(mine, d); else if (name === "repair_skip") repairSkip(mine); } });
   });
+}
+
+/* The generated proof ladder (STEM_PROOF_LADDER=1; serve.py proof_grade): a wrong proof's /check reply carries repair {gen: true, att, steps}, steps
+   with no `ok` (the keys stay on the server, 1 h). Each wrong Check brings a fresh set (new att): the old one goes. Steps grade through
+   POST /repair/<code>/check {value, step, att} -> {ok}; 404 = the keys expired: one line, the ladder unmounts. Without gen:true (flag off, an authored
+   proof) this is never reached and a proof miss draws nothing, as before. */
+function genLadder(rp) {
+  if (S.wl || mockHold() || !window.Repair || !Array.isArray(rp.steps) || !rp.steps.length) return;
+  const mine = S, code = S.code, att = rp.att;
+  rpUnmount();
+  const host = document.createElement("div"); host.id = "rpHost"; $("#fb").after(host);
+  const grade = (value, n, step) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
+    credentials: "same-origin", body: JSON.stringify({ value, step, att }) }).then(x => x.ok ? x.json() : x.status === 404 ? { expired: true } : null, () => null);
+  mine.rp = { fam: "", gen: true };
+  mine.rp.m = Repair.mount(host, { type: "proof", repair: { steps: rp.steps } }, { variant: "repair", gen: true, grade, on: name => {
+    if (name === "repair_skip") repairSkip(mine);
+    else if (name === "repair_expired" && S === mine) {                           // the keys are gone: say so, once, where the ladder was
+      rpUnmount();
+      const p = document.createElement("p"); p.id = "rpGone"; p.className = "rp-line"; p.textContent = "These steps expired. Check again for new ones.";
+      $("#fb").after(p);
+    }
+  } });
 }
 
 /* "Skip for now" (repair.js repair_skip): the brown box goes and the focus goes back to the answer box; preventScroll keeps the page where it is */

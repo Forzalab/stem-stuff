@@ -97,6 +97,7 @@ weight() {
     strip-layers) echo 170 ;;   # B3 PR-B1: the verdict drawer under a typed answer, own server, 4 kinds x 3 states x 360/390/1280 + motion + duck; local run ~165 s (estimate until CI timing)
     stages@phone|stages@desk) echo 25 ;;   # 160 PR-B tool call theater: 8 steps per width on a paused page clock, local run ~20 s (estimate until CI timing)
     proof-timeout) echo 6 ;;   # todo 109 item 1: fake clock, own server, local run ~5 s (estimate until CI timing)
+    proof-ladder) echo 8 ;;   # generated proof ladder (client), own server, flag on
     welcome) echo 5 ;;   # local run ~4 s
     ladder-ui) echo 30 ;;   # LADDER-UI (Nov 3): the welcome ladder at 393 / 1280 / 721 x sugar / diet, own server; local ~25 s (estimate until CI timing)
     cluck-history) echo 20 ;;   # W2 Cluck history status lines + folds at 390 / 1280, own serve.py, stub OpenRouter; estimate until CI timing
@@ -174,6 +175,7 @@ tags() {
     login) echo "@logic @real-time" ;;
     proof) echo "@logic @real-time" ;;   # W107 proof box + stub grader
     proof-timeout) echo "@logic @fast-time" ;;   # todo 109 item 1: fake page clock, own server
+    proof-ladder) echo "@logic @real-time" ;;   # generated proof ladder: stub grader, STEM_PROOF_LADDER=1
     brainrot) echo "@logic @real-time" ;;   # W105 stub YouTube players report onError over postMessage
     copy-math) echo "@logic @real-time" ;;   # W108 real clipboard (granted), stub OpenRouter
     toast-note) echo "@layout @real-time" ;;   # W112 note placement + the cover rule across screen sizes
@@ -310,7 +312,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
