@@ -4,6 +4,7 @@
 //   STEM_TODAY=2026-10-23 python3 serve.py 8813 &   then   STEM_TODAY=2026-10-23 node tests/retry-wait.pw.mjs http://localhost:8813
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { jump } from "./lib/clock.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -33,7 +34,7 @@ async function open(page, code) {
 const sweep = (page, sel) => page.$eval(sel, e => parseFloat(getComputedStyle(e, "::before").getPropertyValue("--sweep")) || 0);
 const dis = (page, sel) => page.$eval(sel, e => e.getAttribute("aria-disabled"));
 const label = (page, sel) => page.$eval(sel, e => e.getAttribute("aria-label"));
-const ff = (page, ms) => page.clock.fastForward(ms);
+const ff = (page, ms) => jump(page, "fastForward", ms);   // frozen jump: a raw fastForward under CI load can be rewound by an in-flight real-time tick (bug class playwright-clock-race)
 /* the option's current --drain (percent), read off the computed gradient's first colour stop (-1 = no gradient) */
 const drain = (page, sel) => page.$eval(sel, e => { const m = /\)\s+([\d.]+)%/.exec(getComputedStyle(e).backgroundImage); return m ? parseFloat(m[1]) : -1; });
 /* does the painted layer use the --action blue (#5aa9ff = rgb(90, 169, 255))? */
@@ -123,7 +124,7 @@ await step("(f) reduced motion: no sweep animation, unlock at 10 s, countdown an
   assert.equal(await page.$eval("#ansGo", e => getComputedStyle(e, "::before").animationName), "none");
   await page.waitForTimeout(700); assert.equal(await sweep(page, "#ansGo"), 0, "dim, never advances");
   assert.match(await page.textContent("#waitLive"), /10 s/);
-  await ff(page, 5100); assert.match(await page.textContent("#waitLive"), /5 s/); assert.equal(await dis(page, "#ansGo"), "true");
+  await jump(page, "runFor", 5100); assert.match(await page.textContent("#waitLive"), /5 s/);   /* runFor, not fastForward: the 5 s countdown line is a 1 s interval tick, and fastForward fires a due interval only once, at the end of the jump */ assert.equal(await dis(page, "#ansGo"), "true");
   await ff(page, 5000); assert.equal(await dis(page, "#ansGo"), null); assert.equal(await page.textContent("#waitLive"), "Ready");
   await page.context().close();
 });
