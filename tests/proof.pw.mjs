@@ -1,5 +1,5 @@
 // The proof box (W107, SCHEMA.md "Proof items"; Tony approved the textarea + 3 chips, Oct 27): the student writes a whole induction proof,
-// Check sends it to Cluck's grader (POST /check -> serve.py proof_grade -> one OpenRouter JSON call, stubbed here), the page shows 3 rubric
+// Check sends it to Cluck's grader (POST /check -> serve.py proof_grade -> one OpenRouter JSON call, stubbed here), the page shows one verdict
 // chips (base | assume | prove) and Cluck's hint; 3 Checks; sugar shows the reference proof after the last one.
 // Starts its own serve.py with a throwaway banks/ folder and a stub grader:   node tests/proof.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -30,7 +30,7 @@ const stub = createServer((req, res) => {
     const pl = JSON.parse(b), user = pl.messages[1].content;
     seen.push(user);
     if (/DOWN/.test(user)) { res.writeHead(500); res.end("{}"); return; }
-    const out = { base: /NOBASE/.test(user) ? "missing" : "ok", assume: "ok", prove: /BADSTEP/.test(user) ? "wrong" : "ok",
+    const out = { verdict: /NOBASE/.test(user) ? "partial" : /BADSTEP/.test(user) ? "wrong" : "correct",
       hint: /NOBASE/.test(user) ? "QUACK. Where do you check n = 1?" : /BADSTEP/.test(user) ? "QUACK. Did you use what you assumed for k?" : "" };
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(out) } }] }));
@@ -56,7 +56,7 @@ async function prove(page, text) {
   await page.waitForFunction(n => window.__drill.state.tries.length > n || document.querySelector("#fb .verdict.wait"), n, { timeout: 6000 });
   await page.waitForTimeout(300);
 }
-const chips = page => page.$$eval("#rubric .rb", xs => xs.map(x => [x.dataset.id, x.dataset.v]));
+const chips = page => page.$$eval("#rubric .rb", xs => xs.map(x => x.dataset.v));
 const GOOD = "Base case: n = 1, both sides are 2.\nAssume it for k.\nAdd 3k+2 and factor: (k+1)(3k+4)/2.";
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -86,13 +86,13 @@ try {
   await step("a wrong proof: 3 chips (the missing row marked), Cluck's hint, the text stays to edit, 2 Checks left", async () => {
     const { ctx, page, errs } = await open("diet");
     await prove(page, "NOBASE " + GOOD);
-    assert.deepEqual(await chips(page), [["base", "missing"], ["assume", "ok"], ["prove", "ok"]]);
+    assert.deepEqual(await chips(page), ["partial"]);
     assert.match(await page.textContent("#fb .cluck"), /Where do you check n = 1\?/);
     assert.equal(await page.$eval("#ans", x => x.disabled), false, "the proof is locked after one miss");
     assert.equal(await page.evaluate(() => window.__drill.state.triesLeft), 2);
     assert.equal(seen.at(-1).includes("NOBASE"), true, "the grader got the proof");
     await prove(page, GOOD);
-    assert.deepEqual(await chips(page), [["base", "ok"], ["assume", "ok"], ["prove", "ok"]]);
+    assert.deepEqual(await chips(page), ["correct"]);
     assert.equal(await page.$eval("#ff", f => f.classList.contains("ok")), true, "a right proof turns the box green");
     assert.equal(await page.$eval("#ans", x => x.disabled), true, "a right proof stays editable");
     assert.deepEqual(errs, []);

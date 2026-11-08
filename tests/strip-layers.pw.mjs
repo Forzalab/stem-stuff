@@ -58,7 +58,7 @@ async function pageFor(browser, W, H, o = {}) {
     if (b.answer === RIGHT[code]) return r.fulfill({ json: { verdict: "correct" } });
     tries[code] = (tries[code] || 0) + 1;
     const left = Math.max(0, 2 - tries[code]);
-    return r.fulfill({ json: { verdict: "wrong", triesLeft: left, ...(code === "STP_PRF" ? { rubric: { base: "ok", assume: "ok", prove: "missing" } } : {}), ...(left === 0 ? { correct: code === "STP_PRF" ? "Base. Assume. Prove." : RIGHT[code] } : {}) } });
+    return r.fulfill({ json: { verdict: "wrong", triesLeft: left, ...(code === "STP_PRF" ? { grade: "partial" } : {}), ...(left === 0 ? { correct: code === "STP_PRF" ? "Base. Assume. Prove." : RIGHT[code] } : {}) } });
   });
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "STP_NUM", null, { timeout: 10000 });

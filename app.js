@@ -939,13 +939,13 @@ function renderQuestion() {
     }).join("")}</div>`;
     wireParts();
   } else if (p.type === "proof") {
-    /* W107 (Tony approved, Oct 27): one tall box for the whole proof, Check in its corner (the Next slot, T17b-1); the 3 rubric chips
-       (base | assume | prove) under it after a Check; the reference proof in #preview once a sugar lockout reveals it */
+    /* W107 (Tony approved, Oct 27): one tall box for the whole proof, Check in its corner (the Next slot, T17b-1); the one verdict chip
+       (correct | partly there | not yet) under it after a Check; the reference proof in #preview once a sugar lockout reveals it */
     q.innerHTML = `${howLine(p)}<div class="ff proof" id="ff">
-        <textarea id="ans" class="ans" rows="8" maxlength="${PROOF_MAX}" aria-label="Your proof"${p.how ? ' aria-describedby="how"' : ""} ${INPUT_ATTRS.replace(' enterkeyhint="send"', "")}
-          placeholder="Base case: ...&#10;Assume: ...&#10;Prove: ..."></textarea>
+        <textarea id="ans" class="ans" rows="8" maxlength="${PROOF_MAX}" aria-label="Your answer"${p.how ? ' aria-describedby="how"' : ""} ${INPUT_ATTRS.replace(' enterkeyhint="send"', "")}
+          placeholder="Write your answer here"></textarea>
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check proof" disabled>${icon("i-go")}</button>
-      </div><div class="stg" id="stgp" aria-live="off"></div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
+      </div><div class="proof-len" id="plen" aria-live="polite" hidden></div><div class="stg" id="stgp" aria-live="off"></div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
     wireProof();
   } else {
     const v = p.var || "x";
@@ -1540,21 +1540,30 @@ async function submitFF() {
 
 /* ---------- proof (W107): a textarea (Enter = a new line, no new key handler), Check sends it to Cluck's grader ---------- */
 const PROOF_MAX = 3000;                                    // serve.py PROOF_MAX
-const PROOF_ROW = { base: "Base case", assume: "Assume", prove: "Prove" };
-const PROOF_V = { ok: ["i-ok", "done"], missing: ["i-x", "missing"], wrong: ["i-x", "wrong"] };
+const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // the one verdict chip (Nov 8: no rubric rows)
 function wireProof() {
   const inp = $("#ans"), go = $("#ansGo");
   inp.addEventListener("input", () => {
     go.disabled = !inp.value.trim();
+    proofLen(inp.value);
     const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); go.hidden = false; }
   });
   go.addEventListener("click", submitProof);
+  proofLen("");
 }
-function rubricChips(rb) {
+/* the soft length guard (item.len.sentences [lo, hi]): a counter and a gentle note outside the range; Check is never blocked */
+function proofLen(v) {
+  const el = $("#plen"), r = S?.prob.len?.sentences; if (!el) return;
+  if (!r) { el.hidden = true; return; }
+  const n = (v.match(/[^.!?\n]+[.!?]*/g) || []).filter(x => /\w/.test(x)).length, [lo, hi] = r;
+  el.hidden = false;
+  el.textContent = `${n} sentence${n === 1 ? "" : "s"} (aim for ${lo === hi ? lo : lo + " to " + hi})` + (n && n < lo ? ". A little more?" : n > hi ? ". Maybe trim it a bit?" : "");
+}
+function rubricChips(g) {
   const el = $("#rubric"); if (!el) return;
-  el.hidden = !rb;
-  el.innerHTML = rb ? Object.keys(PROOF_ROW).map(k => { const [ic, w] = PROOF_V[rb[k]] || PROOF_V.missing;
-    return `<span class="rb ${esc(rb[k] || "missing")}" data-id="${k}" data-v="${esc(rb[k] || "missing")}">${icon(ic)}<span>${PROOF_ROW[k]}: ${w}</span></span>`; }).join("") : "";
+  el.hidden = !g;
+  const [ic, w] = PROOF_V[g] || PROOF_V.wrong;
+  el.innerHTML = g ? `<span class="rb ${esc(g)}" data-v="${esc(g)}">${icon(ic)}<span>${w}</span></span>` : "";
 }
 async function submitProof() {
   const inp = $("#ans"), v = inp ? inp.value : "";
@@ -1567,10 +1576,10 @@ async function submitProof() {
     if (S !== mine) { st.stop(); return; }
     if (r.verdict === "busy" || r.verdict === "timeout" || r.verdict === "pending") { proofWait(r); return; }   // not a try: the text stays
     if (r.verdict !== "invalid") record({ a: v }, r);
-    if (r.rubric) rubricChips(r.rubric);
+    if (r.grade) rubricChips(r.grade);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your proof here first (up to ${PROOF_MAX} letters).</span></p>`; layoutFreeze(); return; }
+    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your answer here first (up to ${PROOF_MAX} letters).</span></p>`; layoutFreeze(); return; }
     feedback(r, "");
     if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
   } finally { busy = false; }
