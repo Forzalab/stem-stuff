@@ -30,6 +30,7 @@ import http.server
 import json
 import math
 import os
+import posixpath
 import random
 import re
 import secrets
@@ -102,10 +103,19 @@ def family_hint(fam):
     return " ".join([FAMILY_HINT[first], *(FAMILY_HINT[f].removeprefix("QUACK. ") for f in rest)]).replace("{sign}", zodiac())
 
 # Server-only or private paths: never served.
-BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
+BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/", "/.env", "/scratch/")
 TRIES = os.environ.get("STEM_TRIES") or os.path.join(ROOT, "tries.json")
 BLOCK = {"/serve.py", "/deploy.sh", "/host.log", "/.host.pid", "/problems.json", "/tries.json", "/" + os.path.basename(BANK)}
 BUNDLE = os.path.join(ROOT, "stem-stuff.html")
+
+
+def blocked(path):
+    """True for a path that is never served: BLOCK / BLOCK_PREFIX, every root *.py (server code), the root file `2`, /scratch. Checked on the
+    decoded, slash-collapsed path (/%61cct.py, //acct.py). Leak hotfix 2026-11-07: this deny-list had missed all of those."""
+    p = "/" + posixpath.normpath(urllib.parse.unquote(path)).lstrip("/")
+    low = p.lower()
+    return (p in BLOCK or low in BLOCK or p.startswith(BLOCK_PREFIX) or low.startswith(BLOCK_PREFIX)
+            or (p.count("/") == 1 and low.endswith(".py")) or low == "/2" or low == "/scratch")
 BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
@@ -4940,7 +4950,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.moved(302)
             return
         path = self.path.split("?")[0]
-        if path in BLOCK or path.startswith(BLOCK_PREFIX):
+        if blocked(path):
             self.send_error(404)
             return
         res = dispatch("GET", path, self.headers.get("Cookie", ""))

@@ -16,3 +16,5 @@ public
 .env*
 design/plans
 # ^ swarm plans/reports never ship.
+/scratch/
+/2

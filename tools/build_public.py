@@ -9,9 +9,9 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "author", "banks", "k", "log", "tests", "tools", "engine", "node_modules", "__pycache__"}
+SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "author", "banks", "k", "log", "tests", "tools", "engine", "node_modules", "__pycache__", "scratch"}
 SKIP_FILES = {"problems.json", "tries.json", "tries.json.tmp", "serve.py", "deploy.sh", "host.log", ".host.pid",
-              "requirements.txt", "vercel.json", ".vercelignore", ".gitignore", "stem-stuff.html", "stem-stuff.html.tmp"}
+              "requirements.txt", "vercel.json", ".vercelignore", ".gitignore", "stem-stuff.html", "stem-stuff.html.tmp", "2"}   # + every root *.py (server code) and dotfiles, see build()
 
 
 def stamp(out):
@@ -65,7 +65,7 @@ def build(out):
         rel = os.path.relpath(d, ROOT)
         dirs[:] = [x for x in dirs if not (x in SKIP_DIRS and rel == ".") and x not in ("node_modules", "__pycache__", ".git")]
         for f in files:
-            if rel == "." and (f in SKIP_FILES or f.startswith(".")):   # dotfiles: .env.local (vercel link), .vercelignore, ...
+            if rel == "." and (f in SKIP_FILES or f.startswith(".") or f.endswith(".py")):   # dotfiles (.env*, .vercelignore); root *.py = server code, never ships
                 continue
             dst = os.path.join(out, rel, f)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
