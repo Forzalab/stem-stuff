@@ -132,6 +132,7 @@ if (W && W.addEventListener) {
      says nothing we can act on and is not ours: flight.js already has it in the ring; no E- code for the student (iPhone E-7LY38 / E-DZY5N, Nov 5) */
   W.addEventListener("error", e => {
     if (!e.error && !e.filename) return;
+    if (/ResizeObserver loop/.test(String(e.message || ""))) return;   // benign layout notice (limit exceeded / undelivered notifications), not a failure
     incident("window", "error", { phase: "script", err: e.error || { name: "Error", message: e.message },
       filename: String(e.filename || "").split(/[?#]/)[0].split("/").pop(), lineno: e.lineno });
   });
