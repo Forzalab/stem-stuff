@@ -13,3 +13,4 @@ version.json
 .claude/worktrees/
 scratch/
 tools/queue.json
+tests/handmaps/auto.tsv
