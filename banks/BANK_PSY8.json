@@ -2892,6 +2892,731 @@
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
   {
+   "code": "PSY_8MA",
+   "title": "Ch7 extra card 1",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "McGuire's idea: a small, weak attack on a belief helps people resist a bigger attack later, like a vaccine. Name it."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "attitude inoculation",
+   "accept": [
+    "inoculation",
+    "the attitude inoculation"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MB",
+   "title": "Ch7 extra card 2",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "McGuire used beliefs almost everyone shares, like brushing your teeth after every meal. What are such beliefs called?"
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "cultural truisms",
+   "accept": [
+    "truisms",
+    "truism",
+    "cultural truism"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MC",
+   "title": "Ch7 extra card 3",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Feinberg & Willer: frame a position in values the other side cares about, like patriotism for conservatives. Name this tool."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "moral reframing",
+   "accept": [
+    "reframing"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MD",
+   "title": "Ch7 extra card 4",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Ditto & Lopez (1992): people spat on a paper strip that stayed this color all the time."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "yellow",
+   "accept": [],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8ME",
+   "title": "Ch7 extra card 5",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "In 1990 the band Judas Priest was sued over a supposed hidden message in a song. These were the two words."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "do it",
+   "accept": [
+    "Do it"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MF",
+   "title": "Ch7 extra card 6",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Gerbner called viewers who watch TV this many hours a day or more heavy viewers. Give the number."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "5",
+   "accept": [
+    "five",
+    "5 hours"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MG",
+   "title": "Ch7 extra card 7",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Wells, Ferguson & Lindsay (1981): jurors judged eyewitnesses by how much of this trait they showed, even though it is weakly tied to accuracy."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "confidence",
+   "accept": [
+    "certainty",
+    "confident",
+    "certain"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MH",
+   "title": "Ch7 extra card 8",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Skitka: attitudes rooted in right and wrong are hard to sway. They become moral ___."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "mandates",
+   "accept": [
+    "moral mandates",
+    "mandate",
+    "moral mandate"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MJ",
+   "title": "Ch7 extra card 9",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Shteynberg: believing many others watch the same speech at the same time makes you process it more deeply. This is shared ___."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "attention",
+   "accept": [
+    "shared attention"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MK",
+   "title": "Ch7 extra card 10",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Besides Willie Nelson, this singer (first name Lyle) joined the Don't Mess With Texas campaign."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "Lovett",
+   "accept": [
+    "Lyle Lovett"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8ML",
+   "title": "Ch7 extra card 11",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "In the Bad News game (Maertens et al., 2021), players were inoculated against this kind of content."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "misinformation",
+   "accept": [
+    "fake news",
+    "disinformation"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MM",
+   "title": "Ch8 extra card 1",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Tapping a pencil in time with someone else, at the same moment, builds liking (Hove & Risen, 2009). What word names this kind of mimicry?"
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "synchronous",
+   "accept": [
+    "synchrony",
+    "synchronized",
+    "synchronised"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MN",
+   "title": "Ch8 extra card 2",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "In Chartrand & Bargh's study, a confederate either rubbed their face or shook this body part."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "foot",
+   "accept": [
+    "feet",
+    "their foot"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MP",
+   "title": "Ch8 extra card 3",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Isen, Clark & Schwartz (1976): a free sample of this office item put people in a good mood before a phone request."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "stationery",
+   "accept": [
+    "stationary",
+    "paper"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MQ",
+   "title": "Ch8 extra card 4",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "In Isen's phone study, with no free sample, about this percent complied with the request."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "10%",
+   "accept": [
+    "10",
+    "10 percent",
+    "ten percent"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MR",
+   "title": "Ch8 extra card 5",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "We help to keep a good feeling going. This reason a good mood raises compliance has this two-word name."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "mood maintenance",
+   "accept": [
+    "maintaining mood"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MS",
+   "title": "Ch8 extra card 6",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Deutsch & Gerard (1955) split social influence into informational and this kind."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "normative",
+   "accept": [
+    "normative social influence"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MT",
+   "title": "Ch8 extra card 7",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "The title of Asch's 1956 paper says a ___ of one against a unanimous majority."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "minority",
+   "accept": [],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MU",
+   "title": "Ch8 extra card 8",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Torrance's horse puzzle: a man buys at 60, sells at 70, buys at 80, sells at 90. How many dollars did he make?"
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "20",
+   "accept": [
+    "$20",
+    "20 dollars"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MV",
+   "title": "Ch8 extra card 9",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Bond & Smith: the United States, United Kingdom, Canada, and this country showed the lowest conformity."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "New Zealand",
+   "accept": [
+    "NZ"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MW",
+   "title": "Ch8 extra card 10",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "In Milgram's study, the learner began to grunt at this many volts, per the slides."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "75",
+   "accept": [
+    "75 volts"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MX",
+   "title": "Ch8 extra card 11",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "This political philosopher said the only thing necessary for evil to triumph is for good people to do nothing."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "Edmund Burke",
+   "accept": [
+    "Burke"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MY",
+   "title": "Ch9 extra card 1",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Zajonc (1968) showed people made-up words that sounded like this language."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "Turkish",
+   "accept": [
+    "turkish-sounding"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8MZ",
+   "title": "Ch9 extra card 2",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Cross et al. (1967): rats raised on Mozart or on this composer's music later preferred what they had heard."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "Schoenberg",
+   "accept": [],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8NA",
+   "title": "Ch9 extra card 3",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Byrne's method: people rate a stranger's answers that the experimenter secretly made to match theirs. The stranger is called this."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "bogus stranger",
+   "accept": [
+    "the bogus stranger",
+    "bogus stranger paradigm"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8NB",
+   "title": "Ch9 extra card 4",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Partners want the ratio of rewards to costs to be about the same for both. Too many rewards for one feels unfair. Name this theory."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "equity theory",
+   "accept": [
+    "equity"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8NC",
+   "title": "Ch9 extra card 5",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Cacioppo et al. (2012): marriages that began online had fewer of these than offline ones, such as separation or divorce."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "breakups",
+   "accept": [
+    "breakup",
+    "divorce",
+    "divorces",
+    "separation"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8ND",
+   "title": "Ch9 extra card 6",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Finkel & Eastwick used rapid 2-minute chats to study chemistry. Name this setup."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "speed dating",
+   "accept": [
+    "speed-dating"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8NE",
+   "title": "Ch9 extra card 7",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Trivers (1971): friendship evolved so non-kin could do this in survival tasks like gathering food."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "cooperate",
+   "accept": [
+    "cooperation",
+    "work together"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8NF",
+   "title": "Ch9 extra card 8",
+   "type": "text",
+   "body": [
+    {
+     "type": "text",
+     "md": "Thibaut & Kelley: the expectations people have for what a relationship should give them."
+    }
+   ],
+   "how": "Type the term, name, or number.",
+   "answer": "comparison level",
+   "accept": [
+    "the comparison level"
+   ],
+   "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
+  },
+  {
+   "code": "PSY_8PA",
+   "title": "Invariant: Motivation x ability",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "Maya must pick a phone this week and has time to read about each one. Leo does not care and is tired. Both see the same ad. Predict who is moved more by strong facts and who by a famous star. Explain why."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "Maya is motivated and able, so she uses the central route. Strong facts move her, and weak facts will not fool her. Leo is low in motivation and ability, so he uses the peripheral route. The famous star moves him more than the facts do.",
+    "must": [
+     "motivated and able people use the central route, so argument strength matters",
+     "low motivation or ability means peripheral cues like fame matter more"
+    ],
+    "hint": "QUACK. Who is ready to think hard? What does the other person use instead?"
+   }
+  },
+  {
+   "code": "PSY_8PB",
+   "title": "Invariant: Informational vs normative",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "Sherif's light task was unclear. Asch's line task was clear. Predict which study leaves people truly believing the group and which makes them go along only in public. Explain using how clear the task is."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "In Sherif's study the task was unclear, so people used the group as information. They came to truly believe the group's guess. In Asch's study the lines were clear, so people knew the group was wrong. They went along in public to avoid being laughed at, but did not change their minds.",
+    "must": [
+     "unclear task means informational influence and private acceptance",
+     "clear task means normative influence and public compliance only"
+    ],
+    "hint": "QUACK. When the task is clear, why would someone still say the wrong answer?"
+   }
+  },
+  {
+   "code": "PSY_8PC",
+   "title": "Invariant: Social cost",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "In an Asch-type test, Ria writes her answer on paper while the others speak aloud. Tom has one ally who also gives the right answer. Compared with a normal group, predict how much each one conforms. Explain why."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "Both conform less. Ria's answer is private, so no one can laugh at her. Tom has an ally, so he does not stand alone. In both cases the fear of disapproval gets weaker, so normative influence drops.",
+    "must": [
+     "a private answer or an ally lowers the cost of disagreeing",
+     "less fear of disapproval means less normative conformity"
+    ],
+    "hint": "QUACK. What does each person have less to fear than in a normal group?"
+   }
+  },
+  {
+   "code": "PSY_8PD",
+   "title": "Invariant: Consistency vs reciprocity",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "Sam asks neighbors to sign a small petition first, and later asks for a big favor. Dana asks for a huge favor first, then a small one. Which one uses consistency and which uses reciprocity? What pushes the neighbor to say yes each time?"
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "Sam uses the foot-in-the-door trick, which is consistency. After one small yes, a person wants to act like someone who helps, so a bigger yes follows. Dana uses the door-in-the-face trick, which is reciprocity. When Dana backs down to a small request, the person feels they should give something back by saying yes.",
+    "must": [
+     "small request first works through consistency with the earlier yes",
+     "big request first then small works through reciprocity of concessions"
+    ],
+    "hint": "QUACK. Which request comes first for each person, and what does the first answer make the neighbor feel?"
+   }
+  },
+  {
+   "code": "PSY_8PE",
+   "title": "Invariant: Descriptive vs injunctive",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "A power company sends each home a card showing the neighbors' average energy use. Predict what homes that use LESS than average will do. Then say what small sign on the card keeps them saving, and which kind of norm each part gives."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "The average is a descriptive norm. It tells what most people do. Homes that use less than average may start to use more, because the average now looks normal. A smiley face for using less adds an injunctive norm, which says this is approved. The smiley face keeps those homes saving.",
+    "must": [
+     "the average is a descriptive norm and pulls low users up",
+     "a smiley face is an injunctive norm of approval and keeps them saving"
+    ],
+    "hint": "QUACK. What does a number say about what is typical, and what does a smile say about what is good?"
+   }
+  },
+  {
+   "code": "PSY_8PF",
+   "title": "Invariant: Obedience factors",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "In a Milgram-style study, change one thing at a time. First, the experimenter says, I am responsible for anything that happens to him. Second, the study moves from a famous university to a shabby office. Predict obedience for each change. Explain why."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "When the experimenter takes the blame, obedience goes up. People feel less guilty, so they keep going. When the setting looks less serious, the authority looks weaker, so obedience goes down. It still stays fairly high, because the step-by-step shocks keep pulling people along.",
+    "must": [
+     "taking responsibility away from the person raises obedience",
+     "a less prestigious setting or authority lowers obedience"
+    ],
+    "hint": "QUACK. Who feels to blame in the first change? How strong does the authority look in the second?"
+   }
+  },
+  {
+   "code": "PSY_8PG",
+   "title": "Invariant: Exchange vs communal",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "Ana drives her roommate to the airport. The roommate hands her 20 dollars and says, Now we are even. Later Ana's sister drives her, and Ana offers to pay on the spot. Which tie is exchange and which is communal? What would repaying do in each?"
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "The roommate has an exchange tie, where people trade and keep things even. Paying back feels right there. The sister has a communal tie, where people give by need and care about each other. Paying back right away can feel cold, as if Ana wants to cancel the bond.",
+    "must": [
+     "roommate is exchange, keeping things equal",
+     "sister is communal, giving by need, so quick repayment can hurt the bond"
+    ],
+    "hint": "QUACK. In which tie do people keep score, and in which do they help out of care?"
+   }
+  },
+  {
+   "code": "PSY_8PH",
+   "title": "Invariant: Investment model",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "Raj is a little happy with his partner, has a better option waiting, and has put little into the tie. Kim is also a little happy, has no other options, and has put ten years and a shared home into hers. Using the three parts of the investment model, predict who stays."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "Commitment grows with satisfaction and with investments. It shrinks when alternatives look good. Kim has low alternatives and high investments, so she is more committed and likely to stay. Raj has a good alternative and little invested, so he is more likely to leave.",
+    "must": [
+     "commitment depends on satisfaction, alternatives, and investments",
+     "Kim has more investments and fewer alternatives, so she stays"
+    ],
+    "hint": "QUACK. Which person has more to lose by leaving, and who has a place to go?"
+   }
+  },
+  {
+   "code": "PSY_8PJ",
+   "title": "Invariant: Attachment dimensions",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "Jo craves closeness but fears the partner will leave. Mia keeps distance and values being independent. Lee is at ease with closeness and does not worry. For each, say if anxiety about rejection and avoidance of closeness are high or low. Then name the type."
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "Attachment can be seen as two dimensions: anxiety about rejection and avoidance of closeness. Jo is high in anxiety and low in avoidance, so Jo is anxious. Mia is high in avoidance, so Mia is avoidant. Lee is low on both, so Lee is secure.",
+    "must": [
+     "Jo high anxiety, low avoidance means anxious",
+     "Mia high avoidance means avoidant, Lee low on both means secure"
+    ],
+    "hint": "QUACK. Which person fears being left? Which one shuts closeness out?"
+   }
+  },
+  {
+   "code": "PSY_8PK",
+   "title": "Invariant: Evolution vs roles",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": "In countries where men and women are more equal, the gaps in what each sex wants in a mate get smaller. Which account fits this better, the evolutionary one or the social role one? What would the evolutionary account expect instead?"
+    }
+   ],
+   "how": "Predict it and say why, in your own words.",
+   "proof": {
+    "reference": "The evolutionary account says the gaps come from the different costs of having children. So it expects the gaps to look about the same in every culture. The social role account says the gaps come from the roles men and women play. When roles get more equal, the gaps shrink, which fits this view better.",
+    "must": [
+     "social roles predict the gaps shrinking with equality",
+     "evolution predicts gaps stay similar across cultures"
+    ],
+    "hint": "QUACK. What does each account say causes the gap, and which cause can change with a society?"
+   }
+  },
+  {
    "code": "PSY_8GV",
    "title": "Ch7 MC 1",
    "type": "mc",
@@ -6652,72 +7377,821 @@
    ]
   },
   {
+   "code": "PSY_8RA",
+   "title": "Ch7 extra MC 1",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Jen reads a mild attack she can easily argue against on the belief that brushing teeth after every meal is good. Later she gets a forceful attack on that belief. Compared with a person who read nothing first, she will likely be..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "more persuaded by the forceful attack"
+    },
+    {
+     "id": "b",
+     "md": "more resistant to the forceful attack"
+    },
+    {
+     "id": "c",
+     "md": "equally persuaded, since the mild attack was too weak to matter"
+    },
+    {
+     "id": "d",
+     "md": "resistant only if she ignored the mild attack"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RB",
+   "title": "Ch7 extra MC 2",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In Ditto & Lopez (1992), a strip that stayed yellow meant a medical problem for one group and good health for the other. Who took longer to decide the test was over?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the group for whom yellow meant good health"
+    },
+    {
+     "id": "b",
+     "md": "neither group, since the strip never changed"
+    },
+    {
+     "id": "c",
+     "md": "the group for whom yellow meant a problem"
+    },
+    {
+     "id": "d",
+     "md": "the group that saw the strip turn green"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RC",
+   "title": "Ch7 extra MC 3",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "To persuade a conservative group to back a policy, Feinberg & Willer's moral reframing suggests which appeal?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "link it to patriotism, a value they care about"
+    },
+    {
+     "id": "b",
+     "md": "link it to equality, a value you care about"
+    },
+    {
+     "id": "c",
+     "md": "list more statistics about the policy"
+    },
+    {
+     "id": "d",
+     "md": "stress that most experts disagree with them"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RD",
+   "title": "Ch7 extra MC 4",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Jurors judge an eyewitness who sounds very sure as more credible. According to the book, how is a witness's confidence tied to accuracy?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the link is very strong"
+    },
+    {
+     "id": "b",
+     "md": "the link is perfect"
+    },
+    {
+     "id": "c",
+     "md": "the more sure, the less accurate"
+    },
+    {
+     "id": "d",
+     "md": "the link is rather weak"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RE",
+   "title": "Ch7 extra MC 5",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Per Gerbner, heavy TV viewers (5 hours or more a day) are MORE likely than light viewers to..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "overestimate how common violent crime is"
+    },
+    {
+     "id": "b",
+     "md": "underestimate how common violent crime is"
+    },
+    {
+     "id": "c",
+     "md": "believe women have more ability than men"
+    },
+    {
+     "id": "d",
+     "md": "hold fewer prejudiced attitudes"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RF",
+   "title": "Ch7 extra MC 6",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "An heir to a tobacco company urges teens not to smoke. According to the book, why may this appeal be seen as more sincere?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "it uses a vivid, scary picture"
+    },
+    {
+     "id": "b",
+     "md": "it goes against his own self-interest"
+    },
+    {
+     "id": "c",
+     "md": "he is a medical expert"
+    },
+    {
+     "id": "d",
+     "md": "most listeners already agree"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RG",
+   "title": "Ch8 extra MC 1",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Students tap a pencil to a beat while the experimenter taps. For half, the beats are in time. For half, out of time. Per Hove & Risen (2009), who liked the experimenter more?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "those who tapped out of time with the experimenter"
+    },
+    {
+     "id": "b",
+     "md": "both groups liked the experimenter equally"
+    },
+    {
+     "id": "c",
+     "md": "those who tapped in time with the experimenter"
+    },
+    {
+     "id": "d",
+     "md": "those who tapped alone"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RH",
+   "title": "Ch8 extra MC 2",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In Isen, Clark & Schwartz (1976), a caller who had 'spent her last dime' asked people to relay a message. What raised compliance?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "a free gift received a few minutes before the call"
+    },
+    {
+     "id": "b",
+     "md": "a threat made during the call"
+    },
+    {
+     "id": "c",
+     "md": "hearing that others had already agreed"
+    },
+    {
+     "id": "d",
+     "md": "an earlier huge request"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RJ",
+   "title": "Ch8 extra MC 3",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Per the slides, within one country, which person is LEAST likely to conform on an Asch-type task?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "a rural resident with a college degree"
+    },
+    {
+     "id": "b",
+     "md": "a city dweller who did not finish school"
+    },
+    {
+     "id": "c",
+     "md": "a rural resident who did not finish school"
+    },
+    {
+     "id": "d",
+     "md": "a city dweller with a college degree"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RK",
+   "title": "Ch8 extra MC 4",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A campaign says, Only 47 percent of young voters voted last time, hoping to raise turnout. Why might it backfire?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "it states a prescriptive norm that sounds like a command"
+    },
+    {
+     "id": "b",
+     "md": "it states a descriptive norm that makes not voting look common"
+    },
+    {
+     "id": "c",
+     "md": "it uses fear that blocks all thinking"
+    },
+    {
+     "id": "d",
+     "md": "it asks for too small a favor"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RL",
+   "title": "Ch8 extra MC 5",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Couples tied together at the knees and wrists had to push a ball between their heads across a mat (Aron et al., 2000). Compared with couples who pushed a ball alone, they reported..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "lower marital satisfaction"
+    },
+    {
+     "id": "b",
+     "md": "the same marital satisfaction"
+    },
+    {
+     "id": "c",
+     "md": "higher marital satisfaction"
+    },
+    {
+     "id": "d",
+     "md": "higher satisfaction only for newlyweds"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RM",
+   "title": "Ch9 extra MC 1",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Cacioppo et al. (2012) surveyed 19,131 people who married between 2005 and 2012. Compared with marriages that began offline, those that began online were..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "less likely to end and more satisfying"
+    },
+    {
+     "id": "b",
+     "md": "more likely to end and less satisfying"
+    },
+    {
+     "id": "c",
+     "md": "less likely to end but less satisfying"
+    },
+    {
+     "id": "d",
+     "md": "equal in breakups and satisfaction"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RN",
+   "title": "Ch9 extra MC 2",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Zajonc (1968) showed made-up Turkish-sounding words 0, 1, 2, 5, 10, or 25 times. Which words did people think meant something good?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the words seen only once"
+    },
+    {
+     "id": "b",
+     "md": "the words never seen"
+    },
+    {
+     "id": "c",
+     "md": "the words seen two or five times"
+    },
+    {
+     "id": "d",
+     "md": "the words seen most often"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RP",
+   "title": "Ch9 extra MC 3",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In rapid 2-minute speed dates, Ned feels chemistry for almost everyone. How do others tend to feel about Ned?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "strong desire, since he likes everyone"
+    },
+    {
+     "id": "b",
+     "md": "little desire or chemistry, since his interest is not unique"
+    },
+    {
+     "id": "c",
+     "md": "the same desire as for anyone else"
+    },
+    {
+     "id": "d",
+     "md": "strong desire only after a second date"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
+   "code": "PSY_8RQ",
+   "title": "Ch9 extra MC 4",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Rats raised on Mozart or on Schoenberg later chose a side of the cage (Cross et al., 1967). The rats raised on Schoenberg mostly..."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "moved to the Schoenberg side"
+    },
+    {
+     "id": "b",
+     "md": "moved to the Mozart side"
+    },
+    {
+     "id": "c",
+     "md": "stayed in the middle"
+    },
+    {
+     "id": "d",
+     "md": "moved at random"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. Reread the stem. Which choice fits the study or term?"
+    }
+   ]
+  },
+  {
    "code": "PSY_8EC1",
    "title": "Extra credit 1",
-   "type": "text",
+   "type": "proof",
    "body": [
     {
      "type": "text",
      "md": "Cialdini says consistency is a lever of influence. Use Freedman & Fraser's window-sign study (not a petition) to explain consistency. Then show how the same idea appears in Milgram's shocks. About 5-6 sentences."
     }
    ],
-   "how": "Write about 5-6 sentences. Placeholder: type EC.",
-   "answer": "EC",
-   "accept": [
-    "extra credit"
-   ],
-   "nudge": "QUACK. This is a free-write item. Use the model answer after you try."
+   "how": "Write about 5-6 sentences.",
+   "proof": {
+    "reference": "Cialdini says people want to act in line with what they said or did before. In Freedman & Fraser, homeowners first agreed to put a small Be a Safe Driver sign in a window. Two weeks later most of them agreed to a big, ugly Drive Carefully sign in the yard. Only a small group agreed when asked cold. Saying yes to safe driving made saying no feel like going against themselves. Milgram's shocks work the same way: it began at 15 volts, and each small step made the next one feel fine.",
+    "must": [
+     "a small request first makes a bigger yes more likely later",
+     "the reason is wanting to stay consistent with the first yes",
+     "Milgram's shocks rose in small steps from 15 volts"
+    ],
+    "hint": "QUACK. Use the idea from class. Which study or term fits?"
+   },
+   "grade": "lenient",
+   "len": {
+    "sentences": [
+     5,
+     6
+    ]
+   }
   },
   {
    "code": "PSY_8EC2",
    "title": "Extra credit 2",
-   "type": "text",
+   "type": "proof",
    "body": [
     {
      "type": "text",
      "md": "Compare Cialdini's reciprocity principle with the door-in-the-face technique. Use the zoo-trip study. Say why the trick fails if two different people make the requests. About 5-6 sentences."
     }
    ],
-   "how": "Write about 5-6 sentences. Placeholder: type EC.",
-   "answer": "EC",
-   "accept": [
-    "extra credit"
-   ],
-   "nudge": "QUACK. This is a free-write item. Use the model answer after you try."
+   "how": "Write about 5-6 sentences.",
+   "proof": {
+    "reference": "Cialdini's reciprocity principle says we feel we must repay what others give us. The door-in-the-face trick uses it. The asker makes a huge request that gets refused. Then the asker backs down to a small one, and that feels like a favor to repay. In the zoo-trip study, only a small group agreed to the 2-hour trip when asked alone, but about half agreed after refusing the huge request. If two different people ask, no one backed down to you, so you feel no need to give back.",
+    "must": [
+     "door-in-the-face is reciprocity of concessions",
+     "zoo trip: few agree alone, about half after the huge request",
+     "two different askers means no concession, so the trick fails"
+    ],
+    "hint": "QUACK. Use the idea from class. Which study or term fits?"
+   },
+   "grade": "lenient",
+   "len": {
+    "sentences": [
+     5,
+     6
+    ]
+   }
   },
   {
    "code": "PSY_8EC3",
    "title": "Extra credit 3",
-   "type": "text",
+   "type": "proof",
    "body": [
     {
      "type": "text",
      "md": "Pick ONE of Buss's sexual conflicts, such as sexual over-perception bias or mate value discrepancy. Explain it with the Chapter 9 evolutionary ideas, then name one limit from Eagly & Wood. About 5-6 sentences."
     }
    ],
-   "how": "Write about 5-6 sentences. Placeholder: type EC.",
-   "answer": "EC",
-   "accept": [
-    "extra credit"
-   ],
-   "nudge": "QUACK. This is a free-write item. Use the model answer after you try."
+   "how": "Write about 5-6 sentences.",
+   "proof": {
+    "reference": "Buss says men and women can clash over sex. One clash is sexual over-perception bias, where men often read a woman's friendliness as sexual interest. The evolutionary view says women invest more in each child, while men can gain from more chances to mate. So for a man, a missed chance can cost more than a wrong guess, and the bias could have helped his genes spread. But Eagly & Wood say social roles shape these gaps too. In more equal societies the gaps in mate preferences get smaller, so the bias may not be fixed in our nature.",
+    "must": [
+     "links the conflict to unequal parental investment",
+     "a missed chance costs a man more than a wrong guess",
+     "Eagly & Wood: social roles, and gaps shrink in more equal societies"
+    ],
+    "hint": "QUACK. Use the idea from class. Which study or term fits?"
+   },
+   "grade": "lenient",
+   "len": {
+    "sentences": [
+     5,
+     6
+    ]
+   }
   },
   {
    "code": "PSY_8EC4",
    "title": "Extra credit 4",
-   "type": "text",
+   "type": "proof",
    "body": [
     {
      "type": "text",
      "md": "Choose scarcity, authority, liking, or consensus from Cialdini. Say whether it works mostly by the central or the peripheral route of the ELM. Then explain how this changed the way you read ONE ad or message. About 5-6 sentences."
     }
    ],
-   "how": "Write about 5-6 sentences. Placeholder: type EC.",
-   "answer": "EC",
-   "accept": [
-    "extra credit"
-   ],
-   "nudge": "QUACK. This is a free-write item. Use the model answer after you try."
+   "how": "Write about 5-6 sentences.",
+   "proof": {
+    "reference": "I choose authority, and it works mostly by the peripheral route. When people do not think hard, a doctor's coat or a title is a quick cue that says, trust this. The Oz effect is one case, where sales jump after a TV doctor praises a product. In Petty, Cacioppo & Goldman, the Princeton professor mattered most to students who did not care about the exam rule. Students who did care were moved by strong arguments, which is the central route. Now when I see an actor in a white coat in an ad, I stop and ask if the claims are actually strong.",
+    "must": [
+     "authority or expertise is a peripheral cue",
+     "central route is for people who are motivated and able, who weigh arguments",
+     "ties it to one real ad or message"
+    ],
+    "hint": "QUACK. Use the idea from class. Which study or term fits?"
+   },
+   "grade": "lenient",
+   "len": {
+    "sentences": [
+     5,
+     6
+    ]
+   }
   }
  ]
 }
