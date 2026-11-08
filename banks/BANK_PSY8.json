@@ -1130,9 +1130,7 @@
    ],
    "how": "Type the term, name, or number.",
    "answer": "3",
-   "accept": [
-    "three"
-   ],
+   "accept": [],
    "nudge": "QUACK. Reread the clue. What one term, name, or number fits it?"
   },
   {
@@ -1409,7 +1407,6 @@
    "how": "Type the term, name, or number.",
    "answer": "1",
    "accept": [
-    "one",
     "1%",
     "1 percent",
     "one percent"
@@ -1489,7 +1486,6 @@
    "answer": "nearly all",
    "accept": [
     "almost all",
-    "most",
     "90%",
     "90",
     "about 90%"
@@ -1571,14 +1567,13 @@
    "body": [
     {
      "type": "text",
-     "md": "Burger (2009): most or few were willing to continue past that point?"
+     "md": "Burger (2009): a majority or a minority were willing to continue past that point?"
     }
    ],
    "how": "Type the term, name, or number.",
-   "answer": "most",
+   "answer": "majority",
    "accept": [
     "a majority",
-    "majority",
     "70%",
     "70",
     "70 percent",
