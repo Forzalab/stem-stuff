@@ -1526,6 +1526,12 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
    transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
 .ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
 .ck-rise[hidden] { display: none; }
+/* the dim (Tony, todo 169): the page behind the bottom third eases darker so the sky + duck read; --scrim at an alpha only, under the sky (::before paints first). Same run + fade-out as the sky; opacity only, so reduced motion needs no variant. */
+.ck-rise::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 33.34%; pointer-events: none; opacity: 0;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--scrim) 45%, transparent)); }
+.ck-rise.on::before { animation: ck-dim var(--d-sky) both; }
+.ck-rise.out::before { opacity: 0; animation: none; transition: opacity .6s ease-in; }
+@keyframes ck-dim { 0%, 8.3% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
 html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
 .ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
