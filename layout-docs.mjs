@@ -3,7 +3,11 @@
 // scene except "broken" must evaluate with zero llm-class findings (tests/layout-core.test.mjs runs them all through evaluate()).
 // The engine places and checks layout; the LLM owns the physics. Not a physics simulator.
 
-export const CORE = `You draw ONE diagram as a figure program: one statement per line, \`id = Comp(args)\`. Output only statements: no prose, no code fences.
+export const CORE = `You draw ONE diagram as a figure program: one statement per line, \`id = Comp(args)\`. Output only the plan lines and statements: no prose, no code fences.
+Plan first (the // lines): up to 4 lines, each on its own line, before any statement:
+  // goal: what the student must see   // anchor: the main object   // layers: 1 <idea>, 2 <idea>, ...   // budget: N statements
+Pick layers by goal: one layer = one reasoning step that changes what the student looks at; pure algebra stays in text.
+  Recommended 2-4 layers, max 6. HINT mode stops before the answer layer; EXPLAIN includes it. The prefix = the anchor's rough blocks only.
 Draw MINIMALISTIC, FUNCTIONAL diagrams: only what the explanation needs, no extraneous elements, no decorative objects.
 The engine places and checks layout (contact, overlap, containment) and draws it. You own the physics and the meaning: what acts on what, directions, sizes.
 World units, y points up. Make the main object about 4 to 10 units wide.
@@ -25,7 +29,7 @@ opts object: {kind, in, tone, layer, fill, label, legend}
   legend: "elephant" on a shape or Union: the object's NAME goes to a legend row under the drawing, beside a small render of it.
   A label with no room by its anchor moves to the legend by itself. Lengths and distances: Dim(A, B, "2 m"), never a loose Label.
 Steps: sN = Layer([ids...], {hide: [ids], zoom: [ids], lit: [ids], title: "..."}) stacks one more step on all before it.
-  Lines before the first Layer = the prefix (rough blocks). Lines after a Layer join it. lit = where to look, zoom = camera.
+  Lines before the first Layer = the prefix. Lines after a Layer join it. lit = where to look, zoom = camera. No step: // layers: none.
 Inline point ops are fine inside args: Seg(Mid(A, B), Off(C, 0, 1)). Arithmetic + - * / on numbers is fine.
 Forward references are fine. Order: basic shapes first, then details, then vectors, then labels.
 Precedence = line order: when two shapes conflict, the LATER line is blamed and must move.
@@ -129,13 +133,20 @@ b = Dim(A, B, "b = 5 cm")
 h = Dim(H, C, "h = 3 cm", {tone: "violet"})
 \`\`\``,
   layers: `Layers stack steps, like Photoshop layers that cannot be switched off in the middle (linear, no branches).
-- The prefix = every line before the first Layer: the rough blocks, drawn as a blueprint.
+- Plan first: // goal, // anchor, // layers: 1 <idea>, 2 <idea>, // budget: N statements. The engine compares the plan with what is drawn.
+- One layer = one reasoning step that changes what the student looks at; pure algebra stays in the text. 2-4 layers, at most 6.
+- HINT mode stops before the answer layer; EXPLAIN includes it.
+- The prefix = every line before the first Layer: the anchor's rough blocks only, drawn as a blueprint.
 - sN = Layer([ids...], opts) adds those statements (and every line written after it, until the next Layer) on top of all before it.
 - hide: [ids] hides earlier shapes from this step on (swap a rough block for its detailed parts).
 - lit: [ids] = where to look: the rest of the figure turns pale. zoom: [ids] = the camera fits those shapes for this step.
 - title: "..." = one short line for the step. A Fix listed in a Layer restyles from that step on (step 1 tone amber).
 - Checks: each step's new shapes are checked against everything shown with them; shapes never shown together never conflict.
 \`\`\`
+// goal: why the block stays put, then what a push adds
+// anchor: a block on the floor
+// layers: 1 weight and normal force, 2 the push
+// budget: 8 statements
 O = Pt(0, 0)
 floor = Seg(Off(O, -3, 0), Off(O, 3, 0), {kind: "surface", tone: "muted"})
 blk = Box(Off(O, 0, 0.75), 1.5, 1.5, 0, {fill: true, tone: "muted"})
@@ -276,7 +287,11 @@ export const SCENES = {
   circuit: {
     title: "Series circuit",
     problem: "A 9 V battery is connected to a 2 Ω and a 4 Ω resistor in a row. How much current flows?",
-    pass1: `TL = Pt(0, 4)
+    pass1: `// goal: one current through the whole loop
+// anchor: the loop: battery, two resistors, wires
+// layers: none
+// budget: 25 statements
+TL = Pt(0, 4)
 TR = Pt(8, 4)
 BR = Pt(8, 0)
 BL = Pt(0, 0)
@@ -307,7 +322,11 @@ req = Box(eqc, 2.4, 0.7, 0, {tone: "orange", layer: 2, label: "6 Ω total"})`,
   ramp: {
     title: "Ramp with friction",
     problem: "A box rests on a 30° ramp. Which way does friction point, and what must it equal?",
-    pass1: `A = Pt(0, 0)
+    pass1: `// goal: the forces on the box and which way friction points
+// anchor: a box on a 30° ramp
+// layers: none
+// budget: 15 statements
+A = Pt(0, 0)
 B = Pt(8, 0)
 top = Meet(A, Rot(A, B, 30), B, Off(B, 0, 1))
 ramp = Poly([A, B, top], {kind: "surface", tone: "muted"})
@@ -324,7 +343,11 @@ th = Angle(B, A, top, "30°")`,
   cube: {
     title: "Cube under pressure",
     problem: "A cube has side 20 cm. Force F presses on its top face. Find the pressure, then the volume strain.",
-    pass1: `F0 = Pt(0, 0)
+    pass1: `// goal: the force on the top face, then the squeeze
+// anchor: the cube
+// layers: none
+// budget: 20 statements
+F0 = Pt(0, 0)
 F1 = Off(F0, 4, 0)
 F2 = Off(F0, 4, 4)
 F3 = Off(F0, 0, 4)
@@ -345,7 +368,11 @@ dV = Label(Off(F3, -1.4, 1.4), "ΔV", {tone: "pink"})`,
   pistons: {
     title: "Two pistons",
     problem: "A 1800 kg elephant sits on the big piston (R = 1.0 m). Students climb onto the small piston (r = 0.20 m). What is the smallest mass that raises the elephant?",
-    pass1: `G = Pt(0, 0)
+    pass1: `// goal: the same pressure under both pistons
+// anchor: two pistons joined by oil
+// layers: none
+// budget: 20 statements
+G = Pt(0, 0)
 tank = Poly([G, Off(G, 10, 0), Off(G, 10, 4.2), Off(G, 8, 4.2), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 4.2), Off(G, 0, 4.2)], {kind: "overlay", tone: "muted", layer: 3})
 wl = Seg(G, Off(G, 0, 4.2), {kind: "surface", tone: "muted"})
 wb = Seg(G, Off(G, 10, 0), {kind: "surface", tone: "muted"})
@@ -367,7 +394,11 @@ dr = Dim(Off(G, 9, 0), Off(G, 10, 0), "r = 0.20 m")`,
   lens: {
     title: "Thin lens (Dim + layers)",
     problem: "An object 10 cm tall stands 25 cm in front of a converging lens with focal length 10 cm. Where does the image form, and how tall is it?",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: where the image forms, from three rays
+// anchor: the lens on its axis with the object
+// layers: 1 the distances, 2 ray 1, 3 ray 2, 4 ray 3, 5 the image
+// budget: 25 statements
+O = Pt(0, 0)
 axis = Seg(Off(O, -6.5, 0), Off(O, 5, 0), {kind: "overlay", tone: "muted"})
 lens = Curve([Off(O, 0, 2.6), Off(O, 0.35, 0), Off(O, 0, -2.6)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", layer: 3, legend: "converging lens"})
 F = Off(O, -2, 0)
@@ -396,7 +427,11 @@ dI = Dim(O, Off(O, 3.333, 0), "dᵢ = 16.7 cm", {tone: "violet"})`,
   pelican: {
     title: "Pelican on a lake (Curve + Union)",
     problem: "Draw a pelican floating on a lake.",
-    pass1: `G = Pt(0, 0)
+    pass1: `// goal: a pelican floating on a lake
+// anchor: rough blocks: lake, body, head
+// layers: 1 the curves of the bird, 2 ripples and the name
+// budget: 20 statements
+G = Pt(0, 0)
 water = Box(Off(G, -0.6, -0.5), 9, 1, 0, {kind: "overlay", fill: true, tone: "sky", layer: 3})
 lake = Seg(Off(G, -5.1, 0), Off(G, 3.9, 0), {kind: "surface", tone: "sky"})
 bodyB = Box(Off(G, 0.6, 0.8), 4, 1.6, 0)
@@ -419,7 +454,11 @@ bird = Union([body, neck, head, beak, pouch, wing, eye], {legend: "pelican"})`,
   horned: {
     title: "Horned cube (layers)",
     problem: "A cube on the ground; then it grows a horn.",
-    pass1: `G = Pt(0, 0)
+    pass1: `// goal: the same cube, then a horn added
+// anchor: a cube on the ground
+// layers: 1 the cube, 2 the horn
+// budget: 10 statements
+G = Pt(0, 0)
 ground = Seg(Off(G, -4, 0), Off(G, 4, 0), {kind: "surface", tone: "muted"})
 cube = Box(Off(G, 0, 2), 4, 4, 0)
 s1 = Layer([f1], {title: "The cube"})
@@ -432,7 +471,11 @@ beast = Union([cube, horn], {legend: "horned cube"})`,
   area: {
     title: "Area under a curve + tangent",
     problem: "Shade the area under f(x) = 0.1x² + 0.5 from x = 1 to x = 4, and draw the tangent at x = 5.",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: the area under f, then the tangent at x = 5
+// anchor: the axes and the curve f
+// layers: 1 the area from 1 to 4, 2 the tangent at 5
+// budget: 10 statements
+O = Pt(0, 0)
 xAx = Seg(Off(O, -0.4, 0), Off(O, 6.6, 0), {kind: "overlay", tone: "muted"})
 yAx = Seg(Off(O, 0, -0.4), Off(O, 0, 4.6), {kind: "overlay", tone: "muted"})
 f = Curve([Pt(0, 0.5), Pt(1, 0.6), Pt(2, 0.9), Pt(3, 1.4), Pt(4, 2.1), Pt(5, 3), Pt(6, 4.1)], {kind: "overlay", tone: "ink", label: "f(x)"})
@@ -447,7 +490,11 @@ tan = Seg(Pt(3.8, 1.8), Pt(6.4, 4.4), {kind: "overlay", tone: "amber", label: "s
   unit: {
     title: "Unit circle: sin and cos",
     problem: "On the unit circle, show cos θ and sin θ for θ = 35°.",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: cos θ and sin θ as the coordinates of the point
+// anchor: the unit circle with the point at 35°
+// layers: 1 cos θ, 2 sin θ
+// budget: 15 statements
+O = Pt(0, 0)
 xAx = Seg(Off(O, -3.6, 0), Off(O, 3.6, 0), {kind: "overlay", tone: "muted"})
 yAx = Seg(Off(O, 0, -3.6), Off(O, 0, 3.6), {kind: "overlay", tone: "muted"})
 circ = Circle(O, 3, {kind: "overlay", tone: "muted"})
@@ -467,7 +514,11 @@ dS = Dim(Q, P, "sin θ", {tone: "violet"})`,
   cone: {
     title: "Cone in a cylinder (volume)",
     problem: "A cone fits exactly inside a cylinder of radius r and height h. Compare their volumes.",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: the cone has the same base and height as the cylinder
+// anchor: the cylinder
+// layers: 1 the cone, 2 r and h
+// budget: 15 statements
+O = Pt(0, 0)
 bot = Curve([Off(O, -2, 0), Off(O, 0, -0.6), Off(O, 2, 0), Off(O, 0, 0.6)], {closed: true, kind: "overlay"})
 top = Curve([Off(O, -2, 5), Off(O, 0, 4.4), Off(O, 2, 5), Off(O, 0, 5.6)], {closed: true, kind: "overlay", fill: true})
 sideL = Seg(Off(O, -2, 0), Off(O, -2, 5), {kind: "overlay"})
@@ -484,7 +535,11 @@ dh = Dim(Off(O, 2, 0), Off(O, 2, 5), "h")`,
   graph: {
     title: "Weighted graph: shortest path",
     problem: "Find the shortest path from A to E in the weighted graph.",
-    pass1: `A = Pt(0, 0)
+    pass1: `// goal: the shortest path from A to E
+// anchor: the weighted graph
+// layers: 1 the path A C B D E
+// budget: 25 statements
+A = Pt(0, 0)
 B = Pt(2.5, 1.6)
 C = Pt(2.5, -1.6)
 D = Pt(5, 1)
@@ -511,7 +566,11 @@ p4 = Fix(eDE, {tone: "amber"})`,
   bst: {
     title: "BST: insert 7",
     problem: "Insert 7 into the binary search tree 8, 3, 10, 1, 6, 14.",
-    pass1: `R = Pt(0, 0)
+    pass1: `// goal: where 7 goes in the tree
+// anchor: the tree 8, 3, 10, 1, 6, 14
+// layers: 1 left at 8, 2 right at 3, 3 right at 6, 4 insert 7
+// budget: 25 statements
+R = Pt(0, 0)
 L = Pt(-2, -1.5)
 Rr = Pt(2, -1.5)
 LL = Pt(-3, -3)
@@ -540,7 +599,11 @@ n7 = Circle(N, 0.45, {fill: true, tone: "amber", label: "7"})`,
   projectile: {
     title: "Projectile: velocity components",
     problem: "A ball is launched over level ground. Show its velocity and the components along the path.",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: vx stays, vy shrinks to 0 at the top
+// anchor: the ground and the path
+// layers: 1 launch velocity, 2 on the way up, 3 at the top
+// budget: 15 statements
+O = Pt(0, 0)
 ground = Seg(Off(O, -0.5, 0), Off(O, 9, 0), {kind: "surface", tone: "muted"})
 path = Curve([O, Pt(2, 2.4), Pt(4, 3.2), Pt(6, 2.4), Pt(8, 0)], {kind: "overlay", tone: "muted"})
 range = Dim(O, Pt(8, 0), "range R")
@@ -559,7 +622,11 @@ g = Vec(Pt(4, 3.2), Pt(4, 2.1), "g", {tone: "pink"})`,
   pendulum: {
     title: "Pendulum: forces",
     problem: "A pendulum of length L swings out to θ = 30°. Show the forces on the bob and split the weight.",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: the two forces on the bob, then mg split
+// anchor: the pivot, rope and bob at 30°
+// layers: 1 tension and weight, 2 the split of mg
+// budget: 15 statements
+O = Pt(0, 0)
 ceiling = Seg(Off(O, -2.5, 0), Off(O, 2.5, 0), {kind: "surface", tone: "muted"})
 D = Off(O, 0, -5)
 B = Rot(O, D, 30)
@@ -579,7 +646,11 @@ Wt = Vec(B, Off(B, -0.78, -0.45), "mg sin θ", {tone: "pink"})`,
   atwood: {
     title: "Atwood machine",
     problem: "Two masses hang over a pulley (m₂ > m₁). Show the forces and the acceleration.",
-    pass1: `O = Pt(0, 0)
+    pass1: `// goal: the forces on each mass and the shared acceleration
+// anchor: the pulley with two hanging masses
+// layers: 1 forces on m1, 2 forces on m2, 3 the acceleration
+// budget: 20 statements
+O = Pt(0, 0)
 ceiling = Seg(Off(O, -2, 1.8), Off(O, 2, 1.8), {kind: "surface", tone: "muted"})
 axle = Seg(Off(O, 0, 1.8), O, {kind: "overlay", tone: "muted"})
 wheel = Circle(O, 0.8, {tone: "ink", legend: "pulley"})
@@ -601,7 +672,11 @@ a2 = Vec(Off(O, 1.8, -1.6), Off(O, 1.8, -2.8), "a", {tone: "pink"})`,
   field: {
     title: "Electric field of a dipole",
     problem: "Sketch the electric field between a positive and a negative charge.",
-    pass1: `P = Pt(-2, 0)
+    pass1: `// goal: field lines run from + to −, E is tangent
+// anchor: the two charges
+// layers: 1 the field lines, 2 E at a point
+// budget: 20 statements
+P = Pt(-2, 0)
 N = Pt(2, 0)
 plus = Circle(P, 0.38, {fill: true, tone: "pink", label: "+"})
 minus = Circle(N, 0.38, {fill: true, tone: "sky", label: "−"})
@@ -624,7 +699,11 @@ E = Vec(Pt(1, 1), Pt(1.75, 0.45), "E", {tone: "violet"})`,
   slit: {
     title: "Young's double slit",
     problem: "Light from one source passes two slits d apart and lands on a screen L away. Why do bright and dark fringes appear, and where is the bright fringe at P?",
-    pass1: `src = Circle(Pt(-2.2, 0), 0.22, {fill: true, tone: "amber", legend: "light source"})
+    pass1: `// goal: why bright and dark fringes alternate
+// anchor: source, barrier with two slits, screen
+// layers: 1 circular waves, 2 the path difference, 3 the fringes
+// budget: 30 statements
+src = Circle(Pt(-2.2, 0), 0.22, {fill: true, tone: "amber", legend: "light source"})
 top = Box(Pt(0, 1.95), 0.2, 2.1, 0, {fill: true, tone: "ink"})
 midB = Box(Pt(0, 0), 0.2, 0.8, 0, {fill: true, tone: "ink"})
 low = Box(Pt(0, -1.95), 0.2, 2.1, 0, {fill: true, tone: "ink"})

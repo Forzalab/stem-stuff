@@ -2,9 +2,10 @@
 // the layout checks (solid pair, surface sunk vs resting, inside escape, Vec head), pass-2 Fix, the mover, determinism,
 // and every read_doc example + built-in scene through evaluate(). Bundle 2: legend (asked + auto-moved), Dim placement + fallback,
 // Layer stacking (show / hide / zoom / lit), Fix restyle inside a layer, Curve (closed, tapered, mirror, self-cross) + Union.
+// Plan lines (Q41: // goal anchor layers budget -> result().plan + fyi plan-layers / plan-budget / plan-missing), layer cap 6 (Q42).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines } from "../layout-core.mjs";
+import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines } from "../layout-core.mjs";
 import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE } from "../layout-docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
@@ -22,7 +23,7 @@ X = Meet(A, Off(A, 1, 1), B, Off(B, -1, 1))
 K = Mid(Off(A, 0, 2), B)`);
   close(r.points.M, [2, 0]); close(r.points.T, [1, 0]); close(r.points.O, [3, 2]); close(r.points.F, [3, 0]);
   close(r.points.R, [0, 4]); close(r.points.X, [2, 2]); close(r.points.K, [2, 1]);
-  assert.equal(r.findings.length, 0);
+  assert.deepEqual(r.findings.map(f => f.code), ["plan-missing"]);
 });
 
 test("parallel Meet: one error on the root, its dependents blocked by it (not N errors)", () => {
@@ -146,9 +147,13 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.deepEqual(llm(evaluate({ pass1: sc.pass1, pass2: sc.pass2 })), [], k);
   const b = evaluate(SCENES.broken.pass1), b2 = evaluate({ pass1: SCENES.broken.pass1, pass2: SCENES.broken.pass2 });
   const codes = new Set([...b.findings, ...b2.findings, ...evaluate(SCENES.broken.pass1, { mover: true }).findings].map(f => f.code));
-  for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "legend", "auto-fixed"]) assert.ok(codes.has(c), c);
+  for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "legend", "auto-fixed", "plan-missing"]) assert.ok(codes.has(c), c);
   assert.ok(!b2.findings.some(f => f.code === "overlap"), "fx3 = Fix(c2, {y: 1.5}) clears the crate overlap");
-  assert.ok(CORE.split("\n").length <= 32, "the core prompt stays short");
+  assert.ok(CORE.split("\n").length <= 34, "the core prompt stays short");
+  assert.match(CORE, /Plan first \(the \/\/ lines\)/);
+  assert.match(CORE, /max 6/);
+  assert.match(TOPICS.layers, /```\n\/\/ goal: /);
+  for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.ok(evaluate(sc.pass1).plan, `${k} has plan lines`);
   assert.match(CORE, /MINIMALISTIC, FUNCTIONAL/);
   assert.ok(!/Svg|path d/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");
   for (const t of ["curves", "legend", "dim", "layers"]) assert.ok(TOPIC_NAMES.includes(t), t);
@@ -309,4 +314,43 @@ test("determinism with layers + curves: streamed in chunks or whole, twice, the 
   sess.end();
   assert.deepEqual(JSON.parse(JSON.stringify(sess.result())), JSON.parse(JSON.stringify(whole)));
   assert.deepEqual(JSON.parse(JSON.stringify(evaluate(s))), JSON.parse(JSON.stringify(whole)));
+});
+
+test("plan lines: the 4 // keys (any case) are captured, streamed or whole; plan-layers / plan-budget / plan-missing are fyi only", () => {
+  const src = `// Goal: why the box stays put
+// ANCHOR: a box on the floor
+// layers: 1 weight and normal (W, N), 2: the push
+// budget: 4 statements
+// a plain comment is dropped
+// colour: not a plan key
+A = Pt(0, 0)
+B = Pt(4, 0) // trailing comments drop
+g = Seg(A, B, {kind: "surface"})
+s1 = Layer([v], {title: "Push"})
+v = Vec(Off(A, 1, 1), Off(A, 2, 1), "F")`;
+  const r = evaluate(src);
+  assert.deepEqual(r.plan, { goal: "why the box stays put", anchor: "a box on the floor", layers: ["weight and normal (W, N)", "the push"], budget: 4 });
+  assert.deepEqual(llm(r), []);
+  assert.deepEqual(r.findings.map(f => [f.code, f.cls, f.line]), [["plan-layers", "fyi", 3], ["plan-budget", "fyi", 4]]);
+  const s = createSession();
+  for (let i = 0; i < src.length; i += 7) s.push(src.slice(i, i + 7));
+  s.end();
+  assert.deepEqual(s.result().plan, r.plan);
+  assert.match(planLines(r), /layers: 2 declared .*; 1 drawn/);
+  assert.match(planLines(r), /budget: 4; 5 statements used/);
+  const ok = evaluate("// goal: a dot\n// layers: none\n// budget: 2\nA = Pt(0, 0)");
+  assert.deepEqual(ok.findings, []);
+  assert.deepEqual(ok.plan.layers, []);
+  const none = evaluate("A = Pt(0, 0)");
+  assert.equal(none.plan, null);
+  assert.deepEqual(none.findings.map(f => [f.code, f.cls]), [["plan-missing", "fyi"]]);
+  assert.match(planLines(none), /^Plan: none/);
+});
+
+test("layer cap: six Layers are fine, a 7th Layer statement is an llm finding too-many-layers", () => {
+  const prog = n => ["// layers: " + Array.from({ length: n }, (_, i) => `${i + 1} dot ${i + 1}`).join(", "), "A = Pt(0, 0)",
+    ...Array.from({ length: n }, (_, i) => `s${i + 1} = Layer([d${i + 1}], {title: "Dot ${i + 1}"})\nd${i + 1} = Circle(Off(A, ${2 * i}, 0), 0.5)`)].join("\n");
+  assert.deepEqual(llm(evaluate(prog(6))), []);
+  const f = llm(evaluate(prog(7)));
+  assert.deepEqual(f.map(x => [x.code, x.ids]), [["too-many-layers", ["s7"]]]);
 });

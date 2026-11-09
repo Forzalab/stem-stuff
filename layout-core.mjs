@@ -10,6 +10,8 @@
 // NOT a physics simulator (Tony, Nov 8): the engine never judges physics meaning (force directions, magnitudes, what acts on what);
 // the LLM owns that. The DAG + collide checker only save the LLM the tokens it spends ARRANGING objects (auto-snap, like Canva):
 // placement, contact, containment, overlap. One diagram per draw.
+// Plan lines (Q41): `// goal: | anchor: | layers: | budget:` lines are kept as result().plan and checked against what is drawn (fyi);
+// a 7th Layer is an llm finding (Q42, MAX_LAYERS = 6).
 // World space: y up. Tolerance = 1% of the figure span (model units), so the verdict is the same on every screen.
 import { box as fcBox, poly as fcPoly, circle as fcCircle, wseg, surface as fcSurface, collide, contactGap, centroid, ptSeg, autoHues } from "./figcheck.js";
 
@@ -29,6 +31,7 @@ const finite = p => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) 
 // ─── the language ───
 export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t"], Off: ["P", "dx", "dy"], Foot: ["P", "A", "B"], Rot: ["O", "P", "deg"], Meet: ["A", "B", "C", "D"] };
 export const SHAPE_SIGS = { Seg: "Seg(A, B, opts?)", Box: "Box(C, w, h, deg?, opts?)", Poly: "Poly([A, B, C, ...], opts?)", Circle: "Circle(O, r, opts?)", Vec: "Vec(A, B, label?, opts?)", Label: "Label(P, text, opts?)", Angle: "Angle(A, O, B, label?, opts?)", Dim: "Dim(A, B, text, opts?)", Curve: "Curve([A, B, C, ...], opts?)" };
+export const MAX_LAYERS = 6;                         // Tony Q42: 2-4 recommended, 6 max; a 7th Layer is an llm finding
 export const LAYER_SIG = 'Layer([ids...], {hide: [ids], zoom: [ids], lit: [ids], title: "..."})';
 const SIGS = { ...Object.fromEntries(Object.entries(POINT_OPS).map(([k, v]) => [k, `${k}(${v.join(", ")})`])), ...SHAPE_SIGS, Figure: "Figure([ids...])", Fix: "Fix(target, {trait: value})", Layer: LAYER_SIG, Union: "Union([ids...], opts?)" };
 const META = new Set(["Fix", "Layer", "Union"]);   // statements outside the DAG (they name other statements): validated at rebuild, never values
@@ -139,15 +142,24 @@ function checkInline(call) {
     else if (n.t === "obj") n.entries.forEach(([, v]) => walk(v));
   }
 }
-/** split a growing text into complete statements: a newline at bracket depth 0 outside strings ends one; `//` comments and ``` fences drop */
+/** split a growing text into complete statements: a newline at bracket depth 0 outside strings ends one; ``` fences drop, `//` comments
+ * drop too, except the PLAN lines (Tony Q41: a whole-line `// goal: | anchor: | layers: | budget:` before or between statements) */
+export const PLAN_KEYS = ["goal", "anchor", "layers", "budget"];
+const PLAN_RE = /^\/\/\s*(goal|anchor|layers|budget)\s*:\s*(.*?)\s*$/i;
 function splitDone(buf) {
-  const done = [];
+  const done = [], plans = [];
   let depth = 0, q = null, start = 0, line = 0, startLine = 0;
   for (let i = 0; i < buf.length; i++) {
     const c = buf[i];
     if (q) { if (c === "\\") i++; else if (c === q) q = null; continue; }
     if (c === '"' || c === "'") q = c;
-    else if (c === "/" && buf[i + 1] === "/") { const j = buf.indexOf("\n", i); if (j < 0) break; buf = buf.slice(0, i) + buf.slice(j); i--; continue; }
+    else if (c === "/" && buf[i + 1] === "/") {
+      const j = buf.indexOf("\n", i);
+      if (j < 0) break;
+      const m = depth === 0 && !buf.slice(start, i).trim() && PLAN_RE.exec(buf.slice(i, j));
+      if (m) plans.push({ key: m[1].toLowerCase(), text: m[2], line: line + 1 });
+      buf = buf.slice(0, i) + buf.slice(j); i--; continue;
+    }
     else if ("([{".includes(c)) depth++;
     else if (")]}".includes(c)) depth = Math.max(0, depth - 1);
     else if (c === "\n") {
@@ -155,7 +167,16 @@ function splitDone(buf) {
       if (depth === 0) { const t = buf.slice(start, i).trim(); if (t && !t.startsWith("```")) done.push({ text: t, line: startLine + 1 }); start = i + 1; startLine = line; }
     }
   }
-  return { done, rest: buf.slice(start), restLines: startLine };
+  return { done, plans, rest: buf.slice(start), restLines: startLine };
+}
+/** one plan line's value: layers "1 forces, 2 friction" -> ["forces", "friction"]; "3" -> 3 blanks; "none" / "0" -> []; budget -> a number */
+function planValue(key, text) {
+  if (key === "budget") { const n = /\d+/.exec(text); return n ? +n[0] : null; }
+  if (key !== "layers") return text;
+  if (/^(none|0|-|no layers?)?$/i.test(text)) return [];
+  if (/^\d+$/.test(text)) return Array(Math.min(+text, 99)).fill("");
+  const num = [...text.matchAll(/(?:^|[,;]\s*)\d+(?:\s*[.:)=-]\s*|\s+)(.*?)(?=\s*[,;]\s*\d+(?:\s*[.:)=-]\s*|\s+)|$)/g)].map(m => m[1].trim());
+  return num.length ? num : text.split(/\s*[,;]\s*/).filter(Boolean);
 }
 
 // ─── geometry helpers on top of figcheck ───
@@ -327,6 +348,8 @@ export function createSession(opts = {}) {
   let quiet = false;         // a step snapshot re-evaluates silently (no checks, no events)
   const emit = e => { if (!quiet) events.push(e); };
   let metaCache = null;      // layer + union membership, recomputed when the statement list changes
+  const plan = {};           // the plan lines of pass 1 (Q41): {goal, anchor, layers, budget, lines: {key: line}}
+  let ended1 = false;        // pass 1 has finished streaming (plan-layers / plan-missing wait for it)
 
   function fresh() { return { vals: new Map(), status: new Map(), findings: [], ghosts: [], order: [], blockedBy: new Map(), patches: new Map(), fixErr: new Map(), moved: new Map() }; }
   S = fresh();
@@ -832,14 +855,29 @@ export function createSession(opts = {}) {
   function push(chunk, pass = 1) {
     events = [];
     bufs[pass] += chunk;
-    const { done, rest, restLines } = splitDone(bufs[pass]);
+    const { done, plans, rest, restLines } = splitDone(bufs[pass]);
+    if (pass === 1) for (const p of plans) { plan[p.key] = planValue(p.key, p.text); (plan.lines ||= {})[p.key] = lineBase[pass] + p.line; emit({ type: "plan", key: p.key, line: lineBase[pass] + p.line }); }
     for (const d of done) addText(d.text, lineBase[pass] + d.line, pass);
     lineBase[pass] += restLines; bufs[pass] = rest;
     return events;
   }
   function end(pass = 1) {
     const ev = push("\n", pass);
+    if (pass === 1) ended1 = true;
     return ev;
+  }
+  /** the plan as data ({goal, anchor, layers, budget}, null when no plan line came) + its fyi checks against what was drawn */
+  function planOut() {
+    if (!plan.lines) return null;
+    return { goal: plan.goal ?? null, anchor: plan.anchor ?? null, layers: plan.layers ?? null, budget: plan.budget ?? null };
+  }
+  function planFindings() {
+    const out = [], n1 = stmts.filter(s => s.pass === 1).length, nL = meta().layers.length, p = planOut();
+    const F = (code, line, hint) => out.push({ code, cls: "fyi", ids: [], amount: null, mtv: null, hint: `${hint} (no action needed)`, line, pass: 1 });
+    if (!p) { if (ended1 && n1) F("plan-missing", null, "no plan lines: start a figure with // goal, // anchor, // layers, // budget"); return out; }
+    if (ended1 && p.layers && p.layers.length !== nL) F("plan-layers", plan.lines.layers, `the plan declares ${p.layers.length} layer${p.layers.length === 1 ? "" : "s"}, the program draws ${nL} Layer statement${nL === 1 ? "" : "s"}`);
+    if (p.budget != null && n1 > p.budget) F("plan-budget", plan.lines.budget, `${n1} statements, over the plan's budget of ${p.budget}`);
+    return out;
   }
   /** pending at the time of asking: undefined refs (root reported once, dependents listed) */
   function pendingFindings() {
@@ -875,6 +913,7 @@ export function createSession(opts = {}) {
       const shown = parts.some(m => k === "hide" ? stepOf(m) < d.k : stepOf(m) <= d.k && hiddenAt(m) > d.k);
       if (!shown) F("layer-ref", "llm", d, [d.id, id], `${d.id} ${verb[k]} ${id}, which is not shown ${k === "hide" ? "before" : "in"} step ${d.k} (it joins in step ${stepOf(parts[0])}${hiddenAt(parts[0]) < Infinity ? `, hidden from step ${hiddenAt(parts[0])}` : ""})`);
     }
+    for (const d of M.layers) if (d.k > MAX_LAYERS) F("too-many-layers", "llm", d, [d.id], `${d.id} is layer ${d.k}; at most ${MAX_LAYERS} layers: merge steps (one layer = one reasoning step), keep algebra in the text`);
     for (const x of M.ldupes) F("layer-dup", "fyi", M.layers[x.ks[1] - 1], [x.id], `${x.id} is listed in steps ${x.ks.join(" and ")}; it joins in step ${x.ks[0]}`);
     for (const x of M.dupes) F("union-dup", "fyi", M.unions.find(u => u.id === x.of[1]), [x.id, ...x.of], `${x.id} is in two Unions (${x.of.join(", ")}); it belongs to ${x.of[0]}`);
     return out;
@@ -906,10 +945,10 @@ export function createSession(opts = {}) {
       for (const st of steps) for (const f of st.fyi) { const key = f.ids.join() + "|" + f.hint; if (!seen.has(key)) { seen.add(key); fyi.push(f); } }
       lay = { ...steps[n], fyi };
     }
-    const findings = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
+    const findings = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
     const status = Object.fromEntries(stmts.map(s => [s.id, S.status.get(s.id) || "pending"]));
     return {
-      points, findings, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
+      plan: planOut(), points, findings, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
       shapes: shapes.map(pub), unions, steps,
       stmts: stmts.map(s => ({ id: s.id, comp: s.comp, line: s.line, pass: s.pass, deps: s.deps, step: M.layers.length ? stepOf(s.id) : undefined })),
       // raw-coordinate points: a HINT for the LLM (derive points instead), never an error
@@ -981,6 +1020,15 @@ export function sceneSummary(res) {
   return lines.join("\n");
 }
 /** the legend as text for the LLM: what the renderer put under the drawing (asked with legend, or moved for lack of room) */
+/** the plan as text for a review: the // lines read back, with the drawn layer + statement counts */
+export function planLines(res) {
+  const p = res.plan;
+  if (!p) return "Plan: none (a figure starts with // goal, // anchor, // layers, // budget).";
+  const nL = res.steps ? res.steps.length - 1 : 0, n1 = (res.stmts || []).filter(s => s.pass === 1).length;
+  return ["Plan (the // lines):", `- goal: ${p.goal ?? "(none)"}`, `- anchor: ${p.anchor ?? "(none)"}`,
+    `- layers: ${p.layers ? `${p.layers.length} declared${p.layers.some(Boolean) ? ` (${p.layers.map((x, i) => `${i + 1} ${x}`).join(", ")})` : ""}` : "(none)"}; ${nL} drawn`,
+    `- budget: ${p.budget ?? "(none)"}; ${n1} statements used`].join("\n");
+}
 export function legendLines(res) {
   if (!res.legend || !res.legend.length) return "Legend: (empty)";
   return ["Legend (under the drawing, each beside a small render of its object):", ...res.legend.map(e => `- ${e.id}: "${e.text}"${e.auto ? ` (moved: the label of ${e.of} had no room by its anchor)` : " (asked with legend)"}`)].join("\n");
