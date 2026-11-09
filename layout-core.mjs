@@ -29,7 +29,7 @@ const fp = p => `(${r3(p[0])}, ${r3(p[1])})`;
 const finite = p => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
 // ─── the language ───
-export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t"], Off: ["P", "dx", "dy"], Foot: ["P", "A", "B"], Rot: ["O", "P", "deg"], Meet: ["A", "B", "C", "D"] };
+export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t"], Off: ["P", "dx", "dy"], Foot: ["P", "A", "B"], Rot: ["O", "P", "deg"], Meet: ["A", "B", "C", "D"], Centre: ["S"], Center: ["S"], Side: ["S", "side"], Edge: ["S", "i", "t"] };
 export const SHAPE_SIGS = { Seg: "Seg(A, B, opts?)", Box: "Box(C, w, h, deg?, opts?)", Poly: "Poly([A, B, C, ...], opts?)", Circle: "Circle(O, r, opts?)", Vec: "Vec(A, B, label?, opts?)", Label: "Label(P, text, opts?)", Angle: "Angle(A, O, B, label?, opts?)", Dim: "Dim(A, B, text, opts?)", Curve: "Curve([A, B, C, ...], opts?)" };
 export const MAX_LAYERS = 6;                         // Tony Q42: 2-4 recommended, 6 max; a 7th Layer is an llm finding
 export const LAYER_SIG = 'Layer([ids...], {hide: [ids], zoom: [ids], lit: [ids], title: "..."})';
@@ -60,7 +60,13 @@ function tokenize(s) {
     const m = /^(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?/.exec(s.slice(i, i + 40));
     if (m) { out.push({ t: "num", v: parseFloat(m[0]) }); i += m[0].length; continue; }
     const id = /^[A-Za-z_Ͱ-Ͽ][\wͰ-Ͽ]*/.exec(s.slice(i, i + 80));
-    if (id) { out.push({ t: "id", v: id[0] }); i += id[0].length; continue; }
+    if (id) {
+      i += id[0].length;
+      const part = s[i] === "." && /^[A-Za-z_]\w*/.exec(s.slice(i + 1, i + 81));   // v.tail, not the number .5
+      if (part) { out.push({ t: "dotted", id: id[0], part: part[0] }); i += part[0].length + 1; }
+      else out.push({ t: "id", v: id[0] });
+      continue;
+    }
     if ("()[]{},:=+-*/".includes(c)) { out.push({ t: c }); i++; continue; }
     throw perr("parse", `unexpected "${c}"`);
   }
@@ -97,9 +103,19 @@ function parseTokens(toks) {
     }
     return expr(0);
   }
+  // W2: dotted sugar compiles to the same point ops; measures are a separate node for Expect (T4)
+  function dotted(k) {
+    const r = { t: "ref", id: k.id };
+    if (k.part === "tail" || k.part === "head") return { t: "dot", id: k.id, part: k.part };
+    if (k.part === "centre" || k.part === "center") return { t: "call", name: "Centre", args: [r] };
+    if (["top", "bottom", "left", "right"].includes(k.part)) return { t: "call", name: "Side", args: [r, { t: "str", v: k.part }] };
+    if (["length", "width", "height", "area"].includes(k.part)) return { t: "measure", of: k.id, m: k.part };
+    throw perr("bad-args", `${k.id}.${k.part}: unknown part (allowed: tail, head, centre, center, top, bottom, left, right, length, width, height, area)`);
+  }
   function primary() {
     const k = take();
     if (k.t === "num" || k.t === "str") return { t: k.t, v: k.v };
+    if (k.t === "dotted") return dotted(k);
     if (k.t === "-") { const e = primary(); if (e.t !== "num") throw perr("parse", "minus needs a number"); return { t: "num", v: -e.v }; }
     if (k.t === "(") { const e = expr(0); take(")"); return e; }
     if (k.t === "[") return { t: "arr", items: list("]") };
@@ -138,7 +154,8 @@ function parseTokens(toks) {
 }
 function refsOf(node, out = new Set()) {
   if (!node) return out;
-  if (node.t === "ref") out.add(node.id);
+  if (node.t === "ref" || node.t === "dot") out.add(node.id);
+  else if (node.t === "measure") out.add(node.of);
   else if (node.t === "call") node.args.forEach(a => refsOf(a, out));
   else if (node.t === "arr") node.items.forEach(a => refsOf(a, out));
   else if (node.t === "obj") node.entries.forEach(([k, v]) => { if (k === "in" || v.t !== "ref") refsOf(v, out); });   // a bare word in opts ({kind: surface}) is a string, not a ref; only `in:` names a statement
@@ -147,14 +164,16 @@ function refsOf(node, out = new Set()) {
 /** one statement's text -> { id, comp, args, deps } or throws {code, message} */
 export function parseStatement(text) {
   const { id, call } = parseTokens(tokenize(text));
-  if (call.t !== "call") throw perr("parse", `${id}: the right side must be a component call like Pt(0, 0)`);
-  if (!(call.name in SIGS)) throw perr("unknown-comp", `${id}: unknown component ${call.name} (known: ${Object.keys(SIGS).join(" ")})`);
-  const deps = call.name === "Layer" || call.name === "Union" ? new Set() : refsOf(call);   // Layer / Union name statements (forward refs fine); not DAG nodes
-  checkInline(call);
+  if (!["call", "dot", "measure"].includes(call.t)) throw perr("parse", `${id}: the right side must be a component call like Pt(0, 0)`);
+  const comp = call.t === "call" ? call.name : call.t === "dot" ? "Dot" : "Measure";   // dotted sugar as a statement
+  if (call.t === "call" && !(comp in SIGS)) throw perr("unknown-comp", `${id}: unknown component ${comp} (known: ${Object.keys(SIGS).join(" ")})`);
+  const args = call.t === "call" ? call.args : [call];
+  const deps = comp === "Layer" || comp === "Union" ? new Set() : refsOf(call);   // Layer / Union name statements (forward refs fine); not DAG nodes
+  checkInline({ t: "call", name: comp, args });
   let inlinePts = 0;
   const countPt = n => { if (n.t === "call") { if (n.name === "Pt") inlinePts++; n.args.forEach(countPt); } else if (n.t === "arr") n.items.forEach(countPt); else if (n.t === "obj") n.entries.forEach(([, v]) => countPt(v)); };
-  call.args.forEach(countPt);
-  return { id, comp: call.name, args: call.args, deps: [...deps], inlinePts };
+  args.forEach(countPt);
+  return { id, comp, args, deps: [...deps], inlinePts };
 }
 function checkInline(call) {
   for (const a of call.args) walk(a);
@@ -298,6 +317,88 @@ function bboxOf(pts) {
   for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   return { x0, y0, x1, y1 };
 }
+/** the points that define a shape's extent (for bbox-based anchors / measures) */
+function geomPts(sh) {
+  const g = sh.geom || {};
+  if (g.pts) return g.pts;
+  if (g.line) return g.line;
+  if (g.c && g.r != null) return [add(g.c, [-g.r, -g.r]), add(g.c, [g.r, g.r])];
+  const out = [];
+  for (const k of ["a", "b", "p", "o"]) if (g[k]) out.push(g[k]);
+  return out;
+}
+/** A1: Centre(shape) = Box / Circle centre, Poly / closed Curve centroid, Seg / Vec / Dim midpoint */
+function centrePoint(sh, id) {
+  if (!sh || sh.t !== "shape") throw perr("bad-args", `${id}: Centre(...) needs a shape`);
+  const g = sh.geom;
+  if (sh.comp === "Box" || sh.comp === "Circle") return g.c;
+  if (sh.comp === "Poly" || (sh.comp === "Curve" && g.closed)) return centroid({ kind: "poly", pts: g.pts });
+  if (["Seg", "Vec", "Dim"].includes(sh.comp)) return mul(add(g.a, g.b), 0.5);
+  throw perr("bad-args", `${id}: Centre(...) takes a Box, Circle, Poly, closed Curve, Seg, Vec or Dim`);
+}
+/** A2: a side midpoint in the shape's OWN frame (a rotated Box keeps its bottom face on a ramp) */
+function sidePoint(sh, side, id) {
+  if (!sh || sh.t !== "shape") throw perr("bad-args", `${id}: Side(...) needs a shape`);
+  const nm = String(side), ok = ["top", "bottom", "left", "right"];
+  if (!ok.includes(nm)) throw perr("bad-args", `${id}: side must be one of ${ok.join(", ")}`);
+  const g = sh.geom;
+  if (sh.comp === "Box") {
+    const a = (g.deg || 0) * DEG, u = [Math.cos(a), Math.sin(a)], v = [-u[1], u[0]];
+    return add(g.c, nm === "top" ? mul(v, g.h / 2) : nm === "bottom" ? mul(v, -g.h / 2) : nm === "left" ? mul(u, -g.w / 2) : mul(u, g.w / 2));
+  }
+  if (sh.comp === "Circle") return add(g.c, nm === "top" ? [0, g.r] : nm === "bottom" ? [0, -g.r] : nm === "left" ? [-g.r, 0] : [g.r, 0]);
+  if (sh.comp === "Poly" || sh.comp === "Curve") {   // limit: Poly / Curve sides use the axis-aligned bbox
+    const b = bboxOf(geomPts(sh));
+    return nm === "top" ? [(b.x0 + b.x1) / 2, b.y1] : nm === "bottom" ? [(b.x0 + b.x1) / 2, b.y0] : nm === "left" ? [b.x0, (b.y0 + b.y1) / 2] : [b.x1, (b.y0 + b.y1) / 2];
+  }
+  throw perr("bad-args", `${id}: Side(...) takes a Box, Circle, Poly or Curve`);
+}
+/** A3: Edge(poly, i, t) / Edge(curve, i, t); a Box uses Side */
+function edgePoint(sh, i, t, id) {
+  if (!sh || sh.t !== "shape") throw perr("bad-args", `${id}: Edge(...) needs a shape`);
+  if (sh.comp === "Box") throw perr("bad-args", `${id}: Edge(box, ...) is not supported: use Side(box, "top"|"bottom"|"left"|"right")`);
+  let pts;
+  if (sh.comp === "Poly") pts = sh.geom.pts;
+  else if (sh.comp === "Curve") pts = sh.geom.line;
+  else throw perr("bad-args", `${id}: Edge(...) takes a Poly or Curve`);
+  const n = sh.comp === "Curve" && !sh.geom.closed ? pts.length - 1 : pts.length;
+  if (!Number.isInteger(i) || i < 0 || i >= n) throw perr("bad-args", `${id}: edge index ${i} is out of range (0..${n - 1})`);
+  if (!(t >= 0 && t <= 1)) throw perr("bad-args", `${id}: t must be between 0 and 1`);
+  return add(pts[i], mul(sub(pts[(i + 1) % pts.length], pts[i]), t));
+}
+/** measureOf(shape, m): a pure measure for Expect (T4); length = longest side except Seg/Vec/Dim */
+export function measureOf(shape, m) {
+  if (!shape || !shape.geom) throw perr("bad-args", "measureOf needs a shape");
+  const comp = shape.comp, g = shape.geom, b = bboxOf(geomPts(shape)), w = b.x1 - b.x0, h = b.y1 - b.y0;
+  if (comp === "Box") {
+    if (m === "width") return g.w;
+    if (m === "height") return g.h;
+    if (m === "area") return g.w * g.h;
+    if (m === "length") return Math.max(g.w, g.h);
+  }
+  if (comp === "Circle") {
+    if (m === "width" || m === "height" || m === "length") return 2 * g.r;
+    if (m === "area") return Math.PI * g.r * g.r;
+  }
+  if (["Seg", "Vec", "Dim"].includes(comp)) {
+    if (m === "length") return len(sub(g.b, g.a));
+    if (m === "width") return w;
+    if (m === "height") return h;
+  }
+  if (comp === "Poly" || (comp === "Curve" && g.closed)) {
+    if (m === "area") return Math.abs(signedArea(g.pts));
+    if (m === "width") return w;
+    if (m === "height") return h;
+    if (m === "length") return Math.max(w, h);
+  }
+  if (comp === "Curve") {   // an open Curve has bbox sides, no area
+    if (m === "width") return w;
+    if (m === "height") return h;
+    if (m === "length") return Math.max(w, h);
+  }
+  if (!["length", "width", "height", "area"].includes(m)) throw perr("bad-args", "measure must be length, width, height or area");
+  throw perr("bad-args", `${comp} has no measure "${m}"`);
+}
 function outOf(a, b, body) {   // figcheck outOf for a bare segment (world space): up, or the body's side of a wall
   const n = unit([-(b[1] - a[1]), b[0] - a[0]]);
   if (Math.abs(n[1]) > EPS) return n[1] > 0 ? n : mul(n, -1);
@@ -402,6 +503,12 @@ export function createSession(opts = {}) {
       case "null": return null;
       case "arr": return n.items.map(val);
       case "obj": return Object.fromEntries(n.entries.map(([k, v]) => [k, v.t === "ref" ? v.id : val(v)]));
+      case "dot": {
+        const sh = S.vals.get(n.id);
+        if (!sh || sh.t !== "shape" || !["Vec", "Seg", "Dim"].includes(sh.comp)) throw perr("bad-args", `${n.id}.${n.part}: tail / head is only for a Vec, Seg or Dim`);
+        return { t: "pt", p: n.part === "tail" ? sh.geom.a : sh.geom.b, free: false, inline: true };
+      }
+      case "measure": throw perr("bad-args", `measures are only for Expect (found ${n.of}.${n.m})`);
       case "ref": return S.vals.get(n.id);
       case "call": return { t: "pt", p: pointOp(n.name, n.args.map(val), n.name), free: false, inline: true };
     }
@@ -427,6 +534,9 @@ export function createSession(opts = {}) {
         p = add(A, mul(d, dot(sub(P, A), d) / L2)); break;
       }
       case "Rot": { const O = asPt(a[0], "O"), P = asPt(a[1], "P"); p = add(O, rot(sub(P, O), asNum(a[2], "deg") * DEG)); break; }
+      case "Centre": case "Center": p = centrePoint(a[0], id); break;
+      case "Side": p = sidePoint(a[0], a[1], id); break;
+      case "Edge": p = edgePoint(a[0], asNum(a[1], "i"), asNum(a[2], "t"), id); break;
       case "Meet": {
         const A = asPt(a[0], "A"), B = asPt(a[1], "B"), C = asPt(a[2], "C"), D = asPt(a[3], "D"), r = sub(B, A), s = sub(D, C), den = cross(r, s);
         if (Math.abs(den) <= 1e-9 * Math.max(1, len(r) * len(s))) throw perr("undefined", `${id}: Meet of parallel lines (AB and CD never cross): pick lines that cross`);
@@ -468,6 +578,7 @@ export function createSession(opts = {}) {
     if (op.legend != null && (typeof op.legend !== "string" || !op.legend.trim())) throw perr("bad-args", `legend is the object's name, a string: {legend: "elephant"}`);
   }
   function compute(st) {
+    if (st.comp === "Dot" || st.comp === "Measure") return val(st.args[0]);   // W2 sugar: a point / a measure (throws today)
     if (st.comp in POINT_OPS) {
       const a = st.args.map(val);
       const patch = S.patches.get(st.id);
@@ -788,7 +899,7 @@ export function createSession(opts = {}) {
     if (!t || t.t !== "ref" || !patch || patch.t !== "obj" || st.args.length !== 2) return perr("bad-args", `${st.id}: write Fix(target, {trait: value})`);
     const target = byId(t.id);
     if (!target || target.comp === "Fix" || target.comp === "Layer") return perr("undefined-ref", `${st.id}: Fix target ${t.id} is not defined`);
-    if (target.comp in POINT_OPS && target.comp !== "Pt") {
+    if ((target.comp in POINT_OPS && target.comp !== "Pt") || target.comp === "Dot" || target.comp === "Measure") {
       const roots = freeRoots(target.id);
       return perr("fix-derived", `${t.id} is derived (${target.comp}); a Fix may not move it. Fix its free source point${roots.length > 1 ? "s" : ""} instead (${roots.join(", ") || "none"}), or its shape params`);
     }
