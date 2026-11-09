@@ -207,7 +207,7 @@ test("Dim: a dimension line beside AB with its text; the next one goes to the ot
   const r = evaluate(`A = Pt(0, 0)
 B = Pt(4, 0)
 C = Pt(4, 3)
-tri = Poly([A, B, C], {fill: true, tone: "sky", layer: 3})
+tri = Poly([A, B, C], {fill: true, tone: "sky", shade: 3})
 d1 = Dim(A, B, "4 cm")
 d2 = Dim(A, B, "four cm")
 d3 = Dim(A, B, "4.0 cm")
@@ -353,4 +353,45 @@ test("layer cap: six Layers are fine, a 7th Layer statement is an llm finding to
   assert.deepEqual(llm(evaluate(prog(6))), []);
   const f = llm(evaluate(prog(7)));
   assert.deepEqual(f.map(x => [x.code, x.ids]), [["too-many-layers", ["s7"]]]);
+});
+
+test("shade: the tone-shade option is 1/2/3; the old layer: name is a bad-args hint; the renderer still outputs layer", () => {
+  const ok = evaluate(`A = Pt(0, 0)
+B = Pt(3, 0)
+S = Seg(A, B, {shade: 2, label: "m"})`);
+  assert.deepEqual(llm(ok), []);
+  assert.equal(ok.shapes.find(s => s.id === "S").opts.shade, 2);
+  assert.equal(ok.labels.find(l => l.id === "S").layer, 2, "the output field stays layer (the lab reads it)");
+  const old = llm(evaluate(`A = Pt(0, 0)
+B = Pt(3, 0)
+S = Seg(A, B, {layer: 2})`));
+  assert.deepEqual(old.map(x => x.code), ["bad-args"]);
+  assert.match(old[0].hint, /layer: was renamed: use shade: 1, 2 or 3 \(Layer\(\.\.\.\) is the step stack\)/);
+  const oldU = llm(evaluate(`A = Pt(0, 0)
+B = Pt(3, 0)
+S = Seg(A, B)
+U = Union([S], {layer: 2})`));
+  assert.deepEqual(oldU.map(x => x.code), ["bad-args"]);
+  assert.match(oldU[0].hint, /use shade: 1, 2 or 3/);
+  assert.equal(llm(evaluate(`A = Pt(0, 0)\nB = Pt(3, 0)\nS = Seg(A, B, {shade: 4})`))[0].code, "bad-args", "shade outside 1-3 still fails");
+});
+
+test("lenient lexer: − and – read as -, a bare (x, y) argument or list item is a point, quotes and grouping are untouched", () => {
+  const r = evaluate(`A = Pt(\u22121, 0)
+S = Seg(A, (2, 0))`);
+  assert.deepEqual(llm(r), []);
+  close(r.points.A, [-1, 0]);
+  close(r.shapes.find(s => s.id === "S").geom.b, [2, 0]);
+  const en = evaluate(`A = Pt(0, 0)\nS = Seg(A, (2 \u2013 0, 3))`);
+  close(en.shapes.find(s => s.id === "S").geom.b, [2, 3]);
+  const poly = evaluate(`P = Poly([(0, 0), (3, 0), (0, 3)])`);
+  assert.equal(poly.shapes[0].geom.pts.length, 3, "a list item too");
+  const lbl = evaluate(`L = Label(Pt(0, 0), "x \u2212 1")`);
+  assert.equal(lbl.shapes.find(s => s.id === "L").geom.text, "x \u2212 1", "text inside quotes is never changed");
+  const quoted = evaluate(`L = Label(Pt(0, 0), "(1, 2)")`);
+  assert.equal(quoted.shapes.find(s => s.id === "L").geom.text, "(1, 2)", "a quoted tuple is text, not a point");
+  const box = evaluate(`B = Box(Pt(0, 0), (1 + 1) * 2, 1)`);
+  assert.equal(box.shapes.find(s => s.id === "B").geom.w, 4, "grouping is not a point");
+  const off = evaluate(`O = Pt(0, 0)\nV = Off(O, (2), 1)`);
+  close(off.points.V, [2, 1], "(2) stays a number");
 });

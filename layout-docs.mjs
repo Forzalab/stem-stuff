@@ -18,13 +18,13 @@ Shapes:
   Curve([A, B, C, ...], opts?): smooth through the points; closed: true = a blob; w: 0.3 or w: [0.4, 0.05] = a (tapered) stroke; mirror: [P, Q].
   Union([ids...], opts?): parts that form ONE object; parts never conflict with each other; its opts fill in what parts leave out.
   Vec(A, B, label?, opts?)  Label(P, text, opts?)  Angle(A, O, B, label?, opts?)  Dim(A, B, text, opts?)
-opts object: {kind, in, tone, layer, fill, label, legend}
+opts object: {kind, in, tone, shade, fill, label, legend}
   kind solid (default for Seg Box Poly Circle Curve): may touch, never overlap.
   kind surface: one-sided ground, wall, ramp, water line; bodies rest on it and may not sink in; arrow heads may pass into it.
   kind inside + in: containerId: must stay inside that Box, Poly, Circle or closed Curve (liquid in a tank).
   kind overlay: never checked (connector lines, construction lines, field lines, helper marks).
   Vec, Label, Angle, Dim are decor: a Vec is checked only at its head, never against the body it starts in.
-  tone sky amber orange violet pink cyan ink muted; layer 1 asked, 2 given, 3 context; one hue per quantity; fill: true fills.
+  tone sky amber orange violet pink cyan ink muted; shade 1 asked, 2 given, 3 context; one hue per quantity; fill: true fills.
   label: "m" on a shape: a short symbol or value, placed inside or beside it by the engine. Give only the anchor.
   legend: "elephant" on a shape or Union: the object's NAME goes to a legend row under the drawing, beside a small render of it.
   A label with no room by its anchor moves to the legend by itself. Lengths and distances: Dim(A, B, "2 m"), never a loose Label.
@@ -89,7 +89,7 @@ A dashed ghost shows where the later shape would have to go.`,
 - mirror: [P, Q] adds the mirror image of the points across line PQ, joined at the axis: give half a symmetric outline.
 - An open Curve without w is a thin line (a path, a trajectory, a ripple): lines never conflict with lines.
 - A curve that crosses itself is an error: move a point, or make the stroke thinner at a tight bend.
-- Union([a, b, c], opts?): one object made of parts. Parts collide with OTHER objects, never with each other. The Union's legend / label name the whole group; its kind, tone, layer, fill fill in what a part leaves out (a part's own opts win).
+- Union([a, b, c], opts?): one object made of parts. Parts collide with OTHER objects, never with each other. The Union's legend / label name the whole group; its kind, tone, shade, fill fill in what a part leaves out (a part's own opts win).
 Build organic things like a human in Canva: the prefix holds rough blocks, a Layer swaps them for the detailed parts.
 \`\`\`
 G = Pt(0, 0)
@@ -104,7 +104,7 @@ beast = Union([cube, horn], {legend: "horned cube"})
 Symmetric lens with mirror (half the outline, mirrored across the vertical through O):
 \`\`\`
 O = Pt(0, 0)
-lens = Curve([Off(O, 0, 2.5), Off(O, 0.4, 0), Off(O, 0, -2.5)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", layer: 3})
+lens = Curve([Off(O, 0, 2.5), Off(O, 0.4, 0), Off(O, 0, -2.5)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", shade: 3})
 \`\`\``,
   legend: `Legend: names of objects go under the drawing, beside a small render of the object itself (not a colour swatch).
 - legend: "elephant" on a shape (or on a Union: the render shows every part). Use it for what an object IS: elephant, students, oil, lens.
@@ -167,12 +167,12 @@ Review 1 = geometry: answer each finding with a Fix (use the ghost target). Revi
 If nothing needs changing, reply with the single line: // ok`,
   colors: `Colors: palette hues only, one hue per quantity, kept across the figure and the text.
 tone: sky amber orange violet pink cyan (quantities), ink (structure), muted (context, surfaces, wires). No green, no red.
-layer: 1 = asked (the unknown), 2 = given, 3 = implied or context. fill: true fills an area shape (a face, a liquid).
+shade: 1 = asked (the unknown), 2 = given, 3 = implied or context. fill: true fills an area shape (a face, a liquid).
 Vec and Label without a tone get their own hue automatically; structure without a tone is ink.
 \`\`\`
 O = Pt(0, 0)
-v = Vec(O, Pt(3, 0), "v", {tone: "sky", layer: 2})
-a = Vec(O, Pt(0, 2), "a = ?", {tone: "amber", layer: 1})
+v = Vec(O, Pt(3, 0), "v", {tone: "sky", shade: 2})
+a = Vec(O, Pt(0, 2), "a = ?", {tone: "amber", shade: 1})
 \`\`\``,
   "ex-physics": `Lever on a fulcrum, loads on both ends:
 \`\`\`
@@ -203,9 +203,9 @@ W = Vec(Off(O, 0.8, -2.5), Off(O, 0.8, -4.2), "mg", {tone: "violet"})
 O = Pt(0, 0)
 xAxis = Seg(O, Off(O, 6, 0), {tone: "muted"})
 yAxis = Seg(O, Off(O, 0, 4), {tone: "muted"})
-s1 = Box(Off(O, 1.5, 0.5), 1, 1, 0, {fill: true, tone: "sky", layer: 3})
-s2 = Box(Off(O, 2.5, 0.9), 1, 1.8, 0, {fill: true, tone: "sky", layer: 3})
-s3 = Box(Off(O, 3.5, 1.4), 1, 2.8, 0, {fill: true, tone: "sky", layer: 3})
+s1 = Box(Off(O, 1.5, 0.5), 1, 1, 0, {fill: true, tone: "sky", shade: 3})
+s2 = Box(Off(O, 2.5, 0.9), 1, 1.8, 0, {fill: true, tone: "sky", shade: 3})
+s3 = Box(Off(O, 3.5, 1.4), 1, 2.8, 0, {fill: true, tone: "sky", shade: 3})
 curve = Poly([Off(O, 1, 0.6), Off(O, 2, 1.3), Off(O, 3, 2.3), Off(O, 4, 3.4), Off(O, 4, 0), Off(O, 1, 0)], {kind: "overlay", tone: "amber"})
 lab = Label(Off(O, 5, 3.5), "f(x)", {tone: "amber"})
 dx = Label(Off(O, 2.5, -0.5), "Δx", {tone: "sky"})
@@ -240,7 +240,7 @@ lC = Label(Off(C, -0.3, 0.3), "C")
 O = Pt(0, 0)
 a0 = Box(Off(O, 0.5, 0), 1, 1, 0, {label: "3"})
 a1 = Box(Off(O, 1.5, 0), 1, 1, 0, {label: "8"})
-a2 = Box(Off(O, 2.5, 0), 1, 1, 0, {fill: true, tone: "amber", layer: 2, label: "5"})
+a2 = Box(Off(O, 2.5, 0), 1, 1, 0, {fill: true, tone: "amber", shade: 2, label: "5"})
 a3 = Box(Off(O, 3.5, 0), 1, 1, 0, {label: "1"})
 ptr = Vec(Off(O, 2.5, 2), Off(O, 2.5, 0.5), "i", {tone: "amber"})
 \`\`\`
@@ -253,9 +253,9 @@ e1 = Seg(R, L, {kind: "overlay", tone: "muted"})
 e2 = Seg(R, Rr, {kind: "overlay", tone: "muted"})
 e3 = Seg(L, LL, {kind: "overlay", tone: "muted"})
 n0 = Circle(R, 0.5, {fill: true, tone: "sky", label: "8"})
-n1 = Circle(L, 0.5, {fill: true, tone: "sky", layer: 2, label: "3"})
-n2 = Circle(Rr, 0.5, {fill: true, tone: "sky", layer: 2, label: "10"})
-n3 = Circle(LL, 0.5, {fill: true, tone: "sky", layer: 3, label: "1"})
+n1 = Circle(L, 0.5, {fill: true, tone: "sky", shade: 2, label: "3"})
+n2 = Circle(Rr, 0.5, {fill: true, tone: "sky", shade: 2, label: "10"})
+n3 = Circle(LL, 0.5, {fill: true, tone: "sky", shade: 3, label: "1"})
 \`\`\``,
   "ex-chem": `A beaker of liquid: glass walls as surfaces, the inner space as an overlay container, the liquid inside it:
 \`\`\`
@@ -263,11 +263,11 @@ B0 = Pt(0, 0)
 B1 = Off(B0, 4, 0)
 T0 = Off(B0, 0, 5)
 T1 = Off(B1, 0, 5)
-space = Poly([B0, B1, T1, T0], {kind: "overlay", tone: "muted", layer: 3})
+space = Poly([B0, B1, T1, T0], {kind: "overlay", tone: "muted", shade: 3})
 wl = Seg(B0, T0, {kind: "surface", tone: "ink"})
 wb = Seg(B0, B1, {kind: "surface", tone: "ink"})
 wr = Seg(B1, T1, {kind: "surface", tone: "ink"})
-liquid = Poly([B0, B1, Off(B1, 0, 3), Off(B0, 0, 3)], {kind: "inside", in: space, fill: true, tone: "sky", layer: 2, label: "water"})
+liquid = Poly([B0, B1, Off(B1, 0, 3), Off(B0, 0, 3)], {kind: "inside", in: space, fill: true, tone: "sky", shade: 2, label: "water"})
 mark = Seg(Off(B1, -0.6, 3), Off(B1, 0, 3), {kind: "overlay", tone: "muted"})
 vol = Label(Off(B1, 1.2, 3), "250 mL", {tone: "sky"})
 \`\`\``,
@@ -317,7 +317,7 @@ vL = Label(Off(bTop, 1.3, -0.2), "9 V", {tone: "sky"})
 iL = Label(Mid(TL, BR), "I = ?", {tone: "cyan"})
 fig = Figure([plus, minus, r1, r2, w1, w2, w3, w4, w5, w6, w7, i1, i2, i3, vL, iL])`,
     pass2: `eqc = Off(BR, -4, -1.4)
-req = Box(eqc, 2.4, 0.7, 0, {tone: "orange", layer: 2, label: "6 Ω total"})`,
+req = Box(eqc, 2.4, 0.7, 0, {tone: "orange", shade: 2, label: "6 Ω total"})`,
   },
   ramp: {
     title: "Ramp with friction",
@@ -332,7 +332,7 @@ top = Meet(A, Rot(A, B, 30), B, Off(B, 0, 1))
 ramp = Poly([A, B, top], {kind: "surface", tone: "muted"})
 P = Along(A, top, 0.45)
 C = Rot(P, Off(P, 0, 0.8), 30)
-blk = Box(C, 1.6, 1.6, 30, {fill: true, tone: "muted", layer: 2})
+blk = Box(C, 1.6, 1.6, 30, {fill: true, tone: "muted", shade: 2})
 W = Vec(C, Off(C, 0, -2.2), "W", {tone: "sky"})
 Wpar = Vec(C, Rot(C, Off(C, -1.1, 0), 30), "W∥", {tone: "cyan"})
 Wperp = Vec(C, Rot(C, Off(C, 0, -1.9), 30), "W⊥", {tone: "violet"})
@@ -354,13 +354,13 @@ F3 = Off(F0, 0, 4)
 B1 = Off(F1, 1.8, 1.6)
 B2 = Off(F2, 1.8, 1.6)
 B3 = Off(F3, 1.8, 1.6)
-front = Poly([F0, F1, F2, F3], {fill: true, tone: "muted", layer: 3})
-top = Poly([F3, F2, B2, B3], {kind: "surface", fill: true, tone: "amber", layer: 2, label: "A"})
-side = Poly([F1, B1, B2, F2], {fill: true, tone: "muted", layer: 2})
+front = Poly([F0, F1, F2, F3], {fill: true, tone: "muted", shade: 3})
+top = Poly([F3, F2, B2, B3], {kind: "surface", fill: true, tone: "amber", shade: 2, label: "A"})
+side = Poly([F1, B1, B2, F2], {fill: true, tone: "muted", shade: 2})
 p1 = Vec(Off(Along(B3, B2, 0.2), 0, 1.8), Along(B3, B2, 0.2), "", {tone: "amber"})
 p2 = Vec(Off(Along(B3, B2, 0.5), 0, 1.8), Along(B3, B2, 0.5), "", {tone: "amber"})
 p3 = Vec(Off(Along(B3, B2, 0.8), 0, 1.8), Along(B3, B2, 0.8), "F", {tone: "amber"})
-pL = Vec(Off(Mid(F0, F3), -1.8, 0), Mid(F0, F3), "P", {tone: "violet", layer: 2})
+pL = Vec(Off(Mid(F0, F3), -1.8, 0), Mid(F0, F3), "P", {tone: "violet", shade: 2})
 dim = Dim(F0, F1, "20 cm")
 dV = Label(Off(F3, -1.4, 1.4), "ΔV", {tone: "pink"})`,
     pass2: "",
@@ -373,18 +373,18 @@ dV = Label(Off(F3, -1.4, 1.4), "ΔV", {tone: "pink"})`,
 // layers: none
 // budget: 20 statements
 G = Pt(0, 0)
-tank = Poly([G, Off(G, 10, 0), Off(G, 10, 4.2), Off(G, 8, 4.2), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 4.2), Off(G, 0, 4.2)], {kind: "overlay", tone: "muted", layer: 3})
+tank = Poly([G, Off(G, 10, 0), Off(G, 10, 4.2), Off(G, 8, 4.2), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 4.2), Off(G, 0, 4.2)], {kind: "overlay", tone: "muted", shade: 3})
 wl = Seg(G, Off(G, 0, 4.2), {kind: "surface", tone: "muted"})
 wb = Seg(G, Off(G, 10, 0), {kind: "surface", tone: "muted"})
 wr = Seg(Off(G, 10, 0), Off(G, 10, 4.2), {kind: "surface", tone: "muted"})
 hump = Poly([Off(G, 5, 1.6), Off(G, 8, 1.6), Off(G, 8, 4.2), Off(G, 5, 4.2)], {kind: "surface", tone: "muted"})
-oil = Poly([G, Off(G, 10, 0), Off(G, 10, 3.6), Off(G, 8, 3.6), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 3.6), Off(G, 0, 3.6)], {kind: "inside", in: tank, fill: true, tone: "muted", layer: 2, legend: "oil"})
+oil = Poly([G, Off(G, 10, 0), Off(G, 10, 3.6), Off(G, 8, 3.6), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 3.6), Off(G, 0, 3.6)], {kind: "inside", in: tank, fill: true, tone: "muted", shade: 2, legend: "oil"})
 big = Box(Off(G, 2.5, 3.9), 5, 0.6, 0, {kind: "inside", in: tank, fill: true, tone: "ink"})
 small = Box(Off(G, 9, 3.9), 2, 0.6, 0, {kind: "inside", in: tank, fill: true, tone: "ink"})
 body = Circle(Off(G, 2.3, 5.1), 0.9, {fill: true})
 head = Circle(Off(G, 3.4, 5.5), 0.45, {fill: true})
 eleph = Union([body, head], {tone: "muted", legend: "elephant, 1800 kg"})
-studs = Box(Off(G, 9, 4.7), 1.2, 1, 0, {fill: true, tone: "violet", layer: 2, legend: "students"})
+studs = Box(Off(G, 9, 4.7), 1.2, 1, 0, {fill: true, tone: "violet", shade: 2, legend: "students"})
 F1 = Vec(Off(G, 2.3, 8), Off(G, 2.3, 6), "F₁ = mg", {tone: "pink"})
 F2 = Vec(Off(G, 9, 7), Off(G, 9, 5.2), "F₂", {tone: "violet"})
 dR = Dim(Off(G, 2.5, 0), Off(G, 5, 0), "R = 1.0 m")
@@ -400,7 +400,7 @@ dr = Dim(Off(G, 9, 0), Off(G, 10, 0), "r = 0.20 m")`,
 // budget: 25 statements
 O = Pt(0, 0)
 axis = Seg(Off(O, -6.5, 0), Off(O, 5, 0), {kind: "overlay", tone: "muted"})
-lens = Curve([Off(O, 0, 2.6), Off(O, 0.35, 0), Off(O, 0, -2.6)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", layer: 3, legend: "converging lens"})
+lens = Curve([Off(O, 0, 2.6), Off(O, 0.35, 0), Off(O, 0, -2.6)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", shade: 3, legend: "converging lens"})
 F = Off(O, -2, 0)
 Fp = Off(O, 2, 0)
 T = Off(O, -5, 2)
@@ -432,17 +432,17 @@ dI = Dim(O, Off(O, 3.333, 0), "dᵢ = 16.7 cm", {tone: "violet"})`,
 // layers: 1 the curves of the bird, 2 ripples and the name
 // budget: 20 statements
 G = Pt(0, 0)
-water = Box(Off(G, -0.6, -0.5), 9, 1, 0, {kind: "overlay", fill: true, tone: "sky", layer: 3})
+water = Box(Off(G, -0.6, -0.5), 9, 1, 0, {kind: "overlay", fill: true, tone: "sky", shade: 3})
 lake = Seg(Off(G, -5.1, 0), Off(G, 3.9, 0), {kind: "surface", tone: "sky"})
 bodyB = Box(Off(G, 0.6, 0.8), 4, 1.6, 0)
 headB = Circle(Off(G, -1.55, 3.7), 0.45)
 s1 = Layer([body, neck, head, beak, pouch, wing, eye], {hide: [bodyB, headB], title: "Curves: body, neck, head, beak with its pouch, wing"})
-body = Curve([Off(G, -1.5, 0.95), Off(G, -0.8, 0.25), Off(G, 0.6, 0), Off(G, 2, 0.25), Off(G, 3.1, 1.05), Off(G, 1.7, 1.45), Off(G, 0, 1.6), Off(G, -1, 1.5)], {closed: true, fill: true, tone: "muted", layer: 2})
-neck = Curve([Off(G, -1, 1.3), Off(G, -1.65, 2.1), Off(G, -1.2, 2.9), Off(G, -1.5, 3.5)], {w: [0.6, 0.42], fill: true, tone: "muted", layer: 2})
-head = Circle(Off(G, -1.55, 3.7), 0.45, {fill: true, tone: "muted", layer: 2})
-beak = Curve([Off(G, -1.9, 3.8), Off(G, -3.3, 3.5), Off(G, -4.7, 3.05), Off(G, -4.85, 2.85)], {w: [0.3, 0.08], fill: true, tone: "amber", layer: 2})
-pouch = Curve([Off(G, -1.85, 3.55), Off(G, -2.5, 2.8), Off(G, -3.6, 2.75), Off(G, -4.55, 3.0), Off(G, -3.3, 3.4)], {closed: true, fill: true, tone: "orange", layer: 2})
-wing = Curve([Off(G, -0.6, 1.35), Off(G, 0.8, 1.3), Off(G, 2.2, 1.05), Off(G, 3.1, 0.95)], {w: [0.75, 0.1], fill: true, tone: "ink", layer: 1})
+body = Curve([Off(G, -1.5, 0.95), Off(G, -0.8, 0.25), Off(G, 0.6, 0), Off(G, 2, 0.25), Off(G, 3.1, 1.05), Off(G, 1.7, 1.45), Off(G, 0, 1.6), Off(G, -1, 1.5)], {closed: true, fill: true, tone: "muted", shade: 2})
+neck = Curve([Off(G, -1, 1.3), Off(G, -1.65, 2.1), Off(G, -1.2, 2.9), Off(G, -1.5, 3.5)], {w: [0.6, 0.42], fill: true, tone: "muted", shade: 2})
+head = Circle(Off(G, -1.55, 3.7), 0.45, {fill: true, tone: "muted", shade: 2})
+beak = Curve([Off(G, -1.9, 3.8), Off(G, -3.3, 3.5), Off(G, -4.7, 3.05), Off(G, -4.85, 2.85)], {w: [0.3, 0.08], fill: true, tone: "amber", shade: 2})
+pouch = Curve([Off(G, -1.85, 3.55), Off(G, -2.5, 2.8), Off(G, -3.6, 2.75), Off(G, -4.55, 3.0), Off(G, -3.3, 3.4)], {closed: true, fill: true, tone: "orange", shade: 2})
+wing = Curve([Off(G, -0.6, 1.35), Off(G, 0.8, 1.3), Off(G, 2.2, 1.05), Off(G, 3.1, 0.95)], {w: [0.75, 0.1], fill: true, tone: "ink", shade: 1})
 eye = Circle(Off(G, -1.45, 3.82), 0.08, {fill: true, tone: "ink"})
 s2 = Layer([rip1, rip2, rip3, bird], {title: "Ripples on the water, and the name"})
 rip1 = Curve([Off(G, -4.1, -0.35), Off(G, -3.4, -0.22), Off(G, -2.7, -0.35)], {kind: "overlay", tone: "sky"})
@@ -480,7 +480,7 @@ xAx = Seg(Off(O, -0.4, 0), Off(O, 6.6, 0), {kind: "overlay", tone: "muted"})
 yAx = Seg(Off(O, 0, -0.4), Off(O, 0, 4.6), {kind: "overlay", tone: "muted"})
 f = Curve([Pt(0, 0.5), Pt(1, 0.6), Pt(2, 0.9), Pt(3, 1.4), Pt(4, 2.1), Pt(5, 3), Pt(6, 4.1)], {kind: "overlay", tone: "ink", label: "f(x)"})
 s1 = Layer([A], {lit: [A], title: "The area from 1 to 4"})
-A = Poly([Pt(1, 0), Pt(1, 0.6), Pt(1.5, 0.725), Pt(2, 0.9), Pt(2.5, 1.125), Pt(3, 1.4), Pt(3.5, 1.725), Pt(4, 2.1), Pt(4, 0)], {kind: "overlay", fill: true, tone: "sky", layer: 2, label: "A"})
+A = Poly([Pt(1, 0), Pt(1, 0.6), Pt(1.5, 0.725), Pt(2, 0.9), Pt(2.5, 1.125), Pt(3, 1.4), Pt(3.5, 1.725), Pt(4, 2.1), Pt(4, 0)], {kind: "overlay", fill: true, tone: "sky", shade: 2, label: "A"})
 ab = Dim(Pt(1, 0), Pt(4, 0), "from 1 to 4", {tone: "sky"})
 s2 = Layer([tan, P], {lit: [tan, P], title: "The tangent at x = 5: slope f′(5) = 1"})
 P = Circle(Pt(5, 3), 0.09, {kind: "overlay", fill: true, tone: "amber"})
@@ -523,9 +523,9 @@ bot = Curve([Off(O, -2, 0), Off(O, 0, -0.6), Off(O, 2, 0), Off(O, 0, 0.6)], {clo
 top = Curve([Off(O, -2, 5), Off(O, 0, 4.4), Off(O, 2, 5), Off(O, 0, 5.6)], {closed: true, kind: "overlay", fill: true})
 sideL = Seg(Off(O, -2, 0), Off(O, -2, 5), {kind: "overlay"})
 sideR = Seg(Off(O, 2, 0), Off(O, 2, 5), {kind: "overlay"})
-cyl = Union([bot, top, sideL, sideR], {tone: "sky", layer: 2, legend: "cylinder: V = πr²h"})
+cyl = Union([bot, top, sideL, sideR], {tone: "sky", shade: 2, legend: "cylinder: V = πr²h"})
 s1 = Layer([cone], {lit: [cone], title: "The cone: same base, same height"})
-cone = Poly([Off(O, -2, 0), Off(O, 2, 0), Off(O, 0, 5)], {kind: "overlay", fill: true, tone: "amber", layer: 2, legend: "cone: V = ⅓πr²h"})
+cone = Poly([Off(O, -2, 0), Off(O, 2, 0), Off(O, 0, 5)], {kind: "overlay", fill: true, tone: "amber", shade: 2, legend: "cone: V = ⅓πr²h"})
 s2 = Layer([rad, dr, dh], {title: "r and h"})
 rad = Seg(O, Off(O, 2, 0), {kind: "overlay", tone: "ink"})
 dr = Dim(O, Off(O, 2, 0), "r")
@@ -551,11 +551,11 @@ eBD = Seg(B, D, {kind: "overlay", tone: "muted", label: "5"})
 eCD = Seg(C, D, {kind: "overlay", tone: "muted", label: "8"})
 eDE = Seg(D, E, {kind: "overlay", tone: "muted", label: "3"})
 eCE = Seg(C, E, {kind: "overlay", tone: "muted", label: "10"})
-nA = Circle(A, 0.42, {fill: true, tone: "sky", layer: 2, label: "A"})
-nB = Circle(B, 0.42, {fill: true, tone: "sky", layer: 2, label: "B"})
-nC = Circle(C, 0.42, {fill: true, tone: "sky", layer: 2, label: "C"})
-nD = Circle(D, 0.42, {fill: true, tone: "sky", layer: 2, label: "D"})
-nE = Circle(E, 0.42, {fill: true, tone: "sky", layer: 2, label: "E"})
+nA = Circle(A, 0.42, {fill: true, tone: "sky", shade: 2, label: "A"})
+nB = Circle(B, 0.42, {fill: true, tone: "sky", shade: 2, label: "B"})
+nC = Circle(C, 0.42, {fill: true, tone: "sky", shade: 2, label: "C"})
+nD = Circle(D, 0.42, {fill: true, tone: "sky", shade: 2, label: "D"})
+nE = Circle(E, 0.42, {fill: true, tone: "sky", shade: 2, label: "E"})
 s1 = Layer([p1, p2, p3, p4], {lit: [eAC, eCB, eBD, eDE, nA, nB, nC, nD, nE], title: "A, C, B, D, E: 2 + 1 + 5 + 3 = 11"})
 p1 = Fix(eAC, {tone: "amber"})
 p2 = Fix(eCB, {tone: "amber"})
@@ -582,12 +582,12 @@ e2 = Seg(R, Rr, {kind: "overlay", tone: "muted"})
 e3 = Seg(L, LL, {kind: "overlay", tone: "muted"})
 e4 = Seg(L, LR, {kind: "overlay", tone: "muted"})
 e5 = Seg(Rr, RR, {kind: "overlay", tone: "muted"})
-n8 = Circle(R, 0.45, {fill: true, tone: "sky", layer: 2, label: "8"})
-n3 = Circle(L, 0.45, {fill: true, tone: "sky", layer: 2, label: "3"})
-n10 = Circle(Rr, 0.45, {fill: true, tone: "sky", layer: 2, label: "10"})
-n1 = Circle(LL, 0.45, {fill: true, tone: "sky", layer: 2, label: "1"})
-n6 = Circle(LR, 0.45, {fill: true, tone: "sky", layer: 2, label: "6"})
-n14 = Circle(RR, 0.45, {fill: true, tone: "sky", layer: 2, label: "14"})
+n8 = Circle(R, 0.45, {fill: true, tone: "sky", shade: 2, label: "8"})
+n3 = Circle(L, 0.45, {fill: true, tone: "sky", shade: 2, label: "3"})
+n10 = Circle(Rr, 0.45, {fill: true, tone: "sky", shade: 2, label: "10"})
+n1 = Circle(LL, 0.45, {fill: true, tone: "sky", shade: 2, label: "1"})
+n6 = Circle(LR, 0.45, {fill: true, tone: "sky", shade: 2, label: "6"})
+n14 = Circle(RR, 0.45, {fill: true, tone: "sky", shade: 2, label: "14"})
 s1 = Layer([], {lit: [n8, e1], title: "7 < 8: go left"})
 s2 = Layer([], {lit: [n3, e4], title: "7 > 3: go right"})
 s3 = Layer([], {lit: [n6], title: "7 > 6: go right; the spot is empty"})
@@ -630,11 +630,11 @@ O = Pt(0, 0)
 ceiling = Seg(Off(O, -2.5, 0), Off(O, 2.5, 0), {kind: "surface", tone: "muted"})
 D = Off(O, 0, -5)
 B = Rot(O, D, 30)
-vert = Seg(O, D, {kind: "overlay", tone: "muted", layer: 3})
-swing = Curve([Rot(O, D, -30), D, B], {kind: "overlay", tone: "muted", layer: 3})
+vert = Seg(O, D, {kind: "overlay", tone: "muted", shade: 3})
+swing = Curve([Rot(O, D, -30), D, B], {kind: "overlay", tone: "muted", shade: 3})
 rope = Seg(O, B, {kind: "overlay", tone: "ink", label: "L"})
 th = Angle(D, O, B, "θ")
-bob = Circle(B, 0.45, {fill: true, tone: "violet", layer: 2, legend: "bob, mass m"})
+bob = Circle(B, 0.45, {fill: true, tone: "violet", shade: 2, legend: "bob, mass m"})
 s1 = Layer([T, W], {lit: [T, W], title: "Two forces: tension and weight"})
 T = Vec(B, Along(B, O, 0.35), "T", {tone: "amber"})
 W = Vec(B, Off(B, 0, -1.8), "mg", {tone: "sky"})
@@ -656,8 +656,8 @@ axle = Seg(Off(O, 0, 1.8), O, {kind: "overlay", tone: "muted"})
 wheel = Circle(O, 0.8, {tone: "ink", legend: "pulley"})
 ropeL = Seg(Off(O, -0.8, 0), Off(O, -0.8, -3), {tone: "muted"})
 ropeR = Seg(Off(O, 0.8, 0), Off(O, 0.8, -1.5), {tone: "muted"})
-m1 = Box(Off(O, -0.8, -3.5), 1, 1, 0, {fill: true, tone: "sky", layer: 2, label: "m₁"})
-m2 = Box(Off(O, 0.8, -2.2), 1.1, 1.4, 0, {fill: true, tone: "violet", layer: 2, label: "m₂"})
+m1 = Box(Off(O, -0.8, -3.5), 1, 1, 0, {fill: true, tone: "sky", shade: 2, label: "m₁"})
+m2 = Box(Off(O, 0.8, -2.2), 1.1, 1.4, 0, {fill: true, tone: "violet", shade: 2, label: "m₂"})
 s1 = Layer([T1, W1], {lit: [m1, T1, W1], title: "Forces on m₁"})
 T1 = Vec(Off(O, -0.8, -3), Off(O, -0.8, -1.6), "T", {tone: "amber"})
 W1 = Vec(Off(O, -0.8, -3.5), Off(O, -0.8, -5), "m₁g", {tone: "sky"})
@@ -708,7 +708,7 @@ top = Box(Pt(0, 1.95), 0.2, 2.1, 0, {fill: true, tone: "ink"})
 midB = Box(Pt(0, 0), 0.2, 0.8, 0, {fill: true, tone: "ink"})
 low = Box(Pt(0, -1.95), 0.2, 2.1, 0, {fill: true, tone: "ink"})
 wall = Union([top, midB, low], {legend: "barrier with two slits"})
-screen = Box(Pt(7, 0), 0.2, 6, 0, {fill: true, tone: "muted", layer: 2, legend: "screen"})
+screen = Box(Pt(7, 0), 0.2, 6, 0, {fill: true, tone: "muted", shade: 2, legend: "screen"})
 S1 = Pt(0.1, 0.6)
 S2 = Pt(0.1, -0.6)
 P = Pt(6.9, 2)
@@ -724,8 +724,8 @@ w6 = Curve([Rot(S2, Off(S2, 3, 0), -60), Off(S2, 3, 0), Rot(S2, Off(S2, 3, 0), 6
 s2 = Layer([r1, r2, axis, mp, th, kk, dl], {hide: [w1, w2, w3, w4, w5, w6], lit: [r1, r2, th, dl], title: "Two paths to P differ by Δ = d sin θ"})
 r1 = Seg(S1, P, {kind: "overlay", tone: "sky"})
 r2 = Seg(S2, P, {kind: "overlay", tone: "cyan"})
-axis = Seg(Pt(0.1, 0), Pt(6.9, 0), {kind: "overlay", tone: "muted", layer: 3})
-mp = Seg(Pt(0.1, 0), P, {kind: "overlay", tone: "muted", layer: 3})
+axis = Seg(Pt(0.1, 0), Pt(6.9, 0), {kind: "overlay", tone: "muted", shade: 3})
+mp = Seg(Pt(0.1, 0), P, {kind: "overlay", tone: "muted", shade: 3})
 th = Angle(Pt(6.9, 0), Pt(0.1, 0), P, "θ")
 K = Foot(S1, S2, P)
 kk = Seg(S1, K, {kind: "overlay", tone: "muted"})

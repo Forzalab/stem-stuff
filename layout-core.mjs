@@ -37,7 +37,7 @@ const SIGS = { ...Object.fromEntries(Object.entries(POINT_OPS).map(([k, v]) => [
 const META = new Set(["Fix", "Layer", "Union"]);   // statements outside the DAG (they name other statements): validated at rebuild, never values
 export const KINDS = ["solid", "surface", "inside", "overlay"];
 export const TONES = ["sky", "amber", "orange", "violet", "pink", "cyan", "ink", "muted"];
-const OPT_KEYS = ["kind", "in", "tone", "layer", "fill", "label", "legend", "closed", "mirror", "w"], CURVE_KEYS = ["closed", "mirror", "w"];
+const OPT_KEYS = ["kind", "in", "tone", "shade", "fill", "label", "legend", "closed", "mirror", "w"], CURVE_KEYS = ["closed", "mirror", "w"];
 const AREA = new Set(["Box", "Poly", "Circle"]), DECOR = new Set(["Vec", "Label", "Angle", "Dim"]);
 const FIX_TRAITS = { Pt: ["x", "y"], Box: ["w", "h", "deg"], Circle: ["r"], Seg: [], Poly: [], Vec: ["label"], Label: ["text"], Angle: ["label"], Dim: ["text"], Curve: [], Union: [] };
 const isArea = sh => AREA.has(sh.comp) || (sh.comp === "Curve" && sh.geom.area);   // a closed or wide Curve is an area; an open thin one is a line
@@ -56,6 +56,7 @@ function tokenize(s) {
       if (j >= s.length) throw perr("parse", "unclosed string");
       out.push({ t: "str", v }); i = j + 1; continue;
     }
+    if (c === "\u2212" || c === "\u2013") { out.push({ t: "-" }); i++; continue; }   // E5: a pasted minus / en dash reads as "-" (strings already returned above)
     const m = /^(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?/.exec(s.slice(i, i + 40));
     if (m) { out.push({ t: "num", v: parseFloat(m[0]) }); i += m[0].length; continue; }
     const id = /^[A-Za-z_Ͱ-Ͽ][\wͰ-Ͽ]*/.exec(s.slice(i, i + 80));
@@ -71,9 +72,30 @@ function parseTokens(toks) {
   const peek = () => toks[i], take = t => { const k = toks[i]; if (!k || (t && k.t !== t)) throw perr("parse", `expected "${t}"${k ? ` near "${k.v ?? k.t}"` : " at end of line"}`); i++; return k; };
   function list(close) {
     const items = [];
-    while (peek() && peek().t !== close) { items.push(expr(0)); if (peek() && peek().t === ",") i++; else break; }
+    while (peek() && peek().t !== close) { items.push(item()); if (peek() && peek().t === ",") i++; else break; }
     take(close);
     return items;
+  }
+  // E5: a bare "(x, y)" of two numeric expressions where an ARGUMENT or LIST ITEM starts is Pt(x, y);
+  // "(1 + 2) * 3" and "(2)" fall back to plain grouping (no comma, or the paren is not the whole item)
+  function item() {
+    if (peek() && peek().t === "(") {
+      const save = i;
+      try {
+        i++;
+        const a = expr(0);
+        if (peek() && peek().t === ",") {
+          i++;
+          const b = expr(0), next = toks[i + 1];
+          if (a.t === "num" && b.t === "num" && peek() && peek().t === ")" && (!next || [",", ")", "]"].includes(next.t))) {
+            i++;
+            return { t: "call", name: "Pt", args: [a, b] };
+          }
+        }
+      } catch { /* not a point: parse it again as grouping */ }
+      i = save;
+    }
+    return expr(0);
   }
   function primary() {
     const k = take();
@@ -430,16 +452,17 @@ export function createSession(opts = {}) {
     if (i < a.length) throw perr("bad-args", `${SIGS[c]}: unexpected extra argument ${i + 1}`);
     const patch = S.patches.get(st.id);
     if (patch) for (const [k, v] of Object.entries(patch)) { if (OPT_KEYS.includes(k) && !FIX_TRAITS[c].includes(k)) n.opts = { ...n.opts, [k]: v }; else n[k] = v; }   // Box w is a trait, Curve w an option
-    const u = meta().unionOf.get(st.id);       // a Union's kind / tone / layer / fill fill in what the member leaves out
-    if (u) { const uo = { ...u.opts, ...(S.patches.get(u.id) || {}) }; for (const k of ["kind", "tone", "layer", "fill"]) if (uo[k] != null && n.opts[k] == null && !(k === "kind" && DECOR.has(c))) n.opts = { ...n.opts, [k]: uo[k] }; }
+    const u = meta().unionOf.get(st.id);       // a Union's kind / tone / shade / fill fill in what the member leaves out
+    if (u) { const uo = { ...u.opts, ...(S.patches.get(u.id) || {}) }; for (const k of ["kind", "tone", "shade", "fill"]) if (uo[k] != null && n.opts[k] == null && !(k === "kind" && DECOR.has(c))) n.opts = { ...n.opts, [k]: uo[k] }; }
     return n;
   }
   function checkOpts(op, comp) {
+    if ("layer" in op) throw perr("bad-args", "layer: was renamed: use shade: 1, 2 or 3 (Layer(...) is the step stack)");
     for (const k of Object.keys(op)) if (!OPT_KEYS.includes(k)) throw perr("bad-args", `unknown option "${k}" (known: ${OPT_KEYS.join(", ")})`);
     if (op.kind != null && !KINDS.includes(op.kind)) throw perr("bad-args", `kind must be one of ${KINDS.join(", ")}`);
     if (op.kind === "inside" && !op.in) throw perr("bad-args", `kind "inside" needs in: <container id>`);
     if (op.tone != null && !TONES.includes(op.tone)) throw perr("bad-args", `tone must be one of ${TONES.join(", ")} (palette hues only)`);
-    if (op.layer != null && ![1, 2, 3].includes(op.layer)) throw perr("bad-args", "layer must be 1, 2 or 3");
+    if (op.shade != null && ![1, 2, 3].includes(op.shade)) throw perr("bad-args", "shade must be 1, 2 or 3");
     if (DECOR.has(comp) && op.kind && op.kind !== "overlay") throw perr("bad-args", `${comp} is decor: no kind but overlay`);
     if (comp !== "Curve") { const k = CURVE_KEYS.find(x => x in op); if (k) throw perr("bad-args", `${k} is a Curve option`); }
     if (op.legend != null && (typeof op.legend !== "string" || !op.legend.trim())) throw perr("bad-args", `legend is the object's name, a string: {legend: "elephant"}`);
@@ -534,9 +557,10 @@ export function createSession(opts = {}) {
   }
   function unionSpec(st) {
     const [first, opt] = st.args, out = { id: st.id, st, members: idList(first) || [], opts: {}, err: null };
-    if (!idList(first) || st.args.length > 2 || (opt && opt.t !== "obj")) out.err = `${st.id}: write Union([ids...], {kind, tone, layer, fill, label, legend})`;
+    if (!idList(first) || st.args.length > 2 || (opt && opt.t !== "obj")) out.err = `${st.id}: write Union([ids...], {kind, tone, shade, fill, label, legend})`;
     else if (opt) for (const [k, v] of opt.entries) {
-      if (!["kind", "tone", "layer", "fill", "label", "legend"].includes(k)) { out.err = `${st.id}: unknown Union option "${k}" (known: kind, tone, layer, fill, label, legend)`; continue; }
+      if (k === "layer") { out.err = `${st.id}: layer: was renamed: use shade: 1, 2 or 3 (Layer(...) is the step stack)`; continue; }
+      if (!["kind", "tone", "shade", "fill", "label", "legend"].includes(k)) { out.err = `${st.id}: unknown Union option "${k}" (known: kind, tone, shade, fill, label, legend)`; continue; }
       out.opts[k] = litVal(v);
     }
     if (!out.err) try { checkOpts(out.opts, "Union"); } catch (e) { out.err = `${st.id}: ${e.message}`; }
@@ -1203,7 +1227,7 @@ export function layoutView(shapes, ghosts = [], W = 360, opt = {}) {
   const reqs = [...shapes.map(sh => ({ sh })), ...unions.filter(u => u.members.some(m => shapes.some(s => s.id === m))).map(u => ({ u }))];
   for (const { sh, u } of reqs) {
     if (u) {                                      // a Union: one object; its label beside the whole group, its legend draws all parts
-      const parts = shapes.filter(s => u.members.includes(s.id)), tone = u.opts.tone || "ink", layer = u.opts.layer || 1, base = { id: u.id, tone, layer };
+      const parts = shapes.filter(s => u.members.includes(s.id)), tone = u.opts.tone || "ink", layer = u.opts.shade || 1, base = { id: u.id, tone, layer };
       if (u.opts.legend) toLegend(u.id, u.id, u.opts.legend, tone, layer, false);
       if (u.opts.label != null && u.opts.label !== "") {
         const text = String(u.opts.label), w = textW(text) + 6, bb = bboxOf(worldPts(parts).map(X)), self = selfOf(u.members[0]);
@@ -1212,7 +1236,7 @@ export function layoutView(shapes, ghosts = [], W = 360, opt = {}) {
       }
       continue;
     }
-    const g = sh.geom, tone = toneOf(sh), layer = sh.opts.layer || 1, base = { id: sh.id, tone, layer }, self = selfOf(sh.id);
+    const g = sh.geom, tone = toneOf(sh), layer = sh.opts.shade || 1, base = { id: sh.id, tone, layer }, self = selfOf(sh.id);
     if (sh.opts.legend) toLegend(sh.id, sh.id, sh.opts.legend, sh.opts.tone || unionOf.get(sh.id)?.opts.tone || "ink", layer, false);
     const tryList = (cands, text, w, h = LH) => { const c = cands.find(c => free(rectPoly(c, w, h), self)); if (c) take(base, text, c, w, h); return !!c; };
     if (sh.comp === "Dim") {
