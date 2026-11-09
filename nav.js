@@ -407,6 +407,8 @@ function init() {
   const dead = c => { const p = off() && off().get(c); return !!p && !!(p.dead || (p.saccharine && p.saccharine.dead)); };   // T28 dead-easy: a sugar warm-up, placed by shuffle.mjs deadOpen / deadLead
   const all = () => { const o = off(); return (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))); };
   const pool = () => all().filter(c => !snack(c) && !dead(c));                 // the queue plays the reals; a snack rides in front of its real
+  const SEQ = new Set(["BANK_PSY8"]);   // Tony Nov 8: Next walks these banks in file order (flashcards, then MC), wrapping at the end; no queue
+  const seqNext = () => { const b = bank(); if (!b || !SEQ.has(b.code)) return null; const cs = all(); if (!cs.length) return null; return cs[(cs.indexOf(cur) + 1) % cs.length]; };
   const deck = st => twinGate(pool(), c => off() && off().get(c), st.seen);   // todo 121: a twin waits for its template's miss (the mock uses pool)
   /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
@@ -471,6 +473,8 @@ function init() {
         return { e: { c: m.code, r: again ? Math.floor(Date.now() / 1000) : 0, redeem: !!(st.seen[m.code] && st.seen[m.code].owe) } };   // a closed card plays a fresh round
       }
     }
+    const sq = seqNext();
+    if (sq) return { e: { c: sq, r: st.seen[sq] && st.seen[sq].n ? Math.floor(Date.now() / 1000) : 0, redeem: false } };
     const deads = all().filter(dead), od = deadOpen(st, opener(deads));   // T28 P2: a fresh bank opens with 1-2 dead-easy
     if (od) return { e: { c: od, r: 0, redeem: false } };
     const live = new Set(deck(st));

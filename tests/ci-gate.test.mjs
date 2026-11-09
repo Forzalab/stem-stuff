@@ -197,33 +197,33 @@ test("decideShip: an empty diff (nothing changed since the green sha) ships", ()
 // --- the CLI (no network: --file injects the diff, --runs reads a fixture) -----------
 // SOURCE of exit codes: SPEC.md §CLI.
 test("CLI: ships the exact green sha (fixture green.json)", () => {
-  const r = cli(["--candidate", "aaaaaaa1", "--runs", fix("green.json"), "--file", "app.js"]);
+  const r = cli(["--candidate", "aaaaaaa1", "--runs", fix("green"), "--file", "app.js"]);
   assert.equal(r.status, 0, `exit 0 = ship; stderr: ${r.stderr}`);
   assert.match(r.stdout, /ok/i, `stdout must say ship ok; got: ${r.stdout}`);
 });
 
 test("CLI: refuses a red sha (fixture red.json, all runs failed)", () => {
-  const r = cli(["--candidate", "fail33333", "--runs", fix("red.json"), "--file", "app.js"]);
+  const r = cli(["--candidate", "fail33333", "--runs", fix("red"), "--file", "app.js"]);
   assert.equal(r.status, 1, `exit 1 = refuse; stdout: ${r.stdout}`);
   assert.match(r.stderr, /refus/i, `stderr must say refuse; got: ${r.stderr}`);
 });
 
 test("CLI: refuses a fast-only sha (fixture fast-only.json)", () => {
-  const r = cli(["--candidate", "fast44444", "--runs", fix("fast-only.json"), "--file", "README.md"]);
+  const r = cli(["--candidate", "fast44444", "--runs", fix("fast-only"), "--file", "README.md"]);
   assert.equal(r.status, 1, "a fast pipe run is not a full green (M2)");
 });
 
 test("CLI: refuses a bench-mutant-only sha (fixture bench.json)", () => {
-  const r = cli(["--candidate", "bench5555", "--runs", fix("bench.json"), "--file", "README.md"]);
+  const r = cli(["--candidate", "bench5555", "--runs", fix("bench"), "--file", "README.md"]);
   assert.equal(r.status, 1, "a bench (mutant) run is never a ship run (runKind -> bench)");
 });
 
 test("CLI: refuses a code diff since the last green sha (fixture code-diff.json)", () => {
-  const r = cli(["--candidate", "green7777", "--runs", fix("code-diff.json"), "--file", "app.js"]);
+  const r = cli(["--candidate", "green7777", "--runs", fix("code-diff"), "--file", "app.js"]);
   assert.equal(r.status, 1, "green6666 is full green but app.js changed since (M1)");
 });
 
 test("CLI: a docs-only diff since the last green sha ships", () => {
-  const r = cli(["--candidate", "green7777", "--runs", fix("code-diff.json"), "--file", "README.md"]);
+  const r = cli(["--candidate", "green7777", "--runs", fix("code-diff"), "--file", "README.md"]);
   assert.equal(r.status, 0, "docs-only later diff is shippable (M1)");
 });

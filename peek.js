@@ -96,7 +96,8 @@
       .then(function (j) { if (j && j.enabled !== false) CRAM_ENABLED = true; }).catch(function () { /* stay off */ })
       .then(function () { clearTimeout(t); arm(wait()); cramToast(); }); } catch (e) { /* stay off */ }
   }
-  var cramOn = function (now) { return CRAM_ENABLED !== false && (now == null ? Date.now() : now) <= CRAM_UNTIL && !!(window.stemBank && window.stemBank.code === CRAM_BANK); };
+  var cramDiet = function () { var k = document.cookie || ""; return /(?:^|;\s*)stem-mode=(?:diet|hard)(?:;|$)/.test(k) && /(?:^|;\s*)stem-mode-v=2(?:;|$)/.test(k); };   // mode.mjs modeOf(): diet has no cram (Tony Nov 8)
+  var cramOn = function (now) { return !(typeof document !== "undefined" && cramDiet()) && CRAM_ENABLED !== false && (now == null ? Date.now() : now) <= CRAM_UNTIL && !!(window.stemBank && window.stemBank.code === CRAM_BANK); };
   var idleList = function () { return cramOn() ? CRAM_IDLE : IDLE; };
   var last = performance.now(), n = 0, t = 0, mine = false, rest = null, mx = null, my = null;
   var wait = function () { return idleList()[n]; };
