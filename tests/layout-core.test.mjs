@@ -429,6 +429,52 @@ U = Union([S], {layer: 2})`));
   assert.equal(llm(evaluate(`A = Pt(0, 0)\nB = Pt(3, 0)\nS = Seg(A, B, {shade: 4})`))[0].code, "bad-args", "shade outside 1-3 still fails");
 });
 
+test("findings: severity + stable per-session ids; Shush moves a warning and never shushes an error", () => {
+  const src = `a = Box(Pt(0, 0), 2, 2, 0)\nb = Box(Pt(1, 0), 2, 2, 0)`;
+  const r = evaluate(src);
+  const err = r.findings.find(f => f.code === "overlap"), warn = r.findings.find(f => f.code === "plan-missing");
+  assert.equal(err.fid, "e1");
+  assert.equal(err.sev, "error");
+  assert.equal(warn.fid, "w1");
+  assert.equal(warn.sev, "warning");
+  assert.equal(err.cls, "llm", "cls is kept");
+  assert.equal(warn.cls, "fyi", "cls is kept");
+
+  const s = createSession();
+  s.push(src, 1); s.end(1);
+  const a = s.result(), b = s.result();
+  assert.deepEqual(b.findings.map(f => f.fid), a.findings.map(f => f.fid), "the same finding keeps its fid on re-evaluation");
+  s.push(`f1 = Fix(a, {tone: "amber"})`, 2); s.end(2);
+  assert.deepEqual(s.result().findings.map(f => f.fid), a.findings.map(f => f.fid), "the same finding keeps its fid after a pass-2 rebuild");
+
+  const ok = evaluate(`${src}\ns1 = Shush(w1, "the plan line is optional here")`);
+  assert.deepEqual(ok.findings.map(f => f.fid), ["e1"], "the error stays, the warning moves out");
+  assert.deepEqual(ok.unresolved.map(f => f.fid), ["e1"]);
+  assert.equal(ok.shushed.length, 1);
+  assert.equal(ok.shushed[0].fid, "w1");
+  assert.equal(ok.shushed[0].reason, "the plan line is optional here");
+  assert.equal(ok.shushed[0].finding.code, "plan-missing");
+  assert.match(formatFindings(ok.findings, ok.shushed), /^e1 \[llm\] overlap/m);
+  assert.match(formatFindings(ok.findings, ok.shushed), /^Shushed:\n- w1: the plan line is optional here/m);
+
+  const short = evaluate(`${src}\ns1 = Shush(w1, "short")`);
+  const bad = short.findings.find(f => f.code === "bad-args");
+  assert.equal(bad.fid, "e2", "a new error gets the next number");
+  assert.equal(bad.sev, "error");
+  assert.match(bad.hint, /15 characters/);
+  assert.ok(short.findings.some(f => f.fid === "w1"), "a bad reason leaves the warning unresolved");
+  assert.equal(short.shushed.length, 0);
+
+  const onErr = evaluate(`${src}\ns1 = Shush(e1, "a reason that is long enough")`);
+  const se = onErr.findings.find(f => f.code === "shush-error");
+  assert.equal(se.sev, "error");
+  assert.match(se.hint, /errors cannot be shushed: fix e1/);
+  assert.ok(onErr.findings.some(f => f.fid === "e1"), "the error stays unresolved");
+
+  const unknown = evaluate(`${src}\ns1 = Shush(w9, "a reason that is long enough")`);
+  assert.ok(unknown.findings.some(f => f.code === "undefined-ref"), "an unknown fid is undefined-ref");
+});
+
 test("lenient lexer: − and – read as -, a bare (x, y) argument or list item is a point, quotes and grouping are untouched", () => {
   const r = evaluate(`A = Pt(\u22121, 0)
 S = Seg(A, (2, 0))`);

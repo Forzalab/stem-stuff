@@ -33,8 +33,8 @@ export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t
 export const SHAPE_SIGS = { Seg: "Seg(A, B, opts?)", Box: "Box(C, w, h, deg?, opts?)", Poly: "Poly([A, B, C, ...], opts?)", Circle: "Circle(O, r, opts?)", Vec: "Vec(A, B, label?, opts?)", Label: "Label(P, text, opts?)", Angle: "Angle(A, O, B, label?, opts?)", Dim: "Dim(A, B, text, opts?)", Curve: "Curve([A, B, C, ...], opts?)" };
 export const MAX_LAYERS = 6;                         // Tony Q42: 2-4 recommended, 6 max; a 7th Layer is an llm finding
 export const LAYER_SIG = 'Layer([ids...], {hide: [ids], zoom: [ids], lit: [ids], title: "..."})';
-const SIGS = { ...Object.fromEntries(Object.entries(POINT_OPS).map(([k, v]) => [k, `${k}(${v.join(", ")})`])), ...SHAPE_SIGS, Figure: "Figure([ids...])", Fix: "Fix(target, {trait: value})", Layer: LAYER_SIG, Union: "Union([ids...], opts?)" };
-const META = new Set(["Fix", "Layer", "Union"]);   // statements outside the DAG (they name other statements): validated at rebuild, never values
+const SIGS = { ...Object.fromEntries(Object.entries(POINT_OPS).map(([k, v]) => [k, `${k}(${v.join(", ")})`])), ...SHAPE_SIGS, Figure: "Figure([ids...])", Fix: "Fix(target, {trait: value})", Layer: LAYER_SIG, Union: "Union([ids...], opts?)", Shush: 'Shush(fid, "reason")' };
+const META = new Set(["Fix", "Layer", "Union", "Shush"]);   // statements outside the DAG (they name other statements): validated at rebuild, never values
 export const KINDS = ["solid", "surface", "inside", "overlay"];
 export const TONES = ["sky", "amber", "orange", "violet", "pink", "cyan", "ink", "muted"];
 const OPT_KEYS = ["kind", "in", "tone", "shade", "fill", "label", "legend", "closed", "mirror", "w"], CURVE_KEYS = ["closed", "mirror", "w"];
@@ -149,7 +149,7 @@ export function parseStatement(text) {
   const { id, call } = parseTokens(tokenize(text));
   if (call.t !== "call") throw perr("parse", `${id}: the right side must be a component call like Pt(0, 0)`);
   if (!(call.name in SIGS)) throw perr("unknown-comp", `${id}: unknown component ${call.name} (known: ${Object.keys(SIGS).join(" ")})`);
-  const deps = call.name === "Layer" || call.name === "Union" ? new Set() : refsOf(call);   // Layer / Union name statements (forward refs fine); not DAG nodes
+  const deps = call.name === "Layer" || call.name === "Union" || call.name === "Shush" ? new Set() : refsOf(call);   // Layer / Union / Shush name statements / findings (forward refs fine); not DAG nodes
   checkInline(call);
   let inlinePts = 0;
   const countPt = n => { if (n.t === "call") { if (n.name === "Pt") inlinePts++; n.args.forEach(countPt); } else if (n.t === "arr") n.items.forEach(countPt); else if (n.t === "obj") n.entries.forEach(([, v]) => countPt(v)); };
@@ -376,6 +376,18 @@ export function createSession(opts = {}) {
   function fresh() { return { vals: new Map(), status: new Map(), findings: [], ghosts: [], order: [], blockedBy: new Map(), patches: new Map(), fixErr: new Map(), moved: new Map() }; }
   S = fresh();
 
+  // ── finding ids: stable per session (e1/w1), keyed by code + sorted ids + line ──
+  const fids = new Map(), fidN = { e: 0, w: 0 };
+  function assignFid(f) {
+    f.sev = f.cls === "fyi" ? "warning" : "error";
+    if (f.fid) return f;
+    const key = `${f.code}|${[...(f.ids || [])].sort().join(",")}|${f.line ?? ""}`;
+    let fid = fids.get(key);
+    if (!fid) { const k = f.sev === "error" ? "e" : "w"; fid = k + (++fidN[k]); fids.set(key, fid); }
+    f.fid = fid;
+    return f;
+  }
+
   const byId = id => stmts.find(s => s.id === id);
   const shapesEval = () => S.order.map(id => S.vals.get(id)).filter(v => v && v.t === "shape");
   function span() {
@@ -391,6 +403,7 @@ export function createSession(opts = {}) {
     const out = { code: f.code, cls: f.cls || "llm", ids: f.ids, amount: f.amount != null ? r3(f.amount) : null, mtv: f.mtv ? rv(f.mtv) : null, hint: f.hint, line: f.line ?? st?.line ?? null, pass: f.pass ?? st?.pass ?? 1 };
     if (f.blocked) out.blocked = f.blocked;
     if (out.cls === "fyi") out.hint = `${out.hint} (no action needed)`;
+    assignFid(out);
     S.findings.push(out); emit({ type: "finding", f: out });
     return out;
   }
@@ -848,6 +861,7 @@ export function createSession(opts = {}) {
     catch (e) {
       const id = /^\s*([A-Za-z_]\w*)\s*=/.exec(text)?.[1] || `line${line}`;
       const f = { code: e.code || "parse", cls: "llm", ids: [id], amount: null, mtv: null, hint: `${e.message}: ${text.slice(0, 60)}`, line, pass };
+      assignFid(f);
       parseFindings.push(f); S.findings.push(f); emit({ type: "finding", f });
       return;
     }
@@ -942,6 +956,40 @@ export function createSession(opts = {}) {
     for (const x of M.dupes) F("union-dup", "fyi", M.unions.find(u => u.id === x.of[1]), [x.id, ...x.of], `${x.id} is in two Unions (${x.of.join(", ")}); it belongs to ${x.of[0]}`);
     return out;
   }
+  // ── Shush: the drawer accepts one warning, with a reason; errors are never shushable ──
+  function shushSpec(st) {
+    const [t, r] = st.args, out = { id: st.id, st, fid: null, reason: null, err: null };
+    if (st.args.length !== 2 || !t || t.t !== "ref") { out.err = `${st.id}: write ${SIGS.Shush}`; return out; }
+    out.fid = t.id;
+    if (!r || r.t !== "str") { out.err = `${st.id}: the reason must be a string of at least 15 characters after trimming`; return out; }
+    out.reason = r.v;
+    if (out.reason.trim().length < 15) { out.err = `${st.id}: the reason must be at least 15 characters after trimming (a warning can be forgiven, never an error)`; return out; }
+    return out;
+  }
+  /** apply the Shush statements to the final findings: a warning moves to `shushed`, an error stays + a shush-error finding */
+  function applyShush(base) {
+    const all = base.slice(), byFid = new Map(), shushed = [], gone = new Set();
+    const index = () => { for (const f of all) { assignFid(f); if (!byFid.has(f.fid)) byFid.set(f.fid, f); } };
+    index();
+    for (const st of stmts.filter(s => s.comp === "Shush")) {
+      const spec = shushSpec(st);
+      let err = null;
+      if (spec.err) err = { code: "bad-args", hint: spec.err };
+      else {
+        const target = byFid.get(spec.fid);
+        if (!target) err = { code: "undefined-ref", hint: `${st.id}: Shush target ${spec.fid} is not a finding in this session` };
+        else if (target.sev === "error") err = { code: "shush-error", hint: `errors cannot be shushed: fix ${spec.fid}` };
+        else if (gone.has(spec.fid)) { S.status.set(st.id, "ok"); continue; }   // a second Shush of one warning: the first reason wins
+        else { gone.add(spec.fid); shushed.push({ fid: spec.fid, reason: spec.reason.trim(), finding: target }); S.status.set(st.id, "ok"); continue; }
+      }
+      const f = { code: err.code, cls: "llm", ids: [st.id], amount: null, mtv: null, hint: err.hint, line: st.line, pass: st.pass };
+      assignFid(f); all.push(f); byFid.set(f.fid, f);
+      S.status.set(st.id, "error");
+    }
+    const findings = all.filter(f => !gone.has(f.fid));
+    findings.sort((a, b) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)));
+    return { findings, shushed };
+  }
   function result(opt = {}) {
     const W = opt.W || o.W, M = meta();
     const shapes = shapesEval().sort((a, b) => a.idx - b.idx);
@@ -969,10 +1017,12 @@ export function createSession(opts = {}) {
       for (const st of steps) for (const f of st.fyi) { const key = f.ids.join() + "|" + f.hint; if (!seen.has(key)) { seen.add(key); fyi.push(f); } }
       lay = { ...steps[n], fyi };
     }
-    const findings = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
+    const base = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
+    for (const f of base) assignFid(f);
+    const { findings, shushed } = stmts.some(s => s.comp === "Shush") ? applyShush(base) : { findings: base, shushed: [] };
     const status = Object.fromEntries(stmts.map(s => [s.id, S.status.get(s.id) || "pending"]));
     return {
-      plan: planOut(), points, findings, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
+      plan: planOut(), points, findings, unresolved: findings, shushed, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
       shapes: shapes.map(pub), unions, steps,
       stmts: stmts.map(s => ({ id: s.id, comp: s.comp, line: s.line, pass: s.pass, deps: s.deps, step: M.layers.length ? stepOf(s.id) : undefined })),
       // raw-coordinate points: a HINT for the LLM (derive points instead), never an error
@@ -1078,10 +1128,10 @@ export function freePointsHint(res) {
   const n = res.free.named.length + res.free.inline;
   return `Hint (not an error): ${n} free point${n === 1 ? "" : "s"} with raw coordinates${res.free.named.length ? ` (${res.free.named.join(", ")}${res.free.inline ? ` + ${res.free.inline} inline Pt` : ""})` : res.free.inline ? ` (${res.free.inline} inline Pt)` : ""}. Fewer is better: derive points from others (Mid, Along, Off, Foot, Rot, Meet) so they move together.`;
 }
-export function formatFindings(findings) {
-  const one = f => `- [${f.cls}] ${f.code} ids=[${f.ids.join(", ")}] ${f.pass === 2 ? "pass2 " : ""}line ${f.line ?? "?"}${f.amount != null ? ` amount ${f.amount}` : ""}${f.mtv ? ` push ${fv(f.mtv)}` : ""}: ${f.hint}${f.blocked && f.blocked.length && !/blocked by it/.test(f.hint) ? ` (blocks: ${f.blocked.join(", ")})` : ""}`;
+export function formatFindings(findings, shushed = []) {
+  const one = f => `${f.fid ? `${f.fid} ` : "- "}[${f.cls}] ${f.code} ids=[${f.ids.join(", ")}] ${f.pass === 2 ? "pass2 " : ""}line ${f.line ?? "?"}${f.amount != null ? ` amount ${f.amount}` : ""}${f.mtv ? ` push ${fv(f.mtv)}` : ""}: ${f.hint}${f.blocked && f.blocked.length && !/blocked by it/.test(f.hint) ? ` (blocks: ${f.blocked.join(", ")})` : ""}`;
   const llm = findings.filter(f => f.cls === "llm"), fyi = findings.filter(f => f.cls !== "llm");
-  return [llm.length ? "Fix these:" : "No spatial errors.", ...llm.map(one), ...(fyi.length ? ["FYI (no action needed):", ...fyi.map(one)] : [])].join("\n");
+  return [llm.length ? "Fix these:" : "No spatial errors.", ...llm.map(one), ...(fyi.length ? ["FYI (no action needed):", ...fyi.map(one)] : []), ...(shushed.length ? ["Shushed:", ...shushed.map(s => `- ${s.fid}: ${s.reason}`)] : [])].join("\n");
 }
 
 // ─── view + label layout (screen px, y down). Every label sits INSIDE its anchor or RIGHT NEXT to it without crossing a stroke, a
