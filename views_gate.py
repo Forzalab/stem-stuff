@@ -16,7 +16,7 @@ import oui
 ROOT = os.path.dirname(os.path.abspath(__file__))
 # What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
 # through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
-CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip"}
+CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip", "Doodle"}   # Doodle: a Steps anchor (stepper, Nov 8)
 GEO_CAPS = {"pts": 12, "marks": 12, "labels": 6}
 GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1}   # name -> point / number args before the text
 GEO_TEXT = {"dim", "angle", "arrow", "label"}
@@ -223,6 +223,12 @@ def check_element(el, ctx):
         texts += [("label", t) for t in labels]
     if ctx.spec == "heat" and name == "Step":         # a heating-curve stepper names its node temperatures in tags (and its edge chunks in labels): numbers a student reads
         texts += [("tags", str(p)) for p in [(el.get("props") or {}).get("tags")] if p] + [("labels", x) for x in (el.get("props") or {}).get("labels") or []]
+    if name == "Step":                                # Step.tex is TeX (not words: a v^2 or a 1/2 is no given), but it never holds the answer
+        tex = str((el.get("props") or {}).get("tex") or "")
+        if key_ref.match(tex.strip()):
+            return f"stage:{name}.tex"
+        if any(livefig._sig3(abs(x), a) for x in livefig.nums(tex) for a in ctx.answers):
+            return f"leak:{name}.tex"
     for k, t in texts:
         if key_ref.match(t.strip()):
             return f"stage:{name}.{k}"                  # a key ref is post-only; a Cluck reply is never post

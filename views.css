@@ -103,6 +103,21 @@
 .vw-cap { min-height: calc(2 * var(--lh) * 1em); }
 .vw-foot { display: flex; align-items: center; gap: var(--s2); }
 .vw-foot .vw-n { margin-left: auto; }
+/* stepper (Nov 8): the anchor stays, parts dim (never removed); the bar is the only visible progress; Show all = the step formulas */
+.vw-sr { position: absolute; width: .0625rem; height: .0625rem; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.vw-anchor { cursor: pointer; }
+.vw-anchor .vw-dim { opacity: .22; transition: opacity var(--d-dim) ease; }
+.vw-anchor text.vw-dim { opacity: 0; }
+.vw-anchor.vw-labels text.vw-dim { opacity: .55; }
+.vw-texs:empty { display: none; }
+.vw-tex { overflow-x: auto; }
+.vw-tex .katex-display { margin: 0; }
+.vw-bar { flex: 1; display: flex; gap: var(--s1); min-width: 0; }
+.vw-bar > i { flex: 1; height: .375rem; border-radius: .1875rem; background: var(--line); transition: background var(--d-fast) ease; }
+.vw-bar > i.on { background: var(--muted); }
+.vw-bar > i.cur { background: var(--ink); }
+.vw-all { margin: 0; padding-left: var(--s4); }
+.vw-all > li + li { margin-top: var(--s2); }
 
 /* Predict (F15): pills, pips, one filled control (Check); a wrong pick stays on screen, struck */
 .vw-q { margin-top: var(--s1); font-weight: var(--w-em); }

@@ -2333,6 +2333,16 @@ function figDrop(ph) {                                                   // a fi
   if (p && p.classList.contains("wl") && !p.classList.contains("wstep") && LEADIN.test(p.textContent)) p.remove();
   ph.remove();
 }
+/* the stepper's end cheer (Tony, Nov 8): the last step of a Cluck stepper, the first time -> the duck avatar rolls 360° fast, then a warm,
+   slow, solid pastel confetti. Nothing under prefers-reduced-motion. views.js Steps sends "vw-steps-end" (bubbles). */
+const CHEER_PASTEL = ["#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#bdb2ff", "#ffc6ff"];
+document.addEventListener("vw-steps-end", () => {
+  if (waitReduced()) return;
+  const av = [...document.querySelectorAll("#cluck .cl-av")].find(a => a.offsetParent !== null);
+  const roll = av ? av.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 450, easing: "cubic-bezier(.4,0,.2,1)" }).finished.catch(() => {}) : Promise.resolve();
+  roll.then(() => { if (window.confetti) window.confetti({ particleCount: 70, spread: 110, startVelocity: 16, gravity: .35, drift: 0, ticks: 420, scalar: 1.1,
+    colors: CHEER_PASTEL, shapes: ["circle", "square"], flat: true, origin: { x: .5, y: .2 }, disableForReducedMotion: true }); });
+});
 function wishFigs(root) {
   for (const ph of root.querySelectorAll(".wfig[data-f]")) {
     const k = +ph.dataset.f, done = figEl[k];

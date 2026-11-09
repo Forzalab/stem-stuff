@@ -473,6 +473,7 @@ function drawGeometry(doc, g, t) {
       label(id, m.text, [x, y], x - cx, y - cy);
     }
     if (layerOf[id]) for (let j = k0; j < kids.length; j++) for (const c of lyc(m.layer, m.tone).trim().split(" ")) kids[j].classList.add(c);
+    for (let j = k0; j < kids.length; j++) kids[j].setAttribute("data-m", id);   // a Steps anchor lights / dims a mark by this id (litMarks)
   });
   const placed = place(reqs, segs, dots, { x: -GEO_PAD, y: -GEO_PAD, w: W + 2 * GEO_PAD, h: H + 2 * GEO_PAD }, null, { LH: GEO_LH, GAP: GEO_CLEAR + 3, clear: GEO_CLEAR });
   const vpts = Object.fromEntries(Object.entries(g.pts).map(([n, p]) => [n, [X(p), Y(p)]]));
@@ -481,13 +482,13 @@ function drawGeometry(doc, g, t) {
   for (const q of placed) {
     if (q.lead) {                                   // the leader stops 5 units short of the box: a glyph may stand past its estimated box (firefox θ)
       const [[ax, ay], [bx, by]] = q.lead, L = Math.hypot(bx - ax, by - ay) || 1, cut = Math.min(5, L / 2);
-      kids.push(h(doc, "line", { class: "gm-lead" + lycOf(layerOf[q.id]), x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
+      kids.push(h(doc, "line", { class: "gm-lead" + lycOf(layerOf[q.id]), "data-m": q.id, x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
     }
   }
   for (const [id, p] of Object.entries(g.pts)) kids.push(h(doc, "g", { class: "gm-pt", "data-pt": id }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 })));
   for (const q of placed) {
     const x = +(q.box[0] + q.box[2] / 2).toFixed(2), y = +(q.box[1] + (q.box[3] - GEO_LH) / 2 + GEO_ASC).toFixed(2);
-    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : "") + lycOf(layerOf[q.id]), x, y, "data-slot": q.slot, "data-at": q.vertex }, q.text));   // data-at: an angle label's vertex
+    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : "") + lycOf(layerOf[q.id]), x, y, "data-slot": q.slot, "data-at": q.vertex, "data-m": q.id }, q.text));   // data-at: an angle label's vertex
   }
   // the viewBox = the drawing + every placed label (+ a margin): a label is placed where it reads best, the frame follows it, centred
   const bx = [...segs.flatMap(s => s.pts), ...dots.flatMap(d => [[d.box[0], d.box[1]], [d.box[0] + d.box[2], d.box[1] + d.box[3]]]),
@@ -544,37 +545,102 @@ register("Geometry", (p, c) => {
 register("Callout", (p, c) => c.h("div", { class: "vw-callout" }, c.h("div", { class: "vw-tag" }, p.tag), c.h("p", null, c.rich(p.text))));
 register("Answer", (p, c) => c.h("p", { class: "vw-p" }, c.h("span", { class: "vw-ans" }, p.value), p.text ? " " : null, p.text ? c.rich(p.text) : null));
 
-/** Steps (F14): reserved slots; Back off at 1, Next off at n; caption aria-live; ←/→ only while the footer has focus. */
+/** lit (Step, stepper Nov 8): the anchor Geometry's parts one step lights -> { marks: Set("m0"...), pts: Set("A"...) }, or null (= all lit).
+    A token names a point "A", a segment "A-B" (either order) or a mark's label as written ("F", "\\theta"; $ and spaces ignored). */
+const GEO_ARGS = { seg: 2, circle: 1, right: 3, dim: 2, angle: 3, arrow: 2, label: 1 };   // point args before a mark's label (circle: its centre)
+const litNorm = x => String(x).replace(/[$\s{}]/g, "");
+export function litMarks(marks, lit) {
+  const toks = String(lit || "").trim().split(/\s+/).filter(Boolean).map(litNorm);
+  if (!toks.length) return null;
+  const want = new Set(toks), out = { marks: new Set(), pts: new Set(toks.filter(t => /^[A-Za-z][A-Za-z0-9']{0,3}$/.test(t))) };
+  (marks || []).forEach((raw, i) => {
+    const m = /^\s*(\w+)\s*\((.*)\)\s*$/.exec(String(raw));
+    if (!m || !(m[1] in GEO_ARGS)) return;
+    const a = m[2].split(",").map(x => x.trim()).filter(x => !/^(layer|tone)\s*=/i.test(x)), n = GEO_ARGS[m[1]], ps = a.slice(0, n);
+    const text = litNorm(a.slice(m[1] === "circle" ? 2 : n).filter(x => !/^(left|right)$/i.test(x)).join(","));
+    const pair = n >= 2 && (want.has(`${ps[0]}-${ps[1]}`) || want.has(`${ps[1]}-${ps[0]}`));
+    const own = (text && want.has(text)) || pair || (["circle", "right", "angle"].includes(m[1]) && want.has(ps[0]) && !text);
+    if (own) { out.marks.add("m" + i); for (const q of ps) out.pts.add(q); }
+  });
+  return out;
+}
+/** one step formula, display TeX: KaTeX when the page has it, else the TeX as text (never innerHTML from the model) */
+function texNode(doc, s, inline = false) {
+  const el = h(doc, inline ? "span" : "div", { class: inline ? "vw-tex-i" : "vw-tex" });
+  const K = doc.defaultView && doc.defaultView.katex;
+  try { if (K) K.render(String(s), el, { displayMode: !inline, throwOnError: false }); else el.textContent = s; } catch { el.textContent = s; }
+  return el;
+}
+/** a step caption: **bold** as rich(), plus inline $...$ math (KaTeX when the page has it) */
+const capNodes = (c, s) => String(s ?? "").split(/\$([^$]+)\$/).flatMap((t, i) => (i % 2 ? [texNode(c.doc, t, true)] : c.rich(t)));
+
+/** Steps (F14 + stepper Nov 8): ONE anchor figure drawn once (Graph marks per step, or a Geometry whose parts each step lights: the rest dims,
+    nothing is removed, no redraw = no whiplash; a Doodle stays), the caption (aria-live), the step formula, a segmented progress bar (no step
+    numbers in visible text: the count is the bar's aria-valuetext + a screen-reader .vw-n), Back / Next (off at the ends; ←/→ while the footer has focus), Show all = every
+    step formula in order. Tap the figure: every label shows (labels on demand). The last step, the first time: a bubbling "vw-steps-end" (the
+    app's cheer). Back/Next never call the model. */
 register("Steps", (p, c) => {
   const steps = (p.steps || []).map(s => s.props);
   if (!steps.length) return c.h("div", { class: "vw-steps wait" });      // its steps have not arrived yet: hold the slot
-  const st = c.state(() => ({ i: 0 }));
+  const st = c.state(() => ({ i: 0, all: false, labels: false, cheered: false }));
   st.i = Math.min(st.i, steps.length - 1);
-  const g = p.fig ? graphModel(p.fig.props) : null;
-  const fig = g && c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure, one step at a time" });
+  const kind = p.fig && p.fig.typeName;
+  const g = kind === "Graph" || (p.fig && !kind) ? graphModel(p.fig.props) : null;
+  const anchor = !g && p.fig ? c.render(p.fig) : null;                    // Geometry / Doodle: drawn once, its own error boundary
+  const geo = kind === "Geometry" ? p.fig.props.marks || [] : null;
+  const fig = g ? c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure, one step at a time" })
+    : anchor && c.h("div", { class: "vw-anchor", title: "Tap to show every label" }, anchor);
   const front = c.h("div", { class: "vw-chips vw-front" });
   const cap = c.h("p", { class: "vw-cap", "aria-live": "polite" });
+  const tex = c.h("div", { class: "vw-texs" });
   const body = c.h("tbody");
   const tb = p.head && c.h("table", { class: "vw-tb" }, c.h("thead", null, c.h("tr", null, p.head.map(x => c.h("th", { scope: "col" }, x)))), body);
-  const back = button(c.doc, "prev", "Back"), next = button(c.doc, "next", "Next"), n = c.h("span", { class: "vw-n" });
-  const foot = c.h("div", { class: "vw-foot" }, back, next, n);
+  const segs = steps.map(() => c.h("i"));
+  const bar = c.h("div", { class: "vw-bar", role: "progressbar", "aria-label": "progress", "aria-valuemin": 1, "aria-valuemax": steps.length }, segs);
+  const back = button(c.doc, "prev", "Back"), next = button(c.doc, "next", "Next"), n = c.h("span", { class: "vw-n vw-sr" });
+  const texs = steps.filter(s => s.tex);
+  const allBtn = texs.length ? c.h("button", { type: "button", class: "btn btn-label vw-all-b", "aria-expanded": "false" }, "Show all") : null;
+  const allList = texs.length ? c.h("ol", { class: "vw-all", hidden: true }, texs.map(s => c.h("li", null, texNode(c.doc, s.tex, true)))) : null;
+  const foot = c.h("div", { class: "vw-foot" }, back, next, bar, n, allBtn);
+  let root = null;
   const show = () => {
     const s = steps[st.i], nodes = Object.fromEntries(pairs(s.nodes));
     if (g) fig.replaceChildren(drawGraph(c.doc, g, { nodes, edges: Object.fromEntries(pairs(s.edges)), tags: Object.fromEntries(pairs(s.tags)),
       labels: Object.fromEntries((s.labels || []).map(t => { const i = t.indexOf(":"); return [t.slice(0, i), t.slice(i + 1)]; })) }));
+    if (geo && anchor) {
+      const L = litMarks(geo, s.lit);
+      for (const el of anchor.querySelectorAll("[data-m]")) {
+        const id = el.getAttribute("data-m");
+        cls(el, "vw-dim", !!L && !(id.startsWith("pt:") ? L.pts.has(id.slice(3)) : L.marks.has(id)));
+      }
+      for (const el of anchor.querySelectorAll("[data-pt]")) cls(el, "vw-dim", !!L && !L.pts.has(el.getAttribute("data-pt")));
+    }
+    if (fig) cls(fig, "vw-labels", st.labels);
     front.replaceChildren(...chips(c.doc, s.front || [], true));
-    cap.replaceChildren(...c.rich(s.cap));
+    cap.replaceChildren(...capNodes(c, s.cap));
+    tex.replaceChildren(...(s.tex ? [texNode(c.doc, s.tex)] : []));
     if (tb) body.replaceChildren(...(s.rows || []).map(r => c.h("tr", { class: nodes[r[0]] === "cur" ? "cur" : !nodes[r[0]] || nodes[r[0]] === "idle" ? "dim" : null },
       r.map(x => c.h("td", null, x)))));
-    n.textContent = `Step ${st.i + 1} of ${steps.length}`;
+    segs.forEach((x, j) => { cls(x, "on", j <= st.i); cls(x, "cur", j === st.i); });
+    bar.setAttribute("aria-valuenow", st.i + 1);
+    bar.setAttribute("aria-valuetext", n.textContent = `Step ${st.i + 1} of ${steps.length}`);
+    if (allBtn) { allBtn.setAttribute("aria-expanded", String(st.all)); allBtn.textContent = st.all ? "Hide all" : "Show all"; allList.hidden = !st.all; }
     dis(back, st.i === 0); dis(next, st.i === steps.length - 1);
+    if (root && root.dispatchEvent && st.i === steps.length - 1 && steps.length > 1 && !st.cheered) {
+      st.cheered = true;
+      const CE = (c.doc.defaultView || globalThis).CustomEvent;
+      if (CE) root.dispatchEvent(new CE("vw-steps-end", { bubbles: true }));
+    }
   };
   const go = d => { const i = Math.max(0, Math.min(steps.length - 1, st.i + d)); if (i !== st.i) { st.i = i; show(); } };
   back.addEventListener("click", () => go(-1));
   next.addEventListener("click", () => go(1));
+  if (allBtn) allBtn.addEventListener("click", () => { st.all = !st.all; show(); });
+  if (anchor) fig.addEventListener("click", () => { st.labels = !st.labels; show(); });
   foot.addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); go(e.key === "ArrowLeft" ? -1 : 1); } });
   show();
-  return c.h("div", { class: "vw-steps" }, fig, p.front && c.h("div", null, c.h("div", { class: "vw-lab" }, p.front), front), cap, tb, foot);
+  root = c.h("div", { class: "vw-steps" }, fig, p.front && c.h("div", null, c.h("div", { class: "vw-lab" }, p.front), front), cap, tex, tb, foot, allList);
+  return root;
 });
 
 register("Hints", (p, c) => {

@@ -222,11 +222,21 @@
         ]
       },
       "Steps": {
-        "description": "A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below",
+        "description": "A stepper: ONE anchor figure (Graph, Geometry or Doodle) drawn once for every step, the steps, an optional frontier row and status table; a segmented progress bar, Back/Next and Show all (every step formula) below. A Geometry fig: each Step lights its own parts (lit), the rest dims, nothing is removed",
         "type": "object",
         "properties": {
           "fig": {
-            "$ref": "#/$defs/Graph"
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Graph"
+              },
+              {
+                "$ref": "#/$defs/Geometry"
+              },
+              {
+                "$ref": "#/$defs/Doodle"
+              }
+            ]
           },
           "steps": {
             "type": "array",
@@ -254,7 +264,7 @@
         ]
       },
       "Step": {
-        "description": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+        "description": "One step: caption (one or two short sentences; with a Geometry fig the six Graph args are null: Step(\"...\", null, null, null, null, null, null, \"W = F s\", \"F s\")), tex (one formula, TeX, no $), lit (a Geometry fig's parts this step lights, space separated: a point name \"A\", a segment \"A-B\", or a label as written \"F\" / \"\\theta\"; every symbol in tex is a lit label; empty = all lit), node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
         "type": "object",
         "properties": {
           "cap": {
@@ -300,6 +310,14 @@
               "maxItems": 5
             },
             "maxItems": 12
+          },
+          "tex": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "lit": {
+            "type": "string",
+            "maxLength": 120
           }
         },
         "required": [
@@ -804,15 +822,25 @@
       }
     },
     "Steps": {
-      "signature": "Steps(fig?: Graph, steps: Step[], front?: string, head?: string[])",
-      "description": "A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below",
+      "signature": "Steps(fig?: Graph | Geometry | Doodle, steps: Step[], front?: string, head?: string[])",
+      "description": "A stepper: ONE anchor figure (Graph, Geometry or Doodle) drawn once for every step, the steps, an optional frontier row and status table; a segmented progress bar, Back/Next and Show all (every step formula) below. A Geometry fig: each Step lights its own parts (lit), the rest dims, nothing is removed",
       "layer": "L1",
       "kind": "interaction",
       "props": {
         "type": "object",
         "properties": {
           "fig": {
-            "$ref": "#/$defs/Graph"
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Graph"
+              },
+              {
+                "$ref": "#/$defs/Geometry"
+              },
+              {
+                "$ref": "#/$defs/Doodle"
+              }
+            ]
           },
           "steps": {
             "type": "array",
@@ -841,8 +869,8 @@
       }
     },
     "Step": {
-      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][])",
-      "description": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][], tex?: string, lit?: string)",
+      "description": "One step: caption (one or two short sentences; with a Geometry fig the six Graph args are null: Step(\"...\", null, null, null, null, null, null, \"W = F s\", \"F s\")), tex (one formula, TeX, no $), lit (a Geometry fig's parts this step lights, space separated: a point name \"A\", a segment \"A-B\", or a label as written \"F\" / \"\\theta\"; every symbol in tex is a lit label; empty = all lit), node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
       "layer": "L1",
       "kind": "layout",
       "props": {
@@ -891,6 +919,14 @@
               "maxItems": 5
             },
             "maxItems": 12
+          },
+          "tex": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "lit": {
+            "type": "string",
+            "maxLength": 120
           }
         },
         "required": [

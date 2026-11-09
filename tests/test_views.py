@@ -127,7 +127,7 @@ class Generated(unittest.TestCase):
         steps = lib["components"]["Steps"]
         self.assertEqual(list(steps["props"]["properties"]), ["fig", "steps", "front", "head"])   # positional order
         self.assertEqual(steps["props"]["required"], ["steps"])
-        self.assertEqual(steps["signature"], "Steps(fig?: Graph, steps: Step[], front?: string, head?: string[])")
+        self.assertEqual(steps["signature"], "Steps(fig?: Graph | Geometry | Doodle, steps: Step[], front?: string, head?: string[])")
         self.assertEqual(lib["schema"]["$defs"]["Steps"]["properties"], steps["props"]["properties"])
         view = lib["components"]["View"]["props"]["properties"]["children"]["items"]["anyOf"]
         self.assertEqual(view, [{"$ref": f"#/$defs/{n}"} for n in gv.shipped(REG)])

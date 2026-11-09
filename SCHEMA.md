@@ -370,8 +370,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Math | L0 | domain | planned | `Math(tex: string≤200)` | symbolic.simplify |
 | Chips | L0 | layout | planned | `Chips(items: string≤32[]≤8)` |  |
 | Callout | L1 | layout | P1.1 | `Callout(tag: string≤24, text: string≤400)` |  |
-| Steps | L1 | interaction | P1.1 | `Steps(fig?: Graph, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)` |  |
-| Step | L1 | layout | P1.1 | `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12)` |  |
+| Steps | L1 | interaction | P1.1 | `Steps(fig?: Graph | Geometry | Doodle, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)` |  |
+| Step | L1 | layout | P1.1 | `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12, tex?: string≤120, lit?: string≤120)` |  |
 | Hints | L1 | interaction | P1.1 | `Hints(hints: string≤200[]≤3)` |  |
 | Predict | L1 | interaction | P1.1 | `Predict(tag?: string≤24, q: string≤140, choices: string≤24[]≤5, struck?: string≤24[]≤4, tries?: number, answer: key.<id>)` |  |
 | Reveal | L1 | interaction | P1.1 | `Reveal(lock: string≤80, body?: Component[]≤4)` |  |

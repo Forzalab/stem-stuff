@@ -139,8 +139,9 @@ def ts(s, caps=False):
         return s["$ref"].removeprefix("#/$defs/")
     if caps and s.get("pattern", "").startswith("^key\\."):
         return "key.<id>"
-    if "anyOf" in s:
-        return "Component"
+    if "anyOf" in s:                                # a short union of refs (Steps.fig) reads as its names; x-any stays "Component"
+        refs = [o.get("$ref", "") for o in s["anyOf"]]
+        return " | ".join(r.removeprefix("#/$defs/") for r in refs) if all(refs) and len(refs) <= 4 else "Component"
     t = s.get("type")
     if t == "array":
         return (ts(s["items"], caps) if "items" in s else "any") + "[]" + (f"≤{s['maxItems']}" if caps and "maxItems" in s else "")
