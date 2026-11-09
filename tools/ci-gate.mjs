@@ -71,14 +71,6 @@ export function decideShip({ candidate, green, changedFiles } = {}) {
   return { ok: true, reason: docs.length ? `docs-only diff since full green ${green.sha}` : `empty diff since full green ${green.sha}` };
 }
 
-// The frozen ci-gate test's `fix()` helper appends ".json" to names that already end in ".json" (green.json.json).
-// A missing runs path with that doubled suffix resolves to the single-suffix file; a real file always wins.
-function resolveRunsPath(p) {
-  if (existsSync(p)) return p;
-  const alt = p.replace(/\.json\.json$/, ".json");
-  return alt !== p && existsSync(alt) ? alt : p;
-}
-
 function parseArgs(argv) {
   const out = { candidate: "", runs: "", files: [], help: false };
   for (let i = 0; i < argv.length; i++) {
@@ -100,7 +92,7 @@ function main(argv) {
   if (!opts.candidate || !opts.runs) { console.error("ci-gate: --candidate and --runs are required"); return 2; }
 
   let runs;
-  const runsPath = resolveRunsPath(opts.runs);
+  const runsPath = opts.runs;
   try { runs = JSON.parse(readFileSync(runsPath, "utf8")); } catch (e) { console.error(`ci-gate: cannot read ${runsPath}: ${e.message}`); return 2; }
   const green = pickGreen(runs, opts.candidate);
 
