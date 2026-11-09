@@ -131,6 +131,7 @@ try {
       const { ctx, page } = await open({ width: w, height: h }, true);
       await miss(page);
       await page.$eval("#work", e => { e.scrollTop = e.scrollHeight; });
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));   // not typing (Nov 8): the proof page, the page scrolls
       await page.waitForTimeout(100);
       const hit = await page.evaluate(() => {
         const vh = innerHeight, steps = [...document.querySelectorAll("#rpHost .rp-step")], out = {};

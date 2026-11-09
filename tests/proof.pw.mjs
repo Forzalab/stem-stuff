@@ -155,6 +155,7 @@ for (const mode of ["diet", "sugar"]) {
     const { ctx, page, errs } = await open(mode, { width: 390, height: 844 });
     const b = await nearestBordered(page, "#ans");
     assert.ok(b && b.inWork && !b.inFreeze, "nested box: nearest bordered ancestor = " + JSON.stringify(b));
+    await page.focus("#ans"); await page.waitForTimeout(100);                     // the split is for typing (Nov 8): unfocused = the proof page, no sash
     const [pr, ta, sh] = [await rect(page, "#problem"), await rect(page, "#ans"), await rect(page, "#sash")];
     assert.ok(ta.t >= pr.b - 1, `proof pane is not below the question: ${JSON.stringify({ pr, ta })}`);
     assert.ok(sh.h > 0 && sh.t >= pr.b - 1 && sh.b <= ta.t + 1, "the sash is not between the question and the proof pane: " + JSON.stringify(sh));
@@ -196,6 +197,7 @@ for (const [w, h] of [[390, 700], [360, 640]]) {
       Repair.mount(host, { type: "num", repair: { steps: ["a", "b", "c", "d", "e"].map(id => ({ id, label: "Step " + id + " of the fix", kind: "num" })) } }, { variant: "repair", error: null }); });
     await page.waitForSelector("#rpHost .rp-skip");
     await page.$eval("#work", e => { e.scrollTop = e.scrollHeight; });
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));   // not typing (Nov 8): the proof page, the page scrolls
     await page.waitForTimeout(100);
     const hit = await page.evaluate(() => {
       const vh = innerHeight, steps = [...document.querySelectorAll("#rpHost .rp-step")], out = {};

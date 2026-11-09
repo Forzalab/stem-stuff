@@ -1625,6 +1625,7 @@ html.side .cl:is(.wbusy, :has(.wtext.wrun)) .cl-ft .ask::after { border-radius: 
 /* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the split. app.js proofHome moves #q (the
    how line, the box, the chips, the reference) and #fb (the verdict) into #work; the pane (#q there) is the one bordered box. */
 html.proof-split #xb { display: none; }
+html.proof-split.pad-off #stage > #work { display: flex; margin-top: var(--s3); }   /* the proof screen, not typing: the pane sits in the page under the question (app.js proofTyping) */
 html.proof-split #stage > #work { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
 html.proof-split #work > #q { position: relative; flex: 1 1 auto; min-height: 0; margin: 0; padding: var(--s3); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
   background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; }

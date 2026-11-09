@@ -411,6 +411,11 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
 let mtForced = false;                                                          // phone: the split opened by itself for a proof item (isProof), not by the Open notes button
 const isProof = () => !!S && S.prob.type === "proof";
+const oneBox = () => !!S && /^(text|num|expr)$/.test(S.prob.type);       // a typed single-box item: the keyboard never restyles the page (Tony, Nov 8)
+/* a proof item's split is for typing (Tony, Nov 8: "If unfocused, return back to the old proof screen"): on while focus is in the proof
+   pane (#work: the box, Check, the ladder) or a press there is down (a tap on Check blurs the box before its click lands) */
+let proofHold = false;
+const proofTyping = () => proofHold || ($("#work").contains(document.activeElement) && (mtOpen || editing()));   // opens on a typing field only: a press on Skip / Check must not move the page under the finger
 let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
@@ -3475,7 +3480,7 @@ function layoutDock() {
      (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
   const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
   const grace = (!a || a === document.body) && performance.now() - lostAt < 500;
-  const swapNext = !!S && !freeze.hidden && shrunk && !mtOpen && !sideMQ.matches && ((inMain && (editing() || swapOn)) || (swapOn && grace));
+  const swapNext = !!S && !oneBox() && !freeze.hidden && shrunk && !mtOpen && !sideMQ.matches && ((inMain && (editing() || swapOn)) || (swapOn && grace));
   root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (mtOpen && !!S));
@@ -3725,7 +3730,7 @@ function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind(), gone = side && clGone;
   if (sideMQ.matches || !S) mtOpen = false;
   const pf = isProof();
-  if (pf && !sideMQ.matches) { mtOpen = true; mtForced = true; }                // a proof item: always the split (question tile on top, the proof pane below)
+  if (pf && !sideMQ.matches && proofTyping()) { mtOpen = true; mtForced = true; }   // a proof item while typing: the split (question tile on top, the proof pane below)
   else if (mtForced) { mtOpen = false; mtForced = false; }
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
@@ -3866,6 +3871,17 @@ function closeMT(toAnswer) {
   if (toAnswer) focusField("problem");                                            // after the close (on q the answer was hidden), still in the tap: the keyboard can stay
   if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
 }
+/* proof: focus into / out of the proof pane opens / closes the split (out: on the next task, when the new focus is known) */
+function proofSync() {
+  if (!isProof() || sideMQ.matches || proofTyping() === mtOpen) return;
+  if (!mtOpen) { swapY = scrollY; root.style.setProperty("--swap-doc-h", root.scrollHeight + "px"); }
+  applyMT(); layoutDock();
+  if (!mtOpen) { if (scrollY !== swapY) scrollTo(0, swapY); requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); }); }
+}
+document.addEventListener("focusin", () => proofSync());
+document.addEventListener("focusout", () => setTimeout(proofSync, 0));
+document.addEventListener("pointerdown", e => { if (mtOpen && isProof() && $("#work").contains(e.target)) proofHold = true; }, true);
+for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => { if (proofHold) setTimeout(() => { proofHold = false; proofSync(); }, 0); }, true);
 window.stemNotes = { open: () => mtOpen && !isProof(), close: () => closeMT(false) };   // nav.js: the iOS Back button closes the split (a proof item's split is its page: not offered)
 addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (mtOpen) shutMT(); });   // Back closes it, never leaves the page
 for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
@@ -3926,7 +3942,7 @@ let fabDrag = null, fabMoved = false, fabSeen = false;
 function fabSync() {
   window.stemBrainrot?.sync();
   const a = document.activeElement, typing = !!a && editing() && $("#q").contains(a);
-  const show = root.classList.contains("pad-off") && !typing && !padGone();
+  const show = root.classList.contains("pad-off") && !typing && !padGone() && !isProof();   // a proof has no notes pad
   root.classList.toggle("fab-on", show);
   if (fab.hidden === !show) return;
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
