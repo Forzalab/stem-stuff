@@ -4,26 +4,32 @@
 // The engine places and checks layout; the LLM owns the physics. Not a physics simulator.
 
 export const CORE = `You draw ONE diagram as a figure program: one statement per line, \`id = Comp(args)\`. Output only statements: no prose, no code fences.
+Draw MINIMALISTIC, FUNCTIONAL diagrams: only what the explanation needs, no extraneous elements, no decorative objects.
 The engine places and checks layout (contact, overlap, containment) and draws it. You own the physics and the meaning: what acts on what, directions, sizes.
 World units, y points up. Make the main object about 4 to 10 units wide.
 Points (the engine computes them; derive points, raw numbers only for a few anchors):
   Pt(x, y)  Mid(A, B)  Along(A, B, t)  Off(P, dx, dy)  Foot(P, A, B)  Rot(O, P, deg)  Meet(A, B, C, D)
 Shapes:
   Seg(A, B, opts?)  Box(C, w, h, deg?, opts?)  Poly([A, B, C, ...], opts?)  Circle(O, r, opts?)
-  Vec(A, B, label?, opts?)  Label(P, text, opts?)  Angle(A, O, B, label?, opts?)
-opts object: {kind, in, tone, layer, fill, label}
-  kind solid (default for Seg Box Poly Circle): may touch, never overlap.
-  kind surface: one-sided ground, wall, ramp, face; bodies rest on it and may not sink in; arrow heads may pass into it.
-  kind inside + in: containerId: must stay inside that Box, Poly or Circle (liquid in a tank).
-  kind overlay: never checked (connector lines, construction lines, helper marks).
-  Vec, Label, Angle are decor: a Vec is checked only at its head, never against the body it starts in.
+  Curve([A, B, C, ...], opts?): smooth through the points; closed: true = a blob; w: 0.3 or w: [0.4, 0.05] = a (tapered) stroke; mirror: [P, Q].
+  Union([ids...], opts?): parts that form ONE object; parts never conflict with each other; its opts fill in what parts leave out.
+  Vec(A, B, label?, opts?)  Label(P, text, opts?)  Angle(A, O, B, label?, opts?)  Dim(A, B, text, opts?)
+opts object: {kind, in, tone, layer, fill, label, legend}
+  kind solid (default for Seg Box Poly Circle Curve): may touch, never overlap.
+  kind surface: one-sided ground, wall, ramp, water line; bodies rest on it and may not sink in; arrow heads may pass into it.
+  kind inside + in: containerId: must stay inside that Box, Poly, Circle or closed Curve (liquid in a tank).
+  kind overlay: never checked (connector lines, construction lines, field lines, helper marks).
+  Vec, Label, Angle, Dim are decor: a Vec is checked only at its head, never against the body it starts in.
   tone sky amber orange violet pink cyan ink muted; layer 1 asked, 2 given, 3 context; one hue per quantity; fill: true fills.
-  label: "R" on a shape names it; the engine places every label, give only the anchor.
+  label: "m" on a shape: a short symbol or value, placed inside or beside it by the engine. Give only the anchor.
+  legend: "elephant" on a shape or Union: the object's NAME goes to a legend row under the drawing, beside a small render of it.
+  A label with no room by its anchor moves to the legend by itself. Lengths and distances: Dim(A, B, "2 m"), never a loose Label.
+Steps: sN = Layer([ids...], {hide: [ids], zoom: [ids], lit: [ids], title: "..."}) stacks one more step on all before it.
+  Lines before the first Layer = the prefix (rough blocks). Lines after a Layer join it. lit = where to look, zoom = camera.
 Inline point ops are fine inside args: Seg(Mid(A, B), Off(C, 0, 1)). Arithmetic + - * / on numbers is fine.
-Forward references are fine. Order: basic shapes first, then vectors, then labels.
+Forward references are fine. Order: basic shapes first, then details, then vectors, then labels.
 Precedence = line order: when two shapes conflict, the LATER line is blamed and must move.
-Optional last line: fig = Figure([ids...]).
-More on demand: read_doc(topic) with topic points, shapes, kinds, pass2, colors, ex-physics, ex-calc, ex-geometry, ex-cs, ex-chem.
+More on demand: read_doc(topic) with topic points, shapes, kinds, curves, legend, dim, layers, pass2, colors, ex-physics, ex-calc, ex-geometry, ex-cs, ex-chem.
 Text in labels: short, no "I", no "!", no emoji.`;
 
 export const TOPICS = {
@@ -72,6 +78,73 @@ blk = Box(C, 1, 1, 25, {fill: true})
 - decor (Vec, Label, Angle, automatic): labels are never checked; a Vec is checked only at its head, against solids it does not start in.
 Findings come back as pairs ids [later, earlier]: the later line is blamed, with the amount and the push vector (where it must move).
 A dashed ghost shows where the later shape would have to go.`,
+  curves: `Curves and unions (organic parts: a beak, a horn, a tail, a lens, a field line). Prefer Box / Circle / Poly; reach for Curve only when a part is round or organic.
+- Curve([A, B, C, ...]): a smooth curve through every point (centripetal Catmull-Rom). The drawn curve and the checked outline are the same polyline.
+- closed: true closes it into a blob (an area: it collides, it can be filled, a label can sit inside).
+- w: 0.3 (a stroke 0.3 wide) or w: [0.4, 0.05] (tapered from 0.4 to 0.05, round ends): a horn, a beak, a tail, a neck. Open curves only.
+- mirror: [P, Q] adds the mirror image of the points across line PQ, joined at the axis: give half a symmetric outline.
+- An open Curve without w is a thin line (a path, a trajectory, a ripple): lines never conflict with lines.
+- A curve that crosses itself is an error: move a point, or make the stroke thinner at a tight bend.
+- Union([a, b, c], opts?): one object made of parts. Parts collide with OTHER objects, never with each other. The Union's legend / label name the whole group; its kind, tone, layer, fill fill in what a part leaves out (a part's own opts win).
+Build organic things like a human in Canva: the prefix holds rough blocks, a Layer swaps them for the detailed parts.
+\`\`\`
+G = Pt(0, 0)
+ground = Seg(Off(G, -4, 0), Off(G, 4, 0), {kind: "surface", tone: "muted"})
+cube = Box(Off(G, 0, 2), 4, 4, 0)
+s1 = Layer([f1], {title: "The cube"})
+f1 = Fix(cube, {tone: "amber", fill: true})
+s2 = Layer([horn, beast], {lit: [horn], zoom: [horn], title: "Add a horn"})
+horn = Curve([Off(G, -0.6, 4), Off(G, -0.3, 5), Off(G, 0.6, 5.9)], {w: [0.9, 0.05], fill: true, tone: "violet"})
+beast = Union([cube, horn], {legend: "horned cube"})
+\`\`\`
+Symmetric lens with mirror (half the outline, mirrored across the vertical through O):
+\`\`\`
+O = Pt(0, 0)
+lens = Curve([Off(O, 0, 2.5), Off(O, 0.4, 0), Off(O, 0, -2.5)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", layer: 3})
+\`\`\``,
+  legend: `Legend: names of objects go under the drawing, beside a small render of the object itself (not a colour swatch).
+- legend: "elephant" on a shape (or on a Union: the render shows every part). Use it for what an object IS: elephant, students, oil, lens.
+- label: "m" is for a short symbol or value ON the object (m, 2 Ω, A). The engine puts it inside the shape when it fits, else right beside it.
+- A label with no room inside or right next to its anchor (it would cross a line, a filled body or another label) moves to the legend by itself: the feedback says "moved to legend". No leader lines are drawn.
+\`\`\`
+G = Pt(0, 0)
+floor = Seg(Off(G, -3, 0), Off(G, 3, 0), {kind: "surface", tone: "muted"})
+crate = Box(Off(G, -1.2, 0.6), 1.2, 1.2, 0, {fill: true, tone: "sky", label: "m", legend: "crate"})
+body = Circle(Off(G, 1.4, 0.9), 0.9, {fill: true})
+ear = Circle(Off(G, 2.3, 1.5), 0.4, {fill: true})
+cat = Union([body, ear], {tone: "muted", legend: "cat"})
+\`\`\``,
+  dim: `Dim(A, B, text, opts?): a dimension line for the length AB: drawn beside AB on the outside of the figure, with a tick at each end and the text centred along it (or just beside it when the line is short).
+- The engine tries the outside, then the other side, then further out; if no spot is free the text moves to the legend.
+- A and B can be any points: Dim(Off(O, 0, 0), Off(O, 4, 0), "4 m") under a body, Dim(Foot(C, A, B), C, "h") for a height.
+- Use Dim for lengths, radii, distances and heights. Never a loose Label for a length.
+\`\`\`
+A = Pt(0, 0)
+B = Pt(5, 0)
+C = Pt(1.5, 3)
+tri = Poly([A, B, C], {kind: "overlay", tone: "ink"})
+H = Foot(C, A, B)
+alt = Seg(C, H, {kind: "overlay", tone: "violet"})
+b = Dim(A, B, "b = 5 cm")
+h = Dim(H, C, "h = 3 cm", {tone: "violet"})
+\`\`\``,
+  layers: `Layers stack steps, like Photoshop layers that cannot be switched off in the middle (linear, no branches).
+- The prefix = every line before the first Layer: the rough blocks, drawn as a blueprint.
+- sN = Layer([ids...], opts) adds those statements (and every line written after it, until the next Layer) on top of all before it.
+- hide: [ids] hides earlier shapes from this step on (swap a rough block for its detailed parts).
+- lit: [ids] = where to look: the rest of the figure turns pale. zoom: [ids] = the camera fits those shapes for this step.
+- title: "..." = one short line for the step. A Fix listed in a Layer restyles from that step on (step 1 tone amber).
+- Checks: each step's new shapes are checked against everything shown with them; shapes never shown together never conflict.
+\`\`\`
+O = Pt(0, 0)
+floor = Seg(Off(O, -3, 0), Off(O, 3, 0), {kind: "surface", tone: "muted"})
+blk = Box(Off(O, 0, 0.75), 1.5, 1.5, 0, {fill: true, tone: "muted"})
+s1 = Layer([W, N], {lit: [W, N], title: "Two forces"})
+W = Vec(Off(O, 0, 0.75), Off(O, 0, -1), "W", {tone: "sky"})
+N = Vec(Off(O, 0, 0.75), Off(O, 0, 2.5), "N", {tone: "amber"})
+s2 = Layer([F], {lit: [F], zoom: [blk, F], title: "Push it"})
+F = Vec(Off(O, -2.6, 0.75), Off(O, -0.75, 0.75), "F", {tone: "violet"})
+\`\`\``,
   pass2: `Reviews (pass 2) append lines; they never delete.
 - Fix a free point or a shape's own traits with a PATCH holding only what changes:
   f1 = Fix(C, {x: 1.2})            moves Pt C, and everything derived from it follows
@@ -265,8 +338,7 @@ p1 = Vec(Off(Along(B3, B2, 0.2), 0, 1.8), Along(B3, B2, 0.2), "", {tone: "amber"
 p2 = Vec(Off(Along(B3, B2, 0.5), 0, 1.8), Along(B3, B2, 0.5), "", {tone: "amber"})
 p3 = Vec(Off(Along(B3, B2, 0.8), 0, 1.8), Along(B3, B2, 0.8), "F", {tone: "amber"})
 pL = Vec(Off(Mid(F0, F3), -1.8, 0), Mid(F0, F3), "P", {tone: "violet", layer: 2})
-dim = Seg(Off(F0, 0, -0.5), Off(F1, 0, -0.5), {tone: "muted"})
-dimL = Label(Off(Mid(F0, F1), 0, -1), "20 cm", {tone: "muted"})
+dim = Dim(F0, F1, "20 cm")
 dV = Label(Off(F3, -1.4, 1.4), "ΔV", {tone: "pink"})`,
     pass2: "",
   },
@@ -279,16 +351,308 @@ wl = Seg(G, Off(G, 0, 4.2), {kind: "surface", tone: "muted"})
 wb = Seg(G, Off(G, 10, 0), {kind: "surface", tone: "muted"})
 wr = Seg(Off(G, 10, 0), Off(G, 10, 4.2), {kind: "surface", tone: "muted"})
 hump = Poly([Off(G, 5, 1.6), Off(G, 8, 1.6), Off(G, 8, 4.2), Off(G, 5, 4.2)], {kind: "surface", tone: "muted"})
-oil = Poly([G, Off(G, 10, 0), Off(G, 10, 3.6), Off(G, 8, 3.6), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 3.6), Off(G, 0, 3.6)], {kind: "inside", in: tank, fill: true, tone: "muted", layer: 2})
+oil = Poly([G, Off(G, 10, 0), Off(G, 10, 3.6), Off(G, 8, 3.6), Off(G, 8, 1.6), Off(G, 5, 1.6), Off(G, 5, 3.6), Off(G, 0, 3.6)], {kind: "inside", in: tank, fill: true, tone: "muted", layer: 2, legend: "oil"})
 big = Box(Off(G, 2.5, 3.9), 5, 0.6, 0, {kind: "inside", in: tank, fill: true, tone: "ink"})
 small = Box(Off(G, 9, 3.9), 2, 0.6, 0, {kind: "inside", in: tank, fill: true, tone: "ink"})
-body = Circle(Off(G, 2.3, 5.1), 0.9, {fill: true, tone: "muted"})
-head = Circle(Off(G, 3.4, 5.5), 0.45, {kind: "overlay", fill: true, tone: "muted"})
-studs = Box(Off(G, 9, 4.7), 1.2, 1, 0, {fill: true, tone: "violet", layer: 2, label: "students"})
+body = Circle(Off(G, 2.3, 5.1), 0.9, {fill: true})
+head = Circle(Off(G, 3.4, 5.5), 0.45, {fill: true})
+eleph = Union([body, head], {tone: "muted", legend: "elephant, 1800 kg"})
+studs = Box(Off(G, 9, 4.7), 1.2, 1, 0, {fill: true, tone: "violet", layer: 2, legend: "students"})
 F1 = Vec(Off(G, 2.3, 8), Off(G, 2.3, 6), "F₁ = mg", {tone: "pink"})
 F2 = Vec(Off(G, 9, 7), Off(G, 9, 5.2), "F₂", {tone: "violet"})
-mL = Label(Off(G, 2.5, 2), "1800 kg", {tone: "ink"})
-oL = Label(Off(G, 6.5, 0.8), "oil", {tone: "muted"})`,
+dR = Dim(Off(G, 2.5, 0), Off(G, 5, 0), "R = 1.0 m")
+dr = Dim(Off(G, 9, 0), Off(G, 10, 0), "r = 0.20 m")`,
+    pass2: "",
+  },
+  lens: {
+    title: "Thin lens (Dim + layers)",
+    problem: "An object 10 cm tall stands 25 cm in front of a converging lens with focal length 10 cm. Where does the image form, and how tall is it?",
+    pass1: `O = Pt(0, 0)
+axis = Seg(Off(O, -6.5, 0), Off(O, 5, 0), {kind: "overlay", tone: "muted"})
+lens = Curve([Off(O, 0, 2.6), Off(O, 0.35, 0), Off(O, 0, -2.6)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", layer: 3, legend: "converging lens"})
+F = Off(O, -2, 0)
+Fp = Off(O, 2, 0)
+T = Off(O, -5, 2)
+I = Off(O, 3.333, -1.333)
+fd = Circle(F, 0.08, {kind: "overlay", fill: true, tone: "ink", label: "F"})
+fpd = Circle(Fp, 0.08, {kind: "overlay", fill: true, tone: "ink", label: "F′"})
+obj = Vec(Off(O, -5, 0), T, "", {tone: "amber", legend: "object"})
+s1 = Layer([dO, dF], {title: "Object at 25 cm, focal length 10 cm"})
+dO = Dim(Off(O, -5, 0), O, "dₒ = 25 cm", {tone: "amber"})
+dF = Dim(O, Fp, "f = 10 cm")
+s2 = Layer([r1a, r1b], {lit: [r1a, r1b, obj], title: "Ray 1: parallel, then through F′"})
+r1a = Seg(T, Off(O, 0, 2), {kind: "overlay", tone: "orange"})
+r1b = Seg(Off(O, 0, 2), I, {kind: "overlay", tone: "orange"})
+s3 = Layer([r2], {lit: [r2, obj], title: "Ray 2: straight through the centre"})
+r2 = Seg(T, I, {kind: "overlay", tone: "pink"})
+s4 = Layer([r3a, r3b], {lit: [r3a, r3b, obj], title: "Ray 3: through F, then parallel"})
+r3a = Seg(T, Off(O, 0, -1.333), {kind: "overlay", tone: "cyan"})
+r3b = Seg(Off(O, 0, -1.333), I, {kind: "overlay", tone: "cyan"})
+s5 = Layer([img, dI], {lit: [img, dI], zoom: [img, dI, r1b], title: "The rays meet: a real, inverted, smaller image"})
+img = Vec(Off(O, 3.333, 0), I, "", {tone: "violet", legend: "image, 6.7 cm"})
+dI = Dim(O, Off(O, 3.333, 0), "dᵢ = 16.7 cm", {tone: "violet"})`,
+    pass2: "",
+  },
+  pelican: {
+    title: "Pelican on a lake (Curve + Union)",
+    problem: "Draw a pelican floating on a lake.",
+    pass1: `G = Pt(0, 0)
+water = Box(Off(G, -0.6, -0.5), 9, 1, 0, {kind: "overlay", fill: true, tone: "sky", layer: 3})
+lake = Seg(Off(G, -5.1, 0), Off(G, 3.9, 0), {kind: "surface", tone: "sky"})
+bodyB = Box(Off(G, 0.6, 0.8), 4, 1.6, 0)
+headB = Circle(Off(G, -1.55, 3.7), 0.45)
+s1 = Layer([body, neck, head, beak, pouch, wing, eye], {hide: [bodyB, headB], title: "Curves: body, neck, head, beak with its pouch, wing"})
+body = Curve([Off(G, -1.5, 0.95), Off(G, -0.8, 0.25), Off(G, 0.6, 0), Off(G, 2, 0.25), Off(G, 3.1, 1.05), Off(G, 1.7, 1.45), Off(G, 0, 1.6), Off(G, -1, 1.5)], {closed: true, fill: true, tone: "muted", layer: 2})
+neck = Curve([Off(G, -1, 1.3), Off(G, -1.65, 2.1), Off(G, -1.2, 2.9), Off(G, -1.5, 3.5)], {w: [0.6, 0.42], fill: true, tone: "muted", layer: 2})
+head = Circle(Off(G, -1.55, 3.7), 0.45, {fill: true, tone: "muted", layer: 2})
+beak = Curve([Off(G, -1.9, 3.8), Off(G, -3.3, 3.5), Off(G, -4.7, 3.05), Off(G, -4.85, 2.85)], {w: [0.3, 0.08], fill: true, tone: "amber", layer: 2})
+pouch = Curve([Off(G, -1.85, 3.55), Off(G, -2.5, 2.8), Off(G, -3.6, 2.75), Off(G, -4.55, 3.0), Off(G, -3.3, 3.4)], {closed: true, fill: true, tone: "orange", layer: 2})
+wing = Curve([Off(G, -0.6, 1.35), Off(G, 0.8, 1.3), Off(G, 2.2, 1.05), Off(G, 3.1, 0.95)], {w: [0.75, 0.1], fill: true, tone: "ink", layer: 1})
+eye = Circle(Off(G, -1.45, 3.82), 0.08, {fill: true, tone: "ink"})
+s2 = Layer([rip1, rip2, rip3, bird], {title: "Ripples on the water, and the name"})
+rip1 = Curve([Off(G, -4.1, -0.35), Off(G, -3.4, -0.22), Off(G, -2.7, -0.35)], {kind: "overlay", tone: "sky"})
+rip2 = Curve([Off(G, 2.1, -0.3), Off(G, 2.8, -0.18), Off(G, 3.5, -0.3)], {kind: "overlay", tone: "sky"})
+rip3 = Curve([Off(G, -0.4, -0.6), Off(G, 0.6, -0.45), Off(G, 1.6, -0.6)], {kind: "overlay", tone: "sky"})
+bird = Union([body, neck, head, beak, pouch, wing, eye], {legend: "pelican"})`,
+    pass2: "",
+  },
+  horned: {
+    title: "Horned cube (layers)",
+    problem: "A cube on the ground; then it grows a horn.",
+    pass1: `G = Pt(0, 0)
+ground = Seg(Off(G, -4, 0), Off(G, 4, 0), {kind: "surface", tone: "muted"})
+cube = Box(Off(G, 0, 2), 4, 4, 0)
+s1 = Layer([f1], {title: "The cube"})
+f1 = Fix(cube, {tone: "amber", fill: true})
+s2 = Layer([horn, beast], {lit: [horn], zoom: [horn], title: "Add a horn"})
+horn = Curve([Off(G, -0.6, 4), Off(G, -0.3, 5), Off(G, 0.6, 5.9)], {w: [0.9, 0.05], fill: true, tone: "violet"})
+beast = Union([cube, horn], {legend: "horned cube"})`,
+    pass2: "",
+  },
+  area: {
+    title: "Area under a curve + tangent",
+    problem: "Shade the area under f(x) = 0.1x² + 0.5 from x = 1 to x = 4, and draw the tangent at x = 5.",
+    pass1: `O = Pt(0, 0)
+xAx = Seg(Off(O, -0.4, 0), Off(O, 6.6, 0), {kind: "overlay", tone: "muted"})
+yAx = Seg(Off(O, 0, -0.4), Off(O, 0, 4.6), {kind: "overlay", tone: "muted"})
+f = Curve([Pt(0, 0.5), Pt(1, 0.6), Pt(2, 0.9), Pt(3, 1.4), Pt(4, 2.1), Pt(5, 3), Pt(6, 4.1)], {kind: "overlay", tone: "ink", label: "f(x)"})
+s1 = Layer([A], {lit: [A], title: "The area from 1 to 4"})
+A = Poly([Pt(1, 0), Pt(1, 0.6), Pt(1.5, 0.725), Pt(2, 0.9), Pt(2.5, 1.125), Pt(3, 1.4), Pt(3.5, 1.725), Pt(4, 2.1), Pt(4, 0)], {kind: "overlay", fill: true, tone: "sky", layer: 2, label: "A"})
+ab = Dim(Pt(1, 0), Pt(4, 0), "from 1 to 4", {tone: "sky"})
+s2 = Layer([tan, P], {lit: [tan, P], title: "The tangent at x = 5: slope f′(5) = 1"})
+P = Circle(Pt(5, 3), 0.09, {kind: "overlay", fill: true, tone: "amber"})
+tan = Seg(Pt(3.8, 1.8), Pt(6.4, 4.4), {kind: "overlay", tone: "amber", label: "slope 1"})`,
+    pass2: "",
+  },
+  unit: {
+    title: "Unit circle: sin and cos",
+    problem: "On the unit circle, show cos θ and sin θ for θ = 35°.",
+    pass1: `O = Pt(0, 0)
+xAx = Seg(Off(O, -3.6, 0), Off(O, 3.6, 0), {kind: "overlay", tone: "muted"})
+yAx = Seg(Off(O, 0, -3.6), Off(O, 0, 3.6), {kind: "overlay", tone: "muted"})
+circ = Circle(O, 3, {kind: "overlay", tone: "muted"})
+P = Rot(O, Off(O, 3, 0), 35)
+Q = Foot(P, O, Off(O, 1, 0))
+rad = Seg(O, P, {kind: "overlay", tone: "ink", label: "1"})
+dot = Circle(P, 0.08, {kind: "overlay", fill: true, tone: "ink"})
+th = Angle(Q, O, P, "θ")
+s1 = Layer([cosL, dC], {lit: [cosL, dC], title: "cos θ: the x of the point"})
+cosL = Seg(O, Q, {kind: "overlay", tone: "sky"})
+dC = Dim(O, Q, "cos θ", {tone: "sky"})
+s2 = Layer([sinL, dS], {lit: [sinL, dS], title: "sin θ: the y of the point"})
+sinL = Seg(Q, P, {kind: "overlay", tone: "violet"})
+dS = Dim(Q, P, "sin θ", {tone: "violet"})`,
+    pass2: "",
+  },
+  cone: {
+    title: "Cone in a cylinder (volume)",
+    problem: "A cone fits exactly inside a cylinder of radius r and height h. Compare their volumes.",
+    pass1: `O = Pt(0, 0)
+bot = Curve([Off(O, -2, 0), Off(O, 0, -0.6), Off(O, 2, 0), Off(O, 0, 0.6)], {closed: true, kind: "overlay"})
+top = Curve([Off(O, -2, 5), Off(O, 0, 4.4), Off(O, 2, 5), Off(O, 0, 5.6)], {closed: true, kind: "overlay", fill: true})
+sideL = Seg(Off(O, -2, 0), Off(O, -2, 5), {kind: "overlay"})
+sideR = Seg(Off(O, 2, 0), Off(O, 2, 5), {kind: "overlay"})
+cyl = Union([bot, top, sideL, sideR], {tone: "sky", layer: 2, legend: "cylinder: V = πr²h"})
+s1 = Layer([cone], {lit: [cone], title: "The cone: same base, same height"})
+cone = Poly([Off(O, -2, 0), Off(O, 2, 0), Off(O, 0, 5)], {kind: "overlay", fill: true, tone: "amber", layer: 2, legend: "cone: V = ⅓πr²h"})
+s2 = Layer([rad, dr, dh], {title: "r and h"})
+rad = Seg(O, Off(O, 2, 0), {kind: "overlay", tone: "ink"})
+dr = Dim(O, Off(O, 2, 0), "r")
+dh = Dim(Off(O, 2, 0), Off(O, 2, 5), "h")`,
+    pass2: "",
+  },
+  graph: {
+    title: "Weighted graph: shortest path",
+    problem: "Find the shortest path from A to E in the weighted graph.",
+    pass1: `A = Pt(0, 0)
+B = Pt(2.5, 1.6)
+C = Pt(2.5, -1.6)
+D = Pt(5, 1)
+E = Pt(7, -0.4)
+eAB = Seg(A, B, {kind: "overlay", tone: "muted", label: "4"})
+eAC = Seg(A, C, {kind: "overlay", tone: "muted", label: "2"})
+eCB = Seg(C, B, {kind: "overlay", tone: "muted", label: "1"})
+eBD = Seg(B, D, {kind: "overlay", tone: "muted", label: "5"})
+eCD = Seg(C, D, {kind: "overlay", tone: "muted", label: "8"})
+eDE = Seg(D, E, {kind: "overlay", tone: "muted", label: "3"})
+eCE = Seg(C, E, {kind: "overlay", tone: "muted", label: "10"})
+nA = Circle(A, 0.42, {fill: true, tone: "sky", layer: 2, label: "A"})
+nB = Circle(B, 0.42, {fill: true, tone: "sky", layer: 2, label: "B"})
+nC = Circle(C, 0.42, {fill: true, tone: "sky", layer: 2, label: "C"})
+nD = Circle(D, 0.42, {fill: true, tone: "sky", layer: 2, label: "D"})
+nE = Circle(E, 0.42, {fill: true, tone: "sky", layer: 2, label: "E"})
+s1 = Layer([p1, p2, p3, p4], {lit: [eAC, eCB, eBD, eDE, nA, nB, nC, nD, nE], title: "A, C, B, D, E: 2 + 1 + 5 + 3 = 11"})
+p1 = Fix(eAC, {tone: "amber"})
+p2 = Fix(eCB, {tone: "amber"})
+p3 = Fix(eBD, {tone: "amber"})
+p4 = Fix(eDE, {tone: "amber"})`,
+    pass2: "",
+  },
+  bst: {
+    title: "BST: insert 7",
+    problem: "Insert 7 into the binary search tree 8, 3, 10, 1, 6, 14.",
+    pass1: `R = Pt(0, 0)
+L = Pt(-2, -1.5)
+Rr = Pt(2, -1.5)
+LL = Pt(-3, -3)
+LR = Pt(-1, -3)
+RR = Pt(3, -3)
+N = Pt(-0.3, -4.5)
+e1 = Seg(R, L, {kind: "overlay", tone: "muted"})
+e2 = Seg(R, Rr, {kind: "overlay", tone: "muted"})
+e3 = Seg(L, LL, {kind: "overlay", tone: "muted"})
+e4 = Seg(L, LR, {kind: "overlay", tone: "muted"})
+e5 = Seg(Rr, RR, {kind: "overlay", tone: "muted"})
+n8 = Circle(R, 0.45, {fill: true, tone: "sky", layer: 2, label: "8"})
+n3 = Circle(L, 0.45, {fill: true, tone: "sky", layer: 2, label: "3"})
+n10 = Circle(Rr, 0.45, {fill: true, tone: "sky", layer: 2, label: "10"})
+n1 = Circle(LL, 0.45, {fill: true, tone: "sky", layer: 2, label: "1"})
+n6 = Circle(LR, 0.45, {fill: true, tone: "sky", layer: 2, label: "6"})
+n14 = Circle(RR, 0.45, {fill: true, tone: "sky", layer: 2, label: "14"})
+s1 = Layer([], {lit: [n8, e1], title: "7 < 8: go left"})
+s2 = Layer([], {lit: [n3, e4], title: "7 > 3: go right"})
+s3 = Layer([], {lit: [n6], title: "7 > 6: go right; the spot is empty"})
+s4 = Layer([e6, n7], {lit: [e6, n7], title: "7 becomes the right child of 6"})
+e6 = Seg(Along(LR, N, 0.28), N, {kind: "overlay", tone: "amber"})
+n7 = Circle(N, 0.45, {fill: true, tone: "amber", label: "7"})`,
+    pass2: "",
+  },
+  projectile: {
+    title: "Projectile: velocity components",
+    problem: "A ball is launched over level ground. Show its velocity and the components along the path.",
+    pass1: `O = Pt(0, 0)
+ground = Seg(Off(O, -0.5, 0), Off(O, 9, 0), {kind: "surface", tone: "muted"})
+path = Curve([O, Pt(2, 2.4), Pt(4, 3.2), Pt(6, 2.4), Pt(8, 0)], {kind: "overlay", tone: "muted"})
+range = Dim(O, Pt(8, 0), "range R")
+s1 = Layer([v0], {lit: [v0], title: "Launch velocity v₀"})
+v0 = Vec(O, Pt(1.2, 1.92), "v₀", {tone: "amber"})
+s2 = Layer([ball, vx, vy], {lit: [ball, vx, vy], title: "On the way up: vx stays, vy shrinks"})
+ball = Circle(Pt(2, 2.4), 0.2, {fill: true, tone: "ink"})
+vx = Vec(Pt(2, 2.4), Pt(3.2, 2.4), "vx", {tone: "sky"})
+vy = Vec(Pt(2, 2.4), Pt(2, 3.36), "vy", {tone: "violet"})
+s3 = Layer([top, vt, g], {lit: [top, vt, g], title: "At the top: vy = 0, only g acts"})
+top = Circle(Pt(4, 3.2), 0.2, {fill: true, tone: "ink"})
+vt = Vec(Pt(4, 3.2), Pt(5.2, 3.2), "vx", {tone: "sky"})
+g = Vec(Pt(4, 3.2), Pt(4, 2.1), "g", {tone: "pink"})`,
+    pass2: "",
+  },
+  pendulum: {
+    title: "Pendulum: forces",
+    problem: "A pendulum of length L swings out to θ = 30°. Show the forces on the bob and split the weight.",
+    pass1: `O = Pt(0, 0)
+ceiling = Seg(Off(O, -2.5, 0), Off(O, 2.5, 0), {kind: "surface", tone: "muted"})
+D = Off(O, 0, -5)
+B = Rot(O, D, 30)
+vert = Seg(O, D, {kind: "overlay", tone: "muted", layer: 3})
+swing = Curve([Rot(O, D, -30), D, B], {kind: "overlay", tone: "muted", layer: 3})
+rope = Seg(O, B, {kind: "overlay", tone: "ink", label: "L"})
+th = Angle(D, O, B, "θ")
+bob = Circle(B, 0.45, {fill: true, tone: "violet", layer: 2, legend: "bob, mass m"})
+s1 = Layer([T, W], {lit: [T, W], title: "Two forces: tension and weight"})
+T = Vec(B, Along(B, O, 0.35), "T", {tone: "amber"})
+W = Vec(B, Off(B, 0, -1.8), "mg", {tone: "sky"})
+s2 = Layer([Wr, Wt], {lit: [Wr, Wt], title: "Split mg along the rope and along the swing"})
+Wr = Vec(B, Along(O, B, 1.3118), "mg cos θ", {tone: "cyan"})
+Wt = Vec(B, Off(B, -0.78, -0.45), "mg sin θ", {tone: "pink"})`,
+    pass2: "",
+  },
+  atwood: {
+    title: "Atwood machine",
+    problem: "Two masses hang over a pulley (m₂ > m₁). Show the forces and the acceleration.",
+    pass1: `O = Pt(0, 0)
+ceiling = Seg(Off(O, -2, 1.8), Off(O, 2, 1.8), {kind: "surface", tone: "muted"})
+axle = Seg(Off(O, 0, 1.8), O, {kind: "overlay", tone: "muted"})
+wheel = Circle(O, 0.8, {tone: "ink", legend: "pulley"})
+ropeL = Seg(Off(O, -0.8, 0), Off(O, -0.8, -3), {tone: "muted"})
+ropeR = Seg(Off(O, 0.8, 0), Off(O, 0.8, -1.5), {tone: "muted"})
+m1 = Box(Off(O, -0.8, -3.5), 1, 1, 0, {fill: true, tone: "sky", layer: 2, label: "m₁"})
+m2 = Box(Off(O, 0.8, -2.2), 1.1, 1.4, 0, {fill: true, tone: "violet", layer: 2, label: "m₂"})
+s1 = Layer([T1, W1], {lit: [m1, T1, W1], title: "Forces on m₁"})
+T1 = Vec(Off(O, -0.8, -3), Off(O, -0.8, -1.6), "T", {tone: "amber"})
+W1 = Vec(Off(O, -0.8, -3.5), Off(O, -0.8, -5), "m₁g", {tone: "sky"})
+s2 = Layer([T2, W2], {lit: [m2, T2, W2], title: "Forces on m₂: the same T, a bigger weight"})
+T2 = Vec(Off(O, 0.8, -1.5), Off(O, 0.8, -0.5), "T", {tone: "amber"})
+W2 = Vec(Off(O, 0.8, -2.2), Off(O, 0.8, -4.4), "m₂g", {tone: "violet"})
+s3 = Layer([a1, a2], {lit: [a1, a2], title: "m₂ falls, m₁ rises: the same a"})
+a1 = Vec(Off(O, -1.75, -4), Off(O, -1.75, -2.8), "a", {tone: "pink"})
+a2 = Vec(Off(O, 1.8, -1.6), Off(O, 1.8, -2.8), "a", {tone: "pink"})`,
+    pass2: "",
+  },
+  field: {
+    title: "Electric field of a dipole",
+    problem: "Sketch the electric field between a positive and a negative charge.",
+    pass1: `P = Pt(-2, 0)
+N = Pt(2, 0)
+plus = Circle(P, 0.38, {fill: true, tone: "pink", label: "+"})
+minus = Circle(N, 0.38, {fill: true, tone: "sky", label: "−"})
+s1 = Layer([mid, l1, l2, l3, l4, a0, a1, a2, a3, a4], {title: "Field lines leave + and end on −"})
+mid = Seg(Off(P, 0.38, 0), Off(N, -0.38, 0), {kind: "overlay", tone: "muted"})
+l1 = Curve([Off(P, 0.3, 0.25), Pt(-1, 1), Pt(0, 1.3), Pt(1, 1), Off(N, -0.3, 0.25)], {kind: "overlay", tone: "muted"})
+l2 = Curve([Off(P, 0.12, 0.36), Pt(-1.6, 1.8), Pt(0, 2.7), Pt(1.6, 1.8), Off(N, -0.12, 0.36)], {kind: "overlay", tone: "muted"})
+l3 = Curve([Off(P, 0.3, -0.25), Pt(-1, -1), Pt(0, -1.3), Pt(1, -1), Off(N, -0.3, -0.25)], {kind: "overlay", tone: "muted"})
+l4 = Curve([Off(P, 0.12, -0.36), Pt(-1.6, -1.8), Pt(0, -2.7), Pt(1.6, -1.8), Off(N, -0.12, -0.36)], {kind: "overlay", tone: "muted"})
+a0 = Vec(Pt(-0.35, 0), Pt(0.35, 0), "", {tone: "amber"})
+a1 = Vec(Pt(-0.35, 1.3), Pt(0.35, 1.3), "", {tone: "amber"})
+a2 = Vec(Pt(-0.35, 2.7), Pt(0.35, 2.7), "", {tone: "amber"})
+a3 = Vec(Pt(-0.35, -1.3), Pt(0.35, -1.3), "", {tone: "amber"})
+a4 = Vec(Pt(-0.35, -2.7), Pt(0.35, -2.7), "", {tone: "amber"})
+s2 = Layer([X, E], {lit: [X, E], title: "At a point, E is tangent to the line"})
+X = Circle(Pt(1, 1), 0.09, {kind: "overlay", fill: true, tone: "violet"})
+E = Vec(Pt(1, 1), Pt(1.75, 0.45), "E", {tone: "violet"})`,
+    pass2: "",
+  },
+  slit: {
+    title: "Young's double slit",
+    problem: "Light from one source passes two slits d apart and lands on a screen L away. Why do bright and dark fringes appear, and where is the bright fringe at P?",
+    pass1: `src = Circle(Pt(-2.2, 0), 0.22, {fill: true, tone: "amber", legend: "light source"})
+top = Box(Pt(0, 1.95), 0.2, 2.1, 0, {fill: true, tone: "ink"})
+midB = Box(Pt(0, 0), 0.2, 0.8, 0, {fill: true, tone: "ink"})
+low = Box(Pt(0, -1.95), 0.2, 2.1, 0, {fill: true, tone: "ink"})
+wall = Union([top, midB, low], {legend: "barrier with two slits"})
+screen = Box(Pt(7, 0), 0.2, 6, 0, {fill: true, tone: "muted", layer: 2, legend: "screen"})
+S1 = Pt(0.1, 0.6)
+S2 = Pt(0.1, -0.6)
+P = Pt(6.9, 2)
+d = Dim(Pt(-0.1, 0.6), Pt(-0.1, -0.6), "d")
+L = Dim(Pt(0, -3), Pt(6.9, -3), "L")
+s1 = Layer([w1, w2, w3, w4, w5, w6], {title: "Each slit sends out circular waves"})
+w1 = Curve([Rot(S1, Off(S1, 1, 0), -60), Off(S1, 1, 0), Rot(S1, Off(S1, 1, 0), 60)], {kind: "overlay", tone: "sky"})
+w2 = Curve([Rot(S1, Off(S1, 2, 0), -60), Off(S1, 2, 0), Rot(S1, Off(S1, 2, 0), 60)], {kind: "overlay", tone: "sky"})
+w3 = Curve([Rot(S1, Off(S1, 3, 0), -60), Off(S1, 3, 0), Rot(S1, Off(S1, 3, 0), 60)], {kind: "overlay", tone: "sky"})
+w4 = Curve([Rot(S2, Off(S2, 1, 0), -60), Off(S2, 1, 0), Rot(S2, Off(S2, 1, 0), 60)], {kind: "overlay", tone: "cyan"})
+w5 = Curve([Rot(S2, Off(S2, 2, 0), -60), Off(S2, 2, 0), Rot(S2, Off(S2, 2, 0), 60)], {kind: "overlay", tone: "cyan"})
+w6 = Curve([Rot(S2, Off(S2, 3, 0), -60), Off(S2, 3, 0), Rot(S2, Off(S2, 3, 0), 60)], {kind: "overlay", tone: "cyan"})
+s2 = Layer([r1, r2, axis, mp, th, kk, dl], {hide: [w1, w2, w3, w4, w5, w6], lit: [r1, r2, th, dl], title: "Two paths to P differ by Δ = d sin θ"})
+r1 = Seg(S1, P, {kind: "overlay", tone: "sky"})
+r2 = Seg(S2, P, {kind: "overlay", tone: "cyan"})
+axis = Seg(Pt(0.1, 0), Pt(6.9, 0), {kind: "overlay", tone: "muted", layer: 3})
+mp = Seg(Pt(0.1, 0), P, {kind: "overlay", tone: "muted", layer: 3})
+th = Angle(Pt(6.9, 0), Pt(0.1, 0), P, "θ")
+K = Foot(S1, S2, P)
+kk = Seg(S1, K, {kind: "overlay", tone: "muted"})
+dl = Seg(S2, K, {kind: "overlay", tone: "pink", label: "Δ = d sin θ"})
+s3 = Layer([prof], {lit: [prof, P], title: "Bright where Δ = mλ, dark where Δ = (m + ½)λ"})
+prof = Curve([Pt(8.1, -3.0), Pt(7.983, -2.875), Pt(7.7, -2.75), Pt(7.417, -2.625), Pt(7.3, -2.5), Pt(7.417, -2.375), Pt(7.7, -2.25), Pt(7.983, -2.125), Pt(8.1, -2.0), Pt(7.983, -1.875), Pt(7.7, -1.75), Pt(7.417, -1.625), Pt(7.3, -1.5), Pt(7.417, -1.375), Pt(7.7, -1.25), Pt(7.983, -1.125), Pt(8.1, -1.0), Pt(7.983, -0.875), Pt(7.7, -0.75), Pt(7.417, -0.625), Pt(7.3, -0.5), Pt(7.417, -0.375), Pt(7.7, -0.25), Pt(7.983, -0.125), Pt(8.1, 0.0), Pt(7.983, 0.125), Pt(7.7, 0.25), Pt(7.417, 0.375), Pt(7.3, 0.5), Pt(7.417, 0.625), Pt(7.7, 0.75), Pt(7.983, 0.875), Pt(8.1, 1.0), Pt(7.983, 1.125), Pt(7.7, 1.25), Pt(7.417, 1.375), Pt(7.3, 1.5), Pt(7.417, 1.625), Pt(7.7, 1.75), Pt(7.983, 1.875), Pt(8.1, 2.0), Pt(7.983, 2.125), Pt(7.7, 2.25), Pt(7.417, 2.375), Pt(7.3, 2.5), Pt(7.417, 2.625), Pt(7.7, 2.75), Pt(7.983, 2.875), Pt(8.1, 3.0)], {kind: "overlay", tone: "amber", legend: "brightness on the screen"})`,
     pass2: "",
   },
   broken: {

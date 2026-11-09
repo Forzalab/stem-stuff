@@ -1,10 +1,11 @@
 // layout-core.mjs smoke + sanity (brain AGENTS.md directive 23): each point op, the DAG errors (parallel Meet, cycle, undefined),
 // the layout checks (solid pair, surface sunk vs resting, inside escape, Vec head), pass-2 Fix, the mover, determinism,
-// and every read_doc example + built-in scene through evaluate().
+// and every read_doc example + built-in scene through evaluate(). Bundle 2: legend (asked + auto-moved), Dim placement + fallback,
+// Layer stacking (show / hide / zoom / lit), Fix restyle inside a layer, Curve (closed, tapered, mirror, self-cross) + Union.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint } from "../layout-core.mjs";
-import { docExamples, SCENES, TOPIC_NAMES, CORE } from "../layout-docs.mjs";
+import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines } from "../layout-core.mjs";
+import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE } from "../layout-docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
 const close = (p, q) => assert.ok(Math.abs(p[0] - q[0]) < 1e-3 && Math.abs(p[1] - q[1]) < 1e-3, `${p} vs ${q}`);
@@ -145,9 +146,12 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.deepEqual(llm(evaluate({ pass1: sc.pass1, pass2: sc.pass2 })), [], k);
   const b = evaluate(SCENES.broken.pass1), b2 = evaluate({ pass1: SCENES.broken.pass1, pass2: SCENES.broken.pass2 });
   const codes = new Set([...b.findings, ...b2.findings, ...evaluate(SCENES.broken.pass1, { mover: true }).findings].map(f => f.code));
-  for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "label-moved", "auto-fixed"]) assert.ok(codes.has(c), c);
+  for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "legend", "auto-fixed"]) assert.ok(codes.has(c), c);
   assert.ok(!b2.findings.some(f => f.code === "overlap"), "fx3 = Fix(c2, {y: 1.5}) clears the crate overlap");
-  assert.ok(CORE.split("\n").length <= 26, "the core prompt stays short");
+  assert.ok(CORE.split("\n").length <= 32, "the core prompt stays short");
+  assert.match(CORE, /MINIMALISTIC, FUNCTIONAL/);
+  assert.ok(!/Svg|path d/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");
+  for (const t of ["curves", "legend", "dim", "layers"]) assert.ok(TOPIC_NAMES.includes(t), t);
 });
 
 test("text-first feedback: the scene summary names centres, sizes and touching neighbours; findings text splits llm / fyi", () => {
@@ -168,4 +172,141 @@ test("bare words in opts are strings, not refs ({kind: surface}); a pass-2 line 
   const r2 = evaluate({ pass1: "A = Pt(0, 0)\nw1 = Seg(A, r1.c)\nB = Pt(4, 0)", pass2: "w1 = Seg(A, B)" });
   assert.deepEqual(r2.findings.filter(f => f.cls === "llm"), []);
   assert.equal(r2.status.w1, "ok");
+});
+
+test("legend: {legend} names go under the drawing; a label with no room by its anchor moves there too (fyi), never a leader line", () => {
+  const r = evaluate(`G = Pt(0, 0)
+floor = Seg(Off(G, -3, 0), Off(G, 3, 0), {kind: "surface"})
+cell = Box(Off(G, 0, 0.25), 0.9, 0.9, 0, {kind: "overlay"})
+studs = Box(Off(G, 0, 0.25), 0.5, 0.5, 0, {fill: true, label: "students on the piston"})
+crate = Box(Off(G, 2, 0.5), 1, 1, 0, {legend: "elephant"})
+t = Label(Off(G, 2, 0.5), "r = 0.20 m")`);
+  assert.deepEqual(llm(r), []);
+  const byText = Object.fromEntries(r.legend.map(e => [e.text, e]));
+  assert.equal(byText.elephant.id, "crate");
+  assert.equal(byText.elephant.auto, false);
+  assert.equal(byText["students on the piston"].id, "studs", "too long for the small box and its sides: legend, beside a render of studs");
+  assert.equal(byText["r = 0.20 m"].id, "crate", "a free Label inside a body moves to the legend with a render of the nearest shape");
+  const moved = r.findings.filter(f => f.code === "legend");
+  assert.equal(moved.length, 2);
+  for (const f of moved) { assert.equal(f.cls, "fyi"); assert.match(f.hint, /^moved to legend: /); }
+  assert.ok(r.labels.every(l => !("lead" in l)), "no leader lines");
+  assert.ok(r.view.H > r.view.drawH, "the legend row adds height under the drawing");
+  assert.match(legendLines(r), /crate: "elephant" \(asked with legend\)/);
+  const roomy = evaluate(`b = Box(Pt(0, 0), 6, 2, 0, {fill: true, label: "m"})`);
+  assert.equal(roomy.labels[0].id, "b");
+  assert.equal(roomy.legend.length, 0, "a label that fits inside its shape stays there");
+});
+
+test("Dim: a dimension line beside AB with its text; the next one goes to the other side or further out; no room = legend; never a solid", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(4, 0)
+C = Pt(4, 3)
+tri = Poly([A, B, C], {fill: true, tone: "sky", layer: 3})
+d1 = Dim(A, B, "4 cm")
+d2 = Dim(A, B, "four cm")
+d3 = Dim(A, B, "4.0 cm")
+d4 = Dim(A, B, "40 mm")
+d5 = Dim(A, B, "0.04 m")
+over = Box(Pt(2, -0.4), 0.5, 0.5, 0)`);
+  assert.deepEqual(llm(r), [], "a Dim is decor: a box over its line is no conflict");
+  const dims = Object.fromEntries(r.dims.map(d => [d.id, d]));
+  assert.equal(dims.d1.text, "4 cm");
+  assert.ok(dims.d1.a[1] > 0 && dims.d1.ticks.length === 2, "a line with two end ticks");
+  const placed = r.labels.filter(l => l.id.startsWith("d")).map(l => l.id);
+  assert.ok(placed.includes("d1") && placed.length >= 2 && placed.length < 5, `some placed, the rest fall back: ${placed}`);
+  const legend = r.legend.filter(e => e.id.startsWith("d"));
+  assert.equal(placed.length + legend.length, 5, "each Dim's text is either placed or in the legend");
+  for (const e of legend) assert.ok(r.findings.some(f => f.code === "legend" && f.ids[0] === e.id));
+  const boxes = r.labels.filter(l => l.id.startsWith("d")).map(l => l.box);
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const [p, q] = [boxes[i], boxes[j]];
+    assert.ok(Math.min(p[0] + p[2], q[0] + q[2]) <= Math.max(p[0], q[0]) || Math.min(p[1] + p[3], q[1] + q[3]) <= Math.max(p[1], q[1]), "placed dim texts never overlap");
+  }
+});
+
+test("Layer: stacked steps (prefix + layers 1..k, minus hidden), forward refs, zoom camera, lit, and a Fix restyle that starts at its layer", () => {
+  const src = `G = Pt(0, 0)
+ground = Seg(Off(G, -4, 0), Off(G, 4, 0), {kind: "surface", tone: "muted"})
+cube = Box(Off(G, 0, 2), 4, 4, 0)
+s1 = Layer([f1], {title: "The cube"})
+f1 = Fix(cube, {tone: "amber", fill: true})
+s2 = Layer([horn, beast], {lit: [horn], zoom: [horn], title: "Add a horn"})
+horn = Curve([Off(G, -0.6, 4), Off(G, -0.3, 5), Off(G, 0.6, 5.9)], {w: [0.9, 0.05], fill: true, tone: "violet"})
+beast = Union([cube, horn], {legend: "horned cube"})
+s3 = Layer([], {hide: [horn], title: "No horn"})`;
+  const r = evaluate(src);
+  assert.deepEqual(llm(r), []);
+  assert.equal(r.steps.length, 4);
+  assert.deepEqual(r.steps.map(s => s.show), [["ground", "cube"], ["ground", "cube"], ["ground", "cube", "horn"], ["ground", "cube"]]);
+  const tone = k => r.steps[k].shapes.find(s => s.id === "cube").opts.tone;
+  assert.equal(tone(0), undefined, "the prefix has no restyle");
+  assert.equal(tone(1), "amber", "f1 restyles from step 1 on");
+  assert.equal(tone(3), "amber");
+  assert.deepEqual(r.steps[2].lit, ["horn"]);
+  assert.deepEqual(r.steps[2].zoom, ["horn"]);
+  assert.ok(r.steps[2].view.s > r.steps[1].view.s * 1.5, "the zoom step's camera is closer");
+  const hv = r.steps[2].view, hs = r.steps[2].shapes.find(s => s.id === "horn").geom.pts;
+  for (const p of hs) { const x = hv.ox + (p[0] - hv.x0) * hv.s, y = hv.drawH - hv.oy - (p[1] - hv.y0) * hv.s; assert.ok(x >= 0 && x <= hv.W && y >= 0 && y <= hv.drawH, "the zoomed shape is in frame"); }
+  assert.equal(r.steps[0].view.s, r.steps[3].view.s, "steps without zoom share one camera");
+  assert.ok(r.steps.every(s => s.view.H === r.steps[0].view.H), "one figure height for every step");
+  assert.ok(r.steps[2].legend.some(e => e.text === "horned cube") && !r.steps[1].legend.some(e => e.text === "horned cube"), "a Union's legend joins at its step");
+  assert.match(stepLines(r), /step 1 s1 "The cube": adds nothing; restyles with f1/);
+  // shapes never shown together never conflict; a bad layer reference is named
+  const sw = evaluate(`a = Box(Pt(0, 0), 2, 2, 0)\ns1 = Layer([b], {hide: [a]})\nb = Box(Pt(0.5, 0), 2, 2, 0)\ns2 = Layer([], {lit: [ghost], zoom: [c]})\ns3 = Layer([c])\nc = Box(Pt(5, 0), 1, 1, 0)`);
+  const codes = llm(sw).map(f => f.code);
+  assert.ok(!codes.includes("overlap"), "a hidden block and its replacement never coexist");
+  assert.ok(codes.includes("undefined-ref") && codes.includes("layer-ref"), codes.join());
+});
+
+test("Curve: smooth through the points, flattened once for drawing AND collision; closed, tapered, mirror; self-crossing is an error", () => {
+  const r = evaluate(`blob = Curve([Pt(0, 0), Pt(2, 0), Pt(2, 2), Pt(0, 2)], {closed: true})
+box = Box(Pt(2.3, 1), 1, 1, 0)
+horn = Curve([Pt(5, 0), Pt(5.5, 1), Pt(6.5, 1.6)], {w: [0.6, 0.05]})
+lens = Curve([Pt(9, 2), Pt(9.4, 0), Pt(9, -2)], {closed: true, mirror: [Pt(9, 0), Pt(9, 1)]})
+path = Curve([Pt(0, -1), Pt(3, -1.5), Pt(6, -1)])
+cross = Seg(Pt(1, -2), Pt(1, -0.6))`);
+  const f = llm(r);
+  assert.deepEqual(f.map(x => [x.code, ...x.ids]), [["overlap", "box", "blob"]], "the box pokes into the smooth blob; the open path never conflicts with a line");
+  const g = id => r.shapes.find(s => s.id === id).geom;
+  assert.ok(g("blob").pts.length > 12 && g("blob").area, "flattened into many points");
+  assert.ok(g("horn").pts.length > g("horn").line.length * 2 - 1, "a tapered stroke is an outline round its centreline");
+  const lx = g("lens").pts.map(p => p[0]);
+  assert.ok(Math.abs(Math.min(...lx) - 8.6) < 0.05 && Math.abs(Math.max(...lx) - 9.4) < 0.05, "mirror makes the other half");
+  assert.ok(!g("path").pts && g("path").line.length > 3);
+  const bad = llm(evaluate(`k = Curve([Pt(0, 3), Pt(2, 4), Pt(2, 3), Pt(0, 4)], {closed: true})\nl = Curve([Pt(5, 0), Pt(7, 1), Pt(6, 2), Pt(6, -1)])`));
+  assert.deepEqual(bad.map(x => [x.code, x.ids[0]]), [["self-cross", "k"], ["self-cross", "l"]]);
+  assert.equal(llm(evaluate(`k = Curve([Pt(0, 0), Pt(1, 1)], {w: 0.2, closed: true})`))[0].code, "bad-args");
+});
+
+test("Union: parts never conflict with each other, each part still collides with other objects; its opts fill in", () => {
+  const r = evaluate(`body = Circle(Pt(0, 0), 1, {fill: true})
+head = Circle(Pt(1.2, 0.5), 0.5, {fill: true, tone: "ink"})
+eleph = Union([body, head], {tone: "violet", legend: "elephant"})
+rock = Circle(Pt(1.9, 0.5), 0.4)`);
+  assert.deepEqual(llm(r).map(f => f.ids), [["rock", "head"]]);
+  assert.equal(r.shapes.find(s => s.id === "body").opts.tone, "violet", "the Union's tone fills in");
+  assert.equal(r.shapes.find(s => s.id === "head").opts.tone, "ink", "a part's own tone wins");
+  assert.deepEqual(r.legend.map(e => [e.id, e.text]), [["eleph", "elephant"]]);
+  assert.match(sceneSummary(r), /head Circle solid \(part of eleph\)/);
+});
+
+test("pelican (Tony's acceptance scene): only Curve / Union / Circle / Poly / Box, zero llm findings, the body floats ON the lake", () => {
+  const sc = SCENES.pelican.pass1;
+  assert.ok(!/Svg|path/.test(sc));
+  const r = evaluate(sc);
+  assert.deepEqual(llm(r), []);
+  assert.match(sceneSummary(r), /^body Curve solid \(part of bird\) \[step 1\]: .*touches .*lake/m);
+  const sunk = evaluate(sc.replace("Off(G, 0.6, 0), Off(G, 2, 0.25)", "Off(G, 0.6, -0.4), Off(G, 2, 0.25)"));
+  assert.ok(llm(sunk).some(f => f.code === "sunk" && f.ids[0] === "body"), "pushed under the water line: sunk");
+  assert.deepEqual(r.steps[2].legend.map(e => e.text), ["pelican"]);
+});
+
+test("determinism with layers + curves: streamed in chunks or whole, twice, the same result", () => {
+  const s = SCENES.slit.pass1;
+  const whole = evaluate(s), sess = createSession();
+  for (let i = 0; i < s.length; i += 11) sess.push(s.slice(i, i + 11));
+  sess.end();
+  assert.deepEqual(JSON.parse(JSON.stringify(sess.result())), JSON.parse(JSON.stringify(whole)));
+  assert.deepEqual(JSON.parse(JSON.stringify(evaluate(s))), JSON.parse(JSON.stringify(whole)));
 });
