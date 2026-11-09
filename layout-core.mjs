@@ -112,7 +112,7 @@ function refsOf(node, out = new Set()) {
   if (node.t === "ref") out.add(node.id);
   else if (node.t === "call") node.args.forEach(a => refsOf(a, out));
   else if (node.t === "arr") node.items.forEach(a => refsOf(a, out));
-  else if (node.t === "obj") node.entries.forEach(([, v]) => refsOf(v, out));
+  else if (node.t === "obj") node.entries.forEach(([k, v]) => { if (k === "in" || v.t !== "ref") refsOf(v, out); });   // a bare word in opts ({kind: surface}) is a string, not a ref; only `in:` names a statement
   return out;
 }
 /** one statement's text -> { id, comp, args, deps } or throws {code, message} */
@@ -644,6 +644,9 @@ export function createSession(opts = {}) {
       return;
     }
     st.idx = stmts.length; stmts.push(st);
+    // a line that failed to parse defined nothing: a later statement with that id repairs it (pass 2 included); drop the stale parse finding
+    const stale = parseFindings.filter(f => ["parse", "unknown-comp", "bad-args"].includes(f.code) && f.ids[0] === st.id);
+    if (stale.length) { parseFindings = parseFindings.filter(f => !stale.includes(f)); rebuild(); return; }
     if (st.comp === "Fix") { rebuild(); return; }
     settle(); detectCycles();
   }

@@ -160,3 +160,12 @@ test("text-first feedback: the scene summary names centres, sizes and touching n
   assert.deepEqual(r.free, { named: ["A", "B"], inline: 0 });
   assert.match(freePointsHint(evaluate("A = Pt(0, 0)\ns = Seg(A, Pt(1, 1))")), /^Hint \(not an error\): 2 free points with raw coordinates \(A \+ 1 inline Pt\)/);
 });
+
+test("bare words in opts are strings, not refs ({kind: surface}); a pass-2 line repairs a pass-1 line that failed to parse", () => {
+  const r = evaluate("A = Pt(0, 0)\nB = Pt(4, 0)\ng = Seg(A, B, {kind: surface, tone: muted})");
+  assert.deepEqual(r.findings.filter(f => f.cls === "llm"), []);
+  assert.equal(r.shapes[0].kind, "surface");
+  const r2 = evaluate({ pass1: "A = Pt(0, 0)\nw1 = Seg(A, r1.c)\nB = Pt(4, 0)", pass2: "w1 = Seg(A, B)" });
+  assert.deepEqual(r2.findings.filter(f => f.cls === "llm"), []);
+  assert.equal(r2.status.w1, "ok");
+});
