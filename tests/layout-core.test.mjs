@@ -6,7 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines } from "../layout-core.mjs";
+import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines, measureOf } from "../layout-core.mjs";
 import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, INLINE_EXAMPLES, readDoc } from "../layout-docs.mjs";
 import { generate } from "../tools/gen_figure_docs.mjs";
 
@@ -523,4 +523,78 @@ test("leak checks Dim text, Vec label, label:/legend:, and Layer title; with no 
   assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B, {legend: "7 V"})`), [["S"]]);
   assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B)\nL1 = Layer([S], {title: "7 V"})`), [["L1"]]);
   for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.deepEqual(evaluate({ pass1: sc.pass1, pass2: sc.pass2 }).findings.filter(f => f.code === "leak" || f.code === "not-given"), [], k);
+});
+
+test("anchors: Side of a rotated Box lies in its own frame (bottom on the ramp); Edge is a LERP; Edge(box) is bad-args", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(8, 0)
+top = Meet(A, Rot(A, B, 30), B, Off(B, 0, 1))
+ramp = Seg(A, top, {kind: "surface"})
+P = Along(A, top, 0.5)
+blk = Box(Rot(P, Off(P, 0, 0.5), 30), 1, 1, 30)
+bot = Side(blk, "bottom")
+probe = Label(bot, "")
+tri = Poly([Pt(0, 5), Pt(4, 5), Pt(0, 8)])
+mid = Edge(tri, 1, 0.5)`);
+  assert.deepEqual(llm(r), []);
+  const p = r.shapes.find(s => s.id === "probe").geom.p, g = r.shapes.find(s => s.id === "ramp").geom;
+  const dx = g.b[0] - g.a[0], dy = g.b[1] - g.a[1];
+  assert.ok(Math.abs(dx * (p[1] - g.a[1]) - dy * (p[0] - g.a[0])) / Math.hypot(dx, dy) < 1e-6, "the own-frame bottom is on the ramp line");
+  close(r.points.mid, [2, 6.5], "Edge(tri, 1, 0.5) is the 2nd edge's midpoint");
+  const bad = llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\ne = Edge(b, 0, 0.5)`));
+  assert.equal(bad[0].code, "bad-args");
+  assert.match(bad[0].hint, /use Side\(box/);
+});
+
+test("dotted parts: v.tail/head are the Vec ends, block.centre == Centre(block); measures and bad parts are bad-args", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(2, 0)
+v = Vec(A, B, "x")
+tail = v.tail
+head = v.head
+block = Box(Pt(0, 3), 1, 1, 0)
+c1 = block.centre
+c2 = Centre(block)
+y = Vec(block.centre, Off(block.centre, 1, 0), "y")`);
+  close(r.points.tail, [0, 0]); close(r.points.head, [2, 0]);
+  close(r.points.c1, r.points.c2);
+  assert.deepEqual(llm(r), []);
+  const m = llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\nm = b.length`));
+  assert.equal(m[0].code, "bad-args");
+  assert.match(m[0].hint, /measures are only for Expect/);
+  assert.equal(llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\nx = b.tail`))[0].code, "bad-args", ".tail is not on a Box");
+  const u = llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\nx = b.sideways`));
+  assert.equal(u[0].code, "bad-args");
+  assert.match(u[0].hint, /allowed: tail, head, centre/);
+  const fx = evaluate({ pass1: `A = Pt(0, 0)\nB = Pt(2, 0)\nv = Vec(A, B, "x")\nt = v.tail`, pass2: `f = Fix(t, {x: 1})` });
+  assert.equal(llm(fx)[0].code, "fix-derived", "a Fix on dotted sugar is derived, not a crash");
+});
+
+test("measureOf: length/width/height/area numbers for Seg, Box, Circle and Poly", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(3, 4)
+s = Seg(A, B)
+b = Box(Pt(10, 0), 2, 3, 0)
+c = Circle(Pt(20, 0), 2)
+p = Poly([Pt(0, 10), Pt(3, 10), Pt(0, 12)])`);
+  const sh = id => r.shapes.find(s => s.id === id);
+  assert.equal(measureOf(sh("s"), "length"), 5);
+  assert.equal(measureOf(sh("b"), "width"), 2);
+  assert.equal(measureOf(sh("b"), "height"), 3);
+  assert.equal(measureOf(sh("b"), "area"), 6);
+  assert.equal(measureOf(sh("c"), "area"), Math.PI * 4);
+  assert.equal(measureOf(sh("p"), "area"), 3);
+});
+
+test("numbers: 0.5 and .5 parse; N.1 is a parse finding, never a throw", () => {
+  const r = evaluate(`A = Pt(.5, 0)
+B = Pt(0.5, 1)
+S = Seg(A, B)`);
+  close(r.points.A, [0.5, 0]);
+  assert.equal(r.shapes.find(s => s.id === "S").geom.b[0], 0.5);
+  const typo = evaluate(`N = Pt(0, 0)
+X = N.1`);
+  const f = typo.findings.filter(x => x.cls === "llm");
+  assert.equal(f.length, 1);
+  assert.equal(f[0].code, "parse");
 });
