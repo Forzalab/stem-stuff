@@ -3481,6 +3481,13 @@ function layoutDock() {
   const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
   const grace = (!a || a === document.body) && performance.now() - lostAt < 500;
   const swapNext = !!S && !oneBox() && !freeze.hidden && shrunk && !mtOpen && !sideMQ.matches && ((inMain && (editing() || swapOn)) || (swapOn && grace));
+  /* a short-answer item has no Swap (Tony, Nov 8): the keyboard leaves the page alone, so the field the student types in is scrolled into
+     the area above the keyboard, like a plain page (the question stays above it, reachable by scroll) */
+  if (oneBox() && shrunk && inMain && editing() && a) requestAnimationFrame(() => {
+    if (document.activeElement !== a) return;
+    const r = a.getBoundingClientRect(), top = vv ? vv.offsetTop : 0, bot = top + (vv ? vv.height : innerHeight);
+    if (r.top < top || r.bottom > bot) scrollBy(0, r.bottom > bot ? Math.min(r.bottom - bot + 8, r.top - top - 8) : r.top - top - 8);
+  });
   root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (mtOpen && !!S));
