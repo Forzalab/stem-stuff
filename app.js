@@ -3775,7 +3775,10 @@ function layoutMT() {
       root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
       const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
       mtNeed = need;                                                           // bug 5: setRatio asks it (a pick taller than the content stays a hug)
-      const cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
+      let cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
+      /* proof, keyboard up (Tony, Nov 8: question cut mid-line, "it stuck there"): 1/3 of the short screen left the question clipped over an
+         empty proof box. The question hugs up to all the room but the box's floor (#q min-height 8rem + the sash row + main's padding) */
+      if (isProof() && root.classList.contains("kbup")) cap = Math.max(cap, h - 11 * 16);
       root.style.setProperty("--tile-h", Math.round(Math.max(56, Math.min(need, cap))) + "px");
     }
   } else root.style.setProperty("--kb-top", "0px");
