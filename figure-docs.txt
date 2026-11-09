@@ -1,0 +1,276 @@
+<topic id="points" title="Points" use="use when you place or derive points (midpoints, feet, rotations, intersections)">
+Points (all computed by the engine, world units, y up):
+- Pt(x, y): a free point. The only kind a pass-2 Fix may move.
+- Mid(A, B): midpoint.
+- Along(A, B, t): A + t (B - A); t = 0.5 is the midpoint, t > 1 runs past B.
+- Off(P, dx, dy): P shifted by (dx, dy).
+- Foot(P, A, B): the foot of the perpendicular from P onto line AB (an altitude's foot).
+- Rot(O, P, deg): P turned about O by deg, counter-clockwise. Rot(P, Off(P, 0, 1), 30) is a unit normal of a 30 degree slope, set at P.
+- Meet(A, B, C, D): where line AB meets line CD. Parallel lines have no point: that is an error.
+Derive points from each other so a change to one anchor moves everything that hangs off it.
+```
+A = Pt(0, 0)
+B = Pt(6, 0)
+C = Pt(2, 4)
+M = Mid(A, B)
+H = Foot(C, A, B)
+T = Meet(A, Rot(A, B, 30), B, Off(B, 0, 1))
+tri = Poly([A, B, C], {kind: "overlay"})
+alt = Seg(C, H, {kind: "overlay", tone: "violet"})
+```
+</topic>
+
+<topic id="shapes" title="Shapes" use="use when you draw a body, line, box, polygon, circle, vector, label or angle">
+Shapes (centre-based, world units):
+- Seg(A, B, opts?): a line (wire, rod, rope, ground). Thin: lines never conflict with each other.
+- Box(C, w, h, deg?, opts?): a w x h rectangle centred on C, turned deg counter-clockwise.
+- Poly([A, B, C, ...], opts?): a polygon (convex or not).
+- Circle(O, r, opts?).
+- Vec(A, B, label?, opts?): a vector arrow from A to B (force, velocity, current, pointer). Head at B.
+- Label(P, text, opts?): text centred on P when free, else moved nearby by the engine.
+- Angle(A, O, B, label?, opts?): an arc at O between rays OA and OB, with its label.
+A body resting on a slope: take a point P on the slope, the centre is P + normal * h/2:
+```
+A = Pt(0, 0)
+B = Pt(6, 0)
+top = Meet(A, Rot(A, B, 25), B, Off(B, 0, 1))
+ramp = Poly([A, B, top], {kind: "surface"})
+P = Along(A, top, 0.5)
+C = Rot(P, Off(P, 0, 0.5), 25)
+blk = Box(C, 1, 1, 25, {fill: true})
+```
+</topic>
+
+<topic id="kinds" title="Kinds and findings" use="use when you pick a kind (solid, surface, inside, overlay) or read a layout finding">
+Kinds decide what the engine checks (layout only; never physics meaning):
+- solid (default for Seg Box Poly Circle): two solids may touch but not overlap beyond the tolerance (1% of the figure span).
+- surface: a one-sided floor, wall, ramp or face. Bodies rest on it; sinking in is an error. Vec heads may end inside it.
+- inside + in: id: stays inside its container (a Box, Poly or Circle); it may fill it exactly. Still solid against other shapes.
+- overlay: never checked. Use it for lines that join bodies (a tree edge centre to centre), construction lines, curves drawn over strips.
+- decor (Vec, Label, Angle, automatic): labels are never checked; a Vec is checked only at its head, against solids it does not start in.
+Findings come back as pairs ids [later, earlier]: the later line is blamed, with the amount and the push vector (where it must move).
+A dashed ghost shows where the later shape would have to go.
+</topic>
+
+<topic id="curves" title="Curves and unions" use="use when a part is organic or one object is made of several parts">
+Curves and unions (organic parts: a beak, a horn, a tail, a lens, a field line). Prefer Box / Circle / Poly; reach for Curve only when a part is round or organic.
+- Curve([A, B, C, ...]): a smooth curve through every point (centripetal Catmull-Rom). The drawn curve and the checked outline are the same polyline.
+- closed: true closes it into a blob (an area: it collides, it can be filled, a label can sit inside).
+- w: 0.3 (a stroke 0.3 wide) or w: [0.4, 0.05] (tapered from 0.4 to 0.05, round ends): a horn, a beak, a tail, a neck. Open curves only.
+- mirror: [P, Q] adds the mirror image of the points across line PQ, joined at the axis: give half a symmetric outline.
+- An open Curve without w is a thin line (a path, a trajectory, a ripple): lines never conflict with lines.
+- A curve that crosses itself is an error: move a point, or make the stroke thinner at a tight bend.
+- Union([a, b, c], opts?): one object made of parts. Parts collide with OTHER objects, never with each other. The Union's legend / label name the whole group; its kind, tone, shade, fill fill in what a part leaves out (a part's own opts win).
+Build organic things like a human in Canva: the prefix holds rough blocks, a Layer swaps them for the detailed parts.
+```
+G = Pt(0, 0)
+ground = Seg(Off(G, -4, 0), Off(G, 4, 0), {kind: "surface", tone: "muted"})
+cube = Box(Off(G, 0, 2), 4, 4, 0)
+s1 = Layer([f1], {title: "The cube"})
+f1 = Fix(cube, {tone: "amber", fill: true})
+s2 = Layer([horn, beast], {lit: [horn], zoom: [horn], title: "Add a horn"})
+horn = Curve([Off(G, -0.6, 4), Off(G, -0.3, 5), Off(G, 0.6, 5.9)], {w: [0.9, 0.05], fill: true, tone: "violet"})
+beast = Union([cube, horn], {legend: "horned cube"})
+```
+Symmetric lens with mirror (half the outline, mirrored across the vertical through O):
+```
+O = Pt(0, 0)
+lens = Curve([Off(O, 0, 2.5), Off(O, 0.4, 0), Off(O, 0, -2.5)], {closed: true, mirror: [O, Off(O, 0, 1)], fill: true, tone: "sky", shade: 3})
+```
+</topic>
+
+<topic id="legend" title="Legend and labels" use="use when an object needs a name or a short symbol or value">
+Legend: names of objects go under the drawing, beside a small render of the object itself (not a colour swatch).
+- legend: "elephant" on a shape (or on a Union: the render shows every part). Use it for what an object IS: elephant, students, oil, lens.
+- label: "m" is for a short symbol or value ON the object (m, 2 Ω, A). The engine puts it inside the shape when it fits, else right beside it.
+- A label with no room inside or right next to its anchor (it would cross a line, a filled body or another label) moves to the legend by itself: the feedback says "moved to legend". No leader lines are drawn.
+```
+G = Pt(0, 0)
+floor = Seg(Off(G, -3, 0), Off(G, 3, 0), {kind: "surface", tone: "muted"})
+crate = Box(Off(G, -1.2, 0.6), 1.2, 1.2, 0, {fill: true, tone: "sky", label: "m", legend: "crate"})
+body = Circle(Off(G, 1.4, 0.9), 0.9, {fill: true})
+ear = Circle(Off(G, 2.3, 1.5), 0.4, {fill: true})
+cat = Union([body, ear], {tone: "muted", legend: "cat"})
+```
+</topic>
+
+<topic id="dim" title="Dimensions" use="use when you show a length, radius, height or distance">
+Dim(A, B, text, opts?): a dimension line for the length AB: drawn beside AB on the outside of the figure, with a tick at each end and the text centred along it (or just beside it when the line is short).
+- The engine tries the outside, then the other side, then further out; if no spot is free the text moves to the legend.
+- A and B can be any points: Dim(Off(O, 0, 0), Off(O, 4, 0), "4 m") under a body, Dim(Foot(C, A, B), C, "h") for a height.
+- Use Dim for lengths, radii, distances and heights. Never a loose Label for a length.
+```
+A = Pt(0, 0)
+B = Pt(5, 0)
+C = Pt(1.5, 3)
+tri = Poly([A, B, C], {kind: "overlay", tone: "ink"})
+H = Foot(C, A, B)
+alt = Seg(C, H, {kind: "overlay", tone: "violet"})
+b = Dim(A, B, "b = 5 cm")
+h = Dim(H, C, "h = 3 cm", {tone: "violet"})
+```
+</topic>
+
+<topic id="layers" title="Steps and layers" use="use when the drawing needs ordered reasoning steps">
+Layers stack steps, like Photoshop layers that cannot be switched off in the middle (linear, no branches).
+- Plan first: // goal, // anchor, // layers: 1 <idea>, 2 <idea>, // budget: N statements. The engine compares the plan with what is drawn.
+- One layer = one reasoning step that changes what the student looks at; pure algebra stays in the text. 2-4 layers, at most 6.
+- HINT mode stops before the answer layer; EXPLAIN includes it.
+- The prefix = every line before the first Layer: the anchor's rough blocks only, drawn as a blueprint.
+- sN = Layer([ids...], opts) adds those statements (and every line written after it, until the next Layer) on top of all before it.
+- hide: [ids] hides earlier shapes from this step on (swap a rough block for its detailed parts).
+- lit: [ids] = where to look: the rest of the figure turns pale. zoom: [ids] = the camera fits those shapes for this step.
+- title: "..." = one short line for the step. A Fix listed in a Layer restyles from that step on (step 1 tone amber).
+- Checks: each step's new shapes are checked against everything shown with them; shapes never shown together never conflict.
+```
+// goal: why the block stays put, then what a push adds
+// anchor: a block on the floor
+// layers: 1 weight and normal force, 2 the push
+// budget: 8 statements
+O = Pt(0, 0)
+floor = Seg(Off(O, -3, 0), Off(O, 3, 0), {kind: "surface", tone: "muted"})
+blk = Box(Off(O, 0, 0.75), 1.5, 1.5, 0, {fill: true, tone: "muted"})
+s1 = Layer([W, N], {lit: [W, N], title: "Two forces"})
+W = Vec(Off(O, 0, 0.75), Off(O, 0, -1), "W", {tone: "sky"})
+N = Vec(Off(O, 0, 0.75), Off(O, 0, 2.5), "N", {tone: "amber"})
+s2 = Layer([F], {lit: [F], zoom: [blk, F], title: "Push it"})
+F = Vec(Off(O, -2.6, 0.75), Off(O, -0.75, 0.75), "F", {tone: "violet"})
+```
+</topic>
+
+<topic id="pass2" title="Reviews and Fix" use="use when you answer a review or patch a point or shape">
+Reviews (pass 2) append lines; they never delete.
+- Fix a free point or a shape's own traits with a PATCH holding only what changes:
+  f1 = Fix(C, {x: 1.2})            moves Pt C, and everything derived from it follows
+  f2 = Fix(blk, {w: 1.4, deg: 30}) Box traits w h deg; Circle r; Label text; Vec and Angle label; any shape's opts keys
+- Fix on a derived point (Mid Along Off Foot Rot Meet) is an error: fix its free source Pt instead.
+- New statements may be added (new ids). Redefining an old id is an error; to delete or restructure, rewrite pass 1.
+- After a review everything is evaluated and checked again.
+Review 1 = geometry: answer each finding with a Fix (use the ghost target). Reviews 2 and 3 = meaning: add or adjust what the scene shows.
+If nothing needs changing, reply with the single line: // ok
+</topic>
+
+<topic id="colors" title="Colors and shade" use="use when you pick a tone, shade or fill">
+Colors: palette hues only, one hue per quantity, kept across the figure and the text.
+tone: sky amber orange violet pink cyan (quantities), ink (structure), muted (context, surfaces, wires). No green, no red.
+shade: 1 = asked (the unknown), 2 = given, 3 = implied or context. fill: true fills an area shape (a face, a liquid).
+Vec and Label without a tone get their own hue automatically; structure without a tone is ink.
+```
+O = Pt(0, 0)
+v = Vec(O, Pt(3, 0), "v", {tone: "sky", shade: 2})
+a = Vec(O, Pt(0, 2), "a = ?", {tone: "amber", shade: 1})
+```
+</topic>
+
+<example id="ex-physics" topic="physics" tags="lever,pulley,forces" title="Physics: lever and pulley" use="use when the problem is forces, a lever, a pulley or a hanging mass">
+Lever on a fulcrum, loads on both ends:
+```
+G = Pt(0, 0)
+ground = Seg(Off(G, -5, 0), Off(G, 5, 0), {kind: "surface", tone: "muted"})
+fulcrum = Poly([Off(G, -0.6, 0), Off(G, 0.6, 0), Off(G, 0, 1)], {fill: true, tone: "muted"})
+beam = Box(Off(G, 0, 1.15), 8, 0.3, 0, {tone: "ink"})
+m1 = Box(Off(G, -3.2, 1.8), 1, 1, 0, {fill: true, tone: "sky", label: "m₁"})
+m2 = Box(Off(G, 3.4, 1.7), 0.8, 0.8, 0, {fill: true, tone: "amber", label: "m₂"})
+W1 = Vec(Off(G, -3.2, 1.8), Off(G, -3.2, -0.4), "m₁g", {tone: "sky"})
+W2 = Vec(Off(G, 3.4, 1.7), Off(G, 3.4, 0.2), "m₂g", {tone: "amber"})
+d1 = Label(Off(G, -1.6, 0.5), "d₁", {tone: "ink"})
+```
+Pulley from a ceiling, rope over the wheel, a hanging mass:
+```
+O = Pt(0, 0)
+ceiling = Seg(Off(O, -2, 2), Off(O, 2, 2), {kind: "surface", tone: "muted"})
+axle = Seg(Off(O, 0, 2), O, {kind: "overlay", tone: "muted"})
+wheel = Circle(O, 0.8, {tone: "ink"})
+ropeL = Seg(Off(O, -0.8, 0), Off(O, -0.8, -3), {tone: "muted"})
+ropeR = Seg(Off(O, 0.8, 0), Off(O, 0.8, -2), {tone: "muted"})
+mass = Box(Off(O, 0.8, -2.5), 1, 1, 0, {fill: true, tone: "violet", label: "m"})
+T = Vec(Off(O, -0.8, -3), Off(O, -0.8, -1.6), "T", {tone: "cyan"})
+W = Vec(Off(O, 0.8, -2.5), Off(O, 0.8, -4.2), "mg", {tone: "violet"})
+```
+</example>
+
+<example id="ex-calc" topic="calc" tags="riemann,tangent,area" title="Calculus: Riemann strips and tangent" use="use when the problem is an area under a curve or a tangent line">
+Riemann strips under a curve (strips solid and touching, the curve drawn over them as overlay):
+```
+O = Pt(0, 0)
+xAxis = Seg(O, Off(O, 6, 0), {tone: "muted"})
+yAxis = Seg(O, Off(O, 0, 4), {tone: "muted"})
+s1 = Box(Off(O, 1.5, 0.5), 1, 1, 0, {fill: true, tone: "sky", shade: 3})
+s2 = Box(Off(O, 2.5, 0.9), 1, 1.8, 0, {fill: true, tone: "sky", shade: 3})
+s3 = Box(Off(O, 3.5, 1.4), 1, 2.8, 0, {fill: true, tone: "sky", shade: 3})
+curve = Poly([Off(O, 1, 0.6), Off(O, 2, 1.3), Off(O, 3, 2.3), Off(O, 4, 3.4), Off(O, 4, 0), Off(O, 1, 0)], {kind: "overlay", tone: "amber"})
+lab = Label(Off(O, 5, 3.5), "f(x)", {tone: "amber"})
+dx = Label(Off(O, 2.5, -0.5), "Δx", {tone: "sky"})
+```
+Tangent line at a point of a curve:
+```
+P = Pt(2, 2)
+c1 = Seg(Pt(0, 0.2), Pt(1, 1), {tone: "ink"})
+c2 = Seg(Pt(1, 1), P, {tone: "ink"})
+c3 = Seg(P, Pt(3, 3.4), {tone: "ink"})
+tan = Seg(Along(P, Pt(3, 3.2), -1.5), Along(P, Pt(3, 3.2), 1.5), {kind: "overlay", tone: "amber"})
+dot = Circle(P, 0.08, {kind: "overlay", fill: true, tone: "amber"})
+lab = Label(Off(P, 0.6, -0.3), "slope = f'(a)", {tone: "amber"})
+```
+</example>
+
+<example id="ex-geometry" topic="geometry" tags="triangle,altitude,incircle" title="Geometry: altitude and incircle" use="use when the problem is a triangle, an altitude or an inscribed circle">
+Right triangle with the altitude to the hypotenuse (Foot) and the inscribed circle (inside):
+```
+A = Pt(0, 0)
+B = Pt(4, 0)
+C = Pt(0, 3)
+tri = Poly([A, B, C], {kind: "overlay", tone: "ink"})
+H = Foot(A, B, C)
+alt = Seg(A, H, {kind: "overlay", tone: "violet", label: "h"})
+I = Pt(1, 1)
+inc = Circle(I, 1, {kind: "inside", in: tri, tone: "sky"})
+rA = Angle(B, A, C, "90°")
+lA = Label(Off(A, -0.3, -0.3), "A")
+lB = Label(Off(B, 0.3, -0.3), "B")
+lC = Label(Off(C, -0.3, 0.3), "C")
+```
+</example>
+
+<example id="ex-cs" topic="cs" tags="array,pointer,binary-tree" title="CS: array pointer and binary tree" use="use when the problem is an array with a pointer or a binary tree">
+An array with a pointer, then a binary tree (edges as overlay so they may end at the node centres):
+```
+O = Pt(0, 0)
+a0 = Box(Off(O, 0.5, 0), 1, 1, 0, {label: "3"})
+a1 = Box(Off(O, 1.5, 0), 1, 1, 0, {label: "8"})
+a2 = Box(Off(O, 2.5, 0), 1, 1, 0, {fill: true, tone: "amber", shade: 2, label: "5"})
+a3 = Box(Off(O, 3.5, 0), 1, 1, 0, {label: "1"})
+ptr = Vec(Off(O, 2.5, 2), Off(O, 2.5, 0.5), "i", {tone: "amber"})
+```
+```
+R = Pt(0, 0)
+L = Pt(-2, -1.6)
+Rr = Pt(2, -1.6)
+LL = Pt(-3, -3.2)
+e1 = Seg(R, L, {kind: "overlay", tone: "muted"})
+e2 = Seg(R, Rr, {kind: "overlay", tone: "muted"})
+e3 = Seg(L, LL, {kind: "overlay", tone: "muted"})
+n0 = Circle(R, 0.5, {fill: true, tone: "sky", label: "8"})
+n1 = Circle(L, 0.5, {fill: true, tone: "sky", shade: 2, label: "3"})
+n2 = Circle(Rr, 0.5, {fill: true, tone: "sky", shade: 2, label: "10"})
+n3 = Circle(LL, 0.5, {fill: true, tone: "sky", shade: 3, label: "1"})
+```
+</example>
+
+<example id="ex-chem" topic="chem" tags="beaker,liquid,volume" title="Chemistry: beaker of liquid" use="use when the problem is a container holding a liquid">
+A beaker of liquid: glass walls as surfaces, the inner space as an overlay container, the liquid inside it:
+```
+B0 = Pt(0, 0)
+B1 = Off(B0, 4, 0)
+T0 = Off(B0, 0, 5)
+T1 = Off(B1, 0, 5)
+space = Poly([B0, B1, T1, T0], {kind: "overlay", tone: "muted", shade: 3})
+wl = Seg(B0, T0, {kind: "surface", tone: "ink"})
+wb = Seg(B0, B1, {kind: "surface", tone: "ink"})
+wr = Seg(B1, T1, {kind: "surface", tone: "ink"})
+liquid = Poly([B0, B1, Off(B1, 0, 3), Off(B0, 0, 3)], {kind: "inside", in: space, fill: true, tone: "sky", shade: 2, label: "water"})
+mark = Seg(Off(B1, -0.6, 3), Off(B1, 0, 3), {kind: "overlay", tone: "muted"})
+vol = Label(Off(B1, 1.2, 3), "250 mL", {tone: "sky"})
+```
+</example>
+

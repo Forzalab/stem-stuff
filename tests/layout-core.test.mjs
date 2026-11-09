@@ -5,8 +5,10 @@
 // Plan lines (Q41: // goal anchor layers budget -> result().plan + fyi plan-layers / plan-budget / plan-missing), layer cap 6 (Q42).
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines } from "../layout-core.mjs";
-import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE } from "../layout-docs.mjs";
+import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, readDoc } from "../layout-docs.mjs";
+import { generate } from "../tools/gen_figure_docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
 const close = (p, q) => assert.ok(Math.abs(p[0] - q[0]) < 1e-3 && Math.abs(p[1] - q[1]) < 1e-3, `${p} vs ${q}`);
@@ -149,7 +151,9 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   const codes = new Set([...b.findings, ...b2.findings, ...evaluate(SCENES.broken.pass1, { mover: true }).findings].map(f => f.code));
   for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "legend", "auto-fixed", "plan-missing"]) assert.ok(codes.has(c), c);
   assert.ok(!b2.findings.some(f => f.code === "overlap"), "fx3 = Fix(c2, {y: 1.5}) clears the crate overlap");
-  assert.ok(CORE.split("\n").length <= 34, "the core prompt stays short");
+  assert.ok(CORE.replace(DOC_INDEX, "").split("\n").length <= 34, "the core prompt prose stays short");
+  assert.equal(DOC_INDEX.split("\n").length, DOCS.length, "the doc index has one line per doc");
+  for (const line of DOC_INDEX.split("\n")) assert.ok(line.length <= 140, `a doc index line is over 140 chars: ${line}`);
   assert.match(CORE, /Plan first \(the \/\/ lines\)/);
   assert.match(CORE, /max 6/);
   assert.match(TOPICS.layers, /```\n\/\/ goal: /);
@@ -157,6 +161,26 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   assert.match(CORE, /MINIMALISTIC, FUNCTIONAL/);
   assert.ok(!/Svg|path d/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");
   for (const t of ["curves", "legend", "dim", "layers"]) assert.ok(TOPIC_NAMES.includes(t), t);
+});
+
+test("figure-docs store: generate() equals the inlined region; ids unique; CORE lists every id; readDoc resolves", () => {
+  const src = readFileSync(new URL("../figure-docs.txt", import.meta.url), "utf8");
+  const layout = readFileSync(new URL("../layout-docs.mjs", import.meta.url), "utf8");
+  const m = /\/\/ <gen figure-docs: do not edit, run node tools\/gen_figure_docs\.mjs>\n([\s\S]*?)\/\/ <\/gen figure-docs>/.exec(layout);
+  assert.ok(m, "layout-docs.mjs has the gen markers");
+  assert.equal(m[1], generate(src), "layout-docs.mjs is in sync with figure-docs.txt (run node tools/gen_figure_docs.mjs)");
+  const ids = DOCS.map(d => d.id);
+  assert.equal(new Set(ids).size, ids.length, "every doc id is unique");
+  assert.equal(DOC_INDEX.split("\n").length, DOCS.length, "DOC_INDEX has one line per doc");
+  for (const d of DOCS) assert.ok(CORE.includes(d.id), `CORE lists ${d.id}`);
+  for (const d of DOCS) assert.equal(readDoc(d.id), TOPICS[d.id], `readDoc(${d.id}) is its TOPICS body`);
+  assert.equal(readDoc("nope"), null);
+});
+
+test("figure-docs parser: rejects tag text in a body, a duplicate id and a missing use (with the line)", () => {
+  assert.throws(() => generate('<topic id="a" title="A" use="use when x">\nbody </example>\n</topic>'), /figure-docs\.txt:2:.*tag text inside the body/);
+  assert.throws(() => generate('<topic id="a" title="A" use="use when x">\none\n</topic>\n\n<topic id="a" title="B" use="use when y">\ntwo\n</topic>'), /figure-docs\.txt:5: duplicate id "a"/);
+  assert.throws(() => generate('<topic id="a" title="A">\nbody\n</topic>'), /figure-docs\.txt:1: topic is missing the use attribute/);
 });
 
 test("text-first feedback: the scene summary names centres, sizes and touching neighbours; findings text splits llm / fyi", () => {
