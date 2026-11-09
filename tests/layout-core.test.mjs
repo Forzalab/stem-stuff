@@ -3,7 +3,7 @@
 // and every read_doc example + built-in scene through evaluate().
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, createSession, sceneSummary, ghostLine, formatFindings } from "../layout-core.mjs";
+import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint } from "../layout-core.mjs";
 import { docExamples, SCENES, TOPIC_NAMES, CORE } from "../layout-docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
@@ -157,4 +157,6 @@ test("text-first feedback: the scene summary names centres, sizes and touching n
   const t = formatFindings(evaluate(SCENES.broken.pass1).findings);
   assert.match(t, /^Fix these:/);
   assert.match(t, /FYI \(no action needed\):/);
+  assert.deepEqual(r.free, { named: ["A", "B"], inline: 0 });
+  assert.match(freePointsHint(evaluate("A = Pt(0, 0)\ns = Seg(A, Pt(1, 1))")), /^Hint \(not an error\): 2 free points with raw coordinates \(A \+ 1 inline Pt\)/);
 });

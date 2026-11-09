@@ -122,7 +122,10 @@ export function parseStatement(text) {
   if (!(call.name in SIGS)) throw perr("unknown-comp", `${id}: unknown component ${call.name} (known: ${Object.keys(SIGS).join(" ")})`);
   const deps = refsOf(call);
   checkInline(call);
-  return { id, comp: call.name, args: call.args, deps: [...deps] };
+  let inlinePts = 0;
+  const countPt = n => { if (n.t === "call") { if (n.name === "Pt") inlinePts++; n.args.forEach(countPt); } else if (n.t === "arr") n.items.forEach(countPt); else if (n.t === "obj") n.entries.forEach(([, v]) => countPt(v)); };
+  call.args.forEach(countPt);
+  return { id, comp: call.name, args: call.args, deps: [...deps], inlinePts };
 }
 function checkInline(call) {
   for (const a of call.args) walk(a);
@@ -685,6 +688,8 @@ export function createSession(opts = {}) {
       points, findings, ghosts: S.ghosts, labels: lay.labels, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
       shapes: shapes.map(s => ({ id: s.id, comp: s.comp, kind: s.kind, opts: s.opts, geom: s.geom, idx: s.idx, line: s.line, pass: s.pass, moved: S.moved.has(s.id) ? rv(S.moved.get(s.id)) : undefined })),
       stmts: stmts.map(s => ({ id: s.id, comp: s.comp, line: s.line, pass: s.pass, deps: s.deps })),
+      // raw-coordinate points: a HINT for the LLM (derive points instead), never an error
+      free: { named: stmts.filter(s => s.comp === "Pt").map(s => s.id), inline: stmts.reduce((n, s) => n + (s.inlinePts || 0), 0) },
     };
   }
   return { push, end, result, get options() { return o; } };
@@ -755,6 +760,11 @@ function gapOf(A, B) {   // the smallest vertex-to-shape distance either way (to
 }
 
 /** the findings as text for the LLM: llm-class first (act on these), then fyi (no action needed) */
+/** the free-point hint (SolidWorks/FreeCAD-style DOF count): how many raw-coordinate points the program has; a nudge, not an error */
+export function freePointsHint(res) {
+  const n = res.free.named.length + res.free.inline;
+  return `Hint (not an error): ${n} free point${n === 1 ? "" : "s"} with raw coordinates${res.free.named.length ? ` (${res.free.named.join(", ")}${res.free.inline ? ` + ${res.free.inline} inline Pt` : ""})` : res.free.inline ? ` (${res.free.inline} inline Pt)` : ""}. Fewer is better: derive points from others (Mid, Along, Off, Foot, Rot, Meet) so they move together.`;
+}
 export function formatFindings(findings) {
   const one = f => `- [${f.cls}] ${f.code} ids=[${f.ids.join(", ")}] ${f.pass === 2 ? "pass2 " : ""}line ${f.line ?? "?"}${f.amount != null ? ` amount ${f.amount}` : ""}${f.mtv ? ` push ${fv(f.mtv)}` : ""}: ${f.hint}${f.blocked && f.blocked.length && !/blocked by it/.test(f.hint) ? ` (blocks: ${f.blocked.join(", ")})` : ""}`;
   const llm = findings.filter(f => f.cls === "llm"), fyi = findings.filter(f => f.cls !== "llm");
