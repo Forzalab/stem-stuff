@@ -274,3 +274,399 @@ vol = Label(Off(B1, 1.2, 3), "250 mL", {tone: "sky"})
 ```
 </example>
 
+
+<example id="ex-area-tangent" topic="math" tags="curve,tangent,area,slope" title="Area under a curve and the tangent at P" use="use when the problem asks for a slope at a point or the area under a curve" inline="1" more="ex-unit-circle ex-riemann">
+A smooth curve y = f(x) with a point P on it, the tangent at P, and the area under f from x = a to x = b shaded.
+```
+// goal: read the slope at P and the area under f between a and b
+// anchor: the curve y = f(x) above the x axis
+// layers: 1 the curve and P, 2 the tangent at P, 3 the shaded area
+// budget: 20 statements
+O = Pt(0, 0)  // one free origin: every axis point is derived from it
+xAxis = Seg(O, Off(O, 6, 0), {tone: "muted"})  // x axis: muted context, so it never competes with f
+yAxis = Seg(O, Off(O, 0, 4), {tone: "muted"})  // y axis: same muted stroke, one hue for structure
+A = Pt(1, 0)  // a is a free anchor: the area, the Dim and f all hang off it
+B = Pt(5, 0)  // b is free too, so b - a is one span a Fix can move
+s1 = Layer([f, dotP], {title: "The curve and P"})  // step 1 adds the curve and the point; a Layer is one reasoning step
+T1 = Off(A, 0, 0.6)  // f at a: Off A, not a raw Pt, so moving a drags the curve with it
+T2 = Off(A, 1, 1.1)  // next sample: one unit right, height off the same anchor
+P = Off(A, 2, 1.5)  // P is a control point of f, so it lies on the curve exactly
+T4 = Off(A, 3, 2.1)  // sample after P: keeps the rise smooth, no extra anchor
+T5 = Off(A, 4, 2.8)  // f at b: last control point, again derived from A
+f = Curve([T1, T2, P, T4, T5], {tone: "amber"})  // open Curve is a thin line: it never collides with the area
+dotP = Circle(P, 0.07, {kind: "overlay", fill: true, tone: "violet"})  // a dot at P is a helper mark, so overlay, never solid
+s2 = Layer([tan], {title: "The tangent at P"})  // step 2 adds one construction line on top of step 1
+Q = Off(P, 1, 0.5)  // tangent direction: slope 0.5 as a step from P, no raw Pt
+tan = Seg(Along(P, Q, -1.3), Along(P, Q, 1.3), {kind: "overlay", tone: "violet"})  // Along both ways keeps the line centred on P; overlay because a tangent is a helper line over the area
+s3 = Layer([area], {title: "The shaded area"})  // step 3 adds the region: the step that answers the area question
+area = Poly([A, T1, T2, P, T4, T5, B], {fill: true, tone: "sky", shade: 3})  // a real region stays solid, not overlay; shade 3 = context
+dim = Dim(A, B, "b - a", {tone: "muted"})  // Dim, not a Label: a width gets ticks and sits outside; written last, so the later line yields to the shapes already there
+lab = Label(Off(T5, 0.25, 0.2), "f(x)", {tone: "amber"})  // symbol only: f(x), never a value the student must find
+```
+</example>
+
+
+<example id="ex-unit-circle" topic="math" tags="unit circle,sin,cos,right triangle" title="Math: unit circle, sin and cos" use="use when the problem is the unit circle, or cos and sin as the coordinates of a point">
+The unit circle with the angle θ at the centre O and the point P on the circle; the cos leg lies on the x-axis, and the sin leg stands on it at the foot.
+```
+// goal: read cos θ and sin θ as the two coordinates of P on the unit circle
+// anchor: the unit circle, its centre O and the point P at θ
+// layers: 1 the circle and P, 2 the sin leg, 3 the cos leg
+O = Pt(0, 0)  // the centre: the one free anchor, and the only point a review may move
+xAx = Seg(Off(O, -1.15, 0), Off(O, 1.15, 0), {kind: "overlay", tone: "muted", shade: 3})  // the x-axis: a helper line through the centre, overlay because it is construction, not a body
+yAx = Seg(Off(O, 0, -1.15), Off(O, 0, 1.15), {kind: "overlay", tone: "muted", shade: 3})  // the y-axis: the same helper role as xAx, so overlay and muted too
+R = Off(O, 1, 0)  // the radius direction: Off, not a raw Pt, so R stays exactly one unit from O
+s1 = Layer([circ, rad, dot, th], {lit: [circ, rad, dot, th], title: "The circle and the point P"})  // one layer is one reasoning step: the given circle and point first, so every later leg is read against them
+circ = Circle(O, 1, {tone: "ink", shade: 2, legend: "unit circle"})  // the unit circle is the real object, so it keeps the default solid kind; fill off draws only its outline, and the legend names the object itself, not a colour key
+P = Rot(O, R, 35)  // P at θ: Rot, not a raw Pt, so changing the angle turns P and every leg that hangs off it
+rad = Seg(O, P, {kind: "overlay", tone: "ink", shade: 2, label: "1"})  // the radius OP: an overlay construction line; label "1" is the given unit radius, not an answer
+dot = Circle(P, 0.06, {kind: "overlay", fill: true, tone: "ink"})  // a marker at P: overlay because a point mark is not a body
+th = Angle(R, O, P, "θ")  // the angle at O: Angle, not a text Label, so the arc marks exactly the angle between OR and OP
+s2 = Layer([sinL, rt1, rt2, dS], {lit: [sinL, rt1, rt2, dS], title: "sin θ: the height of P"})  // one reasoning step: drop the perpendicular, and sin θ appears as the height
+Q = Foot(P, O, R)  // the foot on the x-axis: Foot, not a raw Pt, so it stays under P when θ changes
+sinL = Seg(Q, P, {kind: "overlay", tone: "violet"})  // the sin leg: the vertical rise Q to P; overlay because it is a construction mark on the disc, and a plain Seg because dS carries the measure
+rt1 = Seg(Off(Q, -0.09, 0), Off(Q, -0.09, 0.09), {kind: "overlay", tone: "muted"})  // one side of the right-angle square at Q: a helper mark, overlay because it is construction, not a body
+rt2 = Seg(Off(Q, -0.09, 0.09), Off(Q, 0, 0.09), {kind: "overlay", tone: "muted"})  // the other side of the square: with the two legs it closes the right angle at the foot
+dS = Dim(Q, P, "sin θ", {tone: "violet"})  // sin θ as a length: Dim, not a Label, because Dim draws the measure beside the leg with a tick at each end
+s3 = Layer([cosL, dC], {lit: [cosL, dC], title: "cos θ: the run to the foot"})  // the last reasoning step: the horizontal leg, the second coordinate of P
+cosL = Seg(O, Q, {kind: "overlay", tone: "sky"})  // the cos leg: the run O to Q, drawn after Q exists, so the later line is placed against the earlier foot
+dC = Dim(O, Q, "cos θ", {tone: "sky"})  // cos θ as a length: Dim, not a Label, so the dimension line carries the measure outside the triangle
+```
+</example>
+
+
+<example id="ex-riemann" topic="calc" tags="riemann,left endpoint,rectangles,area" title="Calculus: four left-endpoint rectangles" use="use when the problem estimates an area under a curve with left-endpoint rectangles">
+A curve y = f(x) over the interval from a to b, with four left-endpoint rectangles under it; each rectangle has its top-left corner on the curve, so its height is f at the left edge of its strip.
+```
+// goal: the area under f estimated by four left-endpoint rectangles
+// anchor: the interval a to b on the x-axis
+// layers: 1 the curve, 2 the rectangles, 3 the sum they stand for
+// budget: 22 statements
+A = Pt(0, 0)                    // a: the left end of [a, b]; a free anchor, so every strip below follows if a moves
+B = Pt(4, 0)                    // b: the right end; the second and last raw Pt, every other point is derived from these two
+X1 = Along(A, B, 0.25)          // first grid line: Along keeps it on AB, so re-placing B re-spaces all four strips at once
+X2 = Along(A, B, 0.5)           // second grid line: derived, never a retyped coordinate that could drift off AB
+X3 = Along(A, B, 0.75)          // third grid line: a derived point is what lets the strips stay equal in width
+axis = Seg(A, B, {tone: "muted"})   // the strip floor: a thin line, and lines never conflict with lines, so no kind is needed
+s1 = Layer([curve, fLab], {title: "The curve y = f(x)"})   // step 1: the function alone, because every strip height is read off it
+C0 = Off(A, 0, 0.6)             // f(a): the given height at the left end; Off climbs from the axis point instead of a new raw Pt
+C1 = Off(X1, 0, 1)              // f at grid line 1: the second strip's top-left corner, so this point supplies the height that strip copies
+C2 = Off(X2, 0, 1.6)            // f at grid line 2: the third strip's corner, and the point the sum label hangs above
+C3 = Off(X3, 0, 2.4)            // f at grid line 3: the fourth strip's top-left corner, so it must sit on the curve
+C4 = Off(B, 0, 3.4)             // f(b): the curve is sampled at the right end too, so it spans the whole interval
+curve = Curve([C0, C1, C2, C3, C4], {kind: "overlay", tone: "amber"})   // overlay: a curve drawn over strips is the documented use; it is never checked, so grazing their corners is no conflict
+fLab = Label(Off(C4, 0.5, 0.15), "f(x)", {tone: "amber", shade: 2})   // a short symbol on the curve, given so shade 2: a Label is decor, never checked against the strips
+s2 = Layer([r1, r2, r3, r4, dx], {title: "Four left-endpoint rectangles"})   // step 2: the estimate; the strips arrive together with the width that defines them
+r1 = Box(Off(Mid(A, X1), 0, 0.3), 1, 0.6, 0, {fill: true, tone: "sky", shade: 2})   // centre = base midpoint + h/2, so the bottom edge rests on the axis; w = Δx and h = f(x0), so the top-left corner is C0
+r2 = Box(Off(Mid(X1, X2), 0, 0.5), 1, 1, 0, {fill: true, tone: "sky", shade: 2})    // each height is that strip's own left-end value, so its top-left corner stays on C1
+r3 = Box(Off(Mid(X2, X3), 0, 0.8), 1, 1.6, 0, {fill: true, tone: "sky", shade: 2})  // taller strips are not scaled copies: each is built from its own grid point and height
+r4 = Box(Off(Mid(X3, B), 0, 1.2), 1, 2.4, 0, {fill: true, tone: "sky", shade: 2})   // the last strip ends at b, and its top-left corner is C3, the point the curve passes through
+dx = Dim(A, X1, "Δx", {tone: "sky"})   // a width is measured, so Dim draws the ticks and the text; a loose Label would float and measure nothing
+s3 = Layer([sum], {lit: [sum], title: "Add the four areas"})   // step 3: the total; lit makes the rest pale so the eye lands on the named quantity
+sum = Label(Off(C2, 0, 1.6), "Σ f(xᵢ) Δx", {tone: "violet", shade: 1})   // a symbol for the unknown total, not a number; shade 1 marks it asked, and it sits in the free air above the curve
+```
+</example>
+
+
+<example id="ex-ladder" topic="calc" tags="related rates,ladder,sliding" title="Calculus: the sliding ladder" use="use when a ladder slides down a wall and its foot distance, height and angle are related">
+A ladder leans across the corner between a wall and the ground. The foot distance x and the height y are dimensions; the angle sits at the foot, between the ground and the ladder.
+```
+// goal: see the sliding ladder as x, y and the angle between the ground and the ladder
+// anchor: the corner where the wall meets the ground
+// layers: 1 wall, ground, ladder, 2 the two dimensions, 3 the angle at the foot
+// budget: 12 statements
+O = Pt(0, 0)  // the one free anchor: the corner; every other point is derived from it, so the whole scene moves as one
+ground = Seg(O, Off(O, 7, 0), {kind: "surface", tone: "muted"})  // the floor: Off derives its far end from O instead of a second raw Pt; surface, not overlay, because it is really a floor and nothing may be drawn sunk into it
+wall = Seg(O, Off(O, 0, 5), {kind: "surface", tone: "muted"})  // the same line stood up: a one-sided wall the ladder top rests on; muted because a surface is context, not a quantity
+s1 = Layer([ground, wall, ladder], {title: "The ladder"})  // step 1 is the whole scene at once: a Layer is one reasoning step, and the prefix keeps only the bare anchor
+F = Along(O, Off(O, 7, 0), 0.6)  // the foot is a fraction Along the ground, not a raw Pt, so it stays on the floor if O or the ground changes
+T = Along(O, Off(O, 0, 5), 0.72)  // the top is a fraction Along the wall, so it stays exactly on the wall whatever the wall height; a Rot or a guess by eye would leave the line
+ladder = Seg(F, T, {tone: "ink"})  // the rod itself: a real body, so solid and never overlay; thin lines do not conflict with each other, so it may share its two ends with the wall and the ground
+s2 = Layer([dx, dy], {lit: [dx, dy], title: "The two distances"})  // step 2 adds only the two lengths: one layer per reasoning step keeps each thing to look at separate
+dx = Dim(O, F, "x", {tone: "sky", shade: 2})  // Dim, not a Label: a length gets a tick at each end and sits outside the figure, while a loose Label would float with no ends; shade 2 = given at this instant
+dy = Dim(T, O, "y", {tone: "violet", shade: 2})  // a height is still a Dim, measured from the top down to the corner; the engine places it outside the figure, away from the ladder
+s3 = Layer([ang], {lit: [ang], title: "The angle at the foot"})  // step 3 adds one idea: the angle, read after the ground and the lengths are already on the page
+ang = Angle(O, F, T, "θ", {tone: "amber", shade: 3})  // Angle with the vertex in the middle: the rays are FO (the ground) and FT (the ladder); shade 3 = context, implied by the two lengths
+```
+</example>
+
+
+<example id="ex-cone-in-cylinder" topic="geometry" tags="cone,cylinder,inscribed,dimensions" title="Geometry: cone in a cylinder" use="use when a cone sits exactly inside a cylinder and you compare their volumes">
+A cone inscribed in a cylinder, seen from the side: the cylinder is a rectangle with an ellipse at each rim, and the cone shares the base and the top centre.
+The cylinder is a real body (solid); its rims are construction lines drawn over it (overlay); the cone is the body contained by it (inside), so the engine checks both the fit and the overlap.
+```
+// goal: the cone shares the cylinder's base and height, so the volume ratio is the question
+// anchor: the cylinder's base centre
+// layers: 1 the cylinder outline, 2 the cone inside it, 3 r and h
+// budget: 20 statements
+O = Pt(0, 0)  // the one raw anchor: every other point is Off/Along from O, so a change of r or h moves the whole figure
+BL = Off(O, -2, 0)  // bottom-left corner derived from O: a second raw Pt would not follow the anchor
+BR = Off(O, 2, 0)  // bottom-right corner: the base radius is read from O, never typed twice
+TL = Off(BL, 0, 5)  // top-left lifted straight up: Off keeps the wall vertical instead of guessing a Meet
+TR = Off(BR, 0, 5)  // top-right lifted by the same 5, so the walls stay parallel and equal
+s1 = Layer([cyl, bot, top], {title: "The cylinder: rectangle and two rims"})  // step 1 draws the outline only, before the cone is discussed
+cyl = Poly([BL, BR, TR, TL], {kind: "solid", tone: "muted", shade: 3})  // solid, not overlay: the cylinder is a real body, and a solid container is what makes the cone's inside test bite
+bot = Curve([BL, Off(O, 0, -0.6), BR, Off(O, 0, 0.6)], {closed: true, kind: "overlay", tone: "muted"})  // bottom rim as a closed Curve: a side-view circle is an ellipse; overlay, because a face line drawn across the body is not a second body
+top = Curve([TL, Off(O, 0, 4.4), TR, Off(O, 0, 5.6)], {closed: true, kind: "overlay", tone: "muted"})  // top rim built from TL/TR so it rises with the corners; overlay for the same reason, closed so it reads as one face
+tube = Union([cyl, bot, top], {legend: "cylinder"})  // Union, not three loose shapes: the parts are one cylinder, and parts never conflict with each other
+s2 = Layer([cone], {lit: [cone], title: "The cone: same base, same height"})  // step 2 adds only the body, lit so the eye goes there
+apex = Along(TL, TR, 0.5)  // t = 0.5 is the top face's centre, derived from the rim: the apex cannot drift off the axis
+cone = Poly([BL, BR, apex], {kind: "inside", in: cyl, fill: true, tone: "amber", shade: 2, legend: "cone"})  // inside, not solid: it must stay within the cylinder, and it may touch the base and top exactly
+s3 = Layer([dr, dh], {lit: [dr, dh], title: "r and h"})  // step 3 measures what the volume formula needs, after the shape is settled
+dr = Dim(O, BR, "r", {tone: "sky"})  // Dim, not a Label: a radius is a length, so it gets ticks and an outside spot the engine finds
+dh = Dim(BR, TR, "h", {tone: "violet"})  // h runs up the wall it measures, so the tick ends sit on the two rims
+```
+</example>
+
+
+<example id="ex-triangle-centers" topic="geometry" tags="triangle,altitudes,orthocentre,feet" title="Geometry: three altitudes and the orthocentre" use="use when a triangle needs its altitudes, their feet or the orthocentre">
+A scalene triangle ABC with its three altitudes: each runs from a corner to its Foot on the opposite side, and all three Meet at the orthocentre H, with a right-angle mark at every foot.
+```
+// goal: the three altitudes of a scalene triangle pass through one point
+// anchor: the wire triangle ABC, then one altitude, then all three
+// layers: 1 the triangle, 2 the altitude from C, 3 all three altitudes and H
+// budget: 24 statements
+A = Pt(0, 0)  // one of only three raw anchors: every other point is derived from these corners
+B = Pt(6, 0)  // the base is horizontal so the feet on AB read as a clean perpendicular
+C = Pt(1.5, 4)  // scalene and off-centre, so the three feet land apart instead of hiding each other
+sideAB = Seg(A, B)  // the triangle is three wire Segs, not a Poly: a solid area would conflict with every line drawn inside it
+sideBC = Seg(B, C)  // Segs never conflict with other Segs, so the altitudes may cross the sides with no finding
+sideCA = Seg(C, A)  // closes the outline; no tone, because the triangle is structure, not a measured quantity
+s1 = Layer([sideAB, sideBC, sideCA, lA, lB, lC], {title: "The triangle ABC"})  // step 1 shows only the outline and its names: the reasoning has not started
+lA = Label(Off(A, -0.35, -0.35), "A")  // labels are decor: no kind, never checked; Off keeps the name off the corner itself
+lB = Label(Off(B, 0.35, -0.35), "B")  // B is named below-right, where the angle mark at the foot on AB will not reach
+lC = Label(Off(C, -0.35, 0.35), "C")  // C is named above-left, away from the interior the altitudes will fill
+s2 = Layer([altC, rc], {title: "One altitude: from C, perpendicular to AB"})  // step 2 adds a single altitude, so a foot is seen before all three meet
+Hc = Foot(C, A, B)  // Foot, not a raw Pt: the foot is exactly perpendicular and moves with A, B and C
+altC = Seg(C, Hc)  // the altitude is a Seg; crossing side AB at Hc is legal because lines never conflict with lines
+rc = Angle(A, Hc, C, "")  // an Angle at the foot is the right-angle mark; no label, since the corner is a given, not a value
+s3 = Layer([altA, altB, ra, rb], {title: "All three altitudes meet at H"})  // step 3 is the answer step; HINT mode stops before it
+Ha = Foot(A, B, C)  // the second foot is derived the same way, so every foot follows any drag of the three anchors
+Hb = Foot(B, A, C)  // the third foot: no raw coordinates are typed for any foot or centre
+H = Meet(A, Ha, B, Hb)  // Meet of two altitudes, not a guessed point: the orthocentre is their intersection by definition
+altA = Seg(A, Ha)  // later than the sides by line order, so if anything ever conflicts the later shape is the one blamed
+altB = Seg(B, Hb)  // the third altitude completes the pencil through H; lines crossing at one point is not an overlap
+ra = Angle(A, Ha, B, "")  // right-angle mark at the foot on BC, between the altitude and side BC
+rb = Angle(A, Hb, B, "")  // same mark at the foot on AC: the foot is the vertex, the rays go to A and B
+mark = Circle(H, 0.07, {kind: "overlay", fill: true})  // a dot marking H is a helper mark, not a body; overlay is honest because a solid dot on three lines would be reported as overlapping them
+lH = Label(Off(H, 0.35, -0.35), "H")  // H is named last, after the lines exist, so the engine places it against the finished figure
+```
+</example>
+
+
+<example id="ex-double-slit" topic="physics" tags="double slit,interference,fringes" title="Physics: Young's double slit" use="use when the problem is two slits, a fringe pattern or a path difference" inline="1" more="ex-incline-friction ex-physics">
+Young's double slit: light from a source S passes two slits a distance d apart and reaches a point P on a screen a distance L away.
+The two rays to P differ by Δ = d sin θ, so the bright fringes sit where d sin θ = mλ.
+```
+// goal: how one source through two slits builds the fringe pattern on a screen
+// anchor: the apparatus: source, barrier with two slits, screen
+// layers: 1 the apparatus, 2 a wavefront from each slit, 3 the two paths to P, 4 the fringes
+// budget: 32 statements
+S = Pt(0, 0)  // the one raw anchor: every other point is derived from it
+src = Circle(S, 0.14, {fill: true, tone: "amber", shade: 2})  // the source is a small body, so a filled Circle: a bare Pt would not be drawn
+srcL = Label(Off(S, -0.35, 0.5), "S", {tone: "ink"})  // a name at a point is a Label; Off keeps it clear of the dot
+B0 = Off(S, 2.5, 0)  // barrier centre derived from S, so moving the source moves the whole rig
+SU = Off(B0, 0, 0.6)  // upper slit centre: half of d above the centre, so d stays one number
+SL = Off(B0, 0, -0.6)  // lower slit centre by the same Off: the pair stays symmetric about the axis
+M = Off(S, 9.5, 0)  // screen centre at distance L from the source, on the axis
+s1 = Layer([ax, topBar, midBar, botBar, barrier, scr, dGap, dLen], {title: "Slits and screen"})  // step 1 is the apparatus: setup, not a finding
+ax = Seg(B0, M, {kind: "overlay", tone: "muted", shade: 3})  // the axis is a construction line, so overlay: it is not a body
+topBar = Seg(Off(B0, 0, 2), Off(SU, 0, 0.15), {kind: "surface", tone: "ink"})  // a wall is a one-sided face, so surface, never a solid slab
+midBar = Seg(Off(SU, 0, -0.15), Off(SL, 0, 0.15), {kind: "surface", tone: "ink"})  // the block between the slits: the two 0.15 gaps are the openings
+botBar = Seg(Off(SL, 0, -0.15), Off(B0, 0, -2), {kind: "surface", tone: "ink"})  // the lower slice mirrors the top one about the centre
+barrier = Union([topBar, midBar, botBar], {tone: "ink", legend: "barrier with two slits"})  // one object in three parts: Union stops the parts fighting, legend names the whole
+scr = Seg(Off(M, 0, 2.4), Off(M, 0, -2.4), {kind: "surface", tone: "ink"})  // the screen is the face the fringes land on, so surface
+dGap = Dim(SL, SU, "d", {shade: 2})  // a length between two points is a Dim, never a loose Label; d is given
+dLen = Dim(Off(B0, 0, 2), Off(M, 0, 2), "L", {shade: 2})  // L from two points at the same height, so the dimension line clears the rays
+s2 = Layer([wU, wL], {title: "One wavefront from each slit"})  // step 2 adds only the two fronts: one idea per Layer
+wU = Curve([Rot(SU, Off(SU, 1.2, 0), -35), Off(SU, 1.2, 0), Rot(SU, Off(SU, 1.2, 0), 35)], {kind: "overlay", tone: "cyan", shade: 3})  // Rot turns one radius point about the slit: both ends stay on the circle, no raw Pts
+wL = Curve([Rot(SL, Off(SL, 1.2, 0), -35), Off(SL, 1.2, 0), Rot(SL, Off(SL, 1.2, 0), 35)], {kind: "overlay", tone: "cyan", shade: 3})  // a wavefront is a helper curve drawn over the scene, so overlay
+s3 = Layer([pU, pDelta, pRest, perp, rayP, th], {lit: [scr, pU, pDelta, pRest, perp, rayP, th], title: "Two paths to P"})  // step 3 lights the paths and dims the rest: a Layer says where to look
+P = Off(M, 0, 1.7)  // P hangs off the screen point, so it stays on the screen when L changes
+pU = Seg(SU, P, {kind: "overlay", tone: "amber", shade: 2})  // a light path is a construction line here, so overlay; its tone pairs it with the other ray
+Q = Foot(SU, SL, P)  // Q is the foot from the upper slit onto the lower ray: the later line is fitted to the ray already drawn
+pDelta = Seg(SL, Q, {kind: "overlay", tone: "pink", shade: 1, label: "Δ"})  // the extra piece of the longer ray is Δ, the asked quantity: shade 1
+pRest = Seg(Q, P, {kind: "overlay", tone: "amber", shade: 2})  // the rest of the lower ray, split at Q so Δ reads as its own piece
+perp = Seg(SU, Q, {kind: "overlay", tone: "muted", shade: 3})  // the dropped perpendicular is pure construction, so overlay and muted
+rayP = Seg(B0, P, {kind: "overlay", tone: "muted", shade: 3})  // the direction to P from the slit plane is another helper, so overlay
+th = Angle(M, B0, P, "θ", {shade: 2})  // an Angle needs no drawn rays: it measures the axis against the direction to P
+s4 = Layer([fr0, fr1, fr2], {lit: [scr, fr0, fr1, fr2], title: "Bright fringes"})  // step 4 is the meaning of step 3: where the path difference repeats
+fr0 = Seg(Off(M, -0.35, 0), Off(M, 0.35, 0), {tone: "amber", shade: 2})  // a fringe is a bright line on the screen: a short Seg across it
+fr1 = Seg(Off(M, -0.25, 0.55), Off(M, 0.25, 0.55), {tone: "amber", shade: 3})  // the next bright line, one Δ = λ higher
+fr2 = Seg(Off(M, -0.25, -0.55), Off(M, 0.25, -0.55), {tone: "amber", shade: 3})  // its mirror below: the pattern is symmetric about the axis
+```
+</example>
+
+
+<example id="ex-incline-friction" topic="physics" tags="incline,ramp,friction,forces" title="Physics: block on a ramp with friction" use="use when the problem is a block resting on a ramp with friction">
+A block on a ramp of angle theta: the ramp is a surface the block rests on, and the three forces hang off the block's centre.
+```
+// goal: why friction points up the slope, and how mg splits into parts
+// anchor: a block resting on a ramp of angle theta
+// layers: 1 the ramp and the block, 2 the three forces, 3 the parts of mg
+// budget: 16 statements
+A = Pt(0, 0) // the ramp foot is one raw anchor, so every other point can be derived from it
+B = Pt(8, 0) // the base end is the second anchor, giving the slope line two fixed ends
+s1 = Layer([ramp, blk, th], {lit: [ramp, blk], title: "The ramp and the block"}) // step 1 is the anchor itself: one Layer = one reasoning step
+top = Meet(A, Rot(A, B, 30), B, Off(B, 0, 1)) // Meet finds the corner where the 30 degree ray crosses B's vertical, so it follows both anchors
+ramp = Poly([A, B, top], {kind: "surface", tone: "muted"}) // kind surface: a one-sided ramp bodies rest on, not a solid they sink into
+P = Along(A, top, 0.45) // Along puts the contact point partway up the slope, so it slides with the ramp instead of a raw number
+C = Rot(P, Off(P, 0, 0.8), 30) // Rot turns the outward offset onto the slope normal, so the centre sits half the block height above P
+blk = Box(C, 1.6, 1.6, 30, {fill: true, tone: "muted", shade: 2, legend: "block"}) // turned 30 degrees flat on the ramp; legend names what the body is, and this later line is the one that would move on a conflict
+th = Angle(B, A, top, "θ") // Angle draws the arc at A between base and slope, where a loose Label could not say which angle; it prints the symbol, not the value
+s2 = Layer([W, N, f], {lit: [W, N, f], title: "The three forces on the block"}) // step 2 adds only the forces, so the student can stop before the split
+W = Vec(C, Off(C, 0, -2.2), "mg", {tone: "sky"}) // weight leaves the centre straight down: Off keeps it vertical whatever the slope angle
+N = Vec(C, Rot(C, Off(C, 0, 2), 30), "N", {tone: "amber"}) // the same Rot turns the outward offset with the slope, so N is perpendicular to the ramp
+f = Vec(C, Rot(C, Off(C, 1.9, 0), 30), "f", {tone: "violet"}) // Rot carries the block's local +x up the slope, so friction points up it
+s3 = Layer([Wpar, Wperp], {lit: [Wpar, Wperp], title: "mg split along and across the slope"}) // step 3 is the component step: the algebra stays in the text
+Wpar = Vec(C, Rot(C, Off(C, -1.1, 0), 30), "mg sin θ", {tone: "cyan"}) // the down-slope part of mg, drawn from the same centre so the split is visible
+Wperp = Vec(C, Rot(C, Off(C, 0, -1.9), 30), "mg cos θ", {tone: "pink"}) // the part pressing into the ramp: a Vec head may end inside a surface
+```
+</example>
+
+
+<example id="ex-titration" topic="chem" tags="titration,burette,flask" title="Chemistry: titration setup" use="use when the problem is a titration with a burette and a conical flask">
+A burette of NaOH above a conical flask of HCl, with the drip falling between them.
+The barrel and stopcock are one Union, both liquids sit inside their vessels, and the drip is a flow line.
+```
+// goal: a burette dripping NaOH into the HCl below it
+// anchor: the glassware, burette over flask
+// layers: 1 the two liquids, 2 the drop between them
+// budget: 14 statements
+G = Pt(0, 0)  // one free anchor for the kit: every other point is Off or Along of G, so a pass-2 Fix on G moves the setup together
+tube = Box(Off(G, 0, 6.9), 0.8, 5.4, 0, {tone: "ink"})  // the barrel is a tall thin box centred above the anchor; ink because glass is structure, not a quantity
+cock = Box(Off(G, 0, 4.25), 1.6, 0.7, 0, {tone: "ink"})  // the stopcock is a short wide box at the barrel's foot, its top deliberately overlapping the barrel
+burette = Union([tube, cock], {tone: "ink", legend: "burette"})  // Union, not two solids: cock and barrel overlap, and parts of one object never conflict with each other
+fL = Off(G, -2, 0)  // left foot: derived from the anchor rather than a new Pt, so the flask stays tied to G
+fR = Off(G, 2, 0)  // right foot: the base is the widest part, 4 units across
+nL = Off(G, -0.6, 3.2)  // left neck corner: the 2 to 0.6 taper is what makes the outline read as conical
+nR = Off(G, 0.6, 3.2)  // right neck corner, level with nL so the mouth is horizontal
+flask = Poly([fL, fR, nR, nL], {tone: "ink", legend: "flask"})  // a solid body, not a surface: a surface is a one-sided floor, while this closed outline is the vessel the acid must stay in; legend names the object, a label would be a symbol on it
+s1 = Layer([NaOH, HCl], {lit: [NaOH, HCl], title: "Both liquids"})  // a Layer because the reagents are the next thing to look at, after the empty glassware
+NaOH = Box(Off(G, 0, 6.65), 0.7, 3.9, 0, {kind: "inside", in: tube, fill: true, tone: "sky", shade: 2, legend: "NaOH"})  // inside in tube keeps the column in the barrel and lets it fill it; not overlay, because this is a real body; the reading is a volume, so no Dim: Dim is for lengths
+HCl = Poly([Off(fL, 0.1, 0.02), Off(fR, -0.1, 0.02), Along(nR, fR, 0.66), Along(nL, fL, 0.66)], {kind: "inside", in: flask, fill: true, tone: "amber", shade: 2, legend: "HCl"})  // inside in flask; its top corners are Along the flask's own neck-to-foot walls, so the later liquid fits the earlier flask and meets the glass
+s2 = Layer([drip], {lit: [drip], title: "The drop"})  // the transfer is the last reasoning step, so the drip appears only now
+drip = Seg(Off(G, 0, 3.85), Off(G, 0, 3.25), {kind: "overlay", tone: "sky"})  // a flow/connector line, not a body: overlay keeps it out of the solid checks, and it is written last so it fits the gap between the placed cock and flask
+```
+</example>
+
+
+<example id="ex-galvanic-cell" topic="chem" tags="galvanic,cell,electrodes,salt-bridge" title="Chemistry: galvanic cell" use="use when the problem is a galvanic cell or two half-cells joined by a salt bridge">
+Two half-cells: a zinc electrode in one beaker of solution, a copper electrode in the other.
+A salt bridge joins the two solutions and a wire joins the two electrodes, so electrons run from Zn to Cu.
+```
+// goal: how a galvanic cell keeps the two half-reactions apart while closing the circuit
+// anchor: two beakers of solution, joined by the salt bridge
+// layers: 1 the two electrodes, 2 the salt bridge, 3 the wire and the electron flow
+// budget: 30 statements
+G = Pt(0, 0)  // one free anchor at the centre of the cell; every other point hangs off it with Off, so the whole cell moves when G moves
+lB0 = Off(G, -6, 0)  // left beaker's outer bottom-left, derived with Off instead of a raw Pt so it follows the anchor
+lB1 = Off(G, -2, 0)  // outer bottom-right; the two beakers are mirror images about G, so one anchor sets both
+lT0 = Off(G, -6, 4)  // outer top-left, 4 units up; the wall height comes from the same anchor
+lT1 = Off(G, -2, 4)  // outer top-right; lB1 to lT1 is the open mouth the bridge will pass through
+rB0 = Off(G, 2, 0)  // right beaker's outer bottom-left, mirrored from the left one
+rB1 = Off(G, 6, 0)  // outer bottom-right of the right beaker
+rT0 = Off(G, 2, 4)  // outer top-left of the right beaker
+rT1 = Off(G, 6, 4)  // outer top-right; its open mouth
+lspace = Poly([lB0, lB1, lT1, lT0], {kind: "overlay", tone: "muted", shade: 3})  // the beaker's inner space is only an `in:` target, so overlay: it is a helper container and must never collide; shade 3 says context
+rspace = Poly([rB0, rB1, rT1, rT0], {kind: "overlay", tone: "muted", shade: 3})  // the right beaker's inner space, same helper role, so each liquid is checked against its own container
+wl1 = Seg(lB0, lT0, {kind: "surface", tone: "ink"})  // glass is a real one-sided boundary, so surface: the liquid rests against it and may not sink in; ink because glass is structure, not a quantity
+wb1 = Seg(lB0, lB1, {kind: "surface", tone: "ink"})  // the base is a surface too, so the liquid sits on it instead of overlapping it
+wr1 = Seg(lB1, lT1, {kind: "surface", tone: "ink"})  // the right wall closes the U shape; three surfaces draw a beaker without enclosing a solid area
+wl2 = Seg(rB0, rT0, {kind: "surface", tone: "ink"})  // the right beaker's left wall, a surface and never a solid block the liquid would have to dodge
+wb2 = Seg(rB0, rB1, {kind: "surface", tone: "ink"})  // its base, so the second liquid also rests on glass
+wr2 = Seg(rB1, rT1, {kind: "surface", tone: "ink"})  // its right wall
+solL = Poly([lB0, lB1, Off(lB1, 0, 2.5), Off(lB0, 0, 2.5)], {kind: "inside", in: lspace, fill: true, tone: "sky", shade: 2})  // the solution has volume, so inside + in: lspace proves it stays in the beaker; sky shade 2 marks a given liquid
+solR = Poly([rB0, rB1, Off(rB1, 0, 2.5), Off(rB0, 0, 2.5)], {kind: "inside", in: rspace, fill: true, tone: "sky", shade: 2})  // the copper half-cell's solution, inside its own container so the two liquids cannot mix
+s1 = Layer([zn, cu], {lit: [zn, cu], title: "Two electrodes"})  // one Layer is one reasoning step, and the first step is the pair of metals that exchange electrons
+zn = Box(Off(Mid(lB0, lB1), 0, 3.5), 0.4, 2, 0, {fill: true, tone: "violet", shade: 2, legend: "Zn"})  // the zinc strip stands at Mid of its beaker floor and is lifted by Off until its foot touches the solution top (contact, not overlap); legend, not label, because Zn is the object's name
+cu = Box(Off(Mid(rB0, rB1), 0, 3.5), 0.4, 2, 0, {fill: true, tone: "orange", shade: 2, legend: "Cu"})  // the copper strip, mirrored by the same Mid + Off; a second hue marks the second metal
+s2 = Layer([bridge], {lit: [bridge], title: "Salt bridge"})  // the next step is the internal path: ions move only once the bridge joins the two solutions
+bridge = Curve([Off(G, -3.3, 2.6), Off(G, -3.3, 3.6), Off(G, -3.2, 4.9), Off(G, -1.8, 5.35), Off(G, 0, 5.45), Off(G, 1.8, 5.35), Off(G, 3.2, 4.9), Off(G, 3.3, 3.6), Off(G, 3.3, 2.6)], {w: 0.35, fill: true, tone: "pink", shade: 2, legend: "salt bridge"})  // a thick Curve, not a Seg, because the bridge is a tube; its ends stop on the solution surfaces, and as the later line it is the bridge that yields to the beakers; legend names it
+s3 = Layer([wire, flow], {lit: [wire, flow], title: "Wire and electrons"})  // the last step is the external path, which is what turns the two half-cells into a circuit
+w1 = Seg(Off(G, -4, 4.5), Off(G, -4, 6), {kind: "overlay", tone: "muted"})  // a connector from the zinc top up into the wire; overlay because it joins bodies instead of being a body itself
+w2 = Seg(Off(G, -4, 6), Off(G, 4, 6), {kind: "overlay", tone: "muted"})  // the run across the gap; overlay keeps this helper line out of every collision check
+w3 = Seg(Off(G, 4, 6), Off(G, 4, 4.5), {kind: "overlay", tone: "muted"})  // down to the copper top; overlay lets the wire meet the electrode exactly at the joint
+wire = Union([w1, w2, w3], {kind: "overlay", tone: "muted"})  // the three Segs are one wire, so Union groups them as one object made of parts; overlay marks the whole connector unchecked, never a real body
+flow = Vec(Off(G, -2.5, 6), Off(G, -0.5, 6), "e⁻", {tone: "cyan"})  // electrons leave Zn and reach Cu, so the arrow points Zn to Cu; a Vec is decor, checked only at its head, and the head sits in open air
+```
+</example>
+
+
+<example id="ex-dijkstra" topic="cs" tags="dijkstra,shortest-path,weighted-graph" title="CS: Dijkstra shortest path" use="use when the problem is the shortest path in a weighted graph" inline="1" more="ex-bst-insert ex-cs">
+A weighted graph rooted at the start node S, then the tentative distances beside the nodes, then the shortest path S to T lit:
+```
+// goal: the shortest path S to T, built up in Dijkstra steps
+// anchor: the graph, rooted at the start node S
+// layers: 1 the graph, 2 tentative distances, 3 the shortest path lit
+// budget: 28 statements
+S = Pt(0, 0)                                              // the one free Pt: every node is Off it, so a Fix on S moves the whole graph
+sn = Circle(S, 0.45, {tone: "sky", shade: 2, label: "S"})  // a node is a Circle; "S" is a symbol, and it fits inside so no legend row
+s1 = Layer([eSA, eSB, eAB, eAC, eBD, eCT, eDT], {title: "The graph"})  // step 1 adds the graph's body; the prefix holds only the anchor S
+T = Off(S, 7, 0)                                          // Off, not Pt(7, 0): T keeps its place relative to S, one anchor moves all
+A = Off(S, 2, 2)                                          // derived point, so A cannot drift away from the graph S holds together
+B = Off(S, 2, -2)                                         // same Off pattern: the six nodes share one origin, no loose coordinates
+C = Off(S, 5, 2)                                          // the far column, still measured from S, not from a second anchor
+D = Off(S, 5, -2)                                         // mirrors C about the S-to-T line, so the graph stays readable
+eSA = Seg(S, A, {kind: "overlay", tone: "muted", label: "4"})  // overlay: the edge runs under the node circles and lines are never checked
+eSB = Seg(S, B, {kind: "overlay", tone: "muted", label: "2"})  // weight as a label on the edge itself, placed by the engine beside it
+eAB = Seg(A, B, {kind: "overlay", tone: "muted", label: "2"})  // a short cross edge: it exists to make a second route, nothing more
+eAC = Seg(A, C, {kind: "overlay", tone: "muted", label: "3"})  // the top route out of A, one weight per edge
+eBD = Seg(B, D, {kind: "overlay", tone: "muted", label: "3"})  // the bottom route out of B, the one the answer will use
+eCT = Seg(C, T, {kind: "overlay", tone: "muted", label: "5"})  // every route must end at T, so T collects the last two edges
+eDT = Seg(D, T, {kind: "overlay", tone: "muted", label: "4"})  // the second edge into T: the graph offers a choice, the step decides it
+nA = Circle(A, 0.45, {tone: "sky", shade: 2, label: "A"})  // the same Circle as S: all nodes read as one kind of object
+nB = Circle(B, 0.45, {tone: "sky", shade: 2, label: "B"})  // shade 2 = given: these nodes are data, not the asked value
+nC = Circle(C, 0.45, {tone: "sky", shade: 2, label: "C"})  // a short symbol only: never the distance the student must find
+nD = Circle(D, 0.45, {tone: "sky", shade: 2, label: "D"})  // keep the labels inside the radius so nothing lands in the legend row
+nT = Circle(T, 0.45, {tone: "sky", shade: 2, label: "T"})  // the target node, drawn like the others: the goal is a node, not a special shape
+s2 = Layer([dS, dA, dB, dD, dC, dT], {title: "Tentative distances"})  // step 2 adds only numbers: the graph does not change, so no redraw
+dS = Label(Off(S, -1, 0), "0", {tone: "amber", shade: 2})  // a Label, not a Dim: an edge weight is not the drawn length, so no dimension line
+dA = Label(Off(A, -1.2, 0.3), "4", {tone: "amber", shade: 3})  // shade 3 = context: the best route found so far, still open to change
+dB = Label(Off(B, -1.2, -0.3), "2", {tone: "amber", shade: 3})  // Off the node it belongs to: the later line is placed by the earlier one
+dD = Label(Off(D, 0, -1), "5", {tone: "amber", shade: 3})  // shade 3 = context: found so far, not yet the answer
+dC = Label(Off(C, 0, 1), "7", {tone: "amber", shade: 3})   // the top route's total, kept beside C so the student can compare routes
+dT = Label(Off(T, 1.2, 0.5), "?", {tone: "amber", shade: 1})  // shade 1 = asked; "?" is a symbol, never the total the student must find
+s3 = Layer([], {lit: [eSB, eBD, eDT], title: "Shortest path"})  // step 3 adds no line at all: lit is the step, the path exists and the rest pales
+```
+</example>
+
+
+<example id="ex-bst-insert" topic="cs" tags="bst,insert,comparison path,new leaf" title="CS: binary search tree insert" use="use when a binary search tree insert must show the comparison path and the new leaf">
+A seven-node binary search tree; inserting the key 5 compares down from the root and hangs a new leaf.
+```
+// goal: show where a BST insert goes: compare down from the root, then attach one new leaf
+// anchor: the tree, rooted at one raw point
+// layers: 1 the tree, 2 the comparison path from the root, 3 the new leaf attached
+// budget: 28 statements
+O = Pt(0, 0)  // the one raw anchor; every other point is derived from it with Off so the whole tree moves together
+root = Off(O, 0, 4.2)  // root centre, one level above the anchor; Off, not a second Pt, keeps it tied to O
+L = Off(O, -3, 2.5)  // left child of the root; the drop is wide enough for two node radii to clear
+R = Off(O, 3, 2.5)  // right child of the root, mirrored from L so the tree reads as one symmetric object
+LL = Off(O, -4.2, 0.8)  // key 2, the left child of 4; derived from O, never typed as its own free point
+LR = Off(O, -1.9, 0.8)  // key 6, the right child of 4; the insert will end under this node
+RL = Off(O, 1.9, 0.8)  // key 10, the left child of 12; its slot stays empty in this insert
+RR = Off(O, 4.2, 0.8)  // key 14, the right child of 12; same level as its siblings
+s1 = Layer([n0, n1, n2, n3, n4, n5, n6, e1, e2, e3, e4, e5, e6], {title: "The tree"})  // one layer = one reasoning step: the whole tree first, before any insert moves
+n0 = Circle(root, 0.5, {fill: true, tone: "sky", shade: 2, label: "8"})  // a real node body, solid: two nodes may touch but never overlap
+n1 = Circle(L, 0.5, {fill: true, tone: "sky", shade: 2, label: "4"})  // keys are givens, so a short symbol label; sky is the existing tree's one hue
+n2 = Circle(R, 0.5, {fill: true, tone: "sky", shade: 2, label: "12"})  // same body and tone as its siblings: one hue per quantity across the figure
+n3 = Circle(LL, 0.5, {fill: true, tone: "sky", shade: 2, label: "2"})  // drawn as the same solid body; no special kind for a leaf
+n4 = Circle(LR, 0.5, {fill: true, tone: "sky", shade: 2, label: "6"})  // the node whose empty left slot will take the new key
+n5 = Circle(RL, 0.5, {fill: true, tone: "sky", shade: 2, label: "10"})  // mirror of n3; kept for the shape of the tree, not stepped through
+n6 = Circle(RR, 0.5, {fill: true, tone: "sky", shade: 2, label: "14"})  // mirror of n3's sibling; only the left subtree is compared
+e1 = Seg(root, L, {kind: "overlay", tone: "muted"})  // a tree edge is overlay: it joins two bodies centre to centre, which a checked solid may not do
+e2 = Seg(root, R, {kind: "overlay", tone: "muted"})  // the mirrored edge; muted because an edge is structure, not a quantity
+e3 = Seg(L, LL, {kind: "overlay", tone: "muted"})  // same overlay rule: centre to centre, so the nodes stay solid and unchecked against it
+e4 = Seg(L, LR, {kind: "overlay", tone: "muted"})  // the second edge the comparison will follow
+e5 = Seg(R, RL, {kind: "overlay", tone: "muted"})  // drawn once, never lit: the insert never reaches the right subtree
+e6 = Seg(R, RR, {kind: "overlay", tone: "muted"})  // same rule on the far right; symmetry is drawn, not implied
+s2 = Layer([p3], {lit: [n0, n1, n4, e1, e4, p3], title: "Follow the comparisons"})  // step 2 changes what the student looks at: lit the chain, the rest pales
+slot = Off(O, -2.9, -0.9)  // the empty slot left of 6, derived from O so it hangs exactly one level below LR
+p3 = Seg(LR, slot, {kind: "overlay", tone: "amber"})  // a construction probe, so overlay (never checked) and a plain Seg: a Vec tip would end inside the node and be blamed
+s3 = Layer([nn, e7], {hide: [p3], lit: [n4, nn, e7], title: "The new leaf"})  // the answer step: HINT stops before it, so the placed key is only drawn here
+nn = Circle(slot, 0.5, {fill: true, tone: "amber", shade: 1, label: "5"})  // the inserted key is what was asked, so shade 1; solid like every node
+e7 = Seg(LR, slot, {kind: "overlay", tone: "amber"})  // the real edge replaces the probe; written after nn, so line order would blame this edge if it clashed
+```
+</example>
+

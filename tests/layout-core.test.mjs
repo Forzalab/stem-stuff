@@ -159,7 +159,7 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   assert.match(TOPICS.layers, /```\n\/\/ goal: /);
   for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.ok(evaluate(sc.pass1).plan, `${k} has plan lines`);
   assert.match(CORE, /MINIMALISTIC, FUNCTIONAL/);
-  assert.ok(!/Svg|path d/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");
+  assert.ok(!/\bSvg\s*\(|<path\b|path d="/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");   // syntax only: the words "path difference" are physics
   for (const t of ["curves", "legend", "dim", "layers"]) assert.ok(TOPIC_NAMES.includes(t), t);
 });
 
