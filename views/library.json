@@ -222,7 +222,7 @@
         ]
       },
       "Steps": {
-        "description": "A stepper: ONE anchor figure (Graph, Geometry or Doodle) drawn once for every step, the steps, an optional frontier row and status table; a segmented progress bar, Back/Next and Show all (every step formula) below. A Geometry fig: each Step lights its own parts (lit), the rest dims, nothing is removed",
+        "description": "A stepper: ONE anchor figure (Graph, Geometry or Doodle) drawn once for every step, the steps, an optional frontier row and status table; pips and Show all on top, Back/Next below. A Geometry fig keeps its structure: each Step lights its parts (lit; the rest turns pale), hides parts (hide) or relabels one (say), never a new figure per step. Draw objects from seg / rect / poly / arrow / label; label each quantity once (\"R_1 = 2 Ω\", \"I = ?\") so it gets its own colour, in the figure and in the formulas. No step numbers in any text. Example, 9 V across 2 Ω and 4 Ω in a row: s = Steps(g, [a, b, c]); g = Geometry(\"A 0,0; B 0,3; C 6,3; D 6,0; E 1,2.6; F 2.6,3.4; G 3.4,2.6; H 5,3.4; J 2,2.6; K 4,3.4\", [\"seg(A,B)\", \"seg(B,C)\", \"seg(C,D)\", \"seg(D,A)\", \"rect(E,F,$R_1$ = 2 Ω,fill)\", \"rect(G,H,$R_2$ = 4 Ω,fill)\", \"rect(J,K,$R$,fill)\", \"label(A,V = 9 V)\", \"label(D,I = ?)\"]); a = Step(\"We add the two resistances: one row, one path.\", null, null, null, null, null, null, \"R = R_1 + R_2\", \"R_1 R_2\", \"Add the resistances\", \"R\"); b = Step(\"We swap both boxes for one box with that total.\", null, null, null, null, null, null, \"R = 2 + 4\", \"R\", \"One box in their place\", \"R_1 R_2\"); c = Step(\"Now you divide the push by the total.\", null, null, null, null, null, null, \"I = V / R\", \"V I\", \"Find the current\", \"R_1 R_2\", [\"I=I = V / R\"])",
         "type": "object",
         "properties": {
           "fig": {
@@ -264,7 +264,7 @@
         ]
       },
       "Step": {
-        "description": "One step: caption (one or two short sentences; with a Geometry fig the six Graph args are null: Step(\"...\", null, null, null, null, null, null, \"W = F s\", \"F s\")), tex (one formula, TeX, no $), lit (a Geometry fig's parts this step lights, space separated: a point name \"A\", a segment \"A-B\", or a label as written \"F\" / \"\\theta\"; every symbol in tex is a lit label; empty = all lit), node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+        "description": "One step: caption (one or two short sentences; with a Geometry fig the six Graph args are null: Step(\"...\", null, null, null, null, null, null, \"W = F s\", \"F s\")), tex (one formula, TeX, no $), lit (a Geometry fig's parts this step lights, space separated: a point name \"A\", a segment \"A-B\", or a label as written \"F\" / \"\\theta\" (or its symbol: \"I\" for \"I = ?\"); every symbol in tex is a lit label; empty = all lit), title (a bold heading of a few words, never a step number), hide (parts gone this step, same tokens as lit), say (labels shown with new text this step: [\"I=I = 1.5 A\"] = the label's symbol, =, the new text; a number in it is a given, never the answer), node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
         "type": "object",
         "properties": {
           "cap": {
@@ -318,6 +318,22 @@
           "lit": {
             "type": "string",
             "maxLength": 120
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "hide": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "say": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 4
           }
         },
         "required": [
@@ -536,7 +552,7 @@
         ]
       },
       "Geometry": {
-        "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer; a mark may end with layer=1|2|3 (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone=<ink|muted|c1|c2|c3|ok|bad|mark|sky|amber|orange|violet|pink|cyan> (figure palette hues only; an arrow with no tone gets its own hue automatically, keyed by its label, so leave tone off unless a force must be a given color; ok / bad mean right / wrong, use them only for that), e.g. arrow(A,C,$F$,tone=c1,layer=2)",
+        "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top) poly(A,B,C) rect(A,B) (closed shapes: poly = the points in order, rect = an axis box from two corners; either may end with a label and then fill, e.g. rect(P,Q,$R_1$ = 2 Ω,fill); a resistor, block, cube or piston is drawn from these, never a named object); at most 16 points, 16 marks, 6 labels; a number in a label is a given, never the answer; a mark may end with layer=1|2|3 (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone=<ink|muted|c1|c2|c3|ok|bad|mark|sky|amber|orange|violet|pink|cyan> (figure palette hues only; an arrow with no tone gets its own hue automatically, keyed by its label, so leave tone off unless a force must be a given color; ok / bad mean right / wrong, use them only for that), e.g. arrow(A,C,$F$,tone=c1,layer=2)",
         "type": "object",
         "properties": {
           "pts": {
@@ -549,7 +565,7 @@
               "type": "string",
               "maxLength": 80
             },
-            "maxItems": 12
+            "maxItems": 16
           },
           "alt": {
             "type": "string",
@@ -823,7 +839,7 @@
     },
     "Steps": {
       "signature": "Steps(fig?: Graph | Geometry | Doodle, steps: Step[], front?: string, head?: string[])",
-      "description": "A stepper: ONE anchor figure (Graph, Geometry or Doodle) drawn once for every step, the steps, an optional frontier row and status table; a segmented progress bar, Back/Next and Show all (every step formula) below. A Geometry fig: each Step lights its own parts (lit), the rest dims, nothing is removed",
+      "description": "A stepper: ONE anchor figure (Graph, Geometry or Doodle) drawn once for every step, the steps, an optional frontier row and status table; pips and Show all on top, Back/Next below. A Geometry fig keeps its structure: each Step lights its parts (lit; the rest turns pale), hides parts (hide) or relabels one (say), never a new figure per step. Draw objects from seg / rect / poly / arrow / label; label each quantity once (\"R_1 = 2 Ω\", \"I = ?\") so it gets its own colour, in the figure and in the formulas. No step numbers in any text. Example, 9 V across 2 Ω and 4 Ω in a row: s = Steps(g, [a, b, c]); g = Geometry(\"A 0,0; B 0,3; C 6,3; D 6,0; E 1,2.6; F 2.6,3.4; G 3.4,2.6; H 5,3.4; J 2,2.6; K 4,3.4\", [\"seg(A,B)\", \"seg(B,C)\", \"seg(C,D)\", \"seg(D,A)\", \"rect(E,F,$R_1$ = 2 Ω,fill)\", \"rect(G,H,$R_2$ = 4 Ω,fill)\", \"rect(J,K,$R$,fill)\", \"label(A,V = 9 V)\", \"label(D,I = ?)\"]); a = Step(\"We add the two resistances: one row, one path.\", null, null, null, null, null, null, \"R = R_1 + R_2\", \"R_1 R_2\", \"Add the resistances\", \"R\"); b = Step(\"We swap both boxes for one box with that total.\", null, null, null, null, null, null, \"R = 2 + 4\", \"R\", \"One box in their place\", \"R_1 R_2\"); c = Step(\"Now you divide the push by the total.\", null, null, null, null, null, null, \"I = V / R\", \"V I\", \"Find the current\", \"R_1 R_2\", [\"I=I = V / R\"])",
       "layer": "L1",
       "kind": "interaction",
       "props": {
@@ -869,8 +885,8 @@
       }
     },
     "Step": {
-      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][], tex?: string, lit?: string)",
-      "description": "One step: caption (one or two short sentences; with a Geometry fig the six Graph args are null: Step(\"...\", null, null, null, null, null, null, \"W = F s\", \"F s\")), tex (one formula, TeX, no $), lit (a Geometry fig's parts this step lights, space separated: a point name \"A\", a segment \"A-B\", or a label as written \"F\" / \"\\theta\"; every symbol in tex is a lit label; empty = all lit), node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][], tex?: string, lit?: string, title?: string, hide?: string, say?: string[])",
+      "description": "One step: caption (one or two short sentences; with a Geometry fig the six Graph args are null: Step(\"...\", null, null, null, null, null, null, \"W = F s\", \"F s\")), tex (one formula, TeX, no $), lit (a Geometry fig's parts this step lights, space separated: a point name \"A\", a segment \"A-B\", or a label as written \"F\" / \"\\theta\" (or its symbol: \"I\" for \"I = ?\"); every symbol in tex is a lit label; empty = all lit), title (a bold heading of a few words, never a step number), hide (parts gone this step, same tokens as lit), say (labels shown with new text this step: [\"I=I = 1.5 A\"] = the label's symbol, =, the new text; a number in it is a given, never the answer), node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
       "layer": "L1",
       "kind": "layout",
       "props": {
@@ -927,6 +943,22 @@
           "lit": {
             "type": "string",
             "maxLength": 120
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "hide": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "say": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 4
           }
         },
         "required": [
@@ -1177,7 +1209,7 @@
     },
     "Geometry": {
       "signature": "Geometry(pts: string, marks: string[], alt?: string)",
-      "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer; a mark may end with layer=1|2|3 (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone=<ink|muted|c1|c2|c3|ok|bad|mark|sky|amber|orange|violet|pink|cyan> (figure palette hues only; an arrow with no tone gets its own hue automatically, keyed by its label, so leave tone off unless a force must be a given color; ok / bad mean right / wrong, use them only for that), e.g. arrow(A,C,$F$,tone=c1,layer=2)",
+      "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top) poly(A,B,C) rect(A,B) (closed shapes: poly = the points in order, rect = an axis box from two corners; either may end with a label and then fill, e.g. rect(P,Q,$R_1$ = 2 Ω,fill); a resistor, block, cube or piston is drawn from these, never a named object); at most 16 points, 16 marks, 6 labels; a number in a label is a given, never the answer; a mark may end with layer=1|2|3 (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone=<ink|muted|c1|c2|c3|ok|bad|mark|sky|amber|orange|violet|pink|cyan> (figure palette hues only; an arrow with no tone gets its own hue automatically, keyed by its label, so leave tone off unless a force must be a given color; ok / bad mean right / wrong, use them only for that), e.g. arrow(A,C,$F$,tone=c1,layer=2)",
       "layer": "L1",
       "kind": "layout",
       "props": {
@@ -1193,7 +1225,7 @@
               "type": "string",
               "maxLength": 80
             },
-            "maxItems": 12
+            "maxItems": 16
           },
           "alt": {
             "type": "string",

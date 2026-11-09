@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stepper fixture</title>
+<link rel="icon" href="data:,">
+<!-- Stepper iteration 2 fixture: four Steps anchors from generic marks only, on Cluck's sheet (.ai-box). ?s=circuit|ramp|cube|pistons shows one
+     scene; ?i=N opens step N (1-based); ?all=1 opens Show all. Serve: python3 serve.py 8815, then /try/stepper-demo.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../views.css">
+<link rel="stylesheet" href="../rewards/rewards.css">
+<style>
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); }
+  main { max-width: 40rem; margin: 0 auto; padding: var(--s4); }
+  .sheet { padding: var(--s4); border-radius: 0.75rem; background: var(--help-sheet); }
+  .sheet + .sheet { margin-top: calc(2 * var(--s4)); }
+  .line { margin: 0 0 var(--s2); }
+</style>
+<script src="../vendor/katex/katex.min.js"></script>
+<script src="../vendor/confetti.browser.js"></script>
+<script src="../rewards/fx.js"></script>
+<script type="module">
+  import { render } from "../views.js";
+  import { SCENES } from "./stepper-demo-src.js";
+  const q = new URLSearchParams(location.search), only = q.get("s"), at = +(q.get("i") || 1);
+  const main = document.querySelector("main");
+  for (const [name, src] of Object.entries(SCENES)) {
+    if (only && only !== name) continue;
+    const sec = main.appendChild(Object.assign(document.createElement("section"), { className: "sheet ai-skin ai-box", id: name }));
+    sec.setAttribute("aria-label", name);
+    const line = sec.appendChild(Object.assign(document.createElement("p"), { className: "line" }));
+    line.textContent = "Here it is one step at a time. Your turn after the last one.";
+    const m = sec.appendChild(document.createElement("div"));
+    render(src, m, {});
+    for (let k = 1; k < at; k++) m.querySelector(".vw-next")?.click();
+    if (q.get("all")) m.querySelector(".vw-all-b")?.click();
+  }
+  /* the app's cheer (app.js vw-steps-end), minus the avatar: confetti inside the stepper via rewards/fx.js confettiIn */
+  document.addEventListener("vw-steps-end", e => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !window.FX?.confettiIn) return;
+    const f = window.FX.confettiIn(e.target);
+    f && Promise.resolve(f({ particleCount: 60, spread: 110, startVelocity: 14, gravity: .35, ticks: 360, flat: true, origin: { x: .5, y: .1 } })).finally(() => f.canvas.remove());
+  });
+  document.documentElement.dataset.ready = "1";
+</script>
+</head>
+<body><main></main></body>
+</html>

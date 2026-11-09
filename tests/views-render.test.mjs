@@ -262,8 +262,8 @@ test("Geometry: every mark kind is an SVG element in one 1:1 figure", () => {
     assert.ok(x > x0 && x < x0 + w && y > y0 && y < y0 + hh, "the drawing is inside the viewBox");
 });
 
-test("Geometry: over a cap (13 marks, 7 labels) or a mark on an unknown point drops the statement", () => {
-  const many = Array.from({ length: 13 }, () => '"seg(A,B)"').join(", ");
+test("Geometry: over a cap (17 marks, 7 labels) or a mark on an unknown point drops the statement", () => {
+  const many = Array.from({ length: 17 }, () => '"seg(A,B)"').join(", ");
   const labs = Array.from({ length: 7 }, (_, i) => `"label(A,L${i})"`).join(", ");
   for (const [src, code] of [[`root = View([g])\ng = Geometry("A 0,0; B 1,0", [${labs}])`, "too-long"],
     [`root = View([g])\ng = Geometry("A 0,0; B 1,0", [${many}])`, "too-long"],
@@ -273,4 +273,34 @@ test("Geometry: over a cap (13 marks, 7 labels) or a mark on an unknown point dr
     assert.ok(v.errors.some(e => e.code === code), src);
     assert.equal(all(m, n => hasCls(n, "gm-pt")).length, 0, src);
   }
+});
+
+test("stepper iteration 2 (smoke): the four abstract-mark scenes draw; title / lit / hide / say follow the step; no point names", async () => {
+  const { SCENES } = await import("../try/stepper-demo-src.js");
+  for (const [name, src] of Object.entries(SCENES)) {
+    const m = mount();
+    const v = render(src, m);
+    assert.deepEqual(v.errors, [], name);
+    assert.ok(byClass(m, "vw-anchor").length === 1 && !all(m, n => hasCls(n, "gm-name")).length, name);
+    assert.ok(byClass(m, "vw-pips").length === 1 && one(m, "vw-st").textContent.length > 0, name);
+  }
+  const m = mount();
+  render(SCENES.circuit, m);
+  const next = one(m, "vw-next"), texts = () => all(m, n => /^text$/i.test(n.tagName)).map(t => t.textContent);
+  assert.equal(one(m, "vw-st").textContent, "What we need");
+  assert.ok(all(m, n => hasCls(n, "gm-poly")).length === 3);
+  assert.ok(all(m, n => hasCls(n, "vw-hide")).length > 0, "R is hidden at first");
+  next.click(); next.click();
+  assert.equal(one(m, "vw-st").textContent, "One box in their place");
+  assert.ok(texts().includes("R = 6 Ω"), texts().join("|"));
+  assert.ok(all(m, n => hasCls(n, "vw-dim") && hasCls(n, "ly3")).length > 0, "dim = the layer-3 shade");
+});
+
+test("prompt shape examples (smoke): every registry geo_prompt example and the program draw with no errors", () => {
+  const gp = JSON.parse(readFileSync(new URL("../views/registry.json", import.meta.url), "utf8")).geo_prompt;
+  for (const x of gp.examples) {
+    const v = render(`root = View([s])\ns = Steps(g, [a])\n${x.src}\na = Step("We look at it.")`, mount());
+    assert.deepEqual(v.errors, [], x.idea);
+  }
+  assert.deepEqual(render(gp.program, mount()).errors, []);
 });

@@ -17,9 +17,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 # What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
 # through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
 CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip", "Doodle"}   # Doodle: a Steps anchor (stepper, Nov 8)
-GEO_CAPS = {"pts": 12, "marks": 12, "labels": 6}
-GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1}   # name -> point / number args before the text
-GEO_TEXT = {"dim", "angle", "arrow", "label"}
+GEO_CAPS = {"pts": 16, "marks": 16, "labels": 6}   # 16 (stepper iteration 2): a cube = 7 corners + its force arrows
+GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1, "rect": 2, "poly": 3}   # poly: at least 3; rect / poly: the leading point names, then an optional label, then fill   # name -> point / number args before the text
+GEO_TEXT = {"dim", "angle", "arrow", "label", "rect", "poly"}
 PT_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9']{0,3})\s+(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$")
 MARK_RE = re.compile(r"^\s*([a-z]+)\s*\((.*)\)\s*$")
 TONES = {"ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark", "sky", "amber", "orange", "violet", "pink", "cyan"}     # the figure palette (app.css --fig-<hue>-1..3); views.js TONES
@@ -115,6 +115,15 @@ def geometry(props):
                 return "geo-emph", []
             args.pop()
         n = GEO_MARKS[k]
+        if k in ("rect", "poly"):
+            if len(args) > n and args[-1].lower() == "fill":
+                args.pop()
+            m_ = 0
+            while m_ < len(args) and (k == "poly" or m_ < 2) and args[m_] in pts:
+                m_ += 1
+            if m_ < n:
+                return "geo-mark", []
+            n = m_
         if len(args) < n:
             return "geo-mark", []
         names = args[:1] if k == "circle" else args[:n]
@@ -147,6 +156,7 @@ def _leak(text, ctx, where):
     """livefig's rule for a number a student reads: from the givens, never the answer (3 sig figs)"""
     if oui.slot_id(text):
         return None
+    text = re.sub(r"_\{[^}]*\}|_\w", "", text)          # a subscript names a quantity (R_1, v_{0}), never a number the student reads
     for x in livefig.nums(text):
         if not math.isfinite(x) or abs(x) > livefig.GEOM_MAX:
             return "number"

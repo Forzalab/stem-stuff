@@ -67,7 +67,7 @@ A force that acts on the body is always solid. Enforced by `tests/schema.test.mj
 
 Outline only (Tony picked variant B): 2px ink outline, no fill. The body is filled with the sheet color, so the sheet shows through and the body still covers lines behind it. The incline uses the same sheet fill.
 
-`fill: true` on a body overrides the default: its color at 22% opacity (same as shaded regions). Dot bodies are solid ink, radius at least 6px. Disk and pulley get a 2.5px center dot; ring adds an inner circle 5px in.
+`fill: true` on a body overrides the default: its color at 22% opacity (same as shaded regions). Stepper anchors (Nov 8, iteration 2): a filled `poly` / `rect` is its hue at 22% for layer 2/3 and **40% for a lit layer-1 face**, mixed onto the sheet (opaque, so a line behind stays hidden); an unlit part takes its layer-3 shade, never opacity. Dot bodies are solid ink, radius at least 6px. Disk and pulley get a 2.5px center dot; ring adds an inner circle 5px in.
 
 ## 7. Scene primitives
 
@@ -91,3 +91,4 @@ Picked from five mockups (A–E); this is variant C, "pure ink". Tony first chos
 - Do not color by mark type: a pink arc reads as acceleration, an orange block as velocity, a blue velocity arrow as a force. Section 1 colors stay for graphs (series) and for figures whose only job is to compare kinds of vectors.
 - Angle room: an angle arc's radius is about half its arrows' length or more. Two angles at one point use clearly different radii, so their labels do not stack. The label sits outside the arc and clear of the arrow labels. Check at 390px before shipping.
 - A label never states a value the question asks the student to find.
+- Stepper exception (Tony, Nov 8): inside a `Steps` anchor every labelled quantity gets its own hue (auto-hue W163 or `tone=`), one hue per quantity, the same hue on its symbol in the step formula. Problem figures stay pure ink.

@@ -66,7 +66,7 @@ for (const W of [390, 1280]) {
     await fits();
     const s = await page.evaluate(() => {
       const f = document.querySelector("#v1 .vw-foot"), [back, next] = f.querySelectorAll(".btn");
-      return { n: f.querySelector(".vw-n").textContent, back: back.disabled, next: next.disabled, rows: document.querySelectorAll("#v1 .vw-tb tbody tr").length,
+      return { n: document.querySelector("#v1 .vw-n").textContent, back: back.disabled, next: next.disabled, rows: document.querySelectorAll("#v1 .vw-tb tbody tr").length,
         legend: document.querySelectorAll("#v1 .vw-chips[aria-label=legend] .vw-chip").length, figs: document.querySelectorAll("#v1 .vw-fig svg .nd").length };
     });
     assert.deepEqual(s, { n: "Step 1 of 4", back: true, next: false, rows: 5, legend: 6, figs: 5 });
