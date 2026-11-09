@@ -29,11 +29,12 @@ export function classify(files) {
   return { docs, code };
 }
 
-// How a GitHub Actions run maps to full/fast/bench/unknown TODAY (SOURCE: tests.yml, HEAD b0e01c5).
-// Only 'full' can clear a SHA; a future selected marker is 'unknown' until PR 2 teaches this function about it.
+// How a GitHub Actions run maps to full/fast/bench/affected/unknown TODAY (SOURCE: tests.yml).
+// Only 'full' can clear a SHA; a pull_request run is 'affected' (PR 2 selection) and can never ship.
 export function runKind(run) {
   const r = run || {};
-  if (r.event === "push" || r.event === "pull_request") return "full";   // both run plan+unit+block (the whole suite)
+  if (r.event === "push") return "full";                                // main push: the full suite (backstop)
+  if (r.event === "pull_request") return "affected";                    // PR 2: affected selection, never a ship run
   if (r.event === "workflow_dispatch") {
     const inputs = r.inputs || {};
     if (inputs.pipe === "fast") return "fast";                            // tests.yml fast job

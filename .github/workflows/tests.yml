@@ -33,10 +33,33 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
+      skip_block: ${{ steps.p.outputs.skip_block }}
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # the PR base sha must be in history for the selection diff
       - id: p
-        run: echo "matrix=$(tests/run-all.sh --plan "$BLOCKS" "$LANES")" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: |
+          set -euo pipefail
+          total="$(tests/run-all.sh --list | wc -l)"
+          files=()
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            mapfile -t files < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)
+          fi
+          args=()
+          for f in "${files[@]}"; do args+=(--file "$f"); done
+          selection="$(node tools/ci-select.mjs --total "$total" "${args[@]}")"
+          read -r kind reason <<<"$selection"
+          echo "selection: $kind ($reason)"
+          specs=""; skip=false
+          if [ "$kind" = "affected" ]; then   # consume run-all.sh --affected (06); split logic units from .pw names
+            mapfile -t units < <(tests/run-all.sh --affected "${files[@]}" | grep -v '^unmapped:' || true)
+            specs="$(printf '%s\n' "${units[@]}" | grep -vxE 'unittest|npm' | paste -sd' ' - || true)"
+            [ -n "$specs" ] || skip=true   # zero .pw: an empty SPECS would plan ALL, so skip block instead (§5)
+          fi
+          matrix="$(SPECS="$specs" tests/run-all.sh --plan "$BLOCKS" "$LANES")"
+          echo "skip_block=$skip" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
     if: inputs.pipe != 'fast'
     runs-on: ubuntu-24.04
@@ -56,6 +79,7 @@ jobs:
       - run: node --test tests/invariants.slow.mjs   # ~50 s whole-repo invariant loops (tests/INVARIANTS.md); kept out of npm test so --fast/--quick stay fast
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: plan
+    if: needs.plan.outputs.skip_block != 'true'   # zero-.pw affected PR: no block work (unit still runs)
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
     # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
     runs-on: ubuntu-24.04
@@ -118,7 +142,7 @@ jobs:
     if: always() && inputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     steps:
-      - run: test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && test "${{ needs.block.result }}" = success
+      - run: test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && (test "${{ needs.block.result }}" = success || test "${{ needs.block.result }}" = skipped)
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]

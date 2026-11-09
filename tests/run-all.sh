@@ -42,6 +42,8 @@ if [ -n "$plan" ]; then
   [[ "$pb" =~ ^[1-9][0-9]*$ && "$pl" =~ ^[1-9][0-9]*$ ]] || { echo "bad --plan '$plan' (want B L, e.g. 3 3)" >&2; exit 2; }
   sm=$((pb * pl)); lead=0
 fi
+plan_subset=0
+[ -n "$plan" ] && [ -n "$SPECS" ] && plan_subset=1   # --plan SPECS subset; empty/unset = today's full plan (I6)
 if [ -n "$SHARD" ]; then
   case "$SHARD" in
     [0-9]*/[0-9]*) sn="${SHARD%/*}"; sm="${SHARD#*/}" ;;
@@ -76,6 +78,9 @@ parts_of() { local p; for p in "${!PART_ENV[@]}"; do [ "${p%%@*}" = "$1" ] && ec
 units() {   # every schedulable name: a spec's parts if it has any, else the spec
   local f n p
   for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; p="$(parts_of "$n")"; if [ -n "$p" ]; then echo "$p"; else echo "$n"; fi; done
+}
+plan_units() {   # --plan with SPECS deals exactly that subset; unset/empty = every unit (I6)
+  if [ "$plan_subset" -eq 1 ]; then printf '%s\n' $SPECS; else units; fi
 }
 
 # --affected (ticket 06): print the units these changed files need; run nothing. auto+hand are a union;
@@ -278,7 +283,7 @@ deal() {
     best=0; for ((k = 1; k < sm; k++)); do [ "${load[k]}" -lt "${load[best]}" ] && best=$k; done
     load[best]=$((load[best] + w))
     [ "$best" -eq $(($1 - 1)) ] && echo "$n"
-  done < <(units | while read -r n; do echo "$(weight "$n") $n"; done | LC_ALL=C sort -k1,1nr -k2,2)
+  done < <(plan_units | while read -r n; do echo "$(weight "$n") $n"; done | LC_ALL=C sort -k1,1nr -k2,2)
 }
 
 # schedule check: every unit has its own weight() line (not the default 5), across all M shards each is dealt exactly once,
@@ -289,24 +294,31 @@ while read -r n; do
   [[ "$wsrc" =~ [[:space:]]"$n"[[:space:]\|\)] ]] || { echo "schedule check: $n has no weight() entry (add its CI seconds)" >&2; bad=1; }
   c="$(grep -cxF "$n" <<<"$dealt")"
   [ "$c" -eq 1 ] || { echo "schedule check: $n is scheduled in $c of $sm shards (want exactly 1)" >&2; bad=1; }
-done < <(units)
-for f in tests/*.pw.mjs; do
-  n="$(basename "$f" .pw.mjs)"; want="$(parts_of "$n")"; [ -n "$want" ] || want="$n"
-  got="$(grep -xE "$(printf '%s' "$n" | sed 's/[.[\*^$]/\\&/g')(@.*)?" <<<"$dealt" | LC_ALL=C sort)"
-  [ "$got" = "$want" ] || { echo "schedule check: $n is covered by [$(paste -sd' ' <<<"$got")], want exactly [$(paste -sd' ' <<<"$want")]" >&2; bad=1; }
-done
+done < <(plan_units)
+if [ "$plan_subset" -eq 0 ]; then
+  for f in tests/*.pw.mjs; do
+    n="$(basename "$f" .pw.mjs)"; want="$(parts_of "$n")"; [ -n "$want" ] || want="$n"
+    got="$(grep -xE "$(printf '%s' "$n" | sed 's/[.[\*^$]/\\&/g')(@.*)?" <<<"$dealt" | LC_ALL=C sort)"
+    [ "$got" = "$want" ] || { echo "schedule check: $n is covered by [$(paste -sd' ' <<<"$got")], want exactly [$(paste -sd' ' <<<"$want")]" >&2; bad=1; }
+  done
+fi
 [ "$bad" -eq 0 ] || exit 1
 
 if [ -n "$plan" ]; then   # lane k of block b = deal no. (k-1)*B + b: the heaviest specs open different blocks
+  pshards=$sm; pblocks=$pb
+  if [ "$plan_subset" -eq 1 ]; then   # a subset smaller than the lanes: drop empty blocks/lanes, never plan ALL
+    n="$(plan_units | wc -l)"; [ "$n" -lt "$pshards" ] && pshards=$n
+    [ "$pshards" -lt "$pblocks" ] && pblocks=$pshards
+  fi
   printf '{"include":['
-  for ((b = 1; b <= pb; b++)); do
-    lanes=""
-    for ((k = 1; k <= pl; k++)); do
-      l="$(deal $(((k - 1) * pb + b)) | paste -sd' ')"
-      [ -n "$l" ] || { echo "--plan $pb $pl: lane $k of block $b is empty (an empty SPECS runs everything): fewer lanes" >&2; exit 1; }
-      lanes+="$( [ "$k" -gt 1 ] && printf '|' )$l"
+  for ((b = 1; b <= pblocks; b++)); do
+    lanes=""; k=0
+    for ((s = b; s <= pshards; s += pblocks)); do
+      l="$(deal "$s" | paste -sd' ')"
+      [ -n "$l" ] || { echo "--plan $pb $pl: shard $s has no specs (an empty SPECS runs everything): fewer lanes" >&2; exit 1; }
+      lanes+="$( [ "$k" -gt 0 ] && printf '|' )$l"; k=$((k + 1))
     done
-    printf '%s{"block":%d,"of":%d,"lanes":"%s"}' "$( [ "$b" -gt 1 ] && printf ',' )" "$b" "$pb" "$lanes"
+    printf '%s{"block":%d,"of":%d,"lanes":"%s"}' "$( [ "$b" -gt 1 ] && printf ',' )" "$b" "$pblocks" "$lanes"
   done
   printf ']}\n'; exit 0
 fi
