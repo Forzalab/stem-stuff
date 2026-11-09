@@ -21,6 +21,7 @@ export const DOCS = [
   {"kind":"example","id":"ex-chem","attrs":{"id":"ex-chem","topic":"chem","tags":"beaker,liquid,volume","title":"Chemistry: beaker of liquid","use":"use when the problem is a container holding a liquid"},"body":"A beaker of liquid: glass walls as surfaces, the inner space as an overlay container, the liquid inside it:\n```\nB0 = Pt(0, 0)\nB1 = Off(B0, 4, 0)\nT0 = Off(B0, 0, 5)\nT1 = Off(B1, 0, 5)\nspace = Poly([B0, B1, T1, T0], {kind: \"overlay\", tone: \"muted\", shade: 3})\nwl = Seg(B0, T0, {kind: \"surface\", tone: \"ink\"})\nwb = Seg(B0, B1, {kind: \"surface\", tone: \"ink\"})\nwr = Seg(B1, T1, {kind: \"surface\", tone: \"ink\"})\nliquid = Poly([B0, B1, Off(B1, 0, 3), Off(B0, 0, 3)], {kind: \"inside\", in: space, fill: true, tone: \"sky\", shade: 2, label: \"water\"})\nmark = Seg(Off(B1, -0.6, 3), Off(B1, 0, 3), {kind: \"overlay\", tone: \"muted\"})\nvol = Label(Off(B1, 1.2, 3), \"250 mL\", {tone: \"sky\"})\n```"},
 ];
 export const DOC_INDEX = "points: Points. use when you place or derive points (midpoints, feet, rotations, intersections)\nshapes: Shapes. use when you draw a body, line, box, polygon, circle, vector, label or angle\nkinds: Kinds and findings. use when you pick a kind (solid, surface, inside, overlay) or read a layout finding\ncurves: Curves and unions. use when a part is organic or one object is made of several parts\nlegend: Legend and labels. use when an object needs a name or a short symbol or value\ndim: Dimensions. use when you show a length, radius, height or distance\nlayers: Steps and layers. use when the drawing needs ordered reasoning steps\npass2: Reviews and Fix. use when you answer a review or patch a point or shape\ncolors: Colors and shade. use when you pick a tone, shade or fill\nex-physics: Physics: lever and pulley. use when the problem is forces, a lever, a pulley or a hanging mass\nex-calc: Calculus: Riemann strips and tangent. use when the problem is an area under a curve or a tangent line\nex-geometry: Geometry: altitude and incircle. use when the problem is a triangle, an altitude or an inscribed circle\nex-cs: CS: array pointer and binary tree. use when the problem is an array with a pointer or a binary tree\nex-chem: Chemistry: beaker of liquid. use when the problem is a container holding a liquid";
+export const INLINE_EXAMPLES = "";
 // </gen figure-docs>
 
 export const CORE = `You draw ONE diagram as a figure program: one statement per line, \`id = Comp(args)\`. Output only the plan lines and statements: no prose, no code fences.
@@ -54,7 +55,7 @@ Inline point ops are fine inside args: Seg(Mid(A, B), Off(C, 0, 1)). Arithmetic 
 Forward references are fine. Order: basic shapes first, then details, then vectors, then labels.
 Precedence = line order: when two shapes conflict, the LATER line is blamed and must move.
 More on demand: read_doc(id) with an id from this list (read one before drawing a kind of figure you have no example for):
-${DOC_INDEX}
+${DOC_INDEX}${INLINE_EXAMPLES ? "\n" + INLINE_EXAMPLES : ""}
 Text in labels: short, no "I", no "!", no emoji.`;
 
 /** every doc body by id (read_doc readers use this) */

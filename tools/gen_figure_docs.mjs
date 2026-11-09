@@ -42,6 +42,18 @@ export function parseDocs(txt) {
     }
     if (seen.has(attrs.id)) fail(idLine, `duplicate id "${attrs.id}"`);
     seen.add(attrs.id);
+    if (kind !== "example") {
+      for (const key of ["inline", "more"]) {
+        if (Object.prototype.hasOwnProperty.call(attrs, key)) fail(idLine, `attribute "${key}" is only for <example> blocks`);
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(attrs, "inline") && attrs.inline !== "1") fail(idLine, 'inline must be "1"');
+    if (Object.prototype.hasOwnProperty.call(attrs, "more")) {
+      const refs = attrs.more.trim().split(/\s+/).filter(Boolean);
+      if (!refs.length) fail(idLine, "more is empty");
+      const dup = refs.find((ref, at) => refs.indexOf(ref) !== at);
+      if (dup) fail(idLine, `more lists "${dup}" twice`);
+    }
     const body = [];
     let closed = false;
     i++;
@@ -61,9 +73,21 @@ export function parseDocs(txt) {
 /** The exact text that belongs between the two gen markers. */
 export function generate(txt) {
   const docs = parseDocs(txt);
+  const byId = new Map(docs.map(d => [d.id, d]));
+  const refsOf = d => (d.attrs.more ? d.attrs.more.trim().split(/\s+/).filter(Boolean) : []);
+  for (const d of docs) for (const ref of refsOf(d)) {
+    if (ref === d.id) throw new Error(`figure-docs.txt: "${d.id}" more points to itself`);
+    if (!byId.has(ref)) throw new Error(`figure-docs.txt: "${d.id}" more id "${ref}" does not name a doc`);
+  }
   const rows = docs.map(d => "  " + JSON.stringify({ kind: d.kind, id: d.id, attrs: d.attrs, body: d.body }) + ",");
   const index = docs.map(d => `${d.id}: ${d.attrs.title}. ${d.attrs.use}`).join("\n");
-  return `export const DOCS = [\n${rows.join("\n")}\n];\nexport const DOC_INDEX = ${JSON.stringify(index)};\n`;
+  const inline = docs.filter(d => d.attrs.inline === "1").map(d => {
+    const lines = [`Worked example: ${d.attrs.title}`, d.body];
+    const refs = refsOf(d);
+    if (refs.length) lines.push(`More like this: read_doc(id) for ${refs.map(r => `${r} (${byId.get(r).attrs.title})`).join(", ")}`);
+    return lines.join("\n");
+  }).join("\n");
+  return `export const DOCS = [\n${rows.join("\n")}\n];\nexport const DOC_INDEX = ${JSON.stringify(index)};\nexport const INLINE_EXAMPLES = ${JSON.stringify(inline)};\n`;
 }
 
 function splitLayout(text) {

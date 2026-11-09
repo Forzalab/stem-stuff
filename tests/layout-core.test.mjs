@@ -7,7 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines } from "../layout-core.mjs";
-import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, readDoc } from "../layout-docs.mjs";
+import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, INLINE_EXAMPLES, readDoc } from "../layout-docs.mjs";
 import { generate } from "../tools/gen_figure_docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
@@ -151,7 +151,7 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   const codes = new Set([...b.findings, ...b2.findings, ...evaluate(SCENES.broken.pass1, { mover: true }).findings].map(f => f.code));
   for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "legend", "auto-fixed", "plan-missing"]) assert.ok(codes.has(c), c);
   assert.ok(!b2.findings.some(f => f.code === "overlap"), "fx3 = Fix(c2, {y: 1.5}) clears the crate overlap");
-  assert.ok(CORE.replace(DOC_INDEX, "").split("\n").length <= 34, "the core prompt prose stays short");
+  assert.ok(CORE.replace(DOC_INDEX, "").replace(INLINE_EXAMPLES, "").split("\n").length <= 34, "the core prompt prose stays short");
   assert.equal(DOC_INDEX.split("\n").length, DOCS.length, "the doc index has one line per doc");
   for (const line of DOC_INDEX.split("\n")) assert.ok(line.length <= 140, `a doc index line is over 140 chars: ${line}`);
   assert.match(CORE, /Plan first \(the \/\/ lines\)/);
@@ -181,6 +181,35 @@ test("figure-docs parser: rejects tag text in a body, a duplicate id and a missi
   assert.throws(() => generate('<topic id="a" title="A" use="use when x">\nbody </example>\n</topic>'), /figure-docs\.txt:2:.*tag text inside the body/);
   assert.throws(() => generate('<topic id="a" title="A" use="use when x">\none\n</topic>\n\n<topic id="a" title="B" use="use when y">\ntwo\n</topic>'), /figure-docs\.txt:5: duplicate id "a"/);
   assert.throws(() => generate('<topic id="a" title="A">\nbody\n</topic>'), /figure-docs\.txt:1: topic is missing the use attribute/);
+});
+
+test("inline examples: INLINE_EXAMPLES holds every inline body and resolvable more pointers; bad pointers throw", () => {
+  const byId = new Map(DOCS.map(d => [d.id, d]));
+  const inline = DOCS.filter(d => d.attrs.inline === "1");
+  for (const d of inline) {
+    assert.ok(INLINE_EXAMPLES.includes(`Worked example: ${d.attrs.title}`), `${d.id} is inline`);
+    assert.ok(INLINE_EXAMPLES.includes(d.body), `${d.id} body is verbatim inline`);
+    for (const ref of (d.attrs.more || "").trim().split(/\s+/).filter(Boolean)) {
+      assert.ok(byId.has(ref), `${d.id} more -> ${ref} resolves`);
+      assert.notEqual(ref, d.id, `${d.id} more does not point at itself`);
+    }
+  }
+  const src = `<example id="a" topic="math" tags="t" title="Title A" use="use when a" inline="1" more="b c">
+body A
+</example>
+<example id="b" topic="math" tags="t" title="Title B" use="use when b">
+body B
+</example>
+<example id="c" topic="math" tags="t" title="Title C" use="use when c">
+body C
+</example>`;
+  const region = generate(src);
+  assert.match(region, /export const INLINE_EXAMPLES = "Worked example: Title A\\nbody A\\nMore like this: read_doc\(id\) for b \(Title B\), c \(Title C\)";/);
+  assert.throws(() => generate(src.replace('more="b c"', 'more="nope"')), /more id "nope" does not name a doc/);
+  assert.throws(() => generate(src.replace('more="b c"', 'more="a"')), /"a" more points to itself/);
+  assert.throws(() => generate(src.replace('inline="1"', 'inline="yes"')), /inline must be "1"/);
+  assert.throws(() => generate(`<topic id="a" title="A" use="use when a" more="b">\nx\n</topic>`), /attribute "more" is only for <example> blocks/);
+  assert.ok(generate(`<example id="a" topic="math" tags="t" title="Title A" use="use when a">\nx\n</example>`).includes('export const INLINE_EXAMPLES = "";'), "no inline doc = empty string");
 });
 
 test("text-first feedback: the scene summary names centres, sizes and touching neighbours; findings text splits llm / fyi", () => {
