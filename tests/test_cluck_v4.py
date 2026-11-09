@@ -24,7 +24,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "5cac0fbdf1558e5712c6ace4e571fdd4311b7e4940b670a742560260df85557c"
+SHA = "9180e0415ef682813b622da0079b01a9ddaaccab6f201699833757a96279302c"   # Nov 8: letter defers to the v7 card on style (Tony)
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -1215,8 +1215,7 @@ class LetterContract(unittest.TestCase):
         self.assertNotIn("then ask for theirs", serve.PROMPT_V4)
         self.assertIn("- RESULT: correct → ", serve.PROMPT_V4)
         self.assertIn("- RESULT: wrong → ", serve.PROMPT_V4)
-        self.assertIn("grade 3", serve.PROMPT_V4)
-        self.assertNotIn("grade 4", serve.PROMPT_V4)
+        self.assertIn("grade 4-5", serve.PROMPT_V4)               # Nov 8 (Tony): v7 card wins style: grade 4-5
 
     def test_examples_read_at_grade_3(self):
         ex = re.findall(r'^\s*Example: "(.+)"$', serve.PROMPT_V4, re.M)
@@ -1229,13 +1228,13 @@ class LetterContract(unittest.TestCase):
         self.assertNotIn("lamp", serve.CLUCK_NUDGE.lower())
         self.assertNotIn("?", serve.CLUCK_NUDGE)                         # wrong: zero questions (Tony, Oct 29)
 
-    def test_wrong_rule_forbids_questions(self):                       # round 2: "Wrong: zero questions": slip + fix as plain statements
+    def test_wrong_rule_is_slip_first_then_your_turn(self):            # Nov 8 (Tony, v7 card): slip first, Socratic clues, "Your turn", never a final number
         rule = next(ln for ln in serve.PROMPT_V4.splitlines() if ln.startswith("- RESULT: wrong → "))
-        self.assertIn("Ask zero questions", rule)
-        self.assertIn("plain statements", rule)
+        self.assertIn("start with the slip", rule)
+        self.assertIn("Your turn", rule)
+        self.assertIn("Never a final number", rule)
         ex = serve.PROMPT_V4.split(rule + "\n", 1)[1].splitlines()[0]
         self.assertTrue(ex.lstrip().startswith("Example: "))
-        self.assertNotIn("?", ex)
         self.assertNotIn("nudge", serve.PROMPT_V4.split("[ FORMATTING ]")[1].split("[ ENDFORMATTING ]")[0])   # no rule invites a nudge question
 
 

@@ -147,14 +147,14 @@ class Cram(unittest.TestCase):
         with mock.patch.object(serve, "cram_on", return_value=True):
             sysb = serve._v4_claude_system(v4)
         self.assertIn("CRAM DAY GUIDE", sysb[-2]["text"])
-        self.assertIn("STYLE CARD", sysb[-1]["text"], "the permanent style card is last")
+        self.assertIn("One reply holds all the steps", sysb[-1]["text"], "the permanent style card (v7) is last")
         self.assertNotIn("cache_control", sysb[-2], "the guide is an uncached tail block")
         self.assertNotIn("CRAM DAY", sysb[0]["text"])
         with mock.patch.object(serve, "cram_on", return_value=False):
             off = serve._v4_claude_system(v4)
             self.assertEqual(len(off), 3, "letter, bank line, style card: no cram block")
             self.assertNotIn("CRAM DAY", "".join(b["text"] for b in off))
-            self.assertIn("STYLE CARD", off[-1]["text"], "the style card is permanent, cram or not")
+            self.assertIn("One reply holds all the steps", off[-1]["text"], "the style card is permanent, cram or not")
 
     def test_never_in_a_client_payload(self):
         self.assertTrue(serve.BLOCK_PREFIX and "/banks/" in serve.BLOCK_PREFIX)
