@@ -32,7 +32,7 @@ const stub = createServer((req, res) => {
   let b = ""; req.on("data", c => { b += c; });
   req.on("end", () => {
     const user = JSON.parse(b).messages[1].content, bad = /BADSTEP/.test(user);
-    const out = { base: "ok", assume: "ok", prove: bad ? "wrong" : "ok", hint: bad ? "QUACK. Did you use what you assumed for k?" : "", ladder: bad ? LADDER : [] };
+    const out = { verdict: bad ? "wrong" : "correct", hint: bad ? "QUACK. Did you use what you assumed for k?" : "", ladder: bad ? LADDER : [] };
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(out) } }] }));
   });

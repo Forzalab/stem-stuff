@@ -67,7 +67,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `code` | all | `CALC1_K4M` | yes |
 | `title` | all, optional | brief plain-text title for the question list (≤ 60 chars, never the answer) | yes |
 | `tag` | all, optional | the physics idea the item drills, one of `momentum`, `energy`, `forces`, `signs`, `circular`, `rotation`, `units`: pops pick their lines by it (Tony #29.4). Not `topic`, which names the bank `topics` entry whose `tol` the item inherits | yes |
-| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own · `proof` a whole written proof, graded by Cluck (see "Proof items") | yes |
+| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own · `proof` a free-written answer (a definition, a proof), graded by Cluck against a reference (see "Proof items") | yes |
 | `body` | all | array of blocks, stacked top to bottom in any order and repeatable | yes |
 | `how` | `text`, `multi` (required); others optional | **how to type the answer**, shown right above the answer box: "Type TRUE or FALSE.", "Two decimals, in the order asked.", "Type the condition, like `if (x && y)`." | yes |
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
@@ -91,7 +91,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `twin` | all, optional | `"a"` (same question, new numbers) or `"b"` (the twisted one): a redo twin of `parent_template` | yes |
 | `parent_template` | with `twin` | the code of the twin's template item, in the same bank | yes |
 | `exam_q` | all, optional | integer 1–20: the item's Practice Exam position. A non-twin item with `exam_q` counts as that position's template (shuffle.mjs `isTpl`, the night-before mock, families met) even when its title says twin or twist | yes |
-| `proof` | `proof` (required) | the key of a proof item: `reference`, `rubric`, `keys`, `hints` (see "Proof items") | **no** |
+| `proof` | `proof` (required) | the key of a proof item: `reference`, `keys`, `hint` (see "Proof items") | **no** |
 | `repair` | all, optional | the repair ladder `{ steps, alt? }`, served by `GET /repair/<code>` after a recorded wrong try (`alt` only after a twin miss) | **no** |
 | `vary` | `mc`, optional | 1-3 alternate number sets for a redo: `[{ body, choices, wrong?, saccharine? }]`. Each set is the item's `body` and `choices` with new givens (same choice ids; `correct` stays the item's), its own `wrong` hints and `saccharine` `{ key, tip?, slip? }`. Built by the brain bank builder (BANK_P3X, `vary_p3x.py`); the server does not read it yet. It holds keys (`wrong`, `saccharine.key`), so it is never in `PUBLIC` | **no** |
 
@@ -121,21 +121,22 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 - Shuffle: the server seeds it from the browser's cookie + the code; an uploaded file seeds it from a random id kept in this browser. Letters A–E follow the shown order; the answer sent is always the choice id.
 
 ## Proof items (W107, Tony Oct 27)
-A `proof` item asks for a whole written proof (induction first). The page shows one tall text box (Enter is a new line) and Check; after a Check, three chips under the box, one per rubric row, and Cluck's hint for the first row that is not ok.
+A `proof` item is a free-write box graded by Cluck against `reference` (Tony, Nov 8: no fixed base / assume / prove rows; made for psych flashcards: write the answer to a term or definition prompt, graded on meaning, casual, not wording; a written proof works the same). The page shows one tall text box (Enter is a new line) and Check; after a Check, ONE verdict chip under the box (`correct` / `partly there` / `not yet`) and Cluck's one hint line.
 
 ```json
-{ "code": "CSCI26_PRA", "type": "proof", "body": [ ... ], "how": "Write the base case, then what you assume for $k$, then prove it for $k+1$.",
-  "proof": { "reference": ["Base case: ...", "", "Assume: ...", "", "Prove: ..."],
-             "rubric": [ { "id": "base", "need": "Checks n = 1 ..." }, { "id": "assume", "need": "..." }, { "id": "prove", "need": "..." } ],
-             "keys": ["(k+1)(3k+4)"], "hints": { "base": "QUACK. ...", "assume": "QUACK. ...", "prove": "QUACK. ..." } } }
+{ "code": "PSY8_SCHEMA", "type": "proof", "body": [ { "type": "text", "md": "What is a **schema**?" } ], "how": "Say it in your own words.",
+  "proof": { "reference": "A schema is a mental frame of what we know about a thing. It helps us sort new facts.",
+             "keys": ["mental frame"], "hint": "QUACK. What does your mind use to sort new facts?" } }
 ```
 
-- Grading is **casual** (Tony: "only need to have base and induction {assume, prove} steps"): exactly three rows, `base`, `assume`, `prove`, in that order; no conclusion row; form and notation never count against the student. `POST /check {code, answer}` sends the proof to Cluck's grader (`serve.py` `proof_grade` / `proof_judge`: ONE JSON-schema call, OpenRouter with zero data retention, the proof fenced in a random tag, e-mail / phone shapes blanked, outside the tries lock). Each row comes back `ok`, `missing` or `wrong`; all three ok = `correct`.
-- Reply: `{ verdict, triesLeft, gen, rubric: {base, assume, prove}, gap?, hint? }`. `gap` is the first row that is not ok; `hint` is the grader's line for it, unless it leaks one of `keys`, trips the leak guard, or reads above Flesch-Kincaid grade 5 (the words after the `QUACK.` tag): then the item's own `hints[gap]`. The same proof again (spaces and case aside) is a `repeat`: no try, no call. `busy` (with `why`: `off` no key, `hourly` the shared Cluck cap, `upstream` / `budget` a failure with its `inc` code) never uses a try. Sugar lockout carries `correct` = the reference proof (T19); diet never does.
+- Grading is **casual**: `POST /check {code, answer}` sends the answer to Cluck's grader (`serve.py` `proof_grade` / `proof_judge`: ONE JSON-schema call, OpenRouter with zero data retention, the answer fenced in a random tag, e-mail / phone shapes blanked, outside the tries lock). It returns `correct`, `partial` or `wrong` plus a hint; meaning counts, wording, form and notation never do. `correct` = right; `partial` and `wrong` both spend a try.
+- Optional item flag `"grade": "lenient"` (server only): extra-credit tone. The grader awards `correct` for genuine engagement that uses at least one course concept roughly right, `partial` for on-topic with no real concept, `wrong` only for off-topic or empty; wording, grammar, length and missed `must` ideas never fail it (a missed idea only shapes the hint). No flag = the default grading above.
+- Optional `must` (in `proof`, 3-4 short ideas, server only): grading uses them instead of judging the whole against the reference: `correct` if all are hit, `partial` if some, `wrong` if none; the hint is for the first one missed and is swapped for the authored one if it states a `must` text verbatim. Optional `len: { "sentences": [5, 6] }` (on the item, public, SOFT): the page counts sentences under the box and shows a gentle note when outside the range, Check still works, and the grader is told the target but never fails on length alone.
+- Reply: `{ verdict, grade, triesLeft, gen, hint? }`. `verdict` is `correct` or `wrong` (a `partial` is a `wrong` verdict with `grade: "partial"`, so tries work as for every item). `hint` is the grader's line, unless it leaks one of `keys`, trips the leak guard, or reads above Flesch-Kincaid grade 5 (the words after the `QUACK.` tag): then the item's own `hint`, else a plain default. The same answer again (spaces and case aside) is a `repeat`: no try, no call. `busy` (with `why`: `off` no key, `hourly` the shared Cluck cap, `upstream` / `budget` a failure with its `inc` code) never uses a try. Sugar lockout carries `correct` = the reference (T19); diet never does.
 - Proof items never serve an authored repair ladder (answers would leak; Tony Nov 6): `GET /repair/<code>` is 404 for them and `has_repair` is never set.
-- **Generated ladder** (`STEM_PROOF_LADDER=1`, off by default): on a miss, the SAME grader call also writes 2-4 fill-in steps from THIS student's proof (`serve.py` `PROOF_LADDER_SCHEMA`, `proof_ladder_ok`). The reply gains `repair: { gen: true, att, steps: [{ id, label, kind, ask, var, opts }] }` (`att` = the wrong-try count; no `ok` ever). Step kinds are `num` (a number), `expr` (an expression in `var`, one of n, k, m, graded at three points) and `pick` (2-4 `opts`, one option id). Each step is checked before it ships and dropped if bad (an `expr` answer must also match a side of an `=` in the reference proof); fewer than 2 survivors = no ladder. The expected answers are kept server-side for **1 hour** (Upstash `stem:pl:<sid hash>:<code>:<att>`, an in-process dict without KV), one set per miss. `POST /repair/<code>/check {value, step, att}` answers `{ ok }` only (404 `expired` when the keys are gone or are not this browser's; 400 invalid; not a try). Any LLM, parse or store failure = Cluck's message alone. The app (`genLadder`) mounts the steps with no GET.
-- `reference`, `rubric`, `keys` and `hints` never leave the server. The proof text never goes in a log or incident line; telemetry's owner-device `typed` field is null for a proof. An uploaded file cannot grade a proof on the device (`busy`, `why: "upload"`).
-- Authoring: every student-facing line (the reference, each hint) reads at Flesch-Kincaid grade 5 or below (Tony: grade 2 to 5; `serve.fk_grade`). Every item ships a full reference proof that a second pass has checked (sympy for the algebra).
+- **Generated ladder** (`STEM_PROOF_LADDER=1`, off by default): on a miss, the SAME grader call also writes 2-4 fill-in steps from THIS student's answer (`serve.py` `PROOF_LADDER_SCHEMA`, `proof_ladder_ok`). The reply gains `repair: { gen: true, att, steps: [{ id, label, kind, ask, var, opts }] }` (`att` = the wrong-try count; no `ok` ever). Step kinds are `num` (a number), `expr` (an expression in `var`, one of n, k, m, graded at three points) and `pick` (2-4 `opts`, one option id). Each step is checked before it ships and dropped if bad (an `expr` answer must also match a side of an `=` in the reference proof); fewer than 2 survivors = no ladder. The expected answers are kept server-side for **1 hour** (Upstash `stem:pl:<sid hash>:<code>:<att>`, an in-process dict without KV), one set per miss. `POST /repair/<code>/check {value, step, att}` answers `{ ok }` only (404 `expired` when the keys are gone or are not this browser's; 400 invalid; not a try). Any LLM, parse or store failure = Cluck's message alone. The app (`genLadder`) mounts the steps with no GET.
+- `reference`, `keys` and `hint` never leave the server. The answer text never goes in a log or incident line; telemetry's owner-device `typed` field is null for a proof. An uploaded file cannot grade a proof on the device (`busy`, `why: "upload"`).
+- Authoring: every student-facing line (the reference, the hint) reads at Flesch-Kincaid grade 5 or below (Tony: grade 2 to 5; `serve.fk_grade`). Every item ships a full reference that a second pass has checked (sympy for any algebra).
 
 ## Wrong answers and hints
 Author in this order:
@@ -558,19 +559,15 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "s_text": {"type": "object", "required": ["mark", "at", "text"], "additionalProperties": false, "properties": {"mark": {"const": "text"}, "layer": {"$ref": "#/$defs/layer"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "at": {"$ref": "#/$defs/pt"}, "text": {"$ref": "#/$defs/label"}}},
     "error": {"enum": ["sign", "op-swap", "order-ops", "arithmetic", "algebra", "off-by-factor", "units", "deg-rad", "chain-rule", "product-rule", "quotient-rule", "power-rule", "limit-plug", "domain", "components", "misread", "incomplete", "other", "fallacy", "quantifier", "negation", "counting", "off-by-one", "format"]},
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
-    "proofkey": {"type": "object", "required": ["reference", "rubric", "hints"], "additionalProperties": false,
-      "description": "a proof item's key (W107; server only): Cluck's grader reads reference + rubric; keys and hints guard what the student sees",
+    "proofkey": {"type": "object", "required": ["reference"], "additionalProperties": false,
+      "description": "a proof item's key (W107, reworked Nov 8; server only): Cluck's grader reads reference; keys and hint guard what the student sees",
       "properties": {
-        "reference": {"$ref": "#/$defs/md", "description": "the full reference proof, plain words at Flesch-Kincaid grade 2-5 + $..$: shown (sugar) once the 3 Checks are used"},
-        "rubric": {"type": "array", "minItems": 3, "maxItems": 3, "description": "exactly base, assume, prove, in that order (Tony, Oct 27: casual, no conclusion row)",
-          "prefixItems": [{"$ref": "#/$defs/proofrow_base"}, {"$ref": "#/$defs/proofrow_assume"}, {"$ref": "#/$defs/proofrow_prove"}], "items": false},
-        "keys": {"type": "array", "items": {"type": "string", "minLength": 2}, "description": "the step's own algebra (e.g. (k+1)(3k+4)): a grader hint that holds one is swapped for the authored hint"},
-        "hints": {"type": "object", "required": ["base", "assume", "prove"], "additionalProperties": false,
-          "properties": {"base": {"$ref": "#/$defs/cluck"}, "assume": {"$ref": "#/$defs/cluck"}, "prove": {"$ref": "#/$defs/cluck"}},
-          "description": "one authored Cluck hint per row (FK grade 2-5): used when the grader's own hint is missing, leaks a key, or reads above grade 5"}}},
-    "proofrow_base": {"type": "object", "required": ["id", "need"], "additionalProperties": false, "properties": {"id": {"const": "base"}, "need": {"type": "string", "minLength": 3, "maxLength": 300}}},
-    "proofrow_assume": {"type": "object", "required": ["id", "need"], "additionalProperties": false, "properties": {"id": {"const": "assume"}, "need": {"type": "string", "minLength": 3, "maxLength": 300}}},
-    "proofrow_prove": {"type": "object", "required": ["id", "need"], "additionalProperties": false, "properties": {"id": {"const": "prove"}, "need": {"type": "string", "minLength": 3, "maxLength": 300}}},
+        "reference": {"$ref": "#/$defs/md", "description": "the reference answer (a definition, or a full proof), plain words at Flesch-Kincaid grade 2-5 + $..$: Cluck grades on its meaning; shown (sugar) once the 3 Checks are used"},
+        "keys": {"type": "array", "items": {"type": "string", "minLength": 2}, "description": "words or algebra that must not leak (e.g. (k+1)(3k+4)): a grader hint that holds one is swapped for the authored hint"},
+        "hint": {"$ref": "#/$defs/cluck", "description": "one optional authored Cluck hint (FK grade 2-5): used when the grader's own hint is missing, leaks a key, or reads above grade 5"},
+        "must": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string", "minLength": 3, "maxLength": 200}, "description": "optional 3-4 must-hit ideas: correct when the answer hits all, partial when some, wrong when none; the hint aims at the first one missed and never states it"},
+        "rubric": {"description": "legacy (pre Nov 8), ignored"},
+        "hints": {"description": "legacy (pre Nov 8), ignored"}}},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
     "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "tol_src": {"const": "auto"}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
@@ -651,9 +648,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             "proof"
           ]
         },
+        "grade": {"const": "lenient", "description": "proof only, optional (server only): extra-credit free writing, graded like a casual GE class: correct for real engagement with at least one course concept roughly right, partial when on topic with no real concept, wrong only when off topic or empty; wording, grammar, length and missed must ideas never lower it"},
+        "len": {"type": "object", "required": ["sentences"], "additionalProperties": false, "description": "proof only, optional, SOFT: a sentence counter under the box and a gentle note outside the range; Check always works; the grader is told the target but never fails an answer on length alone",
+          "properties": {"sentences": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 50}}}},
         "proof": {
           "$ref": "#/$defs/proofkey",
-          "description": "proof only (server only): the reference proof, the 3 rubric rows Cluck grades, the leak keys and one hint per row"
+          "description": "proof only (server only): the reference answer Cluck grades against, the leak keys and one optional hint"
         },
         "var": {
           "type": "string",
@@ -927,7 +927,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "if": {"properties": {"type": {"const": "proof"}}, "required": ["type"]},
           "then": {"required": ["proof", "how"], "properties": {"answer": false, "accept": false, "choices": false, "correct": false, "parts": false, "points": false,
             "tol": false, "var": false, "shuffle": false, "wrong": false, "nudge": false, "form": false}},
-          "else": {"properties": {"proof": false}}
+          "else": {"properties": {"proof": false, "len": false, "grade": false}}
         },
         {
           "if": {

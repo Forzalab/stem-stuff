@@ -119,7 +119,7 @@ class ProofStages(unittest.TestCase):
             calls.append(payload)
             if isinstance(reply, Exception):
                 raise reply
-            out = {"base": "ok", "assume": "ok", "prove": "ok", "hint": ""}
+            out = {"verdict": "correct", "hint": ""}
             return io.BytesIO(json.dumps({"choices": [{"message": {"content": json.dumps(out)}}]}).encode())
         with unittest.mock.patch.object(serve, "_or_post", post):
             raw = json.dumps(dict({"code": P["code"], "answer": GOOD}, **body)).encode()
@@ -159,7 +159,7 @@ class ProofStages(unittest.TestCase):
             n.append(1)
             if len(n) == 1:
                 raise TimeoutError("x")
-            out = {"base": "ok", "assume": "ok", "prove": "ok", "hint": ""}
+            out = {"verdict": "correct", "hint": ""}
             return io.BytesIO(json.dumps({"choices": [{"message": {"content": json.dumps(out)}}]}).encode())
         with unittest.mock.patch.object(serve, "_or_post", flaky), unittest.mock.patch.object(serve, "OPENROUTER_PROOF_MODELS", ["m/a", "m/b"]):
             status, head, chunks = serve.check_stream(self.cookie, json.dumps({"code": P["code"], "answer": GOOD, "stages": True}).encode())

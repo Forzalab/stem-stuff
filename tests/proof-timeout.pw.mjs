@@ -20,7 +20,7 @@ copyFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), join(BANKS, "BANK_PRF
 const CODE = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/proof-bank.json"), "utf8")).problems[0].code;
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
-const OK = { verdict: "wrong", triesLeft: 2, rubric: { base: "missing", assume: "ok", prove: "ok" }, hint: "QUACK. Where do you check n = 1?" };
+const OK = { verdict: "wrong", triesLeft: 2, grade: "partial", hint: "QUACK. Where do you check n = 1?" };
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }

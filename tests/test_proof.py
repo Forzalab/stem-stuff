@@ -1,5 +1,5 @@
 """The proof type (SCHEMA.md "Proof items", W107): the student writes a whole induction proof, POST /check sends it to Cluck's grader
-(one JSON call, OpenRouter ZDR), which marks 3 rubric rows (base | assume | prove). Run: python3 -m unittest tests.test_proof"""
+(one JSON call, OpenRouter ZDR), which says correct | partial | wrong + one hint. Run: python3 -m unittest tests.test_proof"""
 import io
 import json
 import os
@@ -26,7 +26,9 @@ GOOD = ("Base case: n = 1. Left side is 2. Right side is 1(4)/2 = 2. Same.\n"
 
 def said(ladder=None, **rows):
     """a fake OpenRouter reply whose content is the grader's JSON (ladder: the fill-in steps, only when given)"""
-    out = dict({"base": "ok", "assume": "ok", "prove": "ok", "hint": ""}, **rows)
+    hint = rows.pop("hint", "")
+    verdict = rows.pop("verdict", None) or ("wrong" if any(v != "ok" for v in rows.values()) else "correct")   # old row kwargs: any bad row = wrong
+    out = {"verdict": verdict, "hint": hint}
     if ladder is not None:
         out["ladder"] = ladder
     return io.BytesIO(json.dumps({"choices": [{"message": {"content": json.dumps(out)}}]}).encode())
@@ -58,7 +60,7 @@ class Proof(unittest.TestCase):
     def test_all_three_rows_ok_is_correct(self):
         r, calls = self.check(GOOD)
         self.assertEqual(r["verdict"], "correct")
-        self.assertEqual(r["rubric"], {"base": "ok", "assume": "ok", "prove": "ok"})
+        self.assertEqual(r["grade"], "correct")
         self.assertEqual(len(calls), 1)
 
     def test_three_tries_then_locked(self):
@@ -79,21 +81,21 @@ class Proof(unittest.TestCase):
             r, _ = self.check(GOOD + str(i), said(base="missing"), sid=sid)
         self.assertNotIn("correct", r)
 
-    def test_the_first_bad_row_names_the_gap_and_its_hint(self):
-        r, _ = self.check(GOOD, said(assume="missing", prove="wrong", hint="QUACK. What do you get to assume for k?"))
-        self.assertEqual((r["verdict"], r["gap"]), ("wrong", "assume"))
+    def test_a_partial_spends_a_try_and_names_a_hint(self):
+        r, _ = self.check(GOOD, said(verdict="partial", hint="QUACK. What do you get to assume for k?"))
+        self.assertEqual((r["verdict"], r["grade"]), ("wrong", "partial"))
         self.assertEqual(r["hint"], "QUACK. What do you get to assume for k?")
 
     def test_a_hint_that_leaks_the_step_gets_the_authored_hint(self):
         r, _ = self.check(GOOD, said(prove="wrong", hint="QUACK. You need (k+1)(3k+4)/2 at the end."))
-        self.assertEqual(r["hint"], P["proof"]["hints"]["prove"])
+        self.assertEqual(r["hint"], P["proof"]["hint"])
 
     def test_a_hard_hint_gets_the_authored_hint(self):
         hard = ("QUACK. Your mathematical demonstration insufficiently substantiates the hypothesized "
                 "equivalence, consequently necessitating additional algebraic manipulation.")
         self.assertGreater(serve.fk_grade(hard), 5)
         r, _ = self.check(GOOD, said(prove="wrong", hint=hard))
-        self.assertEqual(r["hint"], P["proof"]["hints"]["prove"])
+        self.assertEqual(r["hint"], P["proof"]["hint"])
 
     def test_a_hint_without_quack_gets_it_and_emoji_go(self):
         r, _ = self.check(GOOD, said(base="wrong", hint="Check n = 1 again. Do both sides match? \U0001F986"))
@@ -162,13 +164,13 @@ class Proof(unittest.TestCase):
         self.assertNotIn("kid@example.com", user)
         self.assertNotIn("555-1234", user)
         self.assertRegex(user, r"<student_[0-9a-f]{8}>[\s\S]*</student_[0-9a-f]{8}>")
-        self.assertIn(P["proof"]["rubric"][2]["need"], user)
+        self.assertIn(P["proof"]["reference"][0], user)
         self.assertIn("casual", pl["messages"][0]["content"].lower())
 
     def test_the_public_view_never_carries_the_proof_key(self):
         pub = serve.public(serve.view(P, "sugar"))
         self.assertLessEqual(set(pub), {"code", "type", "body", "how", "title"})
-        for k in ("reference", "rubric", "hints", "keys"):
+        for k in ("reference", "hint", "keys"):
             self.assertNotIn(k, json.dumps(pub))
 
     def test_no_student_text_in_logs_or_incidents(self):
@@ -293,7 +295,7 @@ class Ladder(unittest.TestCase):
 
     def test_an_old_stub_with_no_ladder_field_still_grades(self):
         r, _ = self.miss(None)
-        self.assertEqual((r["verdict"], r["gap"]), ("wrong", "prove"))
+        self.assertEqual((r["verdict"], r["grade"]), ("wrong", "wrong"))
         self.assertNotIn("repair", r)
 
     def test_step_check_grades_and_never_names_the_answer(self):
@@ -364,7 +366,7 @@ class FK(unittest.TestCase):
         for p in FIX["problems"]:
             if p["type"] != "proof":
                 continue
-            for h in p["proof"]["hints"].values():
+            for h in [p["proof"]["hint"]]:
                 self.assertLessEqual(serve.fk_grade(h.removeprefix("QUACK.")), 5, h)   # the words after the voice tag
             ref = p["proof"]["reference"]
             self.assertLessEqual(serve.fk_grade("\n".join(ref) if isinstance(ref, list) else ref), 5)
@@ -372,3 +374,33 @@ class FK(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MustLen(unittest.TestCase):
+    def test_must_and_len_reach_the_grader_len_is_public_must_is_not(self):
+        p = dict(P, len={"sentences": [5, 6]}, proof=dict(P["proof"], must=["links new facts to old ones", "sorts facts into groups"]))
+        calls = []
+
+        def post(payload, key, timeout):
+            calls.append(payload["messages"][1]["content"])
+            return said(verdict="partial", hint="QUACK. How do new facts join the old ones?")
+        with unittest.mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "k"}), unittest.mock.patch.object(serve, "_or_post", post):
+            r = serve.grade(p, "must-" + os.urandom(3).hex(), {"answer": "A schema sorts facts."})
+        self.assertEqual((r["verdict"], r["grade"]), ("wrong", "partial"))
+        self.assertIn("1. links new facts to old ones", calls[0])
+        self.assertIn("5 to 6 sentences", calls[0])
+        pub = serve.public(serve.view(p, "sugar"))
+        self.assertEqual(pub["len"], {"sentences": [5, 6]})
+        self.assertNotIn("links new facts", json.dumps(pub))
+
+    def test_lenient_flag_adds_the_lenient_tone_only_when_set(self):
+        sys_prompts = []
+
+        def post(payload, key, timeout):
+            sys_prompts.append(payload["messages"][0]["content"])
+            return said()
+        with unittest.mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "k"}), unittest.mock.patch.object(serve, "_or_post", post):
+            serve.grade(dict(P, grade="lenient"), "len-" + os.urandom(3).hex(), {"answer": GOOD})
+            serve.grade(P, "len-" + os.urandom(3).hex(), {"answer": GOOD})
+        self.assertIn("LENIENT", sys_prompts[0])
+        self.assertNotIn("LENIENT", sys_prompts[1])
