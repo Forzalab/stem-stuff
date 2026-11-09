@@ -241,7 +241,8 @@
   }
 
   /* ---- cram panel (the Hail Mary card; data per bank in calc/cram.json) ---- */
-  function cramFor(bank) { var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && CRAM.enabled !== false && Date.now() < Date.parse(e.until) ? e : null; }
+  var diet = function () { var c = d.cookie || ''; return /(?:^|;\s*)stem-mode=(?:diet|hard)(?:;|$)/.test(c) && /(?:^|;\s*)stem-mode-v=2(?:;|$)/.test(c); };   // mode.mjs modeOf(): diet = the originals, no cram surface (Tony Nov 8)
+  function cramFor(bank) { if (diet()) return null; var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && CRAM.enabled !== false && Date.now() < Date.parse(e.until) ? e : null; }
   function loadCram() { return CRAM ? Promise.resolve(CRAM) : g.fetch('calc/cram.json').then(function (r) { return r.json(); }).then(function (j) { CRAM = j; return j; }); }
   var ICON = { approx: ['M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0', 'M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0'], x: ['M6 6l12 12M18 6L6 18'], bars: ['M4 20v-5M8 20v-9M12 20v-4M16 20v-12M20 20v-7'], dot: [], chev: ['M6 9l6 6 6-6'] };
   function icon(name) {
@@ -446,6 +447,7 @@
     curBank = bank; clearTimeout(itemT); clearTimeout(toastT);
     var pc = d.getElementById('pcode'); curItem = pc ? pc.textContent : null;
     pr.querySelectorAll('.cc-row').forEach(function (e) { e.remove(); });
+    if (diet()) return;                                                       // diet: no Calc chip / Hail Mary row, no promo toast
     var row = h('div', 'cc-row'), p = promo();
     var chip = ctaEl('TI/Casio tricks', 'cc-cta cc-cta-calc', function () { open({ from: 'chip' }); }); chip.setAttribute('aria-label', 'Calc Coach: TI and Casio calculator tricks'); row.append(chip);
     pr.insertBefore(row, d.getElementById('rtag') || d.getElementById('blocks') || null);                // before #rtag (the reveal tray's #rtag + .blocks adjacency)
