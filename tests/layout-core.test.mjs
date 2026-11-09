@@ -494,3 +494,33 @@ S = Seg(A, (2, 0))`);
   const off = evaluate(`O = Pt(0, 0)\nV = Off(O, (2), 1)`);
   close(off.points.V, [2, 1], "(2) stays a number");
 });
+
+test("leak (V1-V2): a number in student text within 3 sig figs of an answer is an llm error; subscripts are names", () => {
+  const lab = t => evaluate(`L = Label(Pt(0, 0), ${JSON.stringify(t)})`, { answers: [1.5] });
+  const a = lab("I = 1.5 A"), la = a.findings.filter(f => f.code === "leak");
+  assert.deepEqual(la.map(f => [f.cls, f.ids]), [["llm", ["L"]]]);
+  assert.match(la[0].hint, /^"I = 1\.5 A" shows 1\.5, the answer: write a symbol instead$/);
+  assert.equal(lab("I = 1.50 A").findings.filter(f => f.code === "leak").length, 1, "1.50 is 3 sig figs from 1.5");
+  assert.deepEqual(lab("R_1").findings.filter(f => f.code === "leak" || f.code === "not-given"), [], "R_1 is a subscript, not a number");
+});
+
+test("not-given (V1-V2): a number that is no given is an fyi warning; a given and a comment line are quiet", () => {
+  const quiet = evaluate(`A = Pt(0, 0)\nB = Pt(9, 0)\nL = Label(A, "9 V")`, { givens: [9, 2, 4] });
+  assert.deepEqual(quiet.findings.filter(f => f.code === "leak" || f.code === "not-given"), []);
+  const bad = evaluate(`A = Pt(0, 0)\nB = Pt(9, 0)\nL = Label(A, "7 V")`, { givens: [9, 2, 4] });
+  const f = bad.findings.filter(x => x.code === "not-given");
+  assert.deepEqual(f.map(x => [x.cls, x.ids]), [["fyi", ["L"]]]);
+  assert.match(f[0].hint, /^"7 V" shows 7, which is not a given$/);
+  const cmt = evaluate(`A = Pt(0, 0)\nB = Pt(9, 0)\n// L = Label(A, "7 V")\nS = Seg(A, B)`, { givens: [9, 2, 4] });
+  assert.deepEqual(cmt.findings.filter(f => f.code === "leak" || f.code === "not-given"), [], "a comment line is not student text");
+});
+
+test("leak checks Dim text, Vec label, label:/legend:, and Layer title; with no givens/answers every scene stays quiet", () => {
+  const bad = src => evaluate(src, { givens: [9, 2, 4] }).findings.filter(f => f.code === "not-given").map(f => f.ids);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(7, 0)\nD = Dim(A, B, "7 V")`), [["D"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nV = Vec(A, B, "7 V")`), [["V"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B, {label: "7 V"})`), [["S"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B, {legend: "7 V"})`), [["S"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B)\nL1 = Layer([S], {title: "7 V"})`), [["L1"]]);
+  for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.deepEqual(evaluate({ pass1: sc.pass1, pass2: sc.pass2 }).findings.filter(f => f.code === "leak" || f.code === "not-given"), [], k);
+});
