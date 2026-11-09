@@ -942,6 +942,43 @@ export function createSession(opts = {}) {
     for (const x of M.dupes) F("union-dup", "fyi", M.unions.find(u => u.id === x.of[1]), [x.id, ...x.of], `${x.id} is in two Unions (${x.of.join(", ")}); it belongs to ${x.of[0]}`);
     return out;
   }
+  // ─── T2 / Slice 0.5 item 2: the answer-leak check (ported from views_gate._leak + livefig.nums/_eq/_sig3) ───
+  function leakFindings() {
+    if (o.givens === undefined && o.answers === undefined) return [];   // no givens / answers: nothing changes
+    const givens = Array.isArray(o.givens) ? o.givens : [], answers = Array.isArray(o.answers) ? o.answers : [];
+    const eq = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1.0, Math.abs(b));   // livefig._eq
+    const sig3 = (a, b) => (b !== 0 && Math.abs(a - b) <= 0.5 * Math.pow(10, Math.floor(Math.log10(Math.abs(b))) - 2) * (1 + 1e-9)) || (a === b && b === 0);   // livefig._sig3
+    const SLOT = /^\$t\.[a-z][a-z0-9_]{0,31}$/;               // oui.slot_id: a "$t.id" slot is not words
+    const NUM = /\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g;            // livefig.NUM_RE
+    const out = [];
+    const test = (text, st) => {
+      if (text == null || text === "" || SLOT.test(text)) return;
+      const bare = String(text).replace(/_{[^}]*}|_\w/g, "");   // a subscript names a quantity (R_1, v_{0}), never a number
+      for (const m of bare.matchAll(NUM)) {
+        const x = Number(m[0]);
+        if (!Number.isFinite(x) || Math.abs(x) > 1e4) continue;  // livefig.GEOM_MAX: this check fires only leak / not-given
+        const base = { ids: [st.id], amount: null, mtv: null, line: st.line, pass: st.pass };
+        if (answers.some(a => sig3(Math.abs(x), a))) out.push({ ...base, code: "leak", cls: "llm", hint: `"${text}" shows ${x}, the answer: write a symbol instead` });
+        else if (!givens.some(g => eq(Math.abs(x), g))) out.push({ ...base, code: "not-given", cls: "fyi", hint: `"${text}" shows ${x}, which is not a given` });
+      }
+    };
+    for (const sh of shapesEval()) {                          // Label text, Vec / Angle label, Dim text, label: / legend:
+      const g = sh.geom;
+      if (sh.comp === "Label") test(g.text, sh);
+      else if (sh.comp === "Vec" || sh.comp === "Angle") test(g.label, sh);
+      else if (sh.comp === "Dim") test(g.text, sh);
+      else if (sh.opts.label != null && sh.opts.label !== "") test(sh.opts.label, sh);
+      if (sh.opts.legend) test(sh.opts.legend, sh);
+    }
+    const M = meta();
+    for (const u of M.unions) if (!u.err) {                   // a Union's label / legend (with its Fix patches)
+      const uo = { ...u.opts, ...(S.patches.get(u.id) || {}) };
+      if (uo.label != null && uo.label !== "") test(uo.label, u.st);
+      if (uo.legend) test(uo.legend, u.st);
+    }
+    for (const d of M.layers) if (!d.err && d.title) test(d.title, d.st);   // Layer title (the engine's "Step k" default is not author text)
+    return out;
+  }
   function result(opt = {}) {
     const W = opt.W || o.W, M = meta();
     const shapes = shapesEval().sort((a, b) => a.idx - b.idx);
@@ -969,7 +1006,7 @@ export function createSession(opts = {}) {
       for (const st of steps) for (const f of st.fyi) { const key = f.ids.join() + "|" + f.hint; if (!seen.has(key)) { seen.add(key); fyi.push(f); } }
       lay = { ...steps[n], fyi };
     }
-    const findings = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
+    const findings = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings(), ...leakFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
     const status = Object.fromEntries(stmts.map(s => [s.id, S.status.get(s.id) || "pending"]));
     return {
       plan: planOut(), points, findings, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
