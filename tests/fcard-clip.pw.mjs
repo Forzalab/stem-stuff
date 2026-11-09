@@ -128,25 +128,33 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
       await ctx.close();
     }
   });
-  /* v49 img2 (Tony, Nov 3 18:14, phone): keyboard up = Swap's problem pane (a flex column: #fb order 2, #q order 3). The card had no
-     order, so it sat between the question and the answer, squeezed the question to 2 lines, ran edge to edge on the pane's frame, and its
-     notch painted the page's --paper (a black block) on the pane's --qbox. Now: under the answer, inset like the rows, notch on the pane's own colour */
-  await step("393 keyboard up (Swap problem pane): the Key formulas card sits under the answer, inside the pane, its notch on the pane's colour", async () => {
+  /* v49 img2 (Tony, Nov 3 18:14, phone): with the keyboard up the card sat between the question and the answer, ran on the frame, and its
+     notch painted the page's --paper (a black block) on the card's --qbox. Nov 8 (Tony): the keyboard no longer restyles a short-answer
+     item (no Swap pane for text / num / expr), so the guard is on the page as it is: under the answer, inset, notch on its real container's
+     colour, and reachable (scrolled to) with the keyboard up */
+  await step("393 keyboard up (expr: no Swap): the Key formulas card sits under the answer, inside the question card, notch on its container's colour, reachable", async () => {
     const [ctx, page] = await open({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, "no-preference");
+    const down = await page.$eval("#fcard", e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, h: Math.round(r.height) }; });
     await page.focus("#ff input"); await page.waitForTimeout(300);
     await page.setViewportSize({ width: 393, height: 469 });
-    await page.waitForFunction(() => document.documentElement.classList.contains("swap-problem"), null, { timeout: 5000 });
-    await page.waitForTimeout(450);
+    await page.waitForTimeout(700);
+    assert.ok(!(await page.evaluate(() => document.documentElement.classList.contains("swap"))), "a short-answer item got the Swap restyle");
+    await page.$eval("#fcard", e => e.scrollIntoView({ block: "end" })); await page.waitForTimeout(200);
     const m = await page.evaluate(() => {
       const r = s => document.querySelector(s).getBoundingClientRect(), fc = r("#fcard"), q = r("#q"), fi = r("#freezeIn");
-      const n = getComputedStyle(document.querySelector(".fc-notch")).backgroundImage, pane = getComputedStyle(document.querySelector("#freezeIn")).backgroundColor;
-      return { fcTop: fc.top, fcL: fc.left, fcR: fc.right, fcB: fc.bottom, qB: q.bottom, fiL: fi.left, fiR: fi.right, fiB: fi.bottom, notch: n, pane };
+      let c = document.querySelector("#fcard").parentElement, bg = "";
+      for (; c; c = c.parentElement) { bg = getComputedStyle(c).backgroundColor; if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") break; }
+      const n = getComputedStyle(document.querySelector(".fc-notch")).backgroundImage, t = document.elementFromPoint(fc.left + fc.width / 2, fc.top + fc.height / 2);
+      return { fcTop: fc.top, fcL: fc.left, fcR: fc.right, fcB: fc.bottom, qB: q.bottom, fiL: fi.left, fiR: fi.right, fiB: fi.bottom, notch: n, pane: bg, vh: innerHeight,
+        hit: !!t && document.querySelector("#fcard").contains(t) };
     });
-    if (SHOTS) await page.screenshot({ path: join(SHOTS, "fcard-swap-393.png") });
+    if (SHOTS) await page.screenshot({ path: join(SHOTS, "fcard-kb-393.png") });
     assert.ok(m.fcTop >= m.qB - 1, "the card is not under the answer " + JSON.stringify(m));
-    assert.ok(m.fcL >= m.fiL + 8 && m.fcR <= m.fiR - 8, "the card runs on the pane's frame " + JSON.stringify(m));
-    assert.ok(m.fcB <= m.fiB + 1, "the card is cut off at the pane's bottom " + JSON.stringify(m));
-    assert.ok(m.notch.startsWith("linear-gradient(" + m.pane + " "), "the notch's top half is not the pane's colour " + JSON.stringify(m));
+    assert.ok(Math.abs(m.fcL - down.l) <= 1 && Math.abs(m.fcR - down.r) <= 1 && Math.abs(Math.round(m.fcB - m.fcTop) - down.h) <= 1, "the card moved / resized with the keyboard " + JSON.stringify({ m, down }));
+    assert.ok(m.fcL >= m.fiL - 1 && m.fcR <= m.fiR + 1, "the card runs outside the question card " + JSON.stringify(m));
+    assert.ok(m.fcB <= m.fiB + 1, "the card is cut off at the question card's bottom " + JSON.stringify(m));
+    assert.ok(m.fcTop >= 0 && m.fcB <= m.vh + 1 && m.hit, "the card is not reachable with the keyboard up " + JSON.stringify(m));
+    assert.ok(m.notch.startsWith("linear-gradient(" + m.pane + " "), "the notch's top half is not its container's colour " + JSON.stringify(m));
     await ctx.close();
   });
   await b.close();

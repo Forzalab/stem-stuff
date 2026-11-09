@@ -122,22 +122,27 @@ for (const [W, H] of SIZES) {
 
   /* ================= Swap: entered from an answer field ================= */
   const ansUp = async sel => { await page.locator(sel).first().focus(); await kbUp(); };
-  await step(`${T} swap: keyboard down looks as today; an answer field + keyboard up = the problem pane with the pad peek; keyboard down = as it was`, async () => {
+  /* Nov 8 (Tony): a short-answer item (text / num / expr) is never restyled by the keyboard: no Swap pane. The page stays a page: the
+     field is scrolled into the area above the keyboard, the question stays reachable by scrolling up. Multi still swaps (below). */
+  const qReachable = async () => {
+    await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(150);
+    const r = await page.evaluate(() => { const f = document.querySelector("#blocks > *").getBoundingClientRect(), vv = window.visualViewport; return { top: f.top, vh: vv.height + vv.offsetTop }; });
+    assert.ok(r.top >= -0.5 && r.top < r.vh, `${T} the question's start is not reachable by scroll: ${JSON.stringify(r)}`);
+  };
+  await step(`${T} short answer (num): keyboard up = no restyle; the answer and Check stay above the keyboard; keyboard down = no Swap`, async () => {
     await open("CALC1_T6B");
-    const before = await page.evaluate(() => ({ y: scrollY, fz: document.querySelector("#freeze").getBoundingClientRect().top }));
     assert.equal(await paneNow(), "off");
     assert.ok(await page.locator("#swap").isHidden(), "old toggle");
     await ansUp("#ans");
-    assert.equal(await paneNow(), "problem", `focus in the answer shows PROBLEM (${await cls()})`);
+    assert.equal(await paneNow(), "off", `a short-answer item got the Swap restyle (${await cls()})`);
     assert.equal(await page.evaluate(() => document.activeElement.id), "ans");
-    await mustBeInside("#ans"); await mustBeInside("#ansGo"); await mustBeInside("#padPeek");
-    await page.locator("#ans").fill("12");
-    await shot("swap-problem-freeform");
-    await clean("problem pane");
+    await mustBeInside("#ans");
+    await page.locator("#ans").fill("12"); await page.waitForTimeout(150);
+    await mustBeInside("#ansGo");
+    await shot("kb-num-freeform");
+    await clean("short answer, keyboard up");
     await kbDown();
-    assert.equal(await paneNow(), "off", `swap stayed on after the keyboard closed (${await cls()})`);
-    const after = await page.evaluate(() => ({ y: scrollY, fz: document.querySelector("#freeze").getBoundingClientRect().top }));
-    assert.ok(Math.abs(after.y - before.y) <= 1 && Math.abs(after.fz - before.fz) <= 1, `page moved: ${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
+    assert.equal(await paneNow(), "off");
   });
 
   await step(`${T} swap: the keyboard-up state is stable (no flip-flop over 1s)`, async () => {
@@ -150,7 +155,18 @@ for (const [W, H] of SIZES) {
   });
 
   /* ================= long question: the problem pane shows it from its start, the answer pinned ================= */
-  for (const [code, sel] of [["PHYS_F3N", "#q .ans"], ["CSCI26_CE3", "#q .ans"], ["CSCI26_LQ1", "#ans"]]) {
+  for (const [code, sel] of [["PHYS_F3N", "#q .ans"], ["CSCI26_LQ1", "#ans"]]) {
+    await step(`${T} short answer: ${code} (long question): keyboard up = no restyle; the answer above the keyboard; the question's start reachable by scroll`, async () => {
+      await open(code);
+      await ansUp(sel);
+      assert.equal(await paneNow(), "off", `a short-answer item got the Swap restyle (${await cls()})`);
+      await mustBeInside(sel);
+      await shot(`kb-long-${code}`);
+      await qReachable();
+      await kbDown();
+    });
+  }
+  for (const [code, sel] of [["CSCI26_CE3", "#q .ans"]]) {
     await step(`${T} swap: ${code}: the problem pane shows the question FROM ITS START; answer pinned`, async () => {
       await open(code);
       await ansUp(sel);
@@ -312,10 +328,14 @@ for (const [W, H] of SIZES) {
     let ok = true;
     try { await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 47, bottom: 34, left: 0, right: 0 } }); } catch { ok = false; }
     if (!ok) { console.log("     (skipped: this Chromium cannot override safe-area insets)"); return; }
-    await open("CALC1_T6B");
-    await ansUp("#ans");
+    await open("CSCI26_CE3");                                                  // multi: still the Swap problem pane
+    await ansUp("#q .ans");
     const top = await page.evaluate(() => document.querySelector("#freeze").getBoundingClientRect().top);
     assert.ok(top >= 47 - 0.5, `problem pane under the notch: top ${top}`);
+    await mustBeInside("#q .ans");
+    await kbDown(); await page.evaluate(() => document.activeElement.blur());
+    await open("CALC1_T6B");                                                   // num: no Swap, the field still lands above the keyboard
+    await ansUp("#ans");
     await mustBeInside("#ans");
     await kbDown(); await page.evaluate(() => document.activeElement.blur());
     await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settle();

@@ -905,15 +905,18 @@ flow(44, "notes-pad", async (page, w) => {
 
 flow(47, "swap-keyboard", async (page, w) => {
   if (w === 1280) skip("phone-only (keyboard up); shot is the desktop free-form view");
+  /* Nov 8 (Tony): the keyboard never restyles a short-answer item (num here): no Swap pane, no pad peek; the page stays as it was */
   await go(page, C.num);
+  const at = () => page.evaluate(() => ({ p: Math.round(document.querySelector("#problem").getBoundingClientRect().top + scrollY), a: Math.round(document.querySelector("#ans").getBoundingClientRect().top + scrollY) }));
+  const before = await at();
   await page.locator("#ans").focus();
-  await page.setViewportSize({ width: 393, height: Math.round(852 * 0.55) });
-  await page.waitForFunction(() => { const e = document.querySelector("#padPeek"); return !!e && !e.hidden && e.getClientRects().length > 0; }, null, { timeout: 4000 });
-  assert.ok(await vis(page, "#padPeek"), "the pad peek");
+  await page.setViewportSize({ width: 393, height: Math.round(852 * 0.55) }); await frames(page); await page.waitForTimeout(400);
+  assert.ok(!(await page.evaluate(() => document.documentElement.classList.contains("swap"))), "a short-answer item got the Swap restyle");
+  assert.deepEqual(await at(), before, "the layout moved with the keyboard");
   assert.ok(await vis(page, "#ans"), "the answer box in view");
   await page.screenshot({ path: join(OUT, `47-swap-keyboard-393-chromium.png`) });
   await page.setViewportSize({ width: 393, height: 852 }); await frames(page);
-  return "keyboard up (viewport 55%): problem pane + pad peek (shot at keyboard-up size)";
+  return "keyboard up (viewport 55%) on a num item: no restyle, the answer in view (shot at keyboard-up size)";
 }, { padPhone: true, noFinalShot393: true });
 
 flow(48, "onboarding-toasts", async (page, w) => {
