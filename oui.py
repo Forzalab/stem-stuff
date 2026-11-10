@@ -8,6 +8,32 @@ Not ported: the serializer (jsonToOpenUI), the prompt generator (build time, Nod
 in the engine, V2 amended), validation-rule checks of form inputs (validation.json; the browser's job).
 JS semantics are kept where a value can differ: loose ==, toNumber, String(number), member access, sort. Sort's localeCompare is
 approximated (accents and case as tie-breaks, like ICU root for Latin text; no other locale rules)."""
+# ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+# FILE: oui.py
+# WHAT: OpenUI Lang 1.0 for the server gate: lexer, parser, validation, evaluator. A port of vendored lang-core (JS).
+#       Same shapes as upstream. The sections follow the upstream source files.
+# START HERE: parse or validate a view -> §parser, §validation; streaming -> §parser (StreamParser); reply canon form -> §canon.
+# FIND A SECTION: grep -n "== §<name> ==" oui.py   (names below; line numbers are never kept)
+# SECTIONS (in file order):
+#   §js-semantics   JS value rules in Python
+#   §lexer          tokenizer
+#   §statements     statement split
+#   §expressions    Pratt expression parser
+#   §builtins       built-in functions
+#   §schema         library schema compile
+#   §validation     validate values
+#   §materialize    AST to result
+#   §parser         parse + StreamParser
+#   §merge          patch merge
+#   §evaluator      runtime evaluator
+#   §canon          canonical form
+# RELATED:
+#   views_gate.py    server gate; the caller of this file
+#   openui-lang.mjs  JS original
+#   views.js         browser renderer of the same language
+#   registry.json    component schema
+#   test_oui.py      fixture tests against the JS
+# ===== END CODEMAP HEADER =====
 import json
 import math
 import re
@@ -15,6 +41,7 @@ import unicodedata
 from decimal import Decimal
 from functools import cmp_to_key
 
+# == §js-semantics ==
 # ── JS value semantics ───────────────────────────────────────────────────────────────────────────────────────────────────────
 JS_WS = "\t\n\v\f\r                  　﻿"
 NUM_RE = re.compile(r"[+-]?(?:\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)")
@@ -228,6 +255,7 @@ def plain(v):
     return None
 
 
+# == §lexer ==
 # ── Lexer (lexer.ts) ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 PUNCT = {"(": "(", ")": ")", "[": "[", "]": "]", "{": "{", "}": "}", ",": ",", ":": ":", ".": ".", "?": "?", "+": "+", "*": "*",
          "/": "/", "%": "%"}
@@ -334,6 +362,7 @@ def tokenize(src):
     return toks
 
 
+# == §statements ==
 # ── Statements (statements.ts) ───────────────────────────────────────────────────────────────────────────────────────────────
 CLOSE = {"(": ")", "[": "]", "{": "}"}
 
@@ -406,6 +435,7 @@ def split(toks):
     return stmts
 
 
+# == §expressions ==
 # ── Expressions (expressions.ts, Pratt) ──────────────────────────────────────────────────────────────────────────────────────
 PREC = {"?": 1, "||": 2, "&&": 3, "==": 4, "!=": 4, ">": 5, "<": 5, ">=": 5, "<=": 5, "+": 6, "-": 6, "*": 7, "/": 7, "%": 7,
         ".": 9, "[": 9}
@@ -593,6 +623,7 @@ def literal_value(node):
     return NOLIT
 
 
+# == §builtins ==
 # ── Built-ins (builtins.ts) ──────────────────────────────────────────────────────────────────────────────────────────────────
 def _field(obj, path):
     if not path or obj is None:
@@ -716,6 +747,7 @@ def is_step(name, actions=None):
     return (d is not None and d["kind"] == "action") or bool(actions and name in actions)
 
 
+# == §schema ==
 # ── Library schema (parser.ts compileSchema) ─────────────────────────────────────────────────────────────────────────────────
 def schema_default(prop):
     """a JSON Schema fragment's `default`, NOLIT when it has none"""
@@ -767,6 +799,7 @@ def compile_schema(schema):
     return cat
 
 
+# == §validation ==
 # ── Validation (validation.ts) ───────────────────────────────────────────────────────────────────────────────────────────────
 INVALID = object()
 OMIT = object()                                             # JS undefined where it means "drop this key"
@@ -947,6 +980,7 @@ def _validate_object(value, s, component, path, ctx):
     return INVALID if invalid else (obj if out is None else out)
 
 
+# == §materialize ==
 # ── Materialize (materialize.ts) ─────────────────────────────────────────────────────────────────────────────────────────────
 def dynamic(v):
     """containsDynamicValue"""
@@ -1184,6 +1218,7 @@ def materialize_value(node, ctx):
     return node
 
 
+# == §parser ==
 # ── Parser (parser.ts) ───────────────────────────────────────────────────────────────────────────────────────────────────────
 def _classify(sid, id_type, expr):
     if expr["k"] == "Comp" and expr["name"] == "Query":
@@ -1469,6 +1504,7 @@ class StreamParser:
         return self.cleaned[:self.end]
 
 
+# == §merge ==
 # ── Merge (merge.ts) ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 def _split_source(text):
     out, depth, in_str, esc, start = [], 0, None, False, 0
@@ -1537,6 +1573,7 @@ def merge_statements(existing, patch, root_id="root"):
     return "\n".join(merged[sid] for sid in order if sid in merged)
 
 
+# == §evaluator ==
 # ── Evaluator (runtime/evaluator.ts, evaluate-prop.ts, evaluate-tree.ts) ─────────────────────────────────────────────────────
 class Step(dict):
     """a custom action step made by a real call (data shaped like one is dropped: ownSteps)"""
@@ -1890,6 +1927,7 @@ def evaluate_root(result, env, lib, errors=None):
     return None
 
 
+# == §canon ==
 # ── Canonical form (spec/language.md Appendix B; tests/fixtures/openui/1.0/README.md) ────────────────────────────────────────
 def bindable(spec):
     """{component: {prop}} for props whose signature prints $binding< (a LibrarySpec has no other marker)"""
