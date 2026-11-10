@@ -19,6 +19,31 @@ How the port stays faithful (tests/test_aiw.py checks it against the vendored JS
   the exact double, Math.round rounds half up.
 No dependency, no network, no I/O at import.
 """
+# ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+# FILE: aiw.py
+# WHAT: Python port of the avoid-ai-writing detector (the gate's no-AI-writing lint). Must match the JS in vendor/ exactly.
+#       Mostly big regex tables; the logic is small.
+# START HERE: gate lint verdict -> §gate-lint (end of file); a regex bug -> §regex-engine (jsre) or §pattern-tables; do not reorder tables.
+# FIND A SECTION: grep -n "== §<name> ==" aiw.py   (names below; line numbers are never kept)
+# SECTIONS (in file order):
+#   §unicode-tables     unicode ranges as node sees them
+#   §regex-engine       _Tr, RX, jsre: JS regex to Python
+#   §js-helpers         JS number/string/UTF-16 helpers
+#   §detector           detector start: same order as the JS
+#   §normalize          tier 1 pre-pass: normalize text
+#   §technical-exempt   technical exempt words, features-noun logic
+#   §pattern-tables     issue weights and pattern tables
+#   §neg-parallelism    negative parallelism issues
+#   §mask-code          fence / inline code / front matter masks
+#   §mask-markdown      mask rendered markdown
+#   §helpers            helpers
+#   §gate-lint          lint_view_strings for the gate
+# RELATED:
+#   aiw_rewrite.py  LLM rewrite of flagged strings
+#   views_gate.py   calls lint_view_strings
+#   patterns.js     the JS source of truth
+#   test_aiw.py     differential test against the JS
+# ===== END CODEMAP HEADER =====
 import math
 import re
 import sys
@@ -26,6 +51,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 __all__ = ["analyze_text", "normalize_text", "get_label", "lint_view_strings", "jsre", "TYPE_LABELS", "SEVERITY_LABELS"]
 
+# == §unicode-tables ==
 # Unicode property ranges as node 22 (Unicode 16.0) sees them, generated once from the JS regex engine
 _U_L = (
     '41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-2c1 2c6-2d1 2e0-2e4 2ec 2ee 370-374 376-377 37a-37d 37f 386 388-38a 38c 38e-3a1 '
@@ -232,6 +258,7 @@ def _emit_set(rs, u):
     return "(?:%s|%s)" % (alts, _bmp_class(bmp)) if bmp else alts
 
 
+# == §regex-engine ==
 class _Tr:
     """JS regex source -> Python regex source"""
 
@@ -515,6 +542,7 @@ def R(source, flags=""):
     return RX(source, flags)
 
 
+# == §js-helpers ==
 # ═══ JS runtime helpers ═══════════════════════════════════════════════
 
 def js_trim(s):
@@ -569,8 +597,10 @@ def cp_len(s):
 
 
 
+# == §detector ==
 # ═══ Detector (patterns.js @013d1db), same order and names as the JS ═══
 
+# == §normalize ==
 # ─── Tier 1 pre-pass: normalize bypass tricks ───
 CYRILLIC_LOOKALIKES = {
     'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'х': 'x',
@@ -689,6 +719,7 @@ def normalize_text(text, source_map=None):
     return res
 
 
+# == §technical-exempt ==
 TECHNICAL_EXEMPT = frozenset([
     'robust', 'comprehensive', 'seamless', 'seamlessly', 'ecosystem', 'leverage', 'leverages', 'leveraging',
     'leveraged', 'facilitate', 'facilitates', 'underpin', 'underpinning', 'underpinnings', 'streamline',
@@ -923,6 +954,7 @@ for _w in TIER3:
     if _w.replace('-', '') != _w:
         TIER3_LOOKUP[_w.replace('-', '')] = _w
 
+# == §pattern-tables ==
 ISSUE_WEIGHTS = {
     'tier1': 5, 'tier1-clarity': 3, 'tier2': 3, 'tier3': 2, 'transition': 2, 'chatbot': 8, 'sycophantic': 8,
     'filler': 2, 'generic-conclusion': 3, 'lets-construction': 2, 'reasoning-artifact': 6,
@@ -1139,6 +1171,7 @@ NP_WINDOW_SENTENCES = 2
 NP_PARAGRAPH_BREAK = R(r'(?:\r\n|\r(?!\n)|\n)[ \t]*(?:\r\n|\r|\n)')
 
 
+# == §neg-parallelism ==
 def negative_parallelism_issues(text, reveals, contrasts):
     distinct_reveals = deduplicate_issues(reveals)
     distinct_contrasts = deduplicate_issues(contrasts)
@@ -1185,6 +1218,7 @@ _FENCE_LINE = R(r'^[ \t]{0,3}(`{3,}|~{3,})([^\n]*)$')
 _FENCE_TAIL = R(r'^[ \t]*\r?$')
 
 
+# == §mask-code ==
 def fence_ranges(text):
     ranges = []
     open_ = None
@@ -1401,6 +1435,7 @@ def mask_html_comments_outside_code(chars):
     return masked
 
 
+# == §mask-markdown ==
 def mask_rendered_markdown(text):
     chars = list(text)
     mf = 0
@@ -1882,6 +1917,7 @@ SOCIAL_CTA_CLOSER = [
     R(r'\btrust\s+me,?\s+(?:on\s+this|you[\'’]?ll)\b', 'gi'),
 ]
 
+# == §helpers ==
 # ═══ Helpers ═══
 _TOKEN_RE = R(r"[\w'-]+", 'g')
 _NONSPACE_RUN = R(r'\S+', 'g')
@@ -2688,6 +2724,7 @@ TYPE_LABELS = {
 }
 
 
+# == §gate-lint ==
 # ═══ Gate lint for view strings (P4.1b) ═══
 # Short UI copy (a caption, a step line, a chip, a hint) is judged string by string. A finding in LINT_BLOCK blocks the
 # string: lexical and phrase tells that read as machine copy at any length. LINT_IGNORE are whole-document measures
