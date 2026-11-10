@@ -45,7 +45,7 @@ class StatusLight(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp(prefix="status-light-")
         problems = {}
-        with open(os.path.join(ROOT, "problems.json")) as f:
+        with open(os.path.join(ROOT, "server", "data", "problems.json")) as f:
             for p in json.load(f)["problems"]:
                 problems[p["code"]] = p
         for name in ("dead-easy.json", "repair-p2x.json"):
@@ -67,7 +67,7 @@ class StatusLight(unittest.TestCase):
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
         cls.base = f"http://127.0.0.1:{port}"
-        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "serve.py"), str(port), cls.bank],
+        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(port), cls.bank],
                                     env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:

@@ -111,7 +111,7 @@ class Mini(unittest.TestCase):
         for k in ("stem", "numbers", "solution", "answer", "error", "goal", "twist"):
             self.assertIn(str(CTX[k]), user)
         text = mini.PROMPT + user
-        with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "server", "data", "prompts", "cluck-v4.txt"), encoding="utf-8") as f:
             lore = [ln.strip() for ln in f if len(ln.strip()) > 30]
         lore += [ln.strip() for s in (serve.IDENTITY, serve.CLUCK_GENIE, serve.VOICE, serve.CLUCK_CHAT) for ln in s.splitlines() if len(ln.strip()) > 30]
         for ln in lore:

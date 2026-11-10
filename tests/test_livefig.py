@@ -396,7 +396,7 @@ class Contact(unittest.TestCase):
 
 class Bundle(unittest.TestCase):
     def test_vercel_function_carries_the_gate(self):
-        with open(os.path.join(serve.ROOT, "vercel.json"), encoding="utf-8") as f:
+        with open(os.path.join(paths.REPO, "vercel.json"), encoding="utf-8") as f:
             inc = json.load(f)["functions"]["api/index.py"]["includeFiles"]
         self.assertIn("livefig.py", inc)
         self.assertIn("SCHEMA.md", inc)

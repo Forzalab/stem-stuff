@@ -102,7 +102,7 @@ test("texPlain: the table (every locked example, then the rest)", () => {
 /* every $..$ / $$..$$ in the repo banks, and every formula's tex */
 function bankTex() {
   const root = new URL("../", import.meta.url), out = [];
-  const files = [...readdirSync(new URL("banks/", root)).filter(f => f.endsWith(".json")).map(f => new URL("banks/" + f, root)), new URL("problems.json", root)];
+  const files = [...readdirSync(new URL("server/data/banks/", root)).filter(f => f.endsWith(".json")).map(f => new URL("server/data/banks/" + f, root)), new URL("server/data/problems.json", root)];
   const walk = (o, k) => {
     if (typeof o === "string") {
       if (k === "tex") { out.push(o); return; }

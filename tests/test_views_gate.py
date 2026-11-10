@@ -274,7 +274,7 @@ class Stream(unittest.TestCase):
     def test_serve_uses_the_gate(self):
         import serve
         self.assertIs(serve.views_gate.Fence, views_gate.Fence)
-        with open(os.path.join(ROOT, "serve.py")) as f:
+        with open(os.path.join(ROOT, "server", "serve.py")) as f:
             self.assertNotIn("livefig.Fence(", f.read())
 
 

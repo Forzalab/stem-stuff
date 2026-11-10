@@ -52,8 +52,8 @@ const fake = createServer((req, res) => {
 }).listen(FAKE);
 const env = on => ({ ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3", STEM_TRIES: join(TMP, `tries-${on}.json`),
   EXPR_MODE: on ? "1" : "", CLAUDE_API: "fake", CLAUDE_BASE: `http://localhost:${FAKE}`, OPENROUTER_API_KEY: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "" });
-const srvs = [spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: env(true), stdio: "ignore" }),
-  spawn("python3", [join(ROOT, "serve.py"), String(OFFP)], { env: env(false), stdio: "ignore" })];
+const srvs = [spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: env(true), stdio: "ignore" }),
+  spawn("python3", [join(ROOT, "server", "serve.py"), String(OFFP)], { env: env(false), stdio: "ignore" })];
 for (const p of [PORT, OFFP]) for (let i = 0; i < 80; i++) { try { if ((await fetch(`http://localhost:${p}/`)).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let fails = 0;

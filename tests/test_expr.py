@@ -355,16 +355,16 @@ class Glue(unittest.TestCase):
         self.assertEqual(stored[0]["explain"], {"10": "the side, mail me"})
 
     def test_routes(self):
-        with open(os.path.join(serve.ROOT, "vercel.json")) as f:
+        with open(os.path.join(paths.REPO, "vercel.json")) as f:
             rw = json.load(f)["rewrites"]
         self.assertIn({"source": "/diagnose", "destination": "/api/index?path=/diagnose"}, rw)
-        with open(os.path.join(serve.ROOT, "vercel.json")) as f:
+        with open(os.path.join(paths.REPO, "vercel.json")) as f:
             self.assertIn("expr.py", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # serve.py imports it on Vercel too
 
 
 class Privacy(unittest.TestCase):
     def test_tonys_sentence(self):
-        with open(os.path.join(serve.ROOT, "privacy.html"), encoding="utf-8") as f:
+        with open(os.path.join(paths.REPO, "privacy.html"), encoding="utf-8") as f:
             self.assertIn("After a wrong answer, you may type your whole working as an expression. Cluck's helper (Claude) sees it, to find the step "
                           "that went off. If it finds a new kind of mistake, we keep that expression and the helper's note, with nothing that says "
                           "who typed it, to teach the site.", " ".join(f.read().split()))

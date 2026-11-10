@@ -346,7 +346,7 @@ const items = [];
 (function walk(o) {
   if (Array.isArray(o)) o.forEach(walk);
   else if (o && typeof o === "object") { items.push(o); Object.values(o).forEach(walk); }
-})([JSON.parse(readFileSync(new URL("problems.json", ROOT), "utf8")), ...readdirSync(new URL("banks/", ROOT)).filter(f => f.endsWith(".json")).map(f => JSON.parse(readFileSync(new URL("banks/" + f, ROOT), "utf8")))]);
+})([JSON.parse(readFileSync(new URL("server/data/problems.json", ROOT), "utf8")), ...readdirSync(new URL("server/data/banks/", ROOT)).filter(f => f.endsWith(".json")).map(f => JSON.parse(readFileSync(new URL("server/data/banks/" + f, ROOT), "utf8")))]);
 const errors = [...new Set(items.map(o => o.error).filter(e => typeof e === "string"))].sort();
 const titles = [...new Set(items.map(o => o.title).filter(t => typeof t === "string"))];
 const secrets = (() => {   // answers, choice text, nudges and hints: no line may carry or equal one

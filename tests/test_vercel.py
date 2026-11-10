@@ -131,7 +131,7 @@ class Wsgi(unittest.TestCase):
             self.assertIn({"source": "/mini", "destination": "/api/index?path=/mini"}, json.load(f)["rewrites"])
 
     def test_every_post_path_has_a_rewrite(self):                                    # any exact POST path serve.py answers needs a vercel.json rewrite
-        with open(os.path.join(ROOT, "serve.py")) as f:
+        with open(os.path.join(ROOT, "server", "serve.py")) as f:
             src = f.read()
         post = src[src.index("def _dispatch("):]
         post = post[:post.index('if path == "/health"')]                              # the POST block of _dispatch (GET routes follow it)

@@ -35,7 +35,7 @@ if (!SURVEY) {
 }
 const codes = readdirSync(BANKS).filter(f => /^BANK_[A-Z0-9]{3,6}\.json$/.test(f))
   .flatMap(f => JSON.parse(readFileSync(join(BANKS, f), "utf8")).problems.filter(p => p.type === "mc").map(p => p.code));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 /* runs in the page: one count per kind of bad wrap, plus where */

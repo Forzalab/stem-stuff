@@ -36,7 +36,7 @@ def bank_items():
     """(strings, per-problem joined documents) of the authored copy in problems.json and banks/*.json"""
     strings = []
     docs = []
-    for f in [os.path.join(ROOT, "problems.json")] + sorted(glob.glob(os.path.join(ROOT, "banks", "*.json"))):
+    for f in [os.path.join(ROOT, "server", "data", "problems.json")] + sorted(glob.glob(os.path.join(ROOT, "server", "data", "banks", "*.json"))):
         with open(f, encoding="utf-8") as fh:
             data = json.load(fh)
         for prob in data.get("problems", []):

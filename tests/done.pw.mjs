@@ -19,7 +19,7 @@ const TRIES = join(mkdtempSync(join(tmpdir(), "done-")), "tries.json");
 
 let srv = null;
 async function start() {
-  srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
+  srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
   for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) return; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
   throw new Error("server did not start");
 }

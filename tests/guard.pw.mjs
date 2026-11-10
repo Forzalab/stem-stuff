@@ -20,7 +20,7 @@ mkdirSync(banks);
 const mc = n => ({ code: `CALC1_G4M${n}`, title: `W104 mc ${n}`, type: "mc", shuffle: false, body: [{ type: "text", md: `Mc ${n}: pick one.` }], correct: "a",
   choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })) });
 writeFileSync(join(banks, "BANK_G104.json"), JSON.stringify({ v: 1, problems: [mc(1), mc(2)] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 let failures = 0;
 async function step(name, fn) {

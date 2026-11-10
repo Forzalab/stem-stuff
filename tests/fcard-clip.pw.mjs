@@ -34,7 +34,7 @@ const PROBS = [["CALC1_FC1", ["KE", "VMAG"]], ["CALC1_FC2", ["VAVG", "VRMS", "KE
 writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 3, groups: [{ name: "Clip", rows: ROWS }] }));
 writeFileSync(join(BANKS, "BANK_FCC.json"), JSON.stringify({ v: 1, problems: PROBS.map(([code, part]) => ({ code, title: code, type: "expr", var: "x",
   points: [1, 2, 3], body: [{ type: "text", md: "Type $x$." }], answer: "x", saccharine: { title: code, part } })) }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
   OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 

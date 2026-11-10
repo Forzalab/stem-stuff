@@ -26,7 +26,7 @@ writeFileSync(join(banks, "BANK_FLY.json"), JSON.stringify({ v: 1, problems: [
   { code: "CALC1_FL2", title: "Fl 2", type: "mc", shuffle: false, body: txt("Pick one."), correct: "a", choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })),
     saccharine: { title: "Fl 2", key: "Tick: a", slip: { b: "Two is not one." } } }] }));
 const logs = [];
-const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_BASE: "http://127.0.0.1:9", OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: ["ignore", "ignore", "pipe"] });
 let part = "";   // a pipe chunk can end mid-line: whole lines only
 srv.stderr.on("data", d => { const ls = (part + d).split("\n"); part = ls.pop(); logs.push(...ls.filter(Boolean)); });

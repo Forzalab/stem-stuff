@@ -260,7 +260,7 @@ class Gate(unittest.TestCase):
     set (an older bank only warns) gets to `vercel deploy`. Vercel is a fake npx on PATH that logs its args; the root is a git repo with
     an origin, so the run gets as far as a real one."""
     FILES = ("tools/build_and_ship/ship.sh", "tools/build_and_ship/brain_banks.py", "tools/build_and_ship/version.sh", "tools/bank_tools/slips.py", "tools/bank_tools/tol.py", "tools/bank_tools/schema-check.mjs",
-             "slips.py", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
+             "server/slips.py", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-gate-")
@@ -286,7 +286,7 @@ class Gate(unittest.TestCase):
         put(self.bin, "npx", '#!/bin/sh\necho "$*" >>"%s"\ncase "$*" in *" deploy"*) cp -r banks/figs "%s" 2>/dev/null; echo https://t.vercel.app ;; esac\n'
             % (self.log, self.figs))
         os.chmod(os.path.join(self.bin, "npx"), 0o755)
-        with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "server", "data", "problems.json"), encoding="utf-8") as f:
             ps = json.load(f)["problems"]
         self.num = next(p for p in ps if p["type"] == "num" and p.get("form"))
         self.fig = next(p for p in ps if p["code"] == FIG_CODE)
@@ -381,7 +381,7 @@ class FigPng(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-figpng-")
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "server", "data", "problems.json"), encoding="utf-8") as f:
             p = next(p for p in json.load(f)["problems"] if p["code"] == FIG_CODE)
         put(self.tmp, "banks/BANK_FIG.json", json.dumps({"v": 20261022, "problems": [dict(p, code=self.CODE)]}))
         self.png = os.path.join(self.tmp, "banks", "figs", self.CODE + "-1.png")
@@ -411,7 +411,7 @@ class FigPng(unittest.TestCase):
         with open(self.png, "rb") as f:
             self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
         self.assertEqual(sorted(os.listdir(os.path.dirname(self.png))), [self.CODE + "-1.png"])
-        self.assertFalse(os.path.exists(os.path.join(ROOT, "banks", "figs", self.CODE + "-1.png")))
+        self.assertFalse(os.path.exists(os.path.join(ROOT, "server", "data", "banks", "figs", self.CODE + "-1.png")))
         self.assertEqual(self.fig("--check").returncode, 0)
 
 

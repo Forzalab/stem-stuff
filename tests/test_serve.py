@@ -28,7 +28,7 @@ os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset: v:1 fixture banks keep l
 os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass has its own tests (tests/test_subject_pass.py)
 import serve  # noqa: E402
 
-BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
+BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "server", "data", "problems.json")))["problems"]}
 
 
 class NoCensorInProd(unittest.TestCase):
@@ -242,7 +242,7 @@ class Grade(unittest.TestCase):
         self.assertIsNone(serve.slip_hit({**u, "answer": "12/(100+200+300)", "form": "12/(100+200+300)", "tol": 0.02}, 0.0609))   # 0.06 sign: 1.5%
 
     def test_off_by_one_wrong(self):                                            # problems.json carries the wiggle test's tol (tools/bank_tools/tol.py --write)
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "problems.json"), encoding="utf-8") as f:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "server", "data", "problems.json"), encoding="utf-8") as f:
             units = {c: u for p in json.load(f)["problems"] for c, u in serve.slips.units(p)}
         for code, typed in (("CSCI26_J2A", 119), ("CSCI26_J2A", 121), ("CSCI26_H5M", 719), ("CSCI26_J5D", 59), ("CALC1_T6B", 11.88), ("CSCI26_M5V#0", 13.9)):
             self.assertFalse(serve.unit_correct(units[code], float(typed)), (code, typed))
@@ -661,7 +661,7 @@ class Families(unittest.TestCase):
             pub = json.dumps(serve.public(BANK[code], "fa6"))
             for bad in ('"families"', '"wrong"', '"error"'):
                 self.assertNotIn(bad, pub, code)
-        for f in sorted(os.listdir(os.path.join(ROOT, "banks"))):
+        for f in sorted(os.listdir(os.path.join(ROOT, "server", "data", "banks"))):
             if f.endswith(".json"):
                 st, _, raw = serve.dispatch("GET", "/b/" + f[:-5] + ".json", "sid=fa6")
                 self.assertNotIn(b'"families"', raw); self.assertNotIn(b'"wrong"', raw); self.assertNotIn(b'"error"', raw)
@@ -801,7 +801,7 @@ class Http(unittest.TestCase):
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             cls.port = s.getsockname()[1]
-        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "serve.py"), str(cls.port)],
+        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(cls.port)],
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.base = f"http://127.0.0.1:{cls.port}/"
         for _ in range(50):
@@ -1527,7 +1527,7 @@ class BankVersions(unittest.TestCase):
 
     def test_cutoff_matches_slips(self):
         import importlib.util                                         # the root slips.py by path (tools/bank_tools/slips.py has the same name)
-        spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "slips.py"))
+        spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "server", "slips.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         self.assertEqual(serve.CUTOFF, mod.CUTOFF)
@@ -1884,8 +1884,8 @@ class Explain(unittest.TestCase):
         self.assertNotIn("no_such_skill", out)
         self.assertNotIn("ALGEBRA THIS NEEDS", serve.explain_prompt(dict(BANK["CALC1_X2P"], saccharine={"key": "k"}), "a"))
         self.assertNotIn("skills", serve.view(p, "sugar"))                                  # server only
-        with open(os.path.join(serve.ROOT, "vercel.json")) as f:
-            self.assertIn("skills.json", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # the function bundle carries the catalog
+        with open(os.path.join(paths.REPO, "vercel.json")) as f:
+            self.assertIn("server/data/skills.json", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # the function bundle carries the catalog
 
     def test_prompt_reads_md_given_as_lines(self):                                    # PHYS_HIA's body: md is a list (live crash, Oct 5)
         p = dict(BANK["CALC1_X2P"], body=[{"type": "text", "md": ["line one", "line two"]}], key="k")
@@ -2531,7 +2531,7 @@ class Guard(unittest.TestCase):
         return ask, kill, out.getvalue()
 
     def spawn(self, port, **kw):
-        p = subprocess.Popen([sys.executable, os.path.join(ROOT, "serve.py"), str(port)], stdin=subprocess.DEVNULL, **kw)
+        p = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(port)], stdin=subprocess.DEVNULL, **kw)
         self.procs.append(p)
         return p
 
@@ -2643,7 +2643,7 @@ class Guard(unittest.TestCase):
             "p.wait()\n")
         master, slave = pty.openpty()
         self.addCleanup(os.close, master)
-        leader = subprocess.Popen([sys.executable, "-c", leader_src, os.path.join(ROOT, "serve.py"), str(b), pidfile],
+        leader = subprocess.Popen([sys.executable, "-c", leader_src, os.path.join(ROOT, "server", "serve.py"), str(b), pidfile],
                                   stdin=slave, stdout=slave, stderr=slave, start_new_session=True)
         os.close(slave)
 
@@ -2689,7 +2689,7 @@ class Guard(unittest.TestCase):
         def own_tty():
             os.setsid()
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)
-        pb = subprocess.Popen([sys.executable, os.path.join(ROOT, "serve.py"), str(b)],
+        pb = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(b)],
                               stdin=slave, stdout=slave, stderr=slave, preexec_fn=own_tty)
         self.procs.append(pb)                                                    # tearDown terminates it
         os.close(slave)

@@ -97,7 +97,7 @@ class NoProc(unittest.TestCase):
             self.assertEqual([(p, port) for p, port, _ in serve._other_servers(self.root)], [(5002, 7002)])
 
     def test_subprocess_guard_no_traceback(self):
-        code = "import sys; sys.path.insert(0, %r); sys.argv = ['serve.py']; import serve; serve._guard(proc_root='/nonexistent-proc', tty=False)" % ROOT
+        code = "import sys; sys.path.insert(0, %r); sys.argv = ['serve.py']; import serve; serve._guard(proc_root='/nonexistent-proc', tty=False)" % os.path.join(ROOT, "server")
         env = dict(os.environ, STEM_TRIES=os.path.join(TMP, "tries-sub.json"))
         r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, stdin=subprocess.DEVNULL, env=env, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)

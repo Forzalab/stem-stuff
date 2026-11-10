@@ -82,7 +82,7 @@ test("anchor + direction: weight re-anchored to its block and straight down; nor
 });
 
 test("contact pre-pass: the bank's hand-drawn ramps (PHYS_F3N, PHYS_S2K) come out with no finding and no visible change", () => {
-  const bank = JSON.parse(readFileSync(new URL("problems.json", root), "utf8")).problems;
+  const bank = JSON.parse(readFileSync(new URL("server/data/problems.json", root), "utf8")).problems;
   const scenes = [];
   const walk = v => { if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === "object") { if (v.type === "graph" && v.kind === "scene") scenes.push(v); Object.values(v).forEach(walk); } };
   walk(bank);

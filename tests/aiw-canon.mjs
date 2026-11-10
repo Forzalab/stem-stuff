@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-const AIDetector = createRequire(import.meta.url)("../vendor/avoid-ai-writing/patterns.js");
+const AIDetector = createRequire(import.meta.url)("../server/vendor/avoid-ai-writing/patterns.js");
 const cases = JSON.parse(readFileSync(0, "utf8"));
 const t = process.argv.indexOf("--time");
 if (t !== -1) {

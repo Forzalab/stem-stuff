@@ -57,7 +57,7 @@ test("a changed bare exponent (m/s^2) is braced, so it renders highlighted, not 
 });
 
 test("every bank question and every snack's marked text renders without a KaTeX error (STEM_BANKS=<dir> for the real banks)", () => {
-  const dir = process.env.STEM_BANKS ? pathToFileURL(process.env.STEM_BANKS + "/") : new URL("../banks/", import.meta.url), files = [new URL("../problems.json", import.meta.url),
+  const dir = process.env.STEM_BANKS ? pathToFileURL(process.env.STEM_BANKS + "/") : new URL("../server/data/banks/", import.meta.url), files = [new URL("../server/data/problems.json", import.meta.url),
     ...readdirSync(dir).filter(f => /^BANK_[A-Z0-9]{3,6}\.json$/.test(f)).map(f => new URL(f, dir))];
   const md = b => Array.isArray(b.md) ? b.md.join("\n") : String(b.md ?? "");
   let n = 0;

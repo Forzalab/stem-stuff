@@ -18,7 +18,7 @@ const TMP = mkdtempSync(join(tmpdir(), "netretry-")), BANKS = join(TMP, "banks")
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_NR12.json"), JSON.stringify({ v: 20261022, problems: [
   { code: "CALC1_NR1", title: "NR 1", type: "num", answer: "2", body: [{ type: "text", md: "Retry one: 1 + 1" }] }] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
