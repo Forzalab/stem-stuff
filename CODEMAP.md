@@ -101,7 +101,6 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `vendor/` | KaTeX, fonts, libs. Do not edit. | never, unless updating a lib |
 | `banks/` | Practice banks with answers (server only). | a bank |
 | `prompts/` | Runtime LLM system prompts. | Cluck prompt text |
-| `author/` | Leftover README only; the kits, prompts and skills moved to `tools/author/` (see PR D). | scene authoring |
 | `blind/` | Blind-locale test data. | blind test |
 | `calc/` | Calc Coach json and svg. | Calc Coach data |
 | `design/` | Live explain-box.* and the `*-lab.html` pages. Notes and plans are in `docs/design/`, mockups and shots in `archive/design/`. | explain box, a lab page |
