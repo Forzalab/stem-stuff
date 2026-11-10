@@ -8,6 +8,8 @@
   },
   "devDependencies": {
     "ajv": "^8.17.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "katex": "0.16.9",
     "mathjs": "12.4.2",
     "playwright-core": "^1.56.1"
