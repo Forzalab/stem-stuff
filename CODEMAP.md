@@ -86,7 +86,14 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `SCHEMA.md` | Format of problems, banks, graph blocks, ladders. | any data format |
 | `api/` | Vercel function entry. | Vercel entry |
 | `engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
-| `tools/` | Build, bench, gen and ship scripts (build_public.py, bundle.py, ship.sh). | build, deploy, bench |
+| `tools/build_and_ship/` | Build + ship the site (build_public.py, bundle.py, ship.sh, openui/). | build, deploy |
+| `tools/operations/` | Workflow + incident scripts (CI train batch.sh/ci-*.mjs, spend, prune). | CI, ops |
+| `tools/bank_tools/` | Bank checks + edits (slips.py, schema-check.mjs, tol.py, fig_png.mjs). | banks, problems |
+| `tools/client_generators/` | Write app files (gen_views.py, rw_icons.py, split-app.mjs). | generate, views |
+| `tools/benchmarks/` | Bench + replay scripts, jev-model.mjs. | bench, perf |
+| `tools/audits/` | UI screenshots + measures (button_audit, dogfood, splash_shots). | audit, UI |
+| `tools/author/` | Problem authoring loop (gen-loop.mjs). | authoring |
+| `tools/repo_checks/` | Repo checks (move_inventory, codemap, mutants). | checks, refactor |
 | `tests/` | All tests; run with tests/run-all.sh (--quick for the fast tier). | test or fixture |
 | `rewards/` | Coin and star fx scripts and icons. | rewards fx |
 | `copy/` | Cluck line pools (JS data) and payload spec. | Cluck wording |

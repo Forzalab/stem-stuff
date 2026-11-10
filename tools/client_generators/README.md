@@ -1,0 +1,1 @@
+Write app files from source data: gen_views.py (views/), rw_icons.py (rewards/icons.js), brainrot_list.py, jargon.py, layer_steps.mjs, gen_figure_docs.mjs (layout-docs.mjs), split-app.mjs (app.js -> app/cluck/shell, W152); owner: client.

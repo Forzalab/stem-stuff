@@ -1,0 +1,1 @@
+Scripts run by .github/workflows or by hand on a live incident: CI train (batch.sh, ci-batch/gate/pipe/retry/select.mjs: tests.yml, retry.yml, ship.yml), anthropic_spend.py (spend.yml), prune-branches.sh (prune.yml), incident.py; owner: ops.
