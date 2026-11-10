@@ -33,7 +33,7 @@ try {
       const ctx = await browser.newContext({ viewport: { width, height: 800 }, serviceWorkers: "block" });
       await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
       const page = await ctx.newPage(); const errs = []; page.on("pageerror", e => errs.push(e.message));
-      await page.route("**/app.js", async route => {   // app.js is a module: expose the two renderers to the test, nothing else changes
+      await page.route("**/cluck.js", async route => {   // app.js is a module: expose the two renderers to the test, nothing else changes
         const res = await route.fetch(); await route.fulfill({ response: res, body: (await res.text()) + "\nwindow.__w = { wishHTML, wishFigs };\n" });
       });
       await page.goto(BASE + "/"); await page.waitForFunction(() => !!window.__w, null, { timeout: 8000 });
