@@ -1,3 +1,27 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: graph.js
+// WHAT: Renders a problem 'graph' block (SCHEMA.md) to SVG: cartesian, scene (forces, inclines), circuit, network.
+//       Browser global: Graph.render(el, block). One IIFE; needs math.js and KaTeX.
+// START HERE: a mark looks wrong -> §marks; physics scene -> §scene-model; plot axes -> §cartesian; circuit or network -> §circuit, §network; label placement -> §layout.
+// FIND A SECTION: grep -n "== §<name> ==" graph.js   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §json-prep     JSON to drawable, expressions
+//   §marks         marks shared by scene and cartesian
+//   §scene-model   scene pre-pass: inclines, forces
+//   §layout        draw, measure labels, place, grow padding
+//   §axis-cross    axis crosses
+//   §figcheck      figcheck on the final model
+//   §degrade       degrade + telemetry
+//   §cartesian     cartesian plots
+//   §circuit       kind: circuit
+//   §network       kind: network
+//   §entry         prep + render + export
+// RELATED:
+//   figcheck.js      figure invariants checked after render
+//   formula-figs.js  small formula-sheet figures
+//   SCHEMA.md        the graph block format
+//   livefig.py       server side of live figures
+// ===== END CODEMAP HEADER =====
 /* graph.js: renders a problem "graph" block (SCHEMA.md) into an element.
    Ported from design/specimen.html; every number comes from design/DESIGN-LANGUAGE.md.
    Needs math.js (expressions) and KaTeX (labels) as globals; draws plain-text labels if KaTeX is missing.
@@ -21,6 +45,7 @@
     return String(s).split("$").map((t, i) => i % 2 ? katex.renderToString(t, { throwOnError: false }) : esc(t)).join("");
   }
 
+// == §json-prep ==
   /* ---- JSON -> drawable: numbers may be math.js strings, expressions become functions ---- */
   const STR = new Set(["mark", "label", "text", "color", "anchor", "shape", "side", "alt", "kind", "type", "unit", "var", "sty"]);
   const EXPR = { fn: { y: "x" }, param: { x: "t", y: "t" }, shade: { f: 1, g: 1 }, tangent: { of: "x" }, path: { x: "t", y: "t", fn: "x" } };
@@ -158,6 +183,7 @@
     return s;
   }
 
+// == §marks ==
   /* ---- marks shared by scene and cartesian: pts(m) in world units, draw(m, k) -> svg ---- */
   const LAYER = { surface: 0, incline: 1, poly: 2, seg: 2, arc: 2, circle: 2, right: 2, angle: 2, dim: 2, path: 3, rope: 4, spring: 4, pulley: 5, body: 6, pivot: 7, point: 8, axes: 8, force: 9, arrow: 9, text: 10 };
   const S = {
@@ -365,6 +391,7 @@
     }
   };
 
+// == §scene-model ==
   /* ---- the scene model pre-pass (fable audit 2026-10-29 U1: I-INC-1/2, I-FORCE-1/2/3): the renderer owns contact, not the author.
      fix(marks) -> { marks, codes }: a box/disk whose bottom is within 0.6 h of a ramp (incline hypotenuse), a surface or a solid seg
      is snapped along that surface's normal so its bottom edge rests on it (offset h/2 or r), a box at the surface's angle. Points on a
@@ -491,6 +518,7 @@
     return { marks: out, codes: [...codes].sort() };
   }
 
+// == §layout ==
   /* ---- layout: draw, measure labels, place them, grow padding, redraw (max 3 passes) ----
      Labels (fable audit 2026-10-29 U3, I-LBL-1/2): every label with a side (anchor other than "c") goes through figcheck.js place()
      (= scene.js's packer): its own side first at OFF px, then the other 7 sides, a 2nd and 3rd ring with a leader line, then a free
@@ -562,6 +590,7 @@
       .map(([, i, m]) => { CUR = i; LAY = layerOf(m); try { return lyr(LAY, S[m.mark].draw(m, k)); } catch (e) { console.warn("mark", m.mark, e); return ""; } finally { LAY = 1; } }).join("");
   }
 
+// == §axis-cross ==
   /* ---- axis crosses (todo 136): two or three arrows from one tail, at right angles, each named by a short text mark near its tip,
      maybe a small circle on the tail named by a text near it (z out of the page). Authored in world units, so on a phone (the 28svh
      cap) the cross came out ~10 px with its letters on the arrows and the origin. The renderer owns it: crossesOf() finds each cross
@@ -637,6 +666,7 @@
     return build;
   }
 
+// == §figcheck ==
   /* ---- figcheck on the final model (fable audit 2026-10-29 U3; §2 hooks: graph.js render()): after Graph.fix, the scene's bodies,
      ramps / surfaces, solids and forces in world units plus the placed label boxes in px go through FigCheck.checkAll; the finding
      codes (only the codes, never label text) are left on the figure as data-fig-findings="I-… I-…" ("" = clean) for tests and U7's
@@ -682,6 +712,7 @@
       return { codes, warn };
     } catch (e) { console.warn("figcheck", e); return { codes: [], warn: [] }; }
   }
+// == §degrade ==
   /* ---- degrade + telemetry (fable audit 2026-10-29 U7, §2 verdict ladder: ok -> fixed -> degrade -> telemetry). Every finding
      checkAll still reports is one nothing fixed: the pre-pass (fix) and the label packer (mount) have run, and the RJ rows have no
      fix at all. So any finding left = a broken figure, and the student never sees it: the svg goes and the figure's alt text stands
@@ -714,6 +745,7 @@
   function ticks(min, max, step) { const out = []; for (let v = Math.ceil(min / step - 1e-9) * step; v <= max + 1e-9; v += step) out.push(+v.toFixed(10)); return out; }
   const fmt = v => v < 0 ? "−" + Math.abs(v) : String(v);
 
+// == §cartesian ==
   function cartesian(g) {
     return (W, pad, k) => {
       const grid = g.grid !== false, axesOn = g.axes !== false;
@@ -815,6 +847,7 @@
     };
   }
 
+// == §circuit ==
   /* ---- kind: circuit (logic gates, SCHEMA.md). Layered layout: Kahn topo sort -> columns, dummy nodes for long edges,
      rows by barycenter (left->right), one right->left reorder, then left->right again; wires are orthogonal, one vertical
      track per net in the gap before its target column. Throws on a bad circuit (the caller then shows alt). ---- */
@@ -1008,6 +1041,7 @@
     };
   }
 
+// == §network ==
   /* ---- kind: network (graph theory: vertices + edges, SCHEMA.md). World positions from the layout (circle, tree, free),
      fit 1:1 like a scene. Parallel edges bow apart, loops hang off the node away from the centre.
      Throws on a bad network (the caller then shows alt). ---- */
@@ -1124,6 +1158,7 @@
     };
   }
 
+// == §entry ==
   function prep(block) {
     if (block.kind === "network") {
       const g = structuredClone(block);
