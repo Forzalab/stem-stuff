@@ -370,6 +370,7 @@
     burst: (kind, o) => seq('burst', () => burst(kind, o)),                 // flow C: LEVEL UP only; o.drop = the reels inside it
     toast: (text, sub, tier) => seq('toast', () => toast(text, sub, tier)),
     conquered: line => seq('toast', () => toast(line, null, 'won', 3000)),   // B4: engine.js mastery()'s r.line, one line, 3 s, a tap dismisses
-    nod                                                                     // app.js: the duck chip's calm nod, its own step after the answer's
+    nod,                                                                    // app.js: the duck chip's calm nod, its own step after the answer's
+    confettiIn                                                              // app.js: the stepper cheer, a canvas inside its own card (never over the input or a toast)
   };
 })();

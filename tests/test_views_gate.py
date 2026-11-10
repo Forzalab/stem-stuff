@@ -40,10 +40,10 @@ class Gate(unittest.TestCase):
         self.assertIn("leak:Text.text=5", views_gate.gate(GOOD.replace("are 3 m", "are 5 m"), CTX)[1][0])
 
     def test_over_caps(self):
-        thirteen = "[" + ", ".join(['"seg(A,B)"'] * 13) + "]"
+        seventeen = "[" + ", ".join(['"seg(A,B)"'] * 17) + "]"
         seven = "[" + ", ".join(f'"label(A,L{i})"' for i in range(7)) + "]"
-        pts = "; ".join(f"P{i} {i},0" for i in range(13))
-        for src, why in [(f'root = View([g])\ng = Geometry("A 0,0; B 3,0", {thirteen})', "too-long:Geometry.marks"),
+        pts = "; ".join(f"P{i} {i},0" for i in range(17))
+        for src, why in [(f'root = View([g])\ng = Geometry("A 0,0; B 3,0", {seventeen})', "too-long:Geometry.marks"),
                          (f'root = View([g])\ng = Geometry("A 0,0; B 3,0", {seven})', "labels"),
                          (f'root = View([g])\ng = Geometry("{pts}", ["seg(P0,P1)"])', "too-long:pts"),
                          ('root = View([g])\ng = Geometry("A 0,0; B 3,0", ["seg(A,Z)"])', "geo-point"),
@@ -66,6 +66,34 @@ class Gate(unittest.TestCase):
 
     def test_key_ref_never_in_a_cluck_reply(self):
         self.assertEqual(views_gate.gate("root = View([fig, c])\n" + GEO + '\nc = Text("key.v1")', CTX)[1], ["c:stage:Text.text"])
+
+
+class Shapes(unittest.TestCase):
+    """stepper iteration 2 (smoke): poly / rect pass the gate; Step title / hide / say pass, a say holding the answer drops its step"""
+    def test_prompt_shape_examples_pass_the_gate(self):
+        import json
+        reg = json.load(open(os.path.join(ROOT, "views", "registry.json"), encoding="utf-8"))
+        ctx = livefig.context("T2", "A shape.", "", [99.0])
+        gp = reg["geo_prompt"]
+        for x in gp["examples"]:
+            prog, log = views_gate.gate('root = View([s])\ns = Steps(g, [a])\n' + x["src"] + '\na = Step("We look at it.")', ctx)
+            self.assertIsNotNone(prog, (x["idea"], log))
+            self.assertIn("Geometry(", prog, (x["idea"], log))
+        prog, log = views_gate.gate(gp["program"], ctx)
+        self.assertIn("Geometry(", prog or "", log)
+        self.assertIn("Move the pointer", prog or "", log)
+
+    def test_poly_rect_and_step_args(self):
+        ctx = livefig.context("T3", "9 V across 2 ohm and 4 ohm in a row.", "", [1.5])
+        body = "\n".join(['root = View([s])', 's = Steps(g, [a])',
+            'g = Geometry("A 0,0; B 0,3; C 6,3; E 1,2.6; F 2.6,3.4", ["poly(A,B,C,fill,tone=sky)", "rect(E,F,$R_1$ = 2 Ω,fill)", "label(A,I = ?)"])',
+            'a = Step("We add.", null, null, null, null, null, null, "R = R_1 + R_2", "R_1", "Add the resistances", "C", ["I=I = ?"])'])
+        prog, log = views_gate.gate(body, ctx)
+        self.assertIsNotNone(prog, log)
+        self.assertIn("Add the resistances", prog)
+        prog, log = views_gate.gate(body.replace('"I=I = ?"', '"I=I = 1.5 A"'), ctx)
+        self.assertTrue(prog is None or "1.5" not in prog, log)
+        self.assertEqual(views_gate.geometry({"pts": "A 0,0; B 1,1", "marks": ["poly(A,B,fill)"]})[0], "geo-mark")
 
 
 class TugFlip(unittest.TestCase):

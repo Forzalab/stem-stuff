@@ -318,14 +318,16 @@ function drawGraph(doc, g, st = {}) {
   return h(doc, "svg", { viewBox: `0 0 ${W} ${Hh}`, "aria-hidden": "true", focusable: "false" }, kids);
 }
 // Geometry: named points "A 0,0; B 3,0" (y up, 1:1 scale) and marks seg(A,B) circle(O,r) right(at,from,to) dim(from,to,label[,left|right])
-// angle(at,from,to[,label]) arrow(from,to[,label]) label(at,text). Caps (registry): 12 points, 12 marks, 6 labels; over one: too-long.
-const GEO_CAPS = { pts: 12, marks: 12, labels: 6 };
-const GREEK = { alpha: "α", beta: "β", gamma: "γ", delta: "δ", theta: "θ", phi: "φ", pi: "π", mu: "μ", omega: "ω", lambda: "λ", Delta: "Δ", circ: "°", cdot: "·" };
-const plainTex = s => String(s).replace(/\$/g, "").replace(/\\([A-Za-z]+)/g, (m, w) => GREEK[w] ?? w).replace(/[{}]/g, "").replace(/\^\s*°/g, "°").trim();
+// angle(at,from,to[,label]) arrow(from,to[,label]) label(at,text) poly(A,B,C,...[,label][,fill]) rect(A,B[,label][,fill]) (stepper iteration 2:
+// generic shapes only, a resistor / block / cube / piston is composed from them). Caps (registry): 16 points, 16 marks, 6 labels; over one: too-long.
+const GEO_CAPS = { pts: 16, marks: 16, labels: 6 };
+const GREEK = { alpha: "α", beta: "β", gamma: "γ", delta: "δ", theta: "θ", phi: "φ", pi: "π", mu: "μ", omega: "ω", lambda: "λ", Delta: "Δ", circ: "°", cdot: "·", Omega: "Ω", parallel: "∥", perp: "⊥", rho: "ρ", sigma: "σ", tau: "τ", eta: "η" };
+const SUB = { 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉", a: "ₐ", e: "ₑ", o: "ₒ", x: "ₓ", i: "ᵢ", r: "ᵣ", n: "ₙ", k: "ₖ", m: "ₘ", p: "ₚ", s: "ₛ", t: "ₜ" };
+const plainTex = s => String(s).replace(/\$/g, "").replace(/_\{?([0-9a-z]{1,3})\}?/g, (m, w) => ([...w].every(ch => SUB[ch]) ? [...w].map(ch => SUB[ch]).join("") : m)).replace(/\\,/g, " ").replace(/\\([A-Za-z]+)/g, (m, w) => GREEK[w] ?? w).replace(/[{}]/g, "").replace(/\^\s*°/g, "°").replace(/_(?=[^\x00-\x7F])/g, "").trim();
 const tooLong = msg => Object.assign(new Error(msg), { code: "too-long" });
 const badGeo = msg => Object.assign(new Error(msg), { code: "bad-value" });
 /** Geometry props -> { pts: {name: [x, y]}, marks: [{k, ...}] }; throws (too-long / bad-value) on a cap or a bad mark. */
-export function geoModel(p) {
+export function geoModel(p, opt = {}) {
   const pts = {};
   for (const t of String(p.pts || "").split(";")) {
     const m = /^\s*([A-Za-z][A-Za-z0-9']{0,3})\s+(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/.exec(t);
@@ -339,7 +341,7 @@ export function geoModel(p) {
   const out = [];
   let labels = 0;
   for (const s of marks) {
-    const m = /^\s*(seg|circle|right|dim|angle|arrow|label)\s*\((.*)\)\s*$/.exec(s);
+    const m = /^\s*(seg|circle|right|dim|angle|arrow|label|poly|rect)\s*\((.*)\)\s*$/.exec(s);
     if (!m) throw badGeo(`mark "${s.slice(0, 20)}"`);
     const a = m[2].split(",").map(x => x.trim()), k = m[1], rest = i => a.slice(i).join(", ").trim();
     let layer = 1, tone = null;                    // trailing `layer=2` / `tone=c2`, either order (W157): emphasis and palette hue, not geometry
@@ -347,7 +349,15 @@ export function geoModel(p) {
       if (t[1].toLowerCase() === "layer") layer = layerNo(t[2]); else tone = toneOf(t[2].toLowerCase());
     }
     let o;
-    if (k === "seg") o = { k, a: P(a[0]), b: P(a[1]) };
+    const fill = (k === "poly" || k === "rect") && a.length > 2 && /^fill$/i.test(a[a.length - 1]) ? !!a.pop() : false;
+    if (k === "poly" || k === "rect") {               // the leading point names are the corners; what follows is the label
+      let n = 0;
+      while (n < a.length && (k === "poly" || n < 2) && Object.hasOwn(pts, a[n])) n++;
+      if (n < (k === "poly" ? 3 : 2)) throw badGeo(`${k} needs ${k === "poly" ? "3 points" : "2 corners"}`);
+      const cs = a.slice(0, n).map(P);
+      const ring = k === "rect" ? [cs[0], [cs[1][0], cs[0][1]], cs[1], [cs[0][0], cs[1][1]]] : cs;
+      o = { k, ring, names: a.slice(0, n), text: rest(n), fill };
+    } else if (k === "seg") o = { k, a: P(a[0]), b: P(a[1]) };
     else if (k === "circle") { if (!(+a[1] > 0)) throw badGeo("circle radius"); o = { k, c: P(a[0]), r: +a[1] }; }
     else if (k === "right") o = { k, names: a.slice(0, 3), at: P(a[0]), u: P(a[1]), v: P(a[2]) };
     else if (k === "angle") o = { k, names: a.slice(0, 3), at: P(a[0]), u: P(a[1]), v: P(a[2]), text: rest(3) };
@@ -364,8 +374,11 @@ export function geoModel(p) {
   /* W163 auto-hue: an arrow (a force / vector) with no tone= gets a palette hue keyed by its own label (else its end points), never its position in
      the list, so the same figure paints the same colours on every render. Segments, circles, angles stay ink: structure is not a role. */
   const akey = o => (o.text ? o.text.replace(/[$\s{}]/g, "") : o.ends);
-  const hues = autoHues(out.filter(o => o.k === "arrow" && !o.tone).map(akey));
-  out.forEach((o, i) => { if (o.k === "arrow") { const { ends, ...rest } = o; out[i] = o.tone ? rest : { ...rest, layer: o.layer || 1, tone: hues.get(akey(o)) }; } });
+  /* stepper (iteration 2, Tony Q6): inside a Steps anchor every labelled mark is a quantity and gets its own hue the same way (one hue per
+     quantity); a problem figure stays pure ink (DESIGN-LANGUAGE §9) */
+  const hued = o => !o.tone && (o.k === "arrow" || (opt.stepper && o.text));
+  const hues = autoHues(out.filter(hued).map(akey));
+  out.forEach((o, i) => { if (hued(o)) { const { ends, ...rest } = o; out[i] = { ...rest, layer: o.layer || 1, tone: hues.get(akey(o)) }; } else if (o.ends) { const { ends, ...rest } = o; out[i] = rest; } });
   /* W340 §2 (I-ANG-1b-d, figcheck resolveAngles): each right / angle mark's vertex is checked against the drawing: the first point,
      or the middle one when the drawing says so (∠BAC: mc-a's θ was drawn at the square corner B); what fits nowhere is a finding */
   const ang = out.map((o, i) => [o, i]).filter(([o]) => o.k === "right" || o.k === "angle");
@@ -384,7 +397,7 @@ export function geoModel(p) {
 const GEO_FONT = 18, GEO_EM = 0.6 * GEO_FONT, GEO_LH = 22, GEO_ASC = 17, GEO_CLEAR = 14, GEO_PAD = 90;   // GEO_PAD: room around the drawing a label may use
 const DIR8 = (dx, dy) => ["e", "se", "s", "sw", "w", "nw", "n", "ne"][Math.round(((Math.atan2(dy, dx) / Math.PI * 180) + 360) % 360 / 45) % 8];   // screen: y down
 const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"], DIRS8_RING = ["e", "se", "s", "sw", "w", "nw", "n", "ne"];
-function drawGeometry(doc, g, t) {
+function drawGeometry(doc, g, t, opt = {}) {
   const all = Object.values(g.pts), ext = [...all];
   for (const m of g.marks) if (m.k === "circle") ext.push([m.c[0] - m.r, m.c[1] - m.r], [m.c[0] + m.r, m.c[1] + m.r]);
   const xs = ext.map(p => p[0]), ys = ext.map(p => p[1]);
@@ -411,7 +424,7 @@ function drawGeometry(doc, g, t) {
     return req;
   };
   const cx = all.reduce((s, p) => s + X(p), 0) / all.length, cy = all.reduce((s, p) => s + Y(p), 0) / all.length;
-  for (const [id, p] of Object.entries(g.pts)) { const x = X(p), y = Y(p); dots.push({ id: "pt:" + id, box: [x - 2.5, y - 2.5, 5, 5] }); label("pt:" + id, id, [x, y], x - cx, y - cy, "gm-t gm-name"); }
+  if (opt.names !== false) for (const [id, p] of Object.entries(g.pts)) { const x = X(p), y = Y(p); dots.push({ id: "pt:" + id, box: [x - 2.5, y - 2.5, 5, 5] }); label("pt:" + id, id, [x, y], x - cx, y - cy, "gm-t gm-name"); }
   const kids = [];
   const lycOf = m => (m ? lyc(m.layer, m.tone) : "");
   const layerOf = {};                               // mark id -> " tn-<hue> ly<N>" classes, for its strokes, its labels and their leaders
@@ -419,7 +432,15 @@ function drawGeometry(doc, g, t) {
     const id = "m" + i, k0 = kids.length;
     if (m.layer > 1 || m.tone) layerOf[id] = m;
     if (m.k === "seg") { kids.push(h(doc, "line", { class: "gm gm-seg", x1: X(m.a), y1: Y(m.a), x2: X(m.b), y2: Y(m.b) })); stroke(id, [X(m.a), Y(m.a)], [X(m.b), Y(m.b)]); }
-    else if (m.k === "circle") {
+    else if (m.k === "poly" || m.k === "rect") {      // a closed outline (§2: 2 px); fill = its hue at 22 %, 40 % lit (§6, views.css)
+      const r = m.ring.map(q => [X(q), Y(q)]);
+      kids.push(h(doc, "polygon", { class: `gm gm-poly${m.fill ? " gm-fill" : ""}`, points: r.map(q => q.join(",")).join(" ") }));
+      stroke(id, ...r, r[0]);
+      if (m.text) {
+        const top = Math.min(...r.map(q => q[1])), mx = r.reduce((s2, q) => s2 + q[0], 0) / r.length;
+        if (m.k === "rect") label(id, m.text, [mx, top], 0, -1); else { const t = r.reduce((b, q) => (q[1] < b[1] ? q : b)); label(id, m.text, t, t[0] - cx || 0.01, -1); }   // a rect: above it; a poly: off its top corner, away from the centre (never on its own edges)
+      }
+    } else if (m.k === "circle") {
       kids.push(h(doc, "circle", { class: "gm gm-circle", cx: X(m.c), cy: Y(m.c), r: m.r * k }));
       stroke(id, ...Array.from({ length: 25 }, (_, j) => [X(m.c) + m.r * k * Math.cos(j * Math.PI / 12), Y(m.c) + m.r * k * Math.sin(j * Math.PI / 12)]));
     } else if (m.k === "arrow") {
@@ -473,6 +494,7 @@ function drawGeometry(doc, g, t) {
       label(id, m.text, [x, y], x - cx, y - cy);
     }
     if (layerOf[id]) for (let j = k0; j < kids.length; j++) for (const c of lyc(m.layer, m.tone).trim().split(" ")) kids[j].classList.add(c);
+    for (let j = k0; j < kids.length; j++) kids[j].setAttribute("data-m", id);   // a Steps anchor lights / dims a mark by this id (litMarks)
   });
   const placed = place(reqs, segs, dots, { x: -GEO_PAD, y: -GEO_PAD, w: W + 2 * GEO_PAD, h: H + 2 * GEO_PAD }, null, { LH: GEO_LH, GAP: GEO_CLEAR + 3, clear: GEO_CLEAR });
   const vpts = Object.fromEntries(Object.entries(g.pts).map(([n, p]) => [n, [X(p), Y(p)]]));
@@ -481,13 +503,13 @@ function drawGeometry(doc, g, t) {
   for (const q of placed) {
     if (q.lead) {                                   // the leader stops 5 units short of the box: a glyph may stand past its estimated box (firefox θ)
       const [[ax, ay], [bx, by]] = q.lead, L = Math.hypot(bx - ax, by - ay) || 1, cut = Math.min(5, L / 2);
-      kids.push(h(doc, "line", { class: "gm-lead" + lycOf(layerOf[q.id]), x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
+      kids.push(h(doc, "line", { class: "gm-lead" + lycOf(layerOf[q.id]), "data-m": q.id, x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
     }
   }
-  for (const [id, p] of Object.entries(g.pts)) kids.push(h(doc, "g", { class: "gm-pt", "data-pt": id }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 })));
+  if (opt.names !== false) for (const [id, p] of Object.entries(g.pts)) kids.push(h(doc, "g", { class: "gm-pt", "data-pt": id }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 })));
   for (const q of placed) {
     const x = +(q.box[0] + q.box[2] / 2).toFixed(2), y = +(q.box[1] + (q.box[3] - GEO_LH) / 2 + GEO_ASC).toFixed(2);
-    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : "") + lycOf(layerOf[q.id]), x, y, "data-slot": q.slot, "data-at": q.vertex }, q.text));   // data-at: an angle label's vertex
+    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : "") + lycOf(layerOf[q.id]), x, y, "data-slot": q.slot, "data-at": q.vertex, "data-m": q.id }, q.text));   // data-at: an angle label's vertex
   }
   // the viewBox = the drawing + every placed label (+ a margin): a label is placed where it reads best, the frame follows it, centred
   const bx = [...segs.flatMap(s => s.pts), ...dots.flatMap(d => [[d.box[0], d.box[1]], [d.box[0] + d.box[2], d.box[1] + d.box[3]]]),
@@ -544,37 +566,158 @@ register("Geometry", (p, c) => {
 register("Callout", (p, c) => c.h("div", { class: "vw-callout" }, c.h("div", { class: "vw-tag" }, p.tag), c.h("p", null, c.rich(p.text))));
 register("Answer", (p, c) => c.h("p", { class: "vw-p" }, c.h("span", { class: "vw-ans" }, p.value), p.text ? " " : null, p.text ? c.rich(p.text) : null));
 
-/** Steps (F14): reserved slots; Back off at 1, Next off at n; caption aria-live; ←/→ only while the footer has focus. */
+/** lit (Step, stepper Nov 8): the anchor Geometry's parts one step lights -> { marks: Set("m0"...), pts: Set("A"...) }, or null (= all lit).
+    A token names a point "A", a segment "A-B" (either order) or a mark's label as written ("F", "\\theta"; $ and spaces ignored). */
+const GEO_ARGS = { seg: 2, circle: 1, right: 3, dim: 2, angle: 3, arrow: 2, label: 1, rect: 2, poly: 0 };   // point args before a mark's label (circle: its centre)
+const litNorm = x => String(x).replace(/[$\s{}]/g, "");
+export function litMarks(marks, lit, ptNames = null) {
+  const toks = String(lit || "").trim().split(/\s+/).filter(Boolean).map(litNorm);
+  if (!toks.length) return null;
+  const want = new Set(toks), out = { marks: new Set(), pts: new Set(toks.filter(t => /^[A-Za-z][A-Za-z0-9']{0,3}$/.test(t))) };
+  const isPt = x => (ptNames ? ptNames.has(x) : /^[A-Za-z][A-Za-z0-9']{0,3}$/.test(x));
+  (marks || []).forEach((raw, i) => {
+    const m = /^\s*(\w+)\s*\((.*)\)\s*$/.exec(String(raw));
+    if (!m || !(m[1] in GEO_ARGS)) return;
+    const a = m[2].split(",").map(x => x.trim()).filter(x => !/^(layer|tone)\s*=/i.test(x) && !/^fill$/i.test(x));
+    let n = GEO_ARGS[m[1]];
+    if (m[1] === "poly") { n = 0; while (n < a.length && isPt(a[n])) n++; }
+    const ps = a.slice(0, n);
+    const text = litNorm(a.slice(m[1] === "circle" ? 2 : n).filter(x => !/^(left|right)$/i.test(x)).join(","));
+    const pair = n >= 2 && (want.has(`${ps[0]}-${ps[1]}`) || want.has(`${ps[1]}-${ps[0]}`));
+    const sym = text && labelSym(a.slice(m[1] === "circle" ? 2 : n).join(","));
+    const own = (text && (want.has(text) || (sym && want.has(litNorm(sym))))) || pair || (["circle", "right", "angle"].includes(m[1]) && want.has(ps[0]) && !text);
+    if (own) { out.marks.add("m" + i); for (const q of ps) out.pts.add(q); }
+  });
+  return out;
+}
+/** say (Step, iteration 2): ["I=1.5 A"] -> Map(label as written, normalised -> the text that label shows this step) */
+export function sayMap(say) {
+  const out = new Map();
+  for (const x of say || []) { const i = String(x).indexOf("="); if (i > 0) out.set(litNorm(x.slice(0, i)), String(x).slice(i + 1).trim()); }
+  return out;
+}
+/** the symbol a label names ("I = ?" -> "I", "$W_\\parallel$" -> "W_\\parallel"), or null for a value ("6 Ω") */
+const labelSym = s => { const t = String(s).replace(/\$/g, "").split("=")[0].trim(); return /^\\?[A-Za-z]+(?:_\{?[A-Za-z0-9\\]+\}?)?$/.test(t) ? t : null; };
+/** a step formula with every symbol the anchor labels wrapped in \\htmlClass{vw-sym tn-<hue>}: the formula reads in the figure's colours */
+export function texHue(tex, hues) {
+  const syms = [...hues.keys()].sort((a, b) => b.length - a.length);
+  if (!syms.length) return String(tex);
+  const esc = x => x.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+  const re = new RegExp(`(?<![\\\\A-Za-z])(${syms.map(esc).join("|")})(?![A-Za-z_])`, "g");
+  return String(tex).replace(re, x => `\\htmlClass{vw-sym tn-${hues.get(x)}}{${x}}`);
+}
+/** one step formula, display TeX: KaTeX when the page has it, else the TeX as text (never innerHTML from the model) */
+function texNode(doc, s, inline = false) {
+  const el = h(doc, inline ? "span" : "div", { class: inline ? "vw-tex-i" : "vw-tex" });
+  const K = doc.defaultView && doc.defaultView.katex;
+  const trust = x => x.command === "\\htmlClass" && /^vw-sym tn-[a-z0-9]+$/.test(x.class);   // only the hue wrap texHue writes
+  try { if (K) K.render(String(s), el, { displayMode: !inline, throwOnError: false, trust, strict: false }); else el.textContent = String(s).replace(/\\htmlClass\{[^}]*\}\{([^}]*)\}/g, "$1"); } catch { el.textContent = s; }
+  return el;
+}
+/** a step caption: **bold** as rich(), plus inline $...$ math (KaTeX when the page has it) */
+const capNodes = (c, s) => String(s ?? "").split(/\$([^$]+)\$/).flatMap((t, i) => (i % 2 ? [texNode(c.doc, t, true)] : c.rich(t)));
+
+/** Steps (F14 + stepper Nov 8, iteration 2): ONE anchor figure drawn once (Graph marks per step, or a Geometry whose parts each step lights,
+    hides or relabels: structure fixed, no redraw = no whiplash; a Doodle stays). Top row: pips (Predict's .vw-pips, the only counter; the
+    count is aria + a screen-reader .vw-n) and Show all (every step formula). Then the figure, a bold title (no number), the caption (aria-live),
+    the formula (symbols in the figure's hues), Back (ghost) / Next (filled) far apart (←/→ while the footer has focus). A Geometry anchor drops
+    its point names and gives every labelled mark its own hue; an unlit part takes its layer-3 shade (never opacity). The last step, the first
+    time: a bubbling "vw-steps-end" (the app's cheer). Back/Next never call the model. */
 register("Steps", (p, c) => {
   const steps = (p.steps || []).map(s => s.props);
   if (!steps.length) return c.h("div", { class: "vw-steps wait" });      // its steps have not arrived yet: hold the slot
-  const st = c.state(() => ({ i: 0 }));
+  const st = c.state(() => ({ i: 0, all: false, cheered: false }));
   st.i = Math.min(st.i, steps.length - 1);
-  const g = p.fig ? graphModel(p.fig.props) : null;
-  const fig = g && c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure, one step at a time" });
+  const kind = p.fig && p.fig.typeName;
+  const g = kind === "Graph" || (p.fig && !kind) ? graphModel(p.fig.props) : null;
+  let anchor = null, gm = null;
+  if (kind === "Geometry") {                                               // drawn here (stepper look); a bad one falls back to its own boundary
+    try {
+      gm = geoModel(p.fig.props, { stepper: true });
+      const says = steps.map(x => sayMap(x.say));                          // a relabelled mark is placed at its widest text, so no step's words cross a stroke
+      const wide = { ...gm, marks: gm.marks.map(m => {
+        if (!m.text) return m;
+        const y = labelSym(m.text), ks = [litNorm(m.text), y && litNorm(y)];
+        const alts = says.flatMap(sm => ks.filter(k => k && sm.has(k)).map(k => sm.get(k)));
+        const best = [m.text, ...alts].reduce((b, x) => ([...plainTex(x)].length > [...plainTex(b)].length ? x : b));
+        return best === m.text ? m : { ...m, text: best };
+      }) };
+      const svg = drawGeometry(c.doc, wide, c.t, { names: false });
+      if (svg._findings.length) throw new Error("findings");
+      anchor = c.h("div", { class: "vw-fig vw-geo", role: "img", "aria-label": p.fig.props.alt || "figure", "data-fig-findings": "" }, svg);
+    } catch { gm = null; }
+  }
+  if (!g && !anchor && p.fig) anchor = c.render(p.fig);                  // Doodle (or a Geometry that did not draw): its own error boundary
+  const geo = gm ? p.fig.props.marks || [] : null, ptNames = gm ? new Set(Object.keys(gm.pts)) : null;
+  const hues = new Map();                                                  // a label's symbol -> its hue, for the step formulas
+  if (gm) for (const m of gm.marks) { const y = m.text && m.tone && labelSym(m.text); if (y && !hues.has(y)) hues.set(y, m.tone); }
+  const texOf = x => texHue(x, hues);
+  const fig = g ? c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure, one step at a time" }) : anchor && c.h("div", { class: "vw-anchor" }, anchor);
+  const under = (el, pred, out = []) => { for (const n of el.childNodes || []) if (n.getAttribute) { if (pred(n)) out.push(n); under(n, pred, out); } return out; };   // no querySelectorAll in the test DOM
+  const marked = gm && anchor ? under(anchor, n => n.hasAttribute("data-m")) : [];
+  const orig = new Map();                                                  // a label's text element -> [its words, its keys for say]
+  if (gm && anchor) for (const el of marked.filter(n => /^text$/i.test(n.tagName))) {
+    const raw = (gm.marks[+el.getAttribute("data-m").slice(1)] || {}).text || "", y = labelSym(raw);
+    orig.set(el, [SLOT.test(raw) ? el.textContent : plainTex(raw), [litNorm(raw), y && litNorm(y)].filter(Boolean)]);
+  }
   const front = c.h("div", { class: "vw-chips vw-front" });
+  const title = c.h("p", { class: "vw-st" });
   const cap = c.h("p", { class: "vw-cap", "aria-live": "polite" });
+  const tex = c.h("div", { class: "vw-texs" });
   const body = c.h("tbody");
   const tb = p.head && c.h("table", { class: "vw-tb" }, c.h("thead", null, c.h("tr", null, p.head.map(x => c.h("th", { scope: "col" }, x)))), body);
-  const back = button(c.doc, "prev", "Back"), next = button(c.doc, "next", "Next"), n = c.h("span", { class: "vw-n" });
-  const foot = c.h("div", { class: "vw-foot" }, back, next, n);
+  const pipEls = steps.map(() => c.h("i"));
+  const pips = c.h("span", { class: "vw-pips", role: "progressbar", "aria-label": "progress", "aria-valuemin": 1, "aria-valuemax": steps.length }, pipEls);
+  const back = c.h("button", { type: "button", class: "btn btn-label vw-back", "aria-label": "Back" }, "\u2190 Back");
+  const next = c.h("button", { type: "button", class: "btn btn-go vw-next", "aria-label": "Next" }, "Next \u2192");
+  const n = c.h("span", { class: "vw-n vw-sr" });
+  const texs = steps.filter(s => s.tex);
+  const allBtn = texs.length ? c.h("button", { type: "button", class: "btn btn-label vw-all-b", "aria-expanded": "false" }, "Show all") : null;
+  const allList = texs.length ? c.h("ol", { class: "vw-all", hidden: true }, texs.map(s => c.h("li", null, texNode(c.doc, texOf(s.tex), true)))) : null;
+  const top = c.h("div", { class: "vw-top" }, pips, n, allBtn);
+  const foot = c.h("div", { class: "vw-foot" }, back, next);
+  let root = null;
   const show = () => {
     const s = steps[st.i], nodes = Object.fromEntries(pairs(s.nodes));
     if (g) fig.replaceChildren(drawGraph(c.doc, g, { nodes, edges: Object.fromEntries(pairs(s.edges)), tags: Object.fromEntries(pairs(s.tags)),
       labels: Object.fromEntries((s.labels || []).map(t => { const i = t.indexOf(":"); return [t.slice(0, i), t.slice(i + 1)]; })) }));
+    if (geo) {
+      const L = litMarks(geo, s.lit, ptNames), H = litMarks(geo, s.hide, ptNames), say = sayMap(s.say);
+      for (const el of marked) {
+        const id = el.getAttribute("data-m");
+        if (!el.hasAttribute("data-ly3")) el.setAttribute("data-ly3", el.classList.contains("ly3") ? "1" : "0");
+        cls(el, "vw-dim", !!L && !L.marks.has(id));
+        cls(el, "ly3", (!!L && !L.marks.has(id)) || el.getAttribute("data-ly3") === "1");   // dim = the layer-3 shade, never opacity
+        cls(el, "vw-lit", !!L && L.marks.has(id));
+        cls(el, "vw-hide", !!H && H.marks.has(id));
+      }
+      for (const [el, [words, keys]] of orig) { const k = keys.find(x => say.has(x)), alt = k && say.get(k); el.textContent = alt != null ? plainTex(alt) : words; }
+    }
     front.replaceChildren(...chips(c.doc, s.front || [], true));
-    cap.replaceChildren(...c.rich(s.cap));
+    title.textContent = s.title || "";
+    cap.replaceChildren(...capNodes(c, s.cap));
+    tex.replaceChildren(...(s.tex ? [texNode(c.doc, texOf(s.tex))] : []));
     if (tb) body.replaceChildren(...(s.rows || []).map(r => c.h("tr", { class: nodes[r[0]] === "cur" ? "cur" : !nodes[r[0]] || nodes[r[0]] === "idle" ? "dim" : null },
       r.map(x => c.h("td", null, x)))));
-    n.textContent = `Step ${st.i + 1} of ${steps.length}`;
+    pipEls.forEach((x, j) => { cls(x, "on", j <= st.i); cls(x, "cur", j === st.i); });
+    pips.setAttribute("aria-valuenow", st.i + 1);
+    pips.setAttribute("aria-valuetext", n.textContent = `Step ${st.i + 1} of ${steps.length}`);
+    if (allBtn) { allBtn.setAttribute("aria-expanded", String(st.all)); allBtn.textContent = st.all ? "Hide all" : "Show all"; allList.hidden = !st.all; }
     dis(back, st.i === 0); dis(next, st.i === steps.length - 1);
+    if (root && root.dispatchEvent && st.i === steps.length - 1 && steps.length > 1 && !st.cheered) {
+      st.cheered = true;
+      const CE = (c.doc.defaultView || globalThis).CustomEvent;
+      if (CE) root.dispatchEvent(new CE("vw-steps-end", { bubbles: true }));
+    }
   };
   const go = d => { const i = Math.max(0, Math.min(steps.length - 1, st.i + d)); if (i !== st.i) { st.i = i; show(); } };
   back.addEventListener("click", () => go(-1));
   next.addEventListener("click", () => go(1));
+  if (allBtn) allBtn.addEventListener("click", () => { st.all = !st.all; show(); });
   foot.addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); go(e.key === "ArrowLeft" ? -1 : 1); } });
   show();
-  return c.h("div", { class: "vw-steps" }, fig, p.front && c.h("div", null, c.h("div", { class: "vw-lab" }, p.front), front), cap, tb, foot);
+  root = c.h("div", { class: "vw-steps" }, top, allList, fig, p.front && c.h("div", null, c.h("div", { class: "vw-lab" }, p.front), front), title, cap, tex, tb, foot);
+  return root;
 });
 
 register("Hints", (p, c) => {

@@ -139,8 +139,9 @@ def ts(s, caps=False):
         return s["$ref"].removeprefix("#/$defs/")
     if caps and s.get("pattern", "").startswith("^key\\."):
         return "key.<id>"
-    if "anyOf" in s:
-        return "Component"
+    if "anyOf" in s:                                # a short union of refs (Steps.fig) reads as its names; x-any stays "Component"
+        refs = [o.get("$ref", "") for o in s["anyOf"]]
+        return " | ".join(r.removeprefix("#/$defs/") for r in refs) if all(refs) and len(refs) <= 4 else "Component"
     t = s.get("type")
     if t == "array":
         return (ts(s["items"], caps) if "items" in s else "any") + "[]" + (f"≤{s['maxItems']}" if caps and "maxItems" in s else "")
@@ -200,6 +201,11 @@ def prompt(reg, recipe=None):
         here = [n for n in names if reg["components"][n]["layer"] == layer]
         if here:
             lines += [f"### {layer}: {note}"] + [f"- `{sig(reg, n, caps=True)}`: {reg['components'][n]['desc']}" for n in here]
+    gp = reg.get("geo_prompt")
+    if "Geometry" in names and gp:                            # stepper iteration 2: shapes, in the upstream OpenUI prompt's form (rules, then tiny programs)
+        lines += ["", "## Shapes (poly, rect)"] + [f"{i}. {r}" for i, r in enumerate(gp["rules"], 1)]
+        lines += ["", "## Shape examples"] + [f"{x['idea']}:\n{x['src']}" for x in gp["examples"]]
+        lines += ["", "A stepper that lights, hides and relabels parts:", gp["program"]]
     return "\n".join(lines) + "\n"
 
 

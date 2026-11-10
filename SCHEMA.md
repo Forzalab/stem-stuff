@@ -370,8 +370,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Math | L0 | domain | planned | `Math(tex: string≤200)` | symbolic.simplify |
 | Chips | L0 | layout | planned | `Chips(items: string≤32[]≤8)` |  |
 | Callout | L1 | layout | P1.1 | `Callout(tag: string≤24, text: string≤400)` |  |
-| Steps | L1 | interaction | P1.1 | `Steps(fig?: Graph, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)` |  |
-| Step | L1 | layout | P1.1 | `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12)` |  |
+| Steps | L1 | interaction | P1.1 | `Steps(fig?: Graph | Geometry | Doodle, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)` |  |
+| Step | L1 | layout | P1.1 | `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12, tex?: string≤120, lit?: string≤120, title?: string≤40, hide?: string≤120, say?: string≤40[]≤4)` |  |
 | Hints | L1 | interaction | P1.1 | `Hints(hints: string≤200[]≤3)` |  |
 | Predict | L1 | interaction | P1.1 | `Predict(tag?: string≤24, q: string≤140, choices: string≤24[]≤5, struck?: string≤24[]≤4, tries?: number, answer: key.<id>)` |  |
 | Reveal | L1 | interaction | P1.1 | `Reveal(lock: string≤80, body?: Component[]≤4)` |  |
@@ -384,7 +384,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | MatchQuiz | L1 | interaction | planned | `MatchQuiz(pairs: string≤80[]≤2[]≤6)` | text.term_cards |
 | ITable | L1 | domain | planned | `ITable(kind: "kmap" | "truth" | "matrix" | "dp", spec: any)` | logic.truth_table |
 | Graph | L2 | domain | P1.1 | `Graph(nodes: string≤600, edges: string≤600, cols?: string≤200, marks?: string≤400, layer?: string≤120, tone?: string≤120)` | graph.trace |
-| Geometry | L1 | layout | P1.1 | `Geometry(pts: string≤240, marks: string≤80[]≤12, alt?: string≤160)` |  |
+| Geometry | L1 | layout | P1.1 | `Geometry(pts: string≤240, marks: string≤80[]≤16, alt?: string≤160)` |  |
 | FlowNet | L2 | domain | planned | `FlowNet(flow: any)` | graph.maxflow |
 | Plot | L2 | domain | planned | `Plot(data: any)` | numeric.sample |
 | Riemann | L2 | domain | planned | `Riemann(data: any)` | numeric.riemann |

@@ -26,21 +26,20 @@ def sys_text(v4, window_open=False):
 
 class StyleCard(unittest.TestCase):
     def test_file_loaded(self):
-        self.assertTrue(serve.STYLE_V4.startswith("STYLE CARD"))
-        for k in ("SUBJECT RULE", "NO AI TELLS", "BAD -> GOOD", "Reply 1", "Reply 2"):
+        """the card = Tony's v7 Cluck prompt (Nov 8), verbatim; the old "show me stage N" flow is gone (one reply = one stepper)"""
+        v7 = open(os.path.join(ROOT, "prompts", "cluck-style.txt"), encoding="utf-8", newline="").read()
+        self.assertEqual(serve.STYLE_V4, v7.strip())
+        self.assertTrue(serve.STYLE_V4.startswith("You are Cluck"))
+        for k in ("GOAL", "MODE", "Pictures", "Steps", "Truth", "Tutor note"):
             self.assertIn(k, serve.STYLE_V4)
-
-    def test_good_bad_pairs_and_two_whole_replies(self):
-        pairs = re.findall(r"^- Bad: .+ Good: .+$", serve.STYLE_V4, re.M)
-        self.assertGreaterEqual(len(pairs), 3)
-        self.assertEqual(len(re.findall(r"^Reply \d,", serve.STYLE_V4, re.M)), 2)
+        self.assertNotIn("show me stage", serve.STYLE_V4)
 
     def test_present_for_any_bank_after_the_cram_window_and_intel_absent(self):
         for code in ("PHYS_MC4", "CALC1_X", "PSY6_Q1"):
             v4 = dict(code=code, bank="Audience: x.", fig=None, turns=[], arm="claude")
             blocks = sys_text(v4, False)
             txt = "\n".join(b["text"] for b in blocks)
-            self.assertIn("STYLE CARD", txt, code)
+            self.assertIn("One reply holds all the steps", txt, code)
             self.assertNotIn("CRAM DAY GUIDE", txt, code)
             self.assertNotIn("cache_control", blocks[-1], "no extra cache breakpoint (4 is the limit)")
             self.assertEqual(sum("cache_control" in b for b in blocks), 2)
@@ -52,26 +51,17 @@ class StyleCard(unittest.TestCase):
     def test_letter_is_untouched_byte_for_byte(self):
         self.assertEqual(serve.PROMPT_V4, open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8", newline="").read())
 
-    def test_whole_replies_follow_their_own_rules(self):
-        card = serve.STYLE_V4
-        replies = re.split(r"^Reply \d,[^\n]*\n", card, flags=re.M)[1:]
-        self.assertEqual(len(replies), 2)
-        ctx = livefig.Ctx("PHYS_X", set(range(0, 11)), [])
-        for r in replies:
-            fences = re.findall(r"```openui\n(.*?)```", r, re.S)
-            self.assertTrue(fences)
-            for f in fences:
-                prog, log = views_gate.gate(f.strip(), ctx)
-                self.assertIsNotNone(prog, log)
-            prose = re.sub(r"```.*?```|\$\$.*?\$\$|\$[^$]*\$|\*\*|\([^)]*\)", " ", r, flags=re.S)
-            self.assertNotRegex(prose, r"[—–]|--", "no em dash")
-            self.assertNotRegex(prose, r"\bnot\b[^.\n]{1,40}\bbut\b", "no not-X-but-Y")
-            self.assertNotRegex(prose, r"\b(Let's|Great question)\b")
-            self.assertNotIn("?", prose.split("Not quite.")[-1] if "Not quite." in prose else "", "a wrong-pick reply asks nothing")
-            for s in re.split(r"(?<=[.!?])\s+|\n", prose):
-                self.assertLessEqual(len(s.split()), 20, s)
-            issues = aiw.analyze_text(prose, None, 5)["issues"]
-            self.assertEqual([i["text"] for i in issues if i["severity"] == "high"], [], "avoid-ai-writing: no high-severity finding")
+    def test_anchor_stepper_passes_the_gate_and_tex_never_holds_the_answer(self):
+        """stepper (Nov 8): a Steps with a Geometry anchor + per-step tex / lit passes the gate; an answer in a step formula drops that step"""
+        ctx = livefig.Ctx("PHYS_X", set(range(0, 11)), [42.0])
+        body = "\n".join(['root = View([s])', 's = Steps(g, [a, b])',
+            'g = Geometry("A 0,0; B 4,0; C 4,2", ["seg(A,B)", "seg(B,C)", "arrow(A,C,$F$)"], "A ramp.")',
+            'a = Step("We start with the ramp.", null, null, null, null, null, null, "s", "A-B")',
+            'b = Step("So we multiply.", null, null, null, null, null, null, "W = F\\,s", "F")'])
+        prog, log = views_gate.gate(body, ctx)
+        self.assertIsNotNone(prog, log)
+        prog, log = views_gate.gate(body.replace("W = F\\,s", "W = 42"), ctx)
+        self.assertTrue(prog is None or "42" not in prog, log)
 
     def test_cram_diagram_prose_has_no_person_like_object_verbs(self):
         d = serve.cram_data()

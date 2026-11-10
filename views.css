@@ -100,9 +100,39 @@
 /* Steps (F14): figure, frontier, a 2-line caption slot, table, footer under the content (never floating) */
 .vw-steps > * + * { margin-top: var(--s3); }
 .vw-steps.wait { min-height: var(--vw-fig); }
-.vw-cap { min-height: calc(2 * var(--lh) * 1em); }
-.vw-foot { display: flex; align-items: center; gap: var(--s2); }
-.vw-foot .vw-n { margin-left: auto; }
+.vw-cap { text-wrap: pretty; min-height: calc(2 * var(--lh) * 1em); }
+.vw-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+/* stepper (Nov 8, iteration 2): never a box (it sits on Cluck's sheet); --s4 gaps frame it. Top row: Predict's pips (the only counter) + Show all;
+   the anchor stays, parts take their layer-3 shade when unlit (never opacity), hide = gone; a bold title with no number; Back ghost, Next filled */
+.vw-steps { position: relative; }
+.vw-steps:has(.vw-top) > * + * { margin-top: var(--s4); }
+.vw-steps > .vw-cap, .vw-steps > .vw-st + .vw-cap { margin-top: var(--s1); }
+.vw-sr { position: absolute; width: .0625rem; height: .0625rem; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.vw-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--btn); }
+.vw-top .vw-pips i { transition: background-color var(--d-fast) ease, border-color var(--d-fast) ease; }
+.vw-top .vw-pips i.on { border-color: var(--muted); background: var(--muted); }
+.vw-top .vw-pips i.cur { border-color: var(--ink); background: var(--ink); }
+.vw-foot .btn { width: auto; grid-auto-flow: column; gap: var(--s2); padding: 0 var(--s4); white-space: nowrap; }
+.vw-foot .vw-back { padding-left: 0; border-color: transparent; background: none; }
+.vw-st { font-weight: var(--w-em); line-height: var(--lh-title); }
+.vw-st:empty { display: none; }
+.vw .gm-poly { fill: var(--body); stroke-width: 2; }   /* §2 outline; §6: the sheet fill covers what is behind */
+.vw .gm-fill { fill: color-mix(in srgb, var(--ink) 22%, var(--body)); }   /* §6: the mark's hue at 22 %, mixed onto the sheet so a wire behind stays hidden */
+.vw-anchor .gm { stroke-width: 2; }   /* §2 outline */
+.vw-anchor :is(.gm-dim, .gm-angle, .gm-right) { stroke-width: 1.5; }   /* §2 guide */
+.vw-anchor .gm-arrow { stroke-width: 3; }   /* §2 force */
+.vw-anchor .gm-fill.vw-lit:not(.ly2, .ly3) { fill: color-mix(in srgb, var(--ink) 40%, var(--body)); }   /* §6: a lit layer-1 face, 40 % */
+.vw-anchor .vw-dim { transition: stroke var(--d-dim) ease, fill var(--d-dim) ease; }
+.vw-anchor .vw-dim:not([class*="tn-"]) { --ink: var(--muted); }   /* an unlit hued part takes .ly3 (views.js): its layer-3 shade, app.css */
+.vw-anchor .vw-hide { display: none; }
+.vw-anchor .gm-t { font-weight: var(--w-em); }
+.vw-sym { color: var(--ink); }
+.vw-texs:empty { display: none; }
+.vw-tex { overflow-x: auto; }
+.vw-tex .katex-display { margin: 0; }
+.vw-all { margin: 0; padding-left: var(--s4); }
+.vw-all > li + li { margin-top: var(--s2); }
+@media (prefers-reduced-motion: reduce) { .vw-anchor .vw-dim, .vw-top .vw-pips i { transition: none; } }
 
 /* Predict (F15): pills, pips, one filled control (Check); a wrong pick stays on screen, struck */
 .vw-q { margin-top: var(--s1); font-weight: var(--w-em); }
