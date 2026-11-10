@@ -1,1 +1,334 @@
-{"active": false, "entries": []}
+{
+ "active": false,
+ "entries": [
+  {
+   "old": "tools/build_public.py",
+   "new": "tools/build_and_ship/build_public.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bundle.py",
+   "new": "tools/build_and_ship/bundle.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ship.sh",
+   "new": "tools/build_and_ship/ship.sh",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/press.sh",
+   "new": "tools/build_and_ship/press.sh",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/version.sh",
+   "new": "tools/build_and_ship/version.sh",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/brain_banks.py",
+   "new": "tools/build_and_ship/brain_banks.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/openui/",
+   "new": "tools/build_and_ship/openui/",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/anthropic_spend.py",
+   "new": "tools/operations/anthropic_spend.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/prune-branches.sh",
+   "new": "tools/operations/prune-branches.sh",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/incident.py",
+   "new": "tools/operations/incident.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/batch.sh",
+   "new": "tools/operations/batch.sh",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ci-batch.mjs",
+   "new": "tools/operations/ci-batch.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ci-gate.mjs",
+   "new": "tools/operations/ci-gate.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ci-pipe.mjs",
+   "new": "tools/operations/ci-pipe.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ci-retry.mjs",
+   "new": "tools/operations/ci-retry.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ci-select.mjs",
+   "new": "tools/operations/ci-select.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/slips.py",
+   "new": "tools/bank_tools/slips.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/schema-check.mjs",
+   "new": "tools/bank_tools/schema-check.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/tol.py",
+   "new": "tools/bank_tools/tol.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/slip_coverage.py",
+   "new": "tools/bank_tools/slip_coverage.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bank_notes.py",
+   "new": "tools/bank_tools/bank_notes.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ce3_traps.py",
+   "new": "tools/bank_tools/ce3_traps.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/ce3_mock50.py",
+   "new": "tools/bank_tools/ce3_mock50.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/fig_png.mjs",
+   "new": "tools/bank_tools/fig_png.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/gen_views.py",
+   "new": "tools/client_generators/gen_views.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/layer_steps.mjs",
+   "new": "tools/client_generators/layer_steps.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/rw_icons.py",
+   "new": "tools/client_generators/rw_icons.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/brainrot_list.py",
+   "new": "tools/client_generators/brainrot_list.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/jargon.py",
+   "new": "tools/client_generators/jargon.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/gen_figure_docs.mjs",
+   "new": "tools/client_generators/gen_figure_docs.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/split-app.mjs",
+   "new": "tools/client_generators/split-app.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bench-telemetry.mjs",
+   "new": "tools/benchmarks/bench-telemetry.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bench_claude.py",
+   "new": "tools/benchmarks/bench_claude.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bench_figs.py",
+   "new": "tools/benchmarks/bench_figs.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bench_seen.mjs",
+   "new": "tools/benchmarks/bench_seen.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/bench_views.py",
+   "new": "tools/benchmarks/bench_views.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/tol_bench.py",
+   "new": "tools/benchmarks/tol_bench.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/jev-model.mjs",
+   "new": "tools/benchmarks/jev-model.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/button_audit.py",
+   "new": "tools/audits/button_audit.py",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/button_audit.mjs",
+   "new": "tools/audits/button_audit.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/dogfood.mjs",
+   "new": "tools/audits/dogfood.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/splash_shots.mjs",
+   "new": "tools/audits/splash_shots.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/measure_slots.mjs",
+   "new": "tools/audits/measure_slots.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/impeccable.sh",
+   "new": "tools/audits/impeccable.sh",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/gen-loop.mjs",
+   "new": "tools/author/gen-loop.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/mutants.mjs",
+   "new": "tools/repo_checks/mutants.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "tools/mutants.test.mjs",
+   "new": "tools/repo_checks/mutants.test.mjs",
+   "pr": "T2",
+   "ship": "no",
+   "bridge": false
+  }
+ ]
+}

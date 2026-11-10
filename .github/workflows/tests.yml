@@ -12,7 +12,7 @@ on:
         description: "Fault to seed: applies tests/bench/mutants/<name>.patch from the run's branch (empty = none)"
         default: ""
       manifest:
-        description: "Batch number when fired by tools/batch.sh on batch/<n> (empty = none)"
+        description: "Batch number when fired by tools/operations/batch.sh on batch/<n> (empty = none)"
         default: ""
       pipe:
         description: "full = whole suite; fast = tests/run-all.sh --fast only (ticket 07 timing)"
@@ -58,7 +58,7 @@ jobs:
             [ "$n" -eq 0 ] || in_flight=true
           fi
           IN_FLIGHT="$in_flight" node --input-type=module -e '
-            import { decidePipe } from "./tools/ci-pipe.mjs";
+            import { decidePipe } from "./tools/operations/ci-pipe.mjs";
             const d = decidePipe({ event: process.env.EVENT, inFlight: process.env.IN_FLIGHT === "true" });
             console.error(`decidePipe: ${d.pipe} (${d.reason})`);
             process.stdout.write(d.pipe);
@@ -86,7 +86,7 @@ jobs:
           fi
           args=()
           for f in "${files[@]}"; do args+=(--file "$f"); done
-          selection="$(node tools/ci-select.mjs --total "$total" "${args[@]}")"
+          selection="$(node tools/operations/ci-select.mjs --total "$total" "${args[@]}")"
           read -r kind reason <<<"$selection"
           echo "selection: $kind ($reason)"
           specs=""; skip=false

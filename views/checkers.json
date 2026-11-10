@@ -39,7 +39,7 @@
     },
     {
       "id": "copy-words",
-      "desc": "copy_gate.py on the view's student-facing strings: Flesch-Kincaid grade 2-4 on the whole view text (TeX and numbers stripped; skipped under 20 words), no term from views/allow/<course>-black.json (tools/jargon.py), no slot over its character budget, no blocking aiw.lint_view_strings finding"
+      "desc": "copy_gate.py on the view's student-facing strings: Flesch-Kincaid grade 2-4 on the whole view text (TeX and numbers stripped; skipped under 20 words), no term from views/allow/<course>-black.json (tools/client_generators/jargon.py), no slot over its character budget, no blocking aiw.lint_view_strings finding"
     }
   ],
   "components": [

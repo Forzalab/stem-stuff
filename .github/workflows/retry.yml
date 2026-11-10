@@ -1,6 +1,6 @@
 # R4 (ticket 09, PR 4): auto-rerun a tests.yml run that failed on its FIRST attempt, once. A pass that
-# only happens on attempt >= 2 is YELLOW: tools/batch.sh renders it yellow and the ship gate refuses it
-# (tools/ci-retry.mjs attemptColor, imported by tools/ci-gate.mjs pickGreen). Never retry a run twice.
+# only happens on attempt >= 2 is YELLOW: tools/operations/batch.sh renders it yellow and the ship gate refuses it
+# (tools/operations/ci-retry.mjs attemptColor, imported by tools/operations/ci-gate.mjs pickGreen). Never retry a run twice.
 # The decision is the pure, tested shouldRetry; this workflow only wires the GitHub events to it.
 name: retry
 on:
@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           CONCLUSION="$CONCLUSION" RUN_ATTEMPT="$RUN_ATTEMPT" node --input-type=module -e '
-            import { shouldRetry, attemptColor } from "./tools/ci-retry.mjs";
+            import { shouldRetry, attemptColor } from "./tools/operations/ci-retry.mjs";
             const run = { conclusion: process.env.CONCLUSION, run_attempt: Number(process.env.RUN_ATTEMPT) };
             console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; shouldRetry=${shouldRetry(run)}`);
             process.stdout.write(shouldRetry(run) ? "true" : "false");

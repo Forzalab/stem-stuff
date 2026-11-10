@@ -9,14 +9,14 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(ROOT, "tools", "repo_checks", "move_inventory.py")
 BUILD = '''import os, shutil, sys
-r = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+r = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.makedirs(sys.argv[1])
 for f in ("index.html", "lib/util.js"):
     os.makedirs(os.path.dirname(os.path.join(sys.argv[1], f)), exist_ok=True)
     shutil.copy(os.path.join(r, f), os.path.join(sys.argv[1], f))
 '''
 FILES = {
-    "tools/build_public.py": BUILD,
+    "tools/build_and_ship/build_public.py": BUILD,
     "index.html": '<script src="lib/util.js"></script><a href="#x">x</a><a href="https://e.com/a.js">e</a>',
     "lib/util.js": "export const a = 1;\n",
     "sw.js": 'const BASE = ["./", "index.html", "lib/util.js"];\n',

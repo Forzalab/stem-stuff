@@ -1,19 +1,19 @@
 // RED (ticket 09, PR 4 / STEP B): the retry-once + attempt-colour logic, plus the ship-gate yellow
-// rule. Fails today because tools/ci-retry.mjs does not exist yet — every import below errors until
+// rule. Fails today because tools/operations/ci-retry.mjs does not exist yet — every import below errors until
 // the coder writes the module with this exact surface:
 //   export function attemptOf(run)      // run_attempt ?? attempt ?? 1  (normalized to a number)
 //   export function attemptColor(run)   // "green" | "yellow" | "red"
 //   export function shouldRetry(run)    // boolean (failure|timed_out on attempt 1 only)
-// and tools/ci-gate.mjs pickGreen must exclude any run whose attemptColor !== "green".
+// and tools/operations/ci-gate.mjs pickGreen must exclude any run whose attemptColor !== "green".
 // No network, no GitHub: every function is pure.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { attemptOf, attemptColor, shouldRetry } from "../tools/ci-retry.mjs";
-import { pickGreen } from "../tools/ci-gate.mjs";
+import { attemptOf, attemptColor, shouldRetry } from "../tools/operations/ci-retry.mjs";
+import { pickGreen } from "../tools/operations/ci-gate.mjs";
 
 // --- attemptOf: read the attempt number, never assume 1 -----------------------------
 // SOURCE of the two field names: the runs list API calls it `run_attempt` (ship.yml:71 reads it),
-// while `gh run list --json attempt` (tools/batch.sh:177) calls it `attempt`. Both mean the same
+// while `gh run list --json attempt` (tools/operations/batch.sh:177) calls it `attempt`. Both mean the same
 // thing. attemptOf normalizes both; missing = first attempt.
 test("attemptOf reads run_attempt or attempt, defaults to 1", () => {
   assert.equal(attemptOf({ run_attempt: 2 }), 2, "run_attempt (runs API) is the attempt");
@@ -23,11 +23,11 @@ test("attemptOf reads run_attempt or attempt, defaults to 1", () => {
     "INTENT: run_attempt wins over attempt (a literal-but-wrong `r.attempt ?? r.run_attempt` order would return 9 here)");
 });
 
-// --- attemptColor: green / yellow / red matches tools/batch.sh:184-186 -----------------
+// --- attemptColor: green / yellow / red matches tools/operations/batch.sh:184-186 -----------------
 test("attemptColor: success on attempt 1 is green, success on attempt>=2 is yellow", () => {
-  // SOURCE tools/batch.sh:184 `elif [ "$co" = success ] && [ "$at" -eq 1 ]; then state=green`
+  // SOURCE tools/operations/batch.sh:184 `elif [ "$co" = success ] && [ "$at" -eq 1 ]; then state=green`
   assert.equal(attemptColor({ conclusion: "success", run_attempt: 1 }), "green");
-  // SOURCE tools/batch.sh:185 `elif [ "$co" = success ]; then state=yellow` (attempt >= 2)
+  // SOURCE tools/operations/batch.sh:185 `elif [ "$co" = success ]; then state=yellow` (attempt >= 2)
   assert.equal(attemptColor({ conclusion: "success", run_attempt: 2 }), "yellow");
   assert.equal(attemptColor({ conclusion: "success", attempt: 2 }), "yellow",
     "INTENT: the `attempt` field (batch.sh) and `run_attempt` (runs API) must both read yellow; a "
@@ -35,7 +35,7 @@ test("attemptColor: success on attempt 1 is green, success on attempt>=2 is yell
 });
 
 test("attemptColor: anything not success is red (loop over all non-success conclusions)", () => {
-  // SOURCE tools/batch.sh:186 `else state=red`. Loop over ALL non-success conclusions:
+  // SOURCE tools/operations/batch.sh:186 `else state=red`. Loop over ALL non-success conclusions:
   for (const c of ["failure", "timed_out", "cancelled", "action_required", "neutral", "skipped", null, undefined]) {
     assert.equal(attemptColor({ conclusion: c, run_attempt: 1 }), "red",
       `conclusion ${String(c)} must be red, not green/yellow`);

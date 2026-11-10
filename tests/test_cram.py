@@ -166,7 +166,7 @@ class Cram(unittest.TestCase):
 
     def test_never_in_a_client_payload(self):
         self.assertTrue(serve.BLOCK_PREFIX and "/banks/" in serve.BLOCK_PREFIX)
-        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
         import build_public
         out = tempfile.mkdtemp()
         build_public.build(os.path.join(out, "public"))

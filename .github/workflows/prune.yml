@@ -1,4 +1,4 @@
-# Trunk style: prune done branches (tools/prune-branches.sh). Weekly, or by hand: Actions → prune-branches → Run workflow.
+# Trunk style: prune done branches (tools/operations/prune-branches.sh). Weekly, or by hand: Actions → prune-branches → Run workflow.
 name: prune-branches
 on:
   schedule:
@@ -22,6 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - run: tools/prune-branches.sh ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.max_age_days || '7' }}
+      - run: tools/operations/prune-branches.sh ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.max_age_days || '7' }}
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,11 +1,11 @@
 /* stem-stuff service worker. See OFFLINE.md.
- * shell (index.html, its css/js, KaTeX): cache-first. Each deploy stamps VERSION (tools/build_public.py), so a deploy = a new
+ * shell (index.html, its css/js, KaTeX): cache-first. Each deploy stamps VERSION (tools/build_and_ship/build_public.py), so a deploy = a new
  * sw.js: it precaches the whole new shell, takes over and drops the old shell cache in one go; offline.js reloads the page
  * (design/DEPLOY.md, Oct 6: the page used to climb one deploy per reload). Unstamped (serve.py, dev): updated in the
  * background, a changed file tells the page (update bar); stamped, a changed file is left to the next sw.js.
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
-const VERSION = "stem-v4";                                     // tools/build_public.py: "stem-<PR>-<sha>" per deploy
+const VERSION = "stem-v4";                                     // tools/build_and_ship/build_public.py: "stem-<PR>-<sha>" per deploy
 const STAMPED = VERSION !== "stem-v4";                         // a deploy (stamped) vs serve.py / dev (unstamped)
 const SHELL = VERSION + "-shell";
 const PROBS = "stem-v4-p";                                      // fixed (v4's name): problems saved for offline survive every deploy

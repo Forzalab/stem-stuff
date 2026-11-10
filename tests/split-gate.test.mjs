@@ -1,4 +1,4 @@
-// W152 gate (brain _files/w152/P0.md): the drill page is 3 ES modules (app.js -> cluck.js -> shell.js, tools/split-app.mjs). A name one
+// W152 gate (brain _files/w152/P0.md): the drill page is 3 ES modules (app.js -> cluck.js -> shell.js, tools/client_generators/split-app.mjs). A name one
 // part uses but never imports throws a ReferenceError only when that code path runs, so tests that never walk it stay green. This lints
 // every part with no-undef (all paths, run or not), and pins the load order the split depends on.
 import { test } from "node:test";

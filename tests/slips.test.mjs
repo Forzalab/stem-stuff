@@ -61,7 +61,7 @@ test("slip window is SLIP_WIN (Tony D2): 0.5% or 3 s.f., never the grading tol",
 
 test("distribute wins a tie with sign: 10-(3+2) typed 9", () => assert.equal(match("10-(3+2)", 9, 1e-6), "distribute"));
 
-/* D4 (todo 17): every live bank form + parser corners, written by `python3 tools/slips.py --golden`; tests/test_slips.py runs the same file.
+/* D4 (todo 17): every live bank form + parser corners, written by `python3 tools/bank_tools/slips.py --golden`; tests/test_slips.py runs the same file.
    Same families in the same order, each value within 1e-9 relative (0 only equals 0): no absolute floor, so tiny-constant forms count. */
 const BANKS = JSON.parse(readFileSync(new URL("fixtures/slips-golden-banks.json", import.meta.url), "utf8"));
 test("golden banks fixture: slips.mjs gives slips.py's mutants on every form", () => {
@@ -177,7 +177,7 @@ test("golden k=2 fixture: slips.mjs gives slips.py's inner+outer entries on ever
 });
 
 /* W-SPOT: on a collision, region() says WHERE the slip is, never WHAT it is, never a number; tests/test_slips.py Spot is the twin.
-   slips-golden-spots.json (python3 tools/slips.py --golden): per bank form, every collision value with its candidates' paths and the line. */
+   slips-golden-spots.json (python3 tools/bank_tools/slips.py --golden): per bank form, every collision value with its candidates' paths and the line. */
 const SPOTS = JSON.parse(readFileSync(new URL("fixtures/slips-golden-spots.json", import.meta.url), "utf8"));
 const strings = c => typeof c === "string" ? [c] : Object.values(c).flatMap(strings);
 test("spot copy: one table, equal to slips.py's, no digit anywhere", () => {

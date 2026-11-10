@@ -1,4 +1,4 @@
-"""tools/ship.sh --print-banks: which file each bank comes from ([banks-dir] > newest in the brain repo > checkout banks/),
+"""tools/build_and_ship/ship.sh --print-banks: which file each bank comes from ([banks-dir] > newest in the brain repo > checkout banks/),
 --no-brain, and BRAIN_TOKEN never reaching stdout/stderr (not even under bash -x). No worktree, no Vercel.
 ship.sh runs from a copy in a temp root, so this checkout's banks/ and .env stay out; HOME is a temp dir and SHIP_BRAIN_SEARCH is empty, so ~/brain and /home/claude/brain do too.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
@@ -52,7 +52,7 @@ def chromium():
 
 
 class Stub:
-    """A fake GitLab API for the bank hatch (tools/brain_banks.py): tree in 2 pages, raw files, commits. bad = "token" | "json"."""
+    """A fake GitLab API for the bank hatch (tools/build_and_ship/brain_banks.py): tree in 2 pages, raw files, commits. bad = "token" | "json"."""
     OLD = "projects/beta/_files/exam-bank/BANK_ZZ1.json"
     NEW = "projects/alpha/_files/quiz-bank/BANK_ZZ1.json"
     ZZ2 = "projects/alpha/_files/quiz-bank/BANK_ZZ2.json"
@@ -112,10 +112,10 @@ class PrintBanks(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix="stem-ship-")
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.root = os.path.join(self.tmp, "root")
-        os.makedirs(os.path.join(self.root, "tools"))
+        os.makedirs(os.path.join(self.root, "tools", "build_and_ship"))
         os.makedirs(os.path.join(self.root, "banks"))
         for f in ("ship.sh", "brain_banks.py"):
-            shutil.copy(os.path.join(ROOT, "tools", f), os.path.join(self.root, "tools", f))
+            shutil.copy(os.path.join(ROOT, "tools", "build_and_ship", f), os.path.join(self.root, "tools", "build_and_ship", f))
         self.home = os.path.join(self.tmp, "home")
         os.makedirs(self.home)
         self.brain = os.path.join(self.tmp, "brain")
@@ -133,7 +133,7 @@ class PrintBanks(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_"))}
         e.update(HOME=self.home, BRAIN_DIR=self.brain, SHIP_BRAIN_SEARCH="")
         e.update(env)
-        cmd = ["bash"] + (["-x"] if bash_x else []) + [os.path.join(self.root, "tools", "ship.sh"), "--print-banks", *args]
+        cmd = ["bash"] + (["-x"] if bash_x else []) + [os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "--print-banks", *args]
         r = subprocess.run(cmd, capture_output=True, text=True, env=e, timeout=60)
         self.assertEqual(r.returncode, expect, r.stderr)
         return r
@@ -225,11 +225,11 @@ class PrintBanks(unittest.TestCase):
         git(self.root, "commit", "-q", "-m", "tools")
         git(self.root, "remote", "add", "origin", origin)
         git(self.root, "push", "-q", "origin", "main")
-        with open(os.path.join(self.root, "tools", "ship.sh"), "a") as f:
+        with open(os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "a") as f:
             f.write("# an old copy\n")
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_"))}
         e.update(HOME=self.home, BRAIN_DIR=self.brain, SHIP_BRAIN_SEARCH="")
-        r = subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo"], capture_output=True, text=True, env=e, timeout=60)
+        r = subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "demo"], capture_output=True, text=True, env=e, timeout=60)
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("pull --ff-only", r.stderr)
         self.assertNotIn("deploying", r.stdout)
@@ -244,13 +244,13 @@ class PrintBanks(unittest.TestCase):
         git(self.root, "push", "-q", "-u", "origin", "main")
         other = os.path.join(self.tmp, "other")
         subprocess.run(["git", "clone", "-q", origin, other], check=True)
-        with open(os.path.join(other, "tools", "ship.sh"), "a") as f:
+        with open(os.path.join(other, "tools", "build_and_ship", "ship.sh"), "a") as f:
             f.write("# newer\n")
         git(other, "commit", "-q", "-am", "newer ship.sh")
         git(other, "push", "-q", "origin", "main")
         r = self.ship()
         self.assertIn("restarting with the new version", r.stdout)
-        with open(os.path.join(self.root, "tools", "ship.sh")) as f:
+        with open(os.path.join(self.root, "tools", "build_and_ship", "ship.sh")) as f:
             self.assertTrue(f.read().endswith("# newer\n"))
         self.assertIn("BANK_ZZ1.json", self.chosen(r))
 
@@ -259,8 +259,8 @@ class Gate(unittest.TestCase):
     """The bank gate: a bank set with one bank failing slips.py --strict or the "problems" schema stops before any Vercel step; a clean
     set (an older bank only warns) gets to `vercel deploy`. Vercel is a fake npx on PATH that logs its args; the root is a git repo with
     an origin, so the run gets as far as a real one."""
-    FILES = ("tools/ship.sh", "tools/brain_banks.py", "tools/version.sh", "tools/slips.py", "tools/tol.py", "tools/schema-check.mjs",
-             "slips.py", "SCHEMA.md", "tests/schemas.mjs", "tools/fig_png.mjs") + FIG_ASSETS
+    FILES = ("tools/build_and_ship/ship.sh", "tools/build_and_ship/brain_banks.py", "tools/build_and_ship/version.sh", "tools/bank_tools/slips.py", "tools/bank_tools/tol.py", "tools/bank_tools/schema-check.mjs",
+             "slips.py", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-gate-")
@@ -299,7 +299,7 @@ class Gate(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_", "VERCEL_"))}
         e.update(HOME=self.tmp, PATH=path or self.bin + os.pathsep + e["PATH"])
         e.update(BRAIN_DIR=brain, SHIP_BRAIN_SEARCH="") if brain else e.update(SHIP_NO_BRAIN="1")
-        return subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
+        return subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
                               capture_output=True, text=True, env=e, timeout=180)
 
     def fig_brain(self):
@@ -374,7 +374,7 @@ class Gate(unittest.TestCase):
 
 
 class FigPng(unittest.TestCase):
-    """tools/fig_png.mjs --root DIR: renders and checks DIR's problems.json + DIR/banks/*.json into DIR/banks/figs (ship.sh points it at the
+    """tools/bank_tools/fig_png.mjs --root DIR: renders and checks DIR's problems.json + DIR/banks/*.json into DIR/banks/figs (ship.sh points it at the
     deploy dir, which holds the brain banks); without --root it is this checkout, as before."""
     CODE = "ZZFIG_W1F"   # not in this checkout: a PNG for it here would mean --root leaked into the repo
 
@@ -387,7 +387,7 @@ class FigPng(unittest.TestCase):
         self.png = os.path.join(self.tmp, "banks", "figs", self.CODE + "-1.png")
 
     def fig(self, *args):
-        return subprocess.run(["node", os.path.join(ROOT, "tools", "fig_png.mjs"), "--root", self.tmp, *args],
+        return subprocess.run(["node", os.path.join(ROOT, "tools", "bank_tools", "fig_png.mjs"), "--root", self.tmp, *args],
                               capture_output=True, text=True, timeout=120)
 
     def test_check_fails_on_a_bank_figure_with_no_png(self):
@@ -416,12 +416,12 @@ class FigPng(unittest.TestCase):
 
 
 class Workflow(unittest.TestCase):
-    """.github/workflows/ship.yml installs what the gate needs before tools/ship.sh runs (run 54 on 2026-10-25 stopped at the gate:
-    "needs node and tests/node_modules", nothing deployed). The figure PNGs (tools/fig_png.mjs) need Chromium and ImageMagick too."""
+    """.github/workflows/ship.yml installs what the gate needs before tools/build_and_ship/ship.sh runs (run 54 on 2026-10-25 stopped at the gate:
+    "needs node and tests/node_modules", nothing deployed). The figure PNGs (tools/bank_tools/fig_png.mjs) need Chromium and ImageMagick too."""
     def test_gate_deps_before_ship(self):
         with open(os.path.join(ROOT, ".github", "workflows", "ship.yml")) as f:
             y = f.read()
-        ship = y.index('tools/ship.sh "$MODE"')
+        ship = y.index('tools/build_and_ship/ship.sh "$MODE"')
         for need in ("pip install sympy", "cd tests && npm ci", "install --only-shell chromium", "imagemagick"):   # + the figure PNG gate
             self.assertIn(need, y)
             self.assertLess(y.index(need), ship, need)

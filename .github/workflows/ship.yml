@@ -1,4 +1,4 @@
-# The power button: tools/ship.sh demo|live on a GitHub runner, so a slow network only has to send one tiny request.
+# The power button: tools/build_and_ship/ship.sh demo|live on a GitHub runner, so a slow network only has to send one tiny request.
 # Phone: GitHub app → Actions → ship → Run workflow, or the curl in design/DEPLOY.md ("Power button"). Runs ship.sh unchanged:
 # origin/main + the brain banks (bank hatch) → Vercel → smoke. Banks live only in ship.sh's temp dirs on this throwaway runner:
 # no artifacts, no caches (banks never land on GitHub).
@@ -44,14 +44,14 @@ jobs:
       # first-parent history for the PR number ("#83+1"); a shallow clone would stamp "?".
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0 }
-      # the bank gate (tools/ship.sh, #261) runs slips.py --strict (sympy) and the schema check (tests/node_modules): no deps = nothing deployed
+      # the bank gate (tools/build_and_ship/ship.sh, #261) runs slips.py --strict (sympy) and the schema check (tests/node_modules): no deps = nothing deployed
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install sympy
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: cd tests && npm ci
-      # the figure PNG gate (tools/fig_png.mjs --root, todo 134) draws the brain banks' figures: Chromium for playwright-core (no
+      # the figure PNG gate (tools/bank_tools/fig_png.mjs --root, todo 134) draws the brain banks' figures: Chromium for playwright-core (no
       # --with-deps: ubuntu-24.04 has its libs, see tests.yml) + ImageMagick's convert (installed only if the image lacks it)
       - run: cd tests && npx playwright-core install --only-shell chromium
       - run: command -v convert >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }
@@ -59,8 +59,8 @@ jobs:
       - run: npx -y vercel@latest --version
       # The ship gate (ticket 09, PR 1). Facts only, no new secret: main push runs today are all FULL (tests.yml push: [main]).
       # Query tests.yml's own runs (the per-workflow endpoint): a green ship/prune/spend run is not a green test run.
-      # tools/ci-gate.mjs refuses (exit 1) unless origin/main itself, or a docs-only diff after it, has a full green run; the
-      # step sits BEFORE tools/ship.sh so a refusal happens before any Vercel call.
+      # tools/operations/ci-gate.mjs refuses (exit 1) unless origin/main itself, or a docs-only diff after it, has a full green run; the
+      # step sits BEFORE tools/build_and_ship/ship.sh so a refusal happens before any Vercel call.
       - name: fetch main test runs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -78,8 +78,8 @@ jobs:
         run: |
           CANDIDATE="$(git rev-parse origin/main)"
           echo "ship gate: candidate $CANDIDATE"
-          node tools/ci-gate.mjs --candidate "$CANDIDATE" --runs runs.json
-      - name: tools/ship.sh
+          node tools/operations/ci-gate.mjs --candidate "$CANDIDATE" --runs runs.json
+      - name: tools/build_and_ship/ship.sh
         env:
           MODE: ${{ inputs.mode }}
           SHIP_PINS: ${{ inputs.pins || vars.SHIP_PINS }}
@@ -87,4 +87,4 @@ jobs:
           BRAIN_TOKEN: ${{ secrets.BRAIN_TOKEN }}
         run: |
           case "$MODE" in demo|live) ;; *) echo "::error::mode must be demo or live"; exit 2 ;; esac
-          tools/ship.sh "$MODE"
+          tools/build_and_ship/ship.sh "$MODE"

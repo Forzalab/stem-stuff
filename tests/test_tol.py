@@ -1,4 +1,4 @@
-"""tools/tol.py: the wiggle test (tolerance 1b, SCHEMA.md tol_why)."""
+"""tools/bank_tools/tol.py: the wiggle test (tolerance 1b, SCHEMA.md tol_why)."""
 import contextlib
 import importlib.util
 import io
@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools", "bank_tools"))
 import tol  # noqa: E402
 
 
@@ -158,7 +158,7 @@ class Log(unittest.TestCase):                                           # todo 3
 
     def test_slips_cli_log_opt_in(self):
         here = os.path.dirname(os.path.abspath(__file__))
-        spec = importlib.util.spec_from_file_location("tools_slips", os.path.join(here, "..", "tools", "slips.py"))
+        spec = importlib.util.spec_from_file_location("tools_slips", os.path.join(here, "..", "tools", "bank_tools", "slips.py"))
         ts = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ts)
         bank = {"problems": [{"code": "A", "type": "num", "answer": "14", "form": "10+7-3"}]}

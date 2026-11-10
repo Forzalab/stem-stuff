@@ -1,4 +1,4 @@
-"""Vercel path: tools/build_public.py keeps answers out of public/, api/index.py (WSGI) serves the API through
+"""Vercel path: tools/build_and_ship/build_public.py keeps answers out of public/, api/index.py (WSGI) serves the API through
 serve.dispatch, and tries go to KV (faked here) when KV_REST_API_URL/TOKEN are set.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import io
@@ -11,7 +11,7 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
 sys.argv = [sys.argv[0]]
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import serve  # noqa: E402
@@ -47,7 +47,7 @@ class BuildPublic(unittest.TestCase):
 
 
 class Stamp(unittest.TestCase):
-    """version.json (tools/ship.sh) → a sw.js of its own per deploy + the badge's meta; none → both stay "dev" (design/DEPLOY.md)"""
+    """version.json (tools/build_and_ship/ship.sh) → a sw.js of its own per deploy + the badge's meta; none → both stay "dev" (design/DEPLOY.md)"""
     def dir(self, version=None):
         d = tempfile.mkdtemp(prefix="stem-stamp-")
         for f in ("sw.js", "index.html"):

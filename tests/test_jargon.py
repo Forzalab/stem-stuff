@@ -1,4 +1,4 @@
-"""tools/jargon.py: provenance from the file extension (.json/.md = ai, anything else = human), a term is blacklisted
+"""tools/client_generators/jargon.py: provenance from the file extension (.json/.md = ai, anything else = human), a term is blacklisted
 only when it occurs in >= min_ai_files DISTINCT AI files (hits in one file never add up) and has <= max_human (default 0)
 human hits, common English never counts, a term holding a bank-format/markup word (format-stop.txt) or a TeX command
 never counts, bank JSON reads question + choice text only, and the shipped manifest builds current blacklists."""
@@ -11,7 +11,7 @@ import unittest
 import unittest.mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "client_generators"))
 import jargon  # noqa: E402
 
 
@@ -152,7 +152,7 @@ class Shipped(unittest.TestCase):
         for e in entries:  # in-repo sources must exist; external (brain) ones may be absent (CI) -> course skipped
             if not e.get("external"):
                 self.assertTrue(os.path.exists(os.path.join(ROOT, e["path"])), e["path"])
-        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "jargon.py"), "--check"],
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "client_generators", "jargon.py"), "--check"],
                            capture_output=True, text=True, timeout=120)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 

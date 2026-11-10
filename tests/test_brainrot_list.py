@@ -1,4 +1,4 @@
-"""tools/brainrot_list.py: a playlist feed -> [id, title, short], and the CATS block in brainrot.js rewritten between its markers.
+"""tools/client_generators/brainrot_list.py: a playlist feed -> [id, title, short], and the CATS block in brainrot.js rewritten between its markers.
 No network. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import io
 import json
@@ -10,7 +10,7 @@ import urllib.error
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "client_generators"))
 import brainrot_list  # noqa: E402
 
 FEED = """<?xml version="1.0" encoding="UTF-8"?>

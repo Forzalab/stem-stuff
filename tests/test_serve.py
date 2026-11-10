@@ -239,7 +239,7 @@ class Grade(unittest.TestCase):
             self.assertEqual(serve.slip_hit(u, 0.532)["collide"], ["drop", "power"])
         self.assertIsNone(serve.slip_hit({**u, "answer": "12/(100+200+300)", "form": "12/(100+200+300)", "tol": 0.02}, 0.0609))   # 0.06 sign: 1.5%
 
-    def test_off_by_one_wrong(self):                                            # problems.json carries the wiggle test's tol (tools/tol.py --write)
+    def test_off_by_one_wrong(self):                                            # problems.json carries the wiggle test's tol (tools/bank_tools/tol.py --write)
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "problems.json"), encoding="utf-8") as f:
             units = {c: u for p in json.load(f)["problems"] for c, u in serve.slips.units(p)}
         for code, typed in (("CSCI26_J2A", 119), ("CSCI26_J2A", 121), ("CSCI26_H5M", 719), ("CSCI26_J5D", 59), ("CALC1_T6B", 11.88), ("CSCI26_M5V#0", 13.9)):
@@ -821,7 +821,7 @@ class Http(unittest.TestCase):
             return e.code
 
     def test_blocked(self):
-        for path in ["problems.json", "serve.py", "deploy.sh", "tests/test_serve.py", "tools/bundle.py", ".git/HEAD", "p/NOPE_ZZZ.json",
+        for path in ["problems.json", "serve.py", "deploy.sh", "tests/test_serve.py", "tools/build_and_ship/bundle.py", ".git/HEAD", "p/NOPE_ZZZ.json",
                      "banks/.gitkeep", "b/BANK_NOPE.json"]:
             for m in ("GET", "HEAD"):
                 self.assertEqual(self.status(path, m), 404, f"{m} {path}")
@@ -1524,7 +1524,7 @@ class BankVersions(unittest.TestCase):
         return unittest.mock.patch.object(serve, "today", lambda: serve.datetime.date(y, m, d))
 
     def test_cutoff_matches_slips(self):
-        import importlib.util                                         # the root slips.py by path (tools/slips.py has the same name)
+        import importlib.util                                         # the root slips.py by path (tools/bank_tools/slips.py has the same name)
         spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "slips.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -1592,7 +1592,7 @@ class BankVersions(unittest.TestCase):
 
 class BankVField(unittest.TestCase):
     """SCHEMA.md Version table: v is an int (1 or yyyymmdd). A string or float v is logged once (naming the file and the value) and read as 1,
-    the same as tools/slips.py; an int, or no v, is quiet."""
+    the same as tools/bank_tools/slips.py; an int, or no v, is quiet."""
     NUM = {"code": "CALC1_VF1", "type": "num", "answer": "2", "form": "1+1", "body": [{"type": "text", "md": "1 + 1"}]}
 
     def setUp(self):
@@ -2709,7 +2709,7 @@ class Guard(unittest.TestCase):
 
 
 class FigImage(unittest.TestCase):
-    """the Claude arm sends each question figure as a pre-rendered PNG (tools/fig_png.mjs) with the question block; the non-vision arm,
+    """the Claude arm sends each question figure as a pre-rendered PNG (tools/bank_tools/fig_png.mjs) with the question block; the non-vision arm,
     CLUCK_FIG_IMG=0 and a figure-less question get none; the bytes are the same on every turn (the cached prefix replays them)"""
     FIG, PLAIN = "CALC1_A9R", "CALC1_T6B"
 
@@ -2730,7 +2730,7 @@ class FigImage(unittest.TestCase):
     def test_every_bank_figure_has_png(self):
         miss = [f"{c}-{i}.png" for c, p in serve.problems().items() for i, b in enumerate(p.get("body", []))
                 if b.get("type") == "graph" and not os.path.isfile(os.path.join(serve.FIG_DIR, f"{c}-{i}.png"))]
-        self.assertEqual(miss, [], "graph blocks with no figure PNG: run `node tools/fig_png.mjs` and commit banks/figs/")
+        self.assertEqual(miss, [], "graph blocks with no figure PNG: run `node tools/bank_tools/fig_png.mjs` and commit banks/figs/")
 
     def test_figure_question_has_image(self):
         import base64

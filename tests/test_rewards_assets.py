@@ -18,8 +18,8 @@ class RewardsAssets(unittest.TestCase):
                 self.assertIn(words, open(p, encoding="utf-8").read(), f)
 
     def test_icons_js_is_fresh(self):
-        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "rw_icons.py"), "--check"])
-        self.assertEqual(r.returncode, 0, "run python3 tools/rw_icons.py")
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "client_generators", "rw_icons.py"), "--check"])
+        self.assertEqual(r.returncode, 0, "run python3 tools/client_generators/rw_icons.py")
 
 
 if __name__ == "__main__":

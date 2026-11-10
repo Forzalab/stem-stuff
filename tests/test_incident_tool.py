@@ -1,4 +1,4 @@
-"""tools/incident.py: finds a code in a pasted log (serve.py's real line format), in Vercel's log search and in PostHog (HTTP stubbed,
+"""tools/operations/incident.py: finds a code in a pasted log (serve.py's real line format), in Vercel's log search and in PostHog (HTTP stubbed,
 no network); the server lines of the same trace only; no key ever printed. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import contextlib
 import io
@@ -11,7 +11,7 @@ import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "operations"))
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset (serve.today)

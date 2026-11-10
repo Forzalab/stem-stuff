@@ -16,10 +16,10 @@
    The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
    While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
    was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
-   Curated brainrots (Tony, Oct 5): CATS = his 8 playlists (3 on Oct 5, 5 on Oct 26; tools/brainrot_list.py writes it, a hand-curated fallback for a failing Oct 26 feed). Each page load picks 5 random categories, one video each (Tony, Oct 29: "add 3 more brainrot vid for desktop"; Oct 31: "5 total"): docked
+   Curated brainrots (Tony, Oct 5): CATS = his 8 playlists (3 on Oct 5, 5 on Oct 26; tools/client_generators/brainrot_list.py writes it, a hand-curated fallback for a failing Oct 26 feed). Each page load picks 5 random categories, one video each (Tony, Oct 29: "add 3 more brainrot vid for desktop"; Oct 31: "5 total"): docked
    shows the 5 in one sideways-scrolling row (4-5 load once a tenth of them is in the box: the half-peeking 4th at once, the 5th when scrolled to), the corner 2. */
 (() => {
-  /* list:start (tools/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
+  /* list:start (tools/client_generators/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
   const CATS = [
     ["Parkour", [["z84bmLDzIIk", "Minecraft Parkour Gameplay No Copyright 4K (2 Hours)", 0], ["85z7jqGAGcc", "Minecraft Parkour Gameplay No Copyright (2 Hours)", 0], ["BXUA2FncVPI", "Minecraft Parkour Gameplay No Copyright 4K", 0], ["5ksFZIlktBY", "Minecraft Parkour Gameplay No Copyright 4K (1 HOUR)", 0], ["wxgSCIpoMQE", "Minecraft Parkour Gameplay No Copyright", 0], ["l9_9M1TetJQ", "Minecraft Parkour Gameplay No Copyright", 0], ["_A3po0HYwkY", "Minecraft Parkour Gameplay No Copyright (1 HOUR)", 0], ["u7kdVe8q5zs", "Minecraft Parkour Gameplay No Copyright", 0], ["0c4KWfPhgWA", "Minecraft Parkour Gameplay (No Copyright) 1 HOUR", 0], ["7mTTdWTw5p0", "Minecraft Parkour Gameplay NO COPYRIGHT", 0], ["952ILTHDgC4", "Minecraft Parkour Gameplay No Copyright (4K)", 0], ["YW7NV8J8oxI", "Minecraft Parkour Gameplay No Copyright (FREE TO USE)", 0], ["1DmWDZOdl6U", "Minecraft Parkour Gameplay NO COPYRIGHT", 0], ["r7QxFKBBTM8", "Minecraft Parkour Gameplay (NO COPYRIGHT)", 0], ["0vPT4tUFKWA", "Minecraft Parkour Gameplay (NO COPYRIGHT)", 0]]],
     ["Brainrot", [["lWJBIrpLq84", "Down in Ohio | TikTok Compilation 🤣", 0], ["tzD9OxAHtzU", "skibidi toilet", 1], ["AnoTVNqLJ-Q", "skibidi toilet 2", 1], ["brGo1JgwtrM", "skibidi toilet 3", 1], ["UvFroPxa67s", "skibidi toilet 4", 1], ["9S8yAqINOYs", "skibidi toilet 5", 1], ["iQWY6j4aGc8", "skibidi toilet 6", 1], ["wVNMVGY56Os", "skibidi toilet 7", 1], ["ImL2oQ_FxfU", "skibidi toilet 8", 1], ["U_lrep5F8gE", "skibidi toilet 9", 1], ["OHj0icF52tQ", "skibidi toilet 10", 1], ["mA5ShB4EmCo", "CG5 - GRIMACE (Original Song)", 0], ["-9kU8hM_iIc", "Just got the grimace shake! #shorts", 1], ["-LpYxiy9MsM", "The GRIMACE SHAKE Got Our Kids!", 1]]],
@@ -77,7 +77,7 @@
      nothing new): the page sends {"event":"listening"} every 250 ms until the player answers, then asks for onError, the same protocol
      YouTube's www-widgetapi.js speaks, without loading that script (one more script from YouTube, for 3 messages). Swapped codes
      (developers.google.com/youtube/iframe_api_reference#onError): 2 bad id, 5 HTML5 player, 100 removed / private, 101 + 150 embedding
-     off. Not 153 (no Referer): every video would fail the same. tools/brainrot_list.py drops non-embeddable ids before they ship. */
+     off. Not 153 (no Referer): every video would fail the same. tools/client_generators/brainrot_list.py drops non-embeddable ids before they ship. */
   const YT = "https://www.youtube-nocookie.com", DEAD = [2, 5, 100, 101, 150], shown = new Set(VIDS.map(v => v[0]));
   const slots = [];
   function listen(f, i) {

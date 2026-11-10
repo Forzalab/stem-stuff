@@ -1,4 +1,4 @@
-"""tools/anthropic_spend.py: cost-report summing, pagination, failure path, no secrets in output (HTTP stubbed, no network)."""
+"""tools/operations/anthropic_spend.py: cost-report summing, pagination, failure path, no secrets in output (HTTP stubbed, no network)."""
 import contextlib
 import datetime as dt
 import io
@@ -9,7 +9,7 @@ import unittest
 import urllib.error
 import urllib.parse
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools", "operations"))
 import anthropic_spend as s  # noqa: E402
 
 ADMIN = "sk-ant-admin01-SECRETSECRETSECRET"

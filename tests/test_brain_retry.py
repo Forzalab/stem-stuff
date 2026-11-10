@@ -1,4 +1,4 @@
-"""The bank hatch (tools/brain_banks.py) survives GitLab 429/5xx: retries with Retry-After or backoff, then fails with the same message.
+"""The bank hatch (tools/build_and_ship/brain_banks.py) survives GitLab 429/5xx: retries with Retry-After or backoff, then fails with the same message.
 Runs the script against a local fake GitLab; SHIP_BACKOFF_SCALE=0 skips all waits (Retry-After included)."""
 import http.server
 import json
@@ -51,7 +51,7 @@ class Retry(unittest.TestCase):
         self.addCleanup(srv.shutdown)
         with tempfile.TemporaryDirectory() as out:
             env = dict(os.environ, BRAIN_TOKEN="t", BRAIN_API=f"http://127.0.0.1:{srv.server_port}", SHIP_BACKOFF_SCALE="0", SHIP_PINS="", SHIP_HTTP_TIMEOUT="1")
-            r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "brain_banks.py"), out], env=env, capture_output=True, text=True, timeout=60)
+            r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "build_and_ship", "brain_banks.py"), out], env=env, capture_output=True, text=True, timeout=60)
             return r, state, os.path.exists(os.path.join(out, "BANK_ZZ1.json"))
 
     def test_429_once_then_ok(self):

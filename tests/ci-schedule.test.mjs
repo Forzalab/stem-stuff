@@ -1,10 +1,10 @@
 // RED (ticket 09, PR 3 / STEP A): the nightly schedule + "batch/nightly is full, never affected"
-// rules for the ship gate. Fails today because tools/ci-gate.mjs runKind maps `schedule` to "unknown"
+// rules for the ship gate. Fails today because tools/operations/ci-gate.mjs runKind maps `schedule` to "unknown"
 // (it must become "full"), and because the ship gate must treat a schedule run as a full run.
 // No network, no GitHub: runKind/pickGreen are pure.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runKind, pickGreen } from "../tools/ci-gate.mjs";
+import { runKind, pickGreen } from "../tools/operations/ci-gate.mjs";
 
 // --- runKind: schedule is a FULL run on main -----------------------------------------
 // SOURCE R3 (SPEC-PR3.md §4): tests.yml gains `on: schedule`, and a schedule run is the full suite.

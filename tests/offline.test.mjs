@@ -26,7 +26,7 @@ test("shell: cache-first", () => {
     "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css",
     "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", "vendor/fonts/press-start-2p-latin-400-normal.woff2"])
     assert.equal(r(p), "shell", p);
-  for (const p of ["sw.js", "_vercel/insights/script.js", "tests/x.js", "tools/bundle.py", "problems.json", "SCHEMA.md", "serve.py"]) assert.equal(r(p), "pass", p);
+  for (const p of ["sw.js", "_vercel/insights/script.js", "tests/x.js", "tools/build_and_ship/bundle.py", "problems.json", "SCHEMA.md", "serve.py"]) assert.equal(r(p), "pass", p);
 });
 test("offline.js never stores or reads k/", () => {
   const off = readFileSync(new URL("../offline.js", import.meta.url), "utf8");

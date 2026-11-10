@@ -1,5 +1,5 @@
 // RED (PR 1, ticket 09): the ship-gate decision + the green-run facts. Fails today because
-// tools/ci-gate.mjs does not exist yet — every import below errors until the coder writes the
+// tools/operations/ci-gate.mjs does not exist yet — every import below errors until the coder writes the
 // module with this exact surface:
 //   export const DOCS_EXTS                          // loopable docs-only extension set
 //   export function isDocsOnly(path)
@@ -7,7 +7,7 @@
 //   export function runKind(run)                    // -> 'full' | 'fast' | 'bench' | 'unknown'
 //   export function pickGreen(runs, candidate)      // -> { sha, kind:'full', created_at } | null
 //   export function decideShip({candidate, green, changedFiles})  // -> { ok, reason }
-// and a CLI: node tools/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]...
+// and a CLI: node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]...
 //   prints the decision, exits 0 (ship) / 1 (refuse).
 // No network, no GitHub, no git: pickGreen/runKind/decideShip are pure; the CLI is driven here
 // through --file injection (no git diff).
@@ -15,16 +15,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { DOCS_EXTS, isDocsOnly, classify, runKind, pickGreen, decideShip } from "../tools/ci-gate.mjs";
+import { DOCS_EXTS, isDocsOnly, classify, runKind, pickGreen, decideShip } from "../tools/operations/ci-gate.mjs";
 
-const CLI = fileURLToPath(new URL("../tools/ci-gate.mjs", import.meta.url));
+const CLI = fileURLToPath(new URL("../tools/operations/ci-gate.mjs", import.meta.url));
 const fix = (name) => fileURLToPath(new URL(`./fixtures/ci-gate/${name}.json`, import.meta.url));
 function cli(args) {
   return spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8" });
 }
 
 // --- docs-only = .md only -----------------------------------------------------------
-// SOURCE of ".md": tools/ci-gate.mjs DOCS_EXTS (SPEC.md §docs-only). Everything else is code:
+// SOURCE of ".md": tools/operations/ci-gate.mjs DOCS_EXTS (SPEC.md §docs-only). Everything else is code:
 // requirements.txt:1 (sympy = a dependency manifest), views/allow/common-en.txt:1 (answer
 // allow-list), vendor/fonts/OFL.txt:1 (license shipped with the code it licenses).
 test("DOCS_EXTS is the set {'.md'} and nothing less", () => {

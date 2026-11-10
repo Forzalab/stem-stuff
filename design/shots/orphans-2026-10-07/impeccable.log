@@ -1,4 +1,4 @@
-$ OUT=... tools/impeccable.sh http://127.0.0.1:8871 index.html -- index.html
+$ OUT=... tools/audits/impeccable.sh http://127.0.0.1:8871 index.html -- index.html
 390x844 index.html: 0 lines
 1920x1080 index.html: 0 lines
 2560x1440 index.html: 0 lines
@@ -31,7 +31,7 @@ rc=2
 
 1 advisory note. Suppress with --no-advisory.
 
-=== live-only run (the 4 viewports, no static args): tools/impeccable.sh http://127.0.0.1:8871 index.html
+=== live-only run (the 4 viewports, no static args): tools/audits/impeccable.sh http://127.0.0.1:8871 index.html
 390x844 index.html: 0 lines
 1920x1080 index.html: 0 lines
 2560x1440 index.html: 0 lines

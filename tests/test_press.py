@@ -1,4 +1,4 @@
-"""tools/press.sh with a fake `gh` on PATH: the default press queues ship.yml and exits (no secret list, no run lookup, no watch);
+"""tools/build_and_ship/press.sh with a fake `gh` on PATH: the default press queues ship.yml and exits (no secret list, no run lookup, no watch);
 --wait still watches the run. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import os
 import subprocess
@@ -26,7 +26,7 @@ class Press(unittest.TestCase):
         log = os.path.join(d, "gh.log")
         open(log, "w").close()
         env = dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"], GH_LOG=log)
-        r = subprocess.run(["bash", os.path.join(ROOT, "tools/press.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
+        r = subprocess.run(["bash", os.path.join(ROOT, "tools/build_and_ship/press.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
         with open(log) as f:
             return r, f.read().splitlines()
 

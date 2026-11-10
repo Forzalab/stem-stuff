@@ -1,5 +1,5 @@
 // views-lib.js: THE component list of the "stem" view library (render plan v2, Part C), read from views/library.json
-// (LibrarySpec, generated from views/registry.json by tools/gen_views.py: edit the registry, never this file or the JSON).
+// (LibrarySpec, generated from views/registry.json by tools/client_generators/gen_views.py: edit the registry, never this file or the JSON).
 // views.js reads it (positional prop order, caps), the tests read it (no look props).
 // Rules (refine F2/F3/F7/F19): no prop names a look (colour, size, icon, style...); look is CSS by cascade (views.css, page vs .ai-box).
 // Every string prop has a maxLength and every list a maxItems: over a cap, the statement drops (`too-long`).

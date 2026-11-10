@@ -1,4 +1,4 @@
-"""tools/slip_coverage.py: the share of logged wrong tries (the tries blob: tries.json or Upstash stem:tries) that get a slip family, a
+"""tools/bank_tools/slip_coverage.py: the share of logged wrong tries (the tries blob: tries.json or Upstash stem:tries) that get a slip family, a
 SLIP_TIE collide, or nothing (the fallback ladder's share). Run: python3 -m pytest tests/test_slip_coverage.py -q"""
 import contextlib
 import importlib.util
@@ -13,7 +13,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))   # never the repo tries.json
-spec = importlib.util.spec_from_file_location("slip_coverage", os.path.join(ROOT, "tools", "slip_coverage.py"))
+spec = importlib.util.spec_from_file_location("slip_coverage", os.path.join(ROOT, "tools", "bank_tools", "slip_coverage.py"))
 cov = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cov)
 

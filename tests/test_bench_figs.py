@@ -1,4 +1,4 @@
-"""tools/bench_figs.py: the GPT-shape score, the figure gate pass-through, the kind match and the table (no network, no key);
+"""tools/benchmarks/bench_figs.py: the GPT-shape score, the figure gate pass-through, the kind match and the table (no network, no key);
 plus the livefig changes it came with (step-number edge labels are free, spelled numbers are givens) and serve.network_data."""
 import json
 import os
@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "benchmarks"))
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import bench_figs as b  # noqa: E402

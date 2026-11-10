@@ -1,10 +1,10 @@
 # G3 Impeccable, 2026-10-08, branch ccr-ef299f82-2e1wio-g3-optout (raw output kept out of the repo: OUT=<scratch>)
 
-$ tools/impeccable.sh http://127.0.0.1:$PORT privacy.html -- privacy.html
+$ tools/audits/impeccable.sh http://127.0.0.1:$PORT privacy.html -- privacy.html
 390x844 privacy.html: 0 lines / 1920x1080: 0 / 2560x1440: 0 / 3840x2160: 0 / static: 0 lines
 rc=0
 
-$ tools/impeccable.sh http://127.0.0.1:$PORT index.html privacy.html -- app.css privacy.html nav.css
+$ tools/audits/impeccable.sh http://127.0.0.1:$PORT index.html privacy.html -- app.css privacy.html nav.css
 390x844 index.html: 0 lines
 1920x1080 index.html: 0 lines
 2560x1440 index.html: 0 lines
