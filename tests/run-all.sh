@@ -411,6 +411,7 @@ elif [ "$base" -eq 1 ]; then
   run unittest python3 -m unittest discover -s tests -p 'test_*.py'
   run npm bash -c 'cd tests && npm test'
   run batch bash tests/batch.test.sh
+  run codemap python3 tools/repo_checks/codemap.py map   # CM3: every CODEMAP row exists, every code file has a row, big files have a header
 fi
 if [ "${#specs[@]}" -gt 0 ]; then
   PORT="$(free_port)"
