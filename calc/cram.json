@@ -1,6 +1,6 @@
 {
  "v": 1,
- "enabled": true,
+ "enabled": false,
  "note": "Cram skeleton: one entry per bank. The top-level enabled flag is the ONE cram switch: a cram surface shows only while enabled is not false and Date.now() < until. Generic study moves, no exam stems.",
  "banks": {
   "BANK_P3X": {

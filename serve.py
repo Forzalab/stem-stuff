@@ -3569,7 +3569,8 @@ def cram_on(now=None):
         return False
     if cram_json().get("enabled", True) is False:            # the one cram flag (calc/cram.json): off = no cram surface
         return False
-    now = now or datetime.datetime.now(PT)
+    if now is None:   # STEM_TODAY (the test runners' pinned date) pins the cram clock too, at noon PT; unset (prod) = the real clock
+        now = datetime.datetime.combine(today(), datetime.time(12), PT) if os.environ.get("STEM_TODAY", "").strip() else datetime.datetime.now(PT)
     return now <= CRAM_UNTIL
 
 

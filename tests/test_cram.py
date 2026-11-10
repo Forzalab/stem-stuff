@@ -36,8 +36,16 @@ class Cram(unittest.TestCase):
         for p in self.ps:
             p.start()
         os.environ.pop("CRAM_INTEL", None)
+        with open(os.path.join(ROOT, "calc", "cram.json")) as f:   # the cram window is over (flag off in the repo): test a forced-on copy, like cram-off.pw.mjs
+            on = dict(json.load(f), enabled=True)
+        self.cram = os.path.join(self.d, "cram.json")
+        with open(self.cram, "w") as f:
+            json.dump(on, f)
+        self.env = mock.patch.dict(os.environ, {"STEM_CRAM": self.cram})
+        self.env.start()
 
     def tearDown(self):
+        self.env.stop()
         for p in self.ps:
             p.stop()
 

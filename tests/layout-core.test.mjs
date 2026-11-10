@@ -5,8 +5,10 @@
 // Plan lines (Q41: // goal anchor layers budget -> result().plan + fyi plan-layers / plan-budget / plan-missing), layer cap 6 (Q42).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines } from "../layout-core.mjs";
-import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE } from "../layout-docs.mjs";
+import { readFileSync } from "node:fs";
+import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines, measureOf } from "../layout-core.mjs";
+import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, INLINE_EXAMPLES, readDoc } from "../layout-docs.mjs";
+import { generate } from "../tools/gen_figure_docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
 const close = (p, q) => assert.ok(Math.abs(p[0] - q[0]) < 1e-3 && Math.abs(p[1] - q[1]) < 1e-3, `${p} vs ${q}`);
@@ -149,14 +151,65 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
   const codes = new Set([...b.findings, ...b2.findings, ...evaluate(SCENES.broken.pass1, { mover: true }).findings].map(f => f.code));
   for (const c of ["overlap", "sunk", "escape", "vec-head", "undefined", "unknown-comp", "cycle", "undefined-ref", "fix-derived", "fix-trait", "redefine", "legend", "auto-fixed", "plan-missing"]) assert.ok(codes.has(c), c);
   assert.ok(!b2.findings.some(f => f.code === "overlap"), "fx3 = Fix(c2, {y: 1.5}) clears the crate overlap");
-  assert.ok(CORE.split("\n").length <= 34, "the core prompt stays short");
+  assert.ok(CORE.replace(DOC_INDEX, "").replace(INLINE_EXAMPLES, "").split("\n").length <= 34, "the core prompt prose stays short");
+  assert.equal(DOC_INDEX.split("\n").length, DOCS.length, "the doc index has one line per doc");
+  for (const line of DOC_INDEX.split("\n")) assert.ok(line.length <= 140, `a doc index line is over 140 chars: ${line}`);
   assert.match(CORE, /Plan first \(the \/\/ lines\)/);
   assert.match(CORE, /max 6/);
   assert.match(TOPICS.layers, /```\n\/\/ goal: /);
   for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.ok(evaluate(sc.pass1).plan, `${k} has plan lines`);
   assert.match(CORE, /MINIMALISTIC, FUNCTIONAL/);
-  assert.ok(!/Svg|path d/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");
+  assert.ok(!/\bSvg\s*\(|<path\b|path d="/.test(CORE + Object.values(TOPICS).join("")), "raw SVG stays out of the prompt");   // syntax only: the words "path difference" are physics
   for (const t of ["curves", "legend", "dim", "layers"]) assert.ok(TOPIC_NAMES.includes(t), t);
+});
+
+test("figure-docs store: generate() equals the inlined region; ids unique; CORE lists every id; readDoc resolves", () => {
+  const src = readFileSync(new URL("../figure-docs.txt", import.meta.url), "utf8");
+  const layout = readFileSync(new URL("../layout-docs.mjs", import.meta.url), "utf8");
+  const m = /\/\/ <gen figure-docs: do not edit, run node tools\/gen_figure_docs\.mjs>\n([\s\S]*?)\/\/ <\/gen figure-docs>/.exec(layout);
+  assert.ok(m, "layout-docs.mjs has the gen markers");
+  assert.equal(m[1], generate(src), "layout-docs.mjs is in sync with figure-docs.txt (run node tools/gen_figure_docs.mjs)");
+  const ids = DOCS.map(d => d.id);
+  assert.equal(new Set(ids).size, ids.length, "every doc id is unique");
+  assert.equal(DOC_INDEX.split("\n").length, DOCS.length, "DOC_INDEX has one line per doc");
+  for (const d of DOCS) assert.ok(CORE.includes(d.id), `CORE lists ${d.id}`);
+  for (const d of DOCS) assert.equal(readDoc(d.id), TOPICS[d.id], `readDoc(${d.id}) is its TOPICS body`);
+  assert.equal(readDoc("nope"), null);
+});
+
+test("figure-docs parser: rejects tag text in a body, a duplicate id and a missing use (with the line)", () => {
+  assert.throws(() => generate('<topic id="a" title="A" use="use when x">\nbody </example>\n</topic>'), /figure-docs\.txt:2:.*tag text inside the body/);
+  assert.throws(() => generate('<topic id="a" title="A" use="use when x">\none\n</topic>\n\n<topic id="a" title="B" use="use when y">\ntwo\n</topic>'), /figure-docs\.txt:5: duplicate id "a"/);
+  assert.throws(() => generate('<topic id="a" title="A">\nbody\n</topic>'), /figure-docs\.txt:1: topic is missing the use attribute/);
+});
+
+test("inline examples: INLINE_EXAMPLES holds every inline body and resolvable more pointers; bad pointers throw", () => {
+  const byId = new Map(DOCS.map(d => [d.id, d]));
+  const inline = DOCS.filter(d => d.attrs.inline === "1");
+  for (const d of inline) {
+    assert.ok(INLINE_EXAMPLES.includes(`Worked example: ${d.attrs.title}`), `${d.id} is inline`);
+    assert.ok(INLINE_EXAMPLES.includes(d.body), `${d.id} body is verbatim inline`);
+    for (const ref of (d.attrs.more || "").trim().split(/\s+/).filter(Boolean)) {
+      assert.ok(byId.has(ref), `${d.id} more -> ${ref} resolves`);
+      assert.notEqual(ref, d.id, `${d.id} more does not point at itself`);
+    }
+  }
+  const src = `<example id="a" topic="math" tags="t" title="Title A" use="use when a" inline="1" more="b c">
+body A
+</example>
+<example id="b" topic="math" tags="t" title="Title B" use="use when b">
+body B
+</example>
+<example id="c" topic="math" tags="t" title="Title C" use="use when c">
+body C
+</example>`;
+  const region = generate(src);
+  assert.match(region, /export const INLINE_EXAMPLES = "Worked example: Title A\\nbody A\\nMore like this: read_doc\(id\) for b \(Title B\), c \(Title C\)";/);
+  assert.throws(() => generate(src.replace('more="b c"', 'more="nope"')), /more id "nope" does not name a doc/);
+  assert.throws(() => generate(src.replace('more="b c"', 'more="a"')), /"a" more points to itself/);
+  assert.throws(() => generate(src.replace('inline="1"', 'inline="yes"')), /inline must be "1"/);
+  assert.throws(() => generate(`<topic id="a" title="A" use="use when a" more="b">\nx\n</topic>`), /attribute "more" is only for <example> blocks/);
+  assert.ok(generate(`<example id="a" topic="math" tags="t" title="Title A" use="use when a">\nx\n</example>`).includes('export const INLINE_EXAMPLES = "";'), "no inline doc = empty string");
 });
 
 test("text-first feedback: the scene summary names centres, sizes and touching neighbours; findings text splits llm / fyi", () => {
@@ -207,7 +260,7 @@ test("Dim: a dimension line beside AB with its text; the next one goes to the ot
   const r = evaluate(`A = Pt(0, 0)
 B = Pt(4, 0)
 C = Pt(4, 3)
-tri = Poly([A, B, C], {fill: true, tone: "sky", layer: 3})
+tri = Poly([A, B, C], {fill: true, tone: "sky", shade: 3})
 d1 = Dim(A, B, "4 cm")
 d2 = Dim(A, B, "four cm")
 d3 = Dim(A, B, "4.0 cm")
@@ -353,4 +406,195 @@ test("layer cap: six Layers are fine, a 7th Layer statement is an llm finding to
   assert.deepEqual(llm(evaluate(prog(6))), []);
   const f = llm(evaluate(prog(7)));
   assert.deepEqual(f.map(x => [x.code, x.ids]), [["too-many-layers", ["s7"]]]);
+});
+
+test("shade: the tone-shade option is 1/2/3; the old layer: name is a bad-args hint; the renderer still outputs layer", () => {
+  const ok = evaluate(`A = Pt(0, 0)
+B = Pt(3, 0)
+S = Seg(A, B, {shade: 2, label: "m"})`);
+  assert.deepEqual(llm(ok), []);
+  assert.equal(ok.shapes.find(s => s.id === "S").opts.shade, 2);
+  assert.equal(ok.labels.find(l => l.id === "S").layer, 2, "the output field stays layer (the lab reads it)");
+  const old = llm(evaluate(`A = Pt(0, 0)
+B = Pt(3, 0)
+S = Seg(A, B, {layer: 2})`));
+  assert.deepEqual(old.map(x => x.code), ["bad-args"]);
+  assert.match(old[0].hint, /layer: was renamed: use shade: 1, 2 or 3 \(Layer\(\.\.\.\) is the step stack\)/);
+  const oldU = llm(evaluate(`A = Pt(0, 0)
+B = Pt(3, 0)
+S = Seg(A, B)
+U = Union([S], {layer: 2})`));
+  assert.deepEqual(oldU.map(x => x.code), ["bad-args"]);
+  assert.match(oldU[0].hint, /use shade: 1, 2 or 3/);
+  assert.equal(llm(evaluate(`A = Pt(0, 0)\nB = Pt(3, 0)\nS = Seg(A, B, {shade: 4})`))[0].code, "bad-args", "shade outside 1-3 still fails");
+});
+
+test("findings: severity + stable per-session ids; Shush moves a warning and never shushes an error", () => {
+  const src = `a = Box(Pt(0, 0), 2, 2, 0)\nb = Box(Pt(1, 0), 2, 2, 0)`;
+  const r = evaluate(src);
+  const err = r.findings.find(f => f.code === "overlap"), warn = r.findings.find(f => f.code === "plan-missing");
+  assert.equal(err.fid, "e1");
+  assert.equal(err.sev, "error");
+  assert.equal(warn.fid, "w1");
+  assert.equal(warn.sev, "warning");
+  assert.equal(err.cls, "llm", "cls is kept");
+  assert.equal(warn.cls, "fyi", "cls is kept");
+
+  const s = createSession();
+  s.push(src, 1); s.end(1);
+  const a = s.result(), b = s.result();
+  assert.deepEqual(b.findings.map(f => f.fid), a.findings.map(f => f.fid), "the same finding keeps its fid on re-evaluation");
+  s.push(`f1 = Fix(a, {tone: "amber"})`, 2); s.end(2);
+  assert.deepEqual(s.result().findings.map(f => f.fid), a.findings.map(f => f.fid), "the same finding keeps its fid after a pass-2 rebuild");
+
+  const ok = evaluate(`${src}\ns1 = Shush(w1, "the plan line is optional here")`);
+  assert.deepEqual(ok.findings.map(f => f.fid), ["e1"], "the error stays, the warning moves out");
+  assert.deepEqual(ok.unresolved.map(f => f.fid), ["e1"]);
+  assert.equal(ok.shushed.length, 1);
+  assert.equal(ok.shushed[0].fid, "w1");
+  assert.equal(ok.shushed[0].reason, "the plan line is optional here");
+  assert.equal(ok.shushed[0].finding.code, "plan-missing");
+  assert.match(formatFindings(ok.findings, ok.shushed), /^e1 \[llm\] overlap/m);
+  assert.match(formatFindings(ok.findings, ok.shushed), /^Shushed:\n- w1: the plan line is optional here/m);
+
+  const short = evaluate(`${src}\ns1 = Shush(w1, "short")`);
+  const bad = short.findings.find(f => f.code === "bad-args");
+  assert.equal(bad.fid, "e2", "a new error gets the next number");
+  assert.equal(bad.sev, "error");
+  assert.match(bad.hint, /15 characters/);
+  assert.ok(short.findings.some(f => f.fid === "w1"), "a bad reason leaves the warning unresolved");
+  assert.equal(short.shushed.length, 0);
+
+  const onErr = evaluate(`${src}\ns1 = Shush(e1, "a reason that is long enough")`);
+  const se = onErr.findings.find(f => f.code === "shush-error");
+  assert.equal(se.sev, "error");
+  assert.match(se.hint, /errors cannot be shushed: fix e1/);
+  assert.ok(onErr.findings.some(f => f.fid === "e1"), "the error stays unresolved");
+
+  const unknown = evaluate(`${src}\ns1 = Shush(w9, "a reason that is long enough")`);
+  assert.ok(unknown.findings.some(f => f.code === "undefined-ref"), "an unknown fid is undefined-ref");
+});
+
+test("lenient lexer: − and – read as -, a bare (x, y) argument or list item is a point, quotes and grouping are untouched", () => {
+  const r = evaluate(`A = Pt(\u22121, 0)
+S = Seg(A, (2, 0))`);
+  assert.deepEqual(llm(r), []);
+  close(r.points.A, [-1, 0]);
+  close(r.shapes.find(s => s.id === "S").geom.b, [2, 0]);
+  const en = evaluate(`A = Pt(0, 0)\nS = Seg(A, (2 \u2013 0, 3))`);
+  close(en.shapes.find(s => s.id === "S").geom.b, [2, 3]);
+  const poly = evaluate(`P = Poly([(0, 0), (3, 0), (0, 3)])`);
+  assert.equal(poly.shapes[0].geom.pts.length, 3, "a list item too");
+  const lbl = evaluate(`L = Label(Pt(0, 0), "x \u2212 1")`);
+  assert.equal(lbl.shapes.find(s => s.id === "L").geom.text, "x \u2212 1", "text inside quotes is never changed");
+  const quoted = evaluate(`L = Label(Pt(0, 0), "(1, 2)")`);
+  assert.equal(quoted.shapes.find(s => s.id === "L").geom.text, "(1, 2)", "a quoted tuple is text, not a point");
+  const box = evaluate(`B = Box(Pt(0, 0), (1 + 1) * 2, 1)`);
+  assert.equal(box.shapes.find(s => s.id === "B").geom.w, 4, "grouping is not a point");
+  const off = evaluate(`O = Pt(0, 0)\nV = Off(O, (2), 1)`);
+  close(off.points.V, [2, 1], "(2) stays a number");
+});
+
+test("leak (V1-V2): a number in student text within 3 sig figs of an answer is an llm error; subscripts are names", () => {
+  const lab = t => evaluate(`L = Label(Pt(0, 0), ${JSON.stringify(t)})`, { answers: [1.5] });
+  const a = lab("I = 1.5 A"), la = a.findings.filter(f => f.code === "leak");
+  assert.deepEqual(la.map(f => [f.cls, f.ids]), [["llm", ["L"]]]);
+  assert.match(la[0].hint, /^"I = 1\.5 A" shows 1\.5, the answer: write a symbol instead$/);
+  assert.equal(lab("I = 1.50 A").findings.filter(f => f.code === "leak").length, 1, "1.50 is 3 sig figs from 1.5");
+  assert.deepEqual(lab("R_1").findings.filter(f => f.code === "leak" || f.code === "not-given"), [], "R_1 is a subscript, not a number");
+});
+
+test("not-given (V1-V2): a number that is no given is an fyi warning; a given and a comment line are quiet", () => {
+  const quiet = evaluate(`A = Pt(0, 0)\nB = Pt(9, 0)\nL = Label(A, "9 V")`, { givens: [9, 2, 4] });
+  assert.deepEqual(quiet.findings.filter(f => f.code === "leak" || f.code === "not-given"), []);
+  const bad = evaluate(`A = Pt(0, 0)\nB = Pt(9, 0)\nL = Label(A, "7 V")`, { givens: [9, 2, 4] });
+  const f = bad.findings.filter(x => x.code === "not-given");
+  assert.deepEqual(f.map(x => [x.cls, x.ids]), [["fyi", ["L"]]]);
+  assert.match(f[0].hint, /^"7 V" shows 7, which is not a given$/);
+  const cmt = evaluate(`A = Pt(0, 0)\nB = Pt(9, 0)\n// L = Label(A, "7 V")\nS = Seg(A, B)`, { givens: [9, 2, 4] });
+  assert.deepEqual(cmt.findings.filter(f => f.code === "leak" || f.code === "not-given"), [], "a comment line is not student text");
+});
+
+test("leak checks Dim text, Vec label, label:/legend:, and Layer title; with no givens/answers every scene stays quiet", () => {
+  const bad = src => evaluate(src, { givens: [9, 2, 4] }).findings.filter(f => f.code === "not-given").map(f => f.ids);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(7, 0)\nD = Dim(A, B, "7 V")`), [["D"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nV = Vec(A, B, "7 V")`), [["V"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B, {label: "7 V"})`), [["S"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B, {legend: "7 V"})`), [["S"]]);
+  assert.deepEqual(bad(`A = Pt(0, 0)\nB = Pt(9, 0)\nS = Seg(A, B)\nL1 = Layer([S], {title: "7 V"})`), [["L1"]]);
+  for (const [k, sc] of Object.entries(SCENES)) if (k !== "broken") assert.deepEqual(evaluate({ pass1: sc.pass1, pass2: sc.pass2 }).findings.filter(f => f.code === "leak" || f.code === "not-given"), [], k);
+});
+
+test("anchors: Side of a rotated Box lies in its own frame (bottom on the ramp); Edge is a LERP; Edge(box) is bad-args", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(8, 0)
+top = Meet(A, Rot(A, B, 30), B, Off(B, 0, 1))
+ramp = Seg(A, top, {kind: "surface"})
+P = Along(A, top, 0.5)
+blk = Box(Rot(P, Off(P, 0, 0.5), 30), 1, 1, 30)
+bot = Side(blk, "bottom")
+probe = Label(bot, "")
+tri = Poly([Pt(0, 5), Pt(4, 5), Pt(0, 8)])
+mid = Edge(tri, 1, 0.5)`);
+  assert.deepEqual(llm(r), []);
+  const p = r.shapes.find(s => s.id === "probe").geom.p, g = r.shapes.find(s => s.id === "ramp").geom;
+  const dx = g.b[0] - g.a[0], dy = g.b[1] - g.a[1];
+  assert.ok(Math.abs(dx * (p[1] - g.a[1]) - dy * (p[0] - g.a[0])) / Math.hypot(dx, dy) < 1e-6, "the own-frame bottom is on the ramp line");
+  close(r.points.mid, [2, 6.5], "Edge(tri, 1, 0.5) is the 2nd edge's midpoint");
+  const bad = llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\ne = Edge(b, 0, 0.5)`));
+  assert.equal(bad[0].code, "bad-args");
+  assert.match(bad[0].hint, /use Side\(box/);
+});
+
+test("dotted parts: v.tail/head are the Vec ends, block.centre == Centre(block); measures and bad parts are bad-args", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(2, 0)
+v = Vec(A, B, "x")
+tail = v.tail
+head = v.head
+block = Box(Pt(0, 3), 1, 1, 0)
+c1 = block.centre
+c2 = Centre(block)
+y = Vec(block.centre, Off(block.centre, 1, 0), "y")`);
+  close(r.points.tail, [0, 0]); close(r.points.head, [2, 0]);
+  close(r.points.c1, r.points.c2);
+  assert.deepEqual(llm(r), []);
+  const m = llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\nm = b.length`));
+  assert.equal(m[0].code, "bad-args");
+  assert.match(m[0].hint, /measures are only for Expect/);
+  assert.equal(llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\nx = b.tail`))[0].code, "bad-args", ".tail is not on a Box");
+  const u = llm(evaluate(`b = Box(Pt(0, 0), 1, 1, 0)\nx = b.sideways`));
+  assert.equal(u[0].code, "bad-args");
+  assert.match(u[0].hint, /allowed: tail, head, centre/);
+  const fx = evaluate({ pass1: `A = Pt(0, 0)\nB = Pt(2, 0)\nv = Vec(A, B, "x")\nt = v.tail`, pass2: `f = Fix(t, {x: 1})` });
+  assert.equal(llm(fx)[0].code, "fix-derived", "a Fix on dotted sugar is derived, not a crash");
+});
+
+test("measureOf: length/width/height/area numbers for Seg, Box, Circle and Poly", () => {
+  const r = evaluate(`A = Pt(0, 0)
+B = Pt(3, 4)
+s = Seg(A, B)
+b = Box(Pt(10, 0), 2, 3, 0)
+c = Circle(Pt(20, 0), 2)
+p = Poly([Pt(0, 10), Pt(3, 10), Pt(0, 12)])`);
+  const sh = id => r.shapes.find(s => s.id === id);
+  assert.equal(measureOf(sh("s"), "length"), 5);
+  assert.equal(measureOf(sh("b"), "width"), 2);
+  assert.equal(measureOf(sh("b"), "height"), 3);
+  assert.equal(measureOf(sh("b"), "area"), 6);
+  assert.equal(measureOf(sh("c"), "area"), Math.PI * 4);
+  assert.equal(measureOf(sh("p"), "area"), 3);
+});
+
+test("numbers: 0.5 and .5 parse; N.1 is a parse finding, never a throw", () => {
+  const r = evaluate(`A = Pt(.5, 0)
+B = Pt(0.5, 1)
+S = Seg(A, B)`);
+  close(r.points.A, [0.5, 0]);
+  assert.equal(r.shapes.find(s => s.id === "S").geom.b[0], 0.5);
+  const typo = evaluate(`N = Pt(0, 0)
+X = N.1`);
+  const f = typo.findings.filter(x => x.cls === "llm");
+  assert.equal(f.length, 1);
+  assert.equal(f[0].code, "parse");
 });
