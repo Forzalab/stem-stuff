@@ -1,10 +1,10 @@
-// tools/bank_tools/fig_png.mjs: every graph block in problems.json (and banks/*.json) -> banks/figs/<code>-<i>.png, i = the block's index in body.
+// tools/bank_tools/fig_png.mjs: every graph block in server/data/problems.json (and server/data/banks/*.json) -> server/data/banks/figs/<code>-<i>.png, i = the block's index in body.
 // The Claude arm of Cluck sends it with the question (serve.fig_images); the non-vision arm gets the JSON only.
 // Light theme, white background, fit inside ~400x300 (Graph.render at 400 wide, narrower when that comes out taller than 300), then
 // ImageMagick to a 32-colour palette so a figure stays small. Idempotent: a PNG whose bytes would not change is left alone.
 //   node tools/bank_tools/fig_png.mjs          (playwright-core + Chromium from /opt/pw-browsers; never `playwright install`)
 //   node tools/bank_tools/fig_png.mjs --check  exits 1 naming each graph block with no PNG (tests/test_serve.py runs the same check in Python)
-//   --root DIR: DIR's problems.json + DIR/banks/*.json -> DIR/banks/figs, drawn with DIR's graph.js/app.css/vendor (default: this
+//   --root DIR: DIR's server/data/problems.json + DIR/server/data/banks/*.json -> DIR/server/data/banks/figs, drawn with DIR's graph.js/app.css/vendor (default: this
 //   checkout). tools/build_and_ship/ship.sh renders + checks its deploy dir this way, so the brain-only banks (BANK_P3X, Exam 3) ship their PNGs too.
 //   Playwright still comes from this checkout's tests/node_modules.
 import { createRequire } from "node:module";
@@ -17,12 +17,12 @@ const HERE = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ri = process.argv.indexOf("--root");
 if (ri > 0 && !process.argv[ri + 1]) { console.error("usage: node tools/bank_tools/fig_png.mjs [--check] [--root DIR]"); process.exit(2); }
 const ROOT = ri > 0 ? resolve(process.argv[ri + 1]) : HERE;
-const OUT = join(ROOT, "banks", "figs");
+const OUT = join(ROOT, "server", "data", "banks", "figs");
 const W = 400, H = 300;
 
 function blocks() {
-  const bd = join(ROOT, "banks");
-  const files = [join(ROOT, "problems.json"), ...(existsSync(bd) ? readdirSync(bd).filter(f => f.endsWith(".json")).map(f => join(bd, f)) : [])].filter(f => existsSync(f));
+  const bd = join(ROOT, "server", "data", "banks");
+  const files = [join(ROOT, "server", "data", "problems.json"), ...(existsSync(bd) ? readdirSync(bd).filter(f => f.endsWith(".json")).map(f => join(bd, f)) : [])].filter(f => existsSync(f));
   const out = [];
   for (const f of files) {
     const d = JSON.parse(readFileSync(f, "utf8"));

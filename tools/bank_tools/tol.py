@@ -20,7 +20,7 @@ NO_TOL (num units with no tol at any level), OFF_BY_ONE (integer key, integer-on
 ill-conditioned form, Q5 warn not block), CANCEL, NONLINEAR, FALLBACK (a node bag over 4096 values: lane B worst case), SF2 (a 2 s.f.
 student misses the tol: report only).
 
-Run: python3 tools/bank_tools/tol.py [banks/BANK_X.json ...]      (default: problems.json + banks/*.json; report + warnings)
+Run: python3 tools/bank_tools/tol.py [server/data/banks/BANK_X.json ...]      (default: server/data/problems.json + server/data/banks/*.json; report + warnings)
      python3 tools/bank_tools/tol.py --write ...                   (store tol + tol_why (+ tol_src auto) on each definitive / auto unit)
      --log PATH   the JSONL warning log (default $BRAIN/projects/calc/_files/tol-warnings.jsonl when that dir exists, else
                   ./tol-warnings.jsonl; BRAIN defaults to /home/claude/brain).  --no-log: print only.
@@ -37,6 +37,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "server"))
 import slips  # noqa: E402
 
 from sympy import Add, Float, Function, Mul, NumberSymbol, Pow, Rational, S, acos, asin, atan, cos, pi, sin, tan  # noqa: E402
@@ -462,7 +463,7 @@ def log_arg(argv):
 def main(argv):
     logp, argv = log_arg(argv)
     write = "--write" in argv
-    paths = [a for a in argv if a != "--write"] or [str(ROOT / "problems.json"), *map(str, sorted((ROOT / "banks").glob("*.json")))]
+    paths = [a for a in argv if a != "--write"] or [str(ROOT / "server" / "data" / "problems.json"), *map(str, sorted((ROOT / "server" / "data" / "banks").glob("*.json")))]
     evs = []
     for path in paths:
         print(path)

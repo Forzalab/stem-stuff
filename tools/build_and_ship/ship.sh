@@ -20,7 +20,7 @@
 # Gate, before any Vercel step: every BANK_*.json that will deploy must pass `tools/bank_tools/slips.py --strict` and the SCHEMA.md "problems"
 # schema (tools/bank_tools/schema-check.mjs; needs node + tests/node_modules, else it fails). One failure = nothing deployed. A bank older than
 # slips.CUTOFF still ships, with one warning line: "BANK_X v1: stops loading <sunset>". Then every graph block in the deploy
-# (origin/main's problems.json + every bank above, brain ones too) gets its banks/figs/<code>-<i>.png (tools/bank_tools/fig_png.mjs --root on
+# (origin/main's problems.json + every bank above, brain ones too) gets its server/data/banks/figs/<code>-<i>.png (tools/bank_tools/fig_png.mjs --root on
 # the deploy dir; serve.fig_images sends it to the Claude arm) and `fig_png.mjs --check` must pass (needs Chromium + ImageMagick).
 #   --no-brain (or SHIP_NO_BRAIN=1) skips the brain. --print-banks prints "NAME<tab>SOURCE<tab>PATH" per bank and stops
 #   (no gate, no worktree, no Vercel; demo|live optional).
@@ -118,7 +118,7 @@ CAND="$(mktemp)"
 add() { printf '%s\t%s\t%s\t%s\t%s\n' "$(basename "$4")" "$1" "$2" "$3" "$4" >>"$CAND"; }
 shopt -s nullglob
 if [ -n "$BANKS" ]; then for f in "$BANKS"/*.json; do add 0 0 arg "$f"; done; fi
-for f in "$ROOT"/banks/*.json; do add 2 0 repo "$f"; done   # rank 2: a stale local copy never beats the brain (Tony, Oct 3)
+for f in "$ROOT"/server/data/banks/*.json; do add 2 0 repo "$f"; done   # rank 2: a stale local copy never beats the brain (Tony, Oct 3)
 if [ -z "$NOBRAIN" ]; then
   brain_dir
   if [ -n "$BRAIN" ]; then
@@ -184,7 +184,7 @@ gate() {
   # v < slips.CUTOFF: still ships, with a warning (the sunset date is the Version-table row's, SCHEMA.md)
   python3 - "$ROOT" "${GATE[@]}" <<'PY' >&2 || rc=1
 import json, re, sys
-sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, sys.argv[1] + "/server")
 import slips
 sunset = re.search(r"^\| `%d` \|.*\| `([0-9-]+)` \|$" % slips.CUTOFF, open(sys.argv[1] + "/SCHEMA.md", encoding="utf-8").read(), re.M)[1]
 for p in sys.argv[2:]:
@@ -205,7 +205,7 @@ if ! git -C "$ROOT" diff --quiet origin/main -- tools/build_and_ship/ship.sh too
 fi
 git -C "$ROOT" worktree add -q --detach "$W" origin/main
 printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
-  [ -n "$name" ] && cp "$path" "$W/banks/$name"
+  [ -n "$name" ] && cp "$path" "$W/server/data/banks/$name"
 done
 gate || exit 1   # after the copy: the figure PNGs are rendered into (and checked in) $W
 VJSON="$(bash "$ROOT/tools/build_and_ship/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (docs/design/DEPLOY.md)
@@ -244,6 +244,7 @@ check "version is this deploy"     "$(git -C "$W" rev-parse --short HEAD)" /vers
 check "a problem loads"            200 /p/PHYS_F3N.json
 check "answers stay hidden"        404 /problems.json
 check "banks stay hidden"          404 /banks/BANK_P2X.json
+check "server dir hidden"         404 /server/data/problems.json
 check "grading works"              '"correct"' /check -X POST -H 'Content-Type: application/json' -d '{"code":"PHYS_F3N","answer":"3.2"}'
 if [ "$bad" -ne 0 ]; then echo "SMOKE RED: $URL" >&2; exit 1; fi
 echo "smoke green"

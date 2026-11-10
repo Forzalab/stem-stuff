@@ -11,7 +11,7 @@ from fractions import Fraction as F
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-BANK = json.loads((ROOT / "problems.json").read_text())
+BANK = json.loads((ROOT / "server" / "data" / "problems.json").read_text())
 BY = {p["code"]: p for p in BANK["problems"]}
 
 C2IF = ["C2A", "C3B", "C4D", "C5E", "C6F", "C7H"]
