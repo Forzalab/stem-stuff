@@ -1,18 +1,32 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
-import { build, stringify } from "./copy/payload.mjs";
+/* ./copy/payload.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { shuffled, seed } from "./shuffle.mjs";
 import * as codes from "./codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
 import { match as slipMatch, slipSpot, familyHint } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { quack, withQuack } from "./quack.mjs";
-import { speakable } from "./speak.mjs";
-import { changes, markNums } from "./chg.mjs";
-import { renumberSteps, pipeTable, pipeHold } from "./steps.mjs";
-import { tableShape, tugFromTable, tugHTML, flipModel, flipHTML } from "./tug.mjs";
+/* ./speak.mjs: used by cluck.js / shell.js only (split-app.mjs) */
+import { changes } from "./chg.mjs";
+/* ./steps.mjs: used by cluck.js / shell.js only (split-app.mjs) */
+/* ./tug.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
-import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
+/* ./sheet.mjs: used by cluck.js / shell.js only (split-app.mjs) */
+/* split-app.mjs (W152): part 1 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
+export const bridge = {};   // the bridge to cluck.js + shell.js (split-app.mjs)
+Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
+  busy: { get: () => busy, set: v => { busy = v; }, enumerable: true },   // let
+  forceWelcome: { get: () => forceWelcome, set: v => { forceWelcome = v; }, enumerable: true },   // let
+  lastEdit: { get: () => lastEdit, set: v => { lastEdit = v; }, enumerable: true },   // let
+  lastQuack: { get: () => lastQuack, set: v => { lastQuack = v; }, enumerable: true },   // let
+  lostAt: { get: () => lostAt, set: v => { lostAt = v; }, enumerable: true },   // let
+  mtForced: { get: () => mtForced, set: v => { mtForced = v; }, enumerable: true },   // let
+  mtOpen: { get: () => mtOpen, set: v => { mtOpen = v; }, enumerable: true },   // let
+  mtTile: { get: () => mtTile, set: v => { mtTile = v; }, enumerable: true },   // let
+  proofHold: { get: () => proofHold, set: v => { proofHold = v; }, enumerable: true },   // let
+  swapOn: { get: () => swapOn, set: v => { swapOn = v; }, enumerable: true },   // let
+});
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
@@ -59,10 +73,10 @@ function obToast(n, text, at, o) {
 const noteAt = () => window.stemToast?.noteAt() || null;
 function hideToast() { window.stemToast?.noteHide(); }
 function placeToast() { window.stemToast?.notePlace(); }
-window.stemToast?.config({ foot: () => dockRoom() });                              // a note keeps off the dock (phones: the code bar, the keyboard)
+window.stemToast?.config({ foot: () => bridge.dockRoom() });                              // a note keeps off the dock (phones: the code bar, the keyboard)
 function toast(text, at, o = {}) {
   const T = window.stemToast; if (!T || !at) return false;
-  if (mtOpen && mtTile === "q" && $("#q").contains(at)) setTile("a", false);       // the note is about the answer: show it first
+  if (mtOpen && mtTile === "q" && $("#q").contains(at)) bridge.setTile("a", false);       // the note is about the answer: show it first
   return T.note({ text, at, ...o });
 }
 /* the entry line (#entryMsg): every upload / open outcome ends here. tone: bad (red, the default) | warn | ok. The class is reset
@@ -83,7 +97,7 @@ const incHTML = (c, card = true) => !c ? "" : ` <span class="inc" data-inc="${c}
 document.addEventListener("click", async e => {
   const b = e.target.closest?.(".inc[data-inc]"); if (!b || b.closest("button")) return;   // inside Cluck's chip, the tap is the chip's (try again)
   e.stopPropagation(); e.preventDefault();
-  say((await copyText(b.dataset.inc)) ? `Copied ${b.dataset.inc}.` : b.dataset.inc);
+  say((await bridge.copyText(b.dataset.inc)) ? `Copied ${b.dataset.inc}.` : b.dataset.inc);
 }, true);
 /* a classic script (offline.js: the SW reload loop) cannot import incident.mjs: it fires "stem:incident" { where, why } */
 addEventListener("stem:incident", e => { const d = e.detail || {}; incident(d.where, d.why); });
@@ -108,7 +122,7 @@ function note(text) {
   if (there && !(m && m.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }))) toast(text, at, { loose: true });
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
@@ -415,14 +429,14 @@ const oneBox = () => !!S && /^(text|num|expr)$/.test(S.prob.type);       // a ty
 /* a proof item's split is for typing (Tony, Nov 8: "If unfocused, return back to the old proof screen"): on while focus is in the proof
    pane (#work: the box, Check, the ladder) or a press there is down (a tap on Check blurs the box before its click lands) */
 let proofHold = false;
-const proofTyping = () => proofHold || ($("#work").contains(document.activeElement) && (mtOpen || editing()));   // opens on a typing field only: a press on Skip / Check must not move the page under the finger
+const proofTyping = () => proofHold || ($("#work").contains(document.activeElement) && (mtOpen || bridge.editing()));   // opens on a typing field only: a press on Skip / Check must not move the page under the finger
 let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
 /* typing keeps the box up: clearing the message below must not hide a dock that only the message was holding open (focus would be lost) */
 codeIn.addEventListener("input", () => { entryMsg(""); root.classList.add("entry-open"); syncCode(); sugShow(); });
-function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
+function putCode(code) { if (code) bridge.barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
 syncCode();
 /* suggestions (suggest.mjs): the codes this browser knows (opened here before, newest first; the live bank and its list; an
    uploaded file) that contain what is typed. Banks first, then questions. The server never lists codes (design/NAV.md).
@@ -454,7 +468,7 @@ function sugShow() {
    a CSS cap alone let it run past the top and over the field. Phones only; --sug-max feeds app.css .code-sug max-height. */
 function sugFit() {
   const vv = window.visualViewport;
-  if (sugEl.hidden || !vv || !dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
+  if (sugEl.hidden || !vv || !bridge.dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
   const e = $("#entry").getBoundingClientRect(), gap = 16;
   const above = root.classList.contains("dock-bottom") && !root.classList.contains("start");
   const coding = root.classList.contains("coding");   // search mode hides the top bar + HUD: the list may rise to the top of the visual viewport
@@ -496,7 +510,7 @@ codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
    (app.css html.coding), so the list never sits on a peeking card. visibility keeps the layout, so nothing jumps; scrollY is restored on exit. */
 let codingY = null;
 function codingOn() {
-  if (!dockMQ.matches || sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
+  if (!bridge.dockMQ.matches || bridge.sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
   if (root.classList.contains("ql-open")) return;   // the question list is open: it stays up with the keyboard (it hid #qlist; nav.js fit sizes it to the visual viewport)
   codingY = scrollY; root.classList.add("coding"); sugFit();
 }
@@ -507,7 +521,7 @@ function codingOff() {
   codingY = null;
 }
 codeIn.addEventListener("focus", codingOn);
-addEventListener("resize", () => { if (!dockMQ.matches || sideMQ.matches) codingOff(); });
+addEventListener("resize", () => { if (!bridge.dockMQ.matches || bridge.sideMQ.matches) codingOff(); });
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
@@ -685,12 +699,12 @@ async function load(code) {
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(history.state && history.state.stemD != null ? { stemD: history.state.stemD } : null, "", "#" + code);   // keeps the in-app depth (nav.js iOS Back)
-  if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
-  if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
+  if (!S || S.code !== code) bridge.barOpen(false);                        // another problem opened: the bar goes back to its strip
+  if (!S || S.code !== code) bridge.wishReset();                                  // a new question: Cluck's wish stops
   $("#rpHost")?.remove();                                                  // the last question's repair ladder
   cancelWait(true);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null, wl };
-  qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
+  bridge.qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
@@ -703,11 +717,11 @@ async function load(code) {
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
-  rwSync();
-  rwRedoTip();
+  bridge.rwSync();
+  bridge.rwRedoTip();
   twistToast();
-  origRender();
-  padRule();
+  bridge.origRender();
+  bridge.padRule();
   window.stemBrainrot?.sync();
 }
 
@@ -740,16 +754,16 @@ function render() {
   proofHome();
   renderQuestion();
   $("#fb").innerHTML = "";
-  mountBox();
+  bridge.mountBox();
   window.CalcCoach?.onItem(bank && bank.code);                                   // Calc chip, cram strip + toast on BANK_P3X (calc-coach.js)
   $("#freezeIn").scrollTop = 0;
   scrollTo({ top: 0 });
   $("#pstripCode").textContent = code;
-  lastEdit = null; padPeekText();
-  clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
-  applyMT();
-  if (isProof()) layoutDock();                                                    // the split opened by itself: the dock steps away as it does for the pad page
-  layoutFreeze();
+  lastEdit = null; bridge.padPeekText();
+  bridge.clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
+  bridge.applyMT();
+  if (isProof()) bridge.layoutDock();                                                    // the split opened by itself: the dock steps away as it does for the pad page
+  bridge.layoutFreeze();
 }
 /* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the multitask split (design/MULTITASK.md
    Pick 9 + stage 2). #q (the how line, the box, the chips, the reference proof) and #fb (the verdict) live in #work, the pad's pane; the
@@ -1113,7 +1127,7 @@ function fitChoices() {
   g.classList.toggle("inline", fits);
   fitMath(g);
   g.querySelectorAll(".fix").forEach(fitFix);
-  if (fits !== was) layoutFreeze();
+  if (fits !== was) bridge.layoutFreeze();
 }
 /* inline math wider than its row (KaTeX can't wrap a fraction or a root): shrink it to fit, down to 85%; still too wide -> it
    scrolls sideways on its own (.kx-scroll), never clipped and never wider than the card. Re-run from scratch on every resize. */
@@ -1496,11 +1510,11 @@ function xLine(i, r) {                                                     // no
 }
 function xCluck(msg) {                                                     // Cluck's 6 moves, as his message; he opens (the wrong-answer prefetch path)
   if (!S || !msg) return;
-  wishNew();
-  Object.assign(wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
-  wishPaint();
-  clOpen("explain", ":is(#wish, .rbox) .wchip", true);
-  if (wish.open) wishDraw();
+  bridge.wishNew();
+  Object.assign(bridge.wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
+  bridge.wishPaint();
+  bridge.clOpen("explain", ":is(#wish, .rbox) .wchip", true);
+  if (bridge.wish.open) bridge.wishDraw();
 }
 async function xDiag(r, text, i) {                                         // a wrong working: underline + Cluck; L3 when L1 named no family
   const d = r.diag; if (!d) return;
@@ -1509,15 +1523,15 @@ async function xDiag(r, text, i) {                                         // a 
   if (ln) { ln.className = "xline"; ln.textContent = ""; }
   xCluck(d.msg);
   if (!d.pending) return;
-  const mine = S, w = wish;
+  const mine = S, w = bridge.wish;
   try {
     const rd = window.stemRedo.has(S.code) ? { round: window.stemRedo.get().n } : {};
     const res = await net("diagnose", { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() }, credentials: "same-origin",
       body: JSON.stringify({ code: S.code, expr: text, ...(i == null ? {} : { part: i }), ...rd }) });
     const o = res.ok ? await res.json() : null;
-    if (!o || S !== mine || wish !== w || !o.msg) return;
+    if (!o || S !== mine || bridge.wish !== w || !o.msg) return;
     Object.assign(w, { text: o.msg, shown: o.msg.length, pos: o.msg.length });
-    wishPaint(); if (w.open) wishDraw();
+    bridge.wishPaint(); if (w.open) bridge.wishDraw();
     if (pv && o.off?.span) xPreview(pv, text, o.off.span);
   } catch { /* the L1 moves stay */ }
 }
@@ -1584,7 +1598,7 @@ async function submitProof() {
     if (r.grade) rubricChips(r.grade);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your answer here first (up to ${PROOF_MAX} letters).</span></p>`; layoutFreeze(); return; }
+    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your answer here first (up to ${PROOF_MAX} letters).</span></p>`; bridge.layoutFreeze(); return; }
     feedback(r, "");
     if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
   } finally { busy = false; }
@@ -1594,9 +1608,9 @@ function proofWait(r) {
   const why = { off: "Cluck can't check proofs right now.", hourly: "Cluck needs a short break. Try again soon.", upload: "Proof checks need the hosted bank. Open it by code." }[r.why]
     || (r.verdict === "timeout" ? "Cluck is taking too long. Tap to try again." : "Cluck could not check it. Tap to try again.");
   $("#fb").innerHTML = `<p class="verdict wait">${icon("i-wait")}<span>${esc(why)}</span>${incHTML(r.inc)}${r.why === "upload" || r.why === "off" ? "" : `<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button>`}</p>`;
-  const again = $("#retry"); if (again) again.addEventListener("click", () => { $("#fb").innerHTML = ""; layoutFreeze(); submitProof(); });
+  const again = $("#retry"); if (again) again.addEventListener("click", () => { $("#fb").innerHTML = ""; bridge.layoutFreeze(); submitProof(); });
   say($("#fb").textContent.replace(/\s+/g, " ").trim());
-  layoutFreeze();
+  bridge.layoutFreeze();
 }
 
 /* ---------- multi: every part has its own arrow, verdict, tries and lockout ---------- */
@@ -1633,7 +1647,7 @@ function partFeedback(i, r, typed) {
   hint.innerHTML = h;
   row.classList.toggle("hinted", !!h);
   const again = hint.querySelector(".retry");
-  if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); layoutFreeze(); submitPart(i); });
+  if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); bridge.layoutFreeze(); submitPart(i); });
   say((partEls(i).row.querySelector(".mk").textContent + " " + verdictWords(r) + " " + hint.textContent).replace(/\s+/g, " ").trim());
 }
 async function submitPart(i) {
@@ -1643,8 +1657,8 @@ async function submitPart(i) {
   try {
     const mine = S, r = await check(S.code, { part: i, answer: v });
     if (S !== mine) return;
-    if (r.verdict === "timeout") { partFeedback(i, r); layoutFreeze(); return; }   // not a try: the text stays, retry resends it
-    if (r.verdict === "expr_needed" || r.verdict === "unparsed") { xOpen(i); xLine(i, r); layoutFreeze(); return; }   // W137: not a try
+    if (r.verdict === "timeout") { partFeedback(i, r); bridge.layoutFreeze(); return; }   // not a try: the text stays, retry resends it
+    if (r.verdict === "expr_needed" || r.verdict === "unparsed") { xOpen(i); xLine(i, r); bridge.layoutFreeze(); return; }   // W137: not a try
     if (r.verdict !== "invalid") record({ a: v, part: i }, r);
     if (r.diag) xDiag(r, v, i);
     if (r.exprMode && r.verdict === "wrong" && r.triesLeft > 0) xOpen(i);
@@ -1652,9 +1666,9 @@ async function submitPart(i) {
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); const rv = reveal(r, i); if (rv) say(rv); }
     else partFeedback(i, r, v);
-    if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
+    if (mine.parts.every(x => x.shut)) { settle(); bridge.rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && [document.body, inp].includes(document.activeElement)) partEls(nxt).inp.focus(); }   // inp: Chromium 153 keeps focus on the just-disabled box until the next frame, 141 blurred at once (W100)
-    layoutFreeze();
+    bridge.layoutFreeze();
   } finally { busy = false; }
 }
 /* every part right or locked: the problem is finished. It counts as correct only if every part is right. */
@@ -1683,7 +1697,7 @@ function record(a, r) {
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
-  rewardTry(a, r);
+  bridge.rewardTry(a, r);
   if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
   if (r.verdict === "wrong") startWait();                                                                                       // the second try costs 10 s (sugar, 2-try items: startWait gates)
 }
@@ -1724,8 +1738,8 @@ function doneExit(mine) {
   setTimeout(() => {
     if (S !== mine) return;                                                      // moved on already
     const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx") && !a.closest("#cluck, #q .vdrawer, #q .vk, #q .vkb")) a.blur();   // Next in the Check slot keeps focus (T17b-1); so does Cluck's sheet (opened in the beat), and the strip: its verdict icon / drawer take focus on purpose (a close inside the beat returns it to the icon)
-    if (mtOpen) closeMT(false);
-    if (swapOn) setSwap(false);
+    if (mtOpen) bridge.closeMT(false);
+    if (swapOn) bridge.setSwap(false);
     root.classList.remove("dock-away", "bar-off");
     /* no scroll to the top any more (A1 audit): Next sits in the Check slot where the eye already is, and the card never moves after Check */
   }, 900);
@@ -1794,7 +1808,7 @@ function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
   renderQuestion(); $("#fb").innerHTML = "";
   if (rec) paint(rec);
-  layoutFreeze();
+  bridge.layoutFreeze();
 }
 /* server mode: the server is the source of truth for tries, the record is a display cache. Per unit:
    server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
@@ -1910,7 +1924,7 @@ function rboxSync() {
     ff.querySelectorAll(":scope > .wchip").forEach(x => x.remove());
     const img = btn.querySelector(".dk");
     if (img) { const t = document.createElement("template"); t.innerHTML = DUCK; const svg = t.content.firstChild; if (img.classList.contains("g-nod")) svg.classList.add("g-nod"); img.replaceWith(svg); }
-    btn.hidden = wishEl().hidden;
+    btn.hidden = bridge.wishEl().hidden;
     ff.insertBefore(btn, ff.querySelector(".nx"));
     wb.remove();
   }
@@ -1921,7 +1935,7 @@ function rboxSync() {
       if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(answerTex(v), false); } catch { /* the plain text stands */ } }
       const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b> <span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;
       host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden");
-      host.insertAdjacentHTML("beforeend", `<p class="ansl">${revDuck()}<span>That's it! The answer is </span>${unit}${mathCopyBtn("Copy answer", v)}</p>`);
+      host.insertAdjacentHTML("beforeend", `<p class="ansl">${revDuck()}<span>That's it! The answer is </span>${unit}${bridge.mathCopyBtn("Copy answer", v)}</p>`);
       pvFit(host);
     }
   }
@@ -1942,7 +1956,7 @@ function cueNext() {
   if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");
   if (!painting) nx.focus({ preventScroll: true });
   rboxSync();
-  if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
+  if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => bridge.fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
 }
 /* keys (Tony, Oct 21 locks): Enter = Check (a picked choice, a typed box) and the chat send, and NEVER Next, even though Next keeps focus
    after Check and even under the level-up overlay. A held Space that sent Check never presses Next either (only its repeats drop). */
@@ -1994,7 +2008,7 @@ function reveal(r, part) {
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
   const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b>\u2009<span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;   // W132: value green + thin space + unit in ink; copy = the value only
   const sentence = !multi && rboxOn();                       // 114r v1f: the line under the reveal box is a plain sentence, no check, no chip
-  host.insertAdjacentHTML("beforeend", `<p class="ansl">${sentence ? `<span>Not it. The answer is\u00a0</span>` : `${icon("i-ok")}<span>Answer</span>`}${unit}${mathCopyBtn("Copy answer", String(c))}${sentence ? revDuck() : ""}</p>`);
+  host.insertAdjacentHTML("beforeend", `<p class="ansl">${sentence ? `<span>Not it. The answer is\u00a0</span>` : `${icon("i-ok")}<span>Answer</span>`}${unit}${bridge.mathCopyBtn("Copy answer", String(c))}${sentence ? revDuck() : ""}</p>`);
   if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + (host.querySelector(".ansl .ansv") || host.querySelector(".ansl b")).textContent.replace(/\s+/g, " ").trim() + ".";
@@ -2003,9 +2017,9 @@ function reveal(r, part) {
 function cueChip(still) {
   if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
-  if (!wish || wish.code !== S.code || wish.idle) { wishNew({ started: false }); wishFromCache(wish); }
-  if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
-  wishPaint();
+  if (!bridge.wish || bridge.wish.code !== S.code || bridge.wish.idle) { bridge.wishNew({ started: false }); bridge.wishFromCache(bridge.wish); }
+  if (!still && bridge.wish.nod == null) { if (cueRight()) bridge.wish.nod = nodGate(); else { bridge.wish.nod = false; nodMiss(); } }
+  bridge.wishPaint();
 }
 const cueRight = () => S.prob.type === "multi" ? !!S.solved : !!(document.querySelector("#q .opt.right:not(.reveal)") || $("#ff.ok"));   // a revealed row is the answer, not the student's pick
 /* the calm nod (r5 BRIEF reward rule 4): the first 3 rights of a PT day nod, then about 1 in 3, never twice in a row, and always on a
@@ -2053,2029 +2067,16 @@ function feedback(r, typed) {
   }
   if (!inRow) fb.insertAdjacentHTML("beforeend", quackHtml);
   const again = $("#retry");
-  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
+  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; bridge.layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
   const rev = reveal(r);
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
-  layoutFreeze();
+  bridge.layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); wishOnWrong(); repairAfterMiss(r); }   // no ladder: each wrong try shows the next formula row, then the arrows
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 
-/* ---------- Cluck the genie (design/EASY.md Phase 4): easy mode, after a wrong answer ----------
-   The first wrong answer of a question asks /explain in the background (at most WISH_AUTO questions an hour in this browser), so
-   the solution is ready when the student looks. Past the cap nothing fires: "Ask Cluck" does it. The text is plain + $LaTeX$, read
-   shown, never spoken (Tony, Oct 5: the voice is gone). A new question stops all of it. */
-const WISH_AUTO = 5;
-const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
-function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
-let wish = null;   // { code, text, started, done, open, failed, ctl, off }
-/* a plain 503 from /explain (no X-Incident) = no AI key on this server (a preview deploy, Oct 26): Cluck is off for this page load. No more
-   Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
-let cluckOff = false;
-const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-PENDING
-/* BIG PLAN V2 (Tony, Nov 2 23:01): every line of the permanent box that is not Cluck's own reply lives here. COPY-PENDING: Tony vets all of it (the no-key
-   note is meant to read like a good fun 404 page). The three starters are app chrome (like .wchip): a tap sends its text through the ask field's pipe (clSend) */
-const CL_COPY = {
-  idle: "Ask me anything about this question. If you miss, I'll explain what went wrong.",
-  starters: ["What is this asking?", "Which formula fits?", "Check my setup"],
-  nokey: "404: Cluck not found. This one hatched without a duck, so he's off paddling somewhere else. The question is all yours. You've got this!",
-  done: "Want my steps? Tap the duck chip under your answer.",
-};
-/* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
-   the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
-   sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
-   asks when tapped, as past the cap */
-const PREFETCH_Q = 2, SEEN = "stem-seen-q";
-let seenMem = [];
-const seenQ = () => { try { const a = JSON.parse(sessionStorage.getItem(SEEN)); return Array.isArray(a) ? a : seenMem; } catch { return seenMem; } };
-function qSeen(code) {
-  const a = seenQ(); if (a.length >= PREFETCH_Q || a.includes(code)) return;
-  seenMem = [...a, code]; try { sessionStorage.setItem(SEEN, JSON.stringify(seenMem)); } catch { /* blocked: this page only */ }
-}
-const shouldPrefetch = code => !painting && wishLog().length < WISH_AUTO && seenQ().includes(code);
-/* the reply cache (Tony, Oct 18): the finished /explain text, in this browser only (localStorage "stem-cluck"): key = code | sorted picks | build
-   (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
-   text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
-const CK = "stem-cluck", CK_MAX = 30, CK_TTL = 7 * 864e5;
-const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (t && Number.isInteger(t.part) ? t.part + ":" : "") + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
-const ckAll = () => { try { const o = JSON.parse(localStorage.getItem(CK)); return o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v && typeof v.text === "string" && Date.now() - v.t < CK_TTL) : []; } catch { return []; } };
-const ckGet = key => ckAll().find(([k]) => k === key)?.[1].text || "";
-function ckPut(key, text) {
-  try { localStorage.setItem(CK, JSON.stringify(Object.fromEntries([...ckAll().filter(([k]) => k !== key), [key, { text, t: Date.now() }]].slice(-CK_MAX)))); } catch { /* blocked or full */ }
-}
-function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
-  const key = S && S.code === w.code ? ckKey(w.code, S.tries.at(-1)) : "", text = key ? ckGet(key) : "";
-  if (!text) return false;
-  Object.assign(w, { key, tr: clTry(S.tries.at(-1)), text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
-  return true;
-}
-function wishEl() {
-  let el = $("#wish");
-  if (!el) { el = document.createElement("div"); el.id = "wish"; el.className = "wish"; el.hidden = true; $("#fb").after(el); }
-  return el;
-}
-function wishReset() {
-  if (wish && wish.ctl) wish.ctl.abort();
-  wish = null;
-  const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; el.classList.remove("gone"); }
-  document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
-  clReset();
-}
-function wishNew(ex) {                                                       // a real wish; the idle one it replaces hands over its spent questions (the server counts per question)
-  const spent = wish && wish.idle && wish.code === S.code ? wish.chat.filter(t => t.role === "user").length + (wish.spent || 0) : 0;
-  if (wish && wish.ctl) wish.ctl.abort();
-  if (wish && wish.idle && cl) { cl.el.querySelector(".cl-thread").innerHTML = ""; cl.el.querySelector(".wtext").innerHTML = ""; cl.el.querySelector("#clTabEP .cl-quack")?.remove(); }
-  return (wish = Object.assign(newWish(), { spent }, ex));
-}
-const idleWish = () => Object.assign(newWish(), { text: CL_COPY.idle, done: true, started: true, shown: CL_COPY.idle.length, pos: CL_COPY.idle.length, skip: true, at: 1, said: true, idle: true, key: "idle|" + S.code });
-const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
-/* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
-function wishOnWrong() {
-  if (mockHold()) return;
-  if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
-  /* a later miss redrew the hint card: Cluck's peek goes back in. A NEW miss (another try than the one the text explains, e.g. a 2nd wrong
-     number) restarts the stream with the latest try, so the box never keeps explaining the first one (C4a, "stream every miss") */
-  if (wish && wish.code === S.code && !wish.idle && !(wish.started && wish.key && wish.key !== ckKey(wish.code, askTry()))) { wishPaint(); return; }
-  const w = wishNew();
-  /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
-     Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
-  const auto = () => { if (sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ":is(#wish, .rbox) .wchip", true); };
-  if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
-  if (!shouldPrefetch(w.code)) w.started = false;                         // no prefetch: the "Explain my mistake" chip asks (no auto call)
-  wishPaint();
-  if (w.started) { wishStart(true); auto(); }                             // the reply streams now, in the background: one request, reused on open
-}
-const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
-const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
-/* telemetry (cluck_ask / cluck_reply): where the student is when Cluck is asked. code = the bank, item = the question; telemetry.js scrubs the text */
-const ckTel = () => ({ code: bank ? bank.code : null, item: S ? S.code : null, tries_left: S ? Math.max(0, maxTries(S.prob) - S.tries.length) : null, after_wrong: !!S && S.tries.some(x => x.v === "wrong") });
-async function wishStart(auto) {
-  const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
-  w.key = key; w.tr = clTry(t);                                                           // the try this text explains (Compare: a later right one needs its own)
-  w.started = true; w.ctl = new AbortController();
-  w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
-  window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
-  if (!auto) window.stemT?.("cluck_ask", { kind: "explain", ...ckTel(), item: w.code, text: "" });   // telemetry: an Explain press (the background ask is not the student's)
-  if (auto) wishLogAdd();
-  const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
-  let r = null, bytes = 0, err = null, ftok = null;
-  try {
-    window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
-    r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
-    fr.h(r);
-    if (!r.ok || !r.body) {
-      const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
-      w.failed = r.status === 503 && sc ? 1 : r.status || 1;                // a plain 404/503 = no Cluck here (hidden), 429 = the cap: no incident
-      if (![404, 429, 503].includes(r.status) || sc) w.inc = inc({ r, bytes: 0 });
-      if (r.status === 503 && !sc) { cluckOff = true; w.off = !auto; }     // no key here: a press (not the background ask) says so in the sheet
-    }
-    else {
-      const rd = r.body.getReader(), dec = new TextDecoder(), sp = { buf: "" };
-      let swap = null;
-      for (;;) {
-        const { value, done } = await rd.read(); if (done) break;
-        bytes += value.length; fr.f();
-        const c = Stages.feed(sp, dec.decode(value, { stream: true }));
-        for (const e of c.events) e.error ? (err = e) : typeof e.replace === "string" ? (swap = e.replace) : w.stg.event(e);       // an {"error": "S-XXXXX"} line: the server's in-band failure (status was 200 already); {"replace"}: the subject pass's fixed text
-        w.text += c.text;
-        window.stemT?.("_tok");   // telemetry: first chunk time
-        if (ftok == null) ftok = Date.now() - t0;
-        if (wish === w && w.open) wishText();
-        if (wish === w) peekText();
-      }
-      fr.e(bytes);
-      if (swap !== null && !err) wishSwap(w, swap);
-      if (err && w.text) { w.text = cutClean(w.text); w.lost = true; }   // Tony 19:37 Nov 3: a reply that died mid-way keeps its whole lines, then one clean line
-      if (err) { w.failed = 1; w.inc = inc({ why: err.why, server: err.error, status: err.why === "budget_cap" ? 503 : 502, phase: w.text ? "stream" : "headers", bytes }); }   // the in-band error = the unstaged 503/502 (X-Incident): the same incident, its reason and the server's code
-      else if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
-    }
-  } catch (e) { fr.x(e); if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
-  w.ctl.signal.aborted ? w.stg.stop() : w.stg.finish(!w.failed && !!w.text);   // the tick only for a whole reply
-  w.done = true;
-  if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
-  window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
-  window.stemT?.("cluck_reply", { kind: auto ? "wish" : "explain", ...ckTel(), item: w.code, ok: !w.failed && !!w.text && !w.ctl.signal.aborted, error: w.ctl.signal.aborted ? "aborted" : w.failed ? (err ? String(err.why || err.error || "stream") : "status " + w.failed) : "", chars: w.text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: !!auto, text: w.text });   // telemetry
-  if (wish !== w) return;
-  if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
-  wishPaint();
-  if (w.open) wishDraw();                                                  // an open sheet shows the failure, not a caret forever (G2c row 23)
-}
-/* the subject pass (serve.py subject_pass, Tony Nov 3 19:26 "stream first, then FLASH the correct text back"): the streamed reply is
-   swapped for the fixed one. Same lines (the server checks); a line that changed and holds no math, fence or table is re-drawn in place with
-   a short fade (.wswap); figures, math and views keep their DOM. Still typing (or the sheet is closed): the next draw just uses the new text. */
-function wishSwap(w, t) {
-  const a = w.text.split("\n"), b = t.split("\n"), x = wish === w && w.open && w.ended ? $("#cluck .wtext") : null;
-  w.text = t;
-  if (!x || a.length !== b.length) return;
-  a.forEach((o, i) => {
-    if (o === b[i] || /[$`|\u0001]/.test(o + b[i]) || !o.trim()) return;
-    const want = o.replace(/\*\*/g, "").replace(/^\s*- /, "").trim();
-    const el = [...x.querySelectorAll(".wl, li, p")].find(e => !e.querySelector(".fig, .katex, .wl, li") && e.textContent.trim() === want);
-    if (!el) return;
-    const tmp = document.createElement("div");
-    tmp.innerHTML = wishHTML(b[i]);
-    const n = el.tagName === "LI" ? tmp.querySelector("li") : tmp.firstElementChild;
-    if (!n) return;
-    n.classList.add("wswap");
-    el.replaceWith(n);
-  });
-  w.shown = w.pos = w.drawn = t.length;                                   // drawn = shown: no full redraw, so the figures keep their nodes
-}
-/* a reply that died mid-way (an in-band error: 402, timeout, cut at max_tokens): drop the server's "stopped early" line, an unclosed fence,
-   the half line at the end and a lead-in that promised a figure (ends with ":"), and the empty gaps a dropped figure left */
-const LEADIN = /:\s*$/;   // a line that promised a figure; the one rule for cutClean, slotsResolve and figDrop
-function cutClean(t) {
-  let s = t.replace(/\n?\(Cluck stopped early\. Sorry!\)\s*$/, "");
-  if ((s.match(/```/g) || []).length % 2) s = s.slice(0, s.lastIndexOf("```"));
-  const lines = s.replace(/\s+$/, "").split("\n");
-  if (lines.length && !/[.!?)\]$]\s*$|[^\x00-\x7f]\s*$/.test(lines.at(-1))) lines.pop();
-  while (lines.length && (LEADIN.test(lines.at(-1)) || !lines.at(-1).trim())) lines.pop();
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n");
-}
-function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
-  Object.assign(w, { failed: 0, lost: false, capped: false, inc: null, stg: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
-  wishStart(false);
-}
-/* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
-   follows until the next step or a "---" rule; "- " lines in a row make one short list (the ChatGPT break-up, Tony's ref); a line
-   that is only math ($$..$$ or $..$) is display math, and display lines in a row share one tinted callout, one equation per line; a table row
-   (2+ spaces between cells) in the mono face so its columns line up */
-const WDISP = /^\s*\$\$?([^$]+)\$\$?\s*$/;
-const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), d); } catch { return m; } };
-/* `code` in a reply (W113 vet: proof-b showed `lo = mid` with its backticks): the code span, never math or bold inside it */
-const wishLine = l => esc(l).split(/`([^`\n]+)`/).map((s, i) => (i % 2 ? `<code class="wcode">${s}</code>`
-  : s.replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"))).join("") || "&nbsp;";
-const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
-/* live figures (serve.py + livefig.py, Claude path only): the server sends at most one checked graph block per reply as
-   "\n```fig\n<json>\n```\n". wishHTML puts a .wfig placeholder in its place (an unclosed fence shows nothing: never raw JSON);
-   wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
-const figGone = new Set(), WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
-const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.length; figJSON.push(j); } return k; };
-/* a view (P4.1, views_gate.py): the server sends gated OpenUI Lang programs (with ```fig, at most two visuals a reply, todo 113) as "\n```openui\n<program>\n```\n", in the
-   same one-figure slot; its key is the program behind a \u0002 mark. wishFigs draws it with views.js (loaded lazily); nothing drawn: its alt text. */
-const WOUI = /\n?```openui\n([\s\S]*?)\n```\n?/g, OUI = "\u0002";
-const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";
-/* a figure the server is still drawing (serve.py v4_visible, Nov 3): the words stream on past a one-char anchor \u0005 where a dropped figure was; at the
-   reply's end \u0006<fence or nothing>\u0007 follows. slotsResolve puts the fill AT the anchor, or removes the anchor and its blank line: while pending
-   (and for good when nothing was drawn) the anchor leaves no DOM, so no gap and no empty box. Stripped of every control char, never shown. */
-const SLOT_FILL = /\u0006([\s\S]*?)\u0007/;
-function leadOut(a) {                                                    // text before a dropped figure: its ":" lead-in line goes, the blank line above it stays
-  const x = a.replace(/\n+$/, ""), i = x.lastIndexOf("\n");
-  return LEADIN.test(x.slice(i + 1)) ? x.slice(0, i + 1) : a.replace(/\n+$/, "\n");
-}
-function slotsResolve(t) {
-  if (!/[\u0005-\u0007]/.test(t)) return t;
-  const m = SLOT_FILL.exec(t), fill = m ? m[1] : "";
-  t = m ? t.slice(0, m.index) + t.slice(m.index + m[0].length) : t.replace(/\u0006[\s\S]*$/, "");
-  const i = t.indexOf("\u0005");
-  if (i >= 0) {
-    const a = t.slice(0, i), b = t.slice(i + 1);
-    t = fill ? a + fill + b : leadOut(a) + b.replace(/^\n+/, "");   // pending or nothing drawn: the lead-in goes too (no status line stands in: Tony, Nov 4)
-  }
-  return t.replace(/[\u0005-\u0007]/g, "");
-}
-const stripFigs = t => slotsResolve(t).replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
-/* the static fallback (todo 113 spec, Tony Oct 28: "a STATIC IMAGE of the same visual, never an error box"): every view, once drawn, is drawn
-   again off screen at STATIC_W px and kept as an image (SVG foreignObject, its computed look inlined). A phone too narrow for the view (the
-   slot under TINY_W px, or the view wider than its slot) shows that image, scaled to fit; a later draw of the same program that fails shows it
-   too. Nothing drawn and no image yet: the alt text, as before. */
-const STATIC_W = 420, TINY_W = 300, staticImg = new Map();             // program -> data: URL of its image
-const VIEW_DRAWN = ".vw-slot.on:not(.vw-fallback) > *";                // any drawn child (a Table-only view has no svg or p)
-const LOOK = ["display", "box-sizing", "width", "height", "margin", "padding", "border", "border-collapse", "border-spacing", "font", "line-height",
-  "letter-spacing", "text-align", "vertical-align", "white-space", "color", "background-color", "fill", "stroke", "stroke-width", "stroke-dasharray",
-  "opacity", "text-anchor", "dominant-baseline", "font-variant-numeric", "flex-direction", "flex-wrap", "gap", "align-items", "justify-content"];
-function inlineLook(src, dst) {
-  if (src.nodeType !== 1) return;
-  const cs = getComputedStyle(src);
-  dst.setAttribute("style", LOOK.map(p => `${p}:${cs.getPropertyValue(p)}`).join(";"));
-  dst.removeAttribute("class");
-  for (let i = 0; i < src.children.length; i++) inlineLook(src.children[i], dst.children[i]);
-}
-function viewImage(V, src) {
-  if (staticImg.has(src)) return staticImg.get(src);
-  const host = document.createElement("div");
-  host.className = "wtext";                                              // the reply's own cascade
-  host.style.cssText = `position:fixed;left:-10000px;top:0;width:${STATIC_W}px;visibility:hidden;pointer-events:none`;
-  const ph = document.createElement("div");
-  ph.className = "fig wfig wview";
-  host.append(ph); document.body.append(host);
-  let url = null;
-  try {
-    V.render(src, ph, {});
-    for (const b of ph.querySelectorAll(".vw-foot")) b.remove();           // a stepper's Back / Next: no buttons in a picture
-    if (ph.querySelector(VIEW_DRAWN)) {
-      const copy = ph.cloneNode(true);
-      inlineLook(ph, copy);
-      const w = STATIC_W, h = Math.ceil(ph.getBoundingClientRect().height) + 2;
-      copy.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject width="100%" height="100%">${
-        new XMLSerializer().serializeToString(copy)}</foreignObject></svg>`;
-      url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-    }
-  } catch (e) { console.error(e); }
-  host.remove();
-  if (url) staticImg.set(src, url);
-  return url;
-}
-function showStatic(ph, url, alt) {
-  const img = document.createElement("img");
-  img.className = "vw-static"; img.src = url; img.alt = alt || "figure"; img.decoding = "async";
-  ph.replaceChildren(img); ph.classList.add("wstatic");
-}
-const tooNarrow = ph => ph.clientWidth < TINY_W || [...ph.querySelectorAll(".vw-slot.on > *")].some(x => x.scrollWidth > ph.clientWidth + 1);
-function figDrop(ph) {                                                   // a figure that drew nothing: its placeholder, the gaps around it and a ":" lead-in line right before it
-  const gap = e => e && e.classList.contains("wgap");
-  while (gap(ph.previousElementSibling)) ph.previousElementSibling.remove();
-  while (gap(ph.nextElementSibling)) ph.nextElementSibling.remove();
-  const p = ph.previousElementSibling;
-  if (p && p.classList.contains("wl") && !p.classList.contains("wstep") && LEADIN.test(p.textContent)) p.remove();
-  ph.remove();
-}
-/* the stepper's end cheer (Tony, Nov 8): the last step of a Cluck stepper, the first time -> the duck avatar rolls 360° fast, then a warm,
-   slow, solid pastel confetti. Nothing under prefers-reduced-motion. views.js Steps sends "vw-steps-end" (bubbles). */
-const CHEER_PASTEL = ["#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#bdb2ff", "#ffc6ff"];
-document.addEventListener("vw-steps-end", e => {
-  if (waitReduced()) return;
-  const av = [...document.querySelectorAll("#cluck .cl-av")].find(a => a.offsetParent !== null);
-  const roll = av ? av.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 450, easing: "cubic-bezier(.4,0,.2,1)" }).finished.catch(() => {}) : Promise.resolve();
-  /* iteration 2: the confetti falls inside the stepper (rewards/fx.js confettiIn: a canvas in that element), never over the input or a toast */
-  const par = e.target instanceof Element ? e.target : null, f = par && window.FX && window.FX.confettiIn ? window.FX.confettiIn(par) : null;
-  roll.then(() => {
-    if (!f) return;
-    Promise.resolve(f({ particleCount: 60, spread: 110, startVelocity: 14, gravity: .35, drift: 0, ticks: 360, scalar: 1, colors: CHEER_PASTEL,
-      shapes: ["circle", "square"], flat: true, origin: { x: .5, y: .1 }, disableForReducedMotion: true })).finally(() => f.canvas.remove());
-  });
-});
-function wishFigs(root) {
-  for (const ph of root.querySelectorAll(".wfig[data-f]")) {
-    const k = +ph.dataset.f, done = figEl[k];
-    if (figGone.has(k)) { figDrop(ph); continue; }                      // drawn nothing before: it stays gone on every redraw
-    if (done && !done.isConnected) { ph.replaceWith(done); continue; }
-    ph.removeAttribute("data-f");
-    if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
-      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); figDrop(ph); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
-      ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
-      import("./views.js").then(V => {
-        let drawn = false;
-        try { V.render(src, ph, {}); drawn = !!ph.querySelector(VIEW_DRAWN); } catch (e) { console.error(e); }
-        const url = drawn || staticImg.has(src) ? viewImage(V, src) : null;   // pre-rendered once it drew (W113 static fallback)
-        if (url && (!drawn || tooNarrow(ph))) showStatic(ph, url, alt);
-        else if (!drawn) off();
-      }).catch(e => { console.error(e); if (staticImg.has(src)) showStatic(ph, staticImg.get(src), alt); else off(); });
-      if (!done) figEl[k] = ph;
-      continue;
-    }
-    let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
-    if (!b || b.type !== "graph") { figGone.add(k); figDrop(ph); continue; }
-    ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
-    try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); figDrop(ph); continue; }
-    if (!done) figEl[k] = ph;
-  }
-}                                // "1. Find the momentum before — only one cart moves"
-function wishHTML(t, ended) {
-  t = slotsResolve(t);
-  let out = "", step = null, eqs = [], li = [];
-  const put = h => { if (step === null) out += h; else step += h; };
-  const flush = () => {
-    if (eqs.length) put(`<div class="wl wmath${eqs.length === 1 && eqs[0].includes("boxed") ? " wans" : ""}">${eqs.join("")}</div>`);   // a lone boxed answer: no box around the box
-    if (li.length) put(`<ul class="wl wlist">${li.join("")}</ul>`);
-    eqs = []; li = [];
-  };
-  const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
-  t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(WOUI, (m, p) => `\n\u0001FIG${figKey(OUI + p)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
-  t = renumberSteps(t);                                                   // badges count 1, 2, 3 whatever digits the model typed ("1." every time is common)
-  t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
-  const lines = t.replace(/\s+$/, "").split("\n");                       // a trailing newline (text cut mid-stream after a line) is not a blank line: no gap at the end
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i], fg = /^\u0001FIG(\d+)$/.exec(l);
-    if (fg) { flush(); put(`<div class="fig wfig" data-f="${fg[1]}"></div>`); continue; }
-    const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
-    if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
-      close();
-      const [title, sub] = s[2].split(/\s+[—–]\s+/);
-      step = `<div class="wl wstep"><span class="wnum" aria-hidden="true">${s[1]}</span><div class="wsbody"><div class="wstitle">${wishLine(title)}</div>${
-        sub ? `<div class="wssub">${wishLine(sub)}</div>` : ""}`;
-      continue;
-    }
-    if (/^\s*---+\s*$/.test(l)) { close(); out += '<hr class="wrule">'; continue; }   // the steps end: the answer comes after the rule
-    if (d) { if (li.length) flush(); eqs.push(`<div class="weq">${wishMath(esc(d[1]), true, esc(l))}</div>`); continue; }
-    if (b) { if (eqs.length) flush(); li.push(`<li>${wishLine(b[1])}</li>`); continue; }
-    const tb = pipeTable(lines, i);                                       // a strict GFM pipe table (the model's habit): a table, not raw bars
-    if (tb) {
-      flush(); i = tb.next - 1;
-      const row = (r, tag) => `<tr>${r.map(c => `<${tag}>${wishLine(c)}</${tag}>`).join("")}</tr>`;
-      if (tableShape(tb.head, tb.rows) === "tug") { put(`<div class="wl wtug">${tugHTML(tugFromTable(tb.head, tb.rows), wishLine)}</div>`); continue; }   // cause -> up/down rows: a Tug (tug.mjs)
-      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (tug.mjs)
-      put(`<div class="wl wtbl"><table><thead>${row(tb.head, "th")}</thead><tbody>${tb.rows.map(r => row(r, "td")).join("")}</tbody></table></div>`);
-      continue;
-    }
-    const hold = pipeHold(lines, i);                                      // a table still arriving (header, separator, a cut row): wait for it, no raw bars
-    if (hold !== null) { flush(); i = hold - 1; continue; }
-    flush();
-    put(!l.trim() ? '<div class="wl wgap"></div>' : `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${wishLine(l)}</div>`);   // a blank line: a short breath, not a full empty row
-  }
-  close();
-  return out;
-}
-/* the ChatGPT feel (Tony, Oct 4: "bit delay feels gud"): ~900 ms of a lone blinking caret (STYLE.md bans pulsing dots), then the text
-   types out at ~35 chars/s word by word, a $..$ always whole, the caret riding the end. A tap on the box skips to the end; reduced motion =
-   no typing (the wait stays). */
-const WISH_DOTS = 900, WISH_CPS = 35;
-const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
-/* the caret follows the words (Tony, Nov 4): it sits inline at the end of the last line that has text, never on a line of its own; no text yet = no caret */
-function wishBody(el, html, caret) {
-  el.innerHTML = html;
-  if (!caret) return;
-  const hosts = [...el.querySelectorAll(".wl:not(.wgap):not(.wlist), li")].filter(e => !e.closest(".wfig, .wtbl") && e.textContent.trim());
-  hosts.at(-1)?.insertAdjacentHTML("beforeend", WCARET);
-}
-/* the wait: nothing on the page until the first word (Tony, Nov 4: no "Thinking…", no wait lines, no lone caret); the screen reader hears "Cluck is thinking." once */
-function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
-  n = Math.min(t.length, Math.ceil(n));
-  while (n < t.length && /\S/.test(t[n])) n++;
-  const fences = t.slice(0, n).split("```").length - 1;                   // inside a live figure's fence: the whole figure at once
-  if (fences % 2) { const e = t.indexOf("```", n); n = e < 0 ? (done ? t.length : t.lastIndexOf("```", n - 1)) : e + 3; }
-  if (done && n >= t.length) return n;                                    // the whole text: show it, even with a pair the model never closed
-  const open = [...t.slice(0, n).matchAll(/\$\$?/g)];                      // $ and $$ each open or close one formula (a $$ pair may span lines)
-  if (open.length % 2) { const c = /\$\$?/g; c.lastIndex = n; const e = c.exec(t); n = e ? e.index + e[0].length : open.at(-1).index; }
-  if (t.slice(0, n).split("**").length % 2 === 0) { const e = t.indexOf("**", n); n = e < 0 ? Math.max(0, t.lastIndexOf("**", n - 1)) : e + 2; }
-  return n;
-}
-/* a /chat reply types out the same way as the steps (a chunk may be a whole line): one word at a time, a formula whole; resolves when all is shown */
-function wishType(el, s) {
-  return new Promise(res => {
-    let last = performance.now(), drawn = -1;
-    const f = now => {
-      if (!el.isConnected || s.off) return res();
-      s.pos = reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
-      s.shown = Math.max(s.shown, wishCut(s.text, s.pos, s.done));
-      const end = s.done && s.shown >= s.text.length;
-      if (drawn !== s.shown || end) { wishBody(el, wishHTML(s.text.slice(0, s.shown), end), !end); wishFigs(el); drawn = s.shown; }
-      end ? res() : requestAnimationFrame(f);
-    };
-    requestAnimationFrame(f);
-  });
-}
-let wishRaf = 0;
-function wishText() { if (!wishRaf) wishRaf = requestAnimationFrame(wishFrame); }
-function wishDraw() { cancelAnimationFrame(wishRaf); wishRaf = 0; wishFrame(performance.now()); }
-function wishFrame(now) {
-  wishRaf = 0;
-  const x = $("#cluck .wtext"), w = wish;
-  if (!x || !w || !w.open) return;
-  if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
-  const t = w.text;
-  if (w.stg?.seen) w.stg.paint(); else x.parentElement.querySelector(":scope > .stg")?.remove();   // a stale row list from another question never stays
-  if (w.done && !t && (w.failed || w.capped)) {                           // nothing came: say so in the sheet (the chip sits under it on a phone)
-    if (w.drawn !== -2) {
-      if (w.off) $("#cluck .cl-ft").hidden = true;                          // no ask field: /chat has no key either
-      x.innerHTML = w.off ? `<div class="wl">${CLUCK_OFF}</div>` : w.failed ? `<div class="wl">Couldn't load Cluck. <button type="button" class="wretry">Try again</button>${incHTML(w.inc)}</div>`
-        : `<div class="wl">Oh duck, Cluck is tired! Come back later.</div>`;
-      w.drawn = -2;
-      x.querySelector(".wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
-      say(w.off ? CLUCK_OFF : w.failed ? "Couldn't load Cluck." : "Cluck is out of wishes for this hour.");
-    }
-    x.classList.remove("wrun"); return;
-  }
-  if (now < w.at || !t) {
-    if (w.drawn !== -1) {                                                 // before the first word: nothing on the page (no caret, no status line)
-      x.innerHTML = "";
-      if (!w.thought) { w.thought = true; say("Cluck is thinking."); }
-      w.drawn = -1;
-    }
-    w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
-  const dt = now - (w.tick || now); w.tick = now;
-  w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
-  w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
-  const end = w.done && w.shown >= t.length;
-  if (w.drawn !== w.shown || end !== w.ended) {
-    if (!w.quack && w.shown > 0) {   // D72: Cluck's message opens with a QUACK, as its first body line (not in the name row)
-      w.quack = lastQuack = quack(w.code + ":cluck", lastQuack);
-      const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
-      if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
-    }
-    wishBody(x, wishHTML(t.slice(0, w.shown), end) + (!end ? "" : w.failed && w.lost ? `<div class="wl wlost">Cluck lost signal. <button type="button" class="wretry">Tap to retry.</button>${incHTML(w.inc)}</div>`
-      : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : ""), !end);   // the stream broke mid-reply: what came, then the clean line (+ its code)
-    x.querySelector(".wlost .wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
-    wishFigs(x);
-    w.drawn = w.shown; w.ended = end;
-  }
-  x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
-  if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // (the idle wish is born said: the box opening on load is not announced)   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
-}
-/* the stage rows' home: above the reply in the open sheet (null = closed: stages.js paints when asked again, so opening shows the state so far) */
-function wishStgHost(w) {
-  const x = wish === w && w.open && $("#cluck .wtext"); if (!x) return null;
-  const p = x.parentElement; let h = p.querySelector(":scope > .stg");
-  if (!h) { h = document.createElement("div"); h.className = "stg"; h.setAttribute("aria-live", "off"); (p.querySelector(":scope > .cl-quack") || x).before(h); }
-  return h;
-}
-const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
-/* the peek: only the start of the steps (the rest is under the fade); wishCut never splits a $..$ */
-const peekHTML = w => wishHTML(w.text.slice(0, wishCut(w.text, 600, w.done)));
-let peekRaf = 0;
-function peekText() {                                                       // the stream fills the peek, one draw a frame
-  if (!peekRaf) peekRaf = requestAnimationFrame(() => {
-    peekRaf = 0;
-    const s = $(".cl-peek .cl-steps"); if (!s || !wish) return;
-    const h = s.offsetHeight; s.innerHTML = peekHTML(wish);
-    if (s.offsetHeight !== h) layoutFreeze();
-  });
-}
-/* E1 LOCKED (Tony, Oct 13: T2, "okay, but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
-   no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --help and the duck tilts once. T35 may host it in an AI preview card */
-const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
-function wishPaint() {
-  const el = wishEl(), w = wish;
-  const room = Math.max(0, ...[...document.querySelectorAll(".cl-peek, .cl-room")].map(p => p.getBoundingClientRect().height));   // the room the peek had (W129 L4)
-  document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
-  el.classList.remove("gone");
-  if (!w || w.idle || [404, 503].includes(w.failed)) {                    // (the idle wish is the box's own opener: nothing on the page yet)
-    el.hidden = true;
-    if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
-    clBackSync(); return;
-  }
-  const perm = clPerm();                                                   // V2: the permanent box is never "the way back": the chip stays (the strip tray's Ask Cluck, the verdict's See steps)
-  const off = perm ? false : sideMQ.matches ? w.open                       // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
-    : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Compare with a similar solution" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
-  el.hidden = off;
-  el.toggleAttribute("data-box", perm && !!w.open);                          // V2: what hiding #wish did to the spent preview (app.css), for the permanent box
-  const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
-  if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
-  el.classList.toggle("cue", cue);
-  if (cue) {
-    const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
-    if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck">${icon("i-duck", "dk ico" + (nod && !q ? " g-nod" : ""))}<span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
-    if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
-  /* GENMISS (Tony, Nov 3): the Q3 = C inline peek + "okay, but how?" card is gone: on every wrong try, matched or generic, on every layout, the only Cluck entry is the strip tray's "Ask Cluck" (the chip below) */
-  } else {
-    const label = !w.started ? "Explain my mistake" : w.failed ? "Oops, didn't load. Tap to try again." : "Ask Cluck";   // permanent box + a reply on its way: the chip (the tray's "Ask Cluck") takes the student to the box's ask field
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped || (w.started && !w.failed) ? "" : " rw-shine"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
-  }
-  rboxSync();
-  const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta") || document.querySelector(".rbox .wchip");   // the chip painted just now: in #wish, or already docked (typed bar). Never an older chip that the strip drawer (a .rbox before #wish in the DOM) still holds: it is about to be replaced, and the new one would get no handler
-  btn?.addEventListener("click", () => {
-    w.tapped = true;                                                       // the ad shine stops for good on this question
-    if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
-    else if (!w.started || w.failed) wishRetry(w);
-    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ":is(#wish, .rbox) .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
-    else if (perm && w.open) { clAskFocus(); return; }                      // the box is always open: the chip goes to its ask field
-    else if (w.open) { clClose(); return; }
-    clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : ":is(#wish, .rbox) .wchip");
-  });
-  clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "okay, but how?" up = no "Show him" row
-  layoutFreeze();
-  window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
-}
-/* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
-   One scroll, no tabs (Tony, Oct 5: variant a of design/mockups/cluck-merge.html): Cluck's explanation of your miss on top (the box
-   text, then the follow-up chat, the ask field pinned at the bottom), and under it the original's worked solution in a fold, "See
-   reference solution" (Tony's wording). The fold is open when there is no explanation, closed after a miss. Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
-   on a phone it covers the screen under the orange head bar (Tony's image 1). The X or Escape closes it; focus goes back to its opener. */
-const CHAT_TURNS = 5;                                                       // serve.py CHAT_TURNS: the server keeps the same count
-let cl = null;   // { el, tab, open, from }
-function clEl() {
-  if (cl) return cl.el;
-  const el = document.createElement("aside");
-  el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Explain");
-  el.innerHTML = `<button type="button" class="cl-grab" aria-label="Expand Cluck to full screen"><i></i></button><div class="cl-bar"><span class="cl-avw" role="img" aria-label="Cluck, online"><span class="cl-av">${icon("i-duck")}</span><i class="cl-dot"></i></span><span class="cl-title">Cluck</span><span class="tag">TUTOR</span><button type="button" class="cl-x" aria-label="Close">${icon("i-x")}</button></div>
-    <button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button>
-    <div class="cl-bd"><p class="cl-note" hidden></p><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-starters" role="group" aria-label="Ask Cluck" hidden></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
-      <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
-      <div class="cl-pane" id="clTabSP"></div></div>
-    <div class="cl-ft"><button type="button" class="cl-more" aria-label="Scroll down">${icon("i-down")}</button><div class="cl-fi"></div></div>`;   // .cl-fi: the ask field / done row (clAsk); the hint stays
-  cl = { el, tab: "explain", open: false, from: null, fold: false };
-  window.CalcCoach?.chrome(el);                                                  // the Calc Coach link in Cluck's chrome, under his text (calc-coach.js)
-  el.querySelector(".cl-fold").addEventListener("click", () => {
-    if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) origPeeked();   // folded away after a solve: looking again is a peek
-    cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
-  });
-  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (design/DISMISS.md)
-  cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
-  document.body.append(cl.dim);
-  clDrag(el);
-  const bd = el.querySelector(".cl-bd"), ro = new ResizeObserver(clMore);   // the scroll-down hint follows the scroll, the sheet's size and the text as it types in
-  bd.addEventListener("scroll", clMore, { passive: true }); ro.observe(bd); [...bd.children].forEach(c => ro.observe(c));
-  el.querySelector(".cl-more").addEventListener("click", () => {
-    window.stemT?.("cluck_more", { act: "tap" });   // Jev (on device: telemetry.js never sends it)
-    bd.scrollBy({ top: bd.clientHeight * 0.8, behavior: reduceMQ.matches ? "auto" : "smooth" });
-  });
-  el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
-  clPlace();
-  return el;
-}
-/* the phone sheet drags (Tony, Oct 13 CHATBOX PICK r2: "draggable uptop, more round, round->full animation when u dragup"; mock unified-v4 frame.js).
-   One number drives it: pos = the sheet's top edge. 0 = full screen (square corners), peek = the docked top (clTop), innerHeight = gone.
-   Above the dock the sheet grows (top moves, radius and dim follow); below it, it slides down and a release past 64px closes it.
-   The grab + the header drag; the body drags only when it cannot scroll that way (scrolled to top for a pull down; not yet full for a pull up). */
-function clDrag(el) {
-  const root = document.documentElement, grab = el.querySelector(".cl-grab"), bar = el.querySelector(".cl-bar"), bd = el.querySelector(".cl-bd");
-  let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null;
-  const phone = () => !sideMQ.matches;
-  const paint = () => {
-    const top = Math.min(pos, peek), down = Math.max(0, pos - peek);
-    el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
-    el.style.transform = down ? `translateY(${down}px)` : "";
-    el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
-    root.style.setProperty("--da", dimAt(pos, peek, innerHeight));
-  };
-  const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
-  const settle = to => {
-    if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
-    full = to === 0; pos = to; paint();
-    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
-    state(full ? "full" : "peek");
-  };
-  const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
-    cancelAnimationFrame(raf);
-    if (reduceMQ.matches) { settle(to); return; }
-    let vel = v0, last = performance.now(); el.dataset.state = "moving";
-    const step = now => {
-      let dt = Math.min(0.032, (now - last) / 1000); last = now;
-      while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - 34 * vel) * h; pos += vel * h; dt -= h; }
-      if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
-      if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
-      paint(); raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-  };
-  cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
-    cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
-    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da");
-    grab.setAttribute("aria-label", "Expand Cluck to full screen");
-  };
-  const begin = y => {                                                      // a press became a drag
-    cancelAnimationFrame(raf);
-    if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
-    d = { y0: y, p0: pos, full, s: [[performance.now(), y]] }; root.classList.add("cl-drag"); el.dataset.state = "dragging";
-  };
-  const track = y => { pos = clampPos(d.p0 + y - d.y0, innerHeight); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };
-  const end = () => {
-    const was = d; d = null; root.classList.remove("cl-drag"); if (!was) return;
-    const [t0, y0] = was.s[0], [t1, y1] = was.s.at(-1), v = Math.max(-3000, Math.min(3000, t1 > t0 ? (y1 - y0) / (t1 - t0) * 1000 : 0));
-    go(snapTo(pos, peek, innerHeight, v, was.full), v);
-  };
-  const toggle = () => { if (!full) begin(0); d = null; root.classList.remove("cl-drag"); go(full ? peek : 0); };   // a tap / Enter on the grab
-  /* the grab + header: pointer events; a press is a drag only after 6px, so a tap still presses X (or toggles from the grab) */
-  let p = null;
-  const down = e => { if (!phone() || e.button > 0 || e.target.closest(".cl-x")) return; p = { id: e.pointerId, y: e.clientY, grab: !!e.target.closest(".cl-grab"), on: false }; };
-  const move = e => {
-    if (!p || e.pointerId !== p.id) return;
-    if (!p.on) { if (Math.abs(e.clientY - p.y) < 6) return; p.on = true; begin(p.y); try { e.currentTarget.setPointerCapture(e.pointerId); } catch {} }
-    e.preventDefault(); track(e.clientY);
-  };
-  const up = e => {
-    if (!p || e.pointerId !== p.id) return;
-    const q = p; p = null;
-    if (q.on) end(); else if (q.grab && e.type === "pointerup") toggle();
-  };
-  for (const t of [grab, bar]) for (const [n, f] of [["pointerdown", down], ["pointermove", move], ["pointerup", up], ["pointercancel", up]]) t.addEventListener(n, f);
-  grab.addEventListener("click", e => { if (e.detail === 0 && phone()) toggle(); });   // Enter / Space (a pointer tap already toggled)
-  /* the body: touch events (a pointer stream is cancelled once the browser starts a scroll). Pull up while not full = grow; pull down at scrollTop 0 = shrink/close */
-  let t = null;
-  bd.addEventListener("touchstart", e => { t = phone() && e.touches.length === 1 ? { y: e.touches[0].clientY, top: bd.scrollTop, on: false, native: false } : null; }, { passive: true });
-  bd.addEventListener("touchmove", e => {
-    if (!t || t.native) return;
-    const y = e.touches[0].clientY, dy = y - t.y;
-    if (!t.on) {
-      if (Math.abs(dy) < 6) return;
-      if ((dy < 0 && !full) || (dy > 0 && bd.scrollTop <= 0 && t.top <= 0)) { t.on = true; begin(y); } else { t.native = true; return; }
-    }
-    if (e.cancelable) e.preventDefault(); track(y);
-  }, { passive: false });
-  const tend = () => { if (t && t.on) end(); t = null; };
-  bd.addEventListener("touchend", tend); bd.addEventListener("touchcancel", tend);
-}
-function clPlace() {                                                        // side by side: the notes column; phone: over the page
-  if (!cl) return;
-  const home = sideMQ.matches ? $("#work") : document.body;
-  if (cl.el.parentElement !== home) home.append(cl.el);
-  $("#work").classList.toggle("cl-on", cl.open && sideMQ.matches);
-  window.stemBrainrot?.sheet(cl.open && sideMQ.matches);
-  document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
-}
-function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
-  if (clGone && sideMQ.matches) { if (auto) return; clGoneSet(false); }    // dismissed (DISMISS.md): an auto-open waits for the student; a tap brings the column back
-  window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
-  clEl(); if (!cl.open) cl.y = scrollY;
-  cl.sheetReset?.();
-  cl.perm = clPerm();
-  if (cl.perm && !S.finished && S.prob.wish && !cluckOff && !S.prob.original && (!wish || wish.code !== S.code)) wish = idleWish();   // V2: before any miss the box holds the opener + starters, not a blank
-  cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
-  clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
-  layoutFreeze();
-  dispatchEvent(new CustomEvent("stem:layers"));                            // nav.js: the iOS Back button
-  if (sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
-    const ft = cl.el.querySelector(".cl-ft"), r = ft.getBoundingClientRect();   // #work.cl-on), so the page moves only when the field is really off screen (W129 L4: "start" scrolled the page under the student)
-    if (r.top < 0 || r.bottom > innerHeight) ft.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" });
-  }
-}
-const clPerm = () => modeOf() === "sugar" && sideMQ.matches && !!S;           // BIG PLAN V1 (Tony Nov 2, 22:49): desktop sugar keeps Cluck's box open from the first paint, no X, no Escape, no dismiss. Phones and diet: unchanged
-/* the first close of Cluck's sheet on this device (flag stem-ob-cluck, set only when the note was placed): a note on the way back in */
-function cluckToast() {
-  try { if (localStorage.getItem("stem-ob-cluck")) return; } catch { return; }
-  setTimeout(() => {
-    const at = document.querySelector(":is(#wish, .rbox) .wchip");
-    if (!at || at.hidden || !at.getClientRects().length || noteAt() || !toast("Cluck lives in Ask Cluck. Tap it to reopen.", at)) return;
-    try { localStorage.setItem("stem-ob-cluck", "1"); } catch { /* shown, not kept */ }
-  }, 80);
-}
-function clClose(dismiss, force) {                                         // force: clReset only (a new question empties the box, applyMT opens it again)
-  if (!cl || !cl.open || (clPerm() && !force)) return;
-  rpUnmount(); if (!force) cluckToast();                                   // the brown repair box goes with the sheet; the first time ever, a note says where Cluck went
-  window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
-  const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
-  cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
-  clTab(cl.tab, false); clPlace(); padRule();
-  layoutFreeze();
-  dispatchEvent(new CustomEvent("stem:layers"));
-  if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
-  if (dismiss === true && sideMQ.matches && !origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
-  if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
-}
-/* ---------- dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor") ----------
-   html.side only: the X, Escape, or the sash dragged to the right edge folds the whole right column; the question column centres and
-   its type steps up. Under the verdict, one hairline row (B4) brings it back. Its sassy line rotates (H; the one humour exception in
-   chrome, STYLE.md §5); "Show him" stays put; the button's name is plain. Phones: unchanged. In memory only, never stored. */
-let clGone = false, hkT = 0, hkI = 0, hkK = null;
-const HK_IDLE = ["Cluck's bathing in the sunshine", "Cluck's waiting for breadcrumbs",   // Tony #36: one slot of the duck kind, a random pick each time it shows
-  "Cluck's paddling in place", "Cluck's counting ripples", "Cluck's practicing his waddle", "Cluck's taking a quick dip",
-  "Cluck's bobbing for snacks", "Cluck's preening, back soon", "Cluck's on a pond break", "Cluck's getting his ducks in a row"];
-const HK = {                                                                // the A/B by humour kind: one kind per device (hkKind)
-  sassy: ["Even ducks need a rest frame.", "Cluck's got lots of wisdom. One click and it's yours.", "Gravity's keeping us grounded here.", "Cluck waits for your next rub.", "Cluck's always here for you."],
-  deadpan: ["Cluck's still here, quack!", "Cluck's got the answer", "Cluck's here if needed", "Cluck remains a duck", "Cluck's on standby"],
-  duck: ["Cluck knows ducks don't cluck", HK_IDLE, "Cluck can hatch eggs. And hints, too.", "Cluck zipped his beak", "Cluck is nearby, floating"],
-  nerd: ["Cluck's resting with energy", "Feathered forces at work.", "The answer is... spaghetti waves?", "Cluck's polling for input...", "Gravity: still pulling for you."],
-};
-const HK_DEF = "deadpan";                                                   // no telemetry id (off, DNT / GPC, no key): this kind, nothing recorded
-const hkForced = (() => {                                                   // QA: #hk=<kind> (alone or after a code) or ?hk=<kind>, read once; the hash
-  try {                                                                     // loses it before boot reads the code (never "Can't open hk=...")
-    const m = /(?:^|[#?&])hk=([a-z]+)/.exec(location.hash + "&" + location.search.slice(1));
-    if (/(^#|&)hk=/.test(location.hash)) history.replaceState(history.state, "", location.pathname + location.search + location.hash.replace(/&?hk=\w*/, "").replace(/^#&/, "#").replace(/^#$/, ""));
-    return m && HK[m[1]] ? m[1] : null;
-  } catch { return null; }
-})();
-function hkKind() {
-  if (hkK) return hkK;
-  if (hkForced) return (hkK = hkForced);
-  const ks = Object.keys(HK);
-  let i = -1; try { i = window.stemHk ? window.stemHk(ks.length) : -1; } catch { i = -1; }   // telemetry.js: a stable hash of its anonymous id
-  return (hkK = Number.isInteger(i) && ks[i] ? ks[i] : HK_DEF);
-}
-function clGoneSet(on) {
-  if (clGone === on) return;
-  clGone = on;
-  if (on && cl && cl.open) { cl.auto = true; clClose(); }                  // the sash drag with the sheet open: it goes with the column
-  applyMT(); layoutFreeze();
-}
-function hkStop() { clearInterval(hkT); hkT = 0; }
-function hkShow(b, roll) {
-  const t = b.querySelector(".hk-t"), set = HK[hkKind()];
-  const l = set[hkI % set.length];
-  t.textContent = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l;
-  if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
-}
-function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok, .rbox .cue-ok")].some(c => c.getClientRects().length > 0); }   // "okay, but how?" or "See Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
-function clBackSync() {
-  const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "okay, but how?" wins
-  let b = $("#clBack");
-  if (!show) { if (b) b.hidden = true; hkStop(); return; }
-  if (!b) {
-    b = document.createElement("button"); b.type = "button"; b.id = "clBack"; b.className = "cl-back"; b.hidden = true;
-    b.setAttribute("aria-label", "See Cluck's explanation");
-    b.innerHTML = `${icon("i-duck")}<span class="hk" aria-hidden="true"><span class="hk-t"></span></span><span class="hk-go" aria-hidden="true">Show him</span>`;
-    b.addEventListener("click", clBack);
-  }
-  const home = $("#freezeIn");
-  if (b.parentElement !== home || b.nextElementSibling) home.append(b);       // under the verdict (and Cluck's chip / peek), last in the column
-  if (!b.hidden) return;
-  b.hidden = false; hkI = 0; hkShow(b, false);
-  window.stemT?.("cluck_back_seen", { hk: hkKind() });                      // the A/B exposure (telemetry.js: a no-op when off)
-  hkStop();
-  if (!reduceMQ.matches) hkT = setInterval(() => { if (b.hidden || !b.isConnected) { hkStop(); return; } hkI++; hkShow(b, true); }, 3600);   // reduced motion: one static line
-}
-function clBack() {
-  const w = wish, said = !!w && !!S && w.code === S.code && w.started && !w.failed && ![404, 503].includes(w.failed);
-  clGoneSet(false);
-  if (said || origEl) clOpen(said ? "explain" : "steps", "#clBack");
-}
-/* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
-   (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
-   his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
-window.stemCluckOpen = () => !!cl && cl.open;
-window.stemCluckClose = () => clClose(false);                               // nav.js: the iOS Back button closes the sheet
-window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
-window.stemCluckModal = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
-window.stemLayout = () => { if (S) layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
-window.stemIdleTap = () => {
-  const w = wish;
-  if (w && S && w.code === S.code && (!w.started || w.failed) && ![404, 503].includes(w.failed)) {   // B7 (Tony, Oct 19, pick b): no prefetch (or it failed): the duck
-    w.tapped = true;                                                       // tap is the "Explain my mistake" tap, the same request (the T34 exception, an explicit tap only)
-    if (w.started || !wishFromCache(w)) wishRetry(w);                      // a reply in this browser's cache: no call
-    clOpen("explain", null); return;
-  }
-  const said = !!wish && wish.started && !wish.failed;
-  if (said || origEl) { clOpen(said ? "explain" : "steps", null); return; }
-  const b = [...document.querySelectorAll(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
-  if (b) { b.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" }); b.focus({ preventScroll: true }); }
-};
-/* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
-   sits over the question there), then the sheet's top sits two lines below the question text's first line (at most 45% down: the chat keeps room) */
-function clTop() {
-  if (sideMQ.matches) return;
-  scrollTo({ top: 0, behavior: "instant" });
-  const t = $("#blocks > :not(.ptitle)") || $("#problem"); if (!t) return;
-  const lh = parseFloat(getComputedStyle(t).lineHeight) || 28;
-  cl.el.style.setProperty("--cl-top", Math.round(Math.min(Math.max(t.getBoundingClientRect().top + 2 * lh + 2, 48), innerHeight * 0.45)) + "px");
-}
-function clTab(tab, focus) {
-  const has = { explain: !!wish && (wish.off || ![404, 503].includes(wish.failed)) && wish.started, steps: !!origEl };   // off: the sheet holds the one line
-  if (!has[tab]) tab = has.explain ? "explain" : "steps";
-  cl.tab = tab;
-  if (!has.explain) cl.fold = true;                                         // nothing above it: the steps are the content
-  const fold = cl.el.querySelector(".cl-fold"), n = cl.el.querySelectorAll("#clTabSP .orig-sol li").length;
-  cl.el.querySelector("#clTabEP").hidden = !has.explain;
-  fold.hidden = !has.steps; fold.setAttribute("aria-expanded", String(cl.fold));
-  fold.querySelector(".cl-fold-n").textContent = n ? `${n} step${n > 1 ? "s" : ""}` : "";
-  cl.el.querySelector("#clTabSP").hidden = !has.steps || !cl.fold;
-  cl.el.querySelector(".cl-ft").hidden = !has.explain || !!wish.off;           // off: no ask field (/chat has no key either)
-  const w = wish, was = !!(w && w.open);
-  if (w) w.open = cl.open && has.explain;
-  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: w.shown is kept, so the text is redrawn whole, not typed again
-  clHist(!!(w && w.open && !was));
-  if (w && !w.open && was) w.tick = 0;
-  if (S && S.orig) {
-    S.orig.open = cl.open && has.steps && cl.fold;
-    $("#origHd")?.setAttribute("aria-expanded", String(S.orig.open));
-    if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
-  }
-  if (w && was !== w.open) wishPaint();                                     // the chip's label follows
-  clIdleSync();
-  clMore();
-  if (focus) {                                                              // a manual open: focus goes into the sheet (an auto open never moves it)
-    const ta = cl.el.querySelector(".ask textarea");
-    if (has.steps && tab === "steps") fold.focus();
-    else if (sideMQ.matches && ta && !ta.disabled && !cl.el.querySelector(".cl-ft").hidden) ta.focus({ preventScroll: true });
-    else { cl.wantAsk = sideMQ.matches; [...cl.el.querySelectorAll(".cl-x")].find(b => b.getClientRects().length)?.focus({ preventScroll: true }); }   // desktop: the ask field once the text is typed; phone: no keyboard pop
-  }
-}
-/* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),
-   the student's words in a bubble. The speaker's name stays for screen readers */
-const clWho = me => me ? '<span class="sr-only">You: </span>' : `<span class="av" aria-hidden="true">${icon("i-duck")}</span><span class="sr-only">Cluck: </span>`;
-function clReset() {                                                        // a new question: close, empty, a fresh ask field
-  cl?.el.querySelector("#clTabEP .cl-quack")?.remove();                     // D72: the next explanation picks its own QUACK
-  if (!cl) return;
-  cl.y = null;                                                              // a new question: no scroll back to the old one
-  clClose(false, true);
-  cl.el.querySelector(".wtext").innerHTML = "";
-  cl.el.querySelector(".cl-thread").innerHTML = "";
-  cl.el.querySelector("#clTabEP > .cl-st")?.remove();
-  cl.el.querySelectorAll("#clTabEP [hidden]").forEach(e => { e.hidden = false; });
-  cl.el.querySelector(".cl-fi").innerHTML = "";
-}
-/* the scroll-down hint (Tony, Oct 19, variant A): while more than 8px of the text is under the ask field, .cl-bd.below shows a fade over the
-   field's top edge and a chevron disc inside it (app.css); a tap scrolls ~80% of the body down; at the bottom it goes. Jev hears "shown" once
-   per reply (the box text, then each chat reply) and "bottom" once per reply that showed it */
-function clMore(late) {
-  if (!cl) return;
-  const bd = cl.el.querySelector(".cl-bd"), on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
-  if (on === bd.classList.contains("below")) { clearTimeout(cl.moreT); cl.moreT = 0; return; }
-  if (on && late !== true) { cl.moreT ||= setTimeout(() => { cl.moreT = 0; clMore(true); }, 150); return; }   // it shows once the sheet has settled (side by side the column re-fits ~70ms after it opens): no flash; it hides at once
-  bd.classList.toggle("below", on);
-  if (wish && wish.idle) return;                                           // V2: the opener + starters are not a reply: Jev hears nothing for them
-  const k = `${wish?.code}#${cl.el.querySelectorAll(".cl-thread .wreply").length}`, m = cl.more;
-  if (on && m?.k !== k) { cl.more = { k }; window.stemT?.("cluck_more", { act: "shown" }); }
-  else if (!on && cl.open && m?.k === k && !m.end) { m.end = true; window.stemT?.("cluck_more", { act: "bottom" }); }   // scrolled to the end (a close is not "bottom")
-}
-/* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
-/* V2: the permanent box's own words. Idle (before any miss): Cluck's opener line (the idle wish's text) + three starter chips; each sends through the ask field's pipe, so it counts against the 5.
-   A question with no Cluck key: the note instead (CL_COPY.nokey). Right on the first try, no steps asked yet: the note points at the duck chip */
-function clIdleSync() {
-  if (!cl) return;
-  const st = cl.el.querySelector(".cl-starters"), nt = cl.el.querySelector(".cl-note"), w = wish, perm = cl.open && cl.perm && !!S;
-  const idle = perm && !!w && w.idle && w.code === S.code && !w.chat.length && !w.busy && !w.out && CHAT_TURNS - (w.spent || 0) > 0;
-  st.hidden = !idle;
-  if (idle && !st.firstChild) {
-    for (const t of CL_COPY.starters) {
-      const b = document.createElement("button"); b.type = "button"; b.className = "cl-starter"; b.textContent = t;
-      b.addEventListener("click", () => { if (wish && wish.idle && !wish.busy) clSend(t); });
-      st.append(b);
-    }
-  }
-  const text = !perm ? "" : (!S.prob.wish || cluckOff) ? CL_COPY.nokey : (!!w && !w.idle && !w.started && S.finished) ? CL_COPY.done : "";
-  nt.hidden = !text; nt.textContent = text;
-}
-function clAskFocus() {                                                     // the tray's Ask Cluck on the permanent box: the field takes the cursor (the box stays where it is)
-  const ta = cl && cl.el.querySelector(".cl-ft:not([hidden]) .ask textarea:not(:disabled)");
-  if (ta) ta.focus({ preventScroll: false }); else cl?.el.querySelector(".cl-bd")?.scrollTo({ top: 1e5, behavior: "smooth" });
-}
-function clAsk(build) {
-  if (!cl) return;
-  clIdleSync();
-  const ft = cl.el.querySelector(".cl-fi"), w = wish;
-  cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
-  if (!w) { ft.innerHTML = ""; return; }
-  const left = w.out ? 0 : CHAT_TURNS - (w.spent || 0) - w.chat.filter(t => t.role === "user").length;   // spent: the starters asked before the miss
-  if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>Classic Cluck, wound down at ${CHAT_TURNS}. On to the next one.</p></div>`; return; }
-  if (build || !ft.querySelector(".ask")) {
-    ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
-    const f = ft.querySelector(".ask"), inp = f.querySelector("textarea");   // inp: the typed fields' Enter (STYLE.md §5 list), no new shortcut
-    f.addEventListener("submit", e => { e.preventDefault(); const m = inp.value.trim(); if (m) { inp.value = ""; askFit(inp); clSend(m); } });
-    inp.addEventListener("keydown", e => {                                  // Enter sends (as the old one-line field did); Shift+Enter is a new line; never mid-IME
-      if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
-      e.preventDefault(); if (!f.querySelector(".send").disabled) f.requestSubmit();
-    });
-    inp.addEventListener("input", () => askFit(inp));
-  }
-  const ready = wishTyped(w) && !w.busy;
-  ft.querySelector(".left").textContent = `${left} left`;
-  ft.querySelector("textarea").disabled = !wishTyped(w);
-  ft.querySelector(".send").disabled = !ready;
-  if (cl.wantAsk && cl.open && wishTyped(w)) {                              // the manual open's focus, now that the field takes it; not if the student moved on
-    cl.wantAsk = false;
-    const a = document.activeElement;
-    if (!a || a === document.body || (a.matches(".cl-x") && cl.el.contains(a))) ft.querySelector("textarea").focus({ preventScroll: true });
-  }
-}
-/* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
-function askFit(ta) {
-  ta.style.height = "auto";
-  const h = ta.scrollHeight, max = parseFloat(getComputedStyle(ta).maxHeight) || Infinity;
-  ta.style.height = Math.min(h, max) + "px";
-  ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
-}
-/* Cluck's history (W2, Nov 5): each Cluck turn that answers a graded pick or typed answer starts with a status line (rules either side, small
-   muted text, no box): "chose 1.80 J ✓" / "typed 6 ✗", the choice's VALUE, never its letter. Lines build up in order = the history. Once a
-   later turn exists, an earlier WRONG reply folds under its line (the line is the toggle); the latest reply and every right one stay open */
-const clPlain = md => /[$\\]/.test(String(md ?? "")) ? clTex(md) : String(md ?? "").replace(/`/g, "").replace(/\s+/g, " ").trim();   // plain text (code) stays as shown; only TeX is flattened
-const clTex = md => String(md ?? "").replace(/\\(?:text|mathrm|mathbf|textbf)\{([^}]*)\}/g, "$1").replace(/\\circ/g, "°").replace(/\\cdot/g, "·").replace(/\\times/g, "×").replace(/\\pi/g, "π")
-  .replace(/\\[,;:! ]|~/g, " ").replace(/\\([%$&#_{}])/g, "$1").replace(/\\(?:left|right|mathit)\b/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[$*`{}]/g, "").replace(/\s+/g, " ").trim();
-const CL_ST_MAX = 28;
-function clTry(t) {                                                         // { v, label } of a graded try; null = no status line (no grade, or no value to show)
-  if (!t || (t.v !== "correct" && t.v !== "wrong") || !S || S.prob.type === "proof") return null;   // a proof has no value to name
-  const p = S.prob, u = p.type === "multi" && Number.isInteger(t.part) ? p.parts?.[t.part] || p : p;
-  let val = t.c != null ? [].concat(t.c).map(id => clPlain((u.choices || []).find(c => c.id === id)?.md ?? "")).filter(Boolean).join(", ") : String(t.a ?? "").trim();
-  if (t.c != null && !val) val = "none";                                    // a choose-all with nothing ticked ("neither" can be the key)
-  if (!val) return null;
-  const pre = t.c != null ? "chose " : "typed ", cut = val.length > CL_ST_MAX ? val.slice(0, CL_ST_MAX - 1).trimEnd() + "\u2026" : val;   // a long (code) choice: cut at ~28 chars, the full text in the title
-  return { v: t.v, label: pre + cut, full: pre + val };
-}
-window.__clTry = clTry;   // tests (as __drill): the status line's label for a try
-function clStatus(tr) {
-  const d = document.createElement("div"); d.className = "cl-st"; d.dataset.v = tr.v; const mark = tr.v === "correct" ? "✓" : "✗";
-  d.dataset.t = `${tr.label} ${mark}`; d.dataset.full = `${tr.full || tr.label} ${mark}`;
-  d.innerHTML = '<i aria-hidden="true"></i><span class="cl-st-b"></span><i aria-hidden="true"></i>';
-  return d;
-}
-function clHist(land) {                                                     // idempotent: add the first line, fold/open each turn, land on the latest
-  if (!cl) return;
-  const pane = cl.el.querySelector("#clTabEP");
-  if (wish?.tr && !pane.querySelector(":scope > .cl-st")) pane.querySelector(":scope > .msg")?.before(clStatus(wish.tr));
-  const segs = [];
-  for (const e of pane.querySelectorAll(":scope > .cl-st, :scope > .msg, .cl-thread > *")) {
-    if (e.classList.contains("cl-st")) segs.push({ st: e, items: [] }); else segs.at(-1)?.items.push(e);
-  }
-  segs.forEach(({ st, items }, i) => {
-    const fold = st.dataset.v === "wrong" && i < segs.length - 1, open = !fold || !!st._open, lab = st.dataset.t;
-    items.forEach(e => { e.hidden = !open; });
-    const b = document.createElement(fold ? "button" : "span"); b.className = "cl-st-b"; b.title = st.dataset.full; if (st.dataset.full !== lab) b.setAttribute("aria-label", st.dataset.full);
-    if (fold) {
-      b.type = "button"; b.setAttribute("aria-expanded", String(open));
-      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; b.append(lab);
-      b.addEventListener("click", () => { st._open = !open; clHist(); st.querySelector(".cl-st-b").focus({ preventScroll: true }); });
-    } else b.textContent = lab;
-    st.children[1].replaceWith(b);
-  });
-  if (land && segs.length > 1 && !pane.hidden) {                           // the sheet opens on the latest reply
-    const bd = cl.el.querySelector(".cl-bd"), st = segs.at(-1).st;
-    bd.scrollTop += st.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8;
-  }
-}
-/* "See Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
-   right answer comes as a NEW message under it (the miss stays above as history), typed like a chat reply and scrolled into view inside the
-   sheet (the page does not move). One /explain (not auto) per right answer, cached like the box text; a re-press scrolls to it. Not in the
-   chat history (that alternates turns) */
-async function clCompare(w) {
-  const t = S.tries.at(-1) || {}, key = ckKey(w.code, t), th = cl.el.querySelector(".cl-thread");
-  const bd = cl.el.querySelector(".cl-bd"), top = el => { bd.scrollTop += el.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8; };   // the message's top at the body's top
-  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.st || w.cmp.el); return; }
-  const tr = clTry(t), st = tr && clStatus(tr);
-  const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
-  const re = box.lastChild;
-  w.cmp = { key, el: box, st };
-  if (st) th.append(st);
-  th.append(box); clHist(); top(st || box);
-  const ty = { text: ckGet(key), pos: 0, shown: 0, done: false }, typed = wishType(re, ty);
-  window.stemT?.("cluck_ask", { kind: "other", ...ckTel(), item: w.code, text: "" });   // telemetry: the Compare press
-  if (ty.text) { ty.done = true; typed.then(() => top(st || box)); return; }    // this browser has it: no call
-  w.busy = true; clAsk();
-  const t0 = Date.now(), tp = traceparent(), fr = frReq("explain", tp);
-  let r = null, bytes = 0, inc = null, ftok = null;
-  const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
-  try {
-    window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
-    r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail() }) });
-    fr.h(r);
-    if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
-    else {
-      const rd = r.body.getReader(), dec = new TextDecoder();
-      for (;;) { const { value, done } = await rd.read(); if (done) break; if (ftok == null) ftok = Date.now() - t0; bytes += value.length; fr.f(); ty.text += dec.decode(value, { stream: true }); }
-      fr.e(bytes);
-      if (!ty.text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
-    }
-  } catch (e) { fr.x(e); fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
-  window.stemT?.("cluck_reply", { kind: "other", ...ckTel(), item: w.code, ok: !!r && r.ok && !!ty.text.trim() && !inc, error: inc ? String(inc.why || inc.status || "fail") : r && r.status === 429 ? "429" : "", chars: ty.text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text: ty.text });   // telemetry
-  if (wish !== w) return;
-  const ok = !!r && r.ok && ty.text.trim() && !inc;
-  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(st || box); say(speakable(stripFigs(ty.text))); }
-  else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Oh duck, Cluck is tired! Come back later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
-  w.busy = false; clAsk();
-}
-async function clSend(msg) {
-  const w = wish, t = askTry();
-  if (!w || w.busy || !wishTyped(w)) return;
-  const th = cl.el.querySelector(".cl-thread");
-  const me = document.createElement("div"); me.className = "msg me"; me.innerHTML = clWho(true) + '<p class="md"></p>'; me.lastChild.textContent = msg;
-  const box = document.createElement("div"); box.className = "msg"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
-  const re = box.lastChild;
-  th.append(me, box);
-  w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
-  window.stemT?.("cluck_ask", { kind: "ask", ...ckTel(), item: w.code, text: msg });   // telemetry: the student's typed question (telemetry.js scrubs it)
-  re.scrollIntoView({ block: "nearest" });
-  w.ctl = w.ctl || new AbortController();
-  let text = "", err = "", inc = null, r = null, bytes = 0, ftok = null;
-  const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
-  const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
-  try {
-    window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
-    r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
-    fr.h(r);
-    if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
-    else if (!r.ok || !r.body) fail({ r });
-    else {
-      const rd = r.body.getReader(), dec = new TextDecoder();
-      for (;;) {
-        const { value, done } = await rd.read(); if (done) break;
-        if (ftok == null) ftok = Date.now() - t0;
-        bytes += value.length; fr.f();
-        text += dec.decode(value, { stream: true });
-        ty.text = text;
-      }
-      fr.e(bytes);
-      if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
-    }
-  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
-  window.stemT?.("cluck_reply", { kind: "ask", ...ckTel(), item: w.code, ok: !err, error: err, chars: text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text });   // telemetry
-  if (wish !== w) return;
-  if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
-  w.busy = false;
-  if (err) {
-    w.chat.pop();                                                          // not answered: it does not count
-    if (err === "limit") { w.out = true; box.remove(); }
-    else re.innerHTML = wishHTML(err === "hourly" ? "Oh duck, Cluck is tired! Come back later." : "Oops, didn't load. Ask again?") + incHTML(inc);
-  } else { w.chat.push({ role: "assistant", content: slotsResolve(text) }); say(speakable(stripFigs(text))); }
-  clAsk();
-  re.scrollIntoView({ block: "nearest" });
-  if (!w.out) cl.el.querySelector(".ask textarea")?.focus();
-}
-
-/* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
-   Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
-   an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
-   quiet +1 (a small "+1" by the coin, no sound, no words: Cluck and the "one more try" toast own a wrong answer). State per bank. */
-const RW = () => window.Rewards || null, FXL = () => window.FX || {};
-const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack || S.prob.dead) && !!RW();
-const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
-const rwTF = p => p.type === "mc" && maxTries(p) === 1 && (p.choices || []).length === 2;   // a True/False row: a coin flip pays less
-window.stemSkipSnack = () => modeOf() === "sugar" && !!RW() && RW().on() && RW().skipSnack();   // nav.js: Next steps over a snack while cruising
-let rwHud = null;
-function rwSync() {
-  const on = rewardOn();
-  if (on) {
-    RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
-    RW().use(rwKey());
-    if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud);
-      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")), toastClear: "#fb" });   // REVEAL-TRAY (Nov 3): never on the hint card (desktop's foot spot lay on it after a miss); Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
-      RW().mountHUD(rwHud); }
-    else RW().render(0);
-  }
-  if (rwHud) rwHud.hidden = !on;
-}
-function rewardTry(a, r) {
-  if (!rewardOn() || (r.verdict !== "correct" && r.verdict !== "wrong")) return;
-  if (r.verdict === "wrong" && window.stemRedo.has(S.code)) return;              // a redo round: no +1 farming on old misses
-  const p = S.prob, multi = p.type === "multi";
-  if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
-  const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
-  rewardGo(S, { correct: r.verdict === "correct", firstTry, open: r.verdict === "wrong" && r.triesLeft > 0,
-    reveal: r.verdict !== "correct" && r.correct != null });                    // T19: the answer was shown = 0 XP, still a miss
-}
-function rewardMulti(mine) {
-  if (!rewardOn() || S !== mine || !S.solved) return;
-  rewardGo(S, { correct: true, firstTry: !S.tries.some(t => t.v === "wrong") });
-}
-function rewardGo(mine, o) {
-  const p = mine.prob;
-  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, dead: !!p.dead, tf: rwTF(p), peeked: !!mine.rwPeek,
-    dwellMs: Date.now() - mine.start });
-  if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
-  if (!o.correct && !o.open && !p.dead) setTimeout(() => rwTip("miss", $("#rwHud .rw-streak")), 1050);   // T37: a closed miss (often a T19 reveal, 0 XP); the count waits. Dead-easy has no count
-  const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right
-  if (!res.xp) { RW().render(0); if (back) comeback(); return; }                 // a done code: the numbers change, nothing moves
-  if (back) mine.rwBack = true;
-  if (res.tick) { if (o.open) mine.rwHeld = (mine.rwHeld || 0) + res.xp; else rewardTick(res, mine); return; }   // a wrong try: +1 for trying, tiny;
-  // with a try left it waits, unshown (Tony, Oct 5 clutter pass C12: nothing moves up there while the eye belongs on the hint)
-  requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
-}
-/* ---------- the original beside a snack (spec 1b; design/REWARDS-WIRING.md §4) ----------
-   A snack (one constant swapped) shows its Practice Exam 2 original with the worked solution. Desktop (side by side): in the pad column,
-   in the scratchpad's place while it is open. Phone: a card on top of the problem, folded until tapped. Fading per original question:
-   level 1 (its first snack) the whole solution; 2 (a later snack) the last line behind "Peek"; 3 (after a first-try correct on one
-   of its snacks) folded. Peeking (the hidden line, or opening a level 3 original) before answering pays 2 XP and rolls no drop. */
-let origEl = null;
-function origRender() {
-  if (origEl) { origEl.remove(); origEl = null; }
-  if (cl) { if (cl.open && cl.tab === "steps") clClose(); cl.el.querySelector("#clTabSP").innerHTML = ""; }
-  const p = S && S.prob, o = p && p.original;
-  if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return;
-  const R = RW(), live = !!R && R.on() && rewardOn(), lvl = live ? R.origLevel(o.q, S.code) : 1;
-  if (live) R.origSeen(o.q, S.code);
-  S.orig = { lvl, open: false, peeked: false };
-  const el = origEl = document.createElement("section");
-  el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
-  const sol = Array.isArray(o.solution) ? o.solution : [], C = snackChg();
-  /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
-     topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
-     while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
-  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Compare with a similar solution</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
-    <div class="orig-body" id="origBody">${sol.length ? `<ol class="orig-sol">${sol.map((l, i) =>
-      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(markNums(l, C.olds), true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek the last step (costs ~15XP)</button>' : ""}
-    <p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
-  const q = el.querySelector(".orig-q");
-  for (const [i, b] of o.body.entries()) {
-    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(C.orig[i]); q.append(d); }
-    else if (b.type === "graph") { const f = document.createElement("div"); f.className = "fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", b.alt || "figure"); f._block = b; q.append(f); }
-  }
-  el.querySelector(".orig-hd").addEventListener("click", () => {
-    if (!S.orig.open && S.orig.lvl === 3) origPeeked();                        // folded away: looking again is a peek
-    origOpen(!S.orig.open);
-  });
-  el.querySelector(".rw-free")?.addEventListener("click", () => el.querySelector(".orig-hd").click());   // the sticker sits on the card's corner
-  const body = el.querySelector(".orig-body");
-  body.querySelector(".orig-peek")?.addEventListener("click", e => {
-    body.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
-  });
-  clEl().querySelector("#clTabSP").append(body);   // the solution reads in Cluck's sheet, "Similar steps" tab (so look it up via body, not el)
-  origPlace();
-  hintNudge(el.querySelector(".rw-hint"));
-  if (sideMQ.matches && lvl < 3) clOpen("steps", "#origHd", true);           // desktop: the free steps open by default (Tony, Oct 5); folded (lvl 3) stays a peek
-}
-/* the card's one nudge: a 600 ms lift + one shine, once per browser session, a beat after it is fully on screen; never with reduced motion */
-const HINT_BULB = `<span class="rw-hint-coin" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><linearGradient id="hbA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5a623"/></linearGradient><linearGradient id="hbB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9c3d6"/><stop offset="1" stop-color="#6f7c94"/></linearGradient></defs><path d="M16 3C10.5 3 6.5 7.2 6.5 12.3c0 3.3 1.7 5.6 3.4 7.4 1.1 1.2 1.6 2.4 1.6 3.6h9c0-1.2.5-2.4 1.6-3.6 1.7-1.8 3.4-4.1 3.4-7.4C25.5 7.2 21.5 3 16 3z" fill="url(#hbA)"/><path d="M12 9.5c.9-1.6 2.4-2.6 4.2-2.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/><path d="M13.3 23.3v-4.6l2.7 2.2 2.7-2.2v4.6" fill="none" stroke="#c77800" stroke-width="1.4" stroke-linejoin="round"/><rect x="11" y="23" width="10" height="3.2" rx="1.2" fill="url(#hbB)"/><rect x="11.8" y="26" width="8.4" height="2.6" rx="1.2" fill="#5b6780"/><rect x="13.8" y="28.3" width="4.4" height="1.7" rx=".8" fill="#3e4859"/></svg></span>`;
-function hintNudge(btn) {
-  let seen = false; try { seen = sessionStorage.getItem("stem-hint-nudged") === "1"; } catch { /* blocked: nudge once anyway */ }
-  if (!btn || seen || reduceMQ.matches || !("IntersectionObserver" in window)) return;
-  new IntersectionObserver((es, io) => {
-    if (!es[0].isIntersecting) return; io.disconnect();
-    setTimeout(() => { btn.classList.add("rw-nudge"); try { sessionStorage.setItem("stem-hint-nudged", "1"); } catch { /* */ } }, 1350);
-  }, { threshold: 0.9 }).observe(btn);
-}
-function origPeeked() {
-  if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
-  S.orig.peeked = S.rwPeek = true;
-}
-function origOpen(open) {
-  if (!origEl) return;
-  if (open) clOpen("steps", "#origHd"); else clClose();
-}
-function origPlace() {
-  if (!origEl) return;
-  const rot = $("#rot.docked");                                                    // desktop: the docked videos stay first in the notes column
-  if (sideMQ.matches) { if (rot && rot.parentElement === $("#work")) rot.after(origEl); else $("#work").prepend(origEl); }
-  else $("#freezeIn").prepend(origEl);
-}
-/* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
-   so a right answer still feels much bigger (design/REWARDS.md: a loss dressed up as a win) */
-function rewardTick(res, mine) {
-  const coin = $("#rwCoin"), fx = FXL(), n = res.xp + (mine.rwHeld || 0); mine.rwHeld = 0;
-  if (fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, `+${n}`, "fx-float-sm");
-  RW().render(n);
-}
-const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
-async function rewardShow(mine, res) {
-  const fx = FXL();
-  const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
-  fx.pop && fx.pop(at);                                                          // the bells on every correct: pop, sparks + confetti,
-  fx.sparks && fx.sparks(at, mine.prob.snack || mine.prob.dead ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
-  fx.float && fx.float(at, `+${res.xp} XP`);
-  const coin = $("#rwCoin");
-  rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
-  if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
-  const held = mine.rwHeld || 0; mine.rwHeld = 0;
-  fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
-  say(`Correct! +${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
-  /* flow C (Tony, Oct 21): one beat per answer, at most one overlay. A level up is the only overlay, with the slot reels spinning inside
-     it when the same answer dropped; any other drop (WIN / BONUS / LEGEND) or a streak note is the banner (LEGEND: gold + small confetti) */
-  if (res.burst === "levelup" && fx.burst) {                                 // engine.js: a level up from a +1 or a dead-easy one stays quiet
-    await fx.burst("levelup", { title: "LEVEL UP", sub: `LEVEL ${res.level}`, drop: res.drop || null });
-    if (mine.rwBack) comeback();
-    return;
-  }
-  const line = res.drop ? res.line : res.streakNote;
-  if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
-  else if (line === res.streakNote && res.streak === 3 && rwTip("three", $("#rwHud .rw-star"))) { /* T37: the onboarding line says "3 cracked" itself */ }
-  else if (line && fx.toast) { hideToast(); fx.toast(line, res.drop ? res.sub || res.streakNote : null, res.drop || null); }
-  else if (!mine.prob.dead) rwTip("right", $("#rwCoin"));
-}
-/* T37 sugar onboarding (Tony, Oct 15; brain chat-redesign-2026-10-13/sugar-onboard, V1 toast trail): the HUD explains itself the first
-   time each piece matters, in the plain toast (STYLE.md §3) with its caret on that piece. Per device (stem-ob-rw-<beat> = times shown).
-   The miss beat speaks 3 times: the plain line, then two humor lines (Tony: "as we got used to ui already"), then never again.
-   It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
-   waits too, uncounted. */
-const RW_OB = { right: ["Points always go up and never let you down."], three: ["THREE STREAK! See your progress here."],
-  miss: ["Did an oopsie or two? Your progress is safe!", "Double whammy! That's OK, happens to the best of us.", "They say third time's the charm, QUACKK—"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4); lines 1 + 3 Tony #36, line 2 Tony, Oct 26
-  redo: ["Gravity pulled you back for review."] };                                // Tony, Oct 19: say it the first time a miss comes back
-/* the redo beat: a Redeem showing (a past miss back, the "Pity roll" tag) opens unanswered; caret on the tag. Before the first
-   answer only, so it never meets the one-more-try note or the Comeback toast */
-function rwRedoTip() {
-  const r = window.stemRedo.get();
-  if (S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) rwTip("redo", $("#rtag"));
-}
-function rwTip(beat, at) {
-  if (!rewardOn() || noteAt() || !rwSeen(at)) return false;
-  const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
-  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false;
-    if (!toast(lines[n], at, { x: true, allow: ".rot-link" })) return false;                         // HUD B (Tony, Oct 28): caret + an X. It may lie on the brainrot link for its 2 s (the Next note's exception: at 1280 the link sits right under the count). No place: next time, uncounted
-    localStorage.setItem(k, n + 1);
-    window.stemT?.("_ob", { beat, n: n + 1 }); return true; }                     // intent.js log only ("ob <beat> <n>"): Jev sees which note it just met
-  catch { return false; }                                                        // blocked storage: no way to keep it once, so never
-}
-
-/* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
-function comeback() {
-  const fx = FXL();
-  if (fx.toast) { hideToast(); fx.toast("HONK HONK. Spacetime just applauded.", "Energy bounced BACK, quack!"); }
-  say("Comeback. Missed it before, got it now.");
-}
-
-/* ---------- scratchpad + Copy ---------- */
-let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
-function mountBox() {
-  if (mounted) { mounted.box.destroy(); mounted.corner.destroy(); }
-  const field = $("#xbField"); field.querySelector("textarea")?.remove();
-  const ta = document.createElement("textarea");
-  Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
-  ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
-  ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbName");
-  field.prepend(ta);
-  /* C10 (Tony, Oct 5): Copy shows only when the box has text. Listened before reserveCorner's, so the corner sees the button as it is */
-  const copyBtn = $("#copy"), syncCopy = () => { copyBtn.hidden = !ta.value; };
-  ta.addEventListener("input", syncCopy); ta.addEventListener("xb-cap", syncCopy); syncCopy();
-  /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
-  S.box = ExplainBox.mount(ta, { bottomInset: dockRoom,
-    cap: () => swapOn ? swapPadMax : mtCap });                                  // Swap: the room the peek leaves
-  S.corner = ExplainBox.reserveCorner(ta, copyBtn);
-  mounted = { box: S.box, corner: S.corner };
-  /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Copy
-     and of where the revealed code bar lies */
-  ta.addEventListener("input", () => { if (ta.selectionEnd === ta.value.length && ta.scrollHeight > ta.clientHeight) ta.scrollTop = ta.scrollHeight; });
-  autosave(ta);
-}
-/* ---------- scratchpad autosave (design/shots/autosave-*.png): draft per bank + code in localStorage.
-   3 s after the last edit: "saving" (a light band sweeps through it), then "saved", gone after 2 s. Reduced motion: no sweep. */
-const SAVE_IDLE = 3000, SAVE_SHOW = 700, SAVED_SHOW = 2000;
-const padKey = code => "stem-pad:" + ((window.stemOffline && window.stemOffline.fileName && window.stemOffline.fileName(code)) || "server") + ":" + code;
-function padGet(code) { try { return localStorage.getItem(padKey(code)) || ""; } catch { return ""; } }
-function padPut(code, v) { try { if (v) localStorage.setItem(padKey(code), v); else localStorage.removeItem(padKey(code)); return true; } catch { return false; } }
-let saveTimers = [], savePending = null;
-function autosave(ta) {
-  const st = $("#xbSave"), code = S.code;
-  for (const t of saveTimers) clearTimeout(t);
-  saveTimers = []; st.className = "xb-save"; st.textContent = "";
-  const draft = padGet(code);
-  if (draft) { ta.value = draft; ta.dispatchEvent(new Event("xb-refit")); ta.dispatchEvent(new Event("xb-cap")); }
-  const flush = () => { if (savePending) { padPut(savePending.code, savePending.ta.value); savePending = null; } };
-  flush();
-  ta.addEventListener("input", () => {
-    for (const t of saveTimers) clearTimeout(t);
-    st.className = "xb-save"; st.textContent = "";
-    savePending = { code, ta };
-    saveTimers = [setTimeout(() => {
-      flush();
-      st.className = "xb-save saving"; st.textContent = "saving";
-      saveTimers = [setTimeout(() => {
-        st.className = "xb-save"; st.textContent = "saved";
-        saveTimers = [setTimeout(() => { st.textContent = ""; }, SAVED_SHOW)];
-      }, SAVE_SHOW)];
-    }, SAVE_IDLE)];
-  });
-  autosave.flush = flush;
-}
-addEventListener("pagehide", () => autosave.flush && autosave.flush());
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && autosave.flush) autosave.flush(); });
-async function copyText(text) {
-  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
-  /* plain-http LAN (serve.py): no async clipboard, use a hidden textarea */
-  const t = document.createElement("textarea");
-  t.value = text; t.setAttribute("readonly", ""); t.style.cssText = "position:fixed;top:0;left:0;opacity:0;font-size:16px";
-  document.body.append(t); t.select(); t.setSelectionRange(0, text.length);
-  let ok = false; try { ok = document.execCommand("copy"); } catch { ok = false; }
-  t.remove();
-  return ok;
-}
-/* Copy: the notes, tries, hints and edit history as one payload; the notes stay (C10: Cut all is gone) */
-async function copyPad() {
-  if (!S) return;
-  const b = $("#copy"), box = S.box;
-  box.snapshot();
-  /* a choice try's a is the choice's markdown: its $math$ goes out as texPlain, the same plain text a drag copies (todo 108). The notes stay as typed */
-  const mdm = md => typeof md === "string" ? mdMathPlain(md) : md;
-  const tries = S.tries.map(t => t.c == null ? t : { ...t, a: Array.isArray(t.a) ? t.a.map(mdm) : t.a?.tick ? { ...t.a, tick: t.a.tick.map(mdm) } : mdm(t.a) });
-  const payload = stringify(build({ code: S.code, start: S.start, tries, hints: S.hints, explain: box.el.value, history: box.getHistory() }));
-  const ok = await copyText(payload);
-  b.classList.toggle("done", ok);
-  b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? "Copied." : "Copy failed. Try again.");
-  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
-}
-$("#copy").addEventListener("click", copyPad);
-/* a codeblock's Copy: the raw code (the line numbers are CSS, never text), then i-ok for 2 s. Capture: the tap does nothing else */
-document.addEventListener("click", async e => {
-  const b = e.target.closest?.(".cb-copy"); if (!b) return;
-  e.stopPropagation();
-  const ok = await copyText([...b.closest(".cb").querySelectorAll(".l")].map(l => l.textContent).join("\n"));
-  b.classList.toggle("done", ok);
-  b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? "Copied." : "Copy failed. Try again.");
-  clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
-}, true);
-
-/* ================= copy math as plain text (todo 108, Tony's answers: plan and-a-todo-list-dapper-yeti) =================
-   KaTeX renders htmlAndMathml (screen readers; the MathML's annotation is the TeX source), so a drag over math copied both the hidden
-   MathML text and the visible glyphs ("x2x^2"). One capture copy listener: a formula the selection touches is copied whole, as texPlain
-   (nav.js) of its TeX, grader-exact; the words around it pass through as plain text, one line per block. A phone's long-press Copy fires
-   the same event. A selection with no math is left to the browser. intent.js / flight.js keep logging the copy (they only read it). */
-let texPlain = null;
-import("./nav.js").then(m => { texPlain = m.texPlain; });             // nav.js is its own module script after this one: no import, so the order stays
-const katexOf = n => (n && (n.nodeType === 1 ? n : n.parentElement))?.closest(".katex") || null;
-const mathPlain = k => {
-  const tex = k.querySelector('annotation[encoding="application/x-tex"]');
-  return tex && texPlain ? texPlain(tex.textContent) : (k.querySelector(".katex-html") || k).textContent;
-};
-/* markdown's $..$ / $$..$$ to texPlain, the rest as written ("\$" is a literal dollar, the same cut as md()) */
-const mdMathPlain = md => !texPlain ? md : md.replace(/\\\$/g, "\u0001").replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (_, a, b) => texPlain(a ?? b)).replace(/\u0001/g, "$");
-function selPlain(r) {
-  r = r.cloneRange();
-  const ks = katexOf(r.startContainer), ke = katexOf(r.endContainer);
-  if (ks && ks === ke) return mathPlain(ks);                          // inside one formula: the whole formula
-  if (ks) r.setStartBefore(ks);                                       // half a formula: snap to all of it
-  if (ke) r.setEndAfter(ke);
-  let out = "";
-  const visit = node => {
-    if (!r.intersectsNode(node)) return;
-    if (node.nodeType === 3) {
-      const a = node === r.startContainer ? r.startOffset : 0, b = node === r.endContainer ? r.endOffset : node.data.length;
-      const t = node.data.slice(a, b);
-      out += /^pre/.test(getComputedStyle(node.parentElement).whiteSpace) ? t : t.replace(/\s+/g, " ");
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    if (node.classList.contains("katex")) { out += mathPlain(node); return; }
-    if (node.tagName === "BR") { out += "\n"; return; }
-    const d = getComputedStyle(node).display;
-    if (d === "none") return;
-    const block = !/^inline/.test(d) && d !== "contents";
-    if (block) out += "\n";
-    node.childNodes.forEach(visit);
-    if (block) out += "\n";
-  };
-  const top = r.commonAncestorContainer;
-  if (top.nodeType === 3) visit(top); else top.childNodes.forEach(visit);
-  return out.replace(/[ \t]*\n[ \t]*/g, "\n").replace(/\n+/g, "\n").replace(/ {2,}/g, " ").trim();
-}
-function touchesMath(r) {
-  if (katexOf(r.startContainer) || katexOf(r.endContainer)) return true;
-  const top = r.commonAncestorContainer;
-  return top.nodeType === 1 && [...top.querySelectorAll(".katex")].some(k => r.intersectsNode(k));
-}
-document.addEventListener("copy", e => {
-  try {
-    const sel = getSelection();
-    if (!sel || sel.isCollapsed || !sel.rangeCount || !e.clipboardData || /^(INPUT|TEXTAREA)$/.test(e.target?.tagName)) return;
-    const rs = Array.from({ length: sel.rangeCount }, (_, n) => sel.getRangeAt(n));
-    if (!rs.some(touchesMath)) return;                                // no math: the browser's own copy
-    const text = rs.map(selPlain).join("\n");
-    e.clipboardData.setData("text/plain", text);
-    e.clipboardData.setData("text/html", esc(text).replace(/\n/g, "<br>"));   // a rich paste gets the same plain text, never the MathML again
-    e.preventDefault();
-  } catch (x) { console.error(x); }                                   // never break a copy: the browser's own then
-}, true);
-/* the tap-to-copy button on a formula card row and on a revealed answer: the same plain text a drag copies, then i-ok and a toast */
-function mathCopyBtn(label, plainText) {
-  return `<button type="button" class="mcopy" aria-label="${label}" title="${label}"${plainText != null ? ` data-copy="${esc(plainText)}"` : ""}>${icon("i-copy")}</button>`;   // COPY-PENDING: "Copy formula", "Copy answer"
-}
-document.addEventListener("click", async e => {
-  const b = e.target.closest?.(".mcopy"); if (!b) return;
-  e.stopPropagation();
-  const k = b.parentElement.querySelector(".katex");
-  const ok = await copyText(k ? mathPlain(k) : b.dataset.copy || "");
-  b.classList.toggle("done", ok);
-  b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? "Copied." : "Copy failed. Try again.");
-  if (ok) toast("Copied", b, { loose: true });   // COPY-PENDING: "Copied". loose: the one note that may lie on a control (prod as before, orc v27 default): under a card row or the answer there always is one, so a strict note would never show
-  clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
-}, true);
-
-/* ================= freeze layer (design/FREEZE.md) =================
-   .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip
-   with its own scroll instead of covering the scratchpad. On iOS Safari the keyboard does not shrink the layout
-   viewport, and sticky/fixed stick to the layout viewport, so --kb-top moves the strip down by visualViewport.offsetTop. */
-const freeze = $("#freeze"), freezeIn = $("#freezeIn"), more = $("#more"), sentinel = $("#sentinel");
-let tallest = 0, lastW = 0;
-const vv = window.visualViewport;
-function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")); }
-/* entry box: fixed bottom-centre on phones / touch (one thumb), top of the column on desktop (FREEZE.md) */
-const dockMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
-const sideMQ = matchMedia("(min-width: 720px)");                       // multitask: problem | pad side by side from here up (design/MULTITASK.md)
-/* the room the bottom bar takes from the page: its full height, or the strip's while it rests as a strip (revealed, it lies over the page) */
-const barTab = $("#barTab");
-function dockRoom(evenAway) {
-  if (!dock.getClientRects().length) return 0;                                  // hidden (a bank's list closed on a phone: app.css C8)
-  if (!root.classList.contains("dock-bottom") || (!evenAway && root.classList.contains("dock-away"))) return 0;
-  if (!root.classList.contains("bar-mini")) return dock.offsetHeight;
-  if (!root.classList.contains("bar-open")) stripRoom = dock.offsetHeight || stripRoom;    // measured as a strip (incl. the safe-area inset); kept while revealed
-  return stripRoom;
-}
-let stripRoom = 24;
-function barOpen(open) {
-  open = open && dockMQ.matches;                             // the phone / touch strip's state only: on desktop bar-open would park the docked corner (W101, LEAKS L1)
-  root.classList.toggle("bar-open", open);
-  if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
-  barTab.setAttribute("aria-expanded", open);
-  barTab.setAttribute("aria-label", open ? "Hide code box" : "Show code box");
-}
-/* tap toggles; a swipe (20px+) up opens, down closes. The tab never takes focus: the scratchpad keeps its caret and keyboard */
-function swipeTab(el, act) {
-  let y0 = null, used = false;
-  el.addEventListener("pointerdown", e => { e.preventDefault(); y0 = e.clientY; used = false; try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ } });
-  el.addEventListener("pointermove", e => { if (y0 === null || used) return; const dy = e.clientY - y0; if (Math.abs(dy) > 20) { used = true; act(dy < 0 ? "up" : "down"); } });
-  el.addEventListener("pointerup", () => { y0 = null; });
-  el.addEventListener("pointercancel", () => { y0 = null; });
-  el.addEventListener("click", () => { if (!used) act("tap"); used = false; });
-}
-new MutationObserver(() => { if ($("#entryMsg").textContent || !retryLoad.hidden) barOpen(true); }).observe(dock, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });   // a message or Retry: shown
-dock.addEventListener("focusin", e => { if (e.target !== barTab) barOpen(true); });   // keyboard / Tab into the code box: shown
-swipeTab(barTab, d => barOpen(d === "tap" ? !root.classList.contains("bar-open") : d === "up"));
-/* C7 (Tony, Oct 5 clutter pass): desktop, no bank: the label opens the code box; the box folds back once focus leaves it (a message keeps it) */
-/* a press on the label must not move focus: the focusin it caused ran barOpen / layoutFreeze / fabSync between pointerdown and click, the layout shifted under the
-   pointer and the click landed on <body> (G2c row 10: only the 2nd click worked). Same pattern as swapBtn: cancel the press, act on the click (keyboard focus is unchanged) */
-for (const ev of ["pointerdown", "mousedown"]) $("#codeChip").addEventListener(ev, e => e.preventDefault());
-$("#codeChip").addEventListener("click", () => { root.classList.add("entry-open"); const c = $("#code"); c.focus(); c.select(); });
-$("#entry").addEventListener("focusout", e => {
-  if (!e.currentTarget.contains(e.relatedTarget)) setTimeout(() => { if (!$("#entry").contains(document.activeElement) && S) root.classList.remove("entry-open"); }, 0);
-});
-/* C8: phones, a bank open: the code bar shows only with the list (app.css), up and ready to type */
-addEventListener("drill:qlist", e => { if (dockMQ.matches && root.classList.contains("bar-mini")) barOpen(e.detail.open); layoutDock(); });
-function layoutDock() {
-  const bottom = dockMQ.matches, h = vv ? vv.height : innerHeight;
-  if (innerWidth !== lastW) { lastW = innerWidth; tallest = 0; }        // orientation / window change
-  tallest = Math.max(tallest, innerHeight, h);
-  root.classList.toggle("dock-bottom", bottom);
-  const inDock = dock.contains(document.activeElement);
-  const shrunk = bottom && !!tallest && h < tallest * 0.8;
-  const kb = shrunk && editing();
-  /* Swap (design/SWAP.md): keyboard up + a field in <main> has focus. Once on, it stays on while focus is anywhere in <main>
-     (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
-  const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
-  const grace = (!a || a === document.body) && performance.now() - lostAt < 500;
-  const swapNext = !!S && !oneBox() && !freeze.hidden && shrunk && !mtOpen && !sideMQ.matches && ((inMain && (editing() || swapOn)) || (swapOn && grace));
-  /* a short-answer item has no Swap (Tony, Nov 8): the keyboard leaves the page alone, so the field the student types in is scrolled into
-     the area above the keyboard, like a plain page (the question stays above it, reachable by scroll) */
-  if (oneBox() && shrunk && inMain && editing() && a) requestAnimationFrame(() => {
-    if (document.activeElement !== a) return;
-    const r = a.getBoundingClientRect(), top = vv ? vv.offsetTop : 0, bot = top + (vv ? vv.height : innerHeight);
-    if (r.top < top || r.bottom > bot) scrollBy(0, r.bottom > bot ? Math.min(r.bottom - bot + 8, r.top - top - 8) : r.top - top - 8);
-  });
-  root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (design/MULTITASK.md)
-  /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
-  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (mtOpen && !!S));
-  root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
-  if (swapNext !== swapOn) setSwap(swapNext);
-  /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
-  const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
-  root.style.setProperty("--kb-bottom", lift + "px");
-  root.classList.toggle("bar-mini", bottom && !!S && !freeze.hidden);
-  /* start page: no problem open. The entry stands alone, centred under its title (app.css html.start); on phones in the area
-     above the keyboard, so --kb-top follows the visual viewport here too (layoutFreeze owns it once a problem is open) */
-  root.classList.toggle("start", !S);
-  if (!S) root.style.setProperty("--kb-top", kb && inDock && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
-  root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
-}
-if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { barOpen(dock.contains(document.activeElement)); layoutDock(); layoutFreeze(); });   // W101: to the strip while typing the code: it opens with the box; to the desktop bar: no bar-open
-new ResizeObserver(() => layoutDock()).observe(dock);
-
-function layoutFreeze() {
-  layoutDock();
-  if (!S || freeze.hidden) return;
-  if (swapOn) { layoutSwap(); return; }
-  if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes
-  if (root.classList.contains("pad-off")) {                                      // phones, pad off: nothing below needs room, so no strip
-    freeze.classList.remove("clipped", "stuck", "open"); more.hidden = true;     // cap, no fade, no pull-tab (Tony: "big ass dark space")
-    root.style.setProperty("--freeze-h", "0px");
-    return;
-  }                                         // one pane above the keyboard: none of the strip logic applies
-  const dockH = dockRoom();
-  const h = (vv ? vv.height : innerHeight) - dockH;
-  const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
-  const inFreeze = freeze.contains(document.activeElement);
-  const kbWas = root.classList.contains("kb");
-  root.classList.toggle("kb", kb);
-  root.style.setProperty("--kb-top", kb && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
-  const frac = kb && !inFreeze ? 0.34 : h < 720 ? 0.5 : h < 960 ? 0.6 : 0.7;
-  root.style.setProperty("--freeze-max", Math.round(Math.max(kb ? 96 : 180, h * frac)) + "px");
-  requestAnimationFrame(() => {
-    const clipped = !freeze.classList.contains("open") && freezeIn.scrollHeight > freezeIn.clientHeight + 2;
-    const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2;
-    freeze.classList.toggle("clipped", clipped && !atEnd);
-    more.hidden = !clipped && !freeze.classList.contains("open");
-    root.style.setProperty("--freeze-h", freeze.classList.contains("open") ? "0px" : freeze.offsetHeight + "px");
-    stuck();
-    if (S.box) S.box.limit();                                                     // scratchpad cap follows the visible viewport and dock
-    if (kb && !kbWas && !inFreeze) showQuestion();
-  });
-}
-function stuck() {
-  if (!S || freeze.hidden || swapOn || mtOpen || sideMQ.matches || root.classList.contains("pad-off")) { freeze.classList.remove("stuck"); return; }
-  const top = parseFloat(getComputedStyle(freeze).top) || 0;
-  const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
-  const was = freeze.classList.contains("stuck");
-  freeze.classList.toggle("stuck", now);
-  if (now && !was) showQuestion();
-}
-/* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
-   the question is what you answer while writing; the problem start is one small scroll up. */
-function showQuestion() {
-  if (swapOn || mtOpen || sideMQ.matches) return;
-  const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
-  const end = Math.max(bottom($("#q")), bottom($("#fb")));
-  freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
-}
-let raf = 0;
-const onView = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(layoutFreeze); };
-if (vv) { vv.addEventListener("resize", onView); vv.addEventListener("scroll", onView); }
-addEventListener("resize", onView);
-addEventListener("scroll", () => stuck(), { passive: true });
-/* html.scrolled: content has moved up under the pinned phone top bar, so its scroll-edge fade shows (app.css "scroll edges").
-   A class, not a scroll-driven animation: that one never ends, and rewards/fx.js waits for the page's animations to finish */
-const edge = () => root.classList.toggle("scrolled", scrollY > 0);
-addEventListener("scroll", edge, { passive: true }); edge();
-/* --top-h: the pinned desktop bar's height; app.css sticks the side columns under it */
-const topBar = $(".top");
-if (topBar && window.ResizeObserver) new ResizeObserver(() => root.style.setProperty("--top-h", topBar.offsetHeight + "px")).observe(topBar);
-document.addEventListener("focusin", onView);
-document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
-freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
-swipeTab(more, d => { const open = freeze.classList.contains("open"); if (d === "tap" || (d === "down") !== open) toggleMore(); });
-function toggleMore() {
-  const open = !freeze.classList.contains("open");
-  freeze.classList.toggle("open", open);
-  more.setAttribute("aria-expanded", open);
-  more.setAttribute("aria-label", open ? "Make question small" : "Show whole question");
-  if (!open) freeze.scrollIntoView({ block: "nearest" });
-  layoutFreeze();
-}
-/* ================= Swap (design/SWAP.md) =================
-   Keyboard up = ONE pane fills the visible area above the keyboard: the problem (card, answer pinned at its bottom) or the
-   scratchpad (question peek on top, the box anchored to the bottom and growing upward). One icon toggle switches; focusing a field
-   picks the pane too. layoutDock() decides when it is on; CSS (html.swap, .swap-problem, .swap-scratch) does the layout;
-   this code sets the pane, the sizes CSS cannot know (--vv-h, --peek-max, the scratchpad's cap) and moves focus. */
-const swapBtn = $("#swap"), stage = $("#stage"), problemEl = $("#problem"), work = $("#work");
-const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
-let pane = "problem", shownPane = "problem", swapY = 0, swapPadMax = null;
-const GAP = 8;                                                                   // between the peek and the scratchpad: small, the box has no outside ring
-const paneOf = el => !el || !el.closest ? null : work.contains(el) ? "scratch" : el.closest("#q, #fb") ? "problem" : null;
-function setSwap(on) {
-  swapOn = on;
-  if (on) {
-    swapY = scrollY;
-    root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");              // the page keeps its height, so its scroll position survives
-    const p = paneOf(document.activeElement); if (p) pane = p;
-    root.classList.add("swap");
-    applyPane();
-  } else {
-    root.classList.remove("swap", "swap-problem", "swap-scratch");
-    swapBtn.hidden = true; swapPadMax = null;
-    freeze.classList.remove("clipped", "no-peek");
-    if (scrollY !== swapY) scrollTo(0, swapY);
-    requestAnimationFrame(() => { if (S && S.box) S.box.limit(); });
-    backInView();
-  }
-}
-/* the DOM change: classes, toggle, scroll positions, sizes */
-function applyPane() {
-  shownPane = pane;
-  root.classList.toggle("swap-problem", pane === "problem");
-  root.classList.toggle("swap-scratch", pane === "scratch");
-  swapBtn.dataset.pane = pane;
-  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show notes" : "Show question");
-  padPeekText();
-  layoutSwap();                                                                   // scroll positions are left alone (a reset lost the field you typed in)
-}
-/* crossfade between panes (View Transitions where supported), instant with reduced motion or without support.
-   Focus has already moved (it must, in the tap, for the keyboard to stay), so the fields are focusable in both states. */
-function setPane(p) {
-  if (p === pane) return;
-  pane = p;
-  if (!swapOn) return;
-  if (document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyPane); else applyPane();
-}
-function layoutSwap() {
-  if (!swapOn || !S) return;
-  const h = vv ? vv.height : innerHeight;
-  root.style.setProperty("--vv-h", Math.round(h) + "px");
-  root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
-  const cell = stage.clientHeight - 6;                                             // minus the stage's focus-ring room
-  const cs = getComputedStyle(S.box.el), padMin = 3 * parseFloat(cs.lineHeight) + parseFloat(cs.paddingTop) + 28 + 4 || 130;   // 3 lines (not min-height: Swap sets it to the cap)
-  const peekMax = Math.max(0, Math.min(Math.round(h * 0.6), cell - padMin - GAP));
-  root.style.setProperty("--peek-max", peekMax + "px");
-  const noPeek = peekMax < 40;
-  freeze.classList.toggle("no-peek", noPeek);
-  let peek = 0;
-  if (!noPeek) {
-    if (shownPane === "scratch") peek = freeze.offsetHeight;
-    else { const how = $("#how"); peek = Math.min(peekMax, problemEl.scrollHeight + (how ? how.offsetHeight + 16 : 0) + 8); }   // what the peek will be
-  }
-  swapPadMax = Math.max(padMin, cell - (peek ? peek + GAP : 0));
-  root.style.setProperty("--pad-max", swapPadMax + "px");
-  S.box.limit();
-  swapFade();
-}
-/* subtle bottom fade on whichever box is scrolling (the peek, or the question in the problem pane) while it has more below */
-function swapFade() {
-  if (!swapOn) return;
-  const sc = shownPane === "scratch" ? freezeIn : problemEl;
-  freeze.classList.toggle("clipped", sc.scrollHeight > sc.clientHeight + 2 && sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2);
-}
-problemEl.addEventListener("scroll", swapFade, { passive: true });
-/* the main field of a pane: the scratchpad; or the first empty answer box, or the picked / current choice */
-function focusField(p) {
-  let el = null;
-  if (p === "scratch") el = S.box && S.box.el;
-  else {
-    const ins = [...document.querySelectorAll("#q .ans")].filter(x => x.getClientRects().length && !x.disabled);   // a hidden fix box can't take focus
-    const back = lastEdit && ins.includes(lastEdit) ? lastEdit : null;                                   // the field you were typing in
-    el = back || (ins.length ? ins.find(x => !x.value.trim() && !x.readOnly) || ins[0]
-      : opts().find(o => o.getAttribute("aria-checked") === "true") || opts().find(o => !o.disabled && o.tabIndex === 0) || opts().find(o => !o.disabled));
-  }
-  if (!el) return false;
-  el.focus({ preventScroll: true });
-  return document.activeElement === el;
-}
-/* the toggle must not take focus from the field (that would drop the keyboard): pointerdown/mousedown are cancelled, and the click puts
-   focus straight into the other pane's field, in the same tap */
-for (const ev of ["pointerdown", "mousedown"]) swapBtn.addEventListener(ev, e => e.preventDefault());
-swapBtn.addEventListener("click", () => { const next = pane === "problem" ? "scratch" : "problem"; focusField(next); setPane(next); });
-/* focus picks the pane; focusing the scratchpad also sends the top bar away (nav row: slides up and fades, keeps its space) */
-document.addEventListener("focusin", e => {
-  root.classList.toggle("bar-off", e.target.id === "scratch");
-  const p = paneOf(e.target); if (p) setPane(p);
-});
-document.addEventListener("focusout", () => setTimeout(() => root.classList.toggle("bar-off", document.activeElement && document.activeElement.id === "scratch"), 0));
-
-/* keyboard up, PROBLEM pane: the pad peek (one line above the keyboard). Its text is the pad's last line; empty pad = "Scratchpad".
-   A tap goes to the pad in the same tap: pointerdown / mousedown are cancelled (focus stays in the field, the keyboard stays up), then the
-   click focuses the pad with the caret at the end, and focus picks the pane. The mirror of the question peek in the SCRATCHPAD pane. */
-const padPeek = $("#padPeek"), padPeekTx = $("#padPeekTx");
-function padPeekText() {
-  const t = S && S.box ? S.box.el.value : "";
-  const last = t.split("\n").map(x => x.trim()).filter(Boolean).pop();
-  padPeekTx.textContent = last || "Notes";
-  padPeek.classList.toggle("empty", !last);
-}
-padPeek.hidden = false;                                                         // CSS shows it only in the PROBLEM pane
-for (const ev of ["pointerdown", "mousedown"]) padPeek.addEventListener(ev, e => e.preventDefault());
-padPeek.addEventListener("click", () => {
-  if (!S || !S.box || padGone()) return;
-  if (root.classList.contains("pad-off")) openMT();                              // phones: the pad lives on the pad page
-  const ta = S.box.el, n = ta.value.length;
-  ta.focus({ preventScroll: true }); ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight;
-  setPane("scratch");
-});
-document.addEventListener("input", e => {
-  if (S && S.box && e.target === S.box.el) padPeekText();
-  if (e.target.matches && e.target.matches("#main input, #main textarea")) lastEdit = e.target;
-});
-/* SCRATCHPAD pane: a tap on the question peek goes back to the answer, in the same tap */
-for (const ev of ["pointerdown", "mousedown"]) freeze.addEventListener(ev, e => { if (swapOn && shownPane === "scratch") e.preventDefault(); });
-freeze.addEventListener("click", () => { if (swapOn && shownPane === "scratch" && focusField("problem")) setPane("problem"); });
-/* keyboard down (or Back with it up): the field last typed in comes back into view, without taking focus (it never gets scrollTop = 0) */
-function backInView() {
-  const el = lastEdit;
-  if (!el || !el.isConnected || !mainEl.contains(el)) return;
-  requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
-}
-
-/* ================= Multitask (design/MULTITASK.md) =================
-   Phone (< 720px): the pad is hidden; the floating Scratchpad button (#padFab) opens the pad page: the tile on top, one drag handle in
-   the gap, the pad below. The tile's q | a switch: q = the problem only, a = the answer control only (round 3b). It opens on q with a big
-   pad (1/3). Anchors 1/2, 1/3 and the smallest tile; drag snaps, tap = next. Exits: Back (a pushed history entry), tapping the problem
-   (caret into the answer), the collapse icon in the pad's top-right. The keyboard going down never closes it.
-   Desktop (>= 720px): side by side, always: problem + answer left, pad right. Anchors strip (52px), 1/3, 1/2, 2/3.
-   Memory: per device (localStorage, every access in try/catch). */
-const sash = $("#sash"), mtMode = $("#mtMode"), mtExp = $("#mtExp"), pstrip = $("#pstrip");
-const ANCH = { phone: [0, 1 / 3, 1 / 2], desk: [0, 1 / 3, 1 / 2, 2 / 3] };
-const ANAME = r => r < 0.4 ? "one third" : r < 0.6 ? "half" : "two thirds";
-let mtMem = {};
-try { mtMem = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { mtMem = {}; }
-const mtKind = () => sideMQ.matches ? "desk" : "phone";
-const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r) ? b : a);
-const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                                 // phone: a big pad
-function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
-const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
-const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
-let dragR = null, mtFit = true, mtNeed = 0;                                                  // mtFit: the tile hugs its content until the handle is used
-/* desktop sugar: the notes pad steps aside while Cluck has something to show (the hint card, or the sheet open); else the pad is the default
-   (Tony, Oct 5: "otherwise default to the scratchpad"; Oct 4's "NO SCRATCHPAD" held for questions with a layer). Diet keeps the pad.
-   Phone sugar: no pad at all, so no Scratchpad button, no pad page, no pad peek (Tony, Oct 14: "HIDE THE SCRATCHPAD ON MOBILE SUGAR MODE"). */
-function padRule() {
-  root.classList.toggle("no-pad", !!S && modeOf() === "sugar" && (!sideMQ.matches || !!origEl || !!(cl && cl.open)));
-}
-const padGone = () => !sideMQ.matches && root.classList.contains("no-pad");   // phone sugar: the pad has no way in
-function applyMT() {
-  const side = sideMQ.matches && !!S, k = mtKind(), gone = side && clGone;
-  if (sideMQ.matches || !S) mtOpen = false;
-  const pf = isProof();
-  if (pf && !sideMQ.matches && proofTyping()) { mtOpen = true; mtForced = true; }   // a proof item while typing: the split (question tile on top, the proof pane below)
-  else if (mtForced) { mtOpen = false; mtForced = false; }
-  const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
-  root.classList.toggle("side", side);
-  root.classList.toggle("cl-gone", gone);                                      // Cluck's column dismissed: one centred column (DISMISS.md)
-  padRule();
-  root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)
-  root.classList.toggle("mt", mtOpen);
-  dispatchEvent(new CustomEvent("stem:layers"));                              // nav.js: the iOS Back button
-  const fit = mtOpen && mtFit && dragR == null;
-  root.classList.toggle("mt-fit", fit);
-  root.classList.toggle("mt-r0", on && !gone && !fit && dragR == null && r === 0);
-  root.classList.toggle("mt-drag", dragR != null);
-  root.style.setProperty("--r", r);
-  root.classList.toggle("mt-q", mtOpen && !pf && mtTile === "q");
-  root.classList.toggle("mt-a", mtOpen && !pf && mtTile === "a");
-  root.classList.toggle("pad-off", !!S && !sideMQ.matches && !mtOpen);         // phones: no pad on the page, the button opens it
-  sash.hidden = !on || gone; mtMode.hidden = !mtOpen || pf; pstrip.hidden = !(side && !gone && r === 0 && dragR == null);
-  mtMode.dataset.pane = mtTile === "q" ? "problem" : "scratch";
-  mtMode.setAttribute("aria-label", mtTile === "q" ? "Show answer" : "Show question");
-  mtExp.hidden = side || !mtOpen || pf;                                               // the collapse corner of the pad page only
-  mtExp.querySelector("use").setAttribute("href", mtOpen ? "#i-collapse" : "#i-expand");
-  mtExp.setAttribute("aria-label", mtOpen ? "Close notes" : "Open notes");
-  mtExp.title = mtExp.getAttribute("aria-label");
-  /* a11y only (WAI-ARIA window splitter), never shown */
-  sash.setAttribute("aria-orientation", side ? "vertical" : "horizontal");
-  sash.setAttribute("aria-valuemin", "0"); sash.setAttribute("aria-valuemax", String(Math.round(Math.max(...ANCH[k]) * 100)));
-  sash.setAttribute("aria-valuenow", String(Math.round(r * 100)));
-  sash.setAttribute("aria-valuetext", anchorName(k, r));
-  sash.setAttribute("aria-label", `Question size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
-  if (on) layoutMT(); else mtCap = null;
-  clBackSync();
-  if (clPerm()) { if (!(cl && cl.open)) clOpen("explain", null, true); } else if (cl && cl.open && cl.perm) clClose();   // the box opens by itself; it leaves when the window or mode no longer has the column
-  if (noteAt() && !noteAt().getClientRects().length) hideToast();               // its anchor just went away (q | a when the page closes)
-  fabSync();
-}
-/* the sizes CSS cannot know: the visible height (phone), and the pad's height (it fills its tile / column) */
-let mtCap = null;
-function layoutMT() {
-  if (!S || !S.box) return;
-  const ta = S.box.el;
-  if (mtOpen) {
-    const h = vv ? vv.height : innerHeight;
-    root.style.setProperty("--vv-h", Math.round(h) + "px");
-    root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
-    if (mtFit) {                                                                 // hug: what the tile shows, at most 1/3 of a short screen, 45% of a tall one
-      const parts = mtTile === "q" || isProof() ? [problemEl] : [$("#fb"), $("#q")];
-      root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
-      const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
-      mtNeed = need;                                                           // bug 5: setRatio asks it (a pick taller than the content stays a hug)
-      let cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
-      /* proof, keyboard up (Tony, Nov 8: question cut mid-line, "it stuck there"): 1/3 of the short screen left the question clipped over an
-         empty proof box. The question hugs up to all the room but the box's floor (#q min-height 8rem + the sash row + main's padding) */
-      if (isProof() && root.classList.contains("kbup")) cap = Math.max(cap, h - 11 * 16);
-      root.style.setProperty("--tile-h", Math.round(Math.max(56, Math.min(need, cap))) + "px");
-    }
-  } else root.style.setProperty("--kb-top", "0px");
-  const fill = () => {
-    if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
-    if (sideMQ.matches) { padFoot(); pageTop(); root.style.setProperty("--cl-top", Math.max(0, Math.round(sentinel.getBoundingClientRect().top + scrollY)) + "px"); }   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
-    if (mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
-    else if (sideMQ.matches) mtCap = Math.max(96, Math.floor(innerHeight - dockRoom() - (ta.getBoundingClientRect().top - work.getBoundingClientRect().top + workRest()) - padFoot()));   // side: where the box sits with the page at its top, not where the sticky column happens to be now (a tap on a scrolled page re-sized it: W129 L6); down to 96px, so the column fits a short window (1366x768 at 150%, L3)
-    else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
-    root.style.setProperty("--pad-max", mtCap + "px");
-    S.box.limit();
-  };
-  fill(); requestAnimationFrame(fill);
-}
-/* the room under the notes box and Cluck's sheet (app.css --foot): main's own bottom padding (--s7), so the page is exactly the window for
-   them (W129 L1: no page scroll on a short question, which read as the Explain column scrolling itself), and at least 8px over the fixed
-   footer's box (#privacy's 44px tap target in Firefox; L3 / L5: no tap on the notes lands on the link) */
-function padFoot() {
-  const pv = $("#privacy"), r = pv && pv.getClientRects().length ? pv.getBoundingClientRect() : null;
-  const room = Math.ceil(Math.max(24, parseFloat(getComputedStyle($("main")).paddingBottom) || 0, r ? innerHeight - r.top + 8 : 0));
-  root.style.setProperty("--foot", room + "px");
-  return room;
-}
-/* the spare room above the bar when the body centres the page up-down (app.css "snug in the center": auto margins), so the notes column's
-   floor (app.css html.side #work min-height) leaves the same room under the page: centred stays centred (easy.pw zoomed out to heck), a
-   column that shrinks still re-centres nothing (W129 L4). 0 when the page starts at the top (taller than the window, the start page, the bar docked at the bottom) */
-function pageTop() {
-  const bar = $("body > .top"), on = !root.classList.contains("start") && !root.classList.contains("dock-bottom") && bar && bar.getClientRects().length;
-  const t = on ? Math.max(0, Math.round(bar.getBoundingClientRect().top + scrollY)) : 0;
-  root.style.setProperty("--pg-top", t + "px");
-  return t;
-}
-let workD = 0;                                                                     // the notes column's top below the sentinel, read while the page is at its top
-function workRest() {                                                              // the notes column's top in the window with the page at its top (it is sticky)
-  const s = sentinel.getBoundingClientRect().top;
-  if (scrollY === 0) workD = work.getBoundingClientRect().top - s;
-  return s + scrollY + workD;
-}
-function mtSave() { try { localStorage.setItem("stem-mt", JSON.stringify(mtMem)); } catch { /* private mode: defaults next time */ } }
-function setRatio(r, animate = true) {
-  const k = mtKind();
-  mtFit = false;
-  mtMem[k] = r; if (r > 0) mtMem[k + "Last"] = r;
-  mtSave();
-  const go = () => {
-    /* bug 5 (Tony, Nov 6): a pick whose tile would be taller than its content stays a hug, no empty space under a short question or proof */
-    if (mtOpen && !sideMQ.matches && r > 0) {
-      mtFit = true; applyMT();                                                   // measures mtNeed from a small tile
-      const cs = getComputedStyle(mainEl), len = mainEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 16;
-      if (r * len <= mtNeed + 8) mtFit = false;                                  // the pick fits inside the content: the ratio rules
-    }
-    applyMT();
-  };
-  if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(go); else go();
-}
-const lastPeek = () => { const k = mtKind(), r = mtMem[k + "Last"]; return typeof r === "number" && r > 0 ? near(k, r) : mtDef(k); };
-function setTile(t, animate = true) {
-  if (mtTile === t) return;
-  mtTile = t;
-  if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
-}
-function openMT() {
-  if (mtOpen || !S || sideMQ.matches || padGone()) return;
-  swapY = scrollY;
-  root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
-  if (swapOn) setSwap(false);
-  mtOpen = true; mtTile = "q"; mtFit = true;
-  if (noteAt() === fab) hideToast();
-  mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
-  try { history.pushState({ mt: 1, stemD: (history.state && history.state.stemD) || 0 }, "", location.href); } catch { /* sandboxed */ }   // stemD: nav.js iOS Back depth, same as the entry under it
-  applyMT(); layoutDock();
-  setTimeout(() => obToast(2, "Switch question/answer here.", mtMode, { x: true, allow: "#scratch" }), 400);   // pad-mode B (Tony, Oct 28): caret + an X. The pad page is all pad (#scratch, edge to edge): the note may lie on its 2 s of it, never on a button
-}
-let mtSkipPop = false;
-function shutMT() {
-  if (!mtOpen || isProof()) return;                                              // a proof item's split is its page: nothing closes it
-  mtOpen = false;
-  applyMT(); layoutDock();
-  if (scrollY !== swapY) scrollTo(0, swapY);
-  requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); });
-}
-function closeMT(toAnswer) {
-  if (!mtOpen) return;
-  shutMT();
-  if (toAnswer) focusField("problem");                                            // after the close (on q the answer was hidden), still in the tap: the keyboard can stay
-  if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
-}
-/* proof: focus into / out of the proof pane opens / closes the split (out: on the next task, when the new focus is known) */
-function proofSync() {
-  if (!isProof() || sideMQ.matches || proofTyping() === mtOpen) return;
-  if (!mtOpen) { swapY = scrollY; root.style.setProperty("--swap-doc-h", root.scrollHeight + "px"); }
-  applyMT(); layoutDock();
-  if (!mtOpen) { if (scrollY !== swapY) scrollTo(0, swapY); requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); }); }
-}
-document.addEventListener("focusin", () => proofSync());
-document.addEventListener("focusout", () => setTimeout(proofSync, 0));
-document.addEventListener("pointerdown", e => { if (mtOpen && isProof() && $("#work").contains(e.target)) proofHold = true; }, true);
-for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => { if (proofHold) setTimeout(() => { proofHold = false; proofSync(); }, 0); }, true);
-window.stemNotes = { open: () => mtOpen && !isProof(), close: () => closeMT(false) };   // nav.js: the iOS Back button closes the split (a proof item's split is its page: not offered)
-addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (mtOpen) shutMT(); });   // Back closes it, never leaves the page
-for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
-mtExp.addEventListener("click", () => closeMT(false));
-mtMode.addEventListener("click", () => setTile(mtTile === "q" ? "a" : "q"));
-pstrip.addEventListener("click", () => setRatio(lastPeek()));
-/* tap the problem (not the answer) = close, caret in the answer */
-for (const ev of ["pointerdown", "mousedown"]) problemEl.addEventListener(ev, e => { if (mtOpen) e.preventDefault(); });
-problemEl.addEventListener("click", () => { if (mtOpen) closeMT(true); });
-/* the handle: the pane follows the finger, release snaps to the nearest anchor; a tap (no move) goes to the next anchor */
-let mtDrag = null;
-sash.addEventListener("pointerdown", e => {
-  if (e.button > 0) return;
-  e.preventDefault();
-  const m = mainEl.getBoundingClientRect(), cs = getComputedStyle(mainEl), side = sideMQ.matches;
-  const a = side ? m.left + parseFloat(cs.paddingLeft) : m.top + parseFloat(cs.paddingTop);
-  const len = (side ? m.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) : m.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) - 16;
-  mtDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, a, len, side, moved: false };
-  try { sash.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
-});
-sash.addEventListener("pointermove", e => {
-  const d = mtDrag; if (!d || e.pointerId !== d.id) return;
-  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
-  d.moved = true;
-  const pos = (d.side ? e.clientX : e.clientY) - d.a - 8;
-  d.raw = pos / d.len;                                                           // past 85% to the right (desktop): the column goes (DISMISS.md)
-  dragR = Math.min(Math.max(...ANCH[mtKind()]), Math.max(0.06, pos / d.len));
-  applyMT();
-});
-function sashEnd(e) {
-  const d = mtDrag; if (!d || (e && e.pointerId !== d.id)) return;
-  mtDrag = null;
-  const k = mtKind();
-  if (!d.moved) { dragR = null; setRatio(nextDown(k, mtRatio(k))); return; }
-  if (d.side && d.raw > 0.85 && !clPerm()) { dragR = null; clGoneSet(true); return; }       // the mirror of the strip: dragged to the right edge = dismissed, the ratio is kept
-  let r = dragR; dragR = null;
-  r = r < (d.side ? 0.2 : 1 / 6) ? 0 : near(k, r);                              // past 20% to the left (desktop) / a sixth (phone): the strip / sliver
-  setRatio(r);
-}
-sash.addEventListener("pointerup", sashEnd);
-sash.addEventListener("pointercancel", sashEnd);
-sash.addEventListener("dblclick", () => { if (sideMQ.matches) setRatio(1 / 2); });
-/* assistive tech only (WAI-ARIA window splitter): arrows step one anchor, Home / End go to the ends. Never shown or documented. */
-sash.addEventListener("keydown", e => {
-  const k = mtKind(), a = ANCH[k], i = a.indexOf(mtRatio(k));
-  const to = { ArrowLeft: i - 1, ArrowUp: i - 1, ArrowRight: i + 1, ArrowDown: i + 1, Home: 0, End: a.length - 1 }[e.key];
-  if (to === undefined) return;
-  e.preventDefault();
-  setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
-});
-if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); clPlace(); layoutFreeze(); });
-
-/* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
-   follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped
-   (a drop is the user's choice: no step-off, even over an answer control). Where it (re)appears it steps off answer controls. Its place is kept per device (stem-mt .fab = { side, y: 0 top .. 1 bottom }). */
-const fab = $("#padFab");
-let fabDrag = null, fabMoved = false, fabSeen = false;
-function fabSync() {
-  window.stemBrainrot?.sync();
-  const a = document.activeElement, typing = !!a && editing() && $("#q").contains(a);
-  const show = root.classList.contains("pad-off") && !typing && !padGone() && !isProof();   // a proof has no notes pad
-  root.classList.toggle("fab-on", show);
-  if (fab.hidden === !show) return;
-  fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
-  if (!show) return;
-  fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
-  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Quack up your thoughts here...", fab, { prefer: "above" }), 700); }   // Scratchpad tip A: above the button, caret down
-  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move me!", fab, { prefer: "above" }), 700);
-}
-function fabBounds() {
-  const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;
-  const floor = root.clientHeight - dockRoom();   // layout viewport and the bar's resting height: nothing that moves while scrolling or while the URL bar slides
-  return { min: s + 8, max: Math.max(s + 8, floor - s - h), h };
-}
-/* avoid: step off answer controls under it. Only (re)appearing asks for it; a drag end never does (the drop is the user's choice), and a resize never does, or the
-   button hops by a control's height with the scroll offset it happens to be at. */
-function fabPlace({ avoid } = {}) {
-  const m = mtMem.fab || {}, b = fabBounds();
-  let top = b.min + (typeof m.y === "number" ? m.y : 1) * (b.max - b.min);
-  fab.classList.toggle("left", m.side === "l");          // default bottom right (Tony, Oct 5 ~09:5x; was left since #69); a drag keeps its side
-  fab.style.transform = "";
-  const r = fab.getBoundingClientRect();
-  /* step off answer controls under it (up first, then down), a few tries at most */
-  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip, .rbox .wchip, .cl-cta")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
-  /* the question text (the body above the choices): stepping up never takes the button above its bottom edge (it climbed over every choice onto the text) */
-  const textBottom = document.querySelector("#blocks")?.getBoundingClientRect().bottom ?? 0;
-  for (let n = 0; avoid && n < 6; n++) {
-    const hit = ctl.find(q => q.bottom > top && q.top < top + b.h); if (!hit) break;
-    const upY = hit.top - b.h - 8, downY = hit.bottom + 8;
-    top = upY >= Math.max(b.min, textBottom + 8) ? upY : downY <= b.max ? downY : top;
-    if (top !== upY && top !== downY) break;
-  }
-  /* no clear step (a long question leaves no gap between the text and the choices): the nearest place that covers neither the text nor a
-     choice (a figure may be covered); failing that, the nearest place off the answer controls (the text may be covered) */
-  const txt = [...document.querySelectorAll("#blocks .md")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
-  const clear = (t, obs) => !obs.some(q => q.bottom > t && q.top < t + b.h);
-  for (const obs of [[...ctl, ...txt], ctl]) {
-    if (!avoid || clear(top, obs)) break;
-    for (let d = 8; d <= b.max - b.min; d += 8) {
-      const t = [top - d, top + d].find(t => t >= b.min && t <= b.max && clear(t, obs)); if (t !== undefined) { top = t; break; }
-    }
-  }
-  /* anchored by its distance from the bottom, like the bar: when a phone's URL bar slides away, the bar and the button move down
-     together (top-anchored, the button stayed put and left a dead band the height of the URL bar above the bar; Tony, Oct 3) */
-  fab.style.bottom = Math.round(root.clientHeight - Math.min(b.max, Math.max(b.min, top)) - b.h) + "px";
-}
-fab.addEventListener("pointerdown", e => {
-  if (e.button > 0) return;
-  const r = fab.getBoundingClientRect();
-  fabDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, r, moved: false };
-  try { fab.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
-});
-fab.addEventListener("pointermove", e => {
-  const d = fabDrag; if (!d || e.pointerId !== d.id) return;
-  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
-  d.moved = true; fab.classList.add("dragging");
-  fab.style.transform = `translate(${e.clientX - d.x0}px, ${e.clientY - d.y0}px)`;     // follows the finger (direct manipulation)
-});
-function fabEnd(e) {
-  const d = fabDrag; if (!d || (e && e.pointerId !== d.id)) return;
-  fabDrag = null; fab.classList.remove("dragging");
-  if (!d.moved) return;
-  fabMoved = true;
-  const dx = e ? e.clientX - d.x0 : 0, dy = e ? e.clientY - d.y0 : 0, b = fabBounds();
-  /* the drop, measured against the bar on screen (both rects are visual): no guess at how tall a slid-away URL bar is. Firefox for
-     Android moves fixed-bottom things with its bottom toolbar (bug 1880375), Chrome by resizing; innerHeight means different things */
-  const bar = dockRoom() ? dock.getBoundingClientRect().top : innerHeight, gap = bar - (d.r.bottom + dy);
-  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, root.clientHeight - dockRoom() - gap - b.h));
-  mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
-  mtMem.fabMoved = 1; mtSave();
-  fabPlace();                                                                     // keep the drop spot: no step-off
-}
-fab.addEventListener("pointerup", fabEnd);
-fab.addEventListener("pointercancel", fabEnd);
-fab.addEventListener("click", () => { if (fabMoved) { fabMoved = false; return; } openMT(); });   // a drag is not a tap
-document.addEventListener("focusin", fabSync);
-document.addEventListener("focusout", () => setTimeout(fabSync, 0));
-addEventListener("resize", () => { if (!fab.hidden) fabPlace(); });                // the same spot of the (new) range: no step-off
-new ResizeObserver(() => { if (!fab.hidden) fabPlace(); }).observe(dock);         // the bar changed height: stay above it
-
-/* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
-let figW = 0;
-new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; drawFigures(); layoutFreeze(); } }).observe($("#blocks"));
-let qW = 0;
-new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
-
-/* ================= resume (design/RELOAD.md) =================
-   Back from bfcache (pageshow persisted) or a long-hidden tab: requests older than the timeout are aborted (background timers are
-   throttled, so theirs may not have fired), busy is cleared, the controls that should be live are live again, the layout reruns. */
-function resume(fromCache) {
-  const now = Date.now();
-  for (const r of [...inflight]) if (fromCache || now - r.t0 >= r.ms) r.ctl.abort();
-  if (fromCache) busy = false;
-  if (!editing()) { lostAt = 0; if (swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
-  if (S && !S.finished) {
-    const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
-    if (go && ins.length) { go.hidden = !!$("#ff .vk"); go.disabled = ins.some(x => !x.value.trim()); }   // a wrong mark holds the slot until typing
-    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim() || !!e.box.querySelector(".vk"); } });
-    for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
-    if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
-  }
-  tallest = 0; lastW = 0; qW = 0;
-  layoutDock(); layoutFreeze(); fitChoices();
-}
-addEventListener("pageshow", e => {
-  if (!e.persisted) return;
-  resume(true);
-  const off = window.stemOffline;
-});
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
-
-/* ================= boot ================= */
+/* the hash routing (moved here from the boot section by split-app.mjs MOVE_TO_APP) */
 const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURIComponent(location.hash.slice(1))) : null;
 const fromHash = () => {
   const n = hashCode();
@@ -4084,38 +2085,5 @@ const fromHash = () => {
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };
-addEventListener("hashchange", fromHash);
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
-if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", () => { if (S) fitChoices(); });   // KaTeX loads a size font on first use: re-fit the math
-layoutDock();
-/* offline.js (it runs after this module) restores an uploaded bank from IndexedDB first, so #CODE of an uploaded problem opens */
-/* the splash (index.html) waits for this: the #CODE problem opened (or failed), so the page never flashes the empty entry state first */
-let firstDone;
-window.stemFirst = new Promise(r => { firstDone = r; });
-addEventListener("DOMContentLoaded", async () => {
-  const off = window.stemOffline;
-  let restored = false;
-  if (off && off.ready) { try { restored = await Promise.race([off.ready, new Promise(r => setTimeout(() => r(false), 1500))]); } catch { /* storage blocked */ } }
-  /* the live list (design/BANK.md): #BANK_XXX, else the last one used here, else the server's pointer (new browser,
-     or storage wiped). A problem in the hash still opens; the bank then only fills the list. */
-  try {
-    if (location.hash.length > 1 && window.stemWelcomeFirst && await window.stemWelcomeFirst.check()) { forceWelcome = true; history.replaceState(null, "", location.pathname + location.search); }   // a first-time user on a deep link: the welcome start first, once (welcome-first.js)
-    const n = hashCode(), last = src(), q = !!n && n.prefix !== "BANK";
-    if (n && n.prefix === "BANK") await openBank(n.code);
-    else if (last && last !== "file") await openBank(last, { go: !q, quiet: true });
-    else if (!last && !restored) await openBank("last", { go: !q, quiet: true });
-    await fromHash();
-  } catch { /* load() / openBank() report their own errors */ } finally { firstDone(); }
-});
-/* page.at (flight.js page(), flight recorder P1 §8): the app's state at a failure, as codes, counts and flags. Never a typed answer,
-   notes, chat or Cluck's text: only their lengths */
-const pageState = () => {
-  const w = wish;
-  return {
-    q: S?.code ?? null, bank: bank?.code ?? null, mode: modeOf(), tries: S ? S.tries.length : null, left: S?.triesLeft ?? null, fin: !!S?.finished, hints: S ? S.hints.length : null,
-    wish: w && { code: w.code, started: !!w.started, end: !!w.done, open: !!w.open, failed: w.failed || 0, capped: !!w.capped, chars: (w.text || "").length,
-      shown: w.shown | 0, chat: (w.chat || []).length, busy: !!w.busy, out: !!w.out, inc: w.inc || null },
-    cl: cl && { open: !!cl.open, tab: cl.tab ?? null, auto: !!cl.auto }, inflight: [...inflight].map(r => [r.ep || null, Date.now() - r.t0]),
-  };
-};
-window.__drill = { check, get state() { return S; }, get page() { return pageState(); } };   // for tests/e2e; page: flight.js
+
+export { $, S, bank, check, cueRight, dock, drawFigures, esc, fitChoices, frReq, fromHash, hashCode, hideToast, icon, incHTML, inflight, isProof, mainEl, maxTries, md, mockHold, noteAt, obToast, off, oneBox, openBank, opts, painting, partEls, proofTyping, rboxSync, renderMath, reqInc, retryLoad, root, rpUnmount, say, select, snackChg, src, toast, waitReduced, xInc };

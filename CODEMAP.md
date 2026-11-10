@@ -11,6 +11,8 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `privacy.html` | The privacy page. | privacy text |
 | `sw.js` | Service worker: precache list BASE, cache rules, VERSION stamp. | a new root file must work offline; cache bugs |
 | `app.js` | The drill: code entry, grading on device, Cluck box, scratchpad, Copy. | answer flow, Cluck UI, boot order |
+| `cluck.js` | The Cluck genie, split out of app.js (152a; cut at the genie banner): wish render, Cluck box, replies. Reaches app.js through `bridge`. | Cluck box, reply render, wish figures |
+| `shell.js` | The shell, split out of app.js (152a; cut at the sugar-rewards banner): rewards, copy math, freeze, Swap, Multitask, resume. Reaches app.js through `bridge`. | rewards, Swap, Multitask, dock layout |
 | `app.css` | Styles of the drill page and tokens. | colours, sizes, layout of the drill page |
 | `nav.js` | Prev / Next, question list, TeX to plain text. Has a CODEMAP header. | question order, list, titles |
 | `nav.css` | Styles of the nav and list. | nav look |

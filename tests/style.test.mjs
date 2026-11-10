@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 const CSS = ["app.css", "nav.css", "design/explain-box.css"];
-const JS = ["app.js", "nav.js"];
+const JS = ["app.js", "cluck.js", "shell.js", "nav.js"];
 
 /* CSS declarations outside :root blocks (token definitions), comments stripped: [{ file, sel, prop, value }] */
 function decls(file) {
@@ -143,7 +143,7 @@ test("§3 Toast: the caret on every toast, the MC row too", () => {
 test("§5 Keyboard: no new shortcuts (keydown only on the listed elements)", () => {
   // window: Escape closes the toast. codeIn: the combobox. q: MC choice keys. inp: Enter submits a box. sash: silent a11y.
   // nav.js btn / panel: the list combobox. ([ and ] prev / next were removed: Tony, Oct 2 ~23:59 PT.)
-  const ALLOW = { "app.js": ["window", "codeIn", "q", "inp", "sash"], "nav.js": ["btn", "panel"] };
+  const ALLOW = { "app.js": ["window", "codeIn", "q", "inp", "sash"], "cluck.js": ["inp"], "shell.js": ["sash"], "nav.js": ["btn", "panel"] };
   const bad = [];
   for (const f of JS) for (const m of read(f).matchAll(/(?:^|[^\w.])(?:(\w+)\.)?addEventListener\(\s*["']key(?:down|up|press)["']/gm)) {
     const who = m[1] || "window";
