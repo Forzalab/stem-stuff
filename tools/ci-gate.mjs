@@ -8,6 +8,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { attemptColor } from "./ci-retry.mjs";
 
 // A docs-only diff is the only diff safe to ship without a fresh full run. Source of truth: SPEC 09 §docs-only.
 // Loopable on purpose: adding a member later is one line here plus one test row.
@@ -34,6 +35,7 @@ export function classify(files) {
 export function runKind(run) {
   const r = run || {};
   if (r.event === "push") return "full";                                // main push: the full suite (backstop)
+  if (r.event === "schedule") return "full";                            // nightly: the full suite on main (R3)
   if (r.event === "pull_request") return "affected";                    // PR 2: affected selection, never a ship run
   if (r.event === "workflow_dispatch") {
     const inputs = r.inputs || {};
@@ -51,10 +53,12 @@ const runAt = (run) => {
 };
 
 // The newest successful FULL run on main. A newer FAILED run never masks an older green (STALE-STATE, M3);
-// other branches and fast/bench/unknown kinds never qualify. null = nothing to ship from.
+// other branches and fast/bench/unknown kinds never qualify. A yellow (success only on a rerun, attempt
+// >= 2) is never a green anchor: the ship gate refuses yellow (R4, SPEC-PR3.md §6). null = nothing to ship from.
 export function pickGreen(runs, candidate) {
   const green = (runs || [])
-    .filter((r) => r && r.conclusion === "success" && r.head_branch === "main" && runKind(r) === "full")
+    .filter((r) => r && r.conclusion === "success" && r.head_branch === "main" && runKind(r) === "full"
+      && attemptColor(r) === "green")
     .sort((a, b) => runAt(b) - runAt(a) || (a.head_sha === candidate ? -1 : b.head_sha === candidate ? 1 : 0))[0];
   return green ? { sha: green.head_sha, kind: "full", created_at: green.created_at } : null;
 }

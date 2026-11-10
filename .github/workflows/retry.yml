@@ -1,0 +1,43 @@
+# R4 (ticket 09, PR 4): auto-rerun a tests.yml run that failed on its FIRST attempt, once. A pass that
+# only happens on attempt >= 2 is YELLOW: tools/batch.sh renders it yellow and the ship gate refuses it
+# (tools/ci-retry.mjs attemptColor, imported by tools/ci-gate.mjs pickGreen). Never retry a run twice.
+# The decision is the pure, tested shouldRetry; this workflow only wires the GitHub events to it.
+name: retry
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+permissions:
+  contents: read    # actions/checkout reads this repo for the pure decision module
+  actions: write    # POST /rerun-failed-jobs on the failed run
+jobs:
+  retry:
+    # R4 guards: never retry a dispatch (bench/mutant or fast pipe), a fork PR, or a non-first attempt.
+    # shouldRetry stays the main rule; attempt == 1 is a second guard so an odd/missing attempt can never loop.
+    if: >-
+      github.event.workflow_run.event != 'workflow_dispatch' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - id: d
+        shell: bash
+        env:
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          CONCLUSION="$CONCLUSION" RUN_ATTEMPT="$RUN_ATTEMPT" node --input-type=module -e '
+            import { shouldRetry, attemptColor } from "./tools/ci-retry.mjs";
+            const run = { conclusion: process.env.CONCLUSION, run_attempt: Number(process.env.RUN_ATTEMPT) };
+            console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; shouldRetry=${shouldRetry(run)}`);
+            process.stdout.write(shouldRetry(run) ? "true" : "false");
+          ' > retry.txt
+          echo "retry=$(cat retry.txt)" >> "$GITHUB_OUTPUT"
+      - if: steps.d.outputs.retry == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/rerun-failed-jobs"

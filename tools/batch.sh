@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Batch queue for the refactor train. Labels are the truth; tools/queue.json is a cache.
 # blame = changed-file name heuristic + tests/handmaps/*.tsv (format TBD by ticket 06) until handmaps land
-# land is not atomic: if a merge fails mid-list, earlier PRs stay merged; finish the rest by hand
-# (rerun refuses because merged PRs are no longer MERGEABLE).
+# land moves main ONCE per batch: one merge of the sealed batch/N tip (R2), then the PRs are closed;
+# a failed single merge leaves main untouched (rerun is safe).
 # red batch + SPLIT: relabel by hand (no un-batch command yet).
 # usage: tools/batch.sh labels | sync | fire [--force] [--dry-run] | status <n> | land <n> | blame <n> <spec...>
 set -euo pipefail
@@ -214,8 +214,8 @@ cmd_land() {
     return 1
   fi
   manifest="$(git show "$sealed:batch/manifest.json")"
-  local -a prs=() shas=()
-  while IFS=$'\t' read -r pr sha; do prs+=("$pr"); shas+=("$sha"); done \
+  local -a prs=()
+  while IFS=$'\t' read -r pr sha; do prs+=("$pr"); done \
     < <(jq -r '.[] | [.pr, .sha] | @tsv' <<<"$manifest")
   for i in "${!prs[@]}"; do
     IFS=$'\t' read -r base mer < <(gh pr view "${prs[$i]}" --json baseRefName,mergeable \
@@ -229,12 +229,29 @@ cmd_land() {
       return 1
     fi
   done
+  # R2 (ticket 09, PR 3): land the WHOLE batch as ONE main update of the sealed tip, never N `gh pr merge` pushes.
+  # landPlan is the tested pure decision; the merge API call below is the single push it describes.
+  local plan ok target
+  plan="$(printf '%s' "$manifest" | node --input-type=module -e '
+    import { landPlan } from "./tools/ci-batch.mjs";
+    let s = ""; for await (const c of process.stdin) s += c;
+    const d = landPlan(JSON.parse(s || "[]"), process.argv[1]);
+    process.stdout.write(JSON.stringify(d));
+  ' "$sealed")"
+  ok="$(jq -r .ok <<<"$plan")"; target="$(jq -r .sha <<<"$plan")"
+  if [ "$ok" != true ] || [ "$target" != "$sealed" ]; then
+    echo "batch $n: refusing to land (landPlan: $(jq -r .reason <<<"$plan"))" >&2
+    return 1
+  fi
+  gh api --method POST "repos/{owner}/{repo}/merges" \
+    -f base=main -f head="batch/$n" \
+    -f commit_message="batch $n: land sealed tip $sealed ($(jq -r .prs <<<"$plan") PR(s))" >/dev/null
   for i in "${!prs[@]}"; do
-    pr="${prs[$i]}"; sha="${shas[$i]}"
-    gh pr merge "$pr" --merge --match-head-commit "$sha" || { echo "land: PR #$pr failed" >&2; return 1; }
+    pr="${prs[$i]}"
+    gh pr close "$pr" --comment "Batch $n landed as ONE main update ($sealed); closing." >/dev/null
     gh_remove_label "$pr" done
     gh_remove_label "$pr" batched
-    echo "landed PR #$pr"
+    echo "landed PR #$pr (batch $n, sealed $sealed)"
   done
 }
 
