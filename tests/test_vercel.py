@@ -10,13 +10,15 @@ import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
+sys.path.insert(0, paths.tool("build_and_ship"))
 sys.argv = [sys.argv[0]]
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import serve  # noqa: E402
 import build_public  # noqa: E402
-sys.path.insert(0, os.path.join(ROOT, "api"))
+sys.path.insert(0, paths.API_DIR)
 import index  # noqa: E402  api/index.py
 
 

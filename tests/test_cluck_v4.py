@@ -14,8 +14,9 @@ import unittest
 import urllib.error
 from unittest import mock
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass (its own tests: tests/test_subject_pass.py) would spend one more mocked call per reply

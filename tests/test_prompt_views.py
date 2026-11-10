@@ -4,7 +4,9 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 import serve  # noqa: E402
 
 

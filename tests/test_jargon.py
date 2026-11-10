@@ -11,7 +11,9 @@ import unittest
 import unittest.mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools", "client_generators"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.tool("client_generators"))
 import jargon  # noqa: E402
 
 

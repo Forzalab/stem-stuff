@@ -7,7 +7,9 @@ import unittest
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 import livefig  # noqa: E402
 import views_gate  # noqa: E402
 

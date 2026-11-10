@@ -10,7 +10,9 @@ import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))   # never the repo tries.json
 spec = importlib.util.spec_from_file_location("slip_coverage", os.path.join(ROOT, "tools", "bank_tools", "slip_coverage.py"))

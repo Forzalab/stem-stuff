@@ -9,7 +9,9 @@ import unittest
 import urllib.error
 import urllib.parse
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools", "operations"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.tool("operations"))
 import anthropic_spend as s  # noqa: E402
 
 ADMIN = "sk-ant-admin01-SECRETSECRETSECRET"

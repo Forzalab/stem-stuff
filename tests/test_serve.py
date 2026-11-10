@@ -17,7 +17,9 @@ import urllib.error
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 import tempfile  # noqa: E402
 TMP = tempfile.mkdtemp(prefix="stem-tries-")
