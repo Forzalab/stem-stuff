@@ -5,8 +5,8 @@
  "ai_sources": [
   "/home/claude/brain/projects/socpsy/_files/socpsy-exam2-bank/bank.md",
   "/home/claude/brain/projects/socpsy/_files/socpsy-exam3/bank-ch8.md",
-  "banks/BANK_PSY6.json",
-  "banks/BANK_PSY7.json"
+  "server/data/banks/BANK_PSY6.json",
+  "server/data/banks/BANK_PSY7.json"
  ],
  "human_sources": [
   "/home/claude/brain/projects/calc/_files/phys2a-exam3-bank/src/webassign-q10-q11-hw11-and-psyc-guide.txt",

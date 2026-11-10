@@ -415,7 +415,7 @@ elif [ "$base" -eq 1 ]; then
 fi
 if [ "${#specs[@]}" -gt 0 ]; then
   PORT="$(free_port)"
-  python3 serve.py "$PORT" >"$TMP/serve.log" 2>&1 & SRV=$!
+  python3 server/serve.py "$PORT" >"$TMP/serve.log" 2>&1 & SRV=$!
   for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && break; sleep 0.2; done
   for name in "${specs[@]}"; do
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env

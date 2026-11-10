@@ -3,7 +3,7 @@
  "min_ai_files": 3,
  "max_human": 0,
  "ai_sources": [
-  "problems.json"
+  "server/data/problems.json"
  ],
  "human_sources": [
   "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/1.txt",
