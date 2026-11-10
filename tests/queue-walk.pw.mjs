@@ -17,7 +17,7 @@ let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const BANKS = process.env.STEM_BANKS || join(ROOT, "banks");
+const BANKS = process.env.STEM_BANKS || join(ROOT, "server", "data", "banks");
 const BANK = process.env.QW_BANK || (existsSync(join(BANKS, "BANK_P2X.json")) ? "BANK_P2X" : "BANK_PSY6");
 const ARG = process.argv[2] || "8851", SHOTS = process.argv[3] || "";
 let BASE = ARG, srv = null, OWN = false;
