@@ -29,15 +29,15 @@ const fp = p => `(${r3(p[0])}, ${r3(p[1])})`;
 const finite = p => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
 // ─── the language ───
-export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t"], Off: ["P", "dx", "dy"], Foot: ["P", "A", "B"], Rot: ["O", "P", "deg"], Meet: ["A", "B", "C", "D"] };
+export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t"], Off: ["P", "dx", "dy"], Foot: ["P", "A", "B"], Rot: ["O", "P", "deg"], Meet: ["A", "B", "C", "D"], Centre: ["S"], Center: ["S"], Side: ["S", "side"], Edge: ["S", "i", "t"] };
 export const SHAPE_SIGS = { Seg: "Seg(A, B, opts?)", Box: "Box(C, w, h, deg?, opts?)", Poly: "Poly([A, B, C, ...], opts?)", Circle: "Circle(O, r, opts?)", Vec: "Vec(A, B, label?, opts?)", Label: "Label(P, text, opts?)", Angle: "Angle(A, O, B, label?, opts?)", Dim: "Dim(A, B, text, opts?)", Curve: "Curve([A, B, C, ...], opts?)" };
 export const MAX_LAYERS = 6;                         // Tony Q42: 2-4 recommended, 6 max; a 7th Layer is an llm finding
 export const LAYER_SIG = 'Layer([ids...], {hide: [ids], zoom: [ids], lit: [ids], title: "..."})';
-const SIGS = { ...Object.fromEntries(Object.entries(POINT_OPS).map(([k, v]) => [k, `${k}(${v.join(", ")})`])), ...SHAPE_SIGS, Figure: "Figure([ids...])", Fix: "Fix(target, {trait: value})", Layer: LAYER_SIG, Union: "Union([ids...], opts?)" };
-const META = new Set(["Fix", "Layer", "Union"]);   // statements outside the DAG (they name other statements): validated at rebuild, never values
+const SIGS = { ...Object.fromEntries(Object.entries(POINT_OPS).map(([k, v]) => [k, `${k}(${v.join(", ")})`])), ...SHAPE_SIGS, Figure: "Figure([ids...])", Fix: "Fix(target, {trait: value})", Layer: LAYER_SIG, Union: "Union([ids...], opts?)", Shush: 'Shush(fid, "reason")' };
+const META = new Set(["Fix", "Layer", "Union", "Shush"]);   // statements outside the DAG (they name other statements): validated at rebuild, never values
 export const KINDS = ["solid", "surface", "inside", "overlay"];
 export const TONES = ["sky", "amber", "orange", "violet", "pink", "cyan", "ink", "muted"];
-const OPT_KEYS = ["kind", "in", "tone", "layer", "fill", "label", "legend", "closed", "mirror", "w"], CURVE_KEYS = ["closed", "mirror", "w"];
+const OPT_KEYS = ["kind", "in", "tone", "shade", "fill", "label", "legend", "closed", "mirror", "w"], CURVE_KEYS = ["closed", "mirror", "w"];
 const AREA = new Set(["Box", "Poly", "Circle"]), DECOR = new Set(["Vec", "Label", "Angle", "Dim"]);
 const FIX_TRAITS = { Pt: ["x", "y"], Box: ["w", "h", "deg"], Circle: ["r"], Seg: [], Poly: [], Vec: ["label"], Label: ["text"], Angle: ["label"], Dim: ["text"], Curve: [], Union: [] };
 const isArea = sh => AREA.has(sh.comp) || (sh.comp === "Curve" && sh.geom.area);   // a closed or wide Curve is an area; an open thin one is a line
@@ -56,10 +56,17 @@ function tokenize(s) {
       if (j >= s.length) throw perr("parse", "unclosed string");
       out.push({ t: "str", v }); i = j + 1; continue;
     }
+    if (c === "\u2212" || c === "\u2013") { out.push({ t: "-" }); i++; continue; }   // E5: a pasted minus / en dash reads as "-" (strings already returned above)
     const m = /^(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?/.exec(s.slice(i, i + 40));
     if (m) { out.push({ t: "num", v: parseFloat(m[0]) }); i += m[0].length; continue; }
     const id = /^[A-Za-z_Ͱ-Ͽ][\wͰ-Ͽ]*/.exec(s.slice(i, i + 80));
-    if (id) { out.push({ t: "id", v: id[0] }); i += id[0].length; continue; }
+    if (id) {
+      i += id[0].length;
+      const part = s[i] === "." && /^[A-Za-z_]\w*/.exec(s.slice(i + 1, i + 81));   // v.tail, not the number .5
+      if (part) { out.push({ t: "dotted", id: id[0], part: part[0] }); i += part[0].length + 1; }
+      else out.push({ t: "id", v: id[0] });
+      continue;
+    }
     if ("()[]{},:=+-*/".includes(c)) { out.push({ t: c }); i++; continue; }
     throw perr("parse", `unexpected "${c}"`);
   }
@@ -71,13 +78,44 @@ function parseTokens(toks) {
   const peek = () => toks[i], take = t => { const k = toks[i]; if (!k || (t && k.t !== t)) throw perr("parse", `expected "${t}"${k ? ` near "${k.v ?? k.t}"` : " at end of line"}`); i++; return k; };
   function list(close) {
     const items = [];
-    while (peek() && peek().t !== close) { items.push(expr(0)); if (peek() && peek().t === ",") i++; else break; }
+    while (peek() && peek().t !== close) { items.push(item()); if (peek() && peek().t === ",") i++; else break; }
     take(close);
     return items;
+  }
+  // E5: a bare "(x, y)" of two numeric expressions where an ARGUMENT or LIST ITEM starts is Pt(x, y);
+  // "(1 + 2) * 3" and "(2)" fall back to plain grouping (no comma, or the paren is not the whole item)
+  function item() {
+    if (peek() && peek().t === "(") {
+      const save = i;
+      try {
+        i++;
+        const a = expr(0);
+        if (peek() && peek().t === ",") {
+          i++;
+          const b = expr(0), next = toks[i + 1];
+          if (a.t === "num" && b.t === "num" && peek() && peek().t === ")" && (!next || [",", ")", "]"].includes(next.t))) {
+            i++;
+            return { t: "call", name: "Pt", args: [a, b] };
+          }
+        }
+      } catch { /* not a point: parse it again as grouping */ }
+      i = save;
+    }
+    return expr(0);
+  }
+  // W2: dotted sugar compiles to the same point ops; measures are a separate node for Expect (T4)
+  function dotted(k) {
+    const r = { t: "ref", id: k.id };
+    if (k.part === "tail" || k.part === "head") return { t: "dot", id: k.id, part: k.part };
+    if (k.part === "centre" || k.part === "center") return { t: "call", name: "Centre", args: [r] };
+    if (["top", "bottom", "left", "right"].includes(k.part)) return { t: "call", name: "Side", args: [r, { t: "str", v: k.part }] };
+    if (["length", "width", "height", "area"].includes(k.part)) return { t: "measure", of: k.id, m: k.part };
+    throw perr("bad-args", `${k.id}.${k.part}: unknown part (allowed: tail, head, centre, center, top, bottom, left, right, length, width, height, area)`);
   }
   function primary() {
     const k = take();
     if (k.t === "num" || k.t === "str") return { t: k.t, v: k.v };
+    if (k.t === "dotted") return dotted(k);
     if (k.t === "-") { const e = primary(); if (e.t !== "num") throw perr("parse", "minus needs a number"); return { t: "num", v: -e.v }; }
     if (k.t === "(") { const e = expr(0); take(")"); return e; }
     if (k.t === "[") return { t: "arr", items: list("]") };
@@ -116,7 +154,8 @@ function parseTokens(toks) {
 }
 function refsOf(node, out = new Set()) {
   if (!node) return out;
-  if (node.t === "ref") out.add(node.id);
+  if (node.t === "ref" || node.t === "dot") out.add(node.id);
+  else if (node.t === "measure") out.add(node.of);
   else if (node.t === "call") node.args.forEach(a => refsOf(a, out));
   else if (node.t === "arr") node.items.forEach(a => refsOf(a, out));
   else if (node.t === "obj") node.entries.forEach(([k, v]) => { if (k === "in" || v.t !== "ref") refsOf(v, out); });   // a bare word in opts ({kind: surface}) is a string, not a ref; only `in:` names a statement
@@ -125,14 +164,16 @@ function refsOf(node, out = new Set()) {
 /** one statement's text -> { id, comp, args, deps } or throws {code, message} */
 export function parseStatement(text) {
   const { id, call } = parseTokens(tokenize(text));
-  if (call.t !== "call") throw perr("parse", `${id}: the right side must be a component call like Pt(0, 0)`);
-  if (!(call.name in SIGS)) throw perr("unknown-comp", `${id}: unknown component ${call.name} (known: ${Object.keys(SIGS).join(" ")})`);
-  const deps = call.name === "Layer" || call.name === "Union" ? new Set() : refsOf(call);   // Layer / Union name statements (forward refs fine); not DAG nodes
-  checkInline(call);
+  if (!["call", "dot", "measure"].includes(call.t)) throw perr("parse", `${id}: the right side must be a component call like Pt(0, 0)`);
+  const comp = call.t === "call" ? call.name : call.t === "dot" ? "Dot" : "Measure";   // dotted sugar as a statement
+  if (call.t === "call" && !(comp in SIGS)) throw perr("unknown-comp", `${id}: unknown component ${comp} (known: ${Object.keys(SIGS).join(" ")})`);
+  const args = call.t === "call" ? call.args : [call];
+  const deps = comp === "Layer" || comp === "Union" || comp === "Shush" ? new Set() : refsOf(call);   // Layer / Union / Shush name statements / findings (forward refs fine); not DAG nodes
+  checkInline({ t: "call", name: comp, args });
   let inlinePts = 0;
   const countPt = n => { if (n.t === "call") { if (n.name === "Pt") inlinePts++; n.args.forEach(countPt); } else if (n.t === "arr") n.items.forEach(countPt); else if (n.t === "obj") n.entries.forEach(([, v]) => countPt(v)); };
-  call.args.forEach(countPt);
-  return { id, comp: call.name, args: call.args, deps: [...deps], inlinePts };
+  args.forEach(countPt);
+  return { id, comp, args, deps: [...deps], inlinePts };
 }
 function checkInline(call) {
   for (const a of call.args) walk(a);
@@ -276,6 +317,88 @@ function bboxOf(pts) {
   for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
   return { x0, y0, x1, y1 };
 }
+/** the points that define a shape's extent (for bbox-based anchors / measures) */
+function geomPts(sh) {
+  const g = sh.geom || {};
+  if (g.pts) return g.pts;
+  if (g.line) return g.line;
+  if (g.c && g.r != null) return [add(g.c, [-g.r, -g.r]), add(g.c, [g.r, g.r])];
+  const out = [];
+  for (const k of ["a", "b", "p", "o"]) if (g[k]) out.push(g[k]);
+  return out;
+}
+/** A1: Centre(shape) = Box / Circle centre, Poly / closed Curve centroid, Seg / Vec / Dim midpoint */
+function centrePoint(sh, id) {
+  if (!sh || sh.t !== "shape") throw perr("bad-args", `${id}: Centre(...) needs a shape`);
+  const g = sh.geom;
+  if (sh.comp === "Box" || sh.comp === "Circle") return g.c;
+  if (sh.comp === "Poly" || (sh.comp === "Curve" && g.closed)) return centroid({ kind: "poly", pts: g.pts });
+  if (["Seg", "Vec", "Dim"].includes(sh.comp)) return mul(add(g.a, g.b), 0.5);
+  throw perr("bad-args", `${id}: Centre(...) takes a Box, Circle, Poly, closed Curve, Seg, Vec or Dim`);
+}
+/** A2: a side midpoint in the shape's OWN frame (a rotated Box keeps its bottom face on a ramp) */
+function sidePoint(sh, side, id) {
+  if (!sh || sh.t !== "shape") throw perr("bad-args", `${id}: Side(...) needs a shape`);
+  const nm = String(side), ok = ["top", "bottom", "left", "right"];
+  if (!ok.includes(nm)) throw perr("bad-args", `${id}: side must be one of ${ok.join(", ")}`);
+  const g = sh.geom;
+  if (sh.comp === "Box") {
+    const a = (g.deg || 0) * DEG, u = [Math.cos(a), Math.sin(a)], v = [-u[1], u[0]];
+    return add(g.c, nm === "top" ? mul(v, g.h / 2) : nm === "bottom" ? mul(v, -g.h / 2) : nm === "left" ? mul(u, -g.w / 2) : mul(u, g.w / 2));
+  }
+  if (sh.comp === "Circle") return add(g.c, nm === "top" ? [0, g.r] : nm === "bottom" ? [0, -g.r] : nm === "left" ? [-g.r, 0] : [g.r, 0]);
+  if (sh.comp === "Poly" || sh.comp === "Curve") {   // limit: Poly / Curve sides use the axis-aligned bbox
+    const b = bboxOf(geomPts(sh));
+    return nm === "top" ? [(b.x0 + b.x1) / 2, b.y1] : nm === "bottom" ? [(b.x0 + b.x1) / 2, b.y0] : nm === "left" ? [b.x0, (b.y0 + b.y1) / 2] : [b.x1, (b.y0 + b.y1) / 2];
+  }
+  throw perr("bad-args", `${id}: Side(...) takes a Box, Circle, Poly or Curve`);
+}
+/** A3: Edge(poly, i, t) / Edge(curve, i, t); a Box uses Side */
+function edgePoint(sh, i, t, id) {
+  if (!sh || sh.t !== "shape") throw perr("bad-args", `${id}: Edge(...) needs a shape`);
+  if (sh.comp === "Box") throw perr("bad-args", `${id}: Edge(box, ...) is not supported: use Side(box, "top"|"bottom"|"left"|"right")`);
+  let pts;
+  if (sh.comp === "Poly") pts = sh.geom.pts;
+  else if (sh.comp === "Curve") pts = sh.geom.line;
+  else throw perr("bad-args", `${id}: Edge(...) takes a Poly or Curve`);
+  const n = sh.comp === "Curve" && !sh.geom.closed ? pts.length - 1 : pts.length;
+  if (!Number.isInteger(i) || i < 0 || i >= n) throw perr("bad-args", `${id}: edge index ${i} is out of range (0..${n - 1})`);
+  if (!(t >= 0 && t <= 1)) throw perr("bad-args", `${id}: t must be between 0 and 1`);
+  return add(pts[i], mul(sub(pts[(i + 1) % pts.length], pts[i]), t));
+}
+/** measureOf(shape, m): a pure measure for Expect (T4); length = longest side except Seg/Vec/Dim */
+export function measureOf(shape, m) {
+  if (!shape || !shape.geom) throw perr("bad-args", "measureOf needs a shape");
+  const comp = shape.comp, g = shape.geom, b = bboxOf(geomPts(shape)), w = b.x1 - b.x0, h = b.y1 - b.y0;
+  if (comp === "Box") {
+    if (m === "width") return g.w;
+    if (m === "height") return g.h;
+    if (m === "area") return g.w * g.h;
+    if (m === "length") return Math.max(g.w, g.h);
+  }
+  if (comp === "Circle") {
+    if (m === "width" || m === "height" || m === "length") return 2 * g.r;
+    if (m === "area") return Math.PI * g.r * g.r;
+  }
+  if (["Seg", "Vec", "Dim"].includes(comp)) {
+    if (m === "length") return len(sub(g.b, g.a));
+    if (m === "width") return w;
+    if (m === "height") return h;
+  }
+  if (comp === "Poly" || (comp === "Curve" && g.closed)) {
+    if (m === "area") return Math.abs(signedArea(g.pts));
+    if (m === "width") return w;
+    if (m === "height") return h;
+    if (m === "length") return Math.max(w, h);
+  }
+  if (comp === "Curve") {   // an open Curve has bbox sides, no area
+    if (m === "width") return w;
+    if (m === "height") return h;
+    if (m === "length") return Math.max(w, h);
+  }
+  if (!["length", "width", "height", "area"].includes(m)) throw perr("bad-args", "measure must be length, width, height or area");
+  throw perr("bad-args", `${comp} has no measure "${m}"`);
+}
 function outOf(a, b, body) {   // figcheck outOf for a bare segment (world space): up, or the body's side of a wall
   const n = unit([-(b[1] - a[1]), b[0] - a[0]]);
   if (Math.abs(n[1]) > EPS) return n[1] > 0 ? n : mul(n, -1);
@@ -354,6 +477,18 @@ export function createSession(opts = {}) {
   function fresh() { return { vals: new Map(), status: new Map(), findings: [], ghosts: [], order: [], blockedBy: new Map(), patches: new Map(), fixErr: new Map(), moved: new Map() }; }
   S = fresh();
 
+  // ── finding ids: stable per session (e1/w1), keyed by code + sorted ids + line ──
+  const fids = new Map(), fidN = { e: 0, w: 0 };
+  function assignFid(f) {
+    f.sev = f.cls === "fyi" ? "warning" : "error";
+    if (f.fid) return f;
+    const key = `${f.code}|${[...(f.ids || [])].sort().join(",")}|${f.line ?? ""}`;
+    let fid = fids.get(key);
+    if (!fid) { const k = f.sev === "error" ? "e" : "w"; fid = k + (++fidN[k]); fids.set(key, fid); }
+    f.fid = fid;
+    return f;
+  }
+
   const byId = id => stmts.find(s => s.id === id);
   const shapesEval = () => S.order.map(id => S.vals.get(id)).filter(v => v && v.t === "shape");
   function span() {
@@ -369,6 +504,7 @@ export function createSession(opts = {}) {
     const out = { code: f.code, cls: f.cls || "llm", ids: f.ids, amount: f.amount != null ? r3(f.amount) : null, mtv: f.mtv ? rv(f.mtv) : null, hint: f.hint, line: f.line ?? st?.line ?? null, pass: f.pass ?? st?.pass ?? 1 };
     if (f.blocked) out.blocked = f.blocked;
     if (out.cls === "fyi") out.hint = `${out.hint} (no action needed)`;
+    assignFid(out);
     S.findings.push(out); emit({ type: "finding", f: out });
     return out;
   }
@@ -380,6 +516,12 @@ export function createSession(opts = {}) {
       case "null": return null;
       case "arr": return n.items.map(val);
       case "obj": return Object.fromEntries(n.entries.map(([k, v]) => [k, v.t === "ref" ? v.id : val(v)]));
+      case "dot": {
+        const sh = S.vals.get(n.id);
+        if (!sh || sh.t !== "shape" || !["Vec", "Seg", "Dim"].includes(sh.comp)) throw perr("bad-args", `${n.id}.${n.part}: tail / head is only for a Vec, Seg or Dim`);
+        return { t: "pt", p: n.part === "tail" ? sh.geom.a : sh.geom.b, free: false, inline: true };
+      }
+      case "measure": throw perr("bad-args", `measures are only for Expect (found ${n.of}.${n.m})`);
       case "ref": return S.vals.get(n.id);
       case "call": return { t: "pt", p: pointOp(n.name, n.args.map(val), n.name), free: false, inline: true };
     }
@@ -405,6 +547,9 @@ export function createSession(opts = {}) {
         p = add(A, mul(d, dot(sub(P, A), d) / L2)); break;
       }
       case "Rot": { const O = asPt(a[0], "O"), P = asPt(a[1], "P"); p = add(O, rot(sub(P, O), asNum(a[2], "deg") * DEG)); break; }
+      case "Centre": case "Center": p = centrePoint(a[0], id); break;
+      case "Side": p = sidePoint(a[0], a[1], id); break;
+      case "Edge": p = edgePoint(a[0], asNum(a[1], "i"), asNum(a[2], "t"), id); break;
       case "Meet": {
         const A = asPt(a[0], "A"), B = asPt(a[1], "B"), C = asPt(a[2], "C"), D = asPt(a[3], "D"), r = sub(B, A), s = sub(D, C), den = cross(r, s);
         if (Math.abs(den) <= 1e-9 * Math.max(1, len(r) * len(s))) throw perr("undefined", `${id}: Meet of parallel lines (AB and CD never cross): pick lines that cross`);
@@ -430,21 +575,23 @@ export function createSession(opts = {}) {
     if (i < a.length) throw perr("bad-args", `${SIGS[c]}: unexpected extra argument ${i + 1}`);
     const patch = S.patches.get(st.id);
     if (patch) for (const [k, v] of Object.entries(patch)) { if (OPT_KEYS.includes(k) && !FIX_TRAITS[c].includes(k)) n.opts = { ...n.opts, [k]: v }; else n[k] = v; }   // Box w is a trait, Curve w an option
-    const u = meta().unionOf.get(st.id);       // a Union's kind / tone / layer / fill fill in what the member leaves out
-    if (u) { const uo = { ...u.opts, ...(S.patches.get(u.id) || {}) }; for (const k of ["kind", "tone", "layer", "fill"]) if (uo[k] != null && n.opts[k] == null && !(k === "kind" && DECOR.has(c))) n.opts = { ...n.opts, [k]: uo[k] }; }
+    const u = meta().unionOf.get(st.id);       // a Union's kind / tone / shade / fill fill in what the member leaves out
+    if (u) { const uo = { ...u.opts, ...(S.patches.get(u.id) || {}) }; for (const k of ["kind", "tone", "shade", "fill"]) if (uo[k] != null && n.opts[k] == null && !(k === "kind" && DECOR.has(c))) n.opts = { ...n.opts, [k]: uo[k] }; }
     return n;
   }
   function checkOpts(op, comp) {
+    if ("layer" in op) throw perr("bad-args", "layer: was renamed: use shade: 1, 2 or 3 (Layer(...) is the step stack)");
     for (const k of Object.keys(op)) if (!OPT_KEYS.includes(k)) throw perr("bad-args", `unknown option "${k}" (known: ${OPT_KEYS.join(", ")})`);
     if (op.kind != null && !KINDS.includes(op.kind)) throw perr("bad-args", `kind must be one of ${KINDS.join(", ")}`);
     if (op.kind === "inside" && !op.in) throw perr("bad-args", `kind "inside" needs in: <container id>`);
     if (op.tone != null && !TONES.includes(op.tone)) throw perr("bad-args", `tone must be one of ${TONES.join(", ")} (palette hues only)`);
-    if (op.layer != null && ![1, 2, 3].includes(op.layer)) throw perr("bad-args", "layer must be 1, 2 or 3");
+    if (op.shade != null && ![1, 2, 3].includes(op.shade)) throw perr("bad-args", "shade must be 1, 2 or 3");
     if (DECOR.has(comp) && op.kind && op.kind !== "overlay") throw perr("bad-args", `${comp} is decor: no kind but overlay`);
     if (comp !== "Curve") { const k = CURVE_KEYS.find(x => x in op); if (k) throw perr("bad-args", `${k} is a Curve option`); }
     if (op.legend != null && (typeof op.legend !== "string" || !op.legend.trim())) throw perr("bad-args", `legend is the object's name, a string: {legend: "elephant"}`);
   }
   function compute(st) {
+    if (st.comp === "Dot" || st.comp === "Measure") return val(st.args[0]);   // W2 sugar: a point / a measure (throws today)
     if (st.comp in POINT_OPS) {
       const a = st.args.map(val);
       const patch = S.patches.get(st.id);
@@ -534,9 +681,10 @@ export function createSession(opts = {}) {
   }
   function unionSpec(st) {
     const [first, opt] = st.args, out = { id: st.id, st, members: idList(first) || [], opts: {}, err: null };
-    if (!idList(first) || st.args.length > 2 || (opt && opt.t !== "obj")) out.err = `${st.id}: write Union([ids...], {kind, tone, layer, fill, label, legend})`;
+    if (!idList(first) || st.args.length > 2 || (opt && opt.t !== "obj")) out.err = `${st.id}: write Union([ids...], {kind, tone, shade, fill, label, legend})`;
     else if (opt) for (const [k, v] of opt.entries) {
-      if (!["kind", "tone", "layer", "fill", "label", "legend"].includes(k)) { out.err = `${st.id}: unknown Union option "${k}" (known: kind, tone, layer, fill, label, legend)`; continue; }
+      if (k === "layer") { out.err = `${st.id}: layer: was renamed: use shade: 1, 2 or 3 (Layer(...) is the step stack)`; continue; }
+      if (!["kind", "tone", "shade", "fill", "label", "legend"].includes(k)) { out.err = `${st.id}: unknown Union option "${k}" (known: kind, tone, shade, fill, label, legend)`; continue; }
       out.opts[k] = litVal(v);
     }
     if (!out.err) try { checkOpts(out.opts, "Union"); } catch (e) { out.err = `${st.id}: ${e.message}`; }
@@ -764,7 +912,7 @@ export function createSession(opts = {}) {
     if (!t || t.t !== "ref" || !patch || patch.t !== "obj" || st.args.length !== 2) return perr("bad-args", `${st.id}: write Fix(target, {trait: value})`);
     const target = byId(t.id);
     if (!target || target.comp === "Fix" || target.comp === "Layer") return perr("undefined-ref", `${st.id}: Fix target ${t.id} is not defined`);
-    if (target.comp in POINT_OPS && target.comp !== "Pt") {
+    if ((target.comp in POINT_OPS && target.comp !== "Pt") || target.comp === "Dot" || target.comp === "Measure") {
       const roots = freeRoots(target.id);
       return perr("fix-derived", `${t.id} is derived (${target.comp}); a Fix may not move it. Fix its free source point${roots.length > 1 ? "s" : ""} instead (${roots.join(", ") || "none"}), or its shape params`);
     }
@@ -824,6 +972,7 @@ export function createSession(opts = {}) {
     catch (e) {
       const id = /^\s*([A-Za-z_]\w*)\s*=/.exec(text)?.[1] || `line${line}`;
       const f = { code: e.code || "parse", cls: "llm", ids: [id], amount: null, mtv: null, hint: `${e.message}: ${text.slice(0, 60)}`, line, pass };
+      assignFid(f);
       parseFindings.push(f); S.findings.push(f); emit({ type: "finding", f });
       return;
     }
@@ -918,6 +1067,77 @@ export function createSession(opts = {}) {
     for (const x of M.dupes) F("union-dup", "fyi", M.unions.find(u => u.id === x.of[1]), [x.id, ...x.of], `${x.id} is in two Unions (${x.of.join(", ")}); it belongs to ${x.of[0]}`);
     return out;
   }
+  // ── Shush: the drawer accepts one warning, with a reason; errors are never shushable ──
+  function shushSpec(st) {
+    const [t, r] = st.args, out = { id: st.id, st, fid: null, reason: null, err: null };
+    if (st.args.length !== 2 || !t || t.t !== "ref") { out.err = `${st.id}: write ${SIGS.Shush}`; return out; }
+    out.fid = t.id;
+    if (!r || r.t !== "str") { out.err = `${st.id}: the reason must be a string of at least 15 characters after trimming`; return out; }
+    out.reason = r.v;
+    if (out.reason.trim().length < 15) { out.err = `${st.id}: the reason must be at least 15 characters after trimming (a warning can be forgiven, never an error)`; return out; }
+    return out;
+  }
+  /** apply the Shush statements to the final findings: a warning moves to `shushed`, an error stays + a shush-error finding */
+  function applyShush(base) {
+    const all = base.slice(), byFid = new Map(), shushed = [], gone = new Set();
+    const index = () => { for (const f of all) { assignFid(f); if (!byFid.has(f.fid)) byFid.set(f.fid, f); } };
+    index();
+    for (const st of stmts.filter(s => s.comp === "Shush")) {
+      const spec = shushSpec(st);
+      let err = null;
+      if (spec.err) err = { code: "bad-args", hint: spec.err };
+      else {
+        const target = byFid.get(spec.fid);
+        if (!target) err = { code: "undefined-ref", hint: `${st.id}: Shush target ${spec.fid} is not a finding in this session` };
+        else if (target.sev === "error") err = { code: "shush-error", hint: `errors cannot be shushed: fix ${spec.fid}` };
+        else if (gone.has(spec.fid)) { S.status.set(st.id, "ok"); continue; }   // a second Shush of one warning: the first reason wins
+        else { gone.add(spec.fid); shushed.push({ fid: spec.fid, reason: spec.reason.trim(), finding: target }); S.status.set(st.id, "ok"); continue; }
+      }
+      const f = { code: err.code, cls: "llm", ids: [st.id], amount: null, mtv: null, hint: err.hint, line: st.line, pass: st.pass };
+      assignFid(f); all.push(f); byFid.set(f.fid, f);
+      S.status.set(st.id, "error");
+    }
+    const findings = all.filter(f => !gone.has(f.fid));
+    findings.sort((a, b) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)));
+    return { findings, shushed };
+  }
+  // ─── T2 / Slice 0.5 item 2: the answer-leak check (ported from views_gate._leak + livefig.nums/_eq/_sig3) ───
+  function leakFindings() {
+    if (o.givens === undefined && o.answers === undefined) return [];   // no givens / answers: nothing changes
+    const givens = Array.isArray(o.givens) ? o.givens : [], answers = Array.isArray(o.answers) ? o.answers : [];
+    const eq = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1.0, Math.abs(b));   // livefig._eq
+    const sig3 = (a, b) => (b !== 0 && Math.abs(a - b) <= 0.5 * Math.pow(10, Math.floor(Math.log10(Math.abs(b))) - 2) * (1 + 1e-9)) || (a === b && b === 0);   // livefig._sig3
+    const SLOT = /^\$t\.[a-z][a-z0-9_]{0,31}$/;               // oui.slot_id: a "$t.id" slot is not words
+    const NUM = /\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g;            // livefig.NUM_RE
+    const out = [];
+    const test = (text, st) => {
+      if (text == null || text === "" || SLOT.test(text)) return;
+      const bare = String(text).replace(/_{[^}]*}|_\w/g, "");   // a subscript names a quantity (R_1, v_{0}), never a number
+      for (const m of bare.matchAll(NUM)) {
+        const x = Number(m[0]);
+        if (!Number.isFinite(x) || Math.abs(x) > 1e4) continue;  // livefig.GEOM_MAX: this check fires only leak / not-given
+        const base = { ids: [st.id], amount: null, mtv: null, line: st.line, pass: st.pass };
+        if (answers.some(a => sig3(Math.abs(x), a))) out.push({ ...base, code: "leak", cls: "llm", hint: `"${text}" shows ${x}, the answer: write a symbol instead` });
+        else if (!givens.some(g => eq(Math.abs(x), g))) out.push({ ...base, code: "not-given", cls: "fyi", hint: `"${text}" shows ${x}, which is not a given` });
+      }
+    };
+    for (const sh of shapesEval()) {                          // Label text, Vec / Angle label, Dim text, label: / legend:
+      const g = sh.geom;
+      if (sh.comp === "Label") test(g.text, sh);
+      else if (sh.comp === "Vec" || sh.comp === "Angle") test(g.label, sh);
+      else if (sh.comp === "Dim") test(g.text, sh);
+      else if (sh.opts.label != null && sh.opts.label !== "") test(sh.opts.label, sh);
+      if (sh.opts.legend) test(sh.opts.legend, sh);
+    }
+    const M = meta();
+    for (const u of M.unions) if (!u.err) {                   // a Union's label / legend (with its Fix patches)
+      const uo = { ...u.opts, ...(S.patches.get(u.id) || {}) };
+      if (uo.label != null && uo.label !== "") test(uo.label, u.st);
+      if (uo.legend) test(uo.legend, u.st);
+    }
+    for (const d of M.layers) if (!d.err && d.title) test(d.title, d.st);   // Layer title (the engine's "Step k" default is not author text)
+    return out;
+  }
   function result(opt = {}) {
     const W = opt.W || o.W, M = meta();
     const shapes = shapesEval().sort((a, b) => a.idx - b.idx);
@@ -945,10 +1165,12 @@ export function createSession(opts = {}) {
       for (const st of steps) for (const f of st.fyi) { const key = f.ids.join() + "|" + f.hint; if (!seen.has(key)) { seen.add(key); fyi.push(f); } }
       lay = { ...steps[n], fyi };
     }
-    const findings = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
+    const base = [...S.findings, ...pendingFindings(), ...metaFindings(), ...lay.fyi, ...planFindings(), ...leakFindings()].map((f, i) => [f, i]).sort(([a, i], [b, j]) => (a.pass - b.pass) || ((a.line ?? 1e9) - (b.line ?? 1e9)) || (i - j)).map(([f]) => f);
+    for (const f of base) assignFid(f);
+    const { findings, shushed } = stmts.some(s => s.comp === "Shush") ? applyShush(base) : { findings: base, shushed: [] };
     const status = Object.fromEntries(stmts.map(s => [s.id, S.status.get(s.id) || "pending"]));
     return {
-      plan: planOut(), points, findings, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
+      plan: planOut(), points, findings, unresolved: findings, shushed, ghosts: S.ghosts, labels: lay.labels, dims: lay.dims, legend: lay.legend, view: lay.view, tol: r3(tolNow()), span: r3(span()), status,
       shapes: shapes.map(pub), unions, steps,
       stmts: stmts.map(s => ({ id: s.id, comp: s.comp, line: s.line, pass: s.pass, deps: s.deps, step: M.layers.length ? stepOf(s.id) : undefined })),
       // raw-coordinate points: a HINT for the LLM (derive points instead), never an error
@@ -1054,10 +1276,10 @@ export function freePointsHint(res) {
   const n = res.free.named.length + res.free.inline;
   return `Hint (not an error): ${n} free point${n === 1 ? "" : "s"} with raw coordinates${res.free.named.length ? ` (${res.free.named.join(", ")}${res.free.inline ? ` + ${res.free.inline} inline Pt` : ""})` : res.free.inline ? ` (${res.free.inline} inline Pt)` : ""}. Fewer is better: derive points from others (Mid, Along, Off, Foot, Rot, Meet) so they move together.`;
 }
-export function formatFindings(findings) {
-  const one = f => `- [${f.cls}] ${f.code} ids=[${f.ids.join(", ")}] ${f.pass === 2 ? "pass2 " : ""}line ${f.line ?? "?"}${f.amount != null ? ` amount ${f.amount}` : ""}${f.mtv ? ` push ${fv(f.mtv)}` : ""}: ${f.hint}${f.blocked && f.blocked.length && !/blocked by it/.test(f.hint) ? ` (blocks: ${f.blocked.join(", ")})` : ""}`;
+export function formatFindings(findings, shushed = []) {
+  const one = f => `${f.fid ? `${f.fid} ` : "- "}[${f.cls}] ${f.code} ids=[${f.ids.join(", ")}] ${f.pass === 2 ? "pass2 " : ""}line ${f.line ?? "?"}${f.amount != null ? ` amount ${f.amount}` : ""}${f.mtv ? ` push ${fv(f.mtv)}` : ""}: ${f.hint}${f.blocked && f.blocked.length && !/blocked by it/.test(f.hint) ? ` (blocks: ${f.blocked.join(", ")})` : ""}`;
   const llm = findings.filter(f => f.cls === "llm"), fyi = findings.filter(f => f.cls !== "llm");
-  return [llm.length ? "Fix these:" : "No spatial errors.", ...llm.map(one), ...(fyi.length ? ["FYI (no action needed):", ...fyi.map(one)] : [])].join("\n");
+  return [llm.length ? "Fix these:" : "No spatial errors.", ...llm.map(one), ...(fyi.length ? ["FYI (no action needed):", ...fyi.map(one)] : []), ...(shushed.length ? ["Shushed:", ...shushed.map(s => `- ${s.fid}: ${s.reason}`)] : [])].join("\n");
 }
 
 // ─── view + label layout (screen px, y down). Every label sits INSIDE its anchor or RIGHT NEXT to it without crossing a stroke, a
@@ -1203,7 +1425,7 @@ export function layoutView(shapes, ghosts = [], W = 360, opt = {}) {
   const reqs = [...shapes.map(sh => ({ sh })), ...unions.filter(u => u.members.some(m => shapes.some(s => s.id === m))).map(u => ({ u }))];
   for (const { sh, u } of reqs) {
     if (u) {                                      // a Union: one object; its label beside the whole group, its legend draws all parts
-      const parts = shapes.filter(s => u.members.includes(s.id)), tone = u.opts.tone || "ink", layer = u.opts.layer || 1, base = { id: u.id, tone, layer };
+      const parts = shapes.filter(s => u.members.includes(s.id)), tone = u.opts.tone || "ink", layer = u.opts.shade || 1, base = { id: u.id, tone, layer };
       if (u.opts.legend) toLegend(u.id, u.id, u.opts.legend, tone, layer, false);
       if (u.opts.label != null && u.opts.label !== "") {
         const text = String(u.opts.label), w = textW(text) + 6, bb = bboxOf(worldPts(parts).map(X)), self = selfOf(u.members[0]);
@@ -1212,7 +1434,7 @@ export function layoutView(shapes, ghosts = [], W = 360, opt = {}) {
       }
       continue;
     }
-    const g = sh.geom, tone = toneOf(sh), layer = sh.opts.layer || 1, base = { id: sh.id, tone, layer }, self = selfOf(sh.id);
+    const g = sh.geom, tone = toneOf(sh), layer = sh.opts.shade || 1, base = { id: sh.id, tone, layer }, self = selfOf(sh.id);
     if (sh.opts.legend) toLegend(sh.id, sh.id, sh.opts.legend, sh.opts.tone || unionOf.get(sh.id)?.opts.tone || "ink", layer, false);
     const tryList = (cands, text, w, h = LH) => { const c = cands.find(c => free(rectPoly(c, w, h), self)); if (c) take(base, text, c, w, h); return !!c; };
     if (sh.comp === "Dim") {
