@@ -82,7 +82,7 @@ const UPLOAD = join(tmp, "problems.json");
 writeFileSync(UPLOAD, JSON.stringify({ v: 1, problems: [1, 2, 3].map(n => ({ ...q5(n), code: `CALC1_U0${n}`, body: [{ type: "text", md: `Upload ${n}: pick a.` }] })) }));
 
 /* serve.py on a free port (tests/queue-walk.pw.mjs bootstrap; stdio ignored = non-TTY, so the Q4 guard never prompts). Killed by its own handle only. */
-const serve = (root, port, tag) => spawn("python3", [join(root, "serve.py"), String(port)], { cwd: root,
+const serve = (root, port, tag) => spawn("python3", [join(root, "server", "serve.py"), String(port)], { cwd: root,
   env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, `tries-${tag}.json`), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 const up = async base => { for (let i = 0; i < 100; i++) { try { if ((await fetch(base + "/")).ok) return; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); } throw new Error("serve.py did not start on " + base); };
 const srv = serve(ROOT, PORT, "main");

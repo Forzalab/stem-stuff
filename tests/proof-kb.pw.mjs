@@ -10,7 +10,7 @@ let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8879);
-const srv = spawn("python3", ["serve.py", String(PORT)], { cwd: ROOT, stdio: "ignore" });
+const srv = spawn("python3", ["server/serve.py", String(PORT)], { cwd: ROOT, stdio: "ignore" });
 await new Promise(ok => setTimeout(ok, 1500));
 let fail = 0;
 const b = await pw.chromium.launch();
