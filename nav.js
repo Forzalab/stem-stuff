@@ -1,3 +1,24 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: nav.js
+// WHAT: Prev / Next and the questions list (ES module). Also turns TeX into plain text for titles and Copy.
+// START HERE: Next/Prev order -> §queue, §go; the question list -> §list-marks; a title or plain-text copy bug -> §titles, §tex-plain; mock night -> §mock.
+// FIND A SECTION: grep -n "== §<name> ==" nav.js   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §bank-link    ?bank= link parsing
+//   §titles       problem title as plain text
+//   §tex-plain    TeX to grader-exact plain text
+//   §nav-state    nav state: bank, mock, night
+//   §queue        one queue per bank
+//   §list-marks   done marks in the list
+//   §go           Prev/Next press
+//   §mock         night-before mock
+//   §ios-back     iOS Back
+// RELATED:
+//   app.js       imports this; owns the drill
+//   offline.js   offline question list
+//   shuffle.mjs  seeded order, mock list
+//   nav.css      styles
+// ===== END CODEMAP HEADER =====
 /* nav.js: Prev / Next and the questions list (design/NAV.md).
    The list: the open practice bank (window.stemBank, design/BANK.md), else an uploaded problems.json
    (window.stemOffline.codes()). Neither: no list (codes are the gate), so the nav stays hidden.
@@ -10,6 +31,7 @@
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
 import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, familyOf, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
+// == §bank-link ==
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
   const s = String(new URLSearchParams(search).get("bank") || "").trim().toUpperCase();
@@ -19,6 +41,7 @@ const MAX = 60;
 const SPAM_MS = 2000;                                               // a pick faster than this is a guess (Fable fix 4)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
+// == §titles ==
 /* ---------- titles: problem.title, else the first paragraph of the first text block as plain text ---------- */
 const SYM = { mu: "μ", pi: "π", theta: "θ", alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", omega: "ω", lambda: "λ",
   sigma: "σ", rho: "ρ", phi: "φ", tau: "τ", epsilon: "ε", varepsilon: "ε", cdot: "·", times: "×", div: "÷", le: "≤", leq: "≤",
@@ -44,6 +67,7 @@ export function texText(src) {
        .replace(/[{}]/g, "").replace(/_/g, "");
   return s.replace(/\s+/g, " ").trim();
 }
+// == §tex-plain ==
 /* ---------- TeX to grader-exact plain text (copy, Tony's answers for todo 108) ----------
    What a student would type into the answer box (serve.py to_python): (1/2)*m*v^2, sqrt(x^2 + 16), 2*pi*r, e^(-x/2), 3.2e-3.
    Spaces around = + binary - and relations; none around * / ^. Implicit products get "*", names (sin, sqrt, pi) never split.
@@ -361,6 +385,7 @@ function sentences(s, n = MAX) {
   return end >= n / 3 ? s.slice(0, end + 1) : clip(s, n);
 }
 
+// == §nav-state ==
 /* ---------- the nav ---------- */
 /* a ?bank= link makes its bank this browser's live list (app.js stem-src, read on DOMContentLoaded, after this module ran); the query
    goes, so a later switch to another bank sticks on reload (the last bank is remembered: stem-src) */
@@ -427,6 +452,7 @@ function init() {
   };
   const opener = deads => front() && returner() ? [] : deads;
 
+// == §queue ==
   /* ---------- the queue: one per bank (D64), saved after every change; the first open migrates the saved marks ---------- */
   let q = null, qFor = "", pending = null;
   function Q() {
@@ -540,6 +566,7 @@ function init() {
     }).join("");
   }
 
+// == §list-marks ==
   /* done marks (design/DONE.md, variant A): one X per wrong try, a tick for correct, at the row's right edge.
      Crossed out + greyed only when it can't be answered any more (correct, or out of tries); still a link. */
   const ico = (id, cls) => `<svg class="ico ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -595,6 +622,7 @@ function init() {
   if (vv) for (const ev of ["resize", "scroll"]) vv.addEventListener(ev, refit);
   addEventListener("resize", refit);
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
+// == §go ==
   /* a press that cannot move says why (app.js drill:note: a toast under Next); never a silent return (T16) */
   const note = text => { dispatchEvent(new CustomEvent("drill:note", { detail: { text } })); say(text); };
   function go(d) {
@@ -625,6 +653,7 @@ function init() {
   mix.addEventListener("click", () => { const st = Q(); st.mix = !st.mix; save(); update(cur); });   // the student switches the order (Tony #3)
   skip.addEventListener("click", () => { skipAhead(Q()); save(); go(1); });                           // strong starters: a tier up, and on
   next.addEventListener("click", () => go(1));
+// == §mock ==
   /* MOCK_NIGHTS_ON false: a mock a night started (its key stored) is done; a ?mock=1 mock (no key) goes on */
   function endNightMock() {
     let k = null; try { k = localStorage.getItem(MOCK_NIGHT); } catch { return; }
@@ -675,6 +704,7 @@ function init() {
     if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1 or the night: once the first question has opened, so app.js's first load never overwrites the mock's hash
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
+// == §ios-back ==
   /* iOS Back (design/NAV.md "iOS exception"): iOS has no system Back. One tap pops the topmost thing; it never leaves the site.
      Order: Cluck's sheet, the question list, a popover, the notes split, then the in-app previous question; else hidden (the root).
      In-app depth = history.state.stemD: 0 at the first question of the tab, +1 per question pushed (Prev/Next/list rows set the hash).
