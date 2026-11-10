@@ -2,7 +2,7 @@
 /* Affected-only selection for a pull_request run (ticket 09, PR 2): pure decision + CLI.
    The pure part takes every fact as an argument (no git, no network, no subprocess):
      node tools/ci-select.mjs --total <N> [--file <path>]...
-   prints "<kind> <reason>" (kind = full | affected) and exits 0. The workflow computes the diff. */
+   prints "<kind> <reason>" (kind = full | affected | docs) and exits 0. The workflow computes the diff. */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -53,6 +53,7 @@ export function decideSelection({ files, affectedCounts, totalUnits } = {}) {
   const list = files || [];
   const counts = affectedCounts || {};
   if (list.length === 0) return { kind: "full", reason: "no changed files (never fewer)" };
+  if (list.every((f) => !isCodeFile(f))) return { kind: "docs", reason: `docs-only: ${list.length} .md files` };
   if (isBig(list)) {
     const codeFiles = list.filter(isCodeFile).length;
     return { kind: "full", reason: `BIG: ${codeFiles} code files / ${areasOf(list).length} areas` };

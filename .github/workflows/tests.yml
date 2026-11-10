@@ -71,6 +71,7 @@ jobs:
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
       skip_block: ${{ steps.p.outputs.skip_block }}
+      docs_only: ${{ steps.p.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # the PR base sha must be in history for the selection diff
@@ -96,10 +97,11 @@ jobs:
           fi
           matrix="$(SPECS="$specs" tests/run-all.sh --plan "$BLOCKS" "$LANES")"
           echo "skip_block=$skip" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$([ "$kind" = docs ] && echo true || echo false)" >> "$GITHUB_OUTPUT"   # docs-only PR: unit + block skip
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
-    needs: decide
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'
+    needs: [decide, plan]
+    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true'   # docs-only PR: skipped
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -117,7 +119,7 @@ jobs:
       - run: node --test tests/invariants.slow.mjs   # ~50 s whole-repo invariant loops (tests/INVARIANTS.md); kept out of npm test so --fast/--quick stay fast
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: [decide, plan]
-    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true'   # zero-.pw affected PR: no block work (unit still runs)
+    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true'   # zero-.pw affected PR: no block work (unit still runs)
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
     # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
     runs-on: ubuntu-24.04
@@ -181,7 +183,7 @@ jobs:
     if: always() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     steps:
-      - run: test "${{ needs.decide.result }}" = success && test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && (test "${{ needs.block.result }}" = success || test "${{ needs.block.result }}" = skipped)
+      - run: test "${{ needs.decide.result }}" = success && test "${{ needs.plan.result }}" = success && (test "${{ needs.unit.result }}" = success || test "${{ needs.unit.result }}" = skipped) && (test "${{ needs.block.result }}" = success || test "${{ needs.block.result }}" = skipped)
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]
