@@ -41,7 +41,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   await page.waitForTimeout(300);
 
   const normal = { p: await fontOf(page, "#blocks .md p"), opt: await fontOf(page, "#q .opt .txt") };
-  /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
+  /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (docs/design/MULTITASK.md) */
   const padPage = async () => { if (!phone || await page.evaluate(() => document.documentElement.classList.contains("mt"))) return;
     await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await page.waitForTimeout(300); };
   await step(`${W} (a) focused scratchpad: one edge (border --focus + 1px inset = 2px, STYLE.md 2.6), no outline`, async () => {

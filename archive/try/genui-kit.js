@@ -1,4 +1,4 @@
-/* try/genui-kit.js: shared helpers for try/genui-ui.html + try/genui-redeem.html (agent U, Oct 7 2026).
+/* archive/try/genui-kit.js: shared helpers for archive/try/genui-ui.html + archive/try/genui-redeem.html (agent U, Oct 7 2026).
    Sprite from index.html, KaTeX helper, URL params, reduced motion, the feedback box (maxlength 4000, autogrow) and "Copy all". */
 (function (root) {
   "use strict";

@@ -1,4 +1,4 @@
-// Calc Coach in the real app (design/CALC-COACH.md): welcome card, item-view chip + cram strip + once-a-day toast, expiry (page.clock), picker hand-off, panel basics.
+// Calc Coach in the real app (docs/design/CALC-COACH.md): welcome card, item-view chip + cram strip + once-a-day toast, expiry (page.clock), picker hand-off, panel basics.
 // Own serve.py with a fixture BANK_P3X:  node tests/calc.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";

@@ -6,7 +6,7 @@ const { chromium } = require("/opt/node-tools/node_modules/playwright-core");
 const [I, OLD, OUT] = process.argv.slice(2);
 const C = "rgb(60 20 0)", RAIN = `drop-shadow(1px 0 0 ${C}) drop-shadow(-1px 0 0 ${C}) drop-shadow(0 1px 0 ${C}) drop-shadow(0 -1px 0 ${C}) drop-shadow(0 3px 3px rgb(60 20 0 / .7))`, FLY = "drop-shadow(0 2px 2px rgb(0 0 0 / .45))";
 const S = JSON.parse(process.env.AUDIT_ROWS || "null") || [
-  ["app HUD balance (and try/tries.html HUD)", "coin24", 28, "#0d0903", 1, ""],
+  ["app HUD balance (and archive/try/tries.html HUD)", "coin24", 28, "#0d0903", 1, ""],
   ["app coinFly over the page", "coin24", 22, "#08111f", 1, FLY],
   ["app slot reel tile, common tier", "coin", 60, "#ffffff", 1, ""],
   ["app coin shower 18px, legend burst: cream centre", "coin24", 18, "#fff3a6", 1, RAIN],

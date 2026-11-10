@@ -1,4 +1,4 @@
-// design/STYLE.md as code: the rules a grep can check. Each failure names its STYLE.md section.
+// docs/design/STYLE.md as code: the rules a grep can check. Each failure names its STYLE.md section.
 // Open items from STYLE.md §9 are `todo` tests: they report, they do not fail. Remove `todo` in the commit that fixes one.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -152,7 +152,7 @@ test("§5 Keyboard: no new shortcuts (keydown only on the listed elements)", () 
   assert.deepEqual(bad, [], "a new key handler is a new shortcut (STYLE.md §5 Keyboard)");
 });
 
-/* rewards/rewards.css: the sugar reward skin may look like a game, but only on its own nodes (design/REWARDS-WIRING.md §7) */
+/* rewards/rewards.css: the sugar reward skin may look like a game, but only on its own nodes (docs/design/REWARDS-WIRING.md §7) */
 test("rewards skin is scoped: every rule styles a .rw-* or .fx-* node, no :root, never the question UI", () => {
   const css = read("rewards/rewards.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const sels = [], stack = [];

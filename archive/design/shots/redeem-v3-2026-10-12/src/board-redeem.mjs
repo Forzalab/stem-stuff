@@ -10,7 +10,7 @@ const css = `<style>body{margin:0;padding:18px;font:13px/1.4 system-ui;backgroun
 .p b{display:block;margin:6px 0 2px;color:#ffd36b}.k{margin-top:12px;background:#243047;border-radius:8px;padding:10px}.ok{color:#5fd38d;font-weight:700}</style>`;
 const panel = (f, t, s, h = 640, y = -60) => `<div class=p><div style="height:${h}px;background-image:url(${png(f)});background-position:0 ${y}px"></div><b>${t}</b><span class=n>${s}</span></div>`;
 const mid = F[3];
-let h = css + `<h1>Redeem v3 (T25): the duck coin flies into the HUD, no words</h1><div class=n>try/genui-redeem.html?v=3 · Chromium 393x852 DPR 2 · the coin art is rewards/icons/coin24_color.svg, the same as the HUD coin</div>
+let h = css + `<h1>Redeem v3 (T25): the duck coin flies into the HUD, no words</h1><div class=n>archive/try/genui-redeem.html?v=3 · Chromium 393x852 DPR 2 · the coin art is rewards/icons/coin24_color.svg, the same as the HUD coin</div>
 <div class=row>${panel(`${D}/v3-idle.png`, "idle", "duck coin + \"+3\" beside Check; nothing in #fb")}${panel(mid.p, `right, mid-flight (${mid.ct} ms of 320)`, "one group: coin + 3 light discs on one arc, shrinking 32 -> 20 px; count still 12")}
 ${panel(`${D}/v3-right-landed.png`, "right, landed", "count 15 (ticked 12 -> 15 only on arrival); #rcoin empty")}${panel(`${D}/v3-wrong.png`, "wrong", "coin stays beside Check, dimmed (.45), no text")}</div>
 <div class=k>Landing offset (getBoundingClientRect, flier vs HUD .coin): <span class=ok>dx ${R.land.dx}, dy ${R.land.dy}, dw ${R.land.dw}, dh ${R.land.dh} px</span> · count at arrival <span class=ok>${R.land.countAtArrival}</span>, count before arrival only ${JSON.stringify(R.countBeforeArrival)}, first tick at ${R.firstTickAt} ms (arrival seen at ${R.arrivalSampleAt} ms) ·

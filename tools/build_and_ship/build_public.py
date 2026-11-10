@@ -9,7 +9,7 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "author", "banks", "k", "log", "tests", "tools", "engine", "node_modules", "__pycache__", "scratch"}
+SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "archive", "author", "banks", "k", "log", "tests", "tools", "engine", "node_modules", "__pycache__", "scratch", "docs"}
 SKIP_FILES = {"problems.json", "tries.json", "tries.json.tmp", "serve.py", "deploy.sh", "host.log", ".host.pid",
               "requirements.txt", "vercel.json", ".vercelignore", ".gitignore", "stem-stuff.html", "stem-stuff.html.tmp", "2"}   # + every root *.py (server code) and dotfiles, see build()
 
@@ -37,7 +37,7 @@ def stamp(out):
 
 
 def stamp_telemetry(out, env=os.environ):
-    """Telemetry keys (design/plans/TELEMETRY.md): the Vercel Production env has POSTHOG_TOKEN (phc_, public by design) and CLARITY_ID
+    """Telemetry keys (docs/design/plans/TELEMETRY.md): the Vercel Production env has POSTHOG_TOKEN (phc_, public by design) and CLARITY_ID
     (+ optional POSTHOG_HOST; CLARITY=1 turns Clarity back on). Stamped into index.html's <meta name="stem-t">; absent (local, preview) → the meta stays empty, telemetry.js no-ops."""
     ph, cl = env.get("POSTHOG_TOKEN", "").strip(), env.get("CLARITY_ID", "").strip()
     if env.get("CLARITY", "0").strip() != "1":   # D22 bench: Clarity added >100 ms TBT with no unique data. Off unless CLARITY=1

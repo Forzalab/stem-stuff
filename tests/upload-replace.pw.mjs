@@ -1,4 +1,4 @@
-// B1: an upload REPLACES the previous upload in memory, as it already does in IndexedDB (design/RELOAD.md).
+// B1: an upload REPLACES the previous upload in memory, as it already does in IndexedDB (docs/design/RELOAD.md).
 // Memory = codes() = the question list = Next's pool = what a reload restores. Rows: A then B, A then A' (a code removed),
 // a bad file after A, several files in one pick (the dialog), the dialog that waits for a code, a hosted code reused by an upload.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:

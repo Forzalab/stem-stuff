@@ -23,7 +23,7 @@
 //   livefig.py       server side of live figures
 // ===== END CODEMAP HEADER =====
 /* graph.js: renders a problem "graph" block (SCHEMA.md) into an element.
-   Ported from design/specimen.html; every number comes from design/DESIGN-LANGUAGE.md.
+   Ported from archive/design/specimen.html; every number comes from docs/design/DESIGN-LANGUAGE.md.
    Needs math.js (expressions) and KaTeX (labels) as globals; draws plain-text labels if KaTeX is missing.
 
    Graph.render(el, block)   draws (again) at el's current width
@@ -1179,7 +1179,7 @@
     const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
     el.style.maxWidth = ""; el.style.marginInline = "";
     mount(el, build);
-    /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (design/STYLE.md "Question box height").
+    /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (docs/design/STYLE.md "Question box height").
        Redrawn narrower and centred (not scaled), so labels keep their size and sit where they were placed; never below 60% of the width. */
     const cap = window.matchMedia && matchMedia("(max-width: 34rem)").matches ? 0.28 * innerHeight : 0, W0 = el.clientWidth;
     for (let i = 0; i < 2 && cap && W0; i++) {

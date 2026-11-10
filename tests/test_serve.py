@@ -101,7 +101,7 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="z")["verdict"], "invalid")
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="b")["verdict"], "correct")
 
-    def test_pick_all(self):                                                    # design/CHOOSE-ALL.md §3
+    def test_pick_all(self):                                                    # docs/design/CHOOSE-ALL.md §3
         for bad in ({"choices": "a"}, {"choices": ["a", "a"]}, {"choices": ["z"]}, {"choices": ["a", "e"]},
                     {"choice": "a"}, {"choices": [1]}):
             self.assertEqual(self.g("CSCI26_A7K", "k1", **bad)["verdict"], "invalid", bad)   # not a try
@@ -123,7 +123,7 @@ class Grade(unittest.TestCase):
             "choices": [{"id": "a", "md": "Good base case"}, {"id": "b", "md": "Good inductive step"}], "correct": [], "miss": "QUACK. Look again.",
             "wrong": [{"choice": "a", "error": "misread", "hint": "QUACK. Plug in the start."}, {"choice": "b", "error": "fallacy", "hint": "QUACK. Assume P(k)."}]}
 
-    def test_grid_any_set_is_a_key(self):                                       # design/CHOOSE-ALL.md §2b: [] = neither, every row = both
+    def test_grid_any_set_is_a_key(self):                                       # docs/design/CHOOSE-ALL.md §2b: [] = neither, every row = both
         g = lambda p, sid, ids: serve.grade(p, sid, {"choices": ids})            # noqa: E731
         self.assertEqual(g(self.GRID, "gr1", [])["verdict"], "correct")         # nothing ticked = "neither": right
         r = g(self.GRID, "gr2", ["a"])
@@ -268,7 +268,7 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CSCI26_A8F", "f2", choices=["a", "c"], fixes={"b": "10", "d": "2^4"})["verdict"], "correct")
         self.assertEqual(serve.public(BANK["CSCI26_A8F"])["fix"], {"type": "num", "how": "whole number"})
 
-    def test_modes(self):                                                       # design/EASY.md
+    def test_modes(self):                                                       # docs/design/EASY.md
         a7k, a8f = BANK["CSCI26_A7K"], BANK["CSCI26_A8F"]
         none_key = dict(a7k, code="CSCI26_N0N", correct=["e"], wrong=[w for w in a7k.get("wrong", []) if w.get("choice") != "e"])
         self.assertEqual([serve.mode_of(c) for c in ("", "sid=x; stem-mode=diet; stem-mode-v=2", "stem-mode-v=2; stem-mode=hard", "stem-mode=sugar; stem-mode-v=2")], ["sugar", "diet", "diet", "sugar"])
@@ -476,7 +476,7 @@ class Grade(unittest.TestCase):
 
 
 class Slips(unittest.TestCase):
-    """slips v2 unit B (design/HANDOFF-slips-v2.md): num grading is author `wrong` -> a slip of `form` (FAMILY_HINT) -> the nudge,
+    """slips v2 unit B (docs/design/HANDOFF-slips-v2.md): num grading is author `wrong` -> a slip of `form` (FAMILY_HINT) -> the nudge,
     in diet and sugar; form, ignore_slips and slip values never reach the client."""
     FORM = "1/((4/3)^2+(1/3)^2+(2/3)^2)"     # golden PHYS_XZP: 9/21; flipping +(2/3)^2 gives 9/13 = 0.692
     ITEM = {"code": "PHYS_XZP", "title": "t", "type": "num", "body": "b", "answer": "9/21", "tol": 1e-3, "form": FORM,
@@ -1129,7 +1129,7 @@ class Repair(unittest.TestCase):
 
 
 class Persist(unittest.TestCase):
-    """tries.json: a restart keeps tries; deleting an entry by hand resets it with a newer gen (design/DONE.md)."""
+    """tries.json: a restart keeps tries; deleting an entry by hand resets it with a newer gen (docs/design/DONE.md)."""
     def setUp(self):
         self.old = serve.TRIES
         serve.TRIES = os.path.join(tempfile.mkdtemp(prefix="stem-p-"), "tries.json")
@@ -1209,7 +1209,7 @@ if __name__ == "__main__":
 
 
 class Banks(unittest.TestCase):
-    """Practice banks (design/BANK.md): banks/BANK_XXX.json, payload, marks, the last-bank pointer, blocked from serving."""
+    """Practice banks (docs/design/BANK.md): banks/BANK_XXX.json, payload, marks, the last-bank pointer, blocked from serving."""
     def setUp(self):
         self.old = serve.BANKS, serve.TRIES
         serve.BANKS = tempfile.mkdtemp(prefix="stem-b-")
@@ -1242,7 +1242,7 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.grade(b, "u1", {"choice": "a"})["verdict"], "wrong")
         self.assertEqual([q["choices"] and q["type"] for q in (serve.public(a, "u1"),)], ["mc"])
 
-    def test_formula_card_and_keys_stay_server_side(self):                    # design/EASY.md
+    def test_formula_card_and_keys_stay_server_side(self):                    # docs/design/EASY.md
         self.write("formula-sheet", {"v": 1, "groups": [{"name": "Work and Energy", "rows": [{"id": "WE_THM", "tex": "W = \\Delta K"}]}]})
         p = dict(BANK["CALC1_X2P"], code="CALC1_FK1", part=["WE_THM", "NOPE"], key="Use: $W = \\Delta K$", slip={"a": "sign"}, tip="Add the areas.")
         self.write("BANK_FK12", {"v": 1, "problems": [p]})
@@ -1357,7 +1357,7 @@ class Banks(unittest.TestCase):
         ct = [x["md"] for x in c["body"] if x.get("type") == "text"]
         self.assertIn("Choose all that are true.", ct[0]); self.assertIn("Use $g", ct[-1]); self.assertEqual(c["title"], "Q7: the speed")
 
-    def test_sugar_only_snacks(self):                                          # design/REWARDS-WIRING.md: snacks are sugar only
+    def test_sugar_only_snacks(self):                                          # docs/design/REWARDS-WIRING.md: snacks are sugar only
         pick = dict(BANK["CSCI26_A7K"], code="CSCI26_SN1", saccharine={"title": "Practice Exam 2, Question 3", "key": "Tick: a, c",
                     "split": [{"sub": "CSCI26_SN1A", "stem": "Row A.", "answer": "true"}, {"sub": "CSCI26_SN1B", "stem": "Row B.", "answer": "false"}]})
         snack = lambda code, before: dict(BANK["CALC1_T6B"], code=code, sugar_only=True,
@@ -1626,7 +1626,7 @@ class BankVField(unittest.TestCase):
 
 
 class Explain(unittest.TestCase):
-    """Cluck the genie (design/EASY.md Phase 4): /explain relays a stubbed OpenRouter stream; ZDR, caps, easy only, no markdown."""
+    """Cluck the genie (docs/design/EASY.md Phase 4): /explain relays a stubbed OpenRouter stream; ZDR, caps, easy only, no markdown."""
     def setUp(self):
         import http.server
         import threading

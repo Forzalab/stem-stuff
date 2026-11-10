@@ -63,7 +63,7 @@ def bank_items():
 
 BANK, BANK_DOCS = bank_items()
 
-UI_COPY = [   # human UI copy (design/STYLE.md and the app)
+UI_COPY = [   # human UI copy (docs/design/STYLE.md and the app)
     "Correct.", "Not quite. One more try.", "Out of tries.", "Open a problem file", "Show the scratchpad", "Next question",
     "Upload or type code to start.", "Got it wrong first time? Keep your progress.", "Compare with Cluck's steps",
     "Paste GPT answer here, but me be sad...", "Exit redo", "Ask Cluck", "Saved", "3 / 12", "Cluck is here if you get stuck.",

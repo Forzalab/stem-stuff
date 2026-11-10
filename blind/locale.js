@@ -1,4 +1,4 @@
-/* blind/locale.js: Tony's blind-locale test (design/UX-TOPDOWN.md §3). "make the whole site in a different language with same physics
+/* blind/locale.js: Tony's blind-locale test (docs/design/UX-TOPDOWN.md §3). "make the whole site in a different language with same physics
    question. I MUST BE ABLE TO ENGAGE WITH IT THOUGHTLESSLY". Loaded by app.js only on ?blind=<lang> (kept for the tab in
    sessionStorage; ?blind=off clears it). Every UI word, aria-label, title and placeholder goes into a script Tony can't read:
    blind/<lang>.json when it knows the string, else each Latin letter maps to a letter of that script (same length, digits kept),

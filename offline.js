@@ -36,13 +36,13 @@
     ready: null
   };
   const TIMEOUT = 8000;
-  const timed = (input, init) => {                       // every fetch from here: aborted after 8 s (design/RELOAD.md)
+  const timed = (input, init) => {                       // every fetch from here: aborted after 8 s (docs/design/RELOAD.md)
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), TIMEOUT);
     return nativeFetch(input, { ...(init || {}), signal: ctl.signal }).finally(() => clearTimeout(t));
   };
 
   /* ---------- the uploaded bank survives reloads: IndexedDB stem-stuff / bank / "files" = [{ name, text }] ---------- */
-  /* v2 adds the "done" store: one record per bank + code (design/DONE.md) */
+  /* v2 adds the "done" store: one record per bank + code (docs/design/DONE.md) */
   function idb(mode, fn, store = "bank") {
     return new Promise((resolve, reject) => {
       if (!window.indexedDB) return reject(new Error("no idb"));
@@ -66,7 +66,7 @@
     return got.length > 0;
   }
 
-  /* ---------- done questions: IndexedDB stem-stuff / done, key = bank + code (design/DONE.md) ----------
+  /* ---------- done questions: IndexedDB stem-stuff / done, key = bank + code (docs/design/DONE.md) ----------
      Upload: "u:<hash of that problem's JSON>:<CODE>" (same file again keeps it, an edited problem starts fresh).
      Server: "s:<CODE>" (IndexedDB is per origin already), "r:<CODE>" inside a redo round. The record never holds the answer or the right choice. */
   const done = new Map();
@@ -94,7 +94,7 @@
     } catch (e) { /* blocked storage: the Map is this page's only copy */ }
   }
   /* "drill:marks" { code }: a mark the list shows changed (wrong tries, done). A write that changes nothing visible (a
-     server gen sync, saved hints) stays silent, so the list never re-sorts on noise (nav.js, design/NAV.md). */
+     server gen sync, saved hints) stays silent, so the list never re-sorts on noise (nav.js, docs/design/NAV.md). */
   const look = rec => rec ? `${rec.x || 0} ${rec.done || "open"}` : "0 open";
   const changed = (code, before, after) => {
     if (look(before) !== look(after)) dispatchEvent(new CustomEvent("drill:marks", { detail: { code } }));

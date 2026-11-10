@@ -1,4 +1,4 @@
-/* popover.js: the site's one rich-context popup (design/POPOVER.md; Tony, Oct 23, after shadcn/ui Popover). App chrome, not a reply format:
+/* popover.js: the site's one rich-context popup (docs/design/POPOVER.md; Tony, Oct 23, after shadcn/ui Popover). App chrome, not a reply format:
    Cluck's replies stay OpenUI Lang. Click/tap only, never hover. Lazy: the DOM is built on open and removed on close; one open at a time.
 
    Pop.toggle(anchor, opts)   opens, or closes when this anchor's popover is the open one (what a click handler wants)

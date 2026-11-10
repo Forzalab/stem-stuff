@@ -1,4 +1,4 @@
-// Reload / idle / stalled-network tests (design/RELOAD.md). Needs a running server and Playwright:
+// Reload / idle / stalled-network tests (docs/design/RELOAD.md). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/reload.pw.mjs http://localhost:8812 [shotDir]
 // Chromium always; Firefox too when Playwright has it installed (else "NOT COVERED firefox", which run-all counts).
 // Not part of `npm test` (that one needs no server or browser).
@@ -19,7 +19,7 @@ const BANK = { v: 1, problems: [
   { code: "CALC1_ZZ9", type: "num", answer: "2", body: [{ type: "text", md: "What is $1 + 1$?" }] },
   { code: "CALC1_ZZ8", type: "num", answer: "3", body: [{ type: "text", md: "What is $1 + 2$?" }] }] };
 
-/* the list is shuffled per browser (design/NAV.md): pin a seed that keeps ZZ9 first, so "next" from ZZ9 is ZZ8 */
+/* the list is shuffled per browser (docs/design/NAV.md): pin a seed that keeps ZZ9 first, so "next" from ZZ9 is ZZ8 */
 const CODES = BANK.problems.map(p => p.code);
 const SEED = Array.from({ length: 50 }, (_, i) => "s" + i).find(s => shuffled(CODES, s)[0] === CODES[0]);
 
@@ -78,7 +78,7 @@ async function run(type, label, launchOpts) {
     let stall = true, n = 0;
     await page.route("**/check", r => { n++; if (stall) return; r.continue(); });
     await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");
-    const before = await page.evaluate(() => window.__drill.state.tries.length);   // (b)'s try is kept across reloads (design/DONE.md)
+    const before = await page.evaluate(() => window.__drill.state.tries.length);   // (b)'s try is kept across reloads (docs/design/DONE.md)
     await skipRetryWait(page);                                    // (b)'s kept wrong try = a second try here: the 10 s wait (retry-wait.pw.mjs) runs before the request this step times
     const t0 = Date.now();
     await answer(page, "7");

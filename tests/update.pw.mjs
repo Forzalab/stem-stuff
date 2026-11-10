@@ -1,7 +1,7 @@
 // "New version's ready! Tap to update." (offline.js + sw.js): the shell is served from the SW cache, so after a deploy the page
 // is one version behind. Serves a copy of the client from its own static server (Cache-Control: no-cache, like Vercel),
 // changes app.css, reloads: the bar shows; tap it: the page reloads with the new file and the bar is gone. Then two stamped
-// deploys (a new sw.js each): untouched, the page reloads by itself; after a key press, the bar instead (design/DEPLOY.md).
+// deploys (a new sw.js each): untouched, the page reloads by itself; after a key press, the bar instead (docs/design/DEPLOY.md).
 //   node tests/update.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";

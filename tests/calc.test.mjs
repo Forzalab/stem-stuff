@@ -1,4 +1,4 @@
-// Calc Coach (calc-coach.js, design/CALC-COACH.md): data schema, only verified steps shown, model read (picker API, then localStorage), promo expiry,
+// Calc Coach (calc-coach.js, docs/design/CALC-COACH.md): data schema, only verified steps shown, model read (picker API, then localStorage), promo expiry,
 // and "no new Cluck reply format" (the reply library, the prompts and the server renderers know nothing of Calc Coach).
 import test from "node:test";
 import assert from "node:assert/strict";

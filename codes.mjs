@@ -1,4 +1,4 @@
-/* codes.mjs: the ONE place that knows problem-code prefixes (SCHEMA.md "Codes", design/BANK.md).
+/* codes.mjs: the ONE place that knows problem-code prefixes (SCHEMA.md "Codes", docs/design/BANK.md).
    Pure ESM, no DOM. app.js and suggest.mjs import it; offline.js is a classic script and reads it from window.stemCodes (app.js sets it).
    Built-in prefixes work everywhere, flagged or not. A custom prefix (3-6 of A-Z0-9, not built-in, not reserved) is accepted from an
    uploaded file only when the file carries a valid "bank": "BANK_XXX" flag and the prefix equals the flag minus "BANK_".

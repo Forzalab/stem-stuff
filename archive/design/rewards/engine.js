@@ -1,4 +1,4 @@
-/* Rewards engine + HUD for the sugar-mode mock. Sets window.Rewards. Spec: design/REWARDS.md */
+/* Rewards engine + HUD for the sugar-mode mock. Sets window.Rewards. Spec: docs/design/REWARDS.md */
 (function () {
   'use strict';
   var KEY = 'stem-rw', CAP_MS = 60000;

@@ -1,4 +1,4 @@
-/* try/genui-ui.css: shared look for try/genui-ui.html and try/genui-redeem.html (agent U, Oct 7 2026).
+/* archive/try/genui-ui.css: shared look for archive/try/genui-ui.html and archive/try/genui-redeem.html (agent U, Oct 7 2026).
    Tokens only (app.css :root, .ai-skin, rewards.css --rw-*). Spacing scale --s1..--s7. Two type sizes per card: --t-md prose, --t-sm labels.
    Every @keyframes has its own reduced-motion rule; ?rm=1 adds html.rm which does the same. */
 

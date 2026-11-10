@@ -1,5 +1,5 @@
-/* rewards/fx.js: the sugar reward FX (pops, sparks, coins, drop banner, the level-up overlay with its slot reels; flow C: one overlay max). Port of design/rewards/fx.js
-   for the app (design/REWARDS-WIRING.md §5): icons from window.RW_ICONS (rewards/icons.js; per-file licence in rewards/icons/NOTICE-traced.txt), canvas-confetti from
+/* rewards/fx.js: the sugar reward FX (pops, sparks, coins, drop banner, the level-up overlay with its slot reels; flow C: one overlay max). Port of archive/design/rewards/fx.js
+   for the app (docs/design/REWARDS-WIRING.md §5): icons from window.RW_ICONS (rewards/icons.js; per-file licence in rewards/icons/NOTICE-traced.txt), canvas-confetti from
    vendor/ (ISC). Every node it adds is aria-hidden (app.js says the words once) and carries .rw-skin (rewards/rewards.css tokens).
    Nothing runs until app.js calls a function (diet never does), except one passive pointerdown listener that only settles a wiggling
    sugar Cluck chip (.rw-chip; diet has none). */
@@ -23,7 +23,7 @@
   const COLORS = ['#ff9a3e', '#ffcd94', '#b05a00', '#ffdcc0', '#ff8204'];   // the warm ramp (PALETTE-v3 §5): help, reward, help-deep, help-on, glow
   const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 }, CONF = { small: 24, medium: 40, large: 70 };
 
-  /* ---------- one blink (STYLE.md §1.6, §2.8; design/shots/blink-fx-2026-10-12) ----------
+  /* ---------- one blink (STYLE.md §1.6, §2.8; archive/design/shots/blink-fx-2026-10-12) ----------
      Every call app.js makes joins ONE queue; a step starts only when the one before has finished, so at most one group moves at a time:
      the answer's own pulse -> sparks, "+N XP" and coins (the FX layer) -> the HUD (shine, bar, level pulse) -> the level-up overlay
      (reels inside on a drop) OR the banner. Flow C (Tony, Oct 21): one beat per answer, at most one overlay, and only for LEVEL UP.

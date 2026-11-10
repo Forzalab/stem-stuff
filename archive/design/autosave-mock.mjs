@@ -1,5 +1,5 @@
 // Mockup shots for the scratchpad autosave status (not built yet). Needs a running server and Playwright:
-//   python3 serve.py 8814 &   then   node design/autosave-mock.mjs http://localhost:8814
+//   python3 serve.py 8814 &   then   node archive/design/autosave-mock.mjs http://localhost:8814
 // Injects the proposed status next to the Scratchpad label and freezes each state: idle, saving (mid-sweep), saved.
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);

@@ -1,6 +1,6 @@
 """Slips from the formula: for each num item (or num part) with a `form`, list every slip (the 10 families of slips.py at the repo root)
 that no `wrong` entry catches (MISSING), and every slip equal to the answer (SAME).
-Banks with v >= 20261022 also pass the gate (design/HANDOFF-slips-v2.md rule 7): every num has `form`; no SAME; no two families on one
+Banks with v >= 20261022 also pass the gate (docs/design/HANDOFF-slips-v2.md rule 7): every num has `form`; no SAME; no two families on one
 value (CLASH). ignore_slips exempts a value. MISSING there is report only: the grader matches slips at runtime.
 Per bank one coverage line, `BANK_X: <n> num units, <n> with form, <n> folded`, and a FOLDED row per folded unit: a form whose k=1
 slips are whole-answer only (no inner slip; fine for a count like "3"). Report only: never a gate failure, never --strict's exit code.

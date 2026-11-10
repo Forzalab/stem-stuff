@@ -1,4 +1,4 @@
-"""Ship from Termux (design/DEPLOY.md, "Power button"): bank pins (SHIP_PINS / --pin) in tools/build_and_ship/brain_banks.py, and tools/build_and_ship/ship.sh
+"""Ship from Termux (docs/design/DEPLOY.md, "Power button"): bank pins (SHIP_PINS / --pin) in tools/build_and_ship/brain_banks.py, and tools/build_and_ship/ship.sh
 routing to tools/build_and_ship/press.sh (a queued GitHub run) on Termux or with --remote. No Vercel, no gh, no network: urllib and press.sh are stubbed.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import io

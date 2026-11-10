@@ -1,4 +1,4 @@
-// mode.mjs: the upload mirror of serve.py hidden() / view() (design/EASY.md, design/REWARDS-WIRING.md).
+// mode.mjs: the upload mirror of serve.py hidden() / view() (docs/design/EASY.md, docs/design/REWARDS-WIRING.md).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { hidden } from "../mode.mjs";

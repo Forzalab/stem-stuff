@@ -1,5 +1,5 @@
 # The power button: tools/build_and_ship/ship.sh demo|live on a GitHub runner, so a slow network only has to send one tiny request.
-# Phone: GitHub app → Actions → ship → Run workflow, or the curl in design/DEPLOY.md ("Power button"). Runs ship.sh unchanged:
+# Phone: GitHub app → Actions → ship → Run workflow, or the curl in docs/design/DEPLOY.md ("Power button"). Runs ship.sh unchanged:
 # origin/main + the brain banks (bank hatch) → Vercel → smoke. Banks live only in ship.sh's temp dirs on this throwaway runner:
 # no artifacts, no caches (banks never land on GitHub).
 name: ship
@@ -37,7 +37,7 @@ jobs:
           [ -n "$VERCEL_TOKEN" ] || miss="$miss VERCEL_TOKEN"
           [ -n "$BRAIN_TOKEN" ] || miss="$miss BRAIN_TOKEN"
           if [ -n "$miss" ]; then
-            echo "::error::missing repo secret(s):$miss. Settings → Secrets and variables → Actions (design/DEPLOY.md, Power button)"
+            echo "::error::missing repo secret(s):$miss. Settings → Secrets and variables → Actions (docs/design/DEPLOY.md, Power button)"
             exit 1
           fi
       # ref main: ship.sh deploys origin/main and stops if its own copy differs from main's. fetch-depth 0: version.sh reads the

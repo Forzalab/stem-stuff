@@ -2,7 +2,7 @@
  {
   "k": 0,
   "ver": "new",
-  "label": "app HUD balance (and try/tries.html HUD)",
+  "label": "app HUD balance (and archive/try/tries.html HUD)",
   "icon": "coin24",
   "sz": 28,
   "bg": "#0d0903",
@@ -19,7 +19,7 @@
  {
   "k": 0,
   "ver": "old",
-  "label": "app HUD balance (and try/tries.html HUD)",
+  "label": "app HUD balance (and archive/try/tries.html HUD)",
   "icon": "old24",
   "sz": 28,
   "bg": "#0d0903",

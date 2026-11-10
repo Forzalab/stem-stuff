@@ -1,4 +1,4 @@
-// nav.js titles (design/NAV.md): problem.title, else plain text from the first text block, 60 chars at most.
+// nav.js titles (docs/design/NAV.md): problem.title, else plain text from the first text block, 60 chars at most.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

@@ -1,5 +1,5 @@
 // Frames + short video of the splash mockup: node tools/audits/splash_shots.mjs [page] [outDir]
-//   page defaults to design/mockups/splash.html; frames are frozen with document.getAnimations() so they are exact.
+//   page defaults to archive/design/mockups/splash.html; frames are frozen with document.getAnimations() so they are exact.
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
@@ -8,8 +8,8 @@ const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 
-const page0 = path.resolve(process.argv[2] || "design/mockups/splash.html");
-const out = path.resolve(process.argv[3] || "design/shots");
+const page0 = path.resolve(process.argv[2] || "archive/design/mockups/splash.html");
+const out = path.resolve(process.argv[3] || "archive/design/shots");
 const url = /^https?:/.test(process.argv[2] || "") ? process.argv[2] : pathToFileURL(page0).href;
 mkdirSync(out, { recursive: true });
 const FRAMES = [["f1", 120], ["f2", 300], ["f3", 700], ["f4", 1850]];   // ms into the 2200 ms loop

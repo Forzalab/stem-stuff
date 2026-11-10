@@ -1,12 +1,12 @@
 // Dogfood run: use the page like a student and screenshot every state (at 390x844 and 1920x1080).
-//   python3 serve.py 8812 &   node tools/audits/dogfood.mjs http://localhost:8812 design/shots
+//   python3 serve.py 8812 &   node tools/audits/dogfood.mjs http://localhost:8812 archive/design/shots
 import { createRequire } from "node:module";
 import { writeFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
-const [BASE = "http://localhost:8812", OUT = "design/shots"] = process.argv.slice(2);
+const [BASE = "http://localhost:8812", OUT = "archive/design/shots"] = process.argv.slice(2);
 
 // a problems.json on "disk" for the upload flow (a real problem under a code the server doesn't have)
 const dir = mkdtempSync(join(tmpdir(), "dog-"));

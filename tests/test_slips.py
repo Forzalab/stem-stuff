@@ -1,4 +1,4 @@
-"""slips.py (design/HANDOFF-slips-v2.md unit A): the 10 slip families on small known forms, match(), the rule-7 gate, the golden fixture
+"""slips.py (docs/design/HANDOFF-slips-v2.md unit A): the 10 slip families on small known forms, match(), the rule-7 gate, the golden fixture
 shared with the JS port, and the tools/bank_tools/slips.py CLI (report exits 0, --strict on a broken v20261022 bank exits 1)."""
 import contextlib
 import importlib.util

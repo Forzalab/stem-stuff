@@ -1,4 +1,4 @@
-// The scene language (SCHEMA.md <!-- schema: scene -->, design/VISUAL-LANGUAGE.md §3, goals in design/VISUAL-GOALS.md).
+// The scene language (SCHEMA.md <!-- schema: scene -->, docs/design/VISUAL-LANGUAGE.md §3, goals in docs/design/VISUAL-GOALS.md).
 // The schema checks the shape; check() below checks what a schema can't: every expression compiles in math.js and names only
 // params, derives, t and math.js names; binds name real params; reveal / trace / handles name real mark ids; every derive
 // evaluates to a finite number at the params' init values.
@@ -12,8 +12,8 @@ import { validator, root } from "./schemas.mjs";
 const validate = validator("scene");
 const md = f => readFileSync(new URL(f, root), "utf8");
 // the two worked examples of VISUAL-LANGUAGE.md §3 (the first two ```json blocks there) + the Q1 b) scene of VISUAL-GOALS.md
-const lang = [...md("design/VISUAL-LANGUAGE.md").matchAll(/```json\n([\s\S]*?)\n```/g)].map(m => JSON.parse(m[1]));
-const q1b = JSON.parse(md("design/VISUAL-GOALS.md").match(/<!-- scene: q1-b -->\s*```json\n([\s\S]*?)\n```/)[1]);
+const lang = [...md("docs/design/VISUAL-LANGUAGE.md").matchAll(/```json\n([\s\S]*?)\n```/g)].map(m => JSON.parse(m[1]));
+const q1b = JSON.parse(md("docs/design/VISUAL-GOALS.md").match(/<!-- scene: q1-b -->\s*```json\n([\s\S]*?)\n```/)[1]);
 const EXAMPLES = { projectile: lang[0], bfs: lang[1], "q1-b": q1b };
 
 function names(src) {                                       // the free symbols of a math.js expression
@@ -111,9 +111,9 @@ test("scene: bad meaning is caught (valid shape, wrong references)", () => {
   }
 });
 
-/* ---------- kits (author/kits/<name>/KIT.md + examples/*.json; VISUAL-LANGUAGE.md §5): the gate ---------- */
+/* ---------- kits (tools/author/kits/<name>/KIT.md + examples/*.json; VISUAL-LANGUAGE.md §5): the gate ---------- */
 import { readdirSync } from "node:fs";
-const KITS = new URL("author/kits/", root);
+const KITS = new URL("tools/author/kits/", root);
 const kitDirs = readdirSync(KITS, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name);
 const kitOf = name => JSON.parse(readFileSync(new URL(`${name}/KIT.md`, KITS), "utf8").match(/<!-- kit -->\s*```json\n([\s\S]*?)\n```/)[1]);
 
@@ -209,14 +209,14 @@ test("bank profile: valid shapes pass, bad ones fail; its kits enum is exactly t
   for (const [what, p] of Object.entries({ "bad subject": { subject: "chemistry" }, "short audience": { audience: "kids" }, "unknown kit": { kits: ["sorting"] }, "unknown key": { colour: "red" } }))
     assert.equal(vp(withP(p)), false, what);
   const kits = require_enum(vp, "kits");
-  assert.deepEqual([...kits].sort(), [...kitDirs].sort(), "SCHEMA.md profile.kits must list exactly author/kits/*");
+  assert.deepEqual([...kits].sort(), [...kitDirs].sort(), "SCHEMA.md profile.kits must list exactly tools/author/kits/*");
 });
 function require_enum() {                                    // the profile.kits enum, read from SCHEMA.md
   const s = JSON.parse(readFileSync(new URL("SCHEMA.md", root), "utf8").match(/<!-- schema: problems -->\s*```json\n([\s\S]*?)\n```/)[1]);
   return s.properties.profile.properties.kits.items.enum;
 }
 
-/* ---------- physics invariants + visual cases (tests/visual-cases/*.json, design/plans/VISUAL-TESTS.md) ----------
+/* ---------- physics invariants + visual cases (tests/visual-cases/*.json, docs/design/plans/VISUAL-TESTS.md) ----------
    A case = { case, source, expect: "pass"|"fail", fails?: <rule>, slip_kind?: "concept"|"mechanical", why, invariants: [...], scene }.
    Ghost marks carry `ghost: true` + `label`; the truth they sit beside carries `truth: true` (mark-level: the scene schema's marks are open).
    physics() returns "" when an invariant holds; lint() runs on every case (ghost rules + the ported benchmark criteria). */

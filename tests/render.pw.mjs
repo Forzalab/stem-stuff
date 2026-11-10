@@ -33,10 +33,10 @@ async function run(browserType, label, opts = {}) {
   catch (e) { console.log(`NOT COVERED ${label}: no browser (${e.message.split("\n")[0]})`); return; }   // run-all counts these lines
   for (const [vname, viewport] of Object.entries(VIEWS)) {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: vname !== "desktop", isMobile: vname === "phone" && label === "chromium" });
-    /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,
+    /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (docs/design/RELOAD.md,
        tested in reload.pw.mjs), and these steps assume a fresh page shows server problems only */
     await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
-    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("pinned")) { localStorage.setItem("stem-q-upload", JSON.stringify({ v: 1, salt: "pin", pos: 0, seen: {}, hist: [], at: -1 })); sessionStorage.setItem("pinned", "1"); } } catch { /* blocked */ } });   // a known queue salt (design/plans/QUEUE.md)
+    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("pinned")) { localStorage.setItem("stem-q-upload", JSON.stringify({ v: 1, salt: "pin", pos: 0, seen: {}, hist: [], at: -1 })); sessionStorage.setItem("pinned", "1"); } } catch { /* blocked */ } });   // a known queue salt (docs/design/plans/QUEUE.md)
     const page = await ctx.newPage();
     await page.clock.install();                                   // the second try waits 10 s (retry-wait.pw.mjs): a test that misses once then answers fast-forwards it
     const errors = [];
@@ -49,15 +49,15 @@ async function run(browserType, label, opts = {}) {
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
     /* pad: runs in diet, where the pad lives (phone sugar has none: Tony, Oct 14; desktop and iPad sugar neither: sugar-hides-notes, Nov 2) */
     const open = async (code, pad) => {
-      await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
+      await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; docs/design/DONE.md)
       if (pad) await page.context().addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     await page.goto("about:blank");
       await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
     };
-    /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
+    /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (docs/design/MULTITASK.md) */
     const padPage = async () => { if (vname !== "phone") return; await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt"));
-      await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running")); await page.waitForTimeout(50); };   // measure the settled pad page, not its crossfade (CI red once, design/TESTING.md)
+      await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running")); await page.waitForTimeout(50); };   // measure the settled pad page, not its crossfade (CI red once, docs/design/TESTING.md)
 
     for (const code of CODES) {
       await step(`${label} ${vname} ${code}: renders TeX, no raw TeX visible`, async () => {
@@ -86,7 +86,7 @@ async function run(browserType, label, opts = {}) {
       });
     }
 
-    // ipad + desktop are side by side (design/MULTITASK.md "Desktop, revised"): the problem column has no pull-tab
+    // ipad + desktop are side by side (docs/design/MULTITASK.md "Desktop, revised"): the problem column has no pull-tab
     /* phones since round 3b (Tony, Oct 3: "big ass dark space"): the pad is off the page, so there is no frozen strip and no pull-tab;
        the whole problem stays in the page at every height */
     if (vname === "phone") await step(`${label} ${vname} no pull-tab on phones: the problem is never clipped (pad off)`, async () => {
@@ -191,7 +191,7 @@ async function run(browserType, label, opts = {}) {
       // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
       const w = await page.evaluate(() => { scrollTo(0, 0); const b = document.querySelector("#xbField").getBoundingClientRect(), c = document.querySelector("#problem").getBoundingClientRect(), k = document.querySelector("#work").getBoundingClientRect();
         return { box: b.right, card: c.right, left: b.left, cardTop: c.top, workTop: k.top, boxTop: b.top }; });
-      if (viewport.width >= 720) {   // side by side (design/MULTITASK.md "Desktop, revised"): the pad is the right column, never under the problem
+      if (viewport.width >= 720) {   // side by side (docs/design/MULTITASK.md "Desktop, revised"): the pad is the right column, never under the problem
         assert.ok(w.left >= w.card && w.left - w.card <= 48, `pad not beside the problem: pad left ${w.left}, card right ${w.card}`);
         assert.ok(Math.abs(w.boxTop - w.cardTop) <= 2, `pad box top ${w.boxTop} vs question box top ${w.cardTop} (the Question row levels them)`);
       } else assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
@@ -200,7 +200,7 @@ async function run(browserType, label, opts = {}) {
     await step(`${label} ${vname} entry box: upload + code bar only; start page = title + entry, centred; placement`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
       assert.equal(await page.locator("#subjBtn, #subjMenu, .logo, .empty").count(), 0, "dropdown/logo/empty-state still present");
-      // start page (design/STYLE.md "Start page"): the one line of title is the only text
+      // start page (docs/design/STYLE.md "Start page"): the one line of title is the only text
       await page.waitForFunction(() => !document.getElementById("splash") && document.documentElement.classList.contains("start"));
       const text = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.checkVisibility && e.checkVisibility() && !e.closest("svg"))
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
@@ -428,7 +428,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(c.inside, "Copy outside the textarea box");
       assert.equal(c.hits, 0, "text under the button");
       // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
-      const side = viewport.width >= 720;   // side by side: the pad fills its column (design/MULTITASK.md), it does not grow with the text
+      const side = viewport.width >= 720;   // side by side: the pad fills its column (docs/design/MULTITASK.md), it does not grow with the text
       await ta.focus();   // a tap on a phone opens the pad page (variant 9); the band is checked on the plain page, as before
       // legit toggles: at most on (last line reaches the corner) and off (it wraps) once per new line
       let toggles = 0, prev = (await clear()).free, lines = 0, h = await ta.evaluate(t => t.offsetHeight);

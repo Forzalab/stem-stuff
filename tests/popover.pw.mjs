@@ -1,4 +1,4 @@
-// popover.js (design/POPOVER.md): the one rich-context popup, driven through its lab page (design/popover-lab.html, opened from disk, no server).
+// popover.js (docs/design/POPOVER.md): the one rich-context popup, driven through its lab page (design/popover-lab.html, opened from disk, no server).
 // Lazy (no .pop until a tap, removed on close), one at a time, a second tap / Esc / an outside tap close it, focus goes back on Esc, aria wiring,
 // every variant inside a 360 viewport (16px edges, no sideways scroll), media = a graph.js figure with an accessible name, reduced motion = no animation.
 //   node tests/popover.pw.mjs

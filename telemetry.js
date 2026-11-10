@@ -1,4 +1,4 @@
-/* Telemetry (design/plans/TELEMETRY.md): PostHog + Microsoft Clarity, loaded AFTER the first question is on screen.
+/* Telemetry (docs/design/plans/TELEMETRY.md): PostHog + Microsoft Clarity, loaded AFTER the first question is on screen.
    window.stemT(name, props) is the one entry point (app.js calls it as window.stemT?.(...)). It never throws, never blocks.
    Off (stemT stays a no-op, nothing loads, nothing is said) when:
      - Do Not Track or Global Privacy Control is on;
@@ -53,7 +53,7 @@
     return false;
   }
   /* replay records everything EXCEPT e-mail and phone-number shapes (Fable fix c): typed into #scratch, Cluck's ask field, or
-     echoed back as text. Same regexes in design/plans/TELEMETRY.md for the server side. */
+     echoed back as text. Same regexes in docs/design/plans/TELEMETRY.md for the server side. */
   var EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
   var PHONE = /(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
   function blankPII(text) {
@@ -117,7 +117,7 @@
     for (var i = 0; i < list.length; i++) if (list[i].s >= a && list[i].s < b) { n++; ms += list[i].d; }
     return { n: n, ms: Math.round(ms) };
   }
-  /* the A/B bucket (design/DISMISS.md): FNV-1a of the anonymous id, mod n. Stable for one id; no new id, no new storage. Junk -> 0 */
+  /* the A/B bucket (docs/design/DISMISS.md): FNV-1a of the anonymous id, mod n. Stable for one id; no new id, no new storage. Junk -> 0 */
   function bucket(id, n) {
     if (typeof id !== "string" || !id || !(n > 0)) return 0;
     var h = 0x811c9dc5;
@@ -384,7 +384,7 @@
         p.init(cfg.ph, {
           api_host: cfg.host, person_profiles: "always", persistence: "localStorage",   // no respect_dnt: optedOut() is the one privacy gate (Tony Oct 20)
           bootstrap: { distinctID: did }, capture_pageview: true, capture_pageleave: true,
-          autocapture: false, disable_session_recording: true,   // bench 2026-10-07 (design/bench/posthog-2026-10-07): both on = +202 ms TBT; pageview + stemT events only
+          autocapture: false, disable_session_recording: true,   // bench 2026-10-07 (archive/design/bench/posthog-2026-10-07): both on = +202 ms TBT; pageview + stemT events only
           disable_surveys: true, capture_dead_clicks: false,   // D22 bench: −42 KB; our dead_tap covers dead clicks
           mask_all_text: false, mask_all_element_attributes: false,
           /* rrweb calls the mask functions only on "masked" nodes: so every input and text node is "masked", and the functions

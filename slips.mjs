@@ -1,4 +1,4 @@
-/* Slips from the formula: the JS twin of slips.py (design/HANDOFF-slips-v2.md unit C), for uploaded banks graded on the device
+/* Slips from the formula: the JS twin of slips.py (docs/design/HANDOFF-slips-v2.md unit C), for uploaded banks graded on the device
    (app.js gradeLocal). Same 10 families, same order, same EPS, same close() and match(); the golden fixture
    tests/fixtures/slips-golden.json is shared by both test suites (tests/slips.test.mjs).
    math.js (vendor/math.min.js, the global `math`; node tests set globalThis.math) only parses: math.parse keeps the tree unfolded,

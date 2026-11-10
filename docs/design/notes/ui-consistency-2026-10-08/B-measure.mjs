@@ -1,7 +1,7 @@
 // UI audit B (question screen): drives each question kind through idle / ready / wrong / right / out, measures with
 // getBoundingClientRect + getComputedStyle, and saves viewport shots. Read-only: no app code is touched.
 //   STEM_TRIES=<throwaway file> python3 serve.py 8841 &
-//   PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node design/notes/ui-consistency-2026-10-08/B-measure.mjs http://localhost:8841 <shotDir> <jsonOut>
+//   PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node docs/design/notes/ui-consistency-2026-10-08/B-measure.mjs http://localhost:8841 <shotDir> <jsonOut>
 import { createRequire } from "node:module";
 import { writeFileSync, mkdirSync } from "node:fs";
 const require = createRequire(import.meta.url);

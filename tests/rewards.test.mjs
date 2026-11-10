@@ -1,4 +1,4 @@
-// rewards/engine.js: XP, levels, drop roll, pity, streak, per-bank state, the fading original (design/REWARDS-WIRING.md).
+// rewards/engine.js: XP, levels, drop roll, pity, streak, per-bank state, the fading original (docs/design/REWARDS-WIRING.md).
 // The engine is a plain script; it runs here on globalThis with a fake localStorage and a scripted Math.random.
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";

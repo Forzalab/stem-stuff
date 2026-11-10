@@ -5,7 +5,7 @@
 #   kept:    main, any branch with an open PR, any branch with a commit in the last 24 h (a live session)
 # Restore one: git push origin refs/tags/archive/<branch>:refs/heads/<branch>
 # Runs in .github/workflows/prune.yml (the repo token can push tags and delete branches; Claude's sandbox cannot). Needs `gh`.
-# design/TRUNK.md has the why.
+# docs/design/TRUNK.md has the why.
 set -euo pipefail
 DRY=; [ "${1:-}" = --dry-run ] && { DRY=1; shift; }
 MAX="${1:-7}"; NOW="$(date +%s)"

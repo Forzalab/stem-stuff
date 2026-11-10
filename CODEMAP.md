@@ -101,9 +101,12 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `vendor/` | KaTeX, fonts, libs. Do not edit. | never, unless updating a lib |
 | `banks/` | Practice banks with answers (server only). | a bank |
 | `prompts/` | Runtime LLM system prompts. | Cluck prompt text |
-| `author/` | Cluck authoring kits and prompts (not read at runtime). | scene authoring |
+| `author/` | Leftover README only; the kits, prompts and skills moved to `tools/author/` (see PR D). | scene authoring |
 | `blind/` | Blind-locale test data. | blind test |
 | `calc/` | Calc Coach json and svg. | Calc Coach data |
-| `design/` | Notes, plans, mockups, shots; explain-box.* is live code. | a design note |
-| `try/` | Prototype pages. | a prototype |
+| `design/` | Live explain-box.* and the `*-lab.html` pages. Notes and plans are in `docs/design/`, mockups and shots in `archive/design/`. | explain box, a lab page |
+| `docs/` | Notes, plans and MC.md (multiple choice A–E and hints). `docs/design/` holds the design notes and plans. | a design note, a plan, MC |
+| `docs/MC.md` | Multiple choice (A–E) and hints. | MC answers, hints |
+| `archive/` | Old mockups, shots and prototype pages (`archive/design/`, `archive/try/`). Not shipped; kept for reference. | an old mockup or prototype |
+| `try/` | The views demo only (views-demo*). Old prototype pages moved to `archive/try/`. | views demo |
 | `.github/workflows/` | CI: tests.yml, ship.yml, prune.yml, spend.yml. | CI |

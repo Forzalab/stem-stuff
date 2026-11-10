@@ -1,5 +1,5 @@
 """The bank hatch: fetch only the exam banks (projects/*/_files/*-bank/BANK_*.json) from the brain on GitLab, over its HTTP API.
-No clone and no git: the brain is heavy and Tony's phone has no copy (design/DEPLOY.md). tools/build_and_ship/ship.sh calls this when no local
+No clone and no git: the brain is heavy and Tony's phone has no copy (docs/design/DEPLOY.md). tools/build_and_ship/ship.sh calls this when no local
 brain clone exists.
 
 usage: python3 tools/build_and_ship/brain_banks.py OUTDIR            |   python3 tools/build_and_ship/brain_banks.py --check-pins SPEC
@@ -26,7 +26,7 @@ import urllib.request
 API = os.environ.get("BRAIN_API", "https://gitlab.com/api/v4").rstrip("/")
 PROJECT = urllib.parse.quote(os.environ.get("BRAIN_PROJECT", "Forzalab-bravo/brain"), safe="")
 REF = os.environ.get("BRAIN_REF", "main")
-BANK = re.compile(r"^projects/[^/]+/_files/[^/]+-bank/(BANK_[A-Z0-9]{3,6}\.json|formula-sheet\.json)$")   # + the formula sheet (design/EASY.md)
+BANK = re.compile(r"^projects/[^/]+/_files/[^/]+-bank/(BANK_[A-Z0-9]{3,6}\.json|formula-sheet\.json)$")   # + the formula sheet (docs/design/EASY.md)
 
 
 class Fail(Exception):

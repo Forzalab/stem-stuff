@@ -28,7 +28,7 @@
 # tools/build_and_ship/ship.sh or brain_banks.py differs from origin/main's (local edits, another branch, offline).
 # A repo-root .env (gitignored; see .env.example) is loaded first. Vercel token: $VERCEL_TOKEN if set (cloud), else your
 # `vercel login`. Already-built demo → live without a rebuild: Vercel dashboard → Deployments → ⋯ → Promote.
-# design/DEPLOY.md has the why.
+# docs/design/DEPLOY.md has the why.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
@@ -123,7 +123,7 @@ if [ -z "$NOBRAIN" ]; then
   brain_dir
   if [ -n "$BRAIN" ]; then
     PINNED=" $(tr ',' ' ' <<<"$SHIP_PINS" | sed 's/\.json//g; s/@[^ ]*//g') "
-    for f in "$BRAIN"/projects/*/_files/*-bank/BANK_*.json "$BRAIN"/projects/*/_files/*-bank/formula-sheet.json; do   # + the formula sheet (design/EASY.md)
+    for f in "$BRAIN"/projects/*/_files/*-bank/BANK_*.json "$BRAIN"/projects/*/_files/*-bank/formula-sheet.json; do   # + the formula sheet (docs/design/EASY.md)
       case "$PINNED" in *" $(basename "$f" .json) "*) continue ;; esac   # pinned: only the pinned sha counts
       t="$(git -C "$BRAIN" log -1 --format=%ct -- "${f#"$BRAIN"/}" 2>/dev/null || true)"
       add 1 "${t:-0}" brain "$f"
@@ -166,7 +166,7 @@ if [ -n "$PRINT" ]; then
 fi
 
 # --- gate: every BANK_*.json about to deploy passes slips.py --strict and the SCHEMA.md "problems" schema, and every figure in the
-# deploy dir $W has its PNG, or nothing deploys (design/BANK-MIGRATION.md §1). This checkout's tools; no node / tests/node_modules =
+# deploy dir $W has its PNG, or nothing deploys (docs/design/BANK-MIGRATION.md §1). This checkout's tools; no node / tests/node_modules =
 # a failure, never a skip. ---
 GATE=()
 while IFS="$(printf '\t')" read -r name src path; do case "$name" in BANK_*.json) GATE+=("$path") ;; esac; done <<<"$CHOSEN"
@@ -208,7 +208,7 @@ printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/banks/$name"
 done
 gate || exit 1   # after the copy: the figure PNGs are rendered into (and checked in) $W
-VJSON="$(bash "$ROOT/tools/build_and_ship/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (design/DEPLOY.md)
+VJSON="$(bash "$ROOT/tools/build_and_ship/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (docs/design/DEPLOY.md)
 VPR="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["pr"])' <<<"$VJSON")"
 echo "deploying origin/main @ $(git -C "$W" rev-parse --short HEAD) ($VPR) as $MODE"
 echo "$SUMMARY"

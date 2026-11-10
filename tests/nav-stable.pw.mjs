@@ -1,4 +1,4 @@
-// Prev/Next in a bank (design/NAV.md "Mastery order", design/plans/QUEUE.md): Next opens the question at once from the bank in
+// Prev/Next in a bank (docs/design/NAV.md "Mastery order", docs/design/plans/QUEUE.md): Next opens the question at once from the bank in
 // memory (no wait on p/CODE.json), Prev stays lit, Prev walks back what was shown, the list keeps the shown ones in their order.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/nav-stable.pw.mjs [port]

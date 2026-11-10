@@ -1,30 +1,31 @@
 #!/usr/bin/env node
-// Gen-quality loop for the cluck-author skill (design/plans/GEN-QUALITY.md).
+// Gen-quality loop for the cluck-author skill (docs/design/plans/GEN-QUALITY.md).
 //   node tools/author/gen-loop.mjs loop  --cases <cases.json> --iter <n> [--skill] [--models a,b] [--only phys_concept,phys_mechanical] --out <log.jsonl>
 //   node tools/author/gen-loop.mjs regen --cases <cases.json> --prod <gens.json> [--model m] --out <log.jsonl>
 //   node tools/author/gen-loop.mjs grade-scene <case.json>       (internal: runs the scene gate in a child, prints @@RESULT)
 // cases.json = [{name, code, pick, correct, choices:[{id,md}], key, slip, prompt}] where prompt = serve.py explain_prompt(p, pick)
-// (built by the "Reproduce" snippet in design/plans/GEN-QUALITY.md). Key: $OPENROUTER_API_KEY (env only, never printed).
+// (built by the "Reproduce" snippet in docs/design/plans/GEN-QUALITY.md). Key: $OPENROUTER_API_KEY (env only, never printed).
 import { readFileSync, appendFileSync, writeFileSync, mkdtempSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const ROOT = new URL("../../", import.meta.url);
-const read = p => readFileSync(new URL(p, ROOT), "utf8");
+const HERE = new URL("./", import.meta.url);
+const ROOT = new URL("../../", HERE);
+const read = p => readFileSync(new URL(p, HERE), "utf8");
 const args = process.argv.slice(2), cmd = args[0];
 const opt = (k, d) => { const i = args.indexOf("--" + k); return i < 0 ? d : (args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : true); };
 export const FLASH = ["deepseek/deepseek-v4.1-flash", "google/gemini-3.8-flash"];
 export const SMART = ["anthropic/claude-sonnet-5.5", "openai/gpt-6.1-sol"];
 
 // ---------- prompts ----------
-const sceneGen = () => read("author/prompts/scene-gen.md").split("## SYSTEM PROMPT (everything below this line is sent)")[1].trim();
+const sceneGen = () => read("prompts/scene-gen.md").split("## SYSTEM PROMPT (everything below this line is sent)")[1].trim();
 const skill = () => {
-  const dir = "author/skills/cluck-author/";
-  const ex = readdirSync(new URL(dir + "examples/", ROOT)).filter(f => f.endsWith(".md")).sort().map(f => read(dir + "examples/" + f));
+  const dir = "skills/cluck-author/";
+  const ex = readdirSync(new URL(dir + "examples/", HERE)).filter(f => f.endsWith(".md")).sort().map(f => read(dir + "examples/" + f));
   return "SKILL (follow it; it overrides anything above that conflicts):\n\n" + read(dir + "SKILL.md") + "\n\nEXAMPLES (other questions: copy the shape, never their words or numbers):\n\n" + ex.join("\n\n");
 };
-const genieV5 = () => read("author/prompts/cluck-genie-v5.md").match(/```text\n([\s\S]*?)\n```/)[1];
+const genieV5 = () => read("prompts/cluck-genie-v5.md").match(/```text\n([\s\S]*?)\n```/)[1];
 const KITS = "KITS: mechanics (body, arrow/force, incline, spring, pulley), energy-bars (bar), graph-search (node, edge, trace); plus axes, fn, shade, poly, seg, text for graphs.";
 
 // ---------- OpenRouter ----------
@@ -100,7 +101,7 @@ const ctxOf = c => ({ code: c.code, key: c.key, choices: c.choices, pick: c.pick
 
 // ---------- commands ----------
 async function loop() {
-  const { rubric } = await import(new URL("author/skills/cluck-author/rubric.mjs", ROOT));
+  const { rubric } = await import(new URL("skills/cluck-author/rubric.mjs", HERE));
   const cases = JSON.parse(readFileSync(opt("cases"), "utf8"));
   const only = String(opt("only", "phys_concept,phys_mechanical")).split(",");
   const models = opt("models") ? String(opt("models")).split(",") : [...FLASH, ...SMART];
@@ -131,12 +132,12 @@ async function loop() {
 }
 
 async function regen() {
-  const { rubric } = await import(new URL("author/skills/cluck-author/rubric.mjs", ROOT));
+  const { rubric } = await import(new URL("skills/cluck-author/rubric.mjs", HERE));
   const cases = JSON.parse(readFileSync(opt("cases"), "utf8"));
   const prod = JSON.parse(readFileSync(opt("prod"), "utf8"));
   const model = opt("model", FLASH[0]), out = opt("out");
   // --no-examples: SKILL.md only. The examples hold gold lines for these same 9 situations, so a with-examples regen partly measures copying.
-  const sk = opt("no-examples") ? "SKILL (follow it):\n\n" + read("author/skills/cluck-author/SKILL.md") : skill();
+  const sk = opt("no-examples") ? "SKILL (follow it):\n\n" + read("skills/cluck-author/SKILL.md") : skill();
   const system = genieV5() + "\n\n" + sk + "\n\nOUTPUT for this call: plain text per the LEVEL rules at the top (not JSON).";
   await Promise.all(cases.map(async c => {
     const r = await call(model, system, c.prompt + "\n\nLEVEL: 1", 1500);
@@ -150,7 +151,7 @@ async function regen() {
 }
 
 async function regrade() {                                    // re-run the current rubric + scene gate on logged gens (no model calls)
-  const { rubric } = await import(new URL("author/skills/cluck-author/rubric.mjs", ROOT));
+  const { rubric } = await import(new URL("skills/cluck-author/rubric.mjs", HERE));
   const cases = String(opt("cases")).split(",").flatMap(f => JSON.parse(readFileSync(f, "utf8")));
   const rows = readFileSync(opt("log"), "utf8").trim().split("\n").map(l => JSON.parse(l));
   for (const r of rows) {

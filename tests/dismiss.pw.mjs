@@ -1,4 +1,4 @@
-// Dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor"). html.side: the X, Escape or the sash dragged
+// Dismiss Cluck's column (desktop; docs/design/DISMISS.md, Tony Oct 20: "B4 look with H humor"). html.side: the X, Escape or the sash dragged
 // to the right edge fold the right column; one centred column, the question one type step up, no "Question" label. Under the verdict a
 // 44px+ row (#clBack) brings it back: its name is plain ("See Cluck's explanation"), its rotating line is aria-hidden, "Show him" stays.
 // Reduced motion: one static line. The humour kind is a stable hash of telemetry's own id (window.stemHk), forced by #hk=<kind>, a fixed

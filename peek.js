@@ -1,4 +1,4 @@
-/* Cluck's duck + sky, and the T45 idle peek (design/IDLE-PEEK.md; 20261015-T45, Tony Oct 15: "idling for more than 2-3min in a
+/* Cluck's duck + sky, and the T45 idle peek (docs/design/IDLE-PEEK.md; 20261015-T45, Tony Oct 15: "idling for more than 2-3min in a
    question/quiz (in a bank, not each question)? cluck slowly peeks up sunrise").
    [Nov 2, B3 PR-B1: the duck is a status nudge. A tap dismisses it and nothing else; it no longer opens Cluck. The action is Ask Cluck in the verdict drawer (strip.js).]
    1. window.stemDuck: ONE duck and ONE sky for every Cluck rise. Every rise replays the same sunrise (same start, curve, end: the 🔒 SYNC);

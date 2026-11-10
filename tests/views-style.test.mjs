@@ -1,4 +1,4 @@
-// views.css + views-lib.js as code rules (refine F2/F3/F17/F18/F19; design/STYLE.md), in the shape of tests/style.test.mjs.
+// views.css + views-lib.js as code rules (refine F2/F3/F17/F18/F19; docs/design/STYLE.md), in the shape of tests/style.test.mjs.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

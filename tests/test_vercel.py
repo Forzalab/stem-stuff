@@ -47,7 +47,7 @@ class BuildPublic(unittest.TestCase):
 
 
 class Stamp(unittest.TestCase):
-    """version.json (tools/build_and_ship/ship.sh) → a sw.js of its own per deploy + the badge's meta; none → both stay "dev" (design/DEPLOY.md)"""
+    """version.json (tools/build_and_ship/ship.sh) → a sw.js of its own per deploy + the badge's meta; none → both stay "dev" (docs/design/DEPLOY.md)"""
     def dir(self, version=None):
         d = tempfile.mkdtemp(prefix="stem-stamp-")
         for f in ("sw.js", "index.html"):

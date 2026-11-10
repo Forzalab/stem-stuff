@@ -1,4 +1,4 @@
-/* try/genui-visual.js — round 1 mock (agent V). One question (PHYS_KWV), five variants, every toggle in the URL.
+/* archive/try/genui-visual.js — round 1 mock (agent V). One question (PHYS_KWV), five variants, every toggle in the URL.
    Data = tests/visual-cases/kwv-*-good.json + SCHEMA-V2 E1/E3/E5/E10 (grid squares: x 0–8, F 0–4, 1 square = 2.5 J). */
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);

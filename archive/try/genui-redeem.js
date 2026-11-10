@@ -1,4 +1,4 @@
-/* try/genui-redeem.js: the "Redeem +3" chip on a re-queued missed question + the FIXED +3 burst on a right answer (agent U, Oct 7 2026).
+/* archive/try/genui-redeem.js: the "Redeem +3" chip on a re-queued missed question + the FIXED +3 burst on a right answer (agent U, Oct 7 2026).
    v=1 chip in the label row, burst rises from the chip · v=2 a quiet line above the stem, burst on the right row · v=3 a coin waiting
    beside Check (T25, Oct 12: Tony's pick, no words at all: the duck coin + "+3"; right = the coin flies into the HUD coin, the count ticks
    on arrival; wrong = the coin stays, dimmed). Wrong = no penalty, "comes back later". The bonus is always +3 (D60), never random; a Redeem is never lost.

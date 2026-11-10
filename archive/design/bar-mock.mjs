@@ -1,6 +1,6 @@
 // MOCKUPS ONLY (not built): (e) two ways to lose the #more chevron button, (f) the bottom code bar as a short strip.
-//   python3 serve.py 8815 &   then   node design/bar-mock.mjs http://localhost:8815
-// Writes design/shots/bar-*.png at 390 (and 1920 where it applies). Injects CSS into the real page; nothing in app.* changes.
+//   python3 serve.py 8815 &   then   node archive/design/bar-mock.mjs http://localhost:8815
+// Writes archive/design/shots/bar-*.png at 390 (and 1920 where it applies). Injects CSS into the real page; nothing in app.* changes.
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 let pw;

@@ -1,4 +1,4 @@
-// Math in choice rows wraps cleanly at every width (design/STYLE.md "Math in text"):
+// Math in choice rows wraps cleanly at every width (docs/design/STYLE.md "Math in text"):
 // no punctuation alone at the start of a line after math, no formula broken over lines ("d =" / "- x" alone), no inline math
 // wider than its row, no word split mid-word.
 // Starts its own serve.py with a throwaway bank of nasty rows:   node tests/katex-wrap.pw.mjs [port]

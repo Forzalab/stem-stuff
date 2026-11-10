@@ -1,6 +1,6 @@
 [
  {
-  "shot": "design/shots/buttons/main.png",
+  "shot": "archive/design/shots/buttons/main.png",
   "name": "upload",
   "sel": "#upload",
   "current": false,
@@ -14,7 +14,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/main.png",
+  "shot": "archive/design/shots/buttons/main.png",
   "name": "code go",
   "sel": "#codeGo",
   "current": false,
@@ -28,7 +28,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/main.png",
+  "shot": "archive/design/shots/buttons/main.png",
   "name": "MC arrow",
   "sel": ".ch[data-id=\"b\"] .send",
   "current": false,
@@ -42,7 +42,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/main.png",
+  "shot": "archive/design/shots/buttons/main.png",
   "name": "copy",
   "sel": "#copy",
   "current": false,
@@ -56,7 +56,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/freeform.png",
+  "shot": "archive/design/shots/buttons/freeform.png",
   "name": "freeform arrow",
   "sel": "#ansGo",
   "current": false,
@@ -70,7 +70,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/more.png",
+  "shot": "archive/design/shots/buttons/more.png",
   "name": "expand chevron",
   "sel": "#more",
   "current": false,
@@ -84,7 +84,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/picker.png",
+  "shot": "archive/design/shots/buttons/picker.png",
   "name": "picker close",
   "sel": ".so-x",
   "current": false,
@@ -98,7 +98,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/picker.png",
+  "shot": "archive/design/shots/buttons/picker.png",
   "name": "picker file",
   "sel": ".so-btn.main",
   "current": false,
@@ -112,7 +112,7 @@
   "icon_h": 24
  },
  {
-  "shot": "design/shots/buttons/picker.png",
+  "shot": "archive/design/shots/buttons/picker.png",
   "name": "picker folder",
   "sel": ".so-btn:not(.main)",
   "current": false,

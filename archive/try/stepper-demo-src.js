@@ -1,5 +1,5 @@
 // Stepper iteration 2 fixture (Nov 8): four anchor scenes drawn ONLY from generic Geometry marks (seg / rect / poly / arrow / angle / label).
-// Each Step exercises title / lit / hide / say / tex. Read by try/stepper-demo.html and tests/views-render.test.mjs (smoke).
+// Each Step exercises title / lit / hide / say / tex. Read by archive/try/stepper-demo.html and tests/views-render.test.mjs (smoke).
 const N6 = "null, null, null, null, null, null";
 export const CIRCUIT = `root = View([s])
 s = Steps(g, [a, b, c, d])

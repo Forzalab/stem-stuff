@@ -1,4 +1,4 @@
-// iOS-only Back button (design/NAV.md "iOS exception"): left of the question-bank button, pops the topmost thing
+// iOS-only Back button (docs/design/NAV.md "iOS exception"): left of the question-bank button, pops the topmost thing
 // (Cluck sheet, question list, popover, notes split), else the in-app previous question; never leaves the site.
 // Starts its own serve.py with a throwaway banks/ folder:   node tests/ios-back.pw.mjs [port] [shotDir]
 import { createRequire } from "node:module";

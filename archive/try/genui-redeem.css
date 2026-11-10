@@ -1,4 +1,4 @@
-/* try/genui-redeem.css: Redeem chip + fixed +3 burst (agent U). Tokens only; every keyframe has a reduced-motion rule. */
+/* archive/try/genui-redeem.css: Redeem chip + fixed +3 burst (agent U). Tokens only; every keyframe has a reduced-motion rule. */
 .rd-slot { position: relative; display: inline-flex; }
 .rd-chip { display: inline-flex; align-items: center; gap: var(--s1); min-height: 2rem; padding: 0 var(--s3) 0 var(--s2); border-radius: 999px; background: var(--sheet); color: var(--ink); font-size: var(--t-sm); font-weight: 700; }
 .rd-chip .ico { width: 1.25rem; height: 1.25rem; color: var(--reward); }

@@ -1,5 +1,5 @@
-// Pentest for Swap (keyboard up = one pane), the one-row MC and safe areas, at phone sizes (design/SWAP.md). Since round 3b the phone pad
-// lives on the pad page (design/MULTITASK.md), so Swap is entered from an answer field and its pane is the problem; the old scratch pane
+// Pentest for Swap (keyboard up = one pane), the one-row MC and safe areas, at phone sizes (docs/design/SWAP.md). Since round 3b the phone pad
+// lives on the pad page (docs/design/MULTITASK.md), so Swap is entered from an answer field and its pane is the problem; the old scratch pane
 // is unreachable (the pad peek and the Scratchpad button open the pad page; flow / polish / bar / render check that page). Needs a server:
 //   python3 serve.py 8812 &   then   node tests/swap.pw.mjs http://localhost:8812 [shotDir]
 // The software keyboard is simulated the only way headless Chromium can: the viewport height shrinks to 55% after a field is focused,
@@ -47,7 +47,7 @@ for (const [W, H] of SIZES) {
   const shot = async (name) => { if (SHOTS) { await page.waitForTimeout(120); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };
   const open = async code => {
     await page.setViewportSize({ width: W, height: H });
-    await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
+    await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; docs/design/DONE.md)
     await page.context().addCookies(DIET);
     await page.goto("about:blank");
     await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });

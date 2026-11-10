@@ -6,7 +6,7 @@
 # Default: queue and exit (ship.yml checks the secrets itself; a failed run = GitHub's failed-workflow notification).
 # --wait: the old way: also check the secrets, find the run, watch it (~2 min), and on red print the log tail.
 # It only queues (+ watches); the deploy itself is tools/build_and_ship/ship.sh on the runner. Exit 1 = something failed (one line says what + the fix).
-# Secret values are never read or printed: `gh secret list` shows names only. design/DEPLOY.md ("Power button") has the why.
+# Secret values are never read or printed: `gh secret list` shows names only. docs/design/DEPLOY.md ("Power button") has the why.
 set -euo pipefail
 usage() { echo "usage: tools/build_and_ship/press.sh [--wait] [--pin BANK_X@sha]... [demo|live]" >&2; exit 2; }
 WAIT=; MODE=; PINS="${SHIP_PINS:-}"; REPO="Forzalab/stem-stuff"

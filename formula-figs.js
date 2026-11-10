@@ -1,4 +1,4 @@
-/* formula-figs.js: a small picture for the formula sheet rows that are hard to read as symbols alone (Tony, Oct 26; design/FORMULA-FIGS.md).
+/* formula-figs.js: a small picture for the formula sheet rows that are hard to read as symbols alone (Tony, Oct 26; docs/design/FORMULA-FIGS.md).
    { <sheet row id>: <SCHEMA.md graph block> }. Drawn by graph.js under the formula in the "?" doc popover (app.js docHTML); role="img", its alt
    is the label. Author-time data only, no new format: each value is a plain "scene" graph block (tests/formula-figs.test.mjs checks the schema).
    Colours follow DESIGN-LANGUAGE.md: forces c1 (filled head), velocity c2 (open head); guides dashed muted. Angles: degrees CCW from +x, y up. */

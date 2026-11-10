@@ -1,4 +1,4 @@
-/* try/genui-ui.js: the wrong-pick moment, 3 variants (agent U, Oct 7 2026). design/plans/UI-UNIFY.md maps every choice.
+/* archive/try/genui-ui.js: the wrong-pick moment, 3 variants (agent U, Oct 7 2026). docs/design/plans/UI-UNIFY.md maps every choice.
    Flow: question card + choices -> pick (+ optional "I'm sure") -> wrong -> Cluck box + visual -> retry -> right (affirm thumbnail) -> Next.
    v=1 Partial sheet + bet tick (+2 / -1, first pick only) · ghost on the question's own figure
    v=2 Ante: put 2 coins on the table before the first pick; lose = they stay on the table · figure copy in the sheet's visual slot

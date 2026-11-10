@@ -1,4 +1,4 @@
-// Done questions (design/DONE.md): list marks, read-only reopen, state across reloads, server restarts and hand resets.
+// Done questions (docs/design/DONE.md): list marks, read-only reopen, state across reloads, server restarts and hand resets.
 // Starts its own serve.py (it restarts it), with a throwaway tries.json:
 //   node tests/done.pw.mjs [port] [shotDir]
 import { createRequire } from "node:module";
@@ -59,7 +59,7 @@ async function pick(page, id) {
   await page.click(`.ch[data-id="${id}"] .send`);
   await graded(page, n); await page.waitForTimeout(150);
 }
-/* the rows in code order (CALC1_D01 = r[0] ...): the list is file order (design/NAV.md); sorted by code to stay independent of that */
+/* the rows in code order (CALC1_D01 = r[0] ...): the list is file order (docs/design/NAV.md); sorted by code to stay independent of that */
 const rows = page => page.$$eval("#qlist a", as => as.sort((a, b) => a.getAttribute("href") < b.getAttribute("href") ? -1 : 1).map(a => ({
   x: a.querySelectorAll(".mk-x").length, ok: a.querySelectorAll(".mk-ok").length, gone: a.classList.contains("gone"),
   label: a.getAttribute("aria-label"), line: getComputedStyle(a.querySelector(".qt")).textDecorationLine,

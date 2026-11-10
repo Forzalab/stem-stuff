@@ -1,4 +1,4 @@
-// speak.mjs: Cluck's text read aloud (design/EASY.md Phase 4). LaTeX and units come out as words.
+// speak.mjs: Cluck's text read aloud (docs/design/EASY.md Phase 4). LaTeX and units come out as words.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { speakable } from "../speak.mjs";

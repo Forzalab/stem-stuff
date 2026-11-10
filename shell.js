@@ -32,7 +32,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
   setTile: { get: () => setTile, enumerable: true },
   sideMQ: { get: () => sideMQ, enumerable: true },
 });
-/* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
+/* ---------- sugar rewards (docs/design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
    Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
    an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
    quiet +1 (a small "+1" by the coin, no sound, no words: Cluck and the "one more try" toast own a wrong answer). State per bank. */
@@ -80,7 +80,7 @@ function rewardGo(mine, o) {
   // with a try left it waits, unshown (Tony, Oct 5 clutter pass C12: nothing moves up there while the eye belongs on the hint)
   requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
 }
-/* ---------- the original beside a snack (spec 1b; design/REWARDS-WIRING.md §4) ----------
+/* ---------- the original beside a snack (spec 1b; docs/design/REWARDS-WIRING.md §4) ----------
    A snack (one constant swapped) shows its Practice Exam 2 original with the worked solution. Desktop (side by side): in the pad column,
    in the scratchpad's place while it is open. Phone: a card on top of the problem, folded until tapped. Fading per original question:
    level 1 (its first snack) the whole solution; 2 (a later snack) the last line behind "Peek"; 3 (after a first-try correct on one
@@ -148,7 +148,7 @@ function origPlace() {
   else $("#freezeIn").prepend(origEl);
 }
 /* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
-   so a right answer still feels much bigger (design/REWARDS.md: a loss dressed up as a win) */
+   so a right answer still feels much bigger (docs/design/REWARDS.md: a loss dressed up as a win) */
 function rewardTick(res, mine) {
   const coin = $("#rwCoin"), fx = FXL(), n = res.xp + (mine.rwHeld || 0); mine.rwHeld = 0;
   if (fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, `+${n}`, "fx-float-sm");
@@ -235,7 +235,7 @@ function mountBox() {
   ta.addEventListener("input", () => { if (ta.selectionEnd === ta.value.length && ta.scrollHeight > ta.clientHeight) ta.scrollTop = ta.scrollHeight; });
   autosave(ta);
 }
-/* ---------- scratchpad autosave (design/shots/autosave-*.png): draft per bank + code in localStorage.
+/* ---------- scratchpad autosave (archive/design/shots/autosave-*.png): draft per bank + code in localStorage.
    3 s after the last edit: "saving" (a light band sweeps through it), then "saved", gone after 2 s. Reduced motion: no sweep. */
 const SAVE_IDLE = 3000, SAVE_SHOW = 700, SAVED_SHOW = 2000;
 const padKey = code => "stem-pad:" + ((window.stemOffline && window.stemOffline.fileName && window.stemOffline.fileName(code)) || "server") + ":" + code;
@@ -380,7 +380,7 @@ document.addEventListener("click", async e => {
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 
-/* ================= freeze layer (design/FREEZE.md) =================
+/* ================= freeze layer (docs/design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip
    with its own scroll instead of covering the scratchpad. On iOS Safari the keyboard does not shrink the layout
    viewport, and sticky/fixed stick to the layout viewport, so --kb-top moves the strip down by visualViewport.offsetTop. */
@@ -390,7 +390,7 @@ const vv = window.visualViewport;
 function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")); }
 /* entry box: fixed bottom-centre on phones / touch (one thumb), top of the column on desktop (FREEZE.md) */
 const dockMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
-const sideMQ = matchMedia("(min-width: 720px)");                       // multitask: problem | pad side by side from here up (design/MULTITASK.md)
+const sideMQ = matchMedia("(min-width: 720px)");                       // multitask: problem | pad side by side from here up (docs/design/MULTITASK.md)
 /* the room the bottom bar takes from the page: its full height, or the strip's while it rests as a strip (revealed, it lies over the page) */
 const barTab = $("#barTab");
 function dockRoom(evenAway) {
@@ -438,7 +438,7 @@ function layoutDock() {
   const inDock = dock.contains(document.activeElement);
   const shrunk = bottom && !!tallest && h < tallest * 0.8;
   const kb = shrunk && editing();
-  /* Swap (design/SWAP.md): keyboard up + a field in <main> has focus. Once on, it stays on while focus is anywhere in <main>
+  /* Swap (docs/design/SWAP.md): keyboard up + a field in <main> has focus. Once on, it stays on while focus is anywhere in <main>
      (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
   const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
   const grace = (!a || a === document.body) && performance.now() - bridge.lostAt < 500;
@@ -450,7 +450,7 @@ function layoutDock() {
     const r = a.getBoundingClientRect(), top = vv ? vv.offsetTop : 0, bot = top + (vv ? vv.height : innerHeight);
     if (r.top < top || r.bottom > bot) scrollBy(0, r.bottom > bot ? Math.min(r.bottom - bot + 8, r.top - top - 8) : r.top - top - 8);
   });
-  root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (design/MULTITASK.md)
+  root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (docs/design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (bridge.mtOpen && !!S));
   root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
@@ -538,7 +538,7 @@ function toggleMore() {
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
 }
-/* ================= Swap (design/SWAP.md) =================
+/* ================= Swap (docs/design/SWAP.md) =================
    Keyboard up = ONE pane fills the visible area above the keyboard: the problem (card, answer pinned at its bottom) or the
    scratchpad (question peek on top, the box anchored to the bottom and growing upward). One icon toggle switches; focusing a field
    picks the pane too. layoutDock() decides when it is on; CSS (html.swap, .swap-problem, .swap-scratch) does the layout;
@@ -669,7 +669,7 @@ function backInView() {
   requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
 }
 
-/* ================= Multitask (design/MULTITASK.md) =================
+/* ================= Multitask (docs/design/MULTITASK.md) =================
    Phone (< 720px): the pad is hidden; the floating Scratchpad button (#padFab) opens the pad page: the tile on top, one drag handle in
    the gap, the pad below. The tile's q | a switch: q = the problem only, a = the answer control only (round 3b). It opens on q with a big
    pad (1/3). Anchors 1/2, 1/3 and the smallest tile; drag snaps, tap = next. Exits: Back (a pushed history entry), tapping the problem
@@ -997,7 +997,7 @@ new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !
 let qW = 0;
 new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
 
-/* ================= resume (design/RELOAD.md) =================
+/* ================= resume (docs/design/RELOAD.md) =================
    Back from bfcache (pageshow persisted) or a long-hidden tab: requests older than the timeout are aborted (background timers are
    throttled, so theirs may not have fired), busy is cleared, the controls that should be live are live again, the layout reruns. */
 function resume(fromCache) {
@@ -1035,7 +1035,7 @@ addEventListener("DOMContentLoaded", async () => {
   const off = window.stemOffline;
   let restored = false;
   if (off && off.ready) { try { restored = await Promise.race([off.ready, new Promise(r => setTimeout(() => r(false), 1500))]); } catch { /* storage blocked */ } }
-  /* the live list (design/BANK.md): #BANK_XXX, else the last one used here, else the server's pointer (new browser,
+  /* the live list (docs/design/BANK.md): #BANK_XXX, else the last one used here, else the server's pointer (new browser,
      or storage wiped). A problem in the hash still opens; the bank then only fills the list. */
   try {
     if (location.hash.length > 1 && window.stemWelcomeFirst && await window.stemWelcomeFirst.check()) { bridge.forceWelcome = true; history.replaceState(null, "", location.pathname + location.search); }   // a first-time user on a deep link: the welcome start first, once (welcome-first.js)

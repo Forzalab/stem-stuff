@@ -1,4 +1,4 @@
-/* Done questions (design/DONE.md): proposed additions. Mockup-only scaffolding is marked "mock". */
+/* Done questions (docs/design/DONE.md): proposed additions. Mockup-only scaffolding is marked "mock". */
 
 /* mock: stand-in for the real top bar / list placement (nav.css places them per layout) */
 .mock-nav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }

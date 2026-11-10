@@ -1,4 +1,4 @@
-// 20261015-T45 idle peek (design/IDLE-PEEK.md, peek.js): in a sugar bank, after 3 min with no input Cluck peeks up at a sunrise; any
+// 20261015-T45 idle peek (docs/design/IDLE-PEEK.md, peek.js): in a sugar bank, after 3 min with no input Cluck peeks up at a sunrise; any
 // input puts him away; one more after 10 more idle min, max 2 per bank. Diet, the start page and a lone question get none.
 // A fake clock (Playwright clock) runs the minutes; the CSS run is jumped to its end (getAnimations().finish()). Phone + desktop,
 // motion + reduce. Own serve.py + banks folder, never the student's real tries.json.

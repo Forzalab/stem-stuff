@@ -1,7 +1,7 @@
 #!/bin/sh
 # Impeccable pass for stem-stuff (Tony rule, 2026-10-06): static + live at phone, desktop, 4K / zoom-out.
 # Usage: tools/audits/impeccable.sh <base_url> <path_or_query>... [static files...]
-#   e.g. tools/audits/impeccable.sh http://localhost:8816 "try/tries.html?v=A" "try/tries.html?v=B&rm=1" -- try/ app.css
+#   e.g. tools/audits/impeccable.sh http://localhost:8816 "archive/try/tries.html?v=A" "archive/try/tries.html?v=B&rm=1" -- archive/try/ app.css
 # Exit 2 if any findings. Raw output -> ${OUT:-impeccable-out}/.
 set -u
 BASE="$1"; shift

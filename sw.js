@@ -1,7 +1,7 @@
 /* stem-stuff service worker. See OFFLINE.md.
  * shell (index.html, its css/js, KaTeX): cache-first. Each deploy stamps VERSION (tools/build_and_ship/build_public.py), so a deploy = a new
  * sw.js: it precaches the whole new shell, takes over and drops the old shell cache in one go; offline.js reloads the page
- * (design/DEPLOY.md, Oct 6: the page used to climb one deploy per reload). Unstamped (serve.py, dev): updated in the
+ * (docs/design/DEPLOY.md, Oct 6: the page used to climb one deploy per reload). Unstamped (serve.py, dev): updated in the
  * background, a changed file tells the page (update bar); stamped, a changed file is left to the next sw.js.
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
@@ -99,7 +99,7 @@ self.addEventListener("fetch", e => {
     e.respondWith((async () => {
       const c = await caches.open(PROBS);
       try {
-        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);   // never hang (design/RELOAD.md)
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);   // never hang (docs/design/RELOAD.md)
         const r = await fetch(req, { signal: ctl.signal }).finally(() => clearTimeout(t));
         if (r.ok) await c.put(key, r.clone());
         return r;

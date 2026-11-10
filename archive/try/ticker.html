@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Work ticker: test drive</title>
 <link rel="icon" href="data:,">
-<!-- Work ticker test drive (Oct 6, v2: plain text ticker). Part 1: Q1 from try/live-scene.html (the F–x work graph). The area is cut
+<!-- Work ticker test drive (Oct 6, v2: plain text ticker). Part 1: Q1 from archive/try/live-scene.html (the F–x work graph). The area is cut
      into pillars (1 m grid columns, split where F crosses zero; under the axis = negative). Drag the line t: a running readout
      "W = 12.0 J" (the signed sum up to t) and, right beside it, a plain text ticker like a stock quote: green "▲ +1.5 +4.5" while a
      positive streak lasts, a red "▼ −0.5" run after a sign flip. A run fades out ~1.5 s after its last entry. At the end: "W = 22 J"
@@ -233,7 +233,7 @@ const sysRM = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const S = { rm: qs.get("rm") === "1" || (qs.get("rm") !== "0" && sysRM), v: /^[abc0]$/.test(qs.get("v") || "") ? qs.get("v") : "a", t: 0, entered: 0, revealed: false, hi: [],
   tk: "", rmv: "", fu: "", look: "", cross: 0, drags: 0, reveals: 0, asked: [], t0: Date.now() };
 
-/* ---------- Q1's force graph (try/live-scene.html QA, default dots) and its pillars ---------- */
+/* ---------- Q1's force graph (archive/try/live-scene.html QA, default dots) and its pillars ---------- */
 const PTS = [[0, 0], [2, 6], [4, 6], [6, -2]], XMAX = 6;
 function F(x) {
   for (let i = 0; i < PTS.length - 1; i++) { const [x1, y1] = PTS[i], [x2, y2] = PTS[i + 1]; if (x <= x2 + 1e-12) return y1 + (y2 - y1) * (x - x1) / (x2 - x1); }

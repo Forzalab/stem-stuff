@@ -1,4 +1,4 @@
-// Practice banks (design/BANK.md): type BANK_XXX, the list button reads the code, the bank reopens where it was
+// Practice banks (docs/design/BANK.md): type BANK_XXX, the list button reads the code, the bank reopens where it was
 // (this browser's pointer, else the server's), upload vs bank, unknown bank, the old-bank banner (SCHEMA.md Version table).
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/bank.pw.mjs [port] [shotDir]
@@ -29,7 +29,7 @@ writeFileSync(join(BANKS, "BANK_AB12.json"), JSON.stringify(BANK));
 /* a bank at the newest Version-table row: never a banner. BANK_AB12 (v 1) shows one until 2026-11-05 (the server's real clock) */
 writeFileSync(join(BANKS, "BANK_NW12.json"), JSON.stringify({ v: 20261022, problems: [{ ...num("CALC1_N01", "2", "New one: 1 + 1"), form: "1+1" }] }));
 
-/* the order is a per-bank queue with a random salt (design/plans/QUEUE.md): pin a salt that plays file order for both tiny banks,
+/* the order is a per-bank queue with a random salt (docs/design/plans/QUEUE.md): pin a salt that plays file order for both tiny banks,
    set again whenever it is missing (one step wipes storage) */
 const { qFresh } = await import("../shuffle.mjs");
 const same = (a, s) => qFresh(a, s).every((c, i) => c === a[i]);
