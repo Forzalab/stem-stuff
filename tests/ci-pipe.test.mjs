@@ -1,5 +1,5 @@
 // RED (ticket 09, PR 5 / STEP C): the fast-pipe decision for a PR push while a full run for that
-// PR is in-flight (M5). Fails today because tools/ci-pipe.mjs does not exist yet — every import
+// PR is in-flight (M5). Fails today because tools/operations/ci-pipe.mjs does not exist yet — every import
 // errors until the coder writes the module with this exact surface:
 //   export function decidePipe({ event, inFlight })  // -> { pipe: "fast" | "full", reason }
 // No network, no GitHub: decidePipe is pure; the workflow computes `inFlight` (a queued/in_progress

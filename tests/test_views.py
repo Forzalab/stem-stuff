@@ -1,4 +1,4 @@
-"""views/registry.json → tools/gen_views.py: the registry breaks no rule (refs, engine names, banned props, caps), every
+"""views/registry.json → tools/client_generators/gen_views.py: the registry breaks no rule (refs, engine names, banned props, caps), every
 generated file (library.json, prompt/*.md, checkers.json, the SCHEMA.md views block) matches a fresh run, library.json holds
 exactly the shipping components (what views.js draws), and the prompts offer only what ships and only refs the stage allows.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
@@ -111,7 +111,7 @@ class Generated(unittest.TestCase):
     def test_outputs_up_to_date(self):
         for path, text in outputs().items():
             with open(path) as f:
-                self.assertEqual(f.read(), text, f"{os.path.relpath(path, ROOT)} is stale: run python3 tools/gen_views.py")
+                self.assertEqual(f.read(), text, f"{os.path.relpath(path, ROOT)} is stale: run python3 tools/client_generators/gen_views.py")
 
     def test_no_orphan_prompts(self):
         want = {r + ".md" for r in REG["recipes"]} | {"all.md"}

@@ -148,16 +148,16 @@ test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the pr
   }
 }
 
-/* slips gate (design/HANDOFF-slips-v2.md rule 7): every bank with v >= 20261022 passes `python3 tools/slips.py --strict` (needs sympy, so
+/* slips gate (design/HANDOFF-slips-v2.md rule 7): every bank with v >= 20261022 passes `python3 tools/bank_tools/slips.py --strict` (needs sympy, so
    node shells out). The fixtures prove the wiring while no real bank is that new: good + the PHYS_XZP golden pass, bad fails. */
 {
   const CUTOFF = 20261022, root = new URL("../", import.meta.url);
-  const slipsGate = file => spawnSync("python3", [fileURLToPath(new URL("tools/slips.py", root)), "--strict", fileURLToPath(file)], { encoding: "utf8" });
+  const slipsGate = file => spawnSync("python3", [fileURLToPath(new URL("tools/bank_tools/slips.py", root)), "--strict", fileURLToPath(file)], { encoding: "utf8" });
   const said = r => `${r.error ?? ""}${r.stdout}${r.stderr}`;
   const dir = new URL("banks/", root);
   const all = [new URL("problems.json", root), ...(existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")).sort().map(f => new URL(f, dir)) : [])];
   for (const file of all.filter(u => (JSON.parse(readFileSync(u, "utf8")).v ?? 1) >= CUTOFF)) {
-    test(`${fileURLToPath(file).slice(fileURLToPath(root).length)}: slips gate (tools/slips.py --strict)`, () => {
+    test(`${fileURLToPath(file).slice(fileURLToPath(root).length)}: slips gate (tools/bank_tools/slips.py --strict)`, () => {
       const r = slipsGate(file);
       assert.equal(r.status, 0, said(r));
     });
@@ -344,7 +344,7 @@ for (const p of problems) {
       }
     }
   });
-  test(`${f}: form equals the answer (tools/slips.py)`, () => {
+  test(`${f}: form equals the answer (tools/bank_tools/slips.py)`, () => {
     for (const u of units) {
       if (!u.form) continue;
       const tol = u.tol ?? 1e-6, ans = num(u.answer), v = num(u.form);
@@ -504,7 +504,7 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
 }
 
 // repair / noob / welcome / twin links (SCHEMA.md "Repair ladder, noob tier, welcome, twins"): the schema shapes them; repairFaults
-// (tests/schemas.mjs, also run by tools/schema-check.mjs) is the cross-check the schema cannot say.
+// (tests/schemas.mjs, also run by tools/bank_tools/schema-check.mjs) is the cross-check the schema cannot say.
 {
   const root = new URL("../", import.meta.url), file = new URL("tests/fixtures/repair-p2x.json", root);
   const fx = JSON.parse(readFileSync(file, "utf8"));
@@ -560,8 +560,8 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     const fam = schema("problems").$defs.rstep.properties.fam.anyOf, errs = schema("problems").$defs.error.enum;
     assert.deepEqual(new Set([...errs, ...fam[1].enum]), new Set([...errs, ...FAMILIES]), "fam = the error types + slips.mjs FAMILIES");
   });
-  test("tools/schema-check.mjs runs the gate: the fixture passes (also --repair); problems.json passes, but not --repair", () => {
-    const run = (...a) => spawnSync("node", [fileURLToPath(new URL("tools/schema-check.mjs", root)), ...a], { encoding: "utf8" });
+  test("tools/bank_tools/schema-check.mjs runs the gate: the fixture passes (also --repair); problems.json passes, but not --repair", () => {
+    const run = (...a) => spawnSync("node", [fileURLToPath(new URL("tools/bank_tools/schema-check.mjs", root)), ...a], { encoding: "utf8" });
     assert.equal(run(fileURLToPath(file)).status, 0);
     assert.equal(run("--repair", fileURLToPath(file)).status, 0);
     assert.equal(run(fileURLToPath(new URL("problems.json", root))).status, 0);

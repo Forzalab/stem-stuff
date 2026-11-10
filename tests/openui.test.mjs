@@ -1,4 +1,4 @@
-// Vendored OpenUI Lang (vendor/openui-lang.mjs, tools/openui/build.sh): every spec conformance case at level 1 (program +
+// Vendored OpenUI Lang (vendor/openui-lang.mjs, tools/build_and_ship/openui/build.sh): every spec conformance case at level 1 (program +
 // validation; the level-2 interactions.json replays need a renderer, P1), the zod-free prompt equals the official build's,
 // the streaming parser keeps completed statements, and the bundle stays self-contained, silent and MIT-noticed.
 import test from "node:test";
@@ -46,5 +46,5 @@ test("bundle: one self-contained module, no telemetry, MIT notice first", () => 
   for (const bad of ['from"', "import(", "require(", "posthog", "fetch(", "sendBeacon", "XMLHttpRequest", "process.env"])
     assert.ok(!src.includes(bad), bad);
   assert.match(text("vendor/openui-lang.LICENSE.txt"), /^The MIT License \(MIT\)\n\nCopyright \(c\) 2011-2024 Thesys Inc\./);
-  assert.match(text("tools/openui/build.sh"), /^VERSION=1\.0\.2 /m);
+  assert.match(text("tools/build_and_ship/openui/build.sh"), /^VERSION=1\.0\.2 /m);
 });

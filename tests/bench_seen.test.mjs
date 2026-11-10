@@ -1,4 +1,4 @@
-// tools/bench_seen.mjs (J6): the dump parser, the rule replay (the same tree the page runs), the label sheet, precision / recall,
+// tools/benchmarks/bench_seen.mjs (J6): the dump parser, the rule replay (the same tree the page runs), the label sheet, precision / recall,
 // and jevShadow, which only ever calls a client it is handed.
 import { test } from "node:test";
 import assert from "node:assert/strict";

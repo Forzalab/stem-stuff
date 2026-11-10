@@ -1,4 +1,4 @@
-"""The bank hatch (tools/brain_banks.py) survives GitLab 429/5xx: retries with Retry-After or backoff, then fails with the same message.
+"""The bank hatch (tools/build_and_ship/brain_banks.py) survives GitLab 429/5xx: retries with Retry-After or backoff, then fails with the same message.
 Runs the script against a local fake GitLab; SHIP_BACKOFF_SCALE=0 skips all waits (Retry-After included)."""
 import http.server
 import json

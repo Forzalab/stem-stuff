@@ -39,7 +39,7 @@
    per item, a 4th never fires. Each one waits another p75. Not while hidden, away, typing or with Cluck's sheet open. Stalling = normal
    idling (🔒 Tony Oct 23): no farm rule, no freeze, no XP cost. state().hold = { code, n }. S2's own nudge keeps 2×p75 / 90 s.
    Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
-   those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/bench_seen.mjs) only. */
+   those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/benchmarks/bench_seen.mjs) only. */
 (function () {
   "use strict";
   var W = window;
@@ -489,7 +489,7 @@
     }
     return {
       helpEnd: helpEnd, ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave, take: take, spot: spot,
-      dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/bench_seen.mjs
+      dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/benchmarks/bench_seen.mjs
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
           nudge: { n: nz.n, gap: nz.gap, dismissed: nz.dismissed, taps: nz.taps, last: nz.last, p: pk, on: on.slice() },

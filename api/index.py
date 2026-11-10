@@ -1,5 +1,5 @@
 """Vercel entry: the stem-stuff API (serve.dispatch) as a WSGI app. vercel.json rewrites /p/, /state/, /repair/, /b/ and /check
-(and /log/incident, /health) here with the original path in ?path=; static files come from public/ (tools/build_public.py)."""
+(and /log/incident, /health) here with the original path in ?path=; static files come from public/ (tools/build_and_ship/build_public.py)."""
 import os
 import sys
 from urllib.parse import parse_qs

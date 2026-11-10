@@ -168,7 +168,7 @@ test("figure-docs store: generate() equals the inlined region; ids unique; CORE 
   const layout = readFileSync(new URL("../layout-docs.mjs", import.meta.url), "utf8");
   const m = /\/\/ <gen figure-docs: do not edit, run node tools\/gen_figure_docs\.mjs>\n([\s\S]*?)\/\/ <\/gen figure-docs>/.exec(layout);
   assert.ok(m, "layout-docs.mjs has the gen markers");
-  assert.equal(m[1], generate(src), "layout-docs.mjs is in sync with figure-docs.txt (run node tools/gen_figure_docs.mjs)");
+  assert.equal(m[1], generate(src), "layout-docs.mjs is in sync with figure-docs.txt (run node tools/client_generators/gen_figure_docs.mjs)");
   const ids = DOCS.map(d => d.id);
   assert.equal(new Set(ids).size, ids.length, "every doc id is unique");
   assert.equal(DOC_INDEX.split("\n").length, DOCS.length, "DOC_INDEX has one line per doc");

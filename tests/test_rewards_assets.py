@@ -19,7 +19,7 @@ class RewardsAssets(unittest.TestCase):
 
     def test_icons_js_is_fresh(self):
         r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "rw_icons.py"), "--check"])
-        self.assertEqual(r.returncode, 0, "run python3 tools/rw_icons.py")
+        self.assertEqual(r.returncode, 0, "run python3 tools/client_generators/rw_icons.py")
 
 
 if __name__ == "__main__":

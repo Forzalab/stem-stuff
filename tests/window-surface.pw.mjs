@@ -1,4 +1,4 @@
-// W152 (app.js split into app.js + cluck.js + shell.js by tools/split-app.mjs): the page's window names after load must stay
+// W152 (app.js split into app.js + cluck.js + shell.js by tools/client_generators/split-app.mjs): the page's window names after load must stay
 // EXACTLY the set the one-file app.js left (tests/window-surface.json, written on main 7397fd3+ before the split). Classic scripts
 // (nav.js, offline.js, brainrot.js, peek.js, toast.js ...) and the specs reach app code only through these names, so one lost
 // or one new name fails here. Name + typeof, at 2 sizes, sugar and diet, after the first question (stemFirst) has opened.

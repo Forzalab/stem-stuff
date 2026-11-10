@@ -1,5 +1,5 @@
 // RED (PR 1, ticket 09): the ship-gate decision + the green-run facts. Fails today because
-// tools/ci-gate.mjs does not exist yet — every import below errors until the coder writes the
+// tools/operations/ci-gate.mjs does not exist yet — every import below errors until the coder writes the
 // module with this exact surface:
 //   export const DOCS_EXTS                          // loopable docs-only extension set
 //   export function isDocsOnly(path)
@@ -7,7 +7,7 @@
 //   export function runKind(run)                    // -> 'full' | 'fast' | 'bench' | 'unknown'
 //   export function pickGreen(runs, candidate)      // -> { sha, kind:'full', created_at } | null
 //   export function decideShip({candidate, green, changedFiles})  // -> { ok, reason }
-// and a CLI: node tools/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]...
+// and a CLI: node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]...
 //   prints the decision, exits 0 (ship) / 1 (refuse).
 // No network, no GitHub, no git: pickGreen/runKind/decideShip are pure; the CLI is driven here
 // through --file injection (no git diff).
@@ -24,7 +24,7 @@ function cli(args) {
 }
 
 // --- docs-only = .md only -----------------------------------------------------------
-// SOURCE of ".md": tools/ci-gate.mjs DOCS_EXTS (SPEC.md §docs-only). Everything else is code:
+// SOURCE of ".md": tools/operations/ci-gate.mjs DOCS_EXTS (SPEC.md §docs-only). Everything else is code:
 // requirements.txt:1 (sympy = a dependency manifest), views/allow/common-en.txt:1 (answer
 // allow-list), vendor/fonts/OFL.txt:1 (license shipped with the code it licenses).
 test("DOCS_EXTS is the set {'.md'} and nothing less", () => {

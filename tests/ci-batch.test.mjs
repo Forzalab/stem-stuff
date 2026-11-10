@@ -1,8 +1,8 @@
 // RED (ticket 09, PR 3 / STEP A): the "main once per batch" landing plan (R2). Fails today because
-// tools/ci-batch.mjs does not exist yet — every import errors until the coder writes the module with
+// tools/operations/ci-batch.mjs does not exist yet — every import errors until the coder writes the module with
 // this exact surface:
 //   export function landPlan(items, sealedSha)  // -> { ok, pushes, sha, prs, reason }
-// No network, no GitHub: landPlan is pure; tools/batch.sh cmd_land (batch.sh:200-239) calls it to
+// No network, no GitHub: landPlan is pure; tools/operations/batch.sh cmd_land (batch.sh:200-239) calls it to
 // land the whole batch as ONE push of the sealed tip, instead of N `gh pr merge` calls.
 import { test } from "node:test";
 import assert from "node:assert/strict";

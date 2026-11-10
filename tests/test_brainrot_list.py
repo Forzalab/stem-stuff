@@ -1,4 +1,4 @@
-"""tools/brainrot_list.py: a playlist feed -> [id, title, short], and the CATS block in brainrot.js rewritten between its markers.
+"""tools/client_generators/brainrot_list.py: a playlist feed -> [id, title, short], and the CATS block in brainrot.js rewritten between its markers.
 No network. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import io
 import json

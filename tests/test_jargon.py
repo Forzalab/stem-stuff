@@ -1,4 +1,4 @@
-"""tools/jargon.py: provenance from the file extension (.json/.md = ai, anything else = human), a term is blacklisted
+"""tools/client_generators/jargon.py: provenance from the file extension (.json/.md = ai, anything else = human), a term is blacklisted
 only when it occurs in >= min_ai_files DISTINCT AI files (hits in one file never add up) and has <= max_human (default 0)
 human hits, common English never counts, a term holding a bank-format/markup word (format-stop.txt) or a TeX command
 never counts, bank JSON reads question + choice text only, and the shipped manifest builds current blacklists."""

@@ -1,4 +1,4 @@
-"""tools/tol.py: the wiggle test (tolerance 1b, SCHEMA.md tol_why)."""
+"""tools/bank_tools/tol.py: the wiggle test (tolerance 1b, SCHEMA.md tol_why)."""
 import contextlib
 import importlib.util
 import io

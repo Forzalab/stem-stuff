@@ -1,5 +1,5 @@
 """Slips from the formula (SCHEMA.md `form`, design/HANDOFF-slips-v2.md): the 10 slip families a student makes on one plain-number
-expression, as values. Shared by serve.py (runtime matching), tools/slips.py (report + --strict gate) and app.js's port (golden fixture
+expression, as values. Shared by serve.py (runtime matching), tools/bank_tools/slips.py (report + --strict gate) and app.js's port (golden fixture
 tests/fixtures/slips-golden.json). `form` is authored text only, never student input. Parsed unfolded so terms survive.
 
 mutants(form, k=1) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value;
@@ -27,7 +27,7 @@ EPS = 1e-9            # two mutant values within this, relative to the value, ar
 ZERO = 1e-9           # a zero key's window, absolute (tolerance 1b: calculator dust passes, 0.0003 fails). app.js / slips.mjs ZERO
 SLIP_WIN = 0.005      # a typed value sits on a slip within 0.5% of it (or equal at 3 s.f.). Tony D2, Oct 23: its own window, never the
                       # grading tol (2% there raised k=2 false matches 6.4% -> 10.3%). slips.mjs SLIP_WIN
-EXACT = 1e-4          # a definitive key's tol (tools/tol.py wiggle test). An integer key at EXACT gets no 3 s.f. pass (Tony, Oct 23: 1023 for 1024)
+EXACT = 1e-4          # a definitive key's tol (tools/bank_tools/tol.py wiggle test). An integer key at EXACT gets no 3 s.f. pass (Tony, Oct 23: 1023 for 1024)
 TOL_NUM = 0.02        # a num item's tol when it has none: WebAssign's default, 2% relative (serve.py tol_of, app.js tolOf)
 
 

@@ -1,5 +1,5 @@
 """slips.py (design/HANDOFF-slips-v2.md unit A): the 10 slip families on small known forms, match(), the rule-7 gate, the golden fixture
-shared with the JS port, and the tools/slips.py CLI (report exits 0, --strict on a broken v20261022 bank exits 1)."""
+shared with the JS port, and the tools/bank_tools/slips.py CLI (report exits 0, --strict on a broken v20261022 bank exits 1)."""
 import contextlib
 import importlib.util
 import io
@@ -160,11 +160,11 @@ class Parser(unittest.TestCase):
         self.assertTrue(slips._same(0.0, 0.0) and not slips._same(1e-20, 0.0) and slips._same(1 + 1e-12, 1))
 
     def test_golden_banks_fixture(self):
-        """every live bank form is in the shared fixture (else: python3 tools/slips.py --golden) and slips.py still gives its values"""
+        """every live bank form is in the shared fixture (else: python3 tools/bank_tools/slips.py --golden) and slips.py still gives its values"""
         with open(os.path.join(FIX, "slips-golden-banks.json"), encoding="utf-8") as f:
             gold = json.load(f)
         have = {g["form"] for g in gold}
-        self.assertEqual([f for f in cli.live_forms() if f not in have], [], "new bank form: run python3 tools/slips.py --golden")
+        self.assertEqual([f for f in cli.live_forms() if f not in have], [], "new bank form: run python3 tools/bank_tools/slips.py --golden")
         self.assertTrue(set(cli.CORNERS) <= have)
         for g in gold:
             same_mutants(self, slips.mutants(g["form"]), g["mutants"], g["form"])
@@ -258,7 +258,7 @@ class Gate(unittest.TestCase):
 
 
 class BadVersion(unittest.TestCase):
-    """tools/slips.py reads v like serve.py _read: an int (1 or yyyymmdd) is used; a string or float v warns on stderr and reads as 1
+    """tools/bank_tools/slips.py reads v like serve.py _read: an int (1 or yyyymmdd) is used; a string or float v warns on stderr and reads as 1
     (no TypeError). Only an int >= CUTOFF runs the rule-7 gate, so a num with no form fails only for an int v."""
     NUM = {"code": "CALC1_BV1", "type": "num", "answer": "2", "body": [{"type": "text", "md": "1 + 1"}]}
 
@@ -297,7 +297,7 @@ class BadVersion(unittest.TestCase):
 
 class Spot(unittest.TestCase):
     """W-SPOT: on a collision, region() says WHERE the slip is (a place in the form, or FINISH for whole-answer slips), never WHAT it is
-    and never a number. slips-golden-spots.json (python3 tools/slips.py --golden) pins slips.mjs to the same lines."""
+    and never a number. slips-golden-spots.json (python3 tools/bank_tools/slips.py --golden) pins slips.mjs to the same lines."""
 
     def gold(self):
         with open(os.path.join(FIX, "slips-golden-spots.json"), encoding="utf-8") as f:
@@ -404,7 +404,7 @@ class K2(unittest.TestCase):
         self.assertEqual(slips.match("10-(3+2)", 9, k=2), "distribute")   # a k=1 slip wins over any pair
 
     def test_k2_golden_fixture(self):
-        """slips-golden-k2.json (python3 tools/slips.py --golden): the k=2 entries per bank form; slips.mjs runs the same file"""
+        """slips-golden-k2.json (python3 tools/bank_tools/slips.py --golden): the k=2 entries per bank form; slips.mjs runs the same file"""
         with open(os.path.join(FIX, "slips-golden-k2.json"), encoding="utf-8") as f:
             gold = json.load(f)
         with open(os.path.join(FIX, "slips-golden-banks.json"), encoding="utf-8") as f:

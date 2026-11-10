@@ -16,7 +16,7 @@ for f in ("index.html", "lib/util.js"):
     shutil.copy(os.path.join(r, f), os.path.join(sys.argv[1], f))
 '''
 FILES = {
-    "tools/build_public.py": BUILD,
+    "tools/build_and_ship/build_public.py": BUILD,
     "index.html": '<script src="lib/util.js"></script><a href="#x">x</a><a href="https://e.com/a.js">e</a>',
     "lib/util.js": "export const a = 1;\n",
     "sw.js": 'const BASE = ["./", "index.html", "lib/util.js"];\n',

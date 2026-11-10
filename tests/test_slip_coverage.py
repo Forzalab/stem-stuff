@@ -1,4 +1,4 @@
-"""tools/slip_coverage.py: the share of logged wrong tries (the tries blob: tries.json or Upstash stem:tries) that get a slip family, a
+"""tools/bank_tools/slip_coverage.py: the share of logged wrong tries (the tries blob: tries.json or Upstash stem:tries) that get a slip family, a
 SLIP_TIE collide, or nothing (the fallback ladder's share). Run: python3 -m pytest tests/test_slip_coverage.py -q"""
 import contextlib
 import importlib.util

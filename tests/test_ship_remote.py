@@ -1,5 +1,5 @@
-"""Ship from Termux (design/DEPLOY.md, "Power button"): bank pins (SHIP_PINS / --pin) in tools/brain_banks.py, and tools/ship.sh
-routing to tools/press.sh (a queued GitHub run) on Termux or with --remote. No Vercel, no gh, no network: urllib and press.sh are stubbed.
+"""Ship from Termux (design/DEPLOY.md, "Power button"): bank pins (SHIP_PINS / --pin) in tools/build_and_ship/brain_banks.py, and tools/build_and_ship/ship.sh
+routing to tools/build_and_ship/press.sh (a queued GitHub run) on Termux or with --remote. No Vercel, no gh, no network: urllib and press.sh are stubbed.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import io
 import json
@@ -209,7 +209,7 @@ class Press(unittest.TestCase):
         open(log, "w").close()
         e = {k: v for k, v in os.environ.items() if not k.startswith("SHIP_")}
         e.update(PATH=d + os.pathsep + os.environ["PATH"], **env)
-        r = subprocess.run(["bash", os.path.join(ROOT, "tools/press.sh"), *args], env=e, capture_output=True, text=True, timeout=60)
+        r = subprocess.run(["bash", os.path.join(ROOT, "tools/build_and_ship/press.sh"), *args], env=e, capture_output=True, text=True, timeout=60)
         with open(log) as f:
             return r, f.read().splitlines()
 

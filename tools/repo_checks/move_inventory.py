@@ -40,7 +40,7 @@ def walk(root):
 def build_files(root):
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "public")
-        r = subprocess.run([sys.executable, os.path.join(root, "tools/build_public.py"), out], cwd=root, capture_output=True, text=True)
+        r = subprocess.run([sys.executable, os.path.join(root, "tools/build_and_ship/build_public.py"), out], cwd=root, capture_output=True, text=True)
         if r.returncode:
             raise SystemExit("build_public failed:\n" + r.stdout + r.stderr)
         return sorted(os.path.relpath(os.path.join(d, f), out).replace(os.sep, "/") for d, _, fs in os.walk(out) for f in fs)

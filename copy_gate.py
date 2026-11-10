@@ -5,7 +5,7 @@ Flesch-Kincaid grade 2-4, no blacklisted jargon, every slot fits its box). Stdli
                                             (None when no words remain).
     check_view(strings, black, budgets=None, lint_context=None) -> list[issue]
         strings  {slot_id: text}, every student-facing string of ONE view
-        black    set of banned terms (lowercase words or 2-3-grams), e.g. load_black(course) (tools/jargon.py)
+        black    set of banned terms (lowercase words or 2-3-grams), e.g. load_black(course) (tools/client_generators/jargon.py)
         budgets  {slot_id: max characters} from slots.json (None: no overflow check)
         issue    {"check": "fk"|"jargon"|"overflow"|"aiw", "slot": slot_id, ...detail}. The fk issue scores the whole view,
                  so its slot is "*" and it lists every slot in "slots".
@@ -16,11 +16,11 @@ Rules
   check is skipped. Fail when grade > 4 or grade < 2.
 - jargon (BLACKLIST, Tony Oct 20): a content word or a 2-3-gram of adjacent content words that is in `black` is
   flagged. One issue per distinct term per slot. Words not on the list pass (the blacklist is built from AI-written vs
-  human-written sources, see tools/jargon.py).
+  human-written sources, see tools/client_generators/jargon.py).
 - overflow: len(text) > budgets[slot].
 - aiw: every blocking aiw.lint_view_strings finding, with the slot it came from.
 
-Common English (used by tools/jargon.py: a common word is never jargon) = views/allow/common-en.txt (top 5000
+Common English (used by tools/client_generators/jargon.py: a common word is never jargon) = views/allow/common-en.txt (top 5000
 English words, wordfreq data, CC-BY-SA-4.0; see its header). A word also counts as common if stripping one regular suffix (s, es, ed, d, ing, ly, er, est; e.g. "dogs", "liked",
 "running") gives a listed word. FUNCTION_WORDS (grammar words) never form or break n-grams.
 
@@ -71,7 +71,7 @@ def load_common(path=COMMON_PATH):
 
 
 def load_black(course, allow_dir=ALLOW_DIR):
-    """Banned terms of views/allow/<course>-black.json (built by tools/jargon.py); a missing file is an empty set."""
+    """Banned terms of views/allow/<course>-black.json (built by tools/client_generators/jargon.py); a missing file is an empty set."""
     p = os.path.join(allow_dir, course + "-black.json")
     if not os.path.exists(p):
         return set()

@@ -54,7 +54,7 @@ from sympy.parsing.sympy_parser import auto_number, parse_expr
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
 try:
-    import bundle  # tools/bundle.py: builds stem-stuff.html (offline download)
+    import bundle  # tools/build_and_ship/bundle.py: builds stem-stuff.html (offline download)
 except Exception:  # noqa: BLE001
     bundle = None
 
@@ -679,7 +679,7 @@ def same(a, b, tol, floor=0.0):
 
 
 def tol_of(u):
-    """the grading window, child over parent: the question's tol (author, or tools/tol.py's wiggle test / auto tol) > the topic's tol
+    """the grading window, child over parent: the question's tol (author, or tools/bank_tools/tol.py's wiggle test / auto tol) > the topic's tol
     (topic_tol, inherit_tol) > the bank's tol (bank_tol) > 2% for num (WebAssign's default) / 1e-6 for expr and a hard-mode fix box
     (sigfig() grades it). app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches and
     repeats keep tol or 1e-6 (98, 99: two tries); slips use slips.SLIP_WIN (Tony D2)."""
@@ -2353,7 +2353,7 @@ def _or_stream(messages, key, max_tokens, out=None):
 # No CLAUDE_API = the OpenRouter path above, unchanged. Any Claude trouble before the first word (error, 4xx/5xx, billing, 429/529,
 # an empty reply) falls back to OPENROUTER_MODELS with their own params; once words flow, it stays on Claude.
 CLAUDE_BASE = os.environ.get("CLAUDE_BASE", "https://api.anthropic.com").rstrip("/")
-# claude-opus-5-5: tools/bench_claude.py (Oct 17, 8 cases): FORMAT adherence opus 8/8, haiku-5-5 7/8, sonnet-5-5 5/8 (adherence first,
+# claude-opus-5-5: tools/benchmarks/bench_claude.py (Oct 17, 8 cases): FORMAT adherence opus 8/8, haiku-5-5 7/8, sonnet-5-5 5/8 (adherence first,
 # then first token: opus ~2.5 s vs ~0.6 s, then cost: ~$0.016 vs $0.0004 a reply).
 # Oct 18 re-bench (voice prompt, 216 replies, blind judge): haiku 7.6/7.0 = sonnet, opus 7.8/7.6 at ~55x the cost -> haiku default.
 # Oct 18 (T62, Tony): Sonnet 5.5 default with the v4 letter prompt (prompts/cluck-v4.txt): 0 leaks / 0 injections in the edge bench, ~$0.015 a reply.
@@ -3343,7 +3343,7 @@ _FIG_PNG = {}                                   # name -> base64 str (None once 
 
 
 def fig_images(p):
-    """the question's figures as image blocks (tools/fig_png.mjs: banks/figs/<code>-<i>.png, fits 400x300, ~100 tokens each), sent on the
+    """the question's figures as image blocks (tools/bank_tools/fig_png.mjs: banks/figs/<code>-<i>.png, fits 400x300, ~100 tokens each), sent on the
     Claude arm only (the non-vision arm gets graph_json alone). CLUCK_FIG_IMG=0: none. A missing PNG is skipped, logged once."""
     if os.environ.get("CLUCK_FIG_IMG", "1") == "0":
         return []
@@ -3358,7 +3358,7 @@ def fig_images(p):
                     _FIG_PNG[name] = base64.b64encode(f.read()).decode("ascii")
             except OSError:
                 _FIG_PNG[name] = None
-                log(f"fig png missing: {name} (run node tools/fig_png.mjs)")
+                log(f"fig png missing: {name} (run node tools/bank_tools/fig_png.mjs)")
         if _FIG_PNG[name]:
             out.append({"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": _FIG_PNG[name]}})
     return out

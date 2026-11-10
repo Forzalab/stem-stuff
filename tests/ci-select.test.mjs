@@ -1,4 +1,4 @@
-// PR 2 (ticket 09): affected selection — pure decision + CLI contract. The module tools/ci-select.mjs
+// PR 2 (ticket 09): affected selection — pure decision + CLI contract. The module tools/operations/ci-select.mjs
 // exports this exact surface (and a CLI):
 //   export const BIG_CODE_FILES = 7        // M4: >=7 code files -> full
 //   export const BIG_AREAS = 3             // M4: >=3 areas -> full
@@ -11,7 +11,7 @@
 //   export function isHub(affectedCount, totalUnits)   // boolean
 //   export function pwSpecs(unitList)      // unitList minus "unittest" and "npm"
 //   export function decideSelection({ files, affectedCounts, totalUnits }) // {kind, reason} ("full"|"affected")
-// and a CLI: node tools/ci-select.mjs --total <N> [--file <path>...]  -> prints "kind reason", exit 0.
+// and a CLI: node tools/operations/ci-select.mjs --total <N> [--file <path>...]  -> prints "kind reason", exit 0.
 // The pure part takes every fact as an argument: no network, no GitHub, no git.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -72,7 +72,7 @@ test("areaOf maps each of the 6 areas (loop over all members)", () => {
   const expect = {
     docs: ["README.md", "SCHEMA.md", "CLAUDE.md"],
     ci: [".github/workflows/tests.yml", "vercel.json", ".vercelignore", "deploy.sh"],
-    tools: ["tools/ci-gate.mjs", "tools/batch.sh", "tools/slip_coverage.py"],
+    tools: ["tools/operations/ci-gate.mjs", "tools/operations/batch.sh", "tools/bank_tools/slip_coverage.py"],
     tests: ["tests/ci-select.test.mjs", "tests/test_ci_image.py"],
     server: ["serve.py", "engine/__init__.py", "api/index.py"],
     client: ["app.js", "app.css", "index.html", "views/views.js", "vendor/marked.min.js", "requirements.txt"],
@@ -200,11 +200,11 @@ test("zero-.pw: a logic-only PR is affected with no block work (skip_block)", ()
   // SOURCE SPEC-PR2.md §5: a logic-pipe file (tools/*.mjs) affects only logic units, so the plan
   // job must flag skip_block. Assert the intent — its units are all logic units — not today's
   // exact list (a .mjs under tools/ is logic-pipe; run-all.sh:92 `*.mjs` tools/*|tests/* -> logic).
-  const units = affectedUnits("tools/ci-gate.mjs");
+  const units = affectedUnits("tools/operations/ci-gate.mjs");
   assert.ok(units.length >= 1, "a tools/*.mjs file affects at least one logic unit");
   assert.ok(units.every((u) => LOGIC.includes(u)), `all its units are logic units, got: ${units.join(",")}`);
   assert.deepEqual(pwSpecs(units), [], "zero .pw names -> the plan job sets skip_block=true");
-  const d = decideSelection({ files: ["tools/ci-gate.mjs"], affectedCounts: { "tools/ci-gate.mjs": units.length }, totalUnits: TOTAL });
+  const d = decideSelection({ files: ["tools/operations/ci-gate.mjs"], affectedCounts: { "tools/operations/ci-gate.mjs": units.length }, totalUnits: TOTAL });
   assert.equal(d.kind, "affected", "still affected (unit job runs the logic units), but the block job is skipped");
 });
 

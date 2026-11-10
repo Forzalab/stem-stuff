@@ -1,4 +1,4 @@
-"""tools/bench_claude.py: the FORMAT checker on canned replies, and the 8 bench cases build (no network, no key)."""
+"""tools/benchmarks/bench_claude.py: the FORMAT checker on canned replies, and the 8 bench cases build (no network, no key)."""
 import os
 import sys
 import tempfile

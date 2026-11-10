@@ -46,7 +46,7 @@ Error: VERCEL_TOKEN is empty
 FAILED: see https://github.com/Forzalab/stem-stuff/actions/runs/222
 exit=1
 === bad arg ===
-usage: tools/press.sh [demo|live]
+usage: tools/build_and_ship/press.sh [demo|live]
 exit=2
 
 == press.sh url print (fake gh stub, 2026-10-07 bench) ==

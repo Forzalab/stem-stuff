@@ -1,4 +1,4 @@
-"""tools/bench_figs.py: the GPT-shape score, the figure gate pass-through, the kind match and the table (no network, no key);
+"""tools/benchmarks/bench_figs.py: the GPT-shape score, the figure gate pass-through, the kind match and the table (no network, no key);
 plus the livefig changes it came with (step-number edge labels are free, spelled numbers are givens) and serve.network_data."""
 import json
 import os

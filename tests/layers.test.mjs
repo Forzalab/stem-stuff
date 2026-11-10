@@ -45,7 +45,7 @@ test("layers: adjacent steps differ by dL* >= 12, or by the best split where the
   }
 });
 
-test("layers: the declared steps are the least-dim ones tools/layer_steps.mjs computes (no hand-tuned drift)", () => {
+test("layers: the declared steps are the least-dim ones tools/client_generators/layer_steps.mjs computes (no hand-tuned drift)", () => {
   for (const [theme, t] of Object.entries(THEMES)) for (const h of HUES) {
     const s = steps(hex(t[h]), hex(t.bg));
     assert.equal(SETS[theme][`${h}-2`], toHex(s[1]), `${theme} ${h}-2`);
@@ -92,7 +92,7 @@ test("openui Graph: layer / tone props mark nodes and edges; omitted = unchanged
 // ── W163 figure palette: six hue families for per-mark auto-hue ──────────────────────────────────────────────────────────────────────
 const dE = (a, b, m) => { let x = hex(a), y = hex(b); if (m) { x = simulate(x, m); y = simulate(y, m); } return de00(x, y); };
 
-test("palette: six Tailwind-style hues, in the app.css tokens and tools/layer_steps.mjs PALETTE, in the order figcheck.js autoHues uses", () => {
+test("palette: six Tailwind-style hues, in the app.css tokens and tools/client_generators/layer_steps.mjs PALETTE, in the order figcheck.js autoHues uses", () => {
   assert.deepEqual(AUTO, ["sky", "amber", "orange", "violet", "pink", "cyan"]);
   assert.deepEqual(AUTO_HUES, AUTO);
   for (const t of Object.values(THEMES)) for (const h of AUTO) assert.equal(t[h], PALETTE[h]);
@@ -122,7 +122,7 @@ test("palette: no auto-hue is green or red (the app means green = correct, red =
   assert.ok(!AUTO.some(h => /green|lime|emerald|teal|red|rose/.test(h)));
 });
 
-test("palette: the declared auto-hue steps are the ones tools/layer_steps.mjs computes", () => {
+test("palette: the declared auto-hue steps are the ones tools/client_generators/layer_steps.mjs computes", () => {
   for (const [theme, t] of Object.entries(THEMES)) for (const h of AUTO) {
     const s = steps(hex(t[h]), hex(t.bg));
     assert.equal(SETS[theme][`${h}-2`], toHex(s[1])); assert.equal(SETS[theme][`${h}-3`], toHex(s[2]));

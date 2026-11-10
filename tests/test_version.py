@@ -1,4 +1,4 @@
-"""tools/version.sh: the version is the newest merged PR on the first-parent history ("#N", "+k" for commits after it), --stamp
+"""tools/build_and_ship/version.sh: the version is the newest merged PR on the first-parent history ("#N", "+k" for commits after it), --stamp
 writes version.json, and the live check says "latest" or "behind" against a fake site (STEM_URL). No network, no Vercel.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import http.server

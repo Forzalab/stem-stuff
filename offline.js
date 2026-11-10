@@ -116,11 +116,11 @@
   api.ready = Promise.all([restore().catch(() => false), doneLoaded]).then(([r]) => r);
   addEventListener("pageshow", e => { if (e.persisted && !local.size) api.ready = restore().catch(() => false); });
 
-  /* updateViaCache none: the browser always asks the server for sw.js. Each deploy has its own sw.js (tools/build_public.py
+  /* updateViaCache none: the browser always asks the server for sw.js. Each deploy has its own sw.js (tools/build_and_ship/build_public.py
      stamps VERSION), so a deploy = a new worker that installs the whole new shell, then takes over this page. */
   const reg = CAN_SW ? navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => { api.mode = "online"; }) : null;
 
-  /* corner badge: which deploy this page runs (the PR, tools/version.sh). Quiet chrome, bottom right (app.css #ver) */
+  /* corner badge: which deploy this page runs (the PR, tools/build_and_ship/version.sh). Quiet chrome, bottom right (app.css #ver) */
   const showVer = () => {
     const m = document.querySelector('meta[name="stem-build"]'), v = document.getElementById("ver");
     if (!m || !v) return;

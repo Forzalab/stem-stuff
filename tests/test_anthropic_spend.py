@@ -1,4 +1,4 @@
-"""tools/anthropic_spend.py: cost-report summing, pagination, failure path, no secrets in output (HTTP stubbed, no network)."""
+"""tools/operations/anthropic_spend.py: cost-report summing, pagination, failure path, no secrets in output (HTTP stubbed, no network)."""
 import contextlib
 import datetime as dt
 import io

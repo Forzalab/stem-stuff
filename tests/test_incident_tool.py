@@ -1,4 +1,4 @@
-"""tools/incident.py: finds a code in a pasted log (serve.py's real line format), in Vercel's log search and in PostHog (HTTP stubbed,
+"""tools/operations/incident.py: finds a code in a pasted log (serve.py's real line format), in Vercel's log search and in PostHog (HTTP stubbed,
 no network); the server lines of the same trace only; no key ever printed. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import contextlib
 import io

@@ -68,7 +68,7 @@ try {
     const css = await page.evaluate(async () => (await caches.match(new URL("app.css", location.href).href)) ?.text());
     assert.ok(css && css.includes("/* v2 */"), "the cache holds the new app.css");
   });
-  // A deploy: tools/ship.sh writes version.json, tools/build_public.py stamps sw.js + the index meta (the real stamp(), on SITE)
+  // A deploy: tools/build_and_ship/ship.sh writes version.json, tools/build_and_ship/build_public.py stamps sw.js + the index meta (the real stamp(), on SITE)
   const deploy = (pr, sha) => {
     writeFileSync(join(SITE, "version.json"), JSON.stringify({ pr, sha, built: "2026-10-06T17:00:00Z" }));
     for (const f of ["sw.js", "index.html"]) writeFileSync(join(SITE, f), readFileSync(join(ROOT, f)));   // stamp() needs the "dev" slots

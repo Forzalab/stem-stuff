@@ -466,7 +466,7 @@ export function leaderOf(t, box) {
 }
 
 /* W163 auto-hue: a figure mark with no tone / colour of its own gets the next hue of the figure palette (app.css --fig-<hue>-1..3,
-   tools/layer_steps.mjs PALETTE: no green or red, most distinct first). DETERMINISTIC: keyed by the mark's own name (id / label), never draw
+   tools/client_generators/layer_steps.mjs PALETTE: no green or red, most distinct first). DETERMINISTIC: keyed by the mark's own name (id / label), never draw
    order, so a redraw, a reload or another Steps frame paints the same mark the same hue. The hue is the key's rank among the figure's distinct
    keys sorted by code point (the first six get six different hues; a seventh wraps). Same spec -> same colours. */
 export const AUTO_HUES = ["sky", "amber", "orange", "violet", "pink", "cyan"];

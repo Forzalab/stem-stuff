@@ -369,7 +369,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 /* FIGURE shade steps (W157, Tony's amendment: figures only; app chrome never reads these). Per hue (the figure palette: ink c1 c2 c3 muted + ok bad mark)
    three Tailwind-style steps --fig-<hue>-1|2|3: 1 = the hue's own token (so a mark with no layer is drawn exactly as before), 2 / 3 = real,
-   less-dim shades computed by tools/layer_steps.mjs on the figure bg (--body): label text >= 4.5:1 (WCAG 1.4.3, so strokes pass 1.4.11's 3:1),
+   less-dim shades computed by tools/client_generators/layer_steps.mjs on the figure bg (--body): label text >= 4.5:1 (WCAG 1.4.3, so strokes pass 1.4.11's 3:1),
    adjacent steps dL* >= 12 where the 4.5:1 floor leaves the room (else the best equal split). tests/layers.test.mjs recomputes every hue x step x theme.
    Dark navy page set here; Cluck's warm set under .ai-box .fig / .vw. The app is dark only today; a light theme adds its own set (1 = darkest). Never opacity. */
 :root, .fig, .vw { --fig-ink-1: var(--ink); --fig-muted-1: var(--muted); --fig-c1-1: var(--c1); --fig-c2-1: var(--c2); --fig-c3-1: var(--c3); --fig-ok-1: var(--correct); --fig-bad-1: var(--wrong); --fig-mark-1: var(--reward); --fig-sky-1: #5eb8ff; --fig-amber-1: #ffd23f; --fig-orange-1: #e0803a; --fig-violet-1: #8f78f5; --fig-pink-1: #f87fe0; --fig-cyan-1: #2fd9e6; }
@@ -402,7 +402,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .tn-mark { --ink: var(--fig-mark-1); --muted: var(--fig-mark-1); --c1: var(--fig-mark-1); }
 .tn-mark.ly2 { --ink: var(--fig-mark-2); --muted: var(--fig-mark-2); --c1: var(--fig-mark-2); }
 .tn-mark.ly3 { --ink: var(--fig-mark-3); --muted: var(--fig-mark-3); --c1: var(--fig-mark-3); }
-/* W163 auto-hue palette (tools/layer_steps.mjs PALETTE): six Tailwind-style hue families, no green or red; a figure mark with no tone / colour gets the next one,
+/* W163 auto-hue palette (tools/client_generators/layer_steps.mjs PALETTE): six Tailwind-style hue families, no green or red; a figure mark with no tone / colour gets the next one,
    keyed by its own name (views.js autoHue, graph.js), so each force / role reads as its own colour. tone="sky" etc. also works by hand. */
 .tn-sky { --ink: var(--fig-sky-1); --muted: var(--fig-sky-1); --c1: var(--fig-sky-1); }
 .tn-sky.ly2 { --ink: var(--fig-sky-2); --muted: var(--fig-sky-2); --c1: var(--fig-sky-2); }
@@ -1510,7 +1510,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
   touch-action: manipulation; animation: toast-in .3s ease-out both;
 }
 @media (prefers-reduced-motion: reduce) { #updateBar { animation: toast-fade .2s linear both; } }
-/* which deploy this is (offline.js showVer: the PR, tools/version.sh). Quiet chrome: smallest type, the lowest text colour (--hint, 5.7:1 on --paper), never in the way */
+/* which deploy this is (offline.js showVer: the PR, tools/build_and_ship/version.sh). Quiet chrome: smallest type, the lowest text colour (--hint, 5.7:1 on --paper), never in the way */
 #ver { position: fixed; z-index: 1; right: max(var(--s2), env(safe-area-inset-right)); bottom: max(var(--s1), env(safe-area-inset-bottom));
   color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
 #ver::after { content: attr(data-v); }

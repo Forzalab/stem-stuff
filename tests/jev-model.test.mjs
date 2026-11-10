@@ -1,4 +1,4 @@
-// The Jev model slug has one source of truth: tools/jev-model.mjs, read from env JEV_MODEL.
+// The Jev model slug has one source of truth: tools/benchmarks/jev-model.mjs, read from env JEV_MODEL.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 
 const SLUG = "microsoft/microsoft-decision-1";
 const ROOT = new URL("../", import.meta.url);
-const ONLY_HOME = "tools/jev-model.mjs";
+const ONLY_HOME = "tools/benchmarks/jev-model.mjs";
 
 test("jevModel(): default when JEV_MODEL is unset, env value when set", async () => {
   const { jevModel } = await import(new URL("../tools/jev-model.mjs", import.meta.url));
@@ -21,7 +21,7 @@ test("jevModel(): default when JEV_MODEL is unset, env value when set", async ()
   }
 });
 
-test("the MSD-1 slug is spelled out only in tools/jev-model.mjs (and test files)", () => {
+test("the MSD-1 slug is spelled out only in tools/benchmarks/jev-model.mjs (and test files)", () => {
   const files = execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" })
     .split("\n")
     .filter(f => /\.(mjs|js|py)$/.test(f));

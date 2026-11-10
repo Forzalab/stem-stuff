@@ -1,4 +1,4 @@
-"""tools/bank_notes.py: the bank-time NOTE per wrong mc pick with a slip (prompt audit B2, design/CLUCK-NOTE.md "Cache")."""
+"""tools/bank_tools/bank_notes.py: the bank-time NOTE per wrong mc pick with a slip (prompt audit B2, design/CLUCK-NOTE.md "Cache")."""
 import io
 import json
 import os

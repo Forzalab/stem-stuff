@@ -1,4 +1,4 @@
-# Anthropic spend -> KV key stem:anthropic:spend (tools/anthropic_spend.py). The Admin API key lives ONLY here, in
+# Anthropic spend -> KV key stem:anthropic:spend (tools/operations/anthropic_spend.py). The Admin API key lives ONLY here, in
 # GitHub Actions secrets; never in Vercel (the app takes public requests). README: "Anthropic spend".
 name: anthropic-spend
 on:
@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          sparse-checkout: tools/anthropic_spend.py
+          sparse-checkout: tools/operations/anthropic_spend.py
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
@@ -30,4 +30,4 @@ jobs:
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
           SPEND_SINCE: ${{ vars.SPEND_SINCE || secrets.SPEND_SINCE }}
-        run: python3 tools/anthropic_spend.py
+        run: python3 tools/operations/anthropic_spend.py

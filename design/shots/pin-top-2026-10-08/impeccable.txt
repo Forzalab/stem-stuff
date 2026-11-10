@@ -1,4 +1,4 @@
-tools/impeccable.sh http://127.0.0.1:<port> index.html -- app.css app.js nav.css  (serve.py local)
+tools/audits/impeccable.sh http://127.0.0.1:<port> index.html -- app.css app.js nav.css  (serve.py local)
 390x844 index.html: 0 lines
 1920x1080 index.html: 0 lines
 2560x1440 index.html: 0 lines

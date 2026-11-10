@@ -2,7 +2,7 @@
   "git": {
     "deploymentEnabled": false
   },
-  "buildCommand": "python3 tools/build_public.py",
+  "buildCommand": "python3 tools/build_and_ship/build_public.py",
   "outputDirectory": "public",
   "headers": [
     {
