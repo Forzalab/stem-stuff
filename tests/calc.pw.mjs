@@ -3,7 +3,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,10 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8887), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "calc-app-")), BANKS = join(TMP, "banks");
+// the cram window is over (calc/cram.json enabled:false in the repo): this spec tests the cram surfaces, so it serves a forced-on copy (as cram-off.pw.mjs forces off)
+const CRAM_ON = JSON.stringify({ ...JSON.parse(readFileSync(join(ROOT, "calc", "cram.json"), "utf8")), enabled: true }), CRAM = join(TMP, "cram.json");
+writeFileSync(CRAM, CRAM_ON);
+const cramOn = (ctx) => ctx.route("**/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: CRAM_ON }));
 
 const WLC = "PHYS_PWQ1";
 const num = (code, n) => ({ code, type: "num", answer: String(n + 2), body: [{ type: "text", md: `Plain ${n}: 2 + ${n}` }], noob: { tier: 1 } });
@@ -26,7 +30,7 @@ writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 1, problems: [we
 writeFileSync(join(BANKS, "BANK_OTH1.json"), JSON.stringify({ v: 1, problems: [num("OTH_W01", 1), num("OTH_W02", 2)] }));
 writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 3, groups: [{ name: "Fluids", rows: [{ id: "PRESSURE", tex: "P=\\frac{F}{A}" }] }] }));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3",
-  STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+  STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json"), STEM_CRAM: CRAM }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
@@ -34,6 +38,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 async function fresh(init = {}, at = "2026-11-06T18:00:00Z", opts = {}) {
   init = { ...init };
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", ...opts });
+  await cramOn(ctx);
   await ctx.addInitScript(([init, at]) => {                                  // the device's clock, pinned (the exam-day gate): Date.now() and new Date() read it, time still runs
     window.__ccToastMs = 300; window.__ccOfferMs = 99999999;
     const R = Date, off = R.parse(at) - R.now();
