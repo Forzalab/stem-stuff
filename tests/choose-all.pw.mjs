@@ -1,4 +1,4 @@
-// mc pick all (design/CHOOSE-ALL.md §4) in HARD mode (design/EASY.md: the stem-mode=hard cookie, as ADMIN_ sets it): checkboxes, no
+// mc pick all (docs/design/CHOOSE-ALL.md §4) in HARD mode (docs/design/EASY.md: the stem-mode=hard cookie, as ADMIN_ sets it): checkboxes, no
 // "None of these" row (nothing ticked is the answer "none"), keys, strike + ticks kept, miss, prove mode, restore on reload.
 // Server mode uses CSCI26_A7K from problems.json; upload mode an inline file. Starts its own serve.py with a throwaway tries.json:
 //   node tests/choose-all.pw.mjs [port]

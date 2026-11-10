@@ -15,7 +15,7 @@ import json, math, os, statistics, subprocess, sys
 from PIL import Image
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8812"
-OUT = sys.argv[2] if len(sys.argv) > 2 else "design/shots/buttons"
+OUT = sys.argv[2] if len(sys.argv) > 2 else "archive/design/shots/buttons"
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 subprocess.run(["node", os.path.join(ROOT, "tools/audits/button_audit.mjs"), BASE, OUT], check=True, cwd=ROOT)

@@ -1,4 +1,4 @@
-/* calc-coach.js: Calc Coach, an app-wide panel (app chrome, like popover.js / toast.js; design/CALC-COACH.md). NOT a Cluck reply format:
+/* calc-coach.js: Calc Coach, an app-wide panel (app chrome, like popover.js / toast.js; docs/design/CALC-COACH.md). NOT a Cluck reply format:
    the model never writes it; replies stay OpenUI Lang. It teaches 2 routines (SOLVE; STO + Ans) on the student's own calculator:
    an SVG keypad with the key(s) to press lit, a simulated screen, one you-first line, Back / Next, and a "Try it on yours" card.
    Data: calc/calc-layout.json (model -> key grid), calc/calc-steps.json (model -> routine -> example -> steps), calc/calc-keys.json.

@@ -22,7 +22,7 @@ export function newSeed(key) {
 }
 export const family = code => code.replace(/_(.).*/, "_$1");   // the topic fallback: prefix + first suffix letter (CSCI26_C2A -> CSCI26_C)
 
-/* ---------- the queue (design/plans/QUEUE.md, D49/D56-D64): a hidden, Spotify-like play order, one per bank ----------
+/* ---------- the queue (docs/design/plans/QUEUE.md, D49/D56-D64): a hidden, Spotify-like play order, one per bank ----------
    State st = { v, salt, pos, seen: { CODE: { n, right, miss, last, wait, gapIdx, owe, first, redeem, retry } }, hist, at }.
    pos = showings so far (the next slot is pos + 1). Pure: qPick / qShow / qAnswer read and write only st, so the same state gives
    the same pick (tests), and a JSON round trip (localStorage) changes nothing. */
@@ -189,7 +189,7 @@ export function rampAnswer(st, code, right, tierOf) {
 }
 /* "Skip this question": up one tier now (cap 3), the clean count starts over */
 export function skipAhead(st) { const r = gate(st); r.tier = Math.min(3, r.tier + 1); r.clean = 0; return st; }
-/* snacks (sugar, design/REWARDS-WIRING.md: main's fixed "snack, real, real"): each snack goes right before the code it twists
+/* snacks (sugar, docs/design/REWARDS-WIRING.md: main's fixed "snack, real, real"): each snack goes right before the code it twists
    (beforeOf(code) -> that code, or null for a real). Several snacks with one target keep their order; a snack whose target is not in
    the list stays where it is. The question list runs it, so a snack row sits right above its real. */
 export function glue(order, beforeOf) {

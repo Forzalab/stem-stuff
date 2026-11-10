@@ -1,4 +1,4 @@
-// telemetry.js (design/plans/TELEMETRY.md): gates, config parsing, guess-spam + rage rules, and "no key = nothing happens".
+// telemetry.js (docs/design/plans/TELEMETRY.md): gates, config parsing, guess-spam + rage rules, and "no key = nothing happens".
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

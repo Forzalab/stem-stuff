@@ -1,4 +1,4 @@
-/* toast.css: the one toast (toast.js; design/TOAST.md round 5, Tony #38 pick d1). The shipped toast look (STYLE.md §3 Toast, take 5f):
+/* toast.css: the one toast (toast.js; docs/design/TOAST.md round 5, Tony #38 pick d1). The shipped toast look (STYLE.md §3 Toast, take 5f):
    the page's own paper, a --line hairline, a soft shadow, the part prompt's type (400, --t-md, --ink). No icon. The words and the bar
    share one left edge; the close button is centred on the right; the bar ends in an 8px finish dot (--reward once the bar is full).
    z: #toast's 50 (app.css z ladder), under the drop banner (55).

@@ -1,4 +1,4 @@
-/* speak.mjs: Cluck's solution text (plain text + $LaTeX$) as words for the voiceover (design/EASY.md Phase 4).
+/* speak.mjs: Cluck's solution text (plain text + $LaTeX$) as words for the voiceover (docs/design/EASY.md Phase 4).
    Pure, so tests/speak.test.mjs can import it. Good enough to be understood; the voice is meant to sound cheap. */
 const GREEK = ["alpha", "beta", "gamma", "delta", "epsilon", "theta", "lambda", "mu", "pi", "rho", "sigma", "tau", "phi", "omega"];
 const UNITS = [[/\bm\/s\^?2\b/g, "meters per second squared"], [/\bm\/s\b/g, "meters per second"], [/\bkg\b/g, "kilograms"],

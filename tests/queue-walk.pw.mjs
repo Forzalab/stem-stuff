@@ -1,4 +1,4 @@
-// The hidden queue on a real bank (design/plans/QUEUE.md): a 20-answer walk with Next only, right and wrong first picks, a retry,
+// The hidden queue on a real bank (docs/design/plans/QUEUE.md): a 20-answer walk with Next only, right and wrong first picks, a retry,
 // a reload mid-walk. Asserts: never the same code within 3, a missed question comes back (after >= 3 others) as a Redeem showing that
 // can be answered again, the reload lands on the same question with the queue intact, no console errors, no Shuffle / Redo UI.
 //   node tests/queue-walk.pw.mjs <base-url | port> [shotDir]

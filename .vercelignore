@@ -4,8 +4,8 @@
 .claude
 node_modules
 tests
-design/shots
-design/mockups
+archive/design/shots
+archive/design/mockups
 # ^ mockups never ship. A page Tony opens on the site (a test drive) goes in try/ instead.
 tries.json
 tries.json.tmp
@@ -14,7 +14,7 @@ host.log
 stem-stuff.html
 public
 .env*
-design/plans
+docs/design/plans
 # ^ swarm plans/reports never ship.
 /scratch/
 /2

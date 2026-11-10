@@ -1,4 +1,4 @@
-/* mode.mjs: sugar (saccharine, the default) or diet (the original questions), per browser (design/EASY.md). The cookie stem-mode=diet
+/* mode.mjs: sugar (saccharine, the default) or diet (the original questions), per browser (docs/design/EASY.md). The cookie stem-mode=diet
    is the one truth: the server reads it on every request (serve.py mode_of), this page reads it here. The code box sets it:
    DIET_<code> = diet, SUGAR_<code> = sugar (ADMIN_ / UNADMIN_, the old names, still work).
    D6 (Oct 7): a diet/hard cookie counts only beside stem-mode-v=2. A browser with the old cookie and no flag goes back to sugar

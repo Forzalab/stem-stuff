@@ -22,7 +22,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
   wishPaint: { get: () => wishPaint, enumerable: true },
   wishReset: { get: () => wishReset, enumerable: true },
 });
-/* ---------- Cluck the genie (design/EASY.md Phase 4): easy mode, after a wrong answer ----------
+/* ---------- Cluck the genie (docs/design/EASY.md Phase 4): easy mode, after a wrong answer ----------
    The first wrong answer of a question asks /explain in the background (at most WISH_AUTO questions an hour in this browser), so
    the solution is ready when the student looks. Past the cap nothing fires: "Ask Cluck" does it. The text is plain + $LaTeX$, read
    shown, never spoken (Tony, Oct 5: the voice is gone). A new question stops all of it. */
@@ -532,7 +532,7 @@ function wishPaint() {
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
 /* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
-   One scroll, no tabs (Tony, Oct 5: variant a of design/mockups/cluck-merge.html): Cluck's explanation of your miss on top (the box
+   One scroll, no tabs (Tony, Oct 5: variant a of archive/design/mockups/cluck-merge.html): Cluck's explanation of your miss on top (the box
    text, then the follow-up chat, the ask field pinned at the bottom), and under it the original's worked solution in a fold, "See
    reference solution" (Tony's wording). The fold is open when there is no explanation, closed after a miss. Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
    on a phone it covers the screen under the orange head bar (Tony's image 1). The X or Escape closes it; focus goes back to its opener. */
@@ -554,7 +554,7 @@ function clEl() {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) bridge.origPeeked();   // folded away after a solve: looking again is a peek
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
   });
-  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (design/DISMISS.md)
+  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (docs/design/DISMISS.md)
   cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
   clDrag(el);
@@ -697,7 +697,7 @@ function clClose(dismiss, force) {                                         // fo
   if (dismiss === true && bridge.sideMQ.matches && !bridge.origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
   if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
 }
-/* ---------- dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor") ----------
+/* ---------- dismiss Cluck's column (desktop; docs/design/DISMISS.md, Tony Oct 20: "B4 look with H humor") ----------
    html.side only: the X, Escape, or the sash dragged to the right edge folds the whole right column; the question column centres and
    its type steps up. Under the verdict, one hairline row (B4) brings it back. Its sassy line rotates (H; the one humour exception in
    chrome, STYLE.md §5); "Show him" stays put; the button's name is plain. Phones: unchanged. In memory only, never stored. */

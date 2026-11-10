@@ -1,4 +1,4 @@
-// Telemetry gating + events (design/plans/TELEMETRY.md). Needs a running server and Playwright:
+// Telemetry gating + events (docs/design/plans/TELEMETRY.md). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/telemetry.pw.mjs http://localhost:8812
 // The real libraries are never fetched: a stamped key is faked by rewriting index.html's <meta name="stem-t">, and the PostHog /
 // Clarity hosts answer with a stub that records calls. LIVE=1 + POSTHOG_TOKEN in the env stamps the real token and lets the

@@ -1,4 +1,4 @@
-/* calc-coach.css: Calc Coach panel (calc-coach.js, design/CALC-COACH.md). App chrome on app.css tokens; `.cc[data-theme=light]` has its own set
+/* calc-coach.css: Calc Coach panel (calc-coach.js, docs/design/CALC-COACH.md). App chrome on app.css tokens; `.cc[data-theme=light]` has its own set
    (the app itself is dark only; light is for calc.html). 44px+ targets, text >= 12px, a short pulse on the lit key (none under reduced motion). */
 .cc { --cc-bg: var(--page); --cc-card: var(--card); --cc-ink: var(--ink); --cc-muted: var(--muted); --cc-line: var(--line); --cc-key: #1b2b40; --cc-key-fn: #14233a; --cc-key-sh: #3a2a14;
   --cc-hi: var(--help); --cc-hi-ink: var(--help-ink); --cc-ring: #fff; --cc-lcd: #c9d6a8; --cc-lcd-ink: #1c2412; --cc-act: var(--action); --cc-act-ink: var(--action-ink);

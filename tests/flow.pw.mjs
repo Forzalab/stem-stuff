@@ -1,4 +1,4 @@
-// The multitask flow (design/MULTITASK.md: phone = round 3b/3d pad page behind the Scratchpad button, desktop = side by side) and the
+// The multitask flow (docs/design/MULTITASK.md: phone = round 3b/3d pad page behind the Scratchpad button, desktop = side by side) and the
 // keyboard-up rules around it, at 390x844 and
 // 375x667 (touch) and 1440x900 (mouse). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/flow.pw.mjs http://localhost:8812 [shotDir]

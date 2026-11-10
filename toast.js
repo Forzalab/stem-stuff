@@ -1,4 +1,4 @@
-/* toast.js: the one toast component (design/TOAST.md round 5; Tony #38 pick d1, shadcn / Sonner style). Sets window.stemToast.
+/* toast.js: the one toast component (docs/design/TOAST.md round 5; Tony #38 pick d1, shadcn / Sonner style). Sets window.stemToast.
    d1: no icon; the words and a progress bar share one left edge; a close button centred on the right; the bar ends in an 8px finish dot.
    Anchored in the question area (Tony: "I'm looking at the question first"), never in the top bar: 12px under its anchor, and it
    scrolls with it. It never covers a live control (W88 r4, cluck-rise): it shows only when it fits between the pinned bar and the

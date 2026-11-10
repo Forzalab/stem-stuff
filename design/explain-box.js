@@ -1,5 +1,5 @@
 /* explain-box.js: plain auto-growing textarea + edit-history snapshots.
-   See design/EXPLAIN-BOX.md. No rich text, no contenteditable.
+   See docs/design/EXPLAIN-BOX.md. No rich text, no contenteditable.
 
    const box = ExplainBox.mount(textareaEl, { idleMs: 2000, onHistory: (entry, history) => {} });
    box.el            the <textarea>

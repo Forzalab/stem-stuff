@@ -276,7 +276,7 @@ test("Geometry: over a cap (17 marks, 7 labels) or a mark on an unknown point dr
 });
 
 test("stepper iteration 2 (smoke): the four abstract-mark scenes draw; title / lit / hide / say follow the step; no point names", async () => {
-  const { SCENES } = await import("../try/stepper-demo-src.js");
+  const { SCENES } = await import("../archive/try/stepper-demo-src.js");
   for (const [name, src] of Object.entries(SCENES)) {
     const m = mount();
     const v = render(src, m);

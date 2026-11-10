@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { writeFileSync, mkdirSync } from "node:fs";
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
-const [BASE = "http://localhost:8812", OUT = "design/shots/buttons"] = process.argv.slice(2);
+const [BASE = "http://localhost:8812", OUT = "archive/design/shots/buttons"] = process.argv.slice(2);
 mkdirSync(OUT, { recursive: true });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });

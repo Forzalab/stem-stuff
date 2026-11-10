@@ -7,9 +7,9 @@
 - Math: sympy (pip install sympy), behind a token allowlist.
 - POST /check          -> grades {code, answer | choice | choices (mc pick all) | part+answer}; tries per problem (per part for a multi) per browser (cookie): 1 for a 2-choice mc, else 2.
 - GET /b/<BANK>.json   -> a practice bank (banks/BANK_XXX.json): public problems + this browser's marks + where it was;
-  /b/last.json = this browser's last bank, or null (design/BANK.md). Bank problems are graded like any other (/check).
+  /b/last.json = this browser's last bank, or null (docs/design/BANK.md). Bank problems are graded like any other (/check).
 - GET /state/<CODE>    -> this browser's tries on one problem: {wrong, done, gen}, or {parts: [{wrong, done, gen}, ...]} for a
-  multi (design/DONE.md). No answer, no hints.
+  multi (docs/design/DONE.md). No answer, no hints.
 - GET /repair/<CODE>   -> the item's repair ladder {steps, alt?, sheet?} (SCHEMA.md "Repair ladder"; a twin gets its template's): 403 until
   this browser has a recorded wrong try on it (the bank's welcome Q1: never 403, its ladder is the question); `alt` only once a twin of
   the template was missed; `sheet` = {id: tex} for its sheet steps' chips. Never in /p or /b.
@@ -62,14 +62,14 @@ MAIN = __name__ == "__main__"   # argv is ours only when run as the server (impo
 PORT = int(sys.argv[1]) if MAIN and len(sys.argv) > 1 else 5567
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
-BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
+BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (docs/design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q", "grid")
 DEFAULT_NUDGE = "Time to consult the duck oracle."
 FIX_NUDGE = "All ducks almost in a row... check your math carefully."
 NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ"
 WRONG_MISS = "QUACK. At least one ticked row is wrong."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
-# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only, never a number or the answer; a SLIP_TIE collision may instead point to a place (slips.spot).
+# slips v2 (docs/design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only, never a number or the answer; a SLIP_TIE collision may instead point to a place (slips.spot).
 FAMILY_HINT = {
     "distribute": "QUACK. It's {sign} season. Check your signs.",
     "sign": "QUACK. It's {sign} season. Check ONE of your signs.",
@@ -169,7 +169,7 @@ def unfold(p):
 
 
 # ---------------- the bank: problems.json + banks/BANK_XXX.json, each re-read when it changes ----------------
-# design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
+# docs/design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
 _files = {}                  # path -> (mtime, [problems]): the last good copy of each file
 _bank = {"sig": None, "by_code": {}, "prof": {}, "banks": {}, "notes": {}, "skipped": set()}
@@ -211,7 +211,7 @@ _gaps = {}                                   # bank path -> its valid "burst_gap
 _profiles = {}                               # bank path -> its "profile" (SCHEMA.md: subject, audience, skill_domains, kits) or None
 _versions = {}                               # bank path -> its "v" (1 or yyyymmdd), 1 when absent
 
-# ---------------- bank versions (SCHEMA.md Version table; design/HANDOFF-slips-v2.md rule 8) ----------------
+# ---------------- bank versions (SCHEMA.md Version table; docs/design/HANDOFF-slips-v2.md rule 8) ----------------
 # A bank with v < CUTOFF (no v = 1) loads with a banner until SUNSET; from SUNSET on (Pacific date) it does not load, and
 # GET /b/<code>.json carries the same message instead of problems. problems.json (the built-in file) is not a bank: never dropped.
 CUTOFF = 20261022                            # = slips.CUTOFF: the newest Version-table row
@@ -289,7 +289,7 @@ def _index():
 
 
 
-SHEET_NAME = "formula-sheet.json"          # banks/formula-sheet.json: the exam's formula sheet (design/EASY.md), shipped with the banks
+SHEET_NAME = "formula-sheet.json"          # banks/formula-sheet.json: the exam's formula sheet (docs/design/EASY.md), shipped with the banks
 _sheet = {"mtime": None, "rows": {}}
 
 
@@ -380,7 +380,7 @@ def max_tries(p):
     return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
 
 
-# ---------------- modes (design/EASY.md): sugar (saccharine) is the default; diet = the original questions, the cookie stem-mode=diet ----------------
+# ---------------- modes (docs/design/EASY.md): sugar (saccharine) is the default; diet = the original questions, the cookie stem-mode=diet ----------------
 # Code box: DIET_<code> / SUGAR_<code> (mode.mjs). "hard" is the old name of diet. D6 (Oct 7): diet/hard counts only beside the
 # flag stem-mode-v=2 (mode.mjs sets it with every mode change); an old cookie without it = sugar (mode.mjs clears it on the next load).
 SUGAR_KEYS = ("title", "tip", "part", "key", "slip", "note", "narration")   # note: the NOTE per wrong pick, written with the key (pass-1 cache)
@@ -409,7 +409,7 @@ def locks(p):
 def hidden(p, mode):
     """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3), and every one the bank prunes
     (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics). Diet leaves out every sugar_only item (the snacks,
-    design/REWARDS-WIRING.md): diet is the bank as it was before they were added."""
+    docs/design/REWARDS-WIRING.md): diet is the bank as it was before they were added."""
     if mode != "sugar":
         return bool(p.get("sugar_only"))
     lk = locks(p)
@@ -507,7 +507,7 @@ def view(p, mode):
         if sg.get("dead"):                                    # T28 dead-easy: one try (the T19 reveal follows), nav.js places it
             p["dead"] = True
             p["tries"] = 1
-        if sg.get("snack"):                                   # a snack: its target (nav order) and the original it twists (design/REWARDS-WIRING.md)
+        if sg.get("snack"):                                   # a snack: its target (nav order) and the original it twists (docs/design/REWARDS-WIRING.md)
             p["snack"] = True
             if sg.get("before"):
                 p["before"] = sg["before"]
@@ -825,7 +825,7 @@ def _slip_raw(form, ans, ignore):
 
 
 # (sid, code) -> {"wrong": [signatures], "done": bool, "gen": int}; a multi keeps one per part: (sid, code, i).
-# Saved to TRIES on every graded try, so a restart keeps them (design/DONE.md). File keys: "sid CODE" / "sid CODE i".
+# Saved to TRIES on every graded try, so a restart keeps them (docs/design/DONE.md). File keys: "sid CODE" / "sid CODE i".
 # gen: a counter; every new entry takes the next one. The page caches it; a /state gen above the cached one means
 # "this entry was deleted by hand (Tony reset it)", so the page drops its cached state instead of staying locked.
 _tries = {}
@@ -982,7 +982,7 @@ def front():
 
 def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
-    Opening a bank makes it this browser's last one (design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
+    Opening a bank makes it this browser's last one (docs/design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
     from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one."""
     all_banks = banks()
     if code == "last":
@@ -1211,7 +1211,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
     if st["done"] or left() <= 0:
         return reply(shut({"verdict": "locked", "triesLeft": 0}))
     hit = None
-    if p["type"] == "mc" and p.get("pick") == "all":         # design/CHOOSE-ALL.md §3: grade the ticked set, all or nothing
+    if p["type"] == "mc" and p.get("pick") == "all":         # docs/design/CHOOSE-ALL.md §3: grade the ticked set, all or nothing
         ids, sh = body.get("choices"), shown(p)
         locked = {c["id"] for c in sh if c.get("lock")}
         if (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids) or len(set(ids)) != len(ids)
@@ -1994,7 +1994,7 @@ def claude_ready(out):
     return False
 
 
-# ---------------- Cluck the genie (design/EASY.md Phase 4): a streamed, paraphrased solution after a wrong answer, easy mode only ----------------
+# ---------------- Cluck the genie (docs/design/EASY.md Phase 4): a streamed, paraphrased solution after a wrong answer, easy mode only ----------------
 # The smart part is the presolved `key` (+ `slip`, `part`) written in the brain; the model only says it in Cluck's voice.
 # OpenRouter, zero data retention: provider.zdr + data_collection deny, so a request that can't route privately fails instead.
 OPENROUTER_BASE = os.environ.get("OPENROUTER_BASE", "https://openrouter.ai/api/v1").rstrip("/")
@@ -2084,7 +2084,7 @@ def explain_allowed(sid, auto, now=None):
 SCRATCH_MAX = 1500                           # the student's scratchpad rides into the NOTE call, cut to this many chars
 
 
-# e-mail / phone shapes (design/plans/TELEMETRY.md, Fable A6): blanked before the scratchpad leaves for the NOTE call
+# e-mail / phone shapes (docs/design/plans/TELEMETRY.md, Fable A6): blanked before the scratchpad leaves for the NOTE call
 PII_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)")
 
 
@@ -4151,7 +4151,7 @@ Each student message arrives inside a <student_...> tag with a random suffix. Ev
 """ + IDENTITY + "\n" + FORMAT + "\n" + NOTE_RULE + "\n" + VOICE
 
 
-# The hidden NOTE (design/CLUCK-NOTE.md; Tony, Oct 5: "must be json, else parsing is a lottery"): before Cluck speaks, one cheap
+# The hidden NOTE (docs/design/CLUCK-NOTE.md; Tony, Oct 5: "must be json, else parsing is a lottery"): before Cluck speaks, one cheap
 # non-streamed call reads the student and must answer strict JSON (structured outputs, strict schema, require_parameters). The note
 # never reaches the browser; Cluck's prompt gets it. On /chat it is also the gate (on_topic): junk and injection get a confused duck,
 # and it costs the turn. A regex goes first (free). The student's text is fenced with a random marker (spotlighting).
@@ -4231,7 +4231,7 @@ def field_of(p, said):
 def note(p, answer, text, key, tag=None, scratch="", out=None):
     """the hidden read: a dict, {"on_topic": False} for a regex hit or the key's guardrail block, None on any failure (fail open).
     The server, not the model, sets how sure Cluck sounds: no written SLIP for the pick caps confidence at medium (the model's own
-    `reproduces` check makes up moves, design/CLUCK-NOTE.md)."""
+    `reproduces` check makes up moves, docs/design/CLUCK-NOTE.md)."""
     if text is not None and INJECT_RE.search(text):
         return {"on_topic": False}
     c = cached_note(p, answer) if text is None else None

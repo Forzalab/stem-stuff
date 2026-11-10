@@ -1,4 +1,4 @@
-// The loading splash (design/SPLASH.md). Needs a running server and Playwright:
+// The loading splash (docs/design/SPLASH.md). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/splash.pw.mjs http://localhost:8812
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";

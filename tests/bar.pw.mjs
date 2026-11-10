@@ -43,7 +43,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
     await page.goto(BASE + "/#PHYS_ZZ1"); await opened(page, "PHYS_ZZ1");
     await page.mouse.wheel(0, 600); await page.waitForTimeout(500);
     const more = page.locator("#more");
-    if (!phone) {   // desktop is side by side now (design/MULTITASK.md "Desktop, revised"): no frozen strip over the pad, so no strip handle
+    if (!phone) {   // desktop is side by side now (docs/design/MULTITASK.md "Desktop, revised"): no frozen strip over the pad, so no strip handle
       assert.ok(await more.isHidden(), "no strip handle side by side");
       const g = await page.evaluate(() => [document.querySelector("#freeze").getBoundingClientRect().right, document.querySelector("#work").getBoundingClientRect().left]);
       assert.ok(g[1] > g[0], "pad beside the problem");

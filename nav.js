@@ -19,10 +19,10 @@
 //   shuffle.mjs  seeded order, mock list
 //   nav.css      styles
 // ===== END CODEMAP HEADER =====
-/* nav.js: Prev / Next and the questions list (design/NAV.md).
-   The list: the open practice bank (window.stemBank, design/BANK.md), else an uploaded problems.json
+/* nav.js: Prev / Next and the questions list (docs/design/NAV.md).
+   The list: the open practice bank (window.stemBank, docs/design/BANK.md), else an uploaded problems.json
    (window.stemOffline.codes()). Neither: no list (codes are the gate), so the nav stays hidden.
-   Next plays a hidden queue (shuffle.mjs qPick, design/plans/QUEUE.md): fresh topics first, a miss back after 3 / 8 / 20 others,
+   Next plays a hidden queue (shuffle.mjs qPick, docs/design/plans/QUEUE.md): fresh topics first, a miss back after 3 / 8 / 20 others,
    one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
    The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows.
@@ -426,7 +426,7 @@ function init() {
     const m = rec || (b ? b.mark(c) : null);
     return b && rd() && rd().has(c) ? { ...m, again: true } : m;     // a re-showing: its old marks stay, faded, behind the history glyph (retry tag)
   }
-  /* sugar snacks ride right before their real (design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
+  /* sugar snacks ride right before their real (docs/design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
   const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
   const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
   const dead = c => { const p = off() && off().get(c); return !!p && !!(p.dead || (p.saccharine && p.saccharine.dead)); };   // T28 dead-easy: a sugar warm-up, placed by shuffle.mjs deadOpen / deadLead
@@ -543,7 +543,7 @@ function init() {
     codes = cs.length ? rows0(cs) : [];
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    name.textContent = bank() ? (front() ? bank().front : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
+    name.textContent = bank() ? (front() ? bank().front : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; docs/design/COPY-CTA.md); the front bank: its title only (Tony #4)
     modes.hidden = !front();                                         // Shuffle / Skip this question: the front bank's list only
     if (front()) { $("#qmixTx").textContent = Q().mix ? "Start with easy ones" : "Shuffle"; $("#qmixIco").hidden = !!Q().mix; skip.hidden = !!Q().mix; }   // the label in its span, so the shuffle icon stays (shown with "Shuffle" only)
     btn.setAttribute("aria-label", "Question list");
@@ -567,7 +567,7 @@ function init() {
   }
 
 // == §list-marks ==
-  /* done marks (design/DONE.md, variant A): one X per wrong try, a tick for correct, at the row's right edge.
+  /* done marks (docs/design/DONE.md, variant A): one X per wrong try, a tick for correct, at the row's right edge.
      Crossed out + greyed only when it can't be answered any more (correct, or out of tries); still a link. */
   const ico = (id, cls) => `<svg class="ico ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
   function marks(rec) {
@@ -705,7 +705,7 @@ function init() {
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
 // == §ios-back ==
-  /* iOS Back (design/NAV.md "iOS exception"): iOS has no system Back. One tap pops the topmost thing; it never leaves the site.
+  /* iOS Back (docs/design/NAV.md "iOS exception"): iOS has no system Back. One tap pops the topmost thing; it never leaves the site.
      Order: Cluck's sheet, the question list, a popover, the notes split, then the in-app previous question; else hidden (the root).
      In-app depth = history.state.stemD: 0 at the first question of the tab, +1 per question pushed (Prev/Next/list rows set the hash).
      Kept on every replaceState (app.js load, the query-param strips above), so it survives a reload; Back shows only at depth > 0. */

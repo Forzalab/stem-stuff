@@ -1,4 +1,4 @@
-// One blink (STYLE.md §1.6, §2.8; design/shots/blink-fx-2026-10-12): after Check, a sugar right answer moves at most ONE group at a time
+// One blink (STYLE.md §1.6, §2.8; archive/design/shots/blink-fx-2026-10-12): after Check, a sugar right answer moves at most ONE group at a time
 // (the answer, the FX layer, the HUD, the level-up overlay with its reels inside, the drop banner, the Cluck chip, Next; flow C: <= 1 overlay), sampled every 20 ms at 393x852;
 // nothing on the reward UI loops for ever; the Cluck chip wiggles at most twice; reduced motion = one fade, nothing else.
 // Starts its own serve.py (throwaway banks/ + tries.json) and a stub OpenRouter for the chip:

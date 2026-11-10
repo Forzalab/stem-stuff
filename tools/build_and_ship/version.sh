@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Which version runs where. The version is the PR number of the newest merged PR on main ("#83"); commits on main after it
 # add "+k" ("#83+1"). The site shows it bottom right; tools/build_and_ship/ship.sh stamps it into each deploy (version.json, read by
-# tools/build_and_ship/build_public.py: sw.js VERSION + the index.html meta). design/DEPLOY.md has the why.
+# tools/build_and_ship/build_public.py: sw.js VERSION + the index.html meta). docs/design/DEPLOY.md has the why.
 # usage: tools/build_and_ship/version.sh                 live (the site's /version.json) vs origin/main; exit 0 same, 1 live behind, 2 error
 #        tools/build_and_ship/version.sh --stamp DIR     write DIR/version.json for the checkout at DIR (ship.sh)
 #        tools/build_and_ship/version.sh --pr [REV]      print the version of REV (default HEAD)

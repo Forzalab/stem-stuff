@@ -1,4 +1,4 @@
-"""Bank-time NOTE (prompt audit B2, design/CLUCK-NOTE.md "Cache"): write saccharine.note[pick] for every wrong mc pick that has a
+"""Bank-time NOTE (prompt audit B2, docs/design/CLUCK-NOTE.md "Cache"): write saccharine.note[pick] for every wrong mc pick that has a
 written slip, with the KEY and the SLIP in view. The wish reads it (serve.cached_note): no live NOTE call, no 1.5 s wait, no second
 provider on a Claude-arm wish. A pick with no slip, a pick-all and a chat message still call live.
 

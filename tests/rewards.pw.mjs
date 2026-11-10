@@ -1,4 +1,4 @@
-// Sugar rewards in the real page (design/REWARDS-WIRING.md): the HUD row, XP + the bells on every correct, a quiet +1 on a wrong try,
+// Sugar rewards in the real page (docs/design/REWARDS-WIRING.md): the HUD row, XP + the bells on every correct, a quiet +1 on a wrong try,
 // 6 XP on try 2, a drop (flow C: a banner, no overlay, never with #toast), a level up + drop (one overlay, the reels inside, keys), state across a reload, snacks right before their real, the fading original,
 // and nothing at all in diet. Starts its own serve.py with a throwaway banks/ folder and tries.json:   node tests/rewards.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -58,7 +58,7 @@ const quiet = page => page.waitForFunction(() => !document.querySelector(".fx-ov
 const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => q.length ? q.shift() : r();
   try { return A(o); } finally { Math.random = r; R.answer = A; } }; }, q);
 /* the list toggle by script: on desktop the brainrot corner can sit over the toggle of an open list (a pre-existing race on main;
-   the overlap is in design/UX-TOPDOWN.md), and this file tests rewards, not the corner */
+   the overlap is in docs/design/UX-TOPDOWN.md), and this file tests rewards, not the corner */
 const toggleList = page => page.$eval("#qlistBtn", b => b.click());
 const listOrder = page => page.$$eval("#qlist a", as => as.map(a => a.getAttribute("href").slice(1)));
 /* every .fx-* node added to the page from now on */
@@ -161,7 +161,7 @@ try {
     assert.equal(await page.evaluate(() => window.Rewards.answer({ code: "CALC1_R03", correct: true, firstTry: true, dwellMs: 9e3 }).xp), 0);
   });
 
-  /* Next is the queue's pick (design/plans/QUEUE.md), not the next row: pin a queue whose only ready real is CALC1_R03 (R01 and R02
+  /* Next is the queue's pick (docs/design/plans/QUEUE.md), not the next row: pin a queue whose only ready real is CALC1_R03 (R01 and R02
      just answered right), so Next plays R03, with its snack S02 in front unless the student is cruising */
   await step("Next steps over a snack only while the last 10 first tries are above 90%", async () => {
     const pinQ = () => page.evaluate(() => {

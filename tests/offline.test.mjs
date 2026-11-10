@@ -41,7 +41,7 @@ test("figcheck.js (fable audit U3) is precached and index.html loads it, as a mo
   assert.ok(gr > fc, "before graph.js");
 });
 
-test("the sugar rewards files are precached (design/REWARDS-WIRING.md §6)", () => {
+test("the sugar rewards files are precached (docs/design/REWARDS-WIRING.md §6)", () => {
   for (const f of ["rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js",
     "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2"]) assert.ok(src.includes(`"${f}"`), f);
 });

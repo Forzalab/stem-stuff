@@ -1,4 +1,4 @@
-// Sugar mode (saccharine, the default) vs diet (DIET_<code>, the original questions), design/EASY.md: no "None of these" in either;
+// Sugar mode (saccharine, the default) vs diet (DIET_<code>, the original questions), docs/design/EASY.md: no "None of these" in either;
 // sugar hides None-is-the-answer questions, drops fix boxes, shows the saccharine title and tip, and Cluck; SUGAR_ goes back. Starts its own
 // serve.py with a throwaway banks/ folder and tries.json:   node tests/easy.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -68,7 +68,7 @@ writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P
 /* every title shares "Term: ": the list still shows one row per question, number + whole title, no shared-prefix header (owner, Oct 6) */
 const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
 writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
-/* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
+/* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (docs/design/EASY.md Phase 4) */
 const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "$$\nv = 2\n$$\n", "Tick: a, c. Egg-cellent."];   // $$ on lines of their own: what live models send
 let asked = 0, gate = null, release = () => {};   // gate: a promise the next stream waits on before its first piece (one stream only)
 let hold = null, unhold = () => {};               // hold: the next stream waits on it after its first piece (one stream only), so "no typing" reads the stream mid-way, not on a clock
@@ -152,7 +152,7 @@ try {
       return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
         frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
-        tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (design/mockups/formula-use.html ?v=7)
+        tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (archive/design/mockups/formula-use.html ?v=7)
       { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(94, 120, 153) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src || f.dataset.src));   // 4-6: their src waits for the row to scroll to them
@@ -309,7 +309,7 @@ try {
       "pop-t fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "the formula, then the purpose as the title");
     assert.equal(await q[2].getAttribute("aria-expanded"), "true");
     assert.equal(await page.$$eval(".pop .fig, .pop .fd-fig", f => f.length), 0, "a row with no picture (KE_ROT) has no figure");
-    await q[1].click();                                                     // I = Σ m r²: formula-figs.js has its picture (design/FORMULA-FIGS.md)
+    await q[1].click();                                                     // I = Σ m r²: formula-figs.js has its picture (docs/design/FORMULA-FIGS.md)
     await page.waitForFunction(() => document.querySelector(".pop .fd-fig svg"), null, { timeout: 3000 });
     const fig = await page.$eval(".pop", e => { const f = e.querySelector(".fd-fig"), r = e.getBoundingClientRect(), fr = f.getBoundingClientRect(), s = f.querySelector("svg").getBoundingClientRect();
       return { at: [...e.children].indexOf(f), role: f.getAttribute("role"), alt: f.getAttribute("aria-label") === window.FormulaFigs.I_SUM.alt, drawn: s.height > 60 && s.width > 150,

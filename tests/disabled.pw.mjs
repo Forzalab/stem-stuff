@@ -65,7 +65,7 @@ async function run(w, h) {
   const page = await b.newPage({ viewport: { width: w, height: h } });
   const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }).catch(() => {}); await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${w}.png` }); } };
   /* wait for option i to be live: a reopened problem paints its cached record first and the /state reconcile re-enables it a
-     moment later (app.js load → paint → syncServer); CI was red once on this race (design/TESTING.md) */
+     moment later (app.js load → paint → syncServer); CI was red once on this race (docs/design/TESTING.md) */
   const pickMC = async i => { await page.waitForFunction(n => document.querySelectorAll("#q .opt:not(:disabled)").length > n, i, { timeout: 5000 });
     const t0 = await page.evaluate(() => window.__drill.state.tries.length);
     const o = (await page.$$("#q .opt:not(:disabled)"))[i]; await o.click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await graded(page, t0 + 1); };

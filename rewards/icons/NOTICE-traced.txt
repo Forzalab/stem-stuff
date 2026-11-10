@@ -27,4 +27,4 @@ Traced from owner-supplied reference art (via image-model isolation); licence of
 production until cleared: Tony decides before merge.
 
 The other icons here (duck_color.svg, fire_color.svg, trophy_color.svg) are still Microsoft Fluent Emoji Color, MIT License:
-see LICENSE-fluentui-emoji.txt. Settings, sizes and before/after evidence: design/shots/reward-icons-traced-2026-10-11/README.md.
+see LICENSE-fluentui-emoji.txt. Settings, sizes and before/after evidence: archive/design/shots/reward-icons-traced-2026-10-11/README.md.

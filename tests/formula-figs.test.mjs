@@ -1,4 +1,4 @@
-// Formula sheet pictures (formula-figs.js, design/FORMULA-FIGS.md; Tony, Oct 26): every key is a real sheet row id, every figure is a
+// Formula sheet pictures (formula-figs.js, docs/design/FORMULA-FIGS.md; Tony, Oct 26): every key is a real sheet row id, every figure is a
 // SCHEMA.md graph block (Ajv on #/$defs/graph) with an alt, its math compiles, at most 6 labels, and a force on a body is never dashed.
 import { test } from "node:test";
 import assert from "node:assert/strict";

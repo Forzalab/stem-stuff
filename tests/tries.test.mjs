@@ -81,7 +81,7 @@ test("multi: the whole-set body, a missing or bad part, and unreadable text are 
   assert.equal(gradeLocal(p, { part: 0, answer: "1" }).triesLeft, 1);
 });
 
-// mc pick all (design/CHOOSE-ALL.md §3): same cases as tests/test_serve.py pick-all tests
+// mc pick all (docs/design/CHOOSE-ALL.md §3): same cases as tests/test_serve.py pick-all tests
 const pickAll = (code, extra = {}) => ({ type: "mc", pick: "all", code, correct: ["a", "c"], miss: "QUACK. Missing one.",
   choices: [{ id: "a", md: "A" }, { id: "b", md: "B" }, { id: "c", md: "C" }, { id: "d", md: "D" }, { id: "e", md: "None", lock: true }],
   wrong: ["b", "d", "e"].map(c => ({ choice: c, error: "misread", hint: `QUACK. ${c}` })), ...extra });
@@ -103,7 +103,7 @@ test("pick all: the set must match; any order", () => {
 });
 test("pick all: unknown, duplicate, not an array, locked + another are invalid (no try spent); empty = none true, a real try", () => {
   const p = pickAll("T_a2");
-  assert.equal(gradeLocal(pickAll("T_a2e"), { choices: [] }).error, "incomplete");   // design/EASY.md: nothing ticked is an answer
+  assert.equal(gradeLocal(pickAll("T_a2e"), { choices: [] }).error, "incomplete");   // docs/design/EASY.md: nothing ticked is an answer
   for (const b of [{ choices: ["z"] }, { choices: ["a", "a"] }, { choices: "a" }, { choice: "a" }, { choices: ["e", "a"] }])
     assert.deepEqual(gradeLocal(p, b), { verdict: "invalid", triesLeft: 2 }, JSON.stringify(b));
   assert.equal(gradeLocal(p, { choices: ["e"] }).struck, "e");                 // "none" alone is a real (wrong) answer
@@ -200,7 +200,7 @@ test("T19: gradeLocal sends `correct` only once shut, and only in sugar (twin of
   } finally { setMode("sugar"); }
 });
 
-// slips v2 (design/HANDOFF-slips-v2.md unit C): uploaded banks match a slip of `form` after the author's wrong entries, before the nudge
+// slips v2 (docs/design/HANDOFF-slips-v2.md unit C): uploaded banks match a slip of `form` after the author's wrong entries, before the nudge
 const xzp = (extra = {}) => ({ type: "num", code: "PHYS_XZP", answer: "3/7", form: "1/((4/3)^2+(1/3)^2+(2/3)^2)", nudge: "QUACK. Nudge.", ...extra });
 test("slips: PHYS_XZP typed 0.692 -> sign, with the family hint, in diet and sugar", () => {
   try {

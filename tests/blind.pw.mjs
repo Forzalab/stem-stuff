@@ -1,4 +1,4 @@
-// The blind-locale test overlay (blind/locale.js; design/UX-TOPDOWN.md §3): with ?blind=ka no Latin letter is left in the UI (text,
+// The blind-locale test overlay (blind/locale.js; docs/design/UX-TOPDOWN.md §3): with ?blind=ka no Latin letter is left in the UI (text,
 // aria-label, title, placeholder) outside the content (question, answers, figure, math, hints, Cluck's text, the original's body),
 // and the question text is byte-identical to the English page. ?blind=off brings English back. Without the flag nothing loads.
 // Starts its own serve.py with a throwaway banks/ folder:   node tests/blind.pw.mjs [port]

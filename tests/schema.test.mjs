@@ -128,7 +128,7 @@ test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the pr
   assert.equal(suffixFaults(mk("BEAR_QAA", "BEAR_QAA")).length, 1);
 });
 
-// practice banks (design/BANK.md): banks/BANK_XXX.json, the same format; problem codes shared with another file = the same problem
+// practice banks (docs/design/BANK.md): banks/BANK_XXX.json, the same format; problem codes shared with another file = the same problem
 {
   const dir = new URL("../banks/", import.meta.url), seen = new Map(problems.map(p => [p.code, JSON.stringify(p)]));
   for (const f of existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")) : []) {
@@ -148,7 +148,7 @@ test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the pr
   }
 }
 
-/* slips gate (design/HANDOFF-slips-v2.md rule 7): every bank with v >= 20261022 passes `python3 tools/bank_tools/slips.py --strict` (needs sympy, so
+/* slips gate (docs/design/HANDOFF-slips-v2.md rule 7): every bank with v >= 20261022 passes `python3 tools/bank_tools/slips.py --strict` (needs sympy, so
    node shells out). The fixtures prove the wiring while no real bank is that new: good + the PHYS_XZP golden pass, bad fails. */
 {
   const CUTOFF = 20261022, root = new URL("../", import.meta.url);
@@ -316,7 +316,7 @@ for (const p of problems) {
     test(`${f}: every distractor has exactly one error+hint`, () => {
       const ids = p.choices.map(c => c.id);
       assert.equal(new Set(ids).size, ids.length, "duplicate choice ids");
-      const right = [p.correct].flat();                                   // pick all: a list (design/CHOOSE-ALL.md)
+      const right = [p.correct].flat();                                   // pick all: a list (docs/design/CHOOSE-ALL.md)
       assert.ok(right.every(r => ids.includes(r)), "correct id not in choices");
       const got = p.wrong.map(w => w.choice);
       assert.ok(got.every(Boolean), "mc wrong entries use choice, not match/re");

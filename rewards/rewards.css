@@ -1,5 +1,5 @@
-/* rewards/rewards.css: the sugar reward skin, Quiz Pop dark (Tony, Oct 4; port of design/rewards/themes/quizpop.css over the shared
-   hud.css + fx.css). Scoped (design/REWARDS-WIRING.md §7): it styles only the HUD row (.rw-*) and the FX layers (.fx-*), every token
+/* rewards/rewards.css: the sugar reward skin, Quiz Pop dark (Tony, Oct 4; port of archive/design/rewards/themes/quizpop.css over the shared
+   hud.css + fx.css). Scoped (docs/design/REWARDS-WIRING.md §7): it styles only the HUD row (.rw-*) and the FX layers (.fx-*), every token
    lives on .rw-skin (never :root) and is named --rw-*, so the question UI keeps STYLE.md. tests/style.test.mjs checks the scope.
    Fonts: the app's text face (var(--font), app.css: Atkinson, SF on WebKit) at 400 / 600 on app.css's size ladder; Press Start 2P (vendor/fonts, OFL) for the burst title only. No CDN.
    z ladder (app.css): stage 15 · dock 20 · brainrot 30 · Scratchpad button 40 · #toast 50 · drop banner 55 · update bar 60 ·
@@ -15,7 +15,7 @@
   --rw-pixel: "Press Start 2P", "Atkinson Hyperlegible Mono", monospace;
 }
 
-/* ---------- HUD B: one gold-rimmed strip in the top bar's gap (Tony, Oct 5 pick; design/mockups/hud.html ?v=B) ----------
+/* ---------- HUD B: one gold-rimmed strip in the top bar's gap (Tony, Oct 5 pick; archive/design/mockups/hud.html ?v=B) ----------
    [balance window: coin + XP] [level star + bar + "N XP to level M"] [tick + right-answer count]. Gold and tangerine only; purple is the LEVEL UP
    burst's (rare = special). As tall as the bar's buttons. A narrow gap drops the words, then the bar. app.js mounts it; never fixed. */
 .rw-hud {

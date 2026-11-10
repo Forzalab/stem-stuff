@@ -329,6 +329,545 @@
    "pr": "T2",
    "ship": "no",
    "bridge": false
+  },
+  {
+   "old": "design/plans/bench-haiku55/",
+   "new": "docs/design/plans/bench_haiku55/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/shots/",
+   "new": "archive/design/shots/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/mockups/",
+   "new": "archive/design/mockups/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/circuit/",
+   "new": "archive/design/circuit/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/bench/",
+   "new": "archive/design/bench/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/shuffle/",
+   "new": "archive/design/shuffle/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/rewards/",
+   "new": "archive/design/rewards/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/autosave-mock.mjs",
+   "new": "archive/design/autosave-mock.mjs",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/bar-mock.mjs",
+   "new": "archive/design/bar-mock.mjs",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/specimen.html",
+   "new": "archive/design/specimen.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/AUDIT.md",
+   "new": "docs/design/AUDIT.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/BANK-MIGRATION.md",
+   "new": "docs/design/BANK-MIGRATION.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/BANK.md",
+   "new": "docs/design/BANK.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/BOUNCE.md",
+   "new": "docs/design/BOUNCE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/CALC-COACH.md",
+   "new": "docs/design/CALC-COACH.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/CHOOSE-ALL.md",
+   "new": "docs/design/CHOOSE-ALL.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/CLUCK-NOTE.md",
+   "new": "docs/design/CLUCK-NOTE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/COPY-CTA.md",
+   "new": "docs/design/COPY-CTA.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/DEPLOY.md",
+   "new": "docs/design/DEPLOY.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/DESIGN-LANGUAGE.md",
+   "new": "docs/design/DESIGN-LANGUAGE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/DISMISS.md",
+   "new": "docs/design/DISMISS.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/DONE.md",
+   "new": "docs/design/DONE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/EASY.md",
+   "new": "docs/design/EASY.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/ENGAGE.md",
+   "new": "docs/design/ENGAGE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/EXPLAIN-BOX.md",
+   "new": "docs/design/EXPLAIN-BOX.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/EXTRACTION.md",
+   "new": "docs/design/EXTRACTION.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/FORMULA-CARD.md",
+   "new": "docs/design/FORMULA-CARD.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/FORMULA-FIGS.md",
+   "new": "docs/design/FORMULA-FIGS.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/FREEZE.md",
+   "new": "docs/design/FREEZE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/HANDOFF-slips-v2.md",
+   "new": "docs/design/HANDOFF-slips-v2.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/IDLE-PEEK.md",
+   "new": "docs/design/IDLE-PEEK.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/MULTITASK.md",
+   "new": "docs/design/MULTITASK.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/NAV.md",
+   "new": "docs/design/NAV.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/POPOVER.md",
+   "new": "docs/design/POPOVER.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/README.md",
+   "new": "docs/design/README.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/RELOAD.md",
+   "new": "docs/design/RELOAD.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/REWARDS-WIRING.md",
+   "new": "docs/design/REWARDS-WIRING.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/REWARDS.md",
+   "new": "docs/design/REWARDS.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/SPLASH.md",
+   "new": "docs/design/SPLASH.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/STYLE.md",
+   "new": "docs/design/STYLE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/SWAP.md",
+   "new": "docs/design/SWAP.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/TESTING-PLAN.md",
+   "new": "docs/design/TESTING-PLAN.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/TESTING.md",
+   "new": "docs/design/TESTING.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/TOAST.md",
+   "new": "docs/design/TOAST.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/TRUNK.md",
+   "new": "docs/design/TRUNK.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/UX-TOPDOWN.md",
+   "new": "docs/design/UX-TOPDOWN.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/VISUAL-GOALS.md",
+   "new": "docs/design/VISUAL-GOALS.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/VISUAL-LANGUAGE.md",
+   "new": "docs/design/VISUAL-LANGUAGE.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/VISUALS.md",
+   "new": "docs/design/VISUALS.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/WIDGETS.md",
+   "new": "docs/design/WIDGETS.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/notes/",
+   "new": "docs/design/notes/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "design/plans/",
+   "new": "docs/design/plans/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/README.md",
+   "new": "archive/try/README.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-kit.js",
+   "new": "archive/try/genui-kit.js",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-redeem.css",
+   "new": "archive/try/genui-redeem.css",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-redeem.html",
+   "new": "archive/try/genui-redeem.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-redeem.js",
+   "new": "archive/try/genui-redeem.js",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-ui.css",
+   "new": "archive/try/genui-ui.css",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-ui.html",
+   "new": "archive/try/genui-ui.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-ui.js",
+   "new": "archive/try/genui-ui.js",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-visual.css",
+   "new": "archive/try/genui-visual.css",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-visual.html",
+   "new": "archive/try/genui-visual.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/genui-visual.js",
+   "new": "archive/try/genui-visual.js",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/index.html",
+   "new": "archive/try/index.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/live-scene.html",
+   "new": "archive/try/live-scene.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/next-cue-variants.html",
+   "new": "archive/try/next-cue-variants.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/notes-variants.html",
+   "new": "archive/try/notes-variants.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/redo-variants.html",
+   "new": "archive/try/redo-variants.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/shots/",
+   "new": "archive/try/shots/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/stepper-demo-src.js",
+   "new": "archive/try/stepper-demo-src.js",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/stepper-demo.html",
+   "new": "archive/try/stepper-demo.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/ticker.html",
+   "new": "archive/try/ticker.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "try/tries.html",
+   "new": "archive/try/tries.html",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "MC.md",
+   "new": "docs/MC.md",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "author/kits/",
+   "new": "tools/author/kits/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "author/prompts/",
+   "new": "tools/author/prompts/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
+  },
+  {
+   "old": "author/skills/",
+   "new": "tools/author/skills/",
+   "pr": "D",
+   "ship": "no",
+   "bridge": false
   }
  ]
 }

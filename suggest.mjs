@@ -1,6 +1,6 @@
-/* suggest.mjs: the code box's suggestion list (design/STYLE.md, "Code box").
+/* suggest.mjs: the code box's suggestion list (docs/design/STYLE.md, "Code box").
    Pure: no DOM, so tests/suggest.test.mjs can import it. app.js feeds it the codes this browser knows (codes it opened before,
-   the live bank code, the live list) and shows what it returns. The server never lists codes (design/NAV.md).
+   the live bank code, the live list) and shows what it returns. The server never lists codes (docs/design/NAV.md).
    Which prefixes exist is codes.mjs's business; nothing here lists one. */
 import { parse, bareBank, ANY } from "./codes.mjs";
 

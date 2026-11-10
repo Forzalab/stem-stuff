@@ -1,5 +1,5 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
-   Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
+   Layout decisions for the frozen problem: docs/design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 /* ./copy/payload.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { shuffled, seed } from "./shuffle.mjs";
 import * as codes from "./codes.mjs";
@@ -29,7 +29,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
 });
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
-/* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
+/* Vercel Web Analytics (docs/design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
 if (location.protocol === "https:" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -66,7 +66,7 @@ function obToast(n, text, at, o) {
   try { localStorage.setItem("stem-ob-" + n, "1");
     if ([1, 2, 3].every(i => localStorage.getItem("stem-ob-" + i))) localStorage.setItem("stem-ob", "done"); } catch { /* shown, not kept */ }
 }
-/* the note (design/STYLE.md §3 Toast; todo 112: the one toast component's note mode, toast.js stemToast.note, element #toast): a short
+/* the note (docs/design/STYLE.md §3 Toast; todo 112: the one toast component's note mode, toast.js stemToast.note, element #toast): a short
    line with a caret on the thing it is about. Under its anchor, else above it (the Scratchpad button: above first); on a kept choice it
    lies on the row's own words, caret left at the badge. Strict cover rule: never on a live control, so it may not show (-> false).
    o: { x: the close button (HUD tips, the pad-mode note: Tony's B), prefer, allow, loose }. 2 s, tap or Esc closes it. */
@@ -122,7 +122,7 @@ function note(text) {
   if (there && !(m && m.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }))) toast(text, at, { loose: true });
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, docs/design/DISMISS.md)
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
@@ -145,7 +145,7 @@ function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
-/* the codeblock (T43; design/STYLE.md "Codeblock"): a fenced block in question or choice text. One span per real line: its number
+/* the codeblock (T43; docs/design/STYLE.md "Codeblock"): a fenced block in question or choice text. One span per real line: its number
    is a CSS counter, and a long line wraps hanging under its own indent with no number. Colour: a tiny regex highlighter (Tokyo Night,
    app.css --syn-*). Comments and strings match first, so a keyword or a // inside them stays theirs. An unknown language stays plain. */
 const FENCE = /^```[^\n`]*\n[\s\S]*?^```[ \t]*$/gm;
@@ -225,7 +225,7 @@ function md(text, inline = false, big = false) {
    Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
    No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
    `answer` is { answer: "typed text" } or { choice: "b" } or, pick all, { choices: ["a", "c"] } (wrong adds struck?); a multi grades one part at a time: { part: i, answer: "typed text" }. */
-/* every request goes through net(): aborted after 8 s (a call may pass its own ms: the proof Check waits 25 s), so nothing can wait forever (design/RELOAD.md).
+/* every request goes through net(): aborted after 8 s (a call may pass its own ms: the proof Check waits 25 s), so nothing can wait forever (docs/design/RELOAD.md).
    In-flight requests are kept so a resumed page (bfcache, a long-hidden tab) can abort the stale ones. */
 const TIMEOUT = 8000, PROOF_TIMEOUT = 25000;   // PROOF_TIMEOUT: serve.py PROOF_TIMEOUT is 20 s per model; the proof Check waits 25 s (todo 109)
 const inflight = new Set();
@@ -291,7 +291,7 @@ async function staged(r, st) {
 /* mirror of serve.py grade(): keep the two in step */
 const PROOF_TRIES = 3;                                     // serve.py PROOF_TRIES (W107, Tony Oct 27: a proof gets 3 Checks)
 const maxTries = p => p.tries ?? (p.type === "proof" ? PROOF_TRIES : p.type === "mc" && !p.grid && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try (a grid: two), else two; a mode view keeps its count
-const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
+const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (docs/design/CHOOSE-ALL.md)
 const FIX_NUDGE = "All ducks almost in a row... check your math carefully.";   // serve.py FIX_NUDGE
 const WRONG_MISS = "QUACK. At least one ticked row is wrong.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
@@ -398,7 +398,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     try { sig = unitSig(u, text); correct = unitOk(u, sig); }
     catch { return R({ verdict: "invalid", triesLeft: left() }); }
     if (!correct) hit = unitHit(u, text, sig);
-    /* slips v2 (design/HANDOFF-slips-v2.md): author wrong -> a slip of `form` (family hint, same shape as a wrong hit) -> nudge */
+    /* slips v2 (docs/design/HANDOFF-slips-v2.md): author wrong -> a slip of `form` (family hint, same shape as a wrong hit) -> nudge */
     if (!correct && !hit && u.type === "num" && u.form) {
       let skip;
       try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
@@ -439,7 +439,7 @@ codeIn.addEventListener("input", () => { entryMsg(""); root.classList.add("entry
 function putCode(code) { if (code) bridge.barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
 syncCode();
 /* suggestions (suggest.mjs): the codes this browser knows (opened here before, newest first; the live bank and its list; an
-   uploaded file) that contain what is typed. Banks first, then questions. The server never lists codes (design/NAV.md).
+   uploaded file) that contain what is typed. Banks first, then questions. The server never lists codes (docs/design/NAV.md).
    A combobox: ArrowDown / ArrowUp move, Enter opens the marked one (else the typed code), Escape closes, a tap opens. */
 const sugEl = $("#codeSug");
 let sugAt = -1, sugList = [];
@@ -540,7 +540,7 @@ codePaste.addEventListener("click", async () => {
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   sugHide();
-  const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
+  const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (docs/design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
   if (!n) { entryMsg("Whoops, that's not a valid code! Try CALC1_T6B instead."); codeIn.focus(); return; }
@@ -573,7 +573,7 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 const retryLoad = $("#retryLoad");
-/* ================= practice banks (design/BANK.md) =================
+/* ================= practice banks (docs/design/BANK.md) =================
    BANK_XXX = a file on the server (banks/BANK_XXX.json). The server keeps the answers, this browser's progress (marks) and
    where it was in each bank (at). localStorage "stem-src" = the live list: a bank code, or "file" for an uploaded file. */
 let bank = null;                         // { code, codes, get: Map code -> public problem, marks }
@@ -594,7 +594,7 @@ addEventListener("drill:bank", () => {
   if (!el) { el = document.createElement("p"); el.className = codes.BANNER_CLASS; el.setAttribute("role", "status"); panel.prepend(el); }
   el.textContent = text;
 });
-/* a re-showing (design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a question back (a
+/* a re-showing (docs/design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a question back (a
    Redeem when it owes a miss), graded fresh in its own server namespace (serve.py grade() round) and kept in its own done record (offline.js "r:"); the
    real history and marks stay as they were. One showing at a time, per bank; localStorage, so a reload stays in it. UI: the retry tag (retryTag) + the list's faded marks (nav.js). */
 const REDO = "stem-redo";
@@ -657,7 +657,7 @@ let busy = false;    // a grading request is out (MC and typed answers)
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
 /* one problem source: the open bank already holds every question (the same public view the server sends), so it answers at
    once; p/CODE.json still goes out in the background (the server's resume pointer for this browser). Else the network
-   (offline.js answers it for an uploaded file). design/NAV.md */
+   (offline.js answers it for an uploaded file). docs/design/NAV.md */
 async function getProblem(code) {
   const p = !modeFlip && bank && bank.get.get(code);                      // a mode flip: the bank in memory is the old mode's view
   if (p) { net(`p/${code}.json`, { headers: { traceparent: traceparent() } }).then(r => r.text()).catch(() => {}); return structuredClone(p); }   // a copy, like a fresh fetch
@@ -709,12 +709,12 @@ async function load(code) {
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
   render();
-  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type, mode: modeOf(), tries: maxTries(prob) });   // telemetry (design/plans/TELEMETRY.md)
+  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type, mode: modeOf(), tries: maxTries(prob) });   // telemetry (docs/design/plans/TELEMETRY.md)
   if (rec) paint(rec);
   window.stemLockHelp?.resume(code);   // LOCK-HELP: a stored lock offer for this item shows again after a reload / when the student returns
   if (!off()) syncServer(S);
   retryTag();
-  dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (docs/design/NAV.md)
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   bridge.rwSync();
@@ -765,7 +765,7 @@ function render() {
   if (isProof()) bridge.layoutDock();                                                    // the split opened by itself: the dock steps away as it does for the pad page
   bridge.layoutFreeze();
 }
-/* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the multitask split (design/MULTITASK.md
+/* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the multitask split (docs/design/MULTITASK.md
    Pick 9 + stage 2). #q (the how line, the box, the chips, the reference proof) and #fb (the verdict) live in #work, the pad's pane; the
    notes pad (#xb) is not shown. Any other item: both go back into the question card. Same #sash, same anchors (applyMT). */
 function proofHome() {
@@ -776,7 +776,7 @@ function proofHome() {
 }
 /* ---------- the Twist chip + its one-time toast (W133, todo 133; copy LOCKED, Tony Oct 29, verbatim) ----------
    An item with `twist: true` (SCHEMA.md) gets a small "Twist" chip in the card's header, left of the title (the title row when sugar
-   shows one, else a header row of its own). A tap opens a note popover (popover.js, design/POPOVER.md) with TWIST_POP. The first twist
+   shows one, else a header row of its own). A tap opens a note popover (popover.js, docs/design/POPOVER.md) with TWIST_POP. The first twist
    on this device also gets the short toast (toast.js: no bar, one action): TWIST_TOAST + "What is that?", which opens the chip's popover.
    Once per device: localStorage TWIST_KEY, set when the toast is on screen (blocked storage: no toast, never a toast every time).
    The toast keeps off the answer area (#q: the box, the ladder, the choices) and Next, tap or no tap. No twist: no chip, no row, no toast. */
@@ -979,7 +979,7 @@ function renderQuestion() {
   }
   formulaCard();
 }
-/* sugar: Key formulas (Tony, Oct 5, design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
+/* sugar: Key formulas (Tony, Oct 5, archive/design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
    they get used, centred, a thin arrow between, under a "Key formulas" label notched into the box's border. Under the answer, before the hint */
 const FC_ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 /* The thinking ladder (SCHEMA.md "Formula ladder", Tony Oct 21): with p.ladder the card starts as the big pieces only (the part rows); S.lad pieces are out,
@@ -1028,9 +1028,9 @@ function midOpen(li, cur) {                                                     
   const b = li.querySelector(".fh-more"), n = li.querySelector(".fhs"); if (!b) return;
   b.hidden = cur; b.setAttribute("aria-expanded", "false"); n.hidden = !cur;
 }
-/* the "?" popover (Tony, Oct 23): popover.js, variant "doc" (design/POPOVER.md). Built on open, removed on close. The row's formula again (same KaTeX,
+/* the "?" popover (Tony, Oct 23): popover.js, variant "doc" (docs/design/POPOVER.md). Built on open, removed on close. The row's formula again (same KaTeX,
    same size, centred under the row's formula), the purpose as its bold title, then the muted body: symbols + units, when, example */
-/* a row's picture (formula-figs.js, design/FORMULA-FIGS.md; Tony, Oct 26): under the formula, drawn by graph.js once the popover is in the page */
+/* a row's picture (formula-figs.js, docs/design/FORMULA-FIGS.md; Tony, Oct 26): under the formula, drawn by graph.js once the popover is in the page */
 function docHTML(d, tex, fig) {
   const sym = (d.sym || []).map(y => `<li><span class="fd-s">${renderMath(y.s, false)}</span><span class="fd-m">${esc(y.m || "")}</span>${y.u ? `<span class="fd-u">${esc(y.u)}</span>` : ""}</li>`).join("");
   return `<div class="pop-h">${renderMath(tex, false)}</div>${fig ? `<div class="pop-fig fig fd-fig" role="img" aria-label="${esc(fig.alt)}"></div>` : ""}${d.purpose ? `<p class="pop-t fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
@@ -1260,7 +1260,7 @@ function keptTap(o) {
   S.keptTold = true;
   if (!toast("That one's already correct!", o)) S.keptTold = false;            // kept A: on the row; no place (the cover rule) = the next tap tries again
 }
-/* Check is live with nothing ticked too (that is the answer "none of them": design/EASY.md); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
+/* Check is live with nothing ticked too (that is the answer "none of them": docs/design/EASY.md); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
   S.selected = ticked().map(x => x.dataset.id);
   const proved = !S.prob.fix || opts().every(o => o.hasAttribute("data-lock") || markOf(o) === "on" || (markOf(o) === "x" && fixOf(o).querySelector("input").value.trim()));
@@ -1702,7 +1702,7 @@ function record(a, r) {
   if (r.verdict === "wrong") startWait();                                                                                       // the second try costs 10 s (sugar, 2-try items: startWait gates)
 }
 
-/* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
+/* ---------- done questions: kept per bank + code across reloads (docs/design/DONE.md) ----------
    Record: { v: 2, units: [{ x, done, hint, gen, sigs? }], x, done, tries, hints }. One unit per problem, one per part for a multi.
    x = wrong tries, done = "open" | "correct" | "out". Top level (for the list): x = all wrong tries, done = "correct" when every
    unit is right, "out" when every unit is closed and one isn't, else "open".

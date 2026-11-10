@@ -1,5 +1,5 @@
-/* rewards/engine.js: the sugar reward engine + HUD (design/REWARDS-WIRING.md; spec: brain projects/calc/topics/sugar-rewards.md;
-   mock and research: design/rewards/, design/REWARDS.md). Sets window.Rewards. Inert until app.js calls Rewards.use(key) in sugar mode:
+/* rewards/engine.js: the sugar reward engine + HUD (docs/design/REWARDS-WIRING.md; spec: brain projects/calc/topics/sugar-rewards.md;
+   mock and research: archive/design/rewards/, docs/design/REWARDS.md). Sets window.Rewards. Inert until app.js calls Rewards.use(key) in sugar mode:
    no DOM, no listeners, no storage before that, so diet is untouched.
    State: localStorage "stem-rw:<bank code | file:name | solo>", one per bank, per device. Every access in try/catch.
    Dead easy, a participation trophy (Tony, Oct 4). XP: real first try 14-18, a 2-choice True/False row 8-10, snack 6, peeked at the

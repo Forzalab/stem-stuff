@@ -1,4 +1,4 @@
-"""Sugar rewards assets (design/REWARDS-WIRING.md §6): vendored, licensed, no CDN, icons.js up to date."""
+"""Sugar rewards assets (docs/design/REWARDS-WIRING.md §6): vendored, licensed, no CDN, icons.js up to date."""
 import os
 import subprocess
 import sys

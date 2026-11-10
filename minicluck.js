@@ -1,6 +1,6 @@
 /* minicluck.js: the tiny Cluck on a sub-step (DESIGN-v3 §4; Tony #13: it pops onto the step and asks right away, a type-in box, Socratic,
    friendly, dead concise, X dismisses; #25.4: the page dims, but the question stem and the student's own work stay clear).
-   App chrome on popover.js (variant "mini", mounted in an .ai-box for Cluck's warm tokens; design/POPOVER.md). What Cluck SAYS is never
+   App chrome on popover.js (variant "mini", mounted in an .ai-box for Cluck's warm tokens; docs/design/POPOVER.md). What Cluck SAYS is never
    built here: POST /mini answers with an OpenUI Lang program, drawn by views.js (the Cluck-reply renderer). Our own strings go in by textContent.
 
    Mini.open(step, o)   step = the sub-step element: the popup sits on it, focus goes back to it on Esc / X.

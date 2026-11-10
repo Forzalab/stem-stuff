@@ -1,4 +1,4 @@
-// slips.mjs: the JS twin of slips.py (design/HANDOFF-slips-v2.md unit C). Golden parity against tests/fixtures/slips-golden.json,
+// slips.mjs: the JS twin of slips.py (docs/design/HANDOFF-slips-v2.md unit C). Golden parity against tests/fixtures/slips-golden.json,
 // the fixture tests/test_slips.py checks on the Python side. Parity is EXACT, not set-based: same families in the same order (values
 // ascending within a family, as slips.py sorts them), each value within 1e-9 relative.
 import { test } from "node:test";

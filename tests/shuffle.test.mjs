@@ -1,4 +1,4 @@
-// shuffle.mjs: the seeded shuffle behind MC choices and the question order (design/NAV.md)
+// shuffle.mjs: the seeded shuffle behind MC choices and the question order (docs/design/NAV.md)
 import test from "node:test";
 import assert from "node:assert/strict";
 import { shuffled, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qKey, GAPS, NEAR, PULL } from "../shuffle.mjs";
@@ -29,7 +29,7 @@ test("family = prefix + first suffix letter", () => {
   assert.equal(family("CALC1_T6B"), "CALC1_T");
 });
 
-/* ---------- the queue (design/plans/QUEUE.md) ---------- */
+/* ---------- the queue (docs/design/plans/QUEUE.md) ---------- */
 const bank = (n, topics = "ABCDEFGH") => Array.from({ length: n }, (_, i) => `PHYS_${topics[i % topics.length]}${i}`);
 /* play k slots: answer(code, slot, st) -> true (right) | false (wrong) | null (skip) | [first, ...retries]. Returns the codes played. */
 function play(st, pool, k, answer = () => true, topicOf = family) {

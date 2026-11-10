@@ -1,4 +1,4 @@
-"""Slips from the formula (SCHEMA.md `form`, design/HANDOFF-slips-v2.md): the 10 slip families a student makes on one plain-number
+"""Slips from the formula (SCHEMA.md `form`, docs/design/HANDOFF-slips-v2.md): the 10 slip families a student makes on one plain-number
 expression, as values. Shared by serve.py (runtime matching), tools/bank_tools/slips.py (report + --strict gate) and app.js's port (golden fixture
 tests/fixtures/slips-golden.json). `form` is authored text only, never student input. Parsed unfolded so terms survive.
 
@@ -363,7 +363,7 @@ def match(form, value, win=SLIP_WIN, k=None, skip=()):
     return None
 
 
-# ---- spot (W-SPOT): on a collision, WHERE the slip is, never WHAT it is, never a number (design/HANDOFF-slips-v2.md rule 3) ----------
+# ---- spot (W-SPOT): on a collision, WHERE the slip is, never WHAT it is, never a number (docs/design/HANDOFF-slips-v2.md rule 3) ----------
 ROOT = ()             # the root's path: a whole-answer (outer) slip has no place in the form; a slip at the root is whole too
 # ALL the spot copy, one table (Tony vets it; slips.mjs SPOT_COPY is equal, pinned by tests/fixtures/slips-golden-spots.json).
 # Structural words + written-order ordinals only: never a digit, never a literal of the form (the form may hold numbers the student never saw).
