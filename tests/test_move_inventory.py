@@ -9,7 +9,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(ROOT, "tools", "repo_checks", "move_inventory.py")
 BUILD = '''import os, shutil, sys
-r = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+r = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.makedirs(sys.argv[1])
 for f in ("index.html", "lib/util.js"):
     os.makedirs(os.path.dirname(os.path.join(sys.argv[1], f)), exist_ok=True)
