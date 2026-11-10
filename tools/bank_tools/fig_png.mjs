@@ -72,4 +72,4 @@ try {   // the launch too: a failed one must not leave .render.html in banks/fig
     writeFileSync(path, png); made++;
   }
 } finally { await browser?.close(); rmSync(tmp, { force: true }); }
-console.log(`fig_png: ${all.length} blocks, ${made} written, ${same} unchanged -> banks/figs/`);
+console.log(`fig_png: ${all.length} blocks, ${made} written, ${same} unchanged -> server/data/banks/figs/`);
