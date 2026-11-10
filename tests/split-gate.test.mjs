@@ -1,0 +1,52 @@
+// W152 gate (brain _files/w152/P0.md): the drill page is 3 ES modules (app.js -> cluck.js -> shell.js, tools/split-app.mjs). A name one
+// part uses but never imports throws a ReferenceError only when that code path runs, so tests that never walk it stay green. This lints
+// every part with no-undef (all paths, run or not), and pins the load order the split depends on.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Linter } from "eslint";
+import * as espree from "espree";
+import * as eslintScope from "eslint-scope";
+import globals from "globals";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const PARTS = ["app.js", "cluck.js", "shell.js"].filter(f => existsSync(join(ROOT, f)));
+// what the classic scripts before app.js put on window (index.html: vendor/, graph.js, popover.js, welcome.js, design/explain-box.js)
+const LIBS = ["katex", "marked", "math", "Graph", "Pop", "Welcome", "ExplainBox", "Stages", "Repair"];
+const config = [{
+  languageOptions: { ecmaVersion: "latest", sourceType: "module", globals: { ...globals.browser, ...Object.fromEntries(LIBS.map(n => [n, "readonly"])) } },
+  rules: { "no-undef": "error", "no-import-assign": "error", "no-redeclare": "error" },
+}];
+const lint = (code, name) => new Linter().verify(code, config, name).map(m => `${name}:${m.line}:${m.column} ${m.message}`);
+
+test("the gate itself: a name no part declares or imports is an error", () => {
+  assert.equal(lint("export const a = () => notDeclaredAnywhere();", "probe.js").length, 1);
+  assert.equal(lint('import { x } from "./y.js"; x = 1;', "probe.js").length, 1, "assigning an import (a cross-part write without the bridge) is an error");
+});
+
+for (const f of PARTS) test(`${f}: no undeclared name, no write to an import`, () => {
+  assert.deepEqual(lint(readFileSync(join(ROOT, f), "utf8"), f), []);
+});
+
+// the bridge object (app.js export) that earlier parts reach later parts through: a local of the same name in any function makes
+// bridge.<x> there read the local (W152 CI: a local `ln` DOM line in xDiag ate ln.wish, Cluck never opened on a wrong working; no error)
+const BRIDGE = (readFileSync(join(ROOT, "app.js"), "utf8").match(/^export const (\w+) = \{\};\s+\/\/ the bridge/m) || [])[1];
+for (const f of PARTS) test(`${f}: nothing but app.js's export is named ${BRIDGE} (no shadowing)`, { skip: !BRIDGE && "app.js not split" }, () => {
+  const ast = espree.parse(readFileSync(join(ROOT, f), "utf8"), { ecmaVersion: "latest", sourceType: "module", range: true, loc: true });
+  const sm = eslintScope.analyze(ast, { ecmaVersion: 2022, sourceType: "module" });
+  const own = sm.scopes.flatMap(sc => sc.variables.filter(v => v.name === BRIDGE).map(v => [sc.type, v.defs[0]?.type, v.defs[0]?.name.loc.start.line]));
+  const ok = own.filter(([type, def]) => type === "module" && (f === "app.js" ? def === "Variable" : def === "ImportBinding"));
+  assert.deepEqual(own.filter(x => !ok.includes(x)), [], `${f}: a second ${BRIDGE} (scope, kind, line)`);
+});
+
+test("load order: index.html runs app.js, cluck.js, shell.js in a row; app.js imports neither later part", { skip: PARTS.length < 3 && "app.js not split" }, () => {
+  const html = readFileSync(join(ROOT, "index.html"), "utf8");
+  const tags = [...html.matchAll(/<script type="module" src="(app|cluck|shell)\.js"><\/script>/g)].map(m => m[1]);
+  assert.deepEqual(tags, ["app", "cluck", "shell"]);
+  const app = readFileSync(join(ROOT, "app.js"), "utf8");
+  assert.doesNotMatch(app, /from\s+["']\.\/(cluck|shell)\.js["']|import\(["']\.\/(cluck|shell)\.js/, "app.js importing a later part makes it run LAST (ES cycle rule): TDZ errors at load");
+  const sw = readFileSync(join(ROOT, "sw.js"), "utf8");
+  for (const f of PARTS) assert.match(sw, new RegExp(`"${f.replace(".", "\\.")}"`), `${f} not precached in sw.js BASE`);
+});

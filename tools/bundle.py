@@ -59,10 +59,22 @@ def inline_fonts(url):
     return re.sub(r"@font-face\{[^}]*\}", face, css)
 
 
+_mod_urls = {}  # absolute module path -> its one data: URL (one string = one module instance in the browser)
+
+
+def module_url(src, seen=()):
+    """The data: URL of a module, computed ONCE per module and reused by every importer and entry tag."""
+    key = os.path.normpath(os.path.join(ROOT, src))
+    if key in seen:
+        raise ValueError("import cycle at " + src)
+    if key not in _mod_urls:
+        body = module_text(src, seen + (key,)).encode()
+        _mod_urls[key] = "data:text/javascript;base64," + base64.b64encode(body).decode()
+    return _mod_urls[key]
+
+
 def module_text(src, seen=()):
     """Module source with relative imports rewritten to data: URLs (file:// can't load module files)."""
-    if src in seen:
-        raise ValueError("import cycle at " + src)
     js = get(src).decode()
     base = src.rsplit("/", 1)[0] + "/" if "/" in src else ""
 
@@ -71,8 +83,7 @@ def module_text(src, seen=()):
         if not spec.startswith("."):
             return m.group(0)
         dep = os.path.normpath(base + spec).replace(os.sep, "/")
-        uri = "data:text/javascript;base64," + base64.b64encode(module_text(dep, seen + (src,)).encode()).decode()
-        return m.group(1) + uri + m.group(3)
+        return m.group(1) + module_url(dep, seen) + m.group(3)
 
     return re.sub(r"""(\b(?:from|import)\s*["'])([^"']+)(["'])""", imp, js)
 
@@ -100,7 +111,9 @@ def build(out=None):
             return tag
         attrs = m.group(1) + m.group(3)
         if re.search(r'type\s*=\s*"module"', attrs):
-            return '<script type="module">%s</script>' % script_text(module_text(src))
+            # entry: import the module's ONE data: URL instead of inlining its body, so an entry that another
+            # module also imports is still one instance (the browser keys module instances by URL)
+            return '<script type="module">import "%s";</script>' % module_url(src)
         body = script_text(get(src).decode())
         if re.search(r"\b(defer|async)\b", attrs):
             deferred.append("<script>%s</script>" % body)  # defer = run after parse: move to end, keep order

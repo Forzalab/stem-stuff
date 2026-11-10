@@ -181,6 +181,7 @@ weight() {
     proof-kb) echo 8 ;;   # proof item, phone keyboard up: the question tile hugs (Nov 8), own server, local ~6 s
     welcome) echo 5 ;;   # local run ~4 s
     ladder-ui) echo 30 ;;   # LADDER-UI (Nov 3): the welcome ladder at 393 / 1280 / 721 x sugar / diet, own server; local ~25 s (estimate until CI timing)
+    window-surface) echo 15 ;;   # W152 window names after the split: 4 runs (2 sizes x sugar/diet), own serve.py; estimate until CI timing
     cluck-history) echo 20 ;;   # W2 Cluck history status lines + folds at 390 / 1280, own serve.py, stub OpenRouter; estimate until CI timing
     w3) echo 40 ;;   # W3 polish items 1-8 at 390 / 1280, own serve.py, page.clock for the 30 s ladder; estimate until CI timing
     reveal-tray) echo 45 ;;   # REVEAL-TRAY (Nov 3): reveal under the drawer, its duck, tags row, Cluck box, brainrot fold, toast; own server + stub; local ~40 s
@@ -248,6 +249,7 @@ tags() {
     why-chip) echo "@logic @real-time" ;;
     repair-gap) echo "@layout @real-time" ;;
     ladder-ui) echo "@layout @real-time" ;;   # LADDER-UI: own serve.py, fixture bank
+    window-surface) echo "@logic @real-time" ;;   # W152: own serve.py, names only, no real-time waits
     reveal-tray) echo "@layout @real-time" ;;   # REVEAL-TRAY: own serve.py + a stub OpenRouter; waits out the real 2 s spam gate
     reveal-duck) echo "@layout @real-time" ;;
     mock) echo "@logic @real-time" ;;   # W103b; waits out the ~0.7 s wrong-answer peek for real
