@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from decimal import Context, Decimal, ROUND_HALF_UP
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 import slips  # noqa: E402
 

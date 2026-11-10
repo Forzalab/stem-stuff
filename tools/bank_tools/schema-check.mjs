@@ -4,7 +4,7 @@
 // Needs tests/node_modules (cd tests && npm ci): ajv, through tests/schemas.mjs.
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { validator, repairFaults } from "../tests/schemas.mjs";
+import { validator, repairFaults } from "../../tests/schemas.mjs";
 
 const validate = validator("problems"), N = 3, args = process.argv.slice(2), need = args.includes("--repair");
 let bad = 0;

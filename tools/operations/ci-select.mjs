@@ -65,8 +65,8 @@ export function decideSelection({ files, affectedCounts, totalUnits } = {}) {
   return { kind: "affected", reason: "affected subset" };
 }
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const RUN_ALL = fileURLToPath(new URL("../tests/run-all.sh", import.meta.url));
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const RUN_ALL = fileURLToPath(new URL("../../tests/run-all.sh", import.meta.url));
 
 // Count a file's affected units; the unmapped: diagnostic is stdout but is not a unit.
 function affectedCount(file) {

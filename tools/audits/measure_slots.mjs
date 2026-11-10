@@ -23,7 +23,7 @@ import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const require = createRequire(join(ROOT, "tests", "package.json"));
 function loadPlaywright() {
   try { return require("playwright"); } catch { return require("/opt/node22/lib/node_modules/playwright"); }

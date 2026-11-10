@@ -10,7 +10,7 @@ const [BASE = "http://localhost:8812", OUT = "design/shots"] = process.argv.slic
 
 // a problems.json on "disk" for the upload flow (a real problem under a code the server doesn't have)
 const dir = mkdtempSync(join(tmpdir(), "dog-"));
-const prob = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url))).problems.find(p => p.code === "PHYS_F3N");
+const prob = JSON.parse(readFileSync(new URL("../../problems.json", import.meta.url))).problems.find(p => p.code === "PHYS_F3N");
 prob.code = "PHYS_Q7W";
 const file = join(dir, "problems.json");
 writeFileSync(file, JSON.stringify({ v: 1, problems: [prob] }));

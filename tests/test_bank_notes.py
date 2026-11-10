@@ -10,7 +10,7 @@ from unittest import mock
 # serve fixes serve.TRIES at import (bank_notes imports serve): a temp file, never the repo's tries.json; v:1 fixture banks pre-sunset
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 os.environ.setdefault("STEM_TODAY", "2026-10-23")
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools", "bank_tools"))
 import bank_notes  # noqa: E402
 import serve  # noqa: E402
 

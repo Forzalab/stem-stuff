@@ -5,7 +5,7 @@ import concurrent.futures as cf, json, os, re, subprocess, sys, time, urllib.req
 
 tree, port, tag, reps = sys.argv[1], int(sys.argv[2]), sys.argv[3], int(sys.argv[4])
 HERE = os.path.dirname(os.path.abspath(__file__))
-S = os.path.dirname(HERE)
+S = os.path.dirname(os.path.dirname(HERE))
 BANK = json.load(open(os.path.join(S, "banks", "BANK_P3X.json")))["problems"]
 P = {p["code"]: p for p in BANK}
 HARD = ["PHYS_SGU", "PHYS_T6Y", "PHYS_USR", "PHYS_FW6", "PHYS_75G"]

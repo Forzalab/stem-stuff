@@ -11,7 +11,7 @@ import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "operations"))
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset (serve.today)

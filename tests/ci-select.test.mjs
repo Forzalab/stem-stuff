@@ -20,11 +20,11 @@ import { fileURLToPath } from "node:url";
 import {
   BIG_CODE_FILES, BIG_AREAS, HUB_FRACTION, DOCS_EXTS,
   isCodeFile, areaOf, areasOf, isBig, isHub, pwSpecs, decideSelection,
-} from "../tools/ci-select.mjs";
+} from "../tools/operations/ci-select.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RUN = fileURLToPath(new URL("./run-all.sh", import.meta.url));
-const CLI = fileURLToPath(new URL("../tools/ci-select.mjs", import.meta.url));
+const CLI = fileURLToPath(new URL("../tools/operations/ci-select.mjs", import.meta.url));
 
 // The universe of units is derived at test time, never frozen: a hardcoded count drifts the moment
 // anyone adds a spec (PR #469 failed exactly this way). SOURCE: `tests/run-all.sh --list`.

@@ -12,7 +12,7 @@ import { readFileSync, existsSync, mkdtempSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { measure, roleOf } from "../tools/measure_slots.mjs";
+import { measure, roleOf } from "../tools/audits/measure_slots.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -98,7 +98,7 @@ for (const W of [360, 390, 1280]) {
 
 await step("CLI writes slots.json + slots.png and exits 0", async () => {
   const out = mkdtempSync(join(tmpdir(), "measure-"));
-  execFileSync("node", [new URL("../tools/measure_slots.mjs", import.meta.url).pathname, new URL("measure-view.oui", FX).pathname,
+  execFileSync("node", [new URL("../tools/audits/measure_slots.mjs", import.meta.url).pathname, new URL("measure-view.oui", FX).pathname,
     "--out", out, "--width", "360", "--base", BASE], { stdio: "pipe", timeout: 60000 });
   const j = JSON.parse(readFileSync(join(out, "slots.json"), "utf8"));
   assert.equal(j.width, 360);

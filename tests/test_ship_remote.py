@@ -14,7 +14,7 @@ import urllib.parse
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
 import brain_banks  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,7 +47,7 @@ class Pins(unittest.TestCase):
 
     def test_cli_check(self):
         for spec, rc in (("BANK_P3X@cd581738", 0), ("BANK_P3X@cd581738,BANK_P3X@cd581738", 1), ("junk", 1)):
-            r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "brain_banks.py"), "--check-pins", spec], capture_output=True, text=True)
+            r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "build_and_ship", "brain_banks.py"), "--check-pins", spec], capture_output=True, text=True)
             self.assertEqual(r.returncode, rc, r.stderr)
 
 
@@ -100,7 +100,7 @@ class PinnedFetch(unittest.TestCase):
         with mock.patch.dict(os.environ, {"BRAIN_TOKEN": "t", "SHIP_PINS": "BANK_P3X@cd581738"}), mock.patch("urllib.request.urlopen", fake), \
                 mock.patch("sys.argv", ["brain_banks.py", self.out]), mock.patch("sys.stderr", new_callable=io.StringIO):
             with self.assertRaises(SystemExit) as c:
-                runpy.run_path(os.path.join(ROOT, "tools", "brain_banks.py"), run_name="__main__")
+                runpy.run_path(os.path.join(ROOT, "tools", "build_and_ship", "brain_banks.py"), run_name="__main__")
         self.assertEqual(c.exception.code, 1)
 
 
@@ -108,8 +108,8 @@ class Routing(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-remote-")
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        os.makedirs(os.path.join(self.tmp, "tools"))
-        shutil.copy(os.path.join(ROOT, "tools", "ship.sh"), os.path.join(self.tmp, "tools", "ship.sh"))
+        os.makedirs(os.path.join(self.tmp, "tools", "build_and_ship"))
+        shutil.copy(os.path.join(ROOT, "tools", "build_and_ship", "ship.sh"), os.path.join(self.tmp, "tools", "build_and_ship", "ship.sh"))
         self.press = os.path.join(self.tmp, "press-stub.sh")
         self.log = os.path.join(self.tmp, "press.log")
         with open(self.press, "w") as f:
@@ -120,7 +120,7 @@ class Routing(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_", "TERMUX", "PREFIX"))}
         e.update(HOME=self.tmp, SHIP_PRESS=self.press, PRESS_LOG=self.log, SHIP_BRAIN_SEARCH="", SHIP_NO_BRAIN="1")
         e.update(env)
-        return subprocess.run(["bash", os.path.join(self.tmp, "tools", "ship.sh"), *args], capture_output=True, text=True, env=e, timeout=60)
+        return subprocess.run(["bash", os.path.join(self.tmp, "tools", "build_and_ship", "ship.sh"), *args], capture_output=True, text=True, env=e, timeout=60)
 
     def pressed(self):
         if not os.path.exists(self.log):

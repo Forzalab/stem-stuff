@@ -100,7 +100,7 @@ function splitLayout(text) {
 }
 
 function main() {
-  const root = fileURLToPath(new URL("..", import.meta.url));
+  const root = fileURLToPath(new URL("../..", import.meta.url));
   const txt = readFileSync(path.join(root, "figure-docs.txt"), "utf8");
   const layoutPath = path.join(root, "layout-docs.mjs");
   const region = generate(txt);

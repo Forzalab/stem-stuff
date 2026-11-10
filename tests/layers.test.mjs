@@ -4,7 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { hex, contrast, Lstar, HUES, THEMES, FLOOR, STEP, steps, mix, toHex, PALETTE, AUTO, de00, CVD, simulate, lab } from "../tools/layer_steps.mjs";
+import { hex, contrast, Lstar, HUES, THEMES, FLOOR, STEP, steps, mix, toHex, PALETTE, AUTO, de00, CVD, simulate, lab } from "../tools/client_generators/layer_steps.mjs";
 import { autoHues, AUTO_HUES } from "../figcheck.js";
 import { render } from "../views.js";
 import { mount, byClass, all } from "./views-dom.mjs";

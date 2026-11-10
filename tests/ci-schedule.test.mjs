@@ -4,7 +4,7 @@
 // No network, no GitHub: runKind/pickGreen are pure.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { runKind, pickGreen } from "../tools/ci-gate.mjs";
+import { runKind, pickGreen } from "../tools/operations/ci-gate.mjs";
 
 // --- runKind: schedule is a FULL run on main -----------------------------------------
 // SOURCE R3 (SPEC-PR3.md §4): tests.yml gains `on: schedule`, and a schedule run is the full suite.

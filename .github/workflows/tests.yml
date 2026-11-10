@@ -58,7 +58,7 @@ jobs:
             [ "$n" -eq 0 ] || in_flight=true
           fi
           IN_FLIGHT="$in_flight" node --input-type=module -e '
-            import { decidePipe } from "./tools/ci-pipe.mjs";
+            import { decidePipe } from "./tools/operations/ci-pipe.mjs";
             const d = decidePipe({ event: process.env.EVENT, inFlight: process.env.IN_FLIGHT === "true" });
             console.error(`decidePipe: ${d.pipe} (${d.reason})`);
             process.stdout.write(d.pipe);

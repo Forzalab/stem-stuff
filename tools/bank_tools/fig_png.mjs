@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 const require = createRequire(import.meta.url);
-const HERE = join(dirname(fileURLToPath(import.meta.url)), "..");
+const HERE = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ri = process.argv.indexOf("--root");
 if (ri > 0 && !process.argv[ri + 1]) { console.error("usage: node tools/bank_tools/fig_png.mjs [--check] [--root DIR]"); process.exit(2); }
 const ROOT = ri > 0 ? resolve(process.argv[ri + 1]) : HERE;

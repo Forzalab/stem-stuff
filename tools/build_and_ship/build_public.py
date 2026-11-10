@@ -8,7 +8,7 @@ import re
 import shutil
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "author", "banks", "k", "log", "tests", "tools", "engine", "node_modules", "__pycache__", "scratch"}
 SKIP_FILES = {"problems.json", "tries.json", "tries.json.tmp", "serve.py", "deploy.sh", "host.log", ".host.pid",
               "requirements.txt", "vercel.json", ".vercelignore", ".gitignore", "stem-stuff.html", "stem-stuff.html.tmp", "2"}   # + every root *.py (server code) and dotfiles, see build()
@@ -72,7 +72,7 @@ def build(out):
             shutil.copy2(os.path.join(d, f), dst)
     stamp(out)
     stamp_telemetry(out)
-    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
     try:
         import bundle
         bundle.build(os.path.join(out, "stem-stuff.html"))

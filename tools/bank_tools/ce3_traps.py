@@ -9,7 +9,7 @@ from sympy import Rational, ceiling, ff, mod_inverse, Mod, Min, Max
 from sympy.logic.boolalg import Xor, Nand, Nor, And, Or, Not
 from sympy import symbols
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 a, b, c, d, e = symbols("a b c d e")
 FUZZY = "Fuzzy: NOT = 1 - x, AND = min, OR = max."
 TF = [{"id": "t", "md": "TRUE"}, {"id": "f", "md": "FALSE"}]

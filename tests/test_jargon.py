@@ -11,7 +11,7 @@ import unittest
 import unittest.mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "client_generators"))
 import jargon  # noqa: E402
 
 
@@ -152,7 +152,7 @@ class Shipped(unittest.TestCase):
         for e in entries:  # in-repo sources must exist; external (brain) ones may be absent (CI) -> course skipped
             if not e.get("external"):
                 self.assertTrue(os.path.exists(os.path.join(ROOT, e["path"])), e["path"])
-        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "jargon.py"), "--check"],
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "client_generators", "jargon.py"), "--check"],
                            capture_output=True, text=True, timeout=120)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 

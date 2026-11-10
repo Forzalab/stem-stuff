@@ -10,7 +10,7 @@ import threading
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SH = os.path.join(ROOT, "tools", "version.sh")
+SH = os.path.join(ROOT, "tools", "build_and_ship", "version.sh")
 ENV = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
 
 
@@ -94,12 +94,12 @@ class Live(unittest.TestCase):
             git(src, "commit", "-q", "--allow-empty", "-m", m)
         subprocess.run(["git", "clone", "-q", "--bare", src, bare], check=True)
         subprocess.run(["git", "clone", "-q", bare, self.clone], check=True)
-        os.makedirs(os.path.join(self.clone, "tools"))
-        with open(SH) as a, open(os.path.join(self.clone, "tools", "version.sh"), "w") as b:
+        os.makedirs(os.path.join(self.clone, "tools", "build_and_ship"))
+        with open(SH) as a, open(os.path.join(self.clone, "tools", "build_and_ship", "version.sh"), "w") as b:
             b.write(a.read())
 
     def live(self, body):
-        return subprocess.run(["bash", os.path.join(self.clone, "tools", "version.sh")], capture_output=True, text=True,
+        return subprocess.run(["bash", os.path.join(self.clone, "tools", "build_and_ship", "version.sh")], capture_output=True, text=True,
                               env=dict(ENV, STEM_URL=self.serve(body)))
 
     def test_latest_behind_down(self):

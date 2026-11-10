@@ -6,7 +6,7 @@
 // full run for the same ref) and passes it in.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decidePipe } from "../tools/ci-pipe.mjs";
+import { decidePipe } from "../tools/operations/ci-pipe.mjs";
 
 // --- M5: a PR push while a full run for that PR is in-flight -> fast only -----------------
 test("decidePipe: pull_request + in-flight full run -> fast pipe only", () => {

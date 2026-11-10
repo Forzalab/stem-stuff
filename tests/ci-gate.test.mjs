@@ -15,9 +15,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { DOCS_EXTS, isDocsOnly, classify, runKind, pickGreen, decideShip } from "../tools/ci-gate.mjs";
+import { DOCS_EXTS, isDocsOnly, classify, runKind, pickGreen, decideShip } from "../tools/operations/ci-gate.mjs";
 
-const CLI = fileURLToPath(new URL("../tools/ci-gate.mjs", import.meta.url));
+const CLI = fileURLToPath(new URL("../tools/operations/ci-gate.mjs", import.meta.url));
 const fix = (name) => fileURLToPath(new URL(`./fixtures/ci-gate/${name}.json`, import.meta.url));
 function cli(args) {
   return spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8" });

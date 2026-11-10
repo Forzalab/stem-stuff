@@ -20,10 +20,10 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
-if str(ROOT / "tools") not in sys.path:
-    sys.path.append(str(ROOT / "tools"))     # tools/bank_tools/tol.py when loaded by path (tests), after ROOT so `slips` is the root module
+if str(ROOT / "tools" / "bank_tools") not in sys.path:
+    sys.path.append(str(ROOT / "tools" / "bank_tools"))     # tools/bank_tools/tol.py when loaded by path (tests), after ROOT so `slips` is the root module
 import slips  # noqa: E402  (the root module, not this file)
 import tol as tolwarn  # noqa: E402  (tools/bank_tools/tol.py: tol warnings, never a gate failure)
 

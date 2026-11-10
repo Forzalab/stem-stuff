@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { jevModel } from "./jev-model.mjs";
 
-const SRC = readFileSync(new URL("../intent.js", import.meta.url), "utf8");
+const SRC = readFileSync(new URL("../../intent.js", import.meta.url), "utf8");
 export const tree = (() => { const w = { URLSearchParams }; w.window = w; vm.runInNewContext(SRC, w); return w.__stemJev.tree; })();
 
 const LINE = /^\+(\d+(?:\.\d+)?) {2}(\S+)(?: {2}(.*))?$/;
@@ -105,7 +105,7 @@ export async function jevBench(lines, client, models = JEV_MODELS) {
      · input between logged lines: a "pause Ns" at t = no input in [t − N, t]; elsewhere (outside an away) the student counts as active
        (a pointerdown every ACT_S s, the input listener logs a pause only past 5 s); a num/expr pick gets a keydown 1 s before it
      · the peek is always free; a nudge the student never taps is put away DISMISS_S s later (doubles the gap, as on the device)
-   The recorded jev / seen / tree lines are ignored: the decision is recomputed with the intent.js given (src, default ../intent.js). */
+   The recorded jev / seen / tree lines are ignored: the decision is recomputed with the intent.js given (src, default ../../intent.js). */
 const ACT_S = 4, DISMISS_S = 10;
 const lcg = (s = 1) => () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
 export function loadJev(src = SRC) { const w = { URLSearchParams }; w.window = w; vm.runInNewContext(src, w); return w.__stemJev; }
@@ -149,8 +149,8 @@ export function events(items) {
    that SHOWS (nudge:S2 …), the seen fire (seen:nod|short|full) and its silent pick (seen:quiet) */
 export function replay(ev, { seed = 1, src } = {}) {
   const J = loadJev(src), lines = [{ fam: {}, any: [] }][0];
-  const SL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../copy/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
-  const NL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../copy/nudge-lines.js", import.meta.url), "utf8"), w); return w.__stemNudgeLines; })();
+  const SL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../../copy/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
+  const NL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../../copy/nudge-lines.js", import.meta.url), "utf8"), w); return w.__stemNudgeLines; })();
   let t = 0, dismissAt = Infinity;
   const fires = [], j = J.create(() => t * 1000, {}, { rand: lcg(seed), lines: NL, seenLines: SL || lines, say: () => { dismissAt = t + DISMISS_S; return true; }, title: () => "" });
   const end = ev.length ? ev[ev.length - 1].t + 60 : 0, q = ev.slice();

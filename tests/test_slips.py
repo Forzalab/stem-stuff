@@ -17,7 +17,7 @@ import slips  # noqa: E402
 
 FIX = os.path.join(ROOT, "tests", "fixtures")
 GOLD = "1/((4/3)^2+(1/3)^2+(2/3)^2)"
-spec = importlib.util.spec_from_file_location("slips_cli", os.path.join(ROOT, "tools", "slips.py"))
+spec = importlib.util.spec_from_file_location("slips_cli", os.path.join(ROOT, "tools", "bank_tools", "slips.py"))
 cli = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cli)
 

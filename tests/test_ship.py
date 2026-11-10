@@ -112,10 +112,10 @@ class PrintBanks(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix="stem-ship-")
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.root = os.path.join(self.tmp, "root")
-        os.makedirs(os.path.join(self.root, "tools"))
+        os.makedirs(os.path.join(self.root, "tools", "build_and_ship"))
         os.makedirs(os.path.join(self.root, "banks"))
         for f in ("ship.sh", "brain_banks.py"):
-            shutil.copy(os.path.join(ROOT, "tools", f), os.path.join(self.root, "tools", f))
+            shutil.copy(os.path.join(ROOT, "tools", "build_and_ship", f), os.path.join(self.root, "tools", "build_and_ship", f))
         self.home = os.path.join(self.tmp, "home")
         os.makedirs(self.home)
         self.brain = os.path.join(self.tmp, "brain")
@@ -133,7 +133,7 @@ class PrintBanks(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_"))}
         e.update(HOME=self.home, BRAIN_DIR=self.brain, SHIP_BRAIN_SEARCH="")
         e.update(env)
-        cmd = ["bash"] + (["-x"] if bash_x else []) + [os.path.join(self.root, "tools", "ship.sh"), "--print-banks", *args]
+        cmd = ["bash"] + (["-x"] if bash_x else []) + [os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "--print-banks", *args]
         r = subprocess.run(cmd, capture_output=True, text=True, env=e, timeout=60)
         self.assertEqual(r.returncode, expect, r.stderr)
         return r
@@ -225,11 +225,11 @@ class PrintBanks(unittest.TestCase):
         git(self.root, "commit", "-q", "-m", "tools")
         git(self.root, "remote", "add", "origin", origin)
         git(self.root, "push", "-q", "origin", "main")
-        with open(os.path.join(self.root, "tools", "ship.sh"), "a") as f:
+        with open(os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "a") as f:
             f.write("# an old copy\n")
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_"))}
         e.update(HOME=self.home, BRAIN_DIR=self.brain, SHIP_BRAIN_SEARCH="")
-        r = subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo"], capture_output=True, text=True, env=e, timeout=60)
+        r = subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "demo"], capture_output=True, text=True, env=e, timeout=60)
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("pull --ff-only", r.stderr)
         self.assertNotIn("deploying", r.stdout)
@@ -244,13 +244,13 @@ class PrintBanks(unittest.TestCase):
         git(self.root, "push", "-q", "-u", "origin", "main")
         other = os.path.join(self.tmp, "other")
         subprocess.run(["git", "clone", "-q", origin, other], check=True)
-        with open(os.path.join(other, "tools", "ship.sh"), "a") as f:
+        with open(os.path.join(other, "tools", "build_and_ship", "ship.sh"), "a") as f:
             f.write("# newer\n")
         git(other, "commit", "-q", "-am", "newer ship.sh")
         git(other, "push", "-q", "origin", "main")
         r = self.ship()
         self.assertIn("restarting with the new version", r.stdout)
-        with open(os.path.join(self.root, "tools", "ship.sh")) as f:
+        with open(os.path.join(self.root, "tools", "build_and_ship", "ship.sh")) as f:
             self.assertTrue(f.read().endswith("# newer\n"))
         self.assertIn("BANK_ZZ1.json", self.chosen(r))
 
@@ -299,7 +299,7 @@ class Gate(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_", "VERCEL_"))}
         e.update(HOME=self.tmp, PATH=path or self.bin + os.pathsep + e["PATH"])
         e.update(BRAIN_DIR=brain, SHIP_BRAIN_SEARCH="") if brain else e.update(SHIP_NO_BRAIN="1")
-        return subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
+        return subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
                               capture_output=True, text=True, env=e, timeout=180)
 
     def fig_brain(self):
@@ -387,7 +387,7 @@ class FigPng(unittest.TestCase):
         self.png = os.path.join(self.tmp, "banks", "figs", self.CODE + "-1.png")
 
     def fig(self, *args):
-        return subprocess.run(["node", os.path.join(ROOT, "tools", "fig_png.mjs"), "--root", self.tmp, *args],
+        return subprocess.run(["node", os.path.join(ROOT, "tools", "bank_tools", "fig_png.mjs"), "--root", self.tmp, *args],
                               capture_output=True, text=True, timeout=120)
 
     def test_check_fails_on_a_bank_figure_with_no_png(self):

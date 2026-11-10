@@ -9,7 +9,7 @@ const ROOT = new URL("../", import.meta.url);
 const ONLY_HOME = "tools/benchmarks/jev-model.mjs";
 
 test("jevModel(): default when JEV_MODEL is unset, env value when set", async () => {
-  const { jevModel } = await import(new URL("../tools/jev-model.mjs", import.meta.url));
+  const { jevModel } = await import(new URL("../tools/benchmarks/jev-model.mjs", import.meta.url));
   const before = process.env.JEV_MODEL;
   try {
     delete process.env.JEV_MODEL;

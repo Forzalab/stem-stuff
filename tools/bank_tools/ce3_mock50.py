@@ -10,7 +10,7 @@ import itertools, json, math, re, sys
 from fractions import Fraction as F
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 BANK = json.loads((ROOT / "problems.json").read_text())
 BY = {p["code"]: p for p in BANK["problems"]}
 

@@ -6,7 +6,7 @@
 // land the whole batch as ONE push of the sealed tip, instead of N `gh pr merge` calls.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { landPlan } from "../tools/ci-batch.mjs";
+import { landPlan } from "../tools/operations/ci-batch.mjs";
 
 // --- R2: N PRs land as ONE push of the sealed sha, never N pushes of each head sha ----------
 test("landPlan: a 3-PR batch lands as one push of the sealed sha", () => {

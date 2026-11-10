@@ -2,7 +2,7 @@
 # smoke: threshold/cap in fire --dry-run, and blame 1/0/2 with a fake queue. No gh, no network.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-B="$ROOT/tools/batch.sh"
+B="$ROOT/tools/operations/batch.sh"
 ok=0
 fail() { echo "FAIL batch.test: $*" >&2; exit 1; }
 has() { case "$1" in *"$2"*) ok=$((ok + 1)) ;; *) fail "$3 (want '$2'; got: $1)" ;; esac; }

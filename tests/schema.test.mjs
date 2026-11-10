@@ -600,7 +600,7 @@ test("schema: vary overlays on an mc item", () => {
   const edit = f => { const b = structuredClone(fx); f(Object.fromEntries(b.problems.map(p => [p.code, p]))); return b; };
   test("unit + twist: the fixture validates (num unit, num part units incl. \"\", twist true/false on num, multi, mc)", () => {
     assert.ok(validate(fx), JSON.stringify(validate.errors, null, 1));
-    const r = spawnSync("node", [fileURLToPath(new URL("../tools/schema-check.mjs", import.meta.url)), fileURLToPath(file)], { encoding: "utf8" });
+    const r = spawnSync("node", [fileURLToPath(new URL("../tools/bank_tools/schema-check.mjs", import.meta.url)), fileURLToPath(file)], { encoding: "utf8" });
     assert.equal(r.status, 0, r.stdout + r.stderr);
   });
   test("unit + twist: the schema refuses junk", () => {
@@ -626,7 +626,7 @@ test("schema: vary overlays on an mc item", () => {
   });
   // W132 lint: a num item / num part with no `unit` key warns on stderr (the gate still passes); "" = unitless on purpose, no warning
   test("unit lint (W132): problems.json passes but warns on its one blank num (CALC1_A9R); a fixture with every unit set warns on none", () => {
-    const run = f => spawnSync("node", [fileURLToPath(new URL("../tools/schema-check.mjs", import.meta.url)), f], { encoding: "utf8" });
+    const run = f => spawnSync("node", [fileURLToPath(new URL("../tools/bank_tools/schema-check.mjs", import.meta.url)), f], { encoding: "utf8" });
     const r = run(fileURLToPath(new URL("../problems.json", import.meta.url)));
     assert.equal(r.status, 0, r.stdout + r.stderr);
     assert.match(r.stderr, /^problems: warn: 1 num without a unit: CALC1_A9R$/m);

@@ -30,7 +30,7 @@
 # `vercel login`. Already-built demo → live without a rebuild: Vercel dashboard → Deployments → ⋯ → Promote.
 # design/DEPLOY.md has the why.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # --- self-update (like deploy.sh): a checkout on main fast-forwards to origin/main; a changed ship.sh finishes the run (once) ---
 if [ -z "${SHIP_REEXEC:-}" ] && [ "$(git -C "$ROOT" symbolic-ref -q --short HEAD 2>/dev/null || true)" = main ]; then
@@ -38,7 +38,7 @@ if [ -z "${SHIP_REEXEC:-}" ] && [ "$(git -C "$ROOT" symbolic-ref -q --short HEAD
   if GIT_TERMINAL_PROMPT=0 git -C "$ROOT" fetch -q origin main </dev/null && git -C "$ROOT" merge -q --ff-only origin/main >/dev/null 2>&1; then
     if [ "$OLD_SELF" != "$(git -C "$ROOT" rev-parse HEAD:tools/build_and_ship/ship.sh)" ]; then
       echo "ship.sh updated -> restarting with the new version"
-      exec env SHIP_REEXEC=1 bash "$ROOT/tools/ship.sh" "$@"
+      exec env SHIP_REEXEC=1 bash "$ROOT/tools/build_and_ship/ship.sh" "$@"
     fi
   else
     echo "ship: could not fast-forward $ROOT to origin/main (local changes or offline)" >&2
@@ -75,10 +75,10 @@ if [ "$WHERE" = remote ] && [ -z "$PRINT" ]; then
   [ -n "$MODE" ] || usage
   [ -z "$BANKS" ] || { echo "ship: a banks-dir cannot go to the GitHub runner (use --local)" >&2; exit 2; }
   export SHIP_PINS   # --pin args were folded into it; press.sh validates and sends it as the workflow's `pins` input
-  exec bash "${SHIP_PRESS:-$ROOT/tools/press.sh}" ${WAIT:+"$WAIT"} "$MODE"
+  exec bash "${SHIP_PRESS:-$ROOT/tools/build_and_ship/press.sh}" ${WAIT:+"$WAIT"} "$MODE"
 fi
 if [ -n "$SHIP_PINS" ]; then
-  python3 "$ROOT/tools/brain_banks.py" --check-pins "$SHIP_PINS" || exit 2
+  python3 "$ROOT/tools/build_and_ship/brain_banks.py" --check-pins "$SHIP_PINS" || exit 2
   export SHIP_PINS
 fi
 case "$MODE" in
@@ -149,7 +149,7 @@ if [ -z "$NOBRAIN" ]; then
       awk '!/^projects\/[^\/]+\/_files\/[^\/]+-bank\/BANK_[^\/]*\.json$/ { print "ship: brain: " $0 " is not in a projects/*/_files/*-bank/ folder, not shipped" }' >&2
   elif [ -n "${BRAIN_TOKEN:+x}" ]; then
     BTMP="$(mktemp -d)"; rc=0
-    HATCH="$(python3 "$ROOT/tools/brain_banks.py" "$BTMP")" || rc=$?
+    HATCH="$(python3 "$ROOT/tools/build_and_ship/brain_banks.py" "$BTMP")" || rc=$?
     [ "$rc" -eq 0 ] || { warn "bank hatch failed, nothing deployed (see the line above)"; exit 1; }
     while IFS="$(printf '\t')" read -r t f src; do [ -n "$f" ] && add 1 "$t" "${src:-brain}" "$f"; done <<<"$HATCH"
   else
@@ -176,11 +176,11 @@ gate() {
   fi
   local out rc=0
   # figure PNGs (todo 134): the brain banks are only in $W, so render there; a graph block with no PNG after that = red
-  node "$ROOT/tools/fig_png.mjs" --root "$W" || warn "gate: fig_png.mjs could not render the figures (above)"
-  out="$(node "$ROOT/tools/fig_png.mjs" --root "$W" --check 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: figure PNGs missing (above), nothing deployed"; rc=1; }
+  node "$ROOT/tools/bank_tools/fig_png.mjs" --root "$W" || warn "gate: fig_png.mjs could not render the figures (above)"
+  out="$(node "$ROOT/tools/bank_tools/fig_png.mjs" --root "$W" --check 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: figure PNGs missing (above), nothing deployed"; rc=1; }
   [ "${#GATE[@]}" -gt 0 ] || return "$rc"
-  out="$(python3 "$ROOT/tools/slips.py" --strict "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: slips.py --strict failed (above), nothing deployed"; rc=1; }
-  out="$(node "$ROOT/tools/schema-check.mjs" "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: schema failed (above), nothing deployed"; rc=1; }
+  out="$(python3 "$ROOT/tools/bank_tools/slips.py" --strict "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: slips.py --strict failed (above), nothing deployed"; rc=1; }
+  out="$(node "$ROOT/tools/bank_tools/schema-check.mjs" "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: schema failed (above), nothing deployed"; rc=1; }
   # v < slips.CUTOFF: still ships, with a warning (the sunset date is the Version-table row's, SCHEMA.md)
   python3 - "$ROOT" "${GATE[@]}" <<'PY' >&2 || rc=1
 import json, re, sys
@@ -208,7 +208,7 @@ printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/banks/$name"
 done
 gate || exit 1   # after the copy: the figure PNGs are rendered into (and checked in) $W
-VJSON="$(bash "$ROOT/tools/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (design/DEPLOY.md)
+VJSON="$(bash "$ROOT/tools/build_and_ship/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (design/DEPLOY.md)
 VPR="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["pr"])' <<<"$VJSON")"
 echo "deploying origin/main @ $(git -C "$W" rev-parse --short HEAD) ($VPR) as $MODE"
 echo "$SUMMARY"

@@ -7,7 +7,7 @@
 #        tools/build_and_ship/version.sh --pr [REV]      print the version of REV (default HEAD)
 # $STEM_URL overrides the site (default https://stem-stuff.vercel.app).
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # pr_of REV [GITDIR]: "#N" or "#N+k" from the first-parent history (merge "Merge pull request #N", squash "Title (#N)"); "?" if none
 pr_of() {

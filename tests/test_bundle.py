@@ -22,7 +22,7 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
 import bundle  # noqa: E402
 
 APP_MARK = "APP_BODY_ONCE_7f3a"     # unique line we write into the synthetic app.js (below)

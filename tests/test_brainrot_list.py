@@ -10,7 +10,7 @@ import urllib.error
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "client_generators"))
 import brainrot_list  # noqa: E402
 
 FEED = """<?xml version="1.0" encoding="UTF-8"?>

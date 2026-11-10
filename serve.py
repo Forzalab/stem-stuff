@@ -52,7 +52,7 @@ import slips
 import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools", "build_and_ship"))
 try:
     import bundle  # tools/build_and_ship/bundle.py: builds stem-stuff.html (offline download)
 except Exception:  # noqa: BLE001

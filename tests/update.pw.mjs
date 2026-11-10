@@ -72,7 +72,7 @@ try {
   const deploy = (pr, sha) => {
     writeFileSync(join(SITE, "version.json"), JSON.stringify({ pr, sha, built: "2026-10-06T17:00:00Z" }));
     for (const f of ["sw.js", "index.html"]) writeFileSync(join(SITE, f), readFileSync(join(ROOT, f)));   // stamp() needs the "dev" slots
-    execFileSync("python3", ["-c", "import sys; sys.path.insert(0, sys.argv[1]); import build_public; build_public.stamp(sys.argv[2])", join(ROOT, "tools"), SITE]);
+    execFileSync("python3", ["-c", "import sys; sys.path.insert(0, sys.argv[1]); import build_public; build_public.stamp(sys.argv[2])", join(ROOT, "tools", "build_and_ship"), SITE]);
   };
   const check = page => page.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.update()));   // what a return to the tab does
   const ver = page => page.evaluate(() => [document.querySelector('meta[name="stem-build"]').content, document.getElementById("ver").dataset.v]);

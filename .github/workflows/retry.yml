@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           CONCLUSION="$CONCLUSION" RUN_ATTEMPT="$RUN_ATTEMPT" node --input-type=module -e '
-            import { shouldRetry, attemptColor } from "./tools/ci-retry.mjs";
+            import { shouldRetry, attemptColor } from "./tools/operations/ci-retry.mjs";
             const run = { conclusion: process.env.CONCLUSION, run_attempt: Number(process.env.RUN_ATTEMPT) };
             console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; shouldRetry=${shouldRetry(run)}`);
             process.stdout.write(shouldRetry(run) ? "true" : "false");

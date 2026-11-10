@@ -12,7 +12,7 @@ import re
 import sys
 import urllib.request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 KATEX_LOCAL = os.path.join(ROOT, "tests", "node_modules", "katex")
 KATEX_CDN = re.compile(r"^https://cdnjs\.cloudflare\.com/ajax/libs/KaTeX/([\d.]+)/(katex(?:\.min)?\.(?:css|js))$")
 _cache = {}

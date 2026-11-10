@@ -6,7 +6,7 @@
 # red batch + SPLIT: relabel by hand (no un-batch command yet).
 # usage: tools/operations/batch.sh labels | sync | fire [--force] [--dry-run] | status <n> | land <n> | blame <n> <spec...>
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 QUEUE="$ROOT/tools/queue.json"
 FAKE="${BATCH_FAKE:-}"
 WT=""
@@ -233,7 +233,7 @@ cmd_land() {
   # landPlan is the tested pure decision; the merge API call below is the single push it describes.
   local plan ok target
   plan="$(printf '%s' "$manifest" | node --input-type=module -e '
-    import { landPlan } from "./tools/ci-batch.mjs";
+    import { landPlan } from "./tools/operations/ci-batch.mjs";
     let s = ""; for await (const c of process.stdin) s += c;
     const d = landPlan(JSON.parse(s || "[]"), process.argv[1]);
     process.stdout.write(JSON.stringify(d));

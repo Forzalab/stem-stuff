@@ -8,8 +8,8 @@
 // No network, no GitHub: every function is pure.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { attemptOf, attemptColor, shouldRetry } from "../tools/ci-retry.mjs";
-import { pickGreen } from "../tools/ci-gate.mjs";
+import { attemptOf, attemptColor, shouldRetry } from "../tools/operations/ci-retry.mjs";
+import { pickGreen } from "../tools/operations/ci-gate.mjs";
 
 // --- attemptOf: read the attempt number, never assume 1 -----------------------------
 // SOURCE of the two field names: the runs list API calls it `run_attempt` (ship.yml:71 reads it),

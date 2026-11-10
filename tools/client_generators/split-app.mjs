@@ -13,7 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), "..");
+const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "..");
 const req = createRequire(path.join(ROOT, "tests", "package.json"));
 const acorn = req("acorn"), escope = req("eslint-scope");   // both come with eslint (tests/package.json; cd tests && npm ci)
 

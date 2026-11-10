@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const ROOT = new URL("../", import.meta.url);
+const ROOT = new URL("../../", import.meta.url);
 const read = p => readFileSync(new URL(p, ROOT), "utf8");
 const args = process.argv.slice(2), cmd = args[0];
 const opt = (k, d) => { const i = args.indexOf("--" + k); return i < 0 ? d : (args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : true); };

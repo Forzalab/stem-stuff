@@ -16,7 +16,7 @@ set -euo pipefail
 VERSION=1.0.2                                         # @openuidev/lang-core, tag @openuidev/lang-core@1.0.2
 COMMIT=f08a660535e55b5b2a24a0eb68568edaf9e4fe4b        # that tag's commit
 ESBUILD=0.25.10
-here="$(cd "$(dirname "$0")" && pwd)"; repo="$(cd "$here/../.." && pwd)"
+here="$(cd "$(dirname "$0")" && pwd)"; repo="$(cd "$here/../../.." && pwd)"
 src="${1:?usage: tools/build_and_ship/openui/build.sh <openui checkout>}"; src="$(cd "$src" && pwd)"
 core="$src/packages/lang-core"
 

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
-import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_PROVIDER, JEV_MODEL, JEV_MODELS, tree } from "../tools/bench_seen.mjs";
+import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_PROVIDER, JEV_MODEL, JEV_MODELS, tree } from "../tools/benchmarks/bench_seen.mjs";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
 const win = () => { const w = { URLSearchParams, setInterval() {}, performance: { now: () => 0 } }; w.window = w; vm.runInNewContext(read("../intent.js"), w); return w; };
