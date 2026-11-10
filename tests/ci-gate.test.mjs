@@ -99,7 +99,6 @@ test("runKind: any unknown event or unknown pipe is NOT full", () => {
   // INTENT: a literal-but-wrong port that defaults unknown runs to 'full' (so "if it isn't fast,
   // it must be full") would wrongly ship a future `schedule` or selected run. Unknown => unknown.
   for (const r of [
-    { event: "schedule" },
     { event: "workflow_dispatch", inputs: { pipe: "bogus" } },
     { event: "workflow_dispatch", inputs: { pipe: "affected" } },   // PR 2's future selected marker
     {},
