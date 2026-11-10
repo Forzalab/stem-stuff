@@ -1,11 +1,10 @@
 """The repo's top-level layout, in one place. Mirror of tests/paths.mjs.
 
-Tests and the hand map read these; layout P flips the values once the tree moves.
-Current tree values (06 gate G5).
+Tests and the hand map read these. Layout P: the server lives in server/, its data in server/data/.
 """
 import os as _os
 REPO = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-SERVER_DIR = REPO              # P flips to REPO/server
+SERVER_DIR = _os.path.join(REPO, "server")
 API_DIR = _os.path.join(REPO, "api")
 TESTS_DIR = _os.path.join(REPO, "tests")
 def tool(group):
@@ -14,8 +13,8 @@ def tool(group):
 
 
 ROOT = "."
-SERVER = ["*.py", "engine/", "api/"]
-DATA = ["banks/", "prompts/", "problems.json", "skills.json"]
+SERVER = ["server/*.py", "server/engine/", "api/"]
+DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"]
 CLIENT = [
     "*.js", "*.css", "*.mjs", "index.html", "calc.html", "privacy.html",
     "blind/", "calc/", "copy/", "design/explain-box.js", "design/explain-box.css",

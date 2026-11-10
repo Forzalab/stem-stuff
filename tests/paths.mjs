@@ -1,9 +1,9 @@
 // The repo's top-level layout, in one place. Tests and the hand map read these;
-// layout P flips the values once the tree moves. Current tree values (06 gate G5).
+// The server lives in server/, its data in server/data/.
 
 export const ROOT = ".";
-export const SERVER = ["*.py", "engine/", "api/"];
-export const DATA = ["banks/", "prompts/", "problems.json", "skills.json"];
+export const SERVER = ["server/*.py", "server/engine/", "api/"];
+export const DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"];
 export const CLIENT = [
   "*.js", "*.css", "*.mjs", "index.html", "calc.html", "privacy.html",
   "blind/", "calc/", "copy/", "design/explain-box.js", "design/explain-box.css",
