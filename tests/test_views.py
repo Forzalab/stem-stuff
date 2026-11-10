@@ -10,7 +10,9 @@ import sys
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools", "client_generators"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.tool("client_generators"))
 import gen_views as gv  # noqa: E402
 
 REG = gv.load()
@@ -218,7 +220,7 @@ class Slots(unittest.TestCase):
         self.assertEqual(REG["components"]["Head"]["words"]["title"], {"role": "heading", "wordClass": "noun_phrase"})
 
     def test_id_regex(self):
-        sys.path.insert(0, ROOT)
+        sys.path.insert(0, paths.SERVER_DIR)
         import aiw
         import oui
         rx = re.compile(self.SLOT["id"])
@@ -238,7 +240,7 @@ class Slots(unittest.TestCase):
         self.assertEqual(js.replace("\\$", "$").replace("\\.", "."), "$t.(" + self.SLOT["id"][1:-1] + ")")
 
     def test_gate_takes_a_slot_where_a_string_is_allowed(self):
-        sys.path.insert(0, ROOT)
+        sys.path.insert(0, paths.SERVER_DIR)
         import aiw
         import oui
         with open(os.path.join(ROOT, "views", "library.json")) as f:

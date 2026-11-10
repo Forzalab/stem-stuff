@@ -9,6 +9,8 @@ import subprocess
 import sys
 import unittest
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JS = "const w={};w.window=w;require('vm').runInNewContext(require('fs').readFileSync(process.argv[1],'utf8'),w);console.log(JSON.stringify(w.__stemSeenLines))"
 
@@ -29,11 +31,11 @@ class SeenLinesAiw(unittest.TestCase):
     def test_no_filled_line_is_blocked(self):
         if not os.path.exists(os.path.join(ROOT, "aiw.py")):
             self.skipTest("aiw.py is absent on this branch (it lands with PR #189 / p41b); run it by hand: git show origin/ccr-eaf1a3c3-xs301g-p41b:aiw.py")
-        sys.path.insert(0, ROOT)
+        sys.path.insert(0, paths.SERVER_DIR)
         try:
             from aiw import lint_view_strings
         finally:
-            sys.path.remove(ROOT)
+            sys.path.remove(paths.SERVER_DIR)
         filled = []
         for l in lines():
             filled += [l["text"].replace("{title}", t) for t in titles()] if "{title}" in l["text"] else [l["text"]]

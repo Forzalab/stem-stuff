@@ -14,10 +14,11 @@ import urllib.parse
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.tool("build_and_ship"))
 import brain_banks  # noqa: E402
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import test_ship  # noqa: E402
 put = test_ship.put
 

@@ -9,7 +9,9 @@ import unittest.mock
 
 sys.argv = [sys.argv[0]]
 os.environ.setdefault("STEM_TODAY", "2026-10-23")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 import expr  # noqa: E402
 import serve  # noqa: E402
 

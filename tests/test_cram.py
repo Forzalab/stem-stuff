@@ -9,7 +9,9 @@ import unittest
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
+sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TODAY", "2026-11-04")   # v:1 fixture banks load (the runners pin it too)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import serve  # noqa: E402
@@ -166,7 +168,7 @@ class Cram(unittest.TestCase):
 
     def test_never_in_a_client_payload(self):
         self.assertTrue(serve.BLOCK_PREFIX and "/banks/" in serve.BLOCK_PREFIX)
-        sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
+        sys.path.insert(0, paths.tool("build_and_ship"))
         import build_public
         out = tempfile.mkdtemp()
         build_public.build(os.path.join(out, "public"))

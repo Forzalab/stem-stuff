@@ -10,7 +10,8 @@ import sys
 import unittest
 from unittest import mock
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
+import paths
 import test_mini  # noqa: E402  (sets STEM_TRIES, the sys.path, the fakes)
 from test_leak import LEAKS  # noqa: E402
 from test_mini import CTX, GOOD  # noqa: E402  (not Mini: its tests would run twice)
