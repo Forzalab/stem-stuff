@@ -162,7 +162,7 @@ test("A3: one non-hub file -> affected, fewer units than all", () => {
 });
 
 // --- docs-only PR -> decide + cite -----------------------------------------------------
-test("docs-only PR -> full (a .md file is unmapped -> all layout -> hub)", () => {
+test("docs-only PR -> docs (superseded: was full via unmapped -> hub; fix B skips unit+block)", () => {
   // DECISION (SPEC-PR2.md open question 1): no docs-only shortcut. The fast job never runs on
   // pull_request (tests.yml fast: `if: inputs.pipe == 'fast'`, dispatch-only) and the all check
   // needs plan+unit+block, so docs-only must go green through the normal full path. A .md is
@@ -170,7 +170,7 @@ test("docs-only PR -> full (a .md file is unmapped -> all layout -> hub)", () =>
   const docs = affectedUnits("README.md");
   assert.deepEqual(new Set(docs), new Set(LAYOUT), "README.md (unmapped) -> exactly all layout units");
   const d = decideSelection({ files: ["README.md", "SCHEMA.md"], affectedCounts: { "README.md": docs.length, "SCHEMA.md": docs.length }, totalUnits: TOTAL });
-  assert.equal(d.kind, "full", "docs-only must be full (hub), never fast/affected");
+  assert.equal(d.kind, "docs", "docs-only must be docs (unit+block skipped)");
   assert.ok(d.reason, "a decision must say why");
 });
 
@@ -209,8 +209,8 @@ test("zero-.pw: a logic-only PR is affected with no block work (skip_block)", ()
 });
 
 // --- the CLI (no git: --file injects the diff; --total injects the unit count) ----------
-test("CLI: serve.py (hub) -> full, app.css -> affected, README.md -> full", () => {
-  for (const [file, kind] of [["serve.py", "full"], ["app.css", "affected"], ["README.md", "full"]]) {
+test("CLI: serve.py (hub) -> full, app.css -> affected, README.md -> docs", () => {
+  for (const [file, kind] of [["serve.py", "full"], ["app.css", "affected"], ["README.md", "docs"]]) {
     const r = cli(["--total", String(TOTAL), "--file", file]);
     assert.equal(r.status, 0, `CLI ${file}: exit 0; stderr: ${r.stderr}`);
     assert.match(r.stdout, new RegExp(`^${kind}\\b`), `CLI ${file} must print "${kind} ...", got: ${r.stdout}`);
@@ -233,4 +233,10 @@ test("--plan with no SPECS still plans every unit (I6: old behaviour unchanged)"
   const out = execFileSync("bash", [RUN, "--plan", "2", "2"], { cwd: ROOT, encoding: "utf8" });
   const matrix = JSON.parse(out);
   assert.equal(matrixUnits(matrix).length, LAYOUT.length, "--plan 2 2 with no SPECS must deal every .pw unit");
+});
+
+test("docs-only diff -> docs; .md + code -> not docs", () => {
+  assert.equal(decideSelection({ files: ["CLAUDE.md", "a/b.md"], affectedCounts: { "CLAUDE.md": 120 }, totalUnits: 122 }).kind, "docs");
+  assert.notEqual(decideSelection({ files: ["CLAUDE.md", "x.js"], affectedCounts: {}, totalUnits: 122 }).kind, "docs");
+  assert.equal(decideSelection({ files: [], affectedCounts: {}, totalUnits: 122 }).kind, "full");
 });
