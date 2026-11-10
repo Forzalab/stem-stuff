@@ -74,11 +74,11 @@ test("classify: a mixed diff splits docs from code", () => {
 
 // --- runKind: how a run maps to full/fast/bench/unknown TODAY ------------------------
 // SOURCE of each rule: tests.yml (HEAD b0e01c5).
-test("runKind: push and pull_request runs are full", () => {
-  for (const event of ["push", "pull_request"]) {
-    assert.equal(runKind({ event }), "full",
-      `${event} is full today — SOURCE tests.yml:4 (pull_request) and tests.yml:5-6 (push: [main]); both run the whole suite`);
-  }
+test("runKind: push runs are full, pull_request runs affected selection", () => {
+  assert.equal(runKind({ event: "push" }), "full",
+    "push to main is the full-suite backstop — SOURCE tests.yml:5-6 (push: [main])");
+  assert.equal(runKind({ event: "pull_request" }), "affected",
+    "PR 2 selects affected units on pull_request (SPEC-PR2.md §4)");
 });
 
 test("runKind: workflow_dispatch pipe=fast is fast, pipe=full or absent is full", () => {
@@ -165,7 +165,7 @@ test("decideShip: a selected/fast green run is never enough to ship", () => {
   // INTENT: a literal-but-wrong port that checks only `green` truthiness (ignores `green.kind`)
   // would pass the previous test and the exact-sha test, but fails here — only kind==='full'
   // may ship (M2: never ship a SHA that only ran selected specs or the fast pipe).
-  for (const kind of ["selected", "fast"]) {
+  for (const kind of ["selected", "fast", "affected"]) {
     const r = decideShip({ candidate: "abc1234", green: { sha: "abc1234", kind }, changedFiles: [] });
     assert.equal(r.ok, false, `kind=${kind} must refuse (M2)`);
   }
