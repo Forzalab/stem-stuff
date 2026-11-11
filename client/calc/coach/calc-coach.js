@@ -64,7 +64,7 @@
   function load() {
     if (DATA) return Promise.resolve(DATA);
     if (loading) return loading;
-    var get = function (f) { return g.fetch('calc/' + f).then(function (r) { return r.json(); }); };
+    var get = function (f) { return g.fetch('client/calc/' + f).then(function (r) { return r.json(); }); };
     loading = Promise.all([get('calc-layout.json'), get('calc-steps.json'), get('calc-keys.json'), get('calc-pad.json')]).then(function (a) { DATA = { layout: a[0], steps: a[1], keys: a[2], pad: a[3] }; return DATA; });
     loading.catch(function () { loading = null; });
     return loading;
@@ -243,7 +243,7 @@
   /* ---- cram panel (the Hail Mary card; data per bank in calc/cram.json) ---- */
   var diet = function () { var c = d.cookie || ''; return /(?:^|;\s*)stem-mode=(?:diet|hard)(?:;|$)/.test(c) && /(?:^|;\s*)stem-mode-v=2(?:;|$)/.test(c); };   // mode.mjs modeOf(): diet = the originals, no cram surface (Tony Nov 8)
   function cramFor(bank) { if (diet()) return null; var e = CRAM && CRAM.banks && CRAM.banks[bank]; return e && CRAM.enabled !== false && Date.now() < Date.parse(e.until) ? e : null; }
-  function loadCram() { return CRAM ? Promise.resolve(CRAM) : g.fetch('calc/cram.json').then(function (r) { return r.json(); }).then(function (j) { CRAM = j; return j; }); }
+  function loadCram() { return CRAM ? Promise.resolve(CRAM) : g.fetch('client/calc/cram.json').then(function (r) { return r.json(); }).then(function (j) { CRAM = j; return j; }); }
   var ICON = { approx: ['M4 9c2-2 4-2 6 0s4 2 6 0 4-2 4 0', 'M4 15c2-2 4-2 6 0s4 2 6 0 4-2 4 0'], x: ['M6 6l12 12M18 6L6 18'], bars: ['M4 20v-5M8 20v-9M12 20v-4M16 20v-12M20 20v-7'], dot: [], chev: ['M6 9l6 6 6-6'] };
   function icon(name) {
     var s = d.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'cc-ic');
@@ -292,9 +292,9 @@
     if (!M || !K || !routineOf(M, 'R1_').length) return null;
     var solve = SOLVE_RE.test(m), kinds = routineOf(M, 'R2_').length ? ['R1', 'R2'] : ['R1'];
     var C = {
-      R1: { cls: 'cc-rt cc-th-amber', anim: 'calc/rt/rt-1-solve.svg', icon: 'bars', t: solve ? 'One equation, SOLVE' : 'One equation, stored',
+      R1: { cls: 'cc-rt cc-th-amber', anim: 'client/calc/rt/rt-1-solve.svg', icon: 'bars', t: solve ? 'One equation, SOLVE' : 'One equation, stored',
         b: solve ? 'Type it all. Guess. Hit SOLVE.' : 'Store each number. Type the formula once.', gloss: solve ? 'SOLVE' : 'STO' },
-      R2: { cls: 'cc-rt cc-th-cyan', anim: 'calc/rt/rt-2-store.svg', icon: 'dot', t: TITLE.R2, b: 'Save a number once. Use it twice.', gloss: 'STO' }
+      R2: { cls: 'cc-rt cc-th-cyan', anim: 'client/calc/rt/rt-2-store.svg', icon: 'dot', t: TITLE.R2, b: 'Save a number once. Use it twice.', gloss: 'STO' }
     };
     var badge = degBadge(m);
     return { title: K.name, unit: 'Routine', cls: 'cc-routine', cards: kinds.map(function (kind, i) {

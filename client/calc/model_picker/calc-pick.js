@@ -12,7 +12,7 @@
 (function () {
   "use strict";
   var KEY = "stem-calc-model", LATER = "stem-calc-model-later", EV = "stem-calc-model", g = window, d = document;
-  var ART = "rewards/icons/duck-calm-nod-128.webp";   // the lock-help art (lockhelp.js LOCKHELP_ART)
+  var ART = "client/rewards/icons/duck-calm-nod-128.webp";   // the lock-help art (lockhelp.js LOCKHELP_ART)
   var BRANDS = { ti: "Texas Instruments", casio: "Casio" };
   var MODELS = {   // [id, name, quick-pick chip]; chips in order of how many students own them (Amazon sales trackers, retailer best-seller tags; Nov 2026)
     ti: [["ti-30xs-multiview", "TI-30XS MultiView", 1], ["ti-36x-pro", "TI-36X Pro", 1], ["ti-84-plus-ce", "TI-84 Plus CE", 1],
