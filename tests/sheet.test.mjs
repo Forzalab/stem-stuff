@@ -1,8 +1,8 @@
 // Cluck's step badges (steps.mjs) and the phone sheet's drag maths (sheet.mjs)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renumberSteps } from "../steps.mjs";
-import { snapTo, radiusAt, dimAt, progress, clampPos } from "../sheet.mjs";
+import { renumberSteps } from "../client/pure_logic_modules/steps.mjs";
+import { snapTo, radiusAt, dimAt, progress, clampPos } from "../client/pure_logic_modules/sheet.mjs";
 
 test("steps the model numbered '1.' each time still count 1, 2, 3", () => {
   const t = "1. The net force points toward the center — a = v^2/r\n$$F = ma$$\n1. Solve for the seat force — N - mg\n1. State the answer";

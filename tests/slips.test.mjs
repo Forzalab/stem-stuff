@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, zodiac, ZODIAC, fillSign, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot, SLIP_TIE } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, zodiac, ZODIAC, fillSign, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot, SLIP_TIE } from "../client/pure_logic_modules/slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));

@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
-const CSS = ["app.css", "nav.css", "design/explain-box.css"];
-const JS = ["app.js", "cluck.js", "shell.js", "nav.js"];
+const CSS = ["client/answer/drill_core/app.css", "client/answer/navigation/nav.css", "client/answer/explain_box/explain-box.css"];
+const JS = ["client/answer/drill_core/app.js", "client/cluck/cluck.js", "client/shell/shell.js", "client/answer/navigation/nav.js"];
 
 /* CSS declarations outside :root blocks (token definitions), comments stripped: [{ file, sel, prop, value }] */
 function decls(file) {
@@ -63,18 +63,18 @@ test("§2.6 borders: ONE line weight (--bw, 1px), dashed or solid; only the ask 
   assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw) or 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
 });
 test("§2.6 the heavy / hairline weights are retired: no --bw-alarm / --bw-hair / --bw-up / --bw-sel anywhere the app loads", () => {
-  const hits = ["app.css", "nav.css", "views.css", "design/explain-box.css", "index.html", ...JS].flatMap(f => read(f).split("\n").map((l, i) => [f, i + 1, l]))
+  const hits = ["client/answer/drill_core/app.css", "client/answer/navigation/nav.css", "client/cluck/openui_views/views.css", "client/answer/explain_box/explain-box.css", "index.html", ...JS].flatMap(f => read(f).split("\n").map((l, i) => [f, i + 1, l]))
     .filter(([, , l]) => /--bw-(alarm|hair|up|sel)\b/.test(l)).map(([f, n, l]) => `${f}:${n} ${l.trim().slice(0, 90)}`);
   assert.deepEqual(hits, [], "one weight: use --bw; tone, not width, carries meaning (STYLE.md §2.6)");
 });
 test("§2.6 a wrong typed box is 1px dashed --wrong-rim (the dash survives greyscale), same size as every other state", () => {
-  const bad = ALL.filter(d => d.file === "app.css" && d.sel === ".ff.bad" && d.prop === "border");
+  const bad = ALL.filter(d => d.file === "client/answer/drill_core/app.css" && d.sel === ".ff.bad" && d.prop === "border");
   assert.equal(bad.length, 1);
   assert.match(bad[0].value, /^var\(--bw\) dashed var\(--wrong-rim\)$/);
   assert.deepEqual(ALL.filter(d => /^\.ff\.bad\b/.test(d.sel) && /^(padding|right|top)/.test(d.prop)).map(fmt), [], "no offsets: the border is the same 1px as the other states");
 });
 test("§2.1 surface vs control vs figure tokens are split; soft fills; Deep navy is the site theme", () => {
-  const root = read("app.css").match(/^:root \{([\s\S]*?)\n\}/m)[1];
+  const root = read("client/answer/drill_core/app.css").match(/^:root \{([\s\S]*?)\n\}/m)[1];
   const tok = n => (root.match(new RegExp("--" + n + ":\\s*([^;]+);")) || [])[1]?.trim();
   assert.ok(tok("sheet") && !/var\(--card\)/.test(tok("sheet")), "--sheet (control fill) has its own value, not an alias of --card");
   assert.equal(tok("grid"), "#394a61", "--grid is its own value, not --line");
@@ -86,8 +86,8 @@ test("§2.1 surface vs control vs figure tokens are split; soft fills; Deep navy
   assert.deepEqual([tok("page"), tok("card"), tok("sheet"), tok("line"), tok("ink"), tok("action")], ["#02060c", "#0b1422", "#14233a", "#5e7899", "#f3f7fc", "#5aa9ff"], "Deep navy is the site theme (Tony, Nov 2); a revert to Ink (#000 / #161616 / #666666 / #3b9eff) fails here");
   assert.notEqual(tok("page"), "#000", "not Ink: the page is navy");
   assert.notEqual(tok("card"), tok("page"), "the surface is a step above the page");
-  assert.ok(!/data-theme/.test(read("app.css") + read("app.js")), "Ink is not a switch: it is :root");
-  assert.match(read("app.css"), /\.p, \.boxed \.q[^{]*\{ box-shadow: inset 0 0 0 1px var\(--line\); \}/, "surfaces keep the 1px inset line (the navy slab step is only 1.10:1)");
+  assert.ok(!/data-theme/.test(read("client/answer/drill_core/app.css") + read("client/answer/drill_core/app.js")), "Ink is not a switch: it is :root");
+  assert.match(read("client/answer/drill_core/app.css"), /\.p, \.boxed \.q[^{]*\{ box-shadow: inset 0 0 0 1px var\(--line\); \}/, "surfaces keep the 1px inset line (the navy slab step is only 1.10:1)");
 });
 test("--c1 is for figures: UI controls use --action", () => {
   const ui = ALL.filter(d => /(^|[ ,.])(\.btn-go|\.code-box|\.opt\.pend|\.qlist|\.fq|\.mcopy|\.fcard|\.lg-go|\.rp-check)/.test(d.sel) && /var\(--c1(-hi)?\)/.test(d.value));
@@ -113,7 +113,7 @@ test("§2.2 type: the text stack (Atkinson / SF), mono or KaTeX only", () => {
 test("§2.1 retired colour tokens stay gone (PALETTE-v3 §1: one warm family, unified v5)", () => {
   const RETIRED = /--(mark|ok|bad|ok-(rim|ico|fill)|bad-(rim|ico|fill)|ai|ai-(soft|edge|send|send-ink|strong|sheet|muted|rule|on-ct|ink)|rw-(sun|sun-dk|tang|tang-dk|tang-ink|magenta|pink|cream|rust|floor|bar|text|soft|lav|v\d+|g-[a-z-]+|wc-[a-z-]+|goldify))\b(?!-)/;
   const code = f => read(f).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, m => m.replace(/[^\n]/g, " "));   // comments blanked, lines kept
-  const hits = ["app.css", "nav.css", "rewards/rewards.css", "rewards/fx.js", "offline.js"].flatMap(f => code(f).split("\n").map((l, i) => [f, i + 1, l]))
+  const hits = ["client/answer/drill_core/app.css", "client/answer/navigation/nav.css", "client/rewards/rewards.css", "client/rewards/fx.js", "client/shell/offline.js"].flatMap(f => code(f).split("\n").map((l, i) => [f, i + 1, l]))
     .filter(([, , l]) => RETIRED.test(l)).map(([f, n, l]) => `${f}:${n} ${l.trim().slice(0, 90)}`);
   assert.deepEqual(hits, [], "use the v5 role (app.css :root)");
 });
@@ -143,7 +143,7 @@ test("§3 Toast: the caret on every toast, the MC row too", () => {
 test("§5 Keyboard: no new shortcuts (keydown only on the listed elements)", () => {
   // window: Escape closes the toast. codeIn: the combobox. q: MC choice keys. inp: Enter submits a box. sash: silent a11y.
   // nav.js btn / panel: the list combobox. ([ and ] prev / next were removed: Tony, Oct 2 ~23:59 PT.)
-  const ALLOW = { "app.js": ["window", "codeIn", "q", "inp", "sash"], "cluck.js": ["inp"], "shell.js": ["sash"], "nav.js": ["btn", "panel"] };
+  const ALLOW = { "client/answer/drill_core/app.js": ["window", "codeIn", "q", "inp", "sash"], "client/cluck/cluck.js": ["inp"], "client/shell/shell.js": ["sash"], "client/answer/navigation/nav.js": ["btn", "panel"] };
   const bad = [];
   for (const f of JS) for (const m of read(f).matchAll(/(?:^|[^\w.])(?:(\w+)\.)?addEventListener\(\s*["']key(?:down|up|press)["']/gm)) {
     const who = m[1] || "window";
@@ -154,7 +154,7 @@ test("§5 Keyboard: no new shortcuts (keydown only on the listed elements)", () 
 
 /* rewards/rewards.css: the sugar reward skin may look like a game, but only on its own nodes (docs/design/REWARDS-WIRING.md §7) */
 test("rewards skin is scoped: every rule styles a .rw-* or .fx-* node, no :root, never the question UI", () => {
-  const css = read("rewards/rewards.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const css = read("client/rewards/rewards.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const sels = [], stack = [];
   let buf = "";
   for (const ch of css) {

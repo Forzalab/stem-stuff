@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const SRC = readFileSync(new URL("../telemetry.js", import.meta.url), "utf8");
+const SRC = readFileSync(new URL("../client/shell/telemetry/telemetry.js", import.meta.url), "utf8");
 
 /* a fake browser: meta = the <meta name="stem-t"> attributes (or null), nav = navigator fields */
 function run({ meta = null, nav = {}, search = "", store = {}, src = SRC, scr } = {}) {
@@ -85,7 +85,7 @@ test("J6: `_` names (_xmark, _copy ...) and q_open's shape: nothing new reaches 
 });
 
 test("incident (incident.mjs): only its allowlisted keys reach PostHog, no text-ish key, no student text", async () => {
-  const { reason, KEYS } = await import("../incident.mjs");
+  const { reason, KEYS } = await import("../client/pure_logic_modules/incident.mjs");
   const sent = [], nav = { sendBeacon: (u, b) => { sent.push(b); return true; } };
   const { win, document, handlers } = run({ meta: { content: "phc_abc" }, nav });
   win.stemT("q_open", { code: "CALC1_XP1", bank: null, type: "mc", mode: "sugar" });
