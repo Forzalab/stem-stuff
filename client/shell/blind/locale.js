@@ -66,7 +66,7 @@
     document.documentElement.setAttribute('data-blind', lang);
     window.stemBlind = { lang: lang, misses: function () { return Object.keys(misses); } };
   }
-  fetch('blind/' + lang + '.json').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (d) {
+  fetch('client/shell/blind/' + lang + '.json').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (d) {
     for (var k in d) {
       if (/\{[^}]+\}/.test(k)) tpl.push([new RegExp('^' + k.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{[^}]+\}/g, "(.+?)") + '$'), d[k]]);
       else dict[k] = d[k];
