@@ -6,8 +6,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines, measureOf } from "../layout-core.mjs";
-import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, INLINE_EXAMPLES, readDoc } from "../layout-docs.mjs";
+import { evaluate, createSession, sceneSummary, ghostLine, formatFindings, freePointsHint, legendLines, stepLines, planLines, measureOf } from "../client/cluck/figure_language/layout-core.mjs";
+import { docExamples, SCENES, TOPIC_NAMES, TOPICS, CORE, DOCS, DOC_INDEX, INLINE_EXAMPLES, readDoc } from "../client/cluck/figure_language/layout-docs.mjs";
 import { generate } from "../tools/client_generators/gen_figure_docs.mjs";
 
 const llm = r => r.findings.filter(f => f.cls === "llm");
@@ -164,8 +164,8 @@ test("docs: every read_doc example and every built-in scene (but broken) has zer
 });
 
 test("figure-docs store: generate() equals the inlined region; ids unique; CORE lists every id; readDoc resolves", () => {
-  const src = readFileSync(new URL("../figure-docs.txt", import.meta.url), "utf8");
-  const layout = readFileSync(new URL("../layout-docs.mjs", import.meta.url), "utf8");
+  const src = readFileSync(new URL("../client/cluck/figure_language/figure-docs.txt", import.meta.url), "utf8");
+  const layout = readFileSync(new URL("../client/cluck/figure_language/layout-docs.mjs", import.meta.url), "utf8");
   const m = /\/\/ <gen figure-docs: do not edit, run node tools\/client_generators\/gen_figure_docs\.mjs>\n([\s\S]*?)\/\/ <\/gen figure-docs>/.exec(layout);
   assert.ok(m, "layout-docs.mjs has the gen markers");
   assert.equal(m[1], generate(src), "layout-docs.mjs is in sync with figure-docs.txt (run node tools/client_generators/gen_figure_docs.mjs)");

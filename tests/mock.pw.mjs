@@ -26,7 +26,7 @@ writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 1, problems: ITE
   nudge: "Check the units of your answer.", body: [{ type: "text", md: `${title}: 2 + ${i + 1}` }], ...(/^PHYS_DQ/.test(code) ? { saccharine: { dead: true } } : {}) })) }));
 /* the queue salt pinned to one whose opener is TWO dead-easy (shuffle.mjs deadOpen): "/" opens on a dead-easy (never on X3 Q1, so ?mock=1
    must navigate after app.js's first load), and the mock's first Next must beat the opener's second dead-easy */
-const { deadOpen } = await import("../shuffle.mjs");
+const { deadOpen } = await import("../client/pure_logic_modules/shuffle.mjs");
 const SALT = Array.from({ length: 200 }, (_, i) => "m" + i).find(s => deadOpen({ salt: s, pos: 1, seen: { PHYS_DQ1: { n: 1 } }, hist: [{ c: "PHYS_DQ1" }] }, ["PHYS_DQ1", "PHYS_DQ2"]) === "PHYS_DQ2");
 assert.ok(SALT, "no salt with a two dead-easy opener");
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });

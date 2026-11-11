@@ -20,7 +20,7 @@ const CODES = ["CALC1_N01", "CALC1_N02", "CALC1_N03", "CALC1_N04"];
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_IB12.json"), JSON.stringify({ v: 1, problems: CODES.map((c, i) => num(c, String(i + 2), `Back ${i + 1}: 1 + ${i + 1}`)) }));
 
-const { qFresh } = await import("../shuffle.mjs");   // pin the queue's salt so Next plays file order
+const { qFresh } = await import("../client/pure_logic_modules/shuffle.mjs");   // pin the queue's salt so Next plays file order
 const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => qFresh(CODES, s).every((c, i) => c === CODES[i]));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }

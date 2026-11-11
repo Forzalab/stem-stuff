@@ -28,9 +28,9 @@ const browser = await pw.chromium.launch();
 for (const width of [360, 1280]) for (const scheme of ["light", "dark"]) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: scheme });
   const errs = []; page.on("pageerror", e => errs.push(e.message)); page.on("console", m => m.type() === "warning" && errs.push(m.text()));
-  await page.setContent(`<!doctype html><html><head><style>${read("app.css")}</style></head><body><div id="f0" class="fig"></div><div id="f1" class="fig"></div></body></html>`);
-  await page.addScriptTag({ content: read("vendor/math.min.js") });
-  await page.addScriptTag({ content: read("graph.js") });
+  await page.setContent(`<!doctype html><html><head><style>${read("client/answer/drill_core/app.css")}</style></head><body><div id="f0" class="fig"></div><div id="f1" class="fig"></div></body></html>`);
+  await page.addScriptTag({ content: read("client/vendor/math.min.js") });
+  await page.addScriptTag({ content: read("client/cluck/figures/graph.js") });
   for (const [i, g] of FIX.geom.valid.entries()) {
     await step(`${g.kind} geometry marks at ${width} ${scheme}`, async () => {
       const r = await page.evaluate(([i, g, marks]) => {
@@ -84,9 +84,9 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
   for (const [width, height] of [[1440, 900], [390, 844]]) {
     const page = await b.newPage({ viewport: { width, height }, colorScheme: "dark" });
     const errs = []; page.on("pageerror", e => errs.push(e.message));
-    await page.setContent(`<!doctype html><html><head><style>${read("app.css")}</style></head><body><div id="f" class="fig"></div></body></html>`);
-    await page.addScriptTag({ content: read("vendor/math.min.js") });
-    await page.addScriptTag({ content: read("graph.js") });
+    await page.setContent(`<!doctype html><html><head><style>${read("client/answer/drill_core/app.css")}</style></head><body><div id="f" class="fig"></div></body></html>`);
+    await page.addScriptTag({ content: read("client/vendor/math.min.js") });
+    await page.addScriptTag({ content: read("client/cluck/figures/graph.js") });
     for (const c of RAMPS) {
       await step(`block rests on the ramp, ${c.name}, ${label} ${width}`, async () => {
         const r = await page.evaluate(g => {
@@ -170,9 +170,9 @@ function clearance(root) {
     return { t: t.textContent.trim(), at: t.dataset.at || null, d: +best[0].toFixed(1), what: best[1] }; });
 }
 const TYPES = { ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".woff2": "font/woff2" };
-const PAGE = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="views.css"><link rel="stylesheet" href="vendor/katex/katex.min.css"><style>body{padding:16px;max-width:720px;margin:auto}</style></head>
+const PAGE = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="client/answer/drill_core/app.css"><link rel="stylesheet" href="client/cluck/openui_views/views.css"><link rel="stylesheet" href="client/vendor/katex/katex.min.css"><style>body{padding:16px;max-width:720px;margin:auto}</style></head>
 <body class="ai-box"><div id="f" class="fig"></div><div id="v" class="vw"></div>
-<script src="vendor/katex/katex.min.js"></script><script src="vendor/math.min.js"></script><script type="module" src="figcheck.js"></script><script src="graph.js" defer></script></body></html>`;
+<script src="client/vendor/katex/katex.min.js"></script><script src="client/vendor/math.min.js"></script><script type="module" src="client/cluck/figures/figcheck.js"></script><script src="client/cluck/figures/graph.js" defer></script></body></html>`;
 /* in the page: every label box (screen px) of a root, every stroke segment of its svg, and what collides */
 function audit(root, sel) {
   const svg = root.querySelector("svg"), pt = svg.createSVGPoint(), segs = [];
@@ -265,7 +265,7 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
     for (const [name, prog] of GEO) {
       await step(`labels: Geometry ${name}, no overlap, none on a stroke without a knockout, inside, ${label} ${width}`, async () => {
         const r = await page.evaluate(async ([prog, src, csrc]) => {
-          const V = await import("/views.js"), v = document.getElementById("v"); v.innerHTML = "";
+          const V = await import("/client/cluck/openui_views/views.js"), v = document.getElementById("v"); v.innerHTML = "";
           const h = V.render(prog, v, { document });
           const at = Object.fromEntries([...v.querySelectorAll("text[data-at]")].map(t => [t.textContent.trim(), t.dataset.at]));
           return { errors: h.errors.map(e => String(e.code || e.message || e)), findings: v.querySelector(".vw-geo")?.dataset.figFindings ?? null, at,
@@ -284,7 +284,7 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
     }
     for (const [name, prog, code] of BAD_GEO) await step(`planted bad Geometry: ${name} -> ${code}, the figure never draws, ${label} ${width}`, async () => {
       const r = await page.evaluate(async prog => {
-        const V = await import("/views.js"), v = document.getElementById("v"); v.innerHTML = "";
+        const V = await import("/client/cluck/openui_views/views.js"), v = document.getElementById("v"); v.innerHTML = "";
         const h = V.render(prog, v, { document });
         return { errors: h.errors.map(e => `${e.code} ${e.message}`), svg: !!v.querySelector(".vw-geo svg") };
       }, prog);

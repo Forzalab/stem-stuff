@@ -31,7 +31,7 @@ test("geometry marks (right, dim, angle, circle): the valid fixtures are SCHEMA 
 // surface axes. tests/fixtures/livefig.json "contact": planted cases with the codes the pre-pass (and livefig.check) report.
 import vm from "node:vm";
 const W = {}; W.window = W;
-vm.runInNewContext(readFileSync(new URL("graph.js", root), "utf8"), W);
+vm.runInNewContext(readFileSync(new URL("client/cluck/figures/graph.js", root), "utf8"), W);
 const D = Math.PI / 180, G = { fix: m => JSON.parse(JSON.stringify(W.Graph.fix(m))) };   // out of the vm realm: plain arrays for deepEqual
 const surfaces = marks => marks.flatMap(m => {
   if (m.mark === "incline") { const sx = m.flip ? -1 : 1, top = [m.at[0] + sx * m.base, m.at[1] + m.base * Math.tan(m.angle * D)]; return [[m.at, top]]; }
