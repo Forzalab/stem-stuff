@@ -297,11 +297,12 @@ class Gate(unittest.TestCase):
         p = {k: x for k, x in {**self.num, **change}.items() if x is not None}
         return put(os.path.join(self.tmp, d), name + ".json", json.dumps({"v": v, "problems": [p]}))
 
-    def ship(self, banks, path=None, brain=None):
+    def ship(self, banks, path=None, brain=None, mode="demo", **env):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_", "VERCEL_"))}
         e.update(HOME=self.tmp, PATH=path or self.bin + os.pathsep + e["PATH"])
         e.update(BRAIN_DIR=brain, SHIP_BRAIN_SEARCH="") if brain else e.update(SHIP_NO_BRAIN="1")
-        return subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
+        e.update(env)
+        return subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), mode, *([os.path.join(self.tmp, banks)] if banks else [])],
                               capture_output=True, text=True, env=e, timeout=180)
 
     def unseed_fig(self):
@@ -335,6 +336,17 @@ class Gate(unittest.TestCase):
         self.assertNotIn("BANK_GOOD v", r.stderr)
         self.assertIn("demo ready: https://t.vercel.app", r.stdout, r.stderr)
         self.assertTrue(self.deployed())
+
+    def test_live_deploys_main_only(self):
+        r = self.ship(None, mode="live", SHIP_REF="b-train")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("ship: live deploys origin/main only (SHIP_REF=b-train)", r.stderr)
+        self.assertFalse(os.path.exists(self.log))                          # stopped before any npx (Vercel) call
+
+    def test_bad_ship_ref_exits_2(self):
+        r = self.ship(None, SHIP_REF="bad;ref")
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertFalse(os.path.exists(self.log))
 
     def test_a_failing_bank_stops_before_vercel(self):
         for name, change, why in (("BANK_NOFORM", {"form": None}, "NOFORM"), ("BANK_LONG", {"title": "x" * 61}, "BANK_LONG: /problems/0/title")):
