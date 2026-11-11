@@ -1,5 +1,5 @@
 {
- "active": false,
+ "active": true,
  "entries": [
   {
    "old": "tools/build_public.py",
