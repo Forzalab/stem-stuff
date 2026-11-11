@@ -32,6 +32,38 @@ class ClientPaths(unittest.TestCase):
             "style.css:1: img/nope.png -> img/nope.png",
         ])
 
+    def _run(self, files, *args):
+        root = tempfile.mkdtemp(prefix="client-paths-")
+        for rel, text in files.items():
+            os.makedirs(os.path.dirname(os.path.join(root, rel)), exist_ok=True)
+            with open(os.path.join(root, rel), "w") as f:
+                f.write(text)
+        return subprocess.run([sys.executable, SCRIPT, "--root", root, "check", *args],
+                              capture_output=True, text=True)
+
+    def test_unknown_extension_is_skipped_with_a_note(self):
+        r = self._run({"tool.py": "import os\n"}, "tool.py")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "0 dangling")
+        self.assertIn("skip: tool.py (no path patterns for .py)", r.stderr)
+
+    def test_bare_package_specifiers_are_ignored(self):
+        r = self._run({"app.mjs": 'import { x } from "ajv/dist/2020.js";\nimport "node:assert/strict";\n'
+                                  'import y from "@scope/pkg/sub.js";\n'}, "app.mjs")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "0 dangling")
+
+    def test_pw_spec_dynamic_import_resolves_from_repo_root(self):
+        r = self._run({
+            "client/pure_logic_modules/mode.mjs": "export const m = 1;\n",
+            "tests/helper.mjs": "export const h = 1;\n",
+            "tests/mode-reset.pw.mjs": 'import "./helper.mjs";\n'
+                                       'await page.evaluate(async () => {\n'
+                                       '  const m = await import("./client/pure_logic_modules/mode.mjs");\n});\n',
+        }, "tests/mode-reset.pw.mjs")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "0 dangling")
+
 
 if __name__ == "__main__":
     unittest.main()
