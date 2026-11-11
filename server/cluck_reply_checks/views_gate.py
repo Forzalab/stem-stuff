@@ -34,9 +34,9 @@ def on():
 
 def registry():
     if "reg" not in _c:
-        with open(os.path.join(ROOT, "views", "registry.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "shared", "openui", "registry.json"), encoding="utf-8") as f:
             _c["reg"] = json.load(f)
-        with open(os.path.join(ROOT, "views", "library.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "shared", "openui", "library.json"), encoding="utf-8") as f:
             _c["cat"] = oui.compile_schema(json.load(f)["schema"])
     return _c["reg"]
 

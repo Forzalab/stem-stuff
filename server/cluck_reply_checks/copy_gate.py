@@ -36,7 +36,7 @@ import re
 from cluck_reply_checks import aiw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # the repo root (this file lives in server/<package>/)
-ALLOW_DIR = os.path.join(ROOT, "views", "allow")
+ALLOW_DIR = os.path.join(ROOT, "shared", "openui", "allow")
 COMMON_PATH = os.path.join(ALLOW_DIR, "common-en.txt")
 FK_MIN_WORDS = 20
 FK_LO, FK_HI = 2.0, 4.0

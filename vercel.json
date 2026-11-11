@@ -17,7 +17,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{server/{http_server/serve,accounts/acct,answer_grading/{expr,slips},cluck_reply_checks/{oui,views_gate,livefig}}.py,server/**/__init__.py,server/data/{prompts/**,problems.json,skills.json,banks/**},views/{registry,library}.json,SCHEMA.md}",
+      "includeFiles": "{server/{http_server/serve,accounts/acct,answer_grading/{expr,slips},cluck_reply_checks/{oui,views_gate,livefig}}.py,server/**/__init__.py,server/data/{prompts/**,problems.json,skills.json,banks/**},shared/openui/{registry,library}.json,SCHEMA.md}",
       "maxDuration": 60
     }
   },
