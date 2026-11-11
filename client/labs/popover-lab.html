@@ -11,7 +11,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="../vendor/fonts/atkinson.css">
 <link rel="stylesheet" href="../vendor/katex/katex.min.css">
-<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../answer/drill_core/app.css">
 <style>
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
 main { max-width: 46rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
@@ -48,8 +48,8 @@ h2 { margin: var(--s6) 0 var(--s3); font-size: var(--t-md); color: var(--muted);
 </main>
 <script src="../vendor/katex/katex.min.js"></script>
 <script src="../vendor/math.min.js"></script>
-<script src="../graph.js"></script>
-<script src="../popover.js"></script>
+<script src="../cluck/figures/graph.js"></script>
+<script src="../shell/popover.js"></script>
 <script>
 "use strict";
 const K = (t, el) => katex.render(t, el, { throwOnError: false });

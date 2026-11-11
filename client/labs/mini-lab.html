@@ -10,9 +10,9 @@
      answers /mini itself). The question is author-time and static. -->
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="../vendor/fonts/atkinson.css">
-<link rel="stylesheet" href="../app.css">
-<link rel="stylesheet" href="../views.css">
-<link rel="stylesheet" href="../minicluck.css">
+<link rel="stylesheet" href="../answer/drill_core/app.css">
+<link rel="stylesheet" href="../cluck/openui_views/views.css">
+<link rel="stylesheet" href="../cluck/mini_cluck/minicluck.css">
 <style>
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
 main { max-width: 46rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
@@ -48,8 +48,8 @@ if (!/[?&]live\b/.test(location.search)) {                                     /
     'root = View([a])\na = Text("Friction pushes against the slide. **So which sign** does its work get?")', { headers: { "content-type": "text/plain" } })), 400)) : real(u, o);
 }
 </script>
-<script src="../popover.js"></script>
-<script src="../minicluck.js"></script>
+<script src="../shell/popover.js"></script>
+<script src="../cluck/mini_cluck/minicluck.js"></script>
 <script>
 "use strict";
 document.getElementById("open").addEventListener("click", () => Mini.open(document.getElementById("s2"), {
