@@ -122,6 +122,36 @@ def blocked(path):
     low = p.lower()
     return (p in BLOCK or low in BLOCK or p.startswith(BLOCK_PREFIX) or low.startswith(BLOCK_PREFIX)
             or (p.count("/") == 1 and low.endswith(".py")) or low == "/2" or low == "/scratch")
+
+
+# BRIDGE (temporary, todo 167): why = old URLs keep working after the client/ move; delete by BX (first Monday >= 7 days after B merges); map = shared/temporary_rename_map/rename-map.json
+RENAME_MAP = os.path.join(ROOT, "shared", "temporary_rename_map", "rename-map.json")
+_bridge_rules = None
+
+
+def bridge(path):
+    """Old URL -> ("stub", None) for a moved .js/.mjs (route serves client/shell/stale_reload.js), ("redirect", new URL) for anything else,
+    None otherwise. Only an active map, only bridge:true entries, never a file still on disk. Map loaded once (module cache)."""
+    global _bridge_rules
+    if _bridge_rules is None:
+        try:
+            with open(RENAME_MAP, encoding="utf-8") as f:
+                m = json.load(f)
+        except (OSError, ValueError):
+            m = {}
+        on = isinstance(m, dict) and m.get("active") is True
+        _bridge_rules = [(e["old"], e["new"]) for e in m.get("entries", []) if e.get("bridge") is True] if on else []
+    rel = posixpath.normpath(urllib.parse.unquote(path)).lstrip("/")
+    if not rel or rel == "." or os.path.isfile(os.path.join(ROOT, rel)):
+        return None
+    for old, new in _bridge_rules:
+        if rel == old or (old.endswith("/") and rel.startswith(old)):
+            if rel.endswith((".js", ".mjs")):
+                return ("stub", None)
+            return ("redirect", "/" + new + rel[len(old):])
+    return None
+
+
 BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
@@ -4961,6 +4991,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
+    def bridged(self, hit, head=False):                  # BRIDGE: hit from bridge(); stub = rewrite (200 JS), redirect = 307
+        kind, target = hit
+        if kind == "redirect":
+            self.send_response(307)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        with open(os.path.join(ROOT, "client", "shell", "stale_reload.js"), "rb") as f:
+            data = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/javascript; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        if not head:
+            self.wfile.write(data)
+
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
 
@@ -4983,6 +5030,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         path = self.path.split("?")[0]
         if blocked(path):
             self.send_error(404)
+            return
+        hit = bridge(path)
+        if hit:
+            self.bridged(hit, head)
             return
         res = dispatch("GET", path, self.headers.get("Cookie", ""))
         if res:
