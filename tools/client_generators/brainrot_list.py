@@ -13,7 +13,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TARGET = os.path.join(ROOT, "brainrot.js")
+TARGET = os.path.join(ROOT, "client", "cluck", "brainrot.js")
 PLAYLISTS = [("Parkour", "PLmSs-0cFIbfVWhkZx0i4UMiZdr2C0Z8w7"),          # Tony, Oct 5
              ("Brainrot", "PLGgy9JJbLirtf32CrMSCLiGcBqKAj0WRL"),
              ("Subway Surfers", "PLGspExVREA9D1_jjA77wSmxdzlw1E507h"),

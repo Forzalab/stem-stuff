@@ -42,8 +42,8 @@ notice="/*! OpenUI Lang core $VERSION (github.com/thesysdev/openui @ ${COMMIT:0:
 for bad in 'from"' 'import(' 'require(' posthog 'fetch(' 'sendBeacon' 'XMLHttpRequest' ci-info 'process.env'; do
   if grep -qF "$bad" "$tmp/out.mjs"; then echo "bundle still has '$bad'" >&2; exit 1; fi
 done
-cp "$tmp/out.mjs" "$repo/vendor/openui-lang.mjs"
-cp "$src/LICENSE" "$repo/vendor/openui-lang.LICENSE.txt"
+cp "$tmp/out.mjs" "$repo/client/vendor/openui-lang.mjs"
+cp "$src/LICENSE" "$repo/client/vendor/openui-lang.LICENSE.txt"
 rm -rf "$repo/tests/fixtures/openui/1.0"; mkdir -p "$repo/tests/fixtures/openui"
 cp -r "$src/spec/fixtures/1.0" "$repo/tests/fixtures/openui/1.0"
 cp "$src/LICENSE" "$repo/tests/fixtures/openui/LICENSE"
@@ -57,4 +57,4 @@ cp "$src/LICENSE" "$repo/tests/fixtures/openui/LICENSE"
     const { generateSystemPrompt } = await import('$tmp/pkg/package/dist/index.mjs');
     const spec = JSON.parse(readFileSync('$repo/tests/fixtures/openui/1.0/library.json', 'utf8'));
     writeFileSync('$repo/tests/fixtures/openui/prompt.txt', generateSystemPrompt({ library: spec, promptOptions: { toolCalls: true, bindings: true } }));")
-echo "vendor/openui-lang.mjs: $(wc -c <"$repo/vendor/openui-lang.mjs") bytes, $(gzip -9c "$repo/vendor/openui-lang.mjs" | wc -c) gzip"
+echo "client/vendor/openui-lang.mjs: $(wc -c <"$repo/client/vendor/openui-lang.mjs") bytes, $(gzip -9c "$repo/client/vendor/openui-lang.mjs" | wc -c) gzip"

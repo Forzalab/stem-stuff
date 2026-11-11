@@ -34,9 +34,9 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "server"))
 from cluck_reply_checks import copy_gate  # noqa: E402
 
-MANIFEST = os.path.join(ROOT, "views", "allow", "sources.json")
-OUT_DIR = os.path.join(ROOT, "views", "allow")
-FORMAT_STOP = os.path.join(ROOT, "views", "allow", "format-stop.txt")
+MANIFEST = os.path.join(ROOT, "shared", "openui", "allow", "sources.json")
+OUT_DIR = os.path.join(ROOT, "shared", "openui", "allow")
+FORMAT_STOP = os.path.join(ROOT, "shared", "openui", "allow", "format-stop.txt")
 AI_EXT = (".json", ".md")
 _TEX_CMD = re.compile(r"\\[A-Za-z]+")
 
