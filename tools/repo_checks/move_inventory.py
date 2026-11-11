@@ -3,7 +3,7 @@
   move_inventory.py record OUT.json [--root DIR]   save 4 inventories: public build files, local URLs (html + sw.js BASE),
                                                    vercel includeFiles files, python import graph of non-test .py
   move_inventory.py check BEFORE.json [--root DIR] record now, map BEFORE through shared/temporary_rename_map/rename-map.json, diff
-  move_inventory.py readmes DIR...                 every DIR needs a one-line README.md
+  move_inventory.py readmes DIR...                 every DIR needs a one-line README.md (+ optional 'Read by:' file:line list)
 Allowed gaps in check: map entries with ship == "no" (may leave the public build), new README.md / __init__.py files. Exit 0 PASS / 1 FAIL."""
 import ast, glob, json, os, re, subprocess, sys, tempfile
 
@@ -209,8 +209,20 @@ def readmes(dirs):
         if not os.path.isfile(p):
             print("FAIL: %s has no README.md" % d); rc = 1; continue
         lines = [l for l in open(p, encoding="utf-8").read().splitlines() if l.strip()]
-        if len(lines) != 1:
-            print("FAIL: %s/README.md has %d non-empty lines (want 1)" % (d, len(lines))); rc = 1
+        bad = ""
+        if not lines:
+            bad = "no summary line"
+        elif len(lines) > 1:
+            if lines[1] != "Read by:":
+                bad = "line 2 must be exactly 'Read by:' (or no line 2)"
+            elif len(lines) == 2:
+                bad = "'Read by:' has no file:line entries"
+            else:
+                odd = [l for l in lines[2:] if not re.match(r"^- \S+:\d+$", l)]
+                if odd:
+                    bad = "not a '- path:line' entry: %r" % odd[0]
+        if bad:
+            print("FAIL: %s/README.md: %s (want 1 summary line, optionally + 'Read by:' and '- path:line' lines)" % (d, bad)); rc = 1
         else:
             print("ok: %s" % d)
     print("PASS" if rc == 0 else "FAIL")
