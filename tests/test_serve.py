@@ -1884,8 +1884,7 @@ class Explain(unittest.TestCase):
         self.assertNotIn("no_such_skill", out)
         self.assertNotIn("ALGEBRA THIS NEEDS", serve.explain_prompt(dict(BANK["CALC1_X2P"], saccharine={"key": "k"}), "a"))
         self.assertNotIn("skills", serve.view(p, "sugar"))                                  # server only
-        with open(os.path.join(paths.REPO, "vercel.json")) as f:
-            self.assertIn("server/data/skills.json", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # the function bundle carries the catalog
+        self.assertIn("server/data/skills.json", paths.bundle())   # the function bundle carries the catalog
 
     def test_prompt_reads_md_given_as_lines(self):                                    # PHYS_HIA's body: md is a list (live crash, Oct 5)
         p = dict(BANK["CALC1_X2P"], body=[{"type": "text", "md": ["line one", "line two"]}], key="k")

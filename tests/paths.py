@@ -12,6 +12,14 @@ def tool(group):
     return _os.path.join(REPO, "tools", group)
 
 
+def bundle():
+    """Repo files the Vercel function ships (vercel.json includeFiles, braces + globs expanded)."""
+    import sys as _sys
+    _sys.path.insert(0, tool("repo_checks"))
+    from move_inventory import include_files
+    return include_files(REPO)
+
+
 ROOT = "."
 SERVER = ["server/*.py", "server/engine/", "api/"]
 DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"]

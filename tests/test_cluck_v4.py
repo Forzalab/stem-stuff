@@ -108,8 +108,7 @@ class PromptFile(unittest.TestCase):
         self.assertIn("</XYZ>", rules)
 
     def test_vercel_ships_it(self):
-        with open(os.path.join(ROOT, "vercel.json")) as f:
-            self.assertIn("prompts/**", json.load(f)["functions"]["api/index.py"]["includeFiles"])
+        self.assertTrue(any(f.startswith("server/data/prompts/") for f in paths.bundle()))
 
 
 class UserTurn(unittest.TestCase):
