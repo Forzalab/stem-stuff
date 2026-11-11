@@ -1,7 +1,7 @@
 // quack.mjs: randomized "QUACK" prefixes with warm kaomoji for hint feedback
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { quack, withQuack } from "../quack.mjs";
+import { quack, withQuack } from "../client/pure_logic_modules/quack.mjs";
 
 test("quack returns a string starting with /^qu+a+c+k/i", () => {
   const result = quack("seed1");
