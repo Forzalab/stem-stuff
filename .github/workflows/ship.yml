@@ -17,6 +17,11 @@ on:
         type: string
         default: ""
         required: false
+      ref:
+        description: "demo only: branch to deploy (live always deploys main)"
+        type: string
+        default: "main"
+        required: false
 permissions:
   contents: read
   actions: read   # the ship gate reads tests.yml run conclusions (no secret of its own)
@@ -40,6 +45,11 @@ jobs:
             echo "::error::missing repo secret(s):$miss. Settings → Secrets and variables → Actions (docs/design/DEPLOY.md, Power button)"
             exit 1
           fi
+      - name: live deploys main only
+        if: inputs.mode == 'live' && inputs.ref != 'main'
+        run: |
+          echo "::error::live deploys main only"
+          exit 1
       # ref main: ship.sh deploys origin/main and stops if its own copy differs from main's. fetch-depth 0: version.sh reads the
       # first-parent history for the PR number ("#83+1"); a shallow clone would stamp "?".
       - uses: actions/checkout@v4
@@ -62,6 +72,7 @@ jobs:
       # tools/operations/ci-gate.mjs refuses (exit 1) unless origin/main itself, or a docs-only diff after it, has a full green run; the
       # step sits BEFORE tools/build_and_ship/ship.sh so a refusal happens before any Vercel call.
       - name: fetch main test runs
+        if: inputs.ref == 'main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -75,6 +86,7 @@ jobs:
               --jq '[.workflow_runs[] | {head_sha, conclusion, event, status, created_at, head_branch, run_attempt}]'
           } | jq -s 'add' > runs.json
       - name: ship gate (full green on origin/main)
+        if: inputs.ref == 'main'
         run: |
           CANDIDATE="$(git rev-parse origin/main)"
           echo "ship gate: candidate $CANDIDATE"
@@ -83,6 +95,7 @@ jobs:
         env:
           MODE: ${{ inputs.mode }}
           SHIP_PINS: ${{ inputs.pins || vars.SHIP_PINS }}
+          SHIP_REF: ${{ inputs.ref }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           BRAIN_TOKEN: ${{ secrets.BRAIN_TOKEN }}
         run: |

@@ -10,6 +10,7 @@
 # that sha = nothing deployed. (The BANK_P3X@cd581738 pin for the `vary` field is no longer needed: SCHEMA.md has `vary`, lane A6.)
 #   demo  = `vercel deploy`        → prints the preview URL (log in to Vercel to open it)
 #   live  = `vercel deploy --prod` → the public site
+# SHIP_REF=<branch> (demo only, default main) deploys origin/<branch> instead; live always deploys origin/main (any other ref exits 1).
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub. Banks, per file name, first hit
 # wins: [banks-dir] > the brain repo (projects/*/_files/*-bank/BANK_*.json; if one name sits at several brain paths, the one
 # with the newest commit; a clone's BANK_*.json elsewhere gets a "not shipped" warning) > banks/*.json in this checkout (only banks the brain does not have, e.g. BANK_PSY6). One line says where each bank came from: `banks: BANK_X(brain) ...`.
@@ -66,6 +67,11 @@ while [ $# -gt 0 ]; do
     *) [ -z "$BANKS" ] || usage; BANKS="$a" ;;
   esac
 done
+# --- SHIP_REF: demo may deploy another branch (a private preview); live is origin/main only. Checked before any fetch or Vercel work ---
+SHIP_REF="${SHIP_REF:-main}"
+case "$SHIP_REF" in *[!A-Za-z0-9._/-]*) echo "ship: bad SHIP_REF=$SHIP_REF (letters, digits, . _ / - only)" >&2; exit 2 ;; esac
+if [ "$MODE" = live ] && [ "$SHIP_REF" != main ]; then echo "ship: live deploys origin/main only (SHIP_REF=$SHIP_REF)" >&2; exit 1; fi
+DEPLOY_REF="origin/$SHIP_REF"
 # --- remote: Termux (or --remote) queues the GitHub run instead of deploying here. SHIP_PRESS = test hook (a stub press.sh) ---
 if [ -z "$WHERE" ]; then
   case "${PREFIX:-}" in *com.termux*) WHERE=remote ;; esac
@@ -198,19 +204,20 @@ PY
 
 W="$(mktemp -d)"; LOG="$(mktemp)"   # the log stays outside the upload
 git -C "$ROOT" fetch -q origin main
+[ "$SHIP_REF" = main ] || git -C "$ROOT" fetch -q origin "$SHIP_REF"
 # This script runs from your checkout but deploys origin/main. A checkout that was never pulled runs an old ship.sh (Oct 3:
 # the phone's pre-brain copy shipped live with only BANK_PSY6). Stop instead.
 if ! git -C "$ROOT" diff --quiet origin/main -- tools/build_and_ship/ship.sh tools/build_and_ship/brain_banks.py tools/build_and_ship/version.sh tools/bank_tools/fig_png.mjs; then
   warn "this ship.sh is not origin/main's: run  git -C \"$ROOT\" pull --ff-only  then ship again"; exit 1
 fi
-git -C "$ROOT" worktree add -q --detach "$W" origin/main
+git -C "$ROOT" worktree add -q --detach "$W" "$DEPLOY_REF"
 printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/server/data/banks/$name"
 done
 gate || exit 1   # after the copy: the figure PNGs are rendered into (and checked in) $W
 VJSON="$(bash "$ROOT/tools/build_and_ship/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (docs/design/DEPLOY.md)
 VPR="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["pr"])' <<<"$VJSON")"
-echo "deploying origin/main @ $(git -C "$W" rev-parse --short HEAD) ($VPR) as $MODE"
+echo "deploying $DEPLOY_REF @ $(git -C "$W" rev-parse --short HEAD) ($VPR) as $MODE"
 echo "$SUMMARY"
 
 ARGS=(--yes --scope forzalabs-projects)
