@@ -73,7 +73,7 @@
       replace();
       fetch(o.url || "/mini", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...o.ctx, text }) })
         .then(res => { if (!res.ok) throw new Error("/mini " + res.status); return res.text(); })
-        .then(src => import("./views.js").then(V => { if (n !== seq) return; r.replaceChildren(); r.classList.remove("mini-wait"); V.render(src, r, {}); }))
+        .then(src => import("../openui_views/views.js").then(V => { if (n !== seq) return; r.replaceChildren(); r.classList.remove("mini-wait"); V.render(src, r, {}); }))
         .catch(e => { console.error(e); if (n === seq) { r.classList.remove("mini-wait"); r.textContent = LOST; } })
         .finally(() => n === seq && replace());
     }

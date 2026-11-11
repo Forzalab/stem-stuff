@@ -12,10 +12,10 @@
 // one error boundary per statement (a failed statement drops or keeps its last good node, its siblings render, spec §8.2);
 // VISUAL-FIRST (Tony 19:0x): nothing to show -> a Doodle, never a blank.
 // The component list lives in views-lib.js (P0.2 generates it); the drawings below are the only look-free code that knows it.
-import { createParser, mergeStatements } from "./vendor/openui-lang.mjs";
+import { createParser, mergeStatements } from "../../vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
-import { parseRow, tugModel, drawTug, flipModel, drawFlip } from "./tug.mjs";
-import { place, resolveAngles, checkAngleLabels, autoHues, AUTO_HUES } from "./figcheck.js";
+import { parseRow, tugModel, drawTug, flipModel, drawFlip } from "../../pure_logic_modules/tug.mjs";
+import { place, resolveAngles, checkAngleLabels, autoHues, AUTO_HUES } from "../figures/figcheck.js";
 
 const SCHEMA = toSchema(LIB);
 const REG = new Map();

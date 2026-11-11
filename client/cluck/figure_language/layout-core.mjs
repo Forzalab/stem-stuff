@@ -13,7 +13,7 @@
 // Plan lines (Q41): `// goal: | anchor: | layers: | budget:` lines are kept as result().plan and checked against what is drawn (fyi);
 // a 7th Layer is an llm finding (Q42, MAX_LAYERS = 6).
 // World space: y up. Tolerance = 1% of the figure span (model units), so the verdict is the same on every screen.
-import { box as fcBox, poly as fcPoly, circle as fcCircle, wseg, surface as fcSurface, collide, contactGap, centroid, ptSeg, autoHues } from "./figcheck.js";
+import { box as fcBox, poly as fcPoly, circle as fcCircle, wseg, surface as fcSurface, collide, contactGap, centroid, ptSeg, autoHues } from "../figures/figcheck.js";
 
 const EPS = 1e-9, DEG = Math.PI / 180;
 const sub = (p, q) => [p[0] - q[0], p[1] - q[1]], add = (p, q) => [p[0] + q[0], p[1] + q[1]], mul = (p, k) => [p[0] * k, p[1] * k];

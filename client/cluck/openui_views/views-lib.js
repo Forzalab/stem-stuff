@@ -5,7 +5,7 @@
 // Every string prop has a maxLength and every list a maxItems: over a cap, the statement drops (`too-long`).
 // Predict's `answer` is a key REFERENCE ("key.<id>"), never a literal: the page posts it with the pick to /predict and never
 // resolves or draws it; the answer itself only ever arrives as a Reveal patch (F4, F5).
-import spec from "./views/library.json" with { type: "json" };
+import spec from "../../../shared/openui/library.json" with { type: "json" };
 
 /** LibrarySpec entry ({description, layer, props: {properties, required}}) -> this file's shape. */
 const fromSpec = c => ({ layer: c.layer, desc: c.description, props: c.props?.properties || {}, required: c.props?.required || [] });

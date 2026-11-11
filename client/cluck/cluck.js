@@ -1,12 +1,12 @@
 /* split-app.mjs (W152): part 2 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
-import { traceparent } from "./incident.mjs";
-import { modeOf } from "./mode.mjs";
-import { quack } from "./quack.mjs";
-import { clampPos, dimAt, progress, radiusAt, snapTo } from "./sheet.mjs";
-import { speakable } from "./speak.mjs";
-import { pipeHold, pipeTable, renumberSteps } from "./steps.mjs";
-import { flipHTML, flipModel, tableShape, tugFromTable, tugHTML } from "./tug.mjs";
-import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mockHold, noteAt, painting, rboxSync, renderMath, reqInc, rpUnmount, say, toast, waitReduced, xInc } from "./app.js";
+import { traceparent } from "../pure_logic_modules/incident.mjs";
+import { modeOf } from "../pure_logic_modules/mode.mjs";
+import { quack } from "../pure_logic_modules/quack.mjs";
+import { clampPos, dimAt, progress, radiusAt, snapTo } from "../pure_logic_modules/sheet.mjs";
+import { speakable } from "../pure_logic_modules/speak.mjs";
+import { pipeHold, pipeTable, renumberSteps } from "../pure_logic_modules/steps.mjs";
+import { flipHTML, flipModel, tableShape, tugFromTable, tugHTML } from "../pure_logic_modules/tug.mjs";
+import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mockHold, noteAt, painting, rboxSync, renderMath, reqInc, rpUnmount, say, toast, waitReduced, xInc } from "../answer/drill_core/app.js";
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
   clClose: { get: () => clClose, enumerable: true },
@@ -317,7 +317,7 @@ function wishFigs(root) {
     if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
       const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); figDrop(ph); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
       ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
-      import("./views.js").then(V => {
+      import("./openui_views/views.js").then(V => {
         let drawn = false;
         try { V.render(src, ph, {}); drawn = !!ph.querySelector(VIEW_DRAWN); } catch (e) { console.error(e); }
         const url = drawn || staticImg.has(src) ? viewImage(V, src) : null;   // pre-rendered once it drew (W113 static fallback)

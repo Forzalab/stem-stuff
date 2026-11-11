@@ -92,7 +92,7 @@
   var CRAM_ENABLED = typeof window.fetch !== "function";                   // calc/cram.json's `enabled` (the one cram flag); no fetch (the vm tests) = old behavior
   if (typeof window.fetch === "function") {                                // one-time read like calc-coach.js loadCram(): off until it resolves
     CRAM_ENABLED = false;
-    try { window.fetch("calc/cram.json", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; })
+    try { window.fetch("client/calc/cram.json", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) { if (j && j.enabled !== false) CRAM_ENABLED = true; }).catch(function () { /* stay off */ })
       .then(function () { clearTimeout(t); arm(wait()); cramToast(); }); } catch (e) { /* stay off */ }
   }
