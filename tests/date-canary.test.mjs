@@ -23,7 +23,7 @@ const today = () => {
 const ROOT = process.env.CANARY_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // the one cram flag (calc/cram.json): off means no cram date can fire, so every source below is green on any calendar
 const CRAM_ENABLED = (() => {
-  try { return JSON.parse(readFileSync(path.join(ROOT, "calc/cram.json"), "utf8")).enabled !== false; }
+  try { return JSON.parse(readFileSync(path.join(ROOT, "client/calc/cram.json"), "utf8")).enabled !== false; }
   catch (e) { throw new Error(`calc/cram.json: cannot read the cram flag (${e.message})`); }
 })();
 // the instant is an exclusive bound (Date.now() < X): the last valid moment is X-1ms
@@ -36,10 +36,10 @@ const utcToPT = (iso) => {
 const ptDate = (y, m, d) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 const SOURCES = [
   ["server/http_server/serve.py", 3534, /^CRAM_UNTIL = datetime\.datetime\((\d+), (\d+), (\d+), \d+, \d+, tzinfo=PT\)/, (m) => ptDate(m[1], m[2], m[3])],
-  ["calc/cram.json", 9, /"until":\s*"([^"]+)"/, (m) => utcToPT(m[1])],
-  ["peek.js", 91, /var CRAM_UNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
-  ["calc-coach.js", 13, /var EXAM_END = Date\.parse\('([^']+)'\)/, (m) => utcToPT(m[1])],
-  ["welcome-first.js", 9, /\bUNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
+  ["client/calc/cram.json", 9, /"until":\s*"([^"]+)"/, (m) => utcToPT(m[1])],
+  ["client/cluck/jev_nudges/peek.js", 91, /var CRAM_UNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
+  ["client/calc/coach/calc-coach.js", 13, /var EXAM_END = Date\.parse\('([^']+)'\)/, (m) => utcToPT(m[1])],
+  ["client/shell/welcome/welcome-first.js", 9, /\bUNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
 ];
 
 function readExpiries() {

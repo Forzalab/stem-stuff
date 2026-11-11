@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const SRC = readFileSync(new URL("../fx.js", import.meta.url), "utf8");
+const SRC = readFileSync(new URL("../client/shell/fx.js", import.meta.url), "utf8");
 function run({ nav = {}, media = [], blur = true, store = {} } = {}) {
   const cls = new Set();
   const win = {

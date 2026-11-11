@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SRC = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "peek.js"), "utf8");
+const SRC = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "client", "cluck", "jev_nudges", "peek.js"), "utf8");
 const UNTIL = Date.parse("2026-11-10T07:59:00Z");
 
 /* a page: clock `now` (Date.now), bank code, a storage object; returns the world after loading peek.js */
