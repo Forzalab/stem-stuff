@@ -883,7 +883,7 @@ KEEPALIVE = b": OPENROUTER PROCESSING\n\n"
 
 class FirstWordCaps(unittest.TestCase):
     """todo 47 (bench Oct 23): the DeepSeek arm thinks ~9.7 s (median) before its first word; reasoning is progress, so it is not cut at 6 s.
-    Stuck (nothing but pings for CLUCK_FIRST_TEXT_S) = fall back; thinking with no word by CLUCK_FIRST_TEXT_S_DEEPSEEK (20) = fall back.
+    Stuck (nothing but pings for CLUCK_FIRST_TEXT_S) = fall back; thinking with no word by CLUCK_FIRST_TEXT_S_DEEPSEEK (30) = fall back.
     The Claude arm: CLUCK_FIRST_TEXT_S, 10 s (6 s until todo 116). A fake clock: no real waits."""
     fake, run_arm = Fallbacks.fake, Fallbacks.run_arm
 
@@ -931,14 +931,14 @@ class FirstWordCaps(unittest.TestCase):
         self.assertIn("fallback from=deepseek reason=stuck", self.joined())
 
     def test_thinking_past_20s_is_the_visible_cap(self):
-        # reasoning every 1 s (never stuck) for 21 s, no word: the DeepSeek visible cap (20 s)
-        waits = {i: 1.0 for i in range(0, 50, 2)}
-        self.ds = lambda: Clocked(think(25) + sse_or(["Too late.\n"]), waits, self.clock)
+        # reasoning every 1 s (never stuck) for 31 s, no word: the DeepSeek visible cap (30 s)
+        waits = {i: 1.0 for i in range(0, 70, 2)}
+        self.ds = lambda: Clocked(think(35) + sse_or(["Too late.\n"]), waits, self.clock)
         self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
         self.assertEqual(self.calls, ["deepseek", "claude"])
         self.assertIn("fallback from=deepseek reason=visible-cap", self.joined())
         self.assertIn("why=deepseek:visible-cap", self.joined())
-        self.assertAlmostEqual(self.clock.t - 1_000_000.0, 21.0)        # cut on the first line past 20 s, not later
+        self.assertAlmostEqual(self.clock.t - 1_000_000.0, 31.0)        # cut on the first line past 30 s, not later
 
     def test_deepseek_visible_cap_env(self):
         with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S_DEEPSEEK": "12"}):
@@ -972,9 +972,9 @@ class FirstWordCaps(unittest.TestCase):
             serve.text_late(t0, False, t0 + 4, "deepseek")               # 11 s since the last delta
         self.assertEqual(c.exception.reason, "stuck")
         self.assertIsInstance(c.exception, TimeoutError)                  # the callers' except paths still read it as a timeout
-        self.clock.t = t0 + 21
+        self.clock.t = t0 + 31
         with self.assertRaises(serve.FirstTextLate) as c:
-            serve.text_late(t0, False, t0 + 20.5, "deepseek")
+            serve.text_late(t0, False, t0 + 30.5, "deepseek")
         self.assertEqual(c.exception.reason, "visible-cap")
         serve.text_late(t0, True, t0, "deepseek")                         # a word came: never
         self.assertEqual(serve.fallback_reason(TimeoutError("timed out")), "stuck")

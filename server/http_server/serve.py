@@ -2560,14 +2560,14 @@ def text_late(t0, said, last=None, arm="claude"):
     times out on its own (Tony, Oct 20: speed fix #6). The caller's fallback (the other arm, then the old chain) answers instead. Once a word
     came: never. Two caps (todo 47, bench Oct 23: DeepSeek's low-effort reasoning takes ~9.7 s median to its first word, 9/12 went past 6 s):
     - visible-cap: the first word by CLUCK_FIRST_TEXT_S since the request t0 on the Claude arm (as before), CLUCK_FIRST_TEXT_S_DEEPSEEK
-      (default 20) on the DeepSeek arm, which may think that long as long as it keeps streaming its reasoning;
+      (default 30: Tony Nov 11, 20 s fired 5/128 in DRAW r2b) on the DeepSeek arm, which may think that long as long as it keeps streaming its reasoning;
     - stuck: CLUCK_FIRST_TEXT_S (default 10; 6 until todo 116, Tony Oct 29 o-116b: Opus's first word takes a median 6.9 s, W113) since
       the last progress `last` (a reasoning or text delta, t0 before any; pings don't count), when the caller tracks it (the DeepSeek arm;
       on the Claude arm both caps are the same 10 s since t0)."""
     if said:
         return
     stuck = _fenv("CLUCK_FIRST_TEXT_S", 10.0)
-    cap = _fenv("CLUCK_FIRST_TEXT_S_DEEPSEEK", 20.0) if arm == "deepseek" else stuck
+    cap = _fenv("CLUCK_FIRST_TEXT_S_DEEPSEEK", 30.0) if arm == "deepseek" else stuck
     now = time.time()
     if now - t0 > cap:
         raise FirstTextLate("visible-cap", f"{arm}: no text in {cap:g} s")
@@ -3683,13 +3683,19 @@ def _v4_claude_chunks(v4, max_tokens):
     return _claude_one(system, msgs, max_tokens + (FIG_TOKENS if v4.get("fig") is not None else 0), v4["arm"], cut=True)
 
 
-def _v4_deepseek_chunks(v4, key, max_tokens):
-    """DeepSeek v4.1 flash through OpenRouter, the same system and turns (blocks joined: the same text), prefix cache on one pinned host"""
+def _v4_messages(v4):
+    """the v4 request's messages: the system head (the v4 prompt, the figure how-to, the bank, the cram note, the style card), then the turns
+    with their user blocks joined into text. The DeepSeek arm and the old chain's fallback (_cluck_stream) send the same messages."""
     fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
     head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
     head += ("\n\n" + cram_note(v4.get("code"))) if cram_note(v4.get("code")) else ""
     head += ("\n\n" + STYLE_V4) if STYLE_V4 else ""              # the permanent style card, last
-    msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
+    return [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
+
+
+def _v4_deepseek_chunks(v4, key, max_tokens):
+    """DeepSeek v4.1 flash through OpenRouter, the same system and turns (blocks joined: the same text), prefix cache on one pinned host"""
+    msgs = _v4_messages(v4)
     # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
                    provider={"order": DS_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny"})
@@ -3931,6 +3937,11 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
             log(f"claude {CLAUDE_MODEL}: {e}")
             if not budget_hit(e, "claude", out, model=CLAUDE_MODEL):
                 incident("cluck", "upstream", provider="claude", model=CLAUDE_MODEL, status=getattr(e, "code", None), err=e, phase="stream" if said else "headers")
+    if v4 is not None and PROMPT_V4 is not None:   # both v4 arms gave up: the old chain answers with the v4 messages (never the answer) and the LeakGuard
+        for t in v4_visible(_or_stream(_v4_messages(v4), key, max_tokens, out), v4["reveal"], v4["facts"], v4["code"], None, None,
+                            v4.get("closed", True), v4.get("free", False)):
+            yield t
+        return
     gate = views_gate.Fence(None)
     for t in _or_stream(messages, key, max_tokens, out):
         o = gate.feed(t)
