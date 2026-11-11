@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
-const BASE = process.argv[2] || "http://localhost:8833", LAB = BASE + "/design/login-lab.html";
+const BASE = process.argv[2] || "http://localhost:8833", LAB = BASE + "/client/labs/login-lab.html";
 const NEW = "q3Xv9LkP0aZ_8-mN2bR4tw", OLD = "Zt7wQ1mN_4kLp-9aBcD3eF";   // 128-bit base64url: the minted one, the one on the other phone's Cluck
 
 let failures = 0;
@@ -78,7 +78,7 @@ try {
     const mint = reqs.filter(r => r.url.includes("/acct/"));
     assert.deepEqual(mint.map(r => [r.method, new URL(r.url).pathname]), [["POST", "/acct/new"]]);
     await page.waitForSelector("#lgSave:not([disabled])");                            // draw() done: the canvas exists before the QR is painted on it
-    const back = await page.evaluate(async () => { const { decode } = await import("../mycluck.mjs"); const c = document.querySelector("canvas.lg-cluck");
+    const back = await page.evaluate(async () => { const { decode } = await import("/client/pure_logic_modules/mycluck.mjs"); const c = document.querySelector("canvas.lg-cluck");
       return decode(c.getContext("2d").getImageData(0, 0, c.width, c.height)); });
     assert.equal(new URL(back).searchParams.get("k"), NEW, "the drawn QR is the login link");
     const fit = await page.$eval("dialog.lg", d => { const b = d.getBoundingClientRect();
@@ -104,7 +104,7 @@ try {
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
     await ready(page);
     const png = await page.evaluate(async tok => {                                  // the other phone's Cluck, as a PNG
-      const { drawCluck } = await import("../mycluck.mjs");
+      const { drawCluck } = await import("/client/pure_logic_modules/mycluck.mjs");
       const img = drawCluck(location.origin + "/?k=" + tok, tok), c = document.createElement("canvas");
       c.width = img.width; c.height = img.height; c.getContext("2d").putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
       const b = await new Promise(r => c.toBlob(r, "image/png"));
@@ -267,7 +267,7 @@ try {
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
     await ready(page);
     const png = await page.evaluate(async tok => {
-      const { drawCluck } = await import("../mycluck.mjs");
+      const { drawCluck } = await import("/client/pure_logic_modules/mycluck.mjs");
       const img = drawCluck(location.origin + "/?k=" + tok, tok), c = document.createElement("canvas");
       c.width = img.width; c.height = img.height; c.getContext("2d").putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
       return [...new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer())];

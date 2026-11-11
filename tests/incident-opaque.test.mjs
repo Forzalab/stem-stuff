@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 
 const handlers = {};
 globalThis.window = { addEventListener: (t, f) => { (handlers[t] ||= []).push(f); }, navigator: { userAgent: "t" }, location: { protocol: "file:" }, document: { querySelector: () => null } };
-await import("../incident.mjs");
+await import("../client/pure_logic_modules/incident.mjs");
 const warn = console.warn;
 const EE = globalThis.ErrorEvent || class extends Event { constructor(t, o = {}) { super(t); Object.assign(this, o); } };
 const fire = o => {

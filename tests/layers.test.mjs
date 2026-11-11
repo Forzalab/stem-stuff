@@ -5,12 +5,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { hex, contrast, Lstar, HUES, THEMES, FLOOR, STEP, steps, mix, toHex, PALETTE, AUTO, de00, CVD, simulate, lab } from "../tools/client_generators/layer_steps.mjs";
-import { autoHues, AUTO_HUES } from "../figcheck.js";
-import { render } from "../views.js";
+import { autoHues, AUTO_HUES } from "../client/cluck/figures/figcheck.js";
+import { render } from "../client/cluck/openui_views/views.js";
 import { mount, byClass, all } from "./views-dom.mjs";
 
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
-const APP = read("app.css"), VIEWS = read("views.css");
+const APP = read("client/answer/drill_core/app.css"), VIEWS = read("client/cluck/openui_views/views.css");
 /** the --fig-<hue>-2|3 hexes declared in the rule that starts with `sel` */
 function declared(css, sel) {
   const i = css.indexOf(sel + " { --fig-"); assert.ok(i >= 0, sel);
