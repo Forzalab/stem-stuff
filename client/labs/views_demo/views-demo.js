@@ -1,5 +1,5 @@
 // views-demo.js: streams the demo programs (views-demo-src.js) into views.js, chunk by chunk, like a server forwarding a model's text.
-import { stream } from "../views.js";
+import { stream } from "../../cluck/openui_views/views.js";
 import { P10, P11, P2, DROPPED, chunk } from "./views-demo-src.js";
 import { makePredict } from "./views-demo-server.js";
 
