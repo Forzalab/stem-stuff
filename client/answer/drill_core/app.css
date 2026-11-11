@@ -1545,7 +1545,7 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
   overflow: hidden; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
 .ck-peek:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ck-duck { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 122 / 128; transform: translateY(var(--vis));
-  background: url(rewards/icons/duck-ask-hmm-128.webp) center / contain no-repeat; pointer-events: none;
+  background: url(../../rewards/icons/duck-ask-hmm-128.webp) center / contain no-repeat; pointer-events: none;
   filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
 .ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s2)); transform: translateX(-50%); margin: 0;
   color: var(--help-muted); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.3; white-space: nowrap; opacity: 0; }

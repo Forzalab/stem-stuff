@@ -29,8 +29,8 @@
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
-import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, familyOf, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "./shuffle.mjs";
-import { isBankId, bareBank } from "./codes.mjs";
+import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, familyOf, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "../../pure_logic_modules/shuffle.mjs";
+import { isBankId, bareBank } from "../../pure_logic_modules/codes.mjs";
 // == §bank-link ==
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {

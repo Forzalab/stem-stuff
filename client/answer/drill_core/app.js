@@ -1,17 +1,17 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: docs/design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 /* ./copy/payload.mjs: used by cluck.js / shell.js only (split-app.mjs) */
-import { shuffled, seed } from "./shuffle.mjs";
-import * as codes from "./codes.mjs";
-import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
-import { match as slipMatch, slipSpot, familyHint } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
-import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "./mode.mjs";
-import { quack, withQuack } from "./quack.mjs";
+import { shuffled, seed } from "../../pure_logic_modules/shuffle.mjs";
+import * as codes from "../../pure_logic_modules/codes.mjs";
+import { suggest, remember, isBank, normalize, normalizeLink, entry } from "../../pure_logic_modules/suggest.mjs";
+import { match as slipMatch, slipSpot, familyHint } from "../../pure_logic_modules/slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
+import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "../../pure_logic_modules/mode.mjs";
+import { quack, withQuack } from "../../pure_logic_modules/quack.mjs";
 /* ./speak.mjs: used by cluck.js / shell.js only (split-app.mjs) */
-import { changes } from "./chg.mjs";
+import { changes } from "../../pure_logic_modules/chg.mjs";
 /* ./steps.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 /* ./tug.mjs: used by cluck.js / shell.js only (split-app.mjs) */
-import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
+import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "../../pure_logic_modules/incident.mjs";
 /* ./sheet.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 /* split-app.mjs (W152): part 1 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 export const bridge = {};   // the bridge to cluck.js + shell.js (split-app.mjs)
@@ -41,7 +41,7 @@ try {
   const q = new URLSearchParams(location.search).get("blind");
   if (q === "off") sessionStorage.removeItem("stem-blind"); else if (q) sessionStorage.setItem("stem-blind", q);
   const lang = sessionStorage.getItem("stem-blind");
-  if (lang && /^[a-z]{2}$/.test(lang)) { const b = document.createElement("script"); b.src = "blind/locale.js"; b.dataset.lang = lang; document.head.appendChild(b); }
+  if (lang && /^[a-z]{2}$/.test(lang)) { const b = document.createElement("script"); b.src = "client/shell/blind/locale.js"; b.dataset.lang = lang; document.head.appendChild(b); }
 } catch { /* storage blocked: no blind test */ }
 
 const $ = s => document.querySelector(s);
