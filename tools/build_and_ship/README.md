@@ -1,1 +1,1 @@
-Build and ship the public site: build_public.py (vercel buildCommand) + bundle.py, ship.sh/press.sh/version.sh (ship.yml), brain_banks.py, openui/ (OpenUI Lang vendor build); owner: deploy.
+Build and ship the public site: build_public.py (vercel buildCommand) + bundle.py, ship.sh/press.sh/version.sh (ship.yml), brain_banks.py, openui/ (OpenUI Lang vendor build); owner: deploy. bridge_gen.py writes the temporary old-URL bridge rules into vercel.json (BRIDGE, todo 167; `--check` in CI-style use).
