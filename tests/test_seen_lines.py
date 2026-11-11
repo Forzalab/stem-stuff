@@ -16,7 +16,7 @@ JS = "const w={};w.window=w;require('vm').runInNewContext(require('fs').readFile
 
 
 def lines():
-    out = subprocess.run(["node", "-e", JS, os.path.join(ROOT, "copy", "seen-lines.js")], check=True, capture_output=True, text=True).stdout
+    out = subprocess.run(["node", "-e", JS, os.path.join(ROOT, "client", "resources", "texts", "seen-lines.js")], check=True, capture_output=True, text=True).stdout
     d = json.loads(out)
     return [x for xs in list(d["fam"].values()) + [d["any"]] for x in xs]
 

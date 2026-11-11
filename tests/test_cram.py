@@ -38,7 +38,7 @@ class Cram(unittest.TestCase):
         for p in self.ps:
             p.start()
         os.environ.pop("CRAM_INTEL", None)
-        with open(os.path.join(ROOT, "calc", "cram.json")) as f:   # the cram window is over (flag off in the repo): test a forced-on copy, like cram-off.pw.mjs
+        with open(os.path.join(ROOT, "client", "calc", "cram.json")) as f:   # the cram window is over (flag off in the repo): test a forced-on copy, like cram-off.pw.mjs
             on = dict(json.load(f), enabled=True)
         self.cram = os.path.join(self.d, "cram.json")
         with open(self.cram, "w") as f:
@@ -188,7 +188,7 @@ class Cram(unittest.TestCase):
 
 class ClientWindow(unittest.TestCase):
     """peek.js carries the same instant and the same bank for the idle peek and the toast"""
-    src = open(os.path.join(ROOT, "peek.js"), encoding="utf-8").read()
+    src = open(os.path.join(ROOT, "client", "cluck", "jev_nudges", "peek.js"), encoding="utf-8").read()
 
     def test_same_instant_and_bank(self):
         m = re.search(r'CRAM_UNTIL = Date\.parse\("([^"]+)"\)', self.src)

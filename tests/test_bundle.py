@@ -49,15 +49,18 @@ class BundleOneInstance(unittest.TestCase):
     def _build(self):
         """Build a synthetic bundle in a temp dir: app.js is an entry module that cluck.js also imports."""
         tmp = tempfile.mkdtemp(prefix="stem-bundle-")
+        app_rel, cluck_rel = "client/answer/drill_core/app.js", "client/cluck/cluck.js"   # the B1 client paths (B-placement.tsv)
         with open(os.path.join(tmp, "index.html"), "w", encoding="utf-8") as f:
             f.write('<!DOCTYPE html><html><head><title>x</title></head><body>\n'
-                    '<script type="module" src="app.js"></script>\n'
-                    '<script type="module" src="cluck.js"></script>\n'
+                    f'<script type="module" src="{app_rel}"></script>\n'
+                    f'<script type="module" src="{cluck_rel}"></script>\n'
                     '</body></html>\n')
-        with open(os.path.join(tmp, "app.js"), "w", encoding="utf-8") as f:
+        os.makedirs(os.path.join(tmp, "client", "answer", "drill_core"))
+        os.makedirs(os.path.join(tmp, "client", "cluck"))
+        with open(os.path.join(tmp, app_rel), "w", encoding="utf-8") as f:
             f.write(f"export const bridge = {{}};   // {APP_MARK}\n")
-        with open(os.path.join(tmp, "cluck.js"), "w", encoding="utf-8") as f:
-            f.write(f'import {{ bridge }} from "./app.js";   // {CLUCK_MARK}\n')
+        with open(os.path.join(tmp, cluck_rel), "w", encoding="utf-8") as f:
+            f.write(f'import {{ bridge }} from "../answer/drill_core/app.js";   // {CLUCK_MARK}\n')
         orig = bundle.ROOT
         bundle.ROOT = tmp
         try:
