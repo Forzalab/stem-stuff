@@ -1,5 +1,5 @@
 // Regenerates tests/fixtures/aiw/corpus.json.gz: runs upstream's detector/patterns.test.js (not vendored; a checkout of
-// conorbronsdon/avoid-ai-writing at the commit in vendor/avoid-ai-writing/NOTICE.txt) with analyzeText wrapped so every
+// conorbronsdon/avoid-ai-writing at the commit in vendor/avoid_ai_writing/NOTICE.txt) with analyzeText wrapped so every
 // distinct (text, options) it passes is recorded. Usage:
 //   node tests/aiw-record.cjs <checkout>/detector /tmp/rec.json && gzip -n -c /tmp/rec.json > tests/fixtures/aiw/corpus.json.gz
 const path = require('path');

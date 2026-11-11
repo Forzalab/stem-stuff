@@ -15,7 +15,7 @@ import paths
 sys.path.insert(0, paths.SERVER_DIR)
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 MSGS = [{"role": "system", "content": "BASE PROMPT"}, {"role": "user", "content": "QUESTION"}]
 CACHED = {"type": "ephemeral"}

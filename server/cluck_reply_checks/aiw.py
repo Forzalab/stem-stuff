@@ -1,7 +1,7 @@
 """aiw.py: stdlib Python port of the avoid-ai-writing detector (P4.1b, the gate's no-AI-writing lint).
 
 Source: conorbronsdon/avoid-ai-writing @013d1db, detector/patterns.js (MIT, Conor Bronsdon; vendored unchanged at
-vendor/avoid-ai-writing/patterns.js for the differential test and the authoring lab).
+vendor/avoid_ai_writing/patterns.js for the differential test and the authoring lab).
 
     analyze_text(text, options=None) -> dict    same result as AIDetector.analyzeText(text, options): score, label,
                                                 issues (type/text/index/severity/suggestion), stats, the trinary fields

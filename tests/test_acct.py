@@ -10,7 +10,7 @@ import unittest.mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import acct  # noqa: E402
+from accounts import acct  # noqa: E402
 
 SID = "0123456789abcdef0123456789abcdef"
 SID2 = "fedcba9876543210fedcba9876543210"
@@ -104,7 +104,7 @@ class Store(unittest.TestCase):
                 acct.put_rewards(SID, bad)
 
     def test_fresh_record_lives_as_long_as_the_sid_cookie(self):
-        import serve
+        from http_server import serve
         self.assertIn("Max-Age=%d;" % acct.SID_MAX_AGE, serve.new_sid("")[1])   # one lifetime, not two drifting numbers
         k = self.key(acct.mint(SID))
         for key in (k, "acct:sid:" + SID):

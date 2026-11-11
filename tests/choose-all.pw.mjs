@@ -34,7 +34,7 @@ const FILE3 = { v: 1, problems: [{ code: "CSCI26_U03", type: "mc", pick: "all", 
   choices: [{ id: "a", md: "Good base case" }, { id: "b", md: "Good inductive step" }], correct: [], miss: "QUACK. U03 miss",
   wrong: ["a", "b"].map(c => ({ choice: c, error: "misread", hint: `QUACK. U03 ${c}` })) }] };
 
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let fails = 0;

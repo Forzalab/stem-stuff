@@ -32,7 +32,7 @@ from collections import Counter
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "server"))
-import copy_gate  # noqa: E402
+from cluck_reply_checks import copy_gate  # noqa: E402
 
 MANIFEST = os.path.join(ROOT, "views", "allow", "sources.json")
 OUT_DIR = os.path.join(ROOT, "views", "allow")

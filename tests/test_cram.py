@@ -14,7 +14,7 @@ import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TODAY", "2026-11-04")   # v:1 fixture banks load (the runners pin it too)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 PT = serve.PT
 IN = datetime.datetime(2026, 11, 6, 8, 0, tzinfo=PT)
@@ -109,7 +109,8 @@ class Cram(unittest.TestCase):
             self.assertNotIn(lit, blob, "an exam given must not be in the repo: " + lit)
 
     def test_diagram_groups_are_wired_and_pass_the_production_gate(self):
-        import views_gate, livefig
+        from cluck_reply_checks import views_gate
+        from cluck_reply_checks import livefig
         d = serve.cram_data()
         used = {g for it in d["items"].values() for g in it.get("diagrams", [])}
         self.assertEqual(used, set(d["diagrams"]))

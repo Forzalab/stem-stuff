@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 
 def item(code, title, md):
@@ -59,8 +59,8 @@ class FigSpec(unittest.TestCase):
 
     def heat_parts(self):
         """(ctx, program, parsed Steps props) of the worked example, on a question that gives the ice's start (-10 C)"""
-        import oui
-        import views_gate
+        from cluck_reply_checks import oui
+        from cluck_reply_checks import views_gate
         ctx = serve.livefig.context("PHYS_YNJ", "A filament radiates into ice at -10 C. How long (in s) until it is steam at 120 C?", "", [999.0],
                                     subject="physics.mechanics", spec=serve.fig_spec("PHYS_YNJ"))
         prog = serve.HEAT_EXAMPLE
@@ -69,7 +69,7 @@ class FigSpec(unittest.TestCase):
         return ctx, prog, steps
 
     def test_heat_example_is_a_stepper_that_passes_the_gate(self):
-        import views_gate
+        from cluck_reply_checks import views_gate
         ctx, prog, steps = self.heat_parts()
         self.assertEqual(views_gate.gate(prog, ctx), (prog, ["ok"]))
         self.assertEqual(steps["fig"]["typeName"], "Graph", "a stepper needs its figure (steps-nofig)")
@@ -104,7 +104,7 @@ class FigSpec(unittest.TestCase):
         self.assertNotRegex(str(rows), r"\d", "rows are symbolic, never the student's numbers")
 
     def test_heat_chunk_equal_to_the_key_is_dropped_as_a_leak(self):
-        import views_gate
+        from cluck_reply_checks import views_gate
         _, prog, _ = self.heat_parts()
         ctx = serve.livefig.context("PHYS_YNJ", "A filament radiates into ice at -10 C. How long until it is steam at 120 C?", "", [375.0],
                                     subject="physics.mechanics", spec="heat")

@@ -13,8 +13,8 @@ import paths
 sys.path.insert(0, paths.SERVER_DIR)
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import livefig  # noqa: E402
-import serve  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from http_server import serve  # noqa: E402
 
 FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "livefig.json")
 with open(FIXTURE, encoding="utf-8") as f:
@@ -397,7 +397,7 @@ class Contact(unittest.TestCase):
 class Bundle(unittest.TestCase):
     def test_vercel_function_carries_the_gate(self):
         inc = paths.bundle()
-        self.assertIn("server/livefig.py", inc)
+        self.assertIn("server/cluck_reply_checks/livefig.py", inc)
         with open(os.path.join(paths.REPO, "vercel.json"), encoding="utf-8") as f:
             raw = json.load(f)["functions"]["api/index.py"]["includeFiles"]
         self.assertLessEqual(len(raw), 256)   # Vercel rejects the deploy above 256 chars (ship run 107)

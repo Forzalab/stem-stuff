@@ -111,7 +111,7 @@ fi
 
 cd "$DIR"
 stop_old
-nohup python3 server/serve.py "$PORT" ${PROBLEMS:+"$PROBLEMS"} > host.log 2>&1 &
+nohup python3 server/http_server/serve.py "$PORT" ${PROBLEMS:+"$PROBLEMS"} > host.log 2>&1 &
 echo $! > .host.pid
 for _ in $(seq 30); do port_busy && break; sleep 0.1; done
 if kill -0 "$(cat .host.pid)" 2>/dev/null && port_busy; then

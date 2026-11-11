@@ -52,8 +52,8 @@ class Registry(unittest.TestCase):
             self.skipTest("engine/ not importable")
         self.assertEqual(gv.problems(REG, served), [])
         bad = gv.problems(REG, served - {"graph.mst"} | {"graph.new"})
-        self.assertIn("tool graph.mst: ships in the registry but server/engine/ has no such tool", bad)
-        self.assertIn("tool graph.new: server/engine/ serves it but the registry does not list it", bad)
+        self.assertIn("tool graph.mst: ships in the registry but server/math_engine/ has no such tool", bad)
+        self.assertIn("tool graph.new: server/math_engine/ serves it but the registry does not list it", bad)
 
     def test_banned_props(self):
         for name in ("color", "size", "icon", "style"):
@@ -221,8 +221,8 @@ class Slots(unittest.TestCase):
 
     def test_id_regex(self):
         sys.path.insert(0, paths.SERVER_DIR)
-        import aiw
-        import oui
+        from cluck_reply_checks import aiw
+        from cluck_reply_checks import oui
         rx = re.compile(self.SLOT["id"])
         self.assertEqual(self.SLOT["id"], "^[a-z][a-z0-9_]{0,31}$")
         for ok in ("a", "title", "c_two", "q1", "a" * 32):
@@ -241,8 +241,8 @@ class Slots(unittest.TestCase):
 
     def test_gate_takes_a_slot_where_a_string_is_allowed(self):
         sys.path.insert(0, paths.SERVER_DIR)
-        import aiw
-        import oui
+        from cluck_reply_checks import aiw
+        from cluck_reply_checks import oui
         with open(os.path.join(ROOT, "views", "library.json")) as f:
             cat = oui.compile_schema(json.load(f)["schema"])
         r = oui.parse('root = View([hd, s])\nhd = Head("$t.title", "$t.sub")\ns = Hints(["$t.h1", "$t.a_long_hint_slot_id"])', cat, "View")

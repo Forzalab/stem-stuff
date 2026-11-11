@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import copy_gate as cg  # noqa: E402
+from cluck_reply_checks import copy_gate as cg  # noqa: E402
 
 GRADE3 = {  # FK ~2.9
     "title": "When you push a heavy box across the floor, it slows down and then it stops.",

@@ -67,11 +67,11 @@ test("SIGTERM to run-all.sh leaves no serve.py behind (main server + the spec's 
   // stub for every real spec name (its schedule check wants them), a serve.py that only listens, and a "mock" spec that spawns one and sleeps
   const { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, readdirSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
-  const sb = mkdtempSync(join(tmpdir(), "runall-orphan-")); mkdirSync(join(sb, "tests")); mkdirSync(join(sb, "server"));
+  const sb = mkdtempSync(join(tmpdir(), "runall-orphan-")); mkdirSync(join(sb, "tests")); mkdirSync(join(sb, "server", "http_server"), { recursive: true });
   copyFileSync(join(root, "tests/run-all.sh"), join(sb, "tests/run-all.sh"));
   for (const f of readdirSync(join(root, "tests")).filter(f => f.endsWith(".pw.mjs"))) writeFileSync(join(sb, "tests", f), "");
-  writeFileSync(join(sb, "server", "serve.py"), "import socket, sys, time\ns = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('127.0.0.1', int(sys.argv[1]))); s.listen(); time.sleep(600)\n");
-  writeFileSync(join(sb, "tests/mock.pw.mjs"), 'import { spawn } from "node:child_process"; spawn("python3", ["server/serve.py", process.argv[2]], { stdio: "ignore" }); await new Promise(() => {});\n');
+  writeFileSync(join(sb, "server", "http_server", "serve.py"), "import socket, sys, time\ns = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('127.0.0.1', int(sys.argv[1]))); s.listen(); time.sleep(600)\n");
+  writeFileSync(join(sb, "tests/mock.pw.mjs"), 'import { spawn } from "node:child_process"; spawn("python3", ["server/http_server/serve.py", process.argv[2]], { stdio: "ignore" }); await new Promise(() => {});\n');
   const ra = spawn("bash", ["tests/run-all.sh"], { cwd: sb, env: { ...process.env, SPECS: "mock" }, stdio: "ignore" });
   const seen = new Set();
   try {

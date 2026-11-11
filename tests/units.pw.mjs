@@ -29,7 +29,7 @@ writeFileSync(join(BANKS, "BANK_UN1.json"), JSON.stringify({ v: 1, problems: [
   { code: "PHYS_U04", type: "multi", body: [{ type: "text", md: "PHYS_U04: two boxes." }], saccharine: sac("PHYS_U04"),
     parts: [{ type: "num", answer: "4", unit: "kg·m^2/s" }, { type: "num", answer: "5", unit: "" }] },
   num("PHYS_U05", "1.5", "10^4 kg·m^2/s")] }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

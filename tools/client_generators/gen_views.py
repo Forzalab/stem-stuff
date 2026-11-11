@@ -3,7 +3,7 @@ Writes: views/library.json (LibrarySpec of the components that ship: what views.
 views/prompt/all.md + views/prompt/<recipe>.md (the view-writing prompt, full and per recipe subset), views/checkers.json
 (gate steps, per-component checker, marks, caps) and the block between the views markers in SCHEMA.md (tables + the
 <!-- schema: views --> JSON Schema for an item's views[]).
-Fails (and --check fails) on: a broken ref; a shipping engine tool server/engine/ does not serve, or one it serves the registry lacks;
+Fails (and --check fails) on: a broken ref; a shipping engine tool server/math_engine/ does not serve, or one it serves the registry lacks;
 a banned prop name (look props, F3); answer/key anywhere but Predict.answer, which must be a required key reference (F5); a string prop with no maxLength or a list with no maxItems (F2, F7).
 usage: python3 tools/client_generators/gen_views.py [--check]   (--check: write nothing, exit 1 if any output is stale)"""
 import json
@@ -36,11 +36,11 @@ def shipped(reg):
 
 
 def engine_tools():
-    """Tool names server/engine/ serves (P0.3), or None when the package is not importable."""
+    """Tool names server/math_engine/ serves (P0.3), or None when the package is not importable."""
     sys.path.insert(0, ROOT)
     sys.path.insert(0, os.path.join(ROOT, "server"))
     try:
-        import engine
+        import math_engine as engine
     except ImportError:
         return None
     return {t["name"] for t in engine.spec()}
@@ -68,8 +68,8 @@ def problems(reg, served=None):
     out, comps, all_tools = [], reg["components"], tools(reg)
     if served is not None:
         live = set(tools(reg, live_only=True))
-        out += [f"tool {t}: ships in the registry but server/engine/ has no such tool" for t in sorted(live - served)]
-        out += [f"tool {t}: server/engine/ serves it but the registry does not list it" for t in sorted(served - set(all_tools))]
+        out += [f"tool {t}: ships in the registry but server/math_engine/ has no such tool" for t in sorted(live - served)]
+        out += [f"tool {t}: server/math_engine/ serves it but the registry does not list it" for t in sorted(served - set(all_tools))]
     ok = set(shipped(reg))
     for name in [reg["root"], *reg["base"]]:
         if name not in ok:

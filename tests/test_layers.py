@@ -9,8 +9,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import livefig  # noqa: E402
-import views_gate  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from cluck_reply_checks import views_gate  # noqa: E402
 
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "livefig.json"), encoding="utf-8") as f:
     FIX = json.load(f)

@@ -15,7 +15,7 @@
 //          filled text inherits; the empty box itself is drawn smaller).
 // usage: node tools/audits/measure_slots.mjs <view.oui> --out <dir> [--width 390] [--base <url>]
 //   measure(program, {css}) also takes extra CSS for the page (tests use it to pin a box to a fixed width).
-//   <view.oui> may also be "-" (stdin). No --base: starts python3 server/serve.py on a free port and stops it after.
+//   <view.oui> may also be "-" (stdin). No --base: starts python3 server/http_server/serve.py on a free port and stops it after.
 import { createRequire } from "node:module";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -44,7 +44,7 @@ const freePort = () => new Promise((ok, no) => {
 });
 async function startServer() {
   const port = await freePort();
-  const proc = spawn("python3", ["server/serve.py", String(port)], { cwd: ROOT, stdio: "ignore" });
+  const proc = spawn("python3", ["server/http_server/serve.py", String(port)], { cwd: ROOT, stdio: "ignore" });
   const base = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try { const r = await fetch(`${base}/views.js`); if (r.ok) return { base, proc }; } catch { /* not up yet */ }

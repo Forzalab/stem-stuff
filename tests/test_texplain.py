@@ -12,7 +12,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 from sympy.parsing.sympy_parser import parse_expr, auto_number  # noqa: E402
 
 JS = r"""

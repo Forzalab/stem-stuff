@@ -15,7 +15,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "server"))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "server"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 HEDGES = ("great question", "good question", "it might be", "it may be", "generally", "typically", "it's worth noting", "keep in mind",
           "i hope this helps", "in summary", "to summarize", "it depends", "arguably")

@@ -22,7 +22,7 @@ const LAD = num("PHYS_LW1", { repair: { steps: [
   { id: "answer", label: "Final answer", kind: "num", ok: "4", tol: 0.01 }] } });
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_P2X.json"), JSON.stringify({ v: 1, problems: [LAD, num("PHYS_LW2"), num("PHYS_LW3", { repair: LAD.repair })] }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P2X", STEM_FRONT_TITLE: "Exam 2",
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P2X", STEM_FRONT_TITLE: "Exam 2",
   STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 let failures = 0;

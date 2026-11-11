@@ -18,7 +18,7 @@ sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset (serve.today)
 import incident as I  # noqa: E402
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 TR = "4bf92f3577b34da6a3ce929d0e0e4736"
 OTHER = "0" * 31 + "1"

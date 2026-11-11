@@ -54,7 +54,7 @@ test("classify: code files are NOT docs-only (INTENT: '.txt' is not docs)", () =
     "views/allow/common-en.txt",     // views/allow/common-en.txt:1 — answer allow-list, runtime
     "views/allow/format-stop.txt",   // answer allow-list
     "vendor/fonts/OFL.txt",          // vendor/fonts/OFL.txt:1 — ships with the fonts
-    "serve.py",                      // server
+    "server/http_server/serve.py",                      // server
     "app.js",                        // client
     ".github/workflows/ship.yml",    // CI
   ];
@@ -173,7 +173,7 @@ test("decideShip: a selected/fast green run is never enough to ship", () => {
 test("decideShip: the exact sha with a full green run ships, even with a non-empty diff", () => {
   // INTENT: a literal-but-wrong port that forgets the exact-sha shortcut (always requires an
   // empty diff) would refuse this; M1 says the exact sha's own full green run is enough.
-  const r = decideShip({ candidate: "abc1234", green: { sha: "abc1234", kind: "full" }, changedFiles: ["app.js", "serve.py"] });
+  const r = decideShip({ candidate: "abc1234", green: { sha: "abc1234", kind: "full" }, changedFiles: ["app.js", "server/http_server/serve.py"] });
   assert.equal(r.ok, true, "M1: exact sha already has a full green run");
 });
 

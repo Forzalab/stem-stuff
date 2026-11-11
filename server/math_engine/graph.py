@@ -2,7 +2,7 @@
 directed). trace() returns the "walk" shape of brain topics/openui-graph-plan-2026-10-18.md §4.1: one full snapshot per stage,
 closed state enums, edge keys "from-to" as written in the figure. Ties are broken by node order in the figure and reported in
 "ties", so an author can reject an item whose answer hangs on a tie. networkx loads on first use (cold start, render-v2 vet)."""
-from engine import EngineError, tool
+from math_engine import EngineError, tool
 
 SYM = {"type": "string", "maxLength": 12}
 NUM = {"type": "number"}

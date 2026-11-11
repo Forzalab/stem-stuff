@@ -62,7 +62,7 @@ test("DOCS_EXTS is {'.md'} and isCodeFile is its complement", () => {
   for (const ext of DOCS_EXTS) {
     assert.equal(isCodeFile(`README${ext}`), false, `README${ext} is docs, not code`);
   }
-  for (const f of ["server/serve.py", "app.js", "requirements.txt", ".github/workflows/tests.yml"]) {
+  for (const f of ["server/http_server/serve.py", "app.js", "requirements.txt", ".github/workflows/tests.yml"]) {
     assert.equal(isCodeFile(f), true, `${f} is CODE (everything not .md)`);
   }
 });
@@ -74,7 +74,7 @@ test("areaOf maps each of the 6 areas (loop over all members)", () => {
     ci: [".github/workflows/tests.yml", "vercel.json", ".vercelignore", "deploy.sh"],
     tools: ["tools/operations/ci-gate.mjs", "tools/operations/batch.sh", "tools/bank_tools/slip_coverage.py"],
     tests: ["tests/ci-select.test.mjs", "tests/test_ci_image.py"],
-    server: ["server/serve.py", "server/engine/__init__.py", "api/index.py"],
+    server: ["server/http_server/serve.py", "server/math_engine/__init__.py", "api/index.py"],
     client: ["app.js", "app.css", "index.html", "views/views.js", "vendor/marked.min.js", "requirements.txt"],
   };
   const seen = new Set();
@@ -98,7 +98,7 @@ test("BIG: 7 code files -> full (>=7 is inclusive)", () => {
 });
 
 test("BIG: >=3 areas -> full", () => {
-  const cross = ["README.md", "server/serve.py", "app.js"]; // docs + server + client
+  const cross = ["README.md", "server/http_server/serve.py", "app.js"]; // docs + server + client
   assert.equal(BIG_AREAS, 3, "SOURCE M4: >=3 areas");
   assert.equal(isBig(cross), true, "3 distinct areas (docs, server, client) is BIG");
   assert.equal(decideSelection({ files: cross, affectedCounts: {}, totalUnits: TOTAL }).kind, "full");
@@ -128,16 +128,16 @@ test("HUB boundary INTENT #1: >= at exactly 90%", () => {
   assert.equal(isHub(89, 100), false, "below 90% is not a hub");
 });
 
-test("HUB: server/serve.py is a real hub (affected >= 90% of all units)", () => {
-  // SOURCE C1: `--affected server/serve.py` reaches nearly the whole suite. Assert the RELATION, not the
-  // number — server/serve.py's exact count drifts as specs are added, but it must stay >= 90% (a hub).
-  const serve = affectedUnits("server/serve.py");
+test("HUB: server/http_server/serve.py is a real hub (affected >= 90% of all units)", () => {
+  // SOURCE C1: `--affected server/http_server/serve.py` reaches nearly the whole suite. Assert the RELATION, not the
+  // number — server/http_server/serve.py's exact count drifts as specs are added, but it must stay >= 90% (a hub).
+  const serve = affectedUnits("server/http_server/serve.py");
   assert.ok(serve.length >= HUB_FRACTION * TOTAL,
-    `server/serve.py affects ${serve.length}/${TOTAL}, want >= 90%`);
-  assert.ok(serve.includes("unittest") && serve.includes("npm"), "server/serve.py reaches both logic units");
+    `server/http_server/serve.py affects ${serve.length}/${TOTAL}, want >= 90%`);
+  assert.ok(serve.includes("unittest") && serve.includes("npm"), "server/http_server/serve.py reaches both logic units");
   assert.equal(isHub(serve.length, TOTAL), true, "isHub must agree the count is a hub");
-  const d = decideSelection({ files: ["server/serve.py"], affectedCounts: { "server/serve.py": serve.length }, totalUnits: TOTAL });
-  assert.equal(d.kind, "full", `a server/serve.py PR must be full, got ${d.kind}`);
+  const d = decideSelection({ files: ["server/http_server/serve.py"], affectedCounts: { "server/http_server/serve.py": serve.length }, totalUnits: TOTAL });
+  assert.equal(d.kind, "full", `a server/http_server/serve.py PR must be full, got ${d.kind}`);
 });
 
 test("HUB is per-file, not the union (INTENT: no summing counts)", () => {
@@ -209,8 +209,8 @@ test("zero-.pw: a logic-only PR is affected with no block work (skip_block)", ()
 });
 
 // --- the CLI (no git: --file injects the diff; --total injects the unit count) ----------
-test("CLI: server/serve.py (hub) -> full, app.css -> affected, README.md -> docs", () => {
-  for (const [file, kind] of [["server/serve.py", "full"], ["app.css", "affected"], ["README.md", "docs"]]) {
+test("CLI: server/http_server/serve.py (hub) -> full, app.css -> affected, README.md -> docs", () => {
+  for (const [file, kind] of [["server/http_server/serve.py", "full"], ["app.css", "affected"], ["README.md", "docs"]]) {
     const r = cli(["--total", String(TOTAL), "--file", file]);
     assert.equal(r.status, 0, `CLI ${file}: exit 0; stderr: ${r.stderr}`);
     assert.match(r.stdout, new RegExp(`^${kind}\\b`), `CLI ${file} must print "${kind} ...", got: ${r.stdout}`);

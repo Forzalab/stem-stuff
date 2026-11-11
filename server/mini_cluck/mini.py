@@ -14,11 +14,11 @@ import secrets
 import sys
 import urllib.request
 
-import livefig
-import views_gate
+from cluck_reply_checks import livefig
+from cluck_reply_checks import views_gate
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root (this file lives in server/)
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # the repo root (this file lives in server/<package>/)
+DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 with open(os.path.join(DATA, "prompts", "mini-cluck.txt"), encoding="utf-8") as _f:
     PROMPT = _f.read()
 MINI_MODEL = os.environ.get("MINI_MODEL", "claude-sonnet-5-5")   # TUNABLE: the Oct 26 bench (TONY-DECISIONS #17b) picks it
@@ -37,7 +37,7 @@ def _srv():
     main = sys.modules.get("__main__")
     if os.path.basename(getattr(main, "__file__", "") or "") == "serve.py":
         return main
-    import serve
+    from http_server import serve
     return serve
 
 

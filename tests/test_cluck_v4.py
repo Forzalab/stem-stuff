@@ -20,7 +20,7 @@ sys.path.insert(0, paths.SERVER_DIR)
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass (its own tests: tests/test_subject_pass.py) would spend one more mocked call per reply
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1263,7 +1263,7 @@ class Visuals(unittest.TestCase):
         self.assertNotIn(serve.V4_VIEWS, serve._v4_claude_system(dict(v4, fig=None))[0]["text"], "no figure context: no figure how-to at all")
 
     def test_examples_pass_the_gate(self):
-        import views_gate
+        from cluck_reply_checks import views_gate
         ex = serve.V4_VIEWS.split("Examples:\n")[1].split("\nNumbers in a view")[0]
         progs = ["root" + x for x in ex.split("root")[1:]]
         self.assertEqual(len(progs), 5, "Tug, Tug battery, Flip, Table, Steps")
@@ -1321,7 +1321,7 @@ class Visuals(unittest.TestCase):
         # Tony (locked for #332): after a WRONG answer (REVEAL no) a view never draws the answer's numbers; after a right / solved one
         # (REVEAL yes) it may. The gate itself: the same Table, P1's answer 13.0 in it, dropped on the wrong pick, kept on the solved turn.
         # An intermediate value the KEY shows (52.0, 4.0) is open either way.
-        import views_gate
+        from cluck_reply_checks import views_gate
         prog = 'root = View([t])\nt = Table(["work", "time", "power"], [["52.0 J", "4.0 s", "13.0 W"]])'
         out, log = views_gate.gate(prog, serve.fig_ctx(P1, "a"))
         self.assertIsNone(out)
@@ -1348,7 +1348,7 @@ class Visuals(unittest.TestCase):
 
     def test_stepper_prompt_carries_a_figure(self):
         # W340 (Tony: a real figure per step): the rule says a Steps MUST carry a figure that changes per step, and the example shows one
-        import views_gate
+        from cluck_reply_checks import views_gate
         self.assertNotIn("Steps(null", serve.V4_VIEWS)
         self.assertIn(serve.V4_STEPS_RULE, serve.V4_VIEWS)
         self.assertIn('s = Steps(g, [s1, s2], null, ["i", "s"])\ng = Graph(', serve.V4_VIEWS)

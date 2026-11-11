@@ -22,7 +22,7 @@ const txt = md => [{ type: "text", md }];
 const PROBS = [1, 2, 3].map(n => ({ code: `CALC1_T45M${n}`, title: `T45 ${n}`, type: "mc", shuffle: false, body: txt(`Question ${n}: pick one.`), correct: "a",
   choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })) }));
 writeFileSync(join(banks, "BANK_T45.json"), JSON.stringify({ v: 1, problems: PROBS }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

@@ -67,7 +67,7 @@ class StatusLight(unittest.TestCase):
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
         cls.base = f"http://127.0.0.1:{port}"
-        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(port), cls.bank],
+        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "http_server", "serve.py"), str(port), cls.bank],
                                     env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:

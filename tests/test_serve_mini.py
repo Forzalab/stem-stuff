@@ -17,8 +17,8 @@ sys.path.insert(0, paths.SERVER_DIR)
 sys.argv = [sys.argv[0]]
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))   # never the repo's tries.json
 os.environ.setdefault("STEM_TODAY", "2026-10-23")   # pre-sunset: the v:1 fixture bank loads
-import mini  # noqa: E402
-import serve  # noqa: E402
+from mini_cluck import mini  # noqa: E402
+from http_server import serve  # noqa: E402
 
 FIX = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "tests", "fixtures", "repair-p2x.json")))["problems"]}
 SOLUTION = "Work: divide 8 by 6 to get the ratio, so the answer is 1.333 (private worked solution)."

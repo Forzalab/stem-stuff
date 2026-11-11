@@ -2,7 +2,7 @@
 // The server lives in server/, its data in server/data/.
 
 export const ROOT = ".";
-export const SERVER = ["server/*.py", "server/engine/", "api/"];
+export const SERVER = ["server/*/*.py", "api/"];
 export const DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"];
 export const CLIENT = [
   "*.js", "*.css", "*.mjs", "index.html", "calc.html", "privacy.html",

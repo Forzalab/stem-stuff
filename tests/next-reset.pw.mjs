@@ -29,7 +29,7 @@ const pa = n => ({ code: `CALC1_T4P${n}`, title: `T41 pick all ${n}`, type: "mc"
 const PROBS = [mc(1), num(1), pa(1), mc(2), num(2), pa(2), mc(3), num(3)];
 const KEY = new Map(PROBS.map(p => [p.code, p]));
 writeFileSync(join(banks, "BANK_T41.json"), JSON.stringify({ v: 1, problems: PROBS }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

@@ -12,8 +12,8 @@ os.environ.setdefault("STEM_TODAY", "2026-10-23")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import expr  # noqa: E402
-import serve  # noqa: E402
+from answer_grading import expr  # noqa: E402
+from http_server import serve  # noqa: E402
 
 GOLD = "Sqrt(7^2+8.5^2+1.5^2)*30*(2*Pi)/60"                         # the golden example's SHAPE with invented numbers
 GOLD_FORM = "(2*3.0^2+3*3.0^2+5*3.0^2+6*3.0^2)*(30*2*pi/60)"            # invented numbers (no bank item): I (point masses, axis y) times alpha
@@ -358,7 +358,7 @@ class Glue(unittest.TestCase):
         with open(os.path.join(paths.REPO, "vercel.json")) as f:
             rw = json.load(f)["rewrites"]
         self.assertIn({"source": "/diagnose", "destination": "/api/index?path=/diagnose"}, rw)
-        self.assertIn("server/expr.py", paths.bundle())   # serve.py imports it on Vercel too
+        self.assertIn("server/answer_grading/expr.py", paths.bundle())   # serve.py imports it on Vercel too
 
 
 class Privacy(unittest.TestCase):

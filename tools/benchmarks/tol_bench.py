@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "server"))
-import serve  # noqa: E402
-import slips  # noqa: E402
+from http_server import serve  # noqa: E402
+from answer_grading import slips  # noqa: E402
 
 REL = (1e-4, 1e-3, 5e-3, 0.01, 0.015, 0.019, 0.021, 0.03, 0.05, 0.1, 0.5)
 

@@ -21,7 +21,7 @@ def bundle():
 
 
 ROOT = "."
-SERVER = ["server/*.py", "server/engine/", "api/"]
+SERVER = ["server/*/*.py", "api/"]
 DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"]
 CLIENT = [
     "*.js", "*.css", "*.mjs", "index.html", "calc.html", "privacy.html",

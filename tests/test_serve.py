@@ -26,7 +26,7 @@ TMP = tempfile.mkdtemp(prefix="stem-tries-")
 os.environ["STEM_TRIES"] = os.path.join(TMP, "tries.json")   # never write the real tries.json (the Http server inherits it)
 os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset: v:1 fixture banks keep loading (serve.today); the Http server inherits it
 os.environ.setdefault("CLUCK_SUBJECT", "0")   # the subject pass has its own tests (tests/test_subject_pass.py)
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "server", "data", "problems.json")))["problems"]}
 
@@ -801,7 +801,7 @@ class Http(unittest.TestCase):
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             cls.port = s.getsockname()[1]
-        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(cls.port)],
+        cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "http_server", "serve.py"), str(cls.port)],
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.base = f"http://127.0.0.1:{cls.port}/"
         for _ in range(50):
@@ -1527,7 +1527,7 @@ class BankVersions(unittest.TestCase):
 
     def test_cutoff_matches_slips(self):
         import importlib.util                                         # the root slips.py by path (tools/bank_tools/slips.py has the same name)
-        spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "server", "slips.py"))
+        spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "server", "answer_grading", "slips.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         self.assertEqual(serve.CUTOFF, mod.CUTOFF)
@@ -2530,7 +2530,7 @@ class Guard(unittest.TestCase):
         return ask, kill, out.getvalue()
 
     def spawn(self, port, **kw):
-        p = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(port)], stdin=subprocess.DEVNULL, **kw)
+        p = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "http_server", "serve.py"), str(port)], stdin=subprocess.DEVNULL, **kw)
         self.procs.append(p)
         return p
 
@@ -2642,7 +2642,7 @@ class Guard(unittest.TestCase):
             "p.wait()\n")
         master, slave = pty.openpty()
         self.addCleanup(os.close, master)
-        leader = subprocess.Popen([sys.executable, "-c", leader_src, os.path.join(ROOT, "server", "serve.py"), str(b), pidfile],
+        leader = subprocess.Popen([sys.executable, "-c", leader_src, os.path.join(ROOT, "server", "http_server", "serve.py"), str(b), pidfile],
                                   stdin=slave, stdout=slave, stderr=slave, start_new_session=True)
         os.close(slave)
 
@@ -2688,7 +2688,7 @@ class Guard(unittest.TestCase):
         def own_tty():
             os.setsid()
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)
-        pb = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(b)],
+        pb = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "http_server", "serve.py"), str(b)],
                               stdin=slave, stdout=slave, stderr=slave, preexec_fn=own_tty)
         self.procs.append(pb)                                                    # tearDown terminates it
         os.close(slave)

@@ -26,8 +26,8 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "tools", "benchmarks"))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 sys.path.insert(0, os.path.join(ROOT, "server"))
-import livefig  # noqa: E402
-import serve  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from http_server import serve  # noqa: E402
 import bench_claude  # noqa: E402
 
 OPUS, HAIKU = "claude-opus-5-5", "claude-haiku-5-5"

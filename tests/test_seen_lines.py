@@ -29,11 +29,11 @@ def titles():
 class SeenLinesAiw(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "node not on PATH")
     def test_no_filled_line_is_blocked(self):
-        if not os.path.exists(os.path.join(ROOT, "server", "aiw.py")):
+        if not os.path.exists(os.path.join(ROOT, "server", "cluck_reply_checks", "aiw.py")):
             self.skipTest("aiw.py is absent on this branch (it lands with PR #189 / p41b); run it by hand: git show origin/ccr-eaf1a3c3-xs301g-p41b:aiw.py")
         sys.path.insert(0, paths.SERVER_DIR)
         try:
-            from aiw import lint_view_strings
+            from cluck_reply_checks.aiw import lint_view_strings
         finally:
             sys.path.remove(paths.SERVER_DIR)
         filled = []

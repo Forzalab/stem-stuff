@@ -123,16 +123,20 @@ const pyNames = (list) =>
   list.split(",").map((s) => s.trim().replace(/^\(|\)$/g, "").replace(/\s+as\s+\w+$/, ""))
     .filter((s) => /^[A-Za-z_]\w*$/.test(s));
 function pyEdge(from, mod) {
-  for (const rel of [`${mod.replace(/\./g, "/")}.py`, `${mod.replace(/\./g, "/")}/__init__.py`]) {
-    const to = files.has(rel) ? rel : path.posix.normalize(path.posix.join(path.posix.dirname(from), rel));
-    if (files.has(to)) edge(from, to);
+  // absolute imports: the repo root, then server/ (every entry point puts it on sys.path), then the importer's own folder
+  for (const base of ["", "server", path.posix.dirname(from)]) {
+    for (const rel of [`${mod.replace(/\./g, "/")}.py`, `${mod.replace(/\./g, "/")}/__init__.py`]) {
+      const to = path.posix.normalize(path.posix.join(base, rel));
+      if (files.has(to)) edge(from, to);
+    }
   }
 }
 for (const f of files) {
   if (/\.py$/.test(f)) {
     if (f.startsWith("vendor/") || f.startsWith("tests/node_modules/")) continue;
     const text = fs.readFileSync(path.join(ROOT, f), "utf8");
-    for (const m of text.matchAll(PY_FROM_RE)) [m[1], ...pyNames(m[2])].forEach((mod) => pyEdge(f, mod));
+    // `from pkg import name` also names pkg.name (a module inside a package), besides the bare name (same-folder import)
+    for (const m of text.matchAll(PY_FROM_RE)) [m[1], ...pyNames(m[2]).map((nm) => `${m[1]}.${nm}`), ...pyNames(m[2])].forEach((mod) => pyEdge(f, mod));
     for (const m of text.matchAll(PY_IMPORT_RE)) pyNames(m[1]).forEach((mod) => pyEdge(f, mod));
     continue;
   }

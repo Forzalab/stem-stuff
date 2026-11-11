@@ -868,6 +868,97 @@
    "pr": "D",
    "ship": "no",
    "bridge": false
+  },
+  {
+   "old": "server/serve.py",
+   "new": "server/http_server/serve.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/acct.py",
+   "new": "server/accounts/acct.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/expr.py",
+   "new": "server/answer_grading/expr.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/slips.py",
+   "new": "server/answer_grading/slips.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/oui.py",
+   "new": "server/cluck_reply_checks/oui.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/views_gate.py",
+   "new": "server/cluck_reply_checks/views_gate.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/copy_gate.py",
+   "new": "server/cluck_reply_checks/copy_gate.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/aiw.py",
+   "new": "server/cluck_reply_checks/aiw.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/aiw_rewrite.py",
+   "new": "server/cluck_reply_checks/aiw_rewrite.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/livefig.py",
+   "new": "server/cluck_reply_checks/livefig.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/mini.py",
+   "new": "server/mini_cluck/mini.py",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/engine/",
+   "new": "server/math_engine/",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
+  },
+  {
+   "old": "server/vendor/avoid-ai-writing/",
+   "new": "server/vendor/avoid_ai_writing/",
+   "pr": "P2",
+   "ship": "yes",
+   "bridge": false
   }
  ]
 }

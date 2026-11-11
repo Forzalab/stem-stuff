@@ -121,7 +121,8 @@ def import_graph(root):
             else:
                 continue
             for mod, level, names in mods:
-                bases = [os.path.normpath(os.path.join(here, *[".."] * (level - 1)))] if level else [root, here]
+                # absolute imports: server/ first (every entry point inserts it at sys.path[0]: api/index.py, tests, tools), then the root, then the file's own dir
+                bases = [os.path.normpath(os.path.join(here, *[".."] * (level - 1)))] if level else [os.path.join(root, "server"), root, here]
                 hit = resolve(root, mod, bases) if mod else None
                 if hit:
                     found.add(hit)

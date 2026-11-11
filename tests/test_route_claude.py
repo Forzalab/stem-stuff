@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 NOTE = {"on_topic": True, "field": "mechanics", "concept": "c", "asked": "a", "need": "n", "assumed": "s", "real": "r", "reproduces": True,
         "gap": serve.GAPS[0], "evidence": "e", "confidence": "low"}
