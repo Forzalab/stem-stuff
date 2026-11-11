@@ -11,7 +11,7 @@
   const pick = a => a[Math.random() * a.length | 0];
   const mk = (tag, cls, html) => { const e = document.createElement(tag); e.className = cls; if (html) e.innerHTML = html; return e; };
   const host = cls => { const e = mk('div', cls + ' rw-skin'); e.setAttribute('aria-hidden', 'true'); return document.body.appendChild(e); };
-  const src = n => (window.RW_ICONS || {})[n.replace(/_color$/, '')] || `rewards/icons/${n}.svg`;
+  const src = n => (window.RW_ICONS || {})[n.replace(/_color$/, '')] || `client/rewards/icons/${n}.svg`;
   const txt = (tag, cls, s) => { const e = mk(tag, cls); e.textContent = s; return e; };
   const mid = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
   const img = (n, cls) => `<img src="${src(n)}" alt="" draggable="false"${cls ? ` class="${cls}"` : ''}>`;

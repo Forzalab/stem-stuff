@@ -33,7 +33,7 @@
   var MISS = "Close call, let's retry next turn!";   // Tony #36
   var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0, shownWon = null, started = {}, fam = null;
 
-  var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
+  var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('client/rewards/icons/' + n + '_color.svg'); };
   var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
   var img = function (n) { return '<img src="' + icon(n) + '" alt="" draggable="false">'; };
   function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, dead: 0, hist: [], paid: {}, missed: {}, orig: {}, won: {}, mt: {}, cv: 2, keep: 1 }; }
