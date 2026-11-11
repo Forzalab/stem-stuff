@@ -152,7 +152,7 @@ def bridge(path):
     return None
 
 
-BUNDLE_DIRS =("", "design", "vendor", "vendor/katex")
+BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
 REPAIR_PATH = re.compile(r"^/repair/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
