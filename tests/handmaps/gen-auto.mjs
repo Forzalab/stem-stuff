@@ -186,5 +186,10 @@ for (const [file, set] of units) {
   rows.push([file, [...set].sort()]);
 }
 rows.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-fs.writeFileSync(OUT, rows.map(([f, u]) => `${f}\t${u.join(" ")}`).join("\n") + (rows.length ? "\n" : ""));
+// Write to a per-process temp file, then rename over OUT: a concurrent reader (run-all.sh
+// --affected, another test in the same npm run) sees the old or the new complete map, never a
+// truncated one. Writing OUT in place (writeFileSync truncates first) made readers see an empty map.
+const tmp = `${OUT}.${process.pid}.tmp`;
+fs.writeFileSync(tmp, rows.map(([f, u]) => `${f}\t${u.join(" ")}`).join("\n") + (rows.length ? "\n" : ""));
+fs.renameSync(tmp, OUT);
 console.log(`auto map: ${rows.length} files -> ${OUT}`);
