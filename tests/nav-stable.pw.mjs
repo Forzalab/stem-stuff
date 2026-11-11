@@ -34,7 +34,7 @@ const longQ = n => ({ code: `CALC1_L0${n}`, type: "mc", correct: "a", shuffle: f
 writeFileSync(join(BANKS, "BANK_NV78.json"), JSON.stringify({ v: 1, problems: [longQ(1), longQ(2)] }));
 writeFileSync(join(BANKS, "BANK_NV34.json"), JSON.stringify({ v: 1, problems: [MC, num("CALC1_M02", "2", "1 + 1")] }));
 
-const { qFresh, qNew, qShow, qPick } = await import("../shuffle.mjs");   // pin the queue's salt so it plays file order (it was the shuffle seed)
+const { qFresh, qNew, qShow, qPick } = await import("../client/pure_logic_modules/shuffle.mjs");   // pin the queue's salt so it plays file order (it was the shuffle seed)
 const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => qFresh(CODES, s).every((c, i) => c === CODES[i]));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }

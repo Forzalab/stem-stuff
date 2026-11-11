@@ -19,7 +19,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8875", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "j5-")), banks = join(tmp, "banks"), shots = process.argv[3] || tmp;
 mkdirSync(banks); mkdirSync(shots, { recursive: true });
-const LINES = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(join(ROOT, "copy/nudge-lines.js"), "utf8"), w); return w.__stemNudgeLines; })();
+const LINES = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(join(ROOT, "client/resources/texts/nudge-lines.js"), "utf8"), w); return w.__stemNudgeLines; })();
 const txt = md => [{ type: "text", md }];
 const PROBS = [1, 2].map(n => ({ code: `CALC1_T95M${n}`, title: `T95 ${n}`, type: "mc", shuffle: false, body: txt(`Question ${n}: pick one.`), correct: "a",
   choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })) }));

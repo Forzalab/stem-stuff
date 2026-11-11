@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const nav = readFileSync(join(ROOT, "nav.js"), "utf8"), app = readFileSync(join(ROOT, "app.js"), "utf8");
+const nav = readFileSync(join(ROOT, "client/answer/navigation/nav.js"), "utf8"), app = readFileSync(join(ROOT, "client/answer/drill_core/app.js"), "utf8");
 const body = (src, head) => { const i = src.indexOf(head); assert.ok(i >= 0, head + " not found"); const j = src.indexOf("\n  }\n", i); return src.slice(i, j); };
 
 test("nav.js go(): every bare return is preceded by a note()", () => {
@@ -24,15 +24,15 @@ test("nav.js: in a bank, Next is not dimmed by a current code that is not in the
   assert.match(nav, /next\.disabled = \(!here && !bank\(\)\) \|\| !pool\(\)\.length;/);
 });
 
-test("app.js: a code the page can't open is said, not dropped (load, fromHash)", () => {
+test("client/answer/drill_core/app.js: a code the page can't open is said, not dropped (load, fromHash)", () => {
   assert.match(app, /async function load\(code\) \{\n  if \(!codes\.isCode\(code\)\) \{ note\(`Quack, can't open \$\{code\}\.`\); return; \}/);
   assert.match(app, /if \(!n\) \{ if \(location\.hash\.length > 1\) note\(`Quack, can't open /);
 });
 
 test("no prefix allowlist copy survives: codes.mjs is the only place (T15)", () => {
-  const sg = readFileSync(join(ROOT, "suggest.mjs"), "utf8"), off = readFileSync(join(ROOT, "offline.js"), "utf8");
+  const sg = readFileSync(join(ROOT, "client/pure_logic_modules/suggest.mjs"), "utf8"), off = readFileSync(join(ROOT, "client/shell/offline.js"), "utf8");
   assert.doesNotMatch(app, /\bCODE_RE\b/);
-  for (const [name, src] of [["app.js", app], ["suggest.mjs", sg], ["offline.js", off]]) {
+  for (const [name, src] of [["client/answer/drill_core/app.js", app], ["client/pure_logic_modules/suggest.mjs", sg], ["client/shell/offline.js", off]]) {
     assert.doesNotMatch(src, /CALC1\|CSCI26|CSCI26\|PHYS|PHYS\|PSY/, name + " has a prefix allowlist literal");
     assert.doesNotMatch(src, /\{3,6\}|\{2,5\}/, name + " writes a length");
   }
