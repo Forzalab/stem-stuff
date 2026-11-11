@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { schema } from "./schemas.mjs";
-import * as C from "../codes.mjs";
+import * as C from "../client/pure_logic_modules/codes.mjs";
 
 const read = f => readFileSync(new URL("../" + f, import.meta.url), "utf8");
 const ok = () => null;                                       // a shapeErr that finds nothing wrong
@@ -185,7 +185,7 @@ test("serve.py: the bank id lengths are LEN.prefix; mode.mjs: its eaten words ar
     assert.ok(line.includes(`{${lo},${hi}}`), `${name} uses {${lo},${hi}}: ${line}`);
   }
   assert.equal(C.PATTERNS.bank, `^BANK_[A-Z0-9]{${lo},${hi}}$`);
-  const m = read("mode.mjs").match(/match\(\/\^#\?\(([A-Z|]+)\)\[/);
+  const m = read("client/pure_logic_modules/mode.mjs").match(/match\(\/\^#\?\(([A-Z|]+)\)\[/);
   assert.ok(m, "mode.mjs modePrefix regex not found");
   const eaten = m[1].split("|");
   assert.deepEqual(eaten.filter(w => !C.RESERVED.includes(w)), [], "mode.mjs eats a word that is not reserved");
@@ -196,18 +196,18 @@ test("serve.py: the bank id lengths are LEN.prefix; mode.mjs: its eaten words ar
 });
 
 test("index.html: app.js (it sets window.stemCodes) is listed before offline.js (it reads it)", () => {
-  const html = read("index.html"), a = html.indexOf('src="app.js"'), o = html.indexOf('src="offline.js"');
+  const html = read("index.html"), a = html.indexOf('src="client/answer/drill_core/app.js"'), o = html.indexOf('src="client/shell/offline.js"');
   assert.ok(a > 0 && o > 0 && a < o);
-  assert.match(read("app.js"), /window\.stemCodes = codes;/);
+  assert.match(read("client/answer/drill_core/app.js"), /window\.stemCodes = codes;/);
 });
 test("sw.js and the bundle know codes.mjs", () => {
-  assert.ok(read("sw.js").includes('"codes.mjs"'));
+  assert.ok(read("sw.js").includes('"client/pure_logic_modules/codes.mjs"'));
 });
 test("only codes.mjs writes a length: no {3,6} / {2,5} in app.js, suggest.mjs, offline.js", () => {
-  for (const f of ["app.js", "suggest.mjs", "offline.js"]) assert.doesNotMatch(read(f), /\{3,6\}|\{2,5\}|\{3,7\}/, f);
+  for (const f of ["client/answer/drill_core/app.js", "client/pure_logic_modules/suggest.mjs", "client/shell/offline.js"]) assert.doesNotMatch(read(f), /\{3,6\}|\{2,5\}|\{3,7\}/, f);
 });
 test("the file name never decides: offline.js ingest reads f.name only to label and to skip non-.json", () => {
-  const off = read("offline.js"), a = off.indexOf("async function ingest"), b = off.indexOf("async function read(", a);
+  const off = read("client/shell/offline.js"), a = off.indexOf("async function ingest"), b = off.indexOf("async function read(", a);
   const uses = off.slice(a, b).split("\n").filter(l => /\.name\b/.test(l));
   assert.ok(uses.length >= 3);
   // allowed: the .json filter, the label fallback, and bookkeeping of which files failed / were kept. Anything else is a decision on the name.
@@ -221,7 +221,7 @@ test("bank versions (SCHEMA.md Version table): bankNotice reads the banner / dro
   assert.deepEqual(C.bankNotice({ code: "BANK_NEW1", problems: [{ code: "PSY_A01" }] }), { banner: "", dropped: "" });   // v >= 20261022: nothing
   for (const b of [null, undefined, { banner: 1, dropped: {} }]) assert.deepEqual(C.bankNotice(b), { banner: "", dropped: "" });
   assert.equal(C.BANNER_CLASS, "entry-msg warn bank-banner");   // the entry line's warn tone (app.css), no new style
-  const app = read("app.js");
+  const app = read("client/answer/drill_core/app.js");
   assert.match(app, /if \(nb\.dropped\) \{ if \(!quiet\) entryMsg\(nb\.dropped, "warn"\); return false; \}/);   // the line, not "not found"
   assert.match(app, /el\.className = codes\.BANNER_CLASS;[^\n]*panel\.prepend\(el\)/);                       // top of #qlist
   assert.match(read("server/http_server/serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);

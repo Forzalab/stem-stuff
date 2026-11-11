@@ -81,14 +81,14 @@ for (const [w, h] of [...SIZES, [1440, 900]]) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   const errs = []; page.on("pageerror", e => errs.push(e.message));
   /* the question card: ~24 px each side on a phone, a 720 px column on desktop */
-  await page.setContent(`<!doctype html><html><head><style>${read("app.css")}${read("vendor/katex/katex.min.css").replace(/url\([^)]*\)/g, "none")}</style>
+  await page.setContent(`<!doctype html><html><head><style>${read("client/answer/drill_core/app.css")}${read("client/vendor/katex/katex.min.css").replace(/url\([^)]*\)/g, "none")}</style>
     <style>body{margin:0;background:#fff}.card{box-sizing:border-box;width:min(720px,100%);margin:0 auto;padding:12px 24px}</style></head>
     <body><div class="card"><div id="c" class="fig"></div><div id="a" class="fig"></div></div></body></html>`);
-  await page.addScriptTag({ content: read("vendor/katex/katex.min.js") });
-  await page.addScriptTag({ content: read("vendor/math.min.js") });
-  await page.addScriptTag({ type: "module", content: read("figcheck.js") });
+  await page.addScriptTag({ content: read("client/vendor/katex/katex.min.js") });
+  await page.addScriptTag({ content: read("client/vendor/math.min.js") });
+  await page.addScriptTag({ type: "module", content: read("client/cluck/figures/figcheck.js") });
   await page.waitForFunction(() => !!window.FigCheck);
-  await page.addScriptTag({ content: read("graph.js") });
+  await page.addScriptTag({ content: read("client/cluck/figures/graph.js") });
   const thrown = await page.evaluate(([c, a]) => [["c", c], ["a", a]].map(([id, g]) => { try { Graph.render(document.getElementById(id), g); return ""; } catch (e) { return id + ": " + e.message; } }).filter(Boolean), [CROSS, AXES]);
   errs.push(...thrown);
   const safe = id => page.evaluate(measure, id).catch(() => ({ wedges: [], labels: [], masses: [], ring: null, W: 0, H: 0 }));
