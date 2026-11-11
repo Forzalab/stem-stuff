@@ -8,8 +8,8 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { schema, validator, bank, repairFaults } from "./schemas.mjs";
-import { FAMILIES } from "../slips.mjs";
-import { isBankId, isBuiltin, isReserved, prefixOf } from "../codes.mjs";
+import { FAMILIES } from "../client/pure_logic_modules/slips.mjs";
+import { isBankId, isBuiltin, isReserved, prefixOf } from "../client/pure_logic_modules/codes.mjs";
 
 // problems.json: the whole bank in one file (SCHEMA.md)
 const validate = validator("problems");

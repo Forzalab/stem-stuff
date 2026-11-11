@@ -8,9 +8,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import vm from "node:vm";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
-const SRC = read("../intent.js");
+const SRC = read("../client/cluck/jev_nudges/intent.js");
 const run = (f, k) => { const w = {}; w.window = w; vm.runInNewContext(read(f), w); return JSON.parse(JSON.stringify(w[k])); };
-const LINES = run("../copy/seen-lines.js", "__stemSeenLines"), NUDGE = run("../copy/nudge-lines.js", "__stemNudgeLines");
+const LINES = run("../client/resources/texts/seen-lines.js", "__stemSeenLines"), NUDGE = run("../client/resources/texts/nudge-lines.js", "__stemNudgeLines");
 const AIW = (() => { const m = { exports: {} }; vm.runInNewContext(read("vendor/aiw/patterns.js"), { module: m, console }); return m.exports; })();
 
 /* a fake browser with a clock the test moves (clock.t ms); sessionStorage is per load, localStorage is the shared `store` */

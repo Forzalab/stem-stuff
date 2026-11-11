@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
-import { qNew, qPick, qShow } from "../shuffle.mjs";
+import { qNew, qPick, qShow } from "../client/pure_logic_modules/shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {

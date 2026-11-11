@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const HERE = dirname(fileURLToPath(import.meta.url));
-const LAB = process.argv[2] ? process.argv[2].replace(/\/$/, "") + "/design/repair-lab.html" : "file://" + join(HERE, "..", "design", "repair-lab.html");
+const LAB = process.argv[2] ? process.argv[2].replace(/\/$/, "") + "/client/labs/repair-lab.html" : "file://" + join(HERE, "..", "client", "labs", "repair-lab.html");
 
 const FIX = Object.fromEntries(JSON.parse(readFileSync(join(HERE, "fixtures", "repair-twin.json"), "utf8")).problems.map(p => [p.code, p]));
 const TEMPLATE = FIX.P3X_PHN, TWIN = FIX.P3X_A98;
