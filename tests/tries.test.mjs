@@ -4,11 +4,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { match as slipMatch, slipSpot, FAMILY_HINT, familyHint } from "../slips.mjs";
+import { match as slipMatch, slipSpot, FAMILY_HINT, familyHint } from "../client/pure_logic_modules/slips.mjs";
 const { evaluate, compile } = mathjs;
 globalThis.math = mathjs;                                 // slips.mjs parses with the global math.js, as in the browser
 
-const src = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const src = readFileSync(new URL("../client/answer/drill_core/app.js", import.meta.url), "utf8");
 const cut = (a, b) => src.slice(src.indexOf(a), src.indexOf(b));
 const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sugar"; const modeOf = () => MODE;
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}

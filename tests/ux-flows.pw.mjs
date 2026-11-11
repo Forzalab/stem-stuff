@@ -228,7 +228,7 @@ flow(43, "offline-sw", async (page, w, ctx) => {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 8000 });
   await opened(page, C.single);
   /* sw.js precaches the shell: wait until everything the page itself loads, plus privacy.html and telemetry.js, is in the cache */
-  const need = await page.evaluate(() => [...new Set([...document.querySelectorAll("script[src], link[href]")].map(e => e.src || e.href).concat(["privacy.html", "telemetry.js", "offline.js", "index.html"].map(p => new URL(p, location.href).href)))]
+  const need = await page.evaluate(() => [...new Set([...document.querySelectorAll("script[src], link[href]")].map(e => e.src || e.href).concat(["privacy.html", "client/shell/telemetry/telemetry.js", "client/shell/offline.js", "index.html"].map(p => new URL(p, location.href).href)))]
     .filter(u => new URL(u).origin === location.origin));
   const missing = () => page.evaluate(async urls => { const out = []; for (const u of urls) if (!(await caches.match(u))) out.push(new URL(u).pathname); return out; }, need);
   let miss = await missing();
@@ -513,7 +513,7 @@ flow(39, "update-bar", async (page, w) => {
   const s2 = serve(copy, port, `upd${w}`);
   try {
     await up(base);
-    const css = join(copy, "app.css"), orig = readFileSync(css, "utf8");
+    const css = join(copy, "client", "answer", "drill_core", "app.css"), orig = readFileSync(css, "utf8");
     await page.goto(base + "/");
     await page.evaluate(() => navigator.serviceWorker.ready);
     if (!(await page.evaluate(() => !!navigator.serviceWorker.controller))) await page.reload();
@@ -525,8 +525,8 @@ flow(39, "update-bar", async (page, w) => {
       if (Date.now() - t0 > 8000) throw new Error(`sw.js app.css fetches never settled: ${n} of ${want} done`);
       const sw = page.context().serviceWorkers().find(x => new URL(x.url()).pathname === "/sw.js");
       if (!sw) continue;
-      n = await sw.evaluate(() => performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname === "/app.css").length);
-      want = 1 + await page.evaluate(() => performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname === "/app.css" && e.workerStart > 0).length);
+      n = await sw.evaluate(() => performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname === "/client/answer/drill_core/app.css").length);
+      want = 1 + await page.evaluate(() => performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname === "/client/answer/drill_core/app.css" && e.workerStart > 0).length);
     }
     writeFileSync(css, orig + `\n/* g2c ${Date.now()} */\n`);
     await page.reload();
@@ -860,7 +860,7 @@ flow(35, "sugar-vs-diet", async (page, w) => {
 flow(36, "old-diet-cookie", async (page, w, ctx) => {
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }]);
   await page.goto(BASE + "/"); await homeReady(page);
-  const sugar = await page.evaluate(async () => (await import("./mode.mjs")).modeOf() === "sugar");
+  const sugar = await page.evaluate(async () => (await import("./client/pure_logic_modules/mode.mjs")).modeOf() === "sugar");
   const ck = Object.fromEntries((await ctx.cookies()).map(c => [c.name, c.value]));
   assert.equal(sugar, true); assert.equal(ck["stem-mode"], undefined); assert.equal(ck["stem-mode-v"], "2");
   return "old stem-mode=diet -> sugar, stem-mode-v=2";

@@ -117,7 +117,7 @@ class Generated(unittest.TestCase):
 
     def test_no_orphan_prompts(self):
         want = {r + ".md" for r in REG["recipes"]} | {"all.md"}
-        self.assertEqual(set(os.listdir(os.path.join(ROOT, "views", "prompt"))), want)
+        self.assertEqual(set(os.listdir(os.path.join(ROOT, "shared", "openui", "prompt"))), want)
 
     def test_library_spec(self):
         lib = gv.library(REG)
@@ -235,7 +235,7 @@ class Slots(unittest.TestCase):
             self.assertFalse(aiw.SLOT_RE.fullmatch("$t." + bad), bad)
         self.assertIsNone(oui.slot_id("see $t.title"))
         self.assertIsNone(oui.slot_id(3))
-        with open(os.path.join(ROOT, "views.js")) as f:
+        with open(os.path.join(ROOT, "client", "cluck", "openui_views", "views.js")) as f:
             js = re.search(r"const SLOT = /\^(.+)\$/;", f.read()).group(1)
         self.assertEqual(js.replace("\\$", "$").replace("\\.", "."), "$t.(" + self.SLOT["id"][1:-1] + ")")
 
@@ -243,7 +243,7 @@ class Slots(unittest.TestCase):
         sys.path.insert(0, paths.SERVER_DIR)
         from cluck_reply_checks import aiw
         from cluck_reply_checks import oui
-        with open(os.path.join(ROOT, "views", "library.json")) as f:
+        with open(os.path.join(ROOT, "shared", "openui", "library.json")) as f:
             cat = oui.compile_schema(json.load(f)["schema"])
         r = oui.parse('root = View([hd, s])\nhd = Head("$t.title", "$t.sub")\ns = Hints(["$t.h1", "$t.a_long_hint_slot_id"])', cat, "View")
         self.assertEqual(r["meta"]["errors"], [])

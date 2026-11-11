@@ -74,7 +74,7 @@ class Shapes(unittest.TestCase):
     """stepper iteration 2 (smoke): poly / rect pass the gate; Step title / hide / say pass, a say holding the answer drops its step"""
     def test_prompt_shape_examples_pass_the_gate(self):
         import json
-        reg = json.load(open(os.path.join(ROOT, "views", "registry.json"), encoding="utf-8"))
+        reg = json.load(open(os.path.join(ROOT, "shared", "openui", "registry.json"), encoding="utf-8"))
         ctx = livefig.context("T2", "A shape.", "", [99.0])
         gp = reg["geo_prompt"]
         for x in gp["examples"]:
