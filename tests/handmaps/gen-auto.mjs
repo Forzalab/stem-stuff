@@ -52,7 +52,7 @@ function testUnits(p) {
 }
 
 // A bare basename that exists in several places goes to the shallowest one(s):
-// the root app.css/app.js/index.html win over test fixtures and labs.
+// the root app.css/app.js/index.html win over test fixtures and labs; on a depth tie a non-tests/ file wins.
 const byBase = new Map();
 for (const f of files) {
   const base = path.posix.basename(f);
@@ -62,7 +62,10 @@ for (const f of files) {
 for (const [base, list] of byBase) {
   if (list.length < 2) continue;
   const depth = Math.min(...list.map((f) => f.split("/").length));
-  byBase.set(base, list.filter((f) => f.split("/").length === depth));
+  const top = list.filter((f) => f.split("/").length === depth);
+  // tie: a non-test file beats a test fixture (after layout B, client/answer/drill_core/app.js ties tests/e2e/fixture/app.js)
+  const real = top.filter((f) => !f.startsWith("tests/"));
+  byBase.set(base, real.length ? real : top);
 }
 
 function resolveRef(token, from) {
