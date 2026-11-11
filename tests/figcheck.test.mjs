@@ -6,7 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import * as F from "../figcheck.js";
+import * as F from "../client/cluck/figures/figcheck.js";
 
 const close = (a, b, eps, msg = "") => assert.ok(Math.abs(a - b) <= eps, `${msg} ${a} vs ${b} (±${eps})`);
 const ids = fs => fs.map(f => f.id);

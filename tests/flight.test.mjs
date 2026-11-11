@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const SRC = readFileSync(new URL("../flight.js", import.meta.url), "utf8");
+const SRC = readFileSync(new URL("../client/shell/telemetry/flight.js", import.meta.url), "utf8");
 const SENTINEL = "Zq7xSENTINELwv";
 
 /* a fake browser: handlers[type] = the listeners flight.js put on document / window; clock = performance.now() */

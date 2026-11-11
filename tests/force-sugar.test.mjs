@@ -1,7 +1,7 @@
 // mode.mjs forceSugarOnce: BANK_CEQ switches a diet browser to sugar once; a later DIET_ sticks; other banks untouched.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { forceSugarOnce, setMode, modeOf } from "../mode.mjs";
+import { forceSugarOnce, setMode, modeOf } from "../client/pure_logic_modules/mode.mjs";
 
 function jar(init = {}, { dead = false } = {}) {
   const kv = new Map(Object.entries(init));

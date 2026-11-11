@@ -17,7 +17,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8899", BASE = `http://127.0.0.1:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "cram-off-")), BANKS = join(TMP, "banks"), CRAM = join(TMP, "cram.json");
 const ON = process.env.CRAM_SPEC_ON === "1";                       // red demo only
-const cram = JSON.parse(readFileSync(join(ROOT, "calc", "cram.json"), "utf8"));
+const cram = JSON.parse(readFileSync(join(ROOT, "client", "calc", "cram.json"), "utf8"));
 cram.enabled = ON;
 writeFileSync(CRAM, JSON.stringify(cram));
 const num = (code, n) => ({ code, type: "num", answer: String(n + 2), body: [{ type: "text", md: `Plain ${n}: 2 + ${n}` }], noob: { tier: 1 } });
@@ -40,7 +40,7 @@ async function newPage() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await ctx.clock.setFixedTime(PIN);
   await ctx.addInitScript(() => { window.__welcomeFirst = true; });   // automated browsers otherwise skip welcome-first (only the flag may stop the redirect)
-  await ctx.route("**/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cram) }));
+  await ctx.route("**/client/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cram) }));
   const page = await ctx.newPage(); const errs = []; page.on("pageerror", e => errs.push(e.message)); page.errs = errs;
   return { ctx, page };
 }
