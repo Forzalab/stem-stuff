@@ -17,10 +17,10 @@
    Lazy: qrcode-generator loads on open (it draws), jsQR (~257 KB) only once the dialog is up, never on a plain page view. */
 (function (root) {
   "use strict";
-  const HERE = (document.currentScript && document.currentScript.src) || location.href;   // the app root: acct/, vendor/, mycluck.mjs sit beside this file
+  const HERE = location.href;   // the app root: acct/, vendor/, mycluck.mjs sit beside this file
   const at = p => new URL(p, HERE).href;
   const KEY = "stem-acct", TOKEN = /^[A-Za-z0-9_-]{16,128}$/, MAX = 1600;               // MAX: a picked photo is scaled to this side for jsQR
-  const QR = "vendor/qrcode-generator/qrcode.js", JSQR = "vendor/jsqr/jsQR.js";
+  const QR = "client/vendor/qrcode_generator/qrcode.js", JSQR = "client/vendor/jsqr/jsQR.js";
   let cur = null;                                                                       // { d, file, opener, unkept }
 
   const store = {
@@ -33,7 +33,7 @@
     s.onload = ok; s.onerror = () => { delete loaded[p]; no(new Error("load " + p)); };
     document.head.append(s);
   }));
-  const cluck = () => import(at("mycluck.mjs"));
+  const cluck = () => import(at("client/pure_logic_modules/mycluck.mjs"));
   const linkFor = t => { const u = new URL("./", HERE); u.search = "?k=" + t; return u.href; };
   const tokenOf = text => {                                                             // the QR holds the link; a bare token is fine too
     if (!text) return null;

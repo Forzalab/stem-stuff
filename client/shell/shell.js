@@ -1,9 +1,9 @@
 /* split-app.mjs (W152): part 3 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
-import { markNums } from "./chg.mjs";
-import { build, stringify } from "./copy/payload.mjs";
-import { modeOf } from "./mode.mjs";
-import { $, S, bank, bridge, check, dock, drawFigures, esc, fitChoices, fromHash, hashCode, hideToast, icon, inflight, isProof, mainEl, maxTries, md, noteAt, obToast, off, oneBox, openBank, opts, partEls, proofTyping, retryLoad, root, say, select, snackChg, src, toast } from "./app.js";
-import { clBackSync, clEl, clGoneSet, clPerm, clPlace } from "./cluck.js";
+import { markNums } from "../pure_logic_modules/chg.mjs";
+import { build, stringify } from "../resources/texts/payload.mjs";
+import { modeOf } from "../pure_logic_modules/mode.mjs";
+import { $, S, bank, bridge, check, dock, drawFigures, esc, fitChoices, fromHash, hashCode, hideToast, icon, inflight, isProof, mainEl, maxTries, md, noteAt, obToast, off, oneBox, openBank, opts, partEls, proofTyping, retryLoad, root, say, select, snackChg, src, toast } from "../answer/drill_core/app.js";
+import { clBackSync, clEl, clGoneSet, clPerm, clPlace } from "../cluck/cluck.js";
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   FXL: { get: () => FXL, enumerable: true },
   applyMT: { get: () => applyMT, enumerable: true },
@@ -310,7 +310,7 @@ document.addEventListener("click", async e => {
    (nav.js) of its TeX, grader-exact; the words around it pass through as plain text, one line per block. A phone's long-press Copy fires
    the same event. A selection with no math is left to the browser. intent.js / flight.js keep logging the copy (they only read it). */
 let texPlain = null;
-import("./nav.js").then(m => { texPlain = m.texPlain; });             // nav.js is its own module script after this one: no import, so the order stays
+import("../answer/navigation/nav.js").then(m => { texPlain = m.texPlain; });             // nav.js is its own module script after this one: no import, so the order stays
 const katexOf = n => (n && (n.nodeType === 1 ? n : n.parentElement))?.closest(".katex") || null;
 const mathPlain = k => {
   const tex = k.querySelector('annotation[encoding="application/x-tex"]');
