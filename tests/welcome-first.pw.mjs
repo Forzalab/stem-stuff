@@ -15,9 +15,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8897), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "welcome-first-")), BANKS = join(TMP, "banks");
 // the cram window is over (calc/cram.json enabled:false in the repo): this spec tests the cram surfaces, so it serves a forced-on copy (as cram-off.pw.mjs forces off)
-const CRAM_ON = JSON.stringify({ ...JSON.parse(readFileSync(join(ROOT, "calc", "cram.json"), "utf8")), enabled: true }), CRAM = join(TMP, "cram.json");
+const CRAM_ON = JSON.stringify({ ...JSON.parse(readFileSync(join(ROOT, "client", "calc", "cram.json"), "utf8")), enabled: true }), CRAM = join(TMP, "cram.json");
 writeFileSync(CRAM, CRAM_ON);
-const cramOn = (ctx) => ctx.route("**/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: CRAM_ON }));
+const cramOn = (ctx) => ctx.route("**/client/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: CRAM_ON }));
 const num = (code, n) => ({ code, type: "num", answer: String(n + 2), body: [{ type: "text", md: `Plain ${n}: 2 + ${n}` }], noob: { tier: 1 } });
 const welcome = { code: "PHYS_PWQ1", type: "num", answer: "4", form: "8/2", tol: 0.01, welcome: true, noob: { tier: 1 },
   body: [{ type: "text", md: "Pressure of $8\\ \\text{N}$ over $2\\ \\text{m}^2$, in $\\text{Pa}$." }],

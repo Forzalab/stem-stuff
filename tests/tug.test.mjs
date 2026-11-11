@@ -1,8 +1,8 @@
 // tug.mjs: the Tug's pure parts (brain plan-2026-11-03/TUG-VIEW.md §4): row grammar, which pipe tables become a Tug, the model, the html.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseRow, dirOf, tableShape, tugFromTable, tugModel, tugHTML } from "../tug.mjs";
-import { pipeTable } from "../steps.mjs";
+import { parseRow, dirOf, tableShape, tugFromTable, tugModel, tugHTML } from "../client/pure_logic_modules/tug.mjs";
+import { pipeTable } from "../client/pure_logic_modules/steps.mjs";
 
 const SHOT = ["| factor | what changed | effect on $P$ |", "", "|---|---|---|", "", "| **V** | down to $\\frac13$ | up |", "", "| **T** | down to $\\frac12$ | down |"];
 
@@ -46,7 +46,7 @@ test("tugHTML: a sky ▲ bar, an orange ▼ bar, the end knot is '?', labels go 
   assert.ok(!/<script/.test(tugHTML(tugModel([{ label: "<script>", move: "", dir: "up", size: 1 }]))), "escaped by default");
 });
 test("flipHTML: one tappable card per row, face A (you did, x) and face B (the fix, check)", async () => {
-  const { flipModel, flipHTML } = await import("../tug.mjs");
+  const { flipModel, flipHTML } = await import("../client/pure_logic_modules/tug.mjs");
   const h = flipHTML(flipModel([["arm of W", "L", "half of L"], ["KE", "x", "y"]]));
   assert.equal((h.match(/class="fl-card"/g) || []).length, 2);
   assert.match(h, /fl-a tn-orange"><span class="fl-gl" aria-hidden="true">✗<\/span><span class="fl-st">arm of W<\/span><span class="fl-tx">L</);
