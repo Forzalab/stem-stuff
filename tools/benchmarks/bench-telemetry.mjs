@@ -58,7 +58,7 @@ await new Promise(r => server.listen(0, "127.0.0.1", r));
 const ORIGIN = `http://127.0.0.1:${server.address().port}`;
 
 // ---- the PostHog options telemetry.js ships, read from the build (so the bench can't drift from them again) ----
-const TJS = fs.readFileSync(path.join(ROOT, "telemetry.js"), "utf8");
+const TJS = fs.readFileSync(path.join(ROOT, "client", "shell", "telemetry", "telemetry.js"), "utf8");
 const PH_SHIPPED = { opts: (TJS.match(/p\.init\(cfg\.ph, \{[\s\S]*?\n {8}\}\);/) || [])[0], pii: (TJS.match(/var EMAIL[\s\S]*?function blankPII[\s\S]*?\n  \}/) || [])[0] };
 if (!PH_SHIPPED.opts || !PH_SHIPPED.pii) throw new Error("can't find p.init({...}) / blankPII in telemetry.js");
 // stubbed PostHog backend: remote config + flags with recording and autocapture on; ingestion answered locally
