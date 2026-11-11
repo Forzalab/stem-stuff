@@ -1,7 +1,7 @@
 // shuffle.mjs: the seeded shuffle behind MC choices and the question order (docs/design/NAV.md)
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shuffled, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qKey, GAPS, NEAR, PULL } from "../shuffle.mjs";
+import { shuffled, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qKey, GAPS, NEAR, PULL } from "../client/pure_logic_modules/shuffle.mjs";
 
 const codes = Array.from({ length: 50 }, (_, i) => "CSCI26_Q" + i);
 
@@ -219,7 +219,7 @@ test("queue: a skipped showing (Next, no answer) comes back later, owing nothing
 });
 
 test("glue: each snack right before its real, after any shuffle; a lost target leaves the snack in place", async () => {
-  const { glue } = await import("../shuffle.mjs");
+  const { glue } = await import("../client/pure_logic_modules/shuffle.mjs");
   const before = { PHYS_S1: "PHYS_R3", PHYS_S2: "PHYS_R3", PHYS_S3: "PHYS_R1", PHYS_S9: "PHYS_GONE" };
   const order = ["PHYS_R3", "PHYS_S3", "PHYS_R1", "PHYS_S9", "PHYS_S1", "PHYS_R2", "PHYS_S2"];
   assert.deepEqual(glue(order, c => before[c] || null), ["PHYS_S1", "PHYS_S2", "PHYS_R3", "PHYS_S3", "PHYS_R1", "PHYS_S9", "PHYS_R2"]);
@@ -230,7 +230,7 @@ test("glue: each snack right before its real, after any shuffle; a lost target l
 });
 
 test("dead-easy (T28) P2: a fresh queue opens with 1-2 of them, then nothing; a returner (a real first) gets none", async () => {
-  const { deadOpen, qNew, qShow } = await import("../shuffle.mjs");
+  const { deadOpen, qNew, qShow } = await import("../client/pure_logic_modules/shuffle.mjs");
   const deads = ["PHYS_ZDA", "PHYS_ZDB", "PHYS_ZDC"], seen = new Set();
   for (const salt of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
     const st = qNew(salt), run = [];
@@ -246,7 +246,7 @@ test("dead-easy (T28) P2: a fresh queue opens with 1-2 of them, then nothing; a 
 });
 
 test("dead-easy (T28) P1: before SOME snacks, same answer every time for one snack and salt; each dead-easy once", async () => {
-  const { deadLead, qNew, qShow, DEAD_LEAD } = await import("../shuffle.mjs");
+  const { deadLead, qNew, qShow, DEAD_LEAD } = await import("../client/pure_logic_modules/shuffle.mjs");
   const deads = ["PHYS_ZDA", "PHYS_ZDB"], st = qNew("s1");
   const hit = Array.from({ length: 200 }, (_, i) => deadLead(st, deads, "PHYS_S" + i) !== null);
   assert.deepEqual(hit, Array.from({ length: 200 }, (_, i) => deadLead(st, deads, "PHYS_S" + i) !== null), "deterministic");
@@ -262,7 +262,7 @@ test("dead-easy (T28) P1: before SOME snacks, same answer every time for one sna
 const rampPool = ["PHYS_ZDA", ...[1, 2, 3].flatMap(t => Array.from({ length: 8 }, (_, i) => "PHYS_T" + t + String.fromCharCode(65 + i)))];
 const tierOf = c => c.startsWith("PHYS_ZD") ? 0 : +c[6];
 async function rampRun(salt, answers) {   // answers[i]: true / false = a graded first pick on slot i + 1, undefined = shown, not answered
-  const { ramp, rampAnswer, qNew, qShow, qAnswer } = await import("../shuffle.mjs");
+  const { ramp, rampAnswer, qNew, qShow, qAnswer } = await import("../client/pure_logic_modules/shuffle.mjs");
   const st = qNew(salt), run = [];
   for (let i = 0; i < answers.length; i++) {
     const p = ramp(st, rampPool, tierOf);
@@ -294,7 +294,7 @@ test("ramp: 2 clean first picks -> the next is tier 2; 2 misses in a row -> back
   assert.equal(top.st.ramp.tier, 3, "never above tier 3");
 });
 test("ramp: 1st miss resets the clean count only; a 2nd miss IN A ROW drops a tier; a clean answer ends the run (PLAN §6.6)", async () => {
-  const { rampAnswer } = await import("../shuffle.mjs");
+  const { rampAnswer } = await import("../client/pure_logic_modules/shuffle.mjs");
   const st = { ramp: { tier: 2, clean: 1 } };   // an old saved queue: no miss key
   assert.equal(rampAnswer(st, "PHYS_T2A", false, tierOf), 2, "1st miss: tier stays");
   assert.equal(st.ramp.clean, 0, "1st miss: the clean count starts over");
@@ -311,7 +311,7 @@ test("ramp: 1st miss resets the clean count only; a 2nd miss IN A ROW drops a ti
   assert.equal(JSON.parse(JSON.stringify(run)).ramp.miss, 1, "the run rides in the saved queue");
 });
 test("ramp: from item 4, one seen code comes back every REVIEW_EVERY (slot 9 is a re-injection)", async () => {
-  const { REVIEW_FROM, REVIEW_EVERY } = await import("../shuffle.mjs");
+  const { REVIEW_FROM, REVIEW_EVERY } = await import("../client/pure_logic_modules/shuffle.mjs");
   assert.equal(REVIEW_FROM, 4); assert.equal(REVIEW_EVERY, 5);
   const { run } = await rampRun("a", Array(14).fill(true));
   const earlier = new Set(run.slice(0, 8).map(p => p.code));
@@ -322,14 +322,14 @@ test("ramp: from item 4, one seen code comes back every REVIEW_EVERY (slot 9 is 
   for (const [i, p] of run.entries()) if (![3, 8, 13].includes(i)) assert.notEqual(p.why, "review", "slot " + (i + 1));
 });
 test("ramp: skipAhead jumps a tier (cap 3)", async () => {
-  const { ramp, skipAhead, qNew, qShow } = await import("../shuffle.mjs");
+  const { ramp, skipAhead, qNew, qShow } = await import("../client/pure_logic_modules/shuffle.mjs");
   const st = qNew("a"); qShow(st, ramp(st, rampPool, tierOf).code);
   skipAhead(st); assert.equal(tierOf(ramp(st, rampPool, tierOf).code), 2);
   skipAhead(st); assert.equal(tierOf(ramp(st, rampPool, tierOf).code), 3);
   skipAhead(st); assert.equal(st.ramp.tier, 3);
 });
 test("ramp: reload (same salt, JSON round trip) gives the same order", async () => {
-  const { ramp } = await import("../shuffle.mjs");
+  const { ramp } = await import("../client/pure_logic_modules/shuffle.mjs");
   const ans = [undefined, true, false, true, true, undefined, true, true, false, true];
   const a = await rampRun("s9", ans), b = await rampRun("s9", ans);
   assert.deepEqual(a.run.map(p => p.code), b.run.map(p => p.code));
@@ -338,7 +338,7 @@ test("ramp: reload (same salt, JSON round trip) gives the same order", async () 
   assert.notDeepEqual((await rampRun("other", ans)).run.map(p => p.code), a.run.map(p => p.code), "the salt changes the order");
 });
 test("ramp: no item at the current tier -> the nearest tier still serves; an empty pool -> null", async () => {
-  const { ramp, qNew, qShow } = await import("../shuffle.mjs");
+  const { ramp, qNew, qShow } = await import("../client/pure_logic_modules/shuffle.mjs");
   const st = qNew("a"), pool = ["PHYS_T3A", "PHYS_T3B"], run = [];
   for (let i = 0; i < 5; i++) { const p = ramp(st, pool, tierOf); qShow(st, p.code); run.push(p.code); }
   assert.deepEqual([...run.slice(0, 2)].sort(), pool, "tier 3 only: still served, each once first");
@@ -350,7 +350,7 @@ const twinItems = { PHYS_T1A: {}, PHYS_A1A: { twin: "a", parent_template: "PHYS_
   PHYS_T1B: {}, PHYS_A1B: { twin: "a", parent_template: "PHYS_T1B" }, PHYS_A1C: { twin: "a", parent_template: "PHYS_GONE" } };
 const twinCodes = Object.keys(twinItems), twinOf = c => twinItems[c];
 test("twinGate: a fresh device's ramp never serves an a / b twin before its template's miss", async () => {
-  const { twinGate, ramp, qNew, qShow } = await import("../shuffle.mjs");
+  const { twinGate, ramp, qNew, qShow } = await import("../client/pure_logic_modules/shuffle.mjs");
   for (const salt of Array.from({ length: 40 }, (_, i) => "t" + i)) {
     const st = qNew(salt), run = [];
     for (let i = 0; i < 4; i++) { const p = ramp(st, twinGate(twinCodes, twinOf, st.seen), () => 1); qShow(st, p.code); run.push(p.code); }
@@ -358,7 +358,7 @@ test("twinGate: a fresh device's ramp never serves an a / b twin before its temp
   }
 });
 test("twinGate: the template's graded miss lets its twins in (only its own); a twin whose template is not in the deck plays", async () => {
-  const { twinGate, qNew, qShow, qAnswer } = await import("../shuffle.mjs");
+  const { twinGate, qNew, qShow, qAnswer } = await import("../client/pure_logic_modules/shuffle.mjs");
   const st = qNew("s");
   assert.deepEqual(twinGate(twinCodes, twinOf, st.seen), ["PHYS_T1A", "PHYS_T1B", "PHYS_A1C"]);
   qShow(st, "PHYS_T1A"); qAnswer(st, "PHYS_T1A", true);
@@ -368,7 +368,7 @@ test("twinGate: the template's graded miss lets its twins in (only its own); a t
   assert.deepEqual(twinGate(twinCodes, () => undefined, {}), twinCodes, "an unknown item plays");
 });
 test("twinGate leaves the mock alone: mockList still picks a twin per template", async () => {
-  const { mockList } = await import("../shuffle.mjs");
+  const { mockList } = await import("../client/pure_logic_modules/shuffle.mjs");
   const items = [{ code: "PHYS_T1A", exam_q: 1 }, { code: "PHYS_A1A", twin: "a", parent_template: "PHYS_T1A" }];
   assert.deepEqual(mockList(items, "s"), ["PHYS_A1A"]);
 });
@@ -387,7 +387,7 @@ const titleBank = [
   X("PHYS_T20", "X3 Q20 bulb ice to steam, practice"),
 ];
 test("mockList, title fallback: the templates themselves, in exam order (X3 Qn), twins / twists / ranges / other items left out", async () => {
-  const { mockList } = await import("../shuffle.mjs");
+  const { mockList } = await import("../client/pure_logic_modules/shuffle.mjs");
   assert.deepEqual(mockList(titleBank, "s"), ["PHYS_T1", "PHYS_T2", "PHYS_T3", "PHYS_T20"]);
 });
 /* the SCHEMA.md twin shape (twin a|b + parent_template), and exam_q preferred over the title */
@@ -399,7 +399,7 @@ const twinBank = [
   X("PHYS_A2", "a", { twin: "a", parent_template: "PHYS_T2" }),
 ];
 test("mockList, twin shape: exam_q orders; one twin of each template by hash(salt + n), stable for a salt; no twin -> the template", async () => {
-  const { mockList } = await import("../shuffle.mjs");
+  const { mockList } = await import("../client/pure_logic_modules/shuffle.mjs");
   const a = mockList(twinBank, "s1");
   assert.equal(a.length, 2);
   assert.ok(["PHYS_A1", "PHYS_B1"].includes(a[0]), "Q1 plays a twin of its template");
@@ -411,7 +411,7 @@ test("mockList, twin shape: exam_q orders; one twin of each template by hash(sal
   assert.deepEqual(mockList([], "s"), []);
 });
 test("mockNext / mockAnswer: the list once in order, one graded first pick each, then the score and the misses in exam order, then done", async () => {
-  const { mockNew, mockNext, mockAnswer, mockOn } = await import("../shuffle.mjs");
+  const { mockNew, mockNext, mockAnswer, mockOn } = await import("../client/pure_logic_modules/shuffle.mjs");
   const m = mockNew(["Q1", "Q2", "Q3", "Q4"]);
   const seen = [];
   for (const [c, ok] of [["Q1", true], ["Q2", false], ["Q3", null], ["Q4", true]]) {
@@ -440,7 +440,7 @@ test("mockNext / mockAnswer: the list once in order, one graded first pick each,
 const clean = (...cs) => Object.fromEntries(cs.map(c => [c, { n: 1, right: 1, miss: 0 }]));
 const missed = (...cs) => Object.fromEntries(cs.map(c => [c, { n: 2, right: 0, miss: 2 }]));
 test("familiesMet, today's title shape: a family with a title twin / twist needs a clean one of those; a twinless family, its template", async () => {
-  const { familiesMet } = await import("../shuffle.mjs");
+  const { familiesMet } = await import("../client/pure_logic_modules/shuffle.mjs");
   assert.deepEqual(familiesMet(titleBank, {}), { met: 0, of: 4 }, "Q1 Q2 Q3 Q20; the range and the other quiz are no family");
   assert.deepEqual(familiesMet(titleBank, clean("PHYS_T2", "PHYS_T3", "PHYS_Q11", "PHYS_C")), { met: 2, of: 4 }, "twinless Q2 / Q3: the template");
   assert.deepEqual(familiesMet(titleBank, clean("PHYS_T1")), { met: 0, of: 4 }, "Q1 has a twin: its template alone is not enough");
@@ -448,7 +448,7 @@ test("familiesMet, today's title shape: a family with a title twin / twist needs
   assert.deepEqual(familiesMet(titleBank, { ...missed("PHYS_W1", "PHYS_T20"), ...clean("PHYS_T1") }), { met: 0, of: 4 }, "a missed twin / template meets nothing");
 });
 test("familiesMet, the SCHEMA twin shape: a twin's family is its template's exam_q; only a clean twin meets it; no families -> of 0", async () => {
-  const { familiesMet } = await import("../shuffle.mjs");
+  const { familiesMet } = await import("../client/pure_logic_modules/shuffle.mjs");
   assert.deepEqual(familiesMet(twinBank, clean("PHYS_T1", "PHYS_T2")), { met: 0, of: 2 }, "both have twins: templates do not count");
   assert.deepEqual(familiesMet(twinBank, clean("PHYS_B1")), { met: 1, of: 2 }, "a clean b meets Q1");
   assert.deepEqual(familiesMet(twinBank, clean("PHYS_A1", "PHYS_B1", "PHYS_A2")), { met: 2, of: 2 }, "one per family, never more");
@@ -460,7 +460,7 @@ test("familiesMet, the SCHEMA twin shape: a twin's family is its template's exam
 /* ---------- Exam-3 family spacing (Tony Nov 5: two cards of one exam question never within 3 slots) ----------
    60 picks over the real BANK_P3X (tests/fixtures/p3x-queue.json, a slim copy of the built bank) through ramp() and qPick(). */
 import { readFileSync } from "node:fs";
-import { ramp, rampAnswer, twinGate, familyOf } from "../shuffle.mjs";
+import { ramp, rampAnswer, twinGate, familyOf } from "../client/pure_logic_modules/shuffle.mjs";
 const P3X = JSON.parse(readFileSync(new URL("./fixtures/p3x-queue.json", import.meta.url), "utf8"));
 const P3X_BY = new Map(P3X.map(p => [p.code, p]));
 const FAMKEY = familyOf(c => P3X_BY.get(c), family);
