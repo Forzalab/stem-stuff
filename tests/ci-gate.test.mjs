@@ -51,11 +51,11 @@ test("classify: code files are NOT docs-only (INTENT: '.txt' is not docs)", () =
   // reading of 'docs-only') would wrongly ship these without a full run. They are CODE:
   const code = [
     "requirements.txt",              // requirements.txt:1 sympy/networkx/tzdata — installs change
-    "views/allow/common-en.txt",     // views/allow/common-en.txt:1 — answer allow-list, runtime
-    "views/allow/format-stop.txt",   // answer allow-list
-    "vendor/fonts/OFL.txt",          // vendor/fonts/OFL.txt:1 — ships with the fonts
+    "shared/openui/allow/common-en.txt",     // views/allow/common-en.txt:1 — answer allow-list, runtime
+    "shared/openui/allow/format-stop.txt",   // answer allow-list
+    "client/vendor/fonts/OFL.txt",          // vendor/fonts/OFL.txt:1 — ships with the fonts
     "server/http_server/serve.py",                      // server
-    "app.js",                        // client
+    "client/answer/drill_core/app.js",                        // client
     ".github/workflows/ship.yml",    // CI
   ];
   for (const f of code) {
@@ -67,9 +67,9 @@ test("classify: code files are NOT docs-only (INTENT: '.txt' is not docs)", () =
 });
 
 test("classify: a mixed diff splits docs from code", () => {
-  const c = classify(["README.md", "app.js"]);
+  const c = classify(["README.md", "client/answer/drill_core/app.js"]);
   assert.deepEqual(c.docs, ["README.md"], "README.md:1 is the only doc");
-  assert.deepEqual(c.code, ["app.js"], "app.js is code");
+  assert.deepEqual(c.code, ["client/answer/drill_core/app.js"], "app.js is code");
 });
 
 // --- runKind: how a run maps to full/fast/bench/unknown TODAY ------------------------
@@ -173,7 +173,7 @@ test("decideShip: a selected/fast green run is never enough to ship", () => {
 test("decideShip: the exact sha with a full green run ships, even with a non-empty diff", () => {
   // INTENT: a literal-but-wrong port that forgets the exact-sha shortcut (always requires an
   // empty diff) would refuse this; M1 says the exact sha's own full green run is enough.
-  const r = decideShip({ candidate: "abc1234", green: { sha: "abc1234", kind: "full" }, changedFiles: ["app.js", "server/http_server/serve.py"] });
+  const r = decideShip({ candidate: "abc1234", green: { sha: "abc1234", kind: "full" }, changedFiles: ["client/answer/drill_core/app.js", "server/http_server/serve.py"] });
   assert.equal(r.ok, true, "M1: exact sha already has a full green run");
 });
 
@@ -183,7 +183,7 @@ test("decideShip: docs-only since the last full green run ships", () => {
 });
 
 test("decideShip: one code file since the last full green run refuses", () => {
-  const r = decideShip({ candidate: "def5678", green: { sha: "abc1234", kind: "full" }, changedFiles: ["app.js"] });
+  const r = decideShip({ candidate: "def5678", green: { sha: "abc1234", kind: "full" }, changedFiles: ["client/answer/drill_core/app.js"] });
   assert.equal(r.ok, false, "M1: non-docs change needs a full run on this exact sha");
   assert.ok(r.reason, "a refusal must say why");
 });
@@ -196,13 +196,13 @@ test("decideShip: an empty diff (nothing changed since the green sha) ships", ()
 // --- the CLI (no network: --file injects the diff, --runs reads a fixture) -----------
 // SOURCE of exit codes: SPEC.md §CLI.
 test("CLI: ships the exact green sha (fixture green.json)", () => {
-  const r = cli(["--candidate", "aaaaaaa1", "--runs", fix("green"), "--file", "app.js"]);
+  const r = cli(["--candidate", "aaaaaaa1", "--runs", fix("green"), "--file", "client/answer/drill_core/app.js"]);
   assert.equal(r.status, 0, `exit 0 = ship; stderr: ${r.stderr}`);
   assert.match(r.stdout, /ok/i, `stdout must say ship ok; got: ${r.stdout}`);
 });
 
 test("CLI: refuses a red sha (fixture red.json, all runs failed)", () => {
-  const r = cli(["--candidate", "fail33333", "--runs", fix("red"), "--file", "app.js"]);
+  const r = cli(["--candidate", "fail33333", "--runs", fix("red"), "--file", "client/answer/drill_core/app.js"]);
   assert.equal(r.status, 1, `exit 1 = refuse; stdout: ${r.stdout}`);
   assert.match(r.stderr, /refus/i, `stderr must say refuse; got: ${r.stderr}`);
 });
@@ -218,7 +218,7 @@ test("CLI: refuses a bench-mutant-only sha (fixture bench.json)", () => {
 });
 
 test("CLI: refuses a code diff since the last green sha (fixture code-diff.json)", () => {
-  const r = cli(["--candidate", "green7777", "--runs", fix("code-diff"), "--file", "app.js"]);
+  const r = cli(["--candidate", "green7777", "--runs", fix("code-diff"), "--file", "client/answer/drill_core/app.js"]);
   assert.equal(r.status, 1, "green6666 is full green but app.js changed since (M1)");
 });
 

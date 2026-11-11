@@ -62,7 +62,7 @@ test("DOCS_EXTS is {'.md'} and isCodeFile is its complement", () => {
   for (const ext of DOCS_EXTS) {
     assert.equal(isCodeFile(`README${ext}`), false, `README${ext} is docs, not code`);
   }
-  for (const f of ["server/http_server/serve.py", "app.js", "requirements.txt", ".github/workflows/tests.yml"]) {
+  for (const f of ["server/http_server/serve.py", "client/answer/drill_core/app.js", "requirements.txt", ".github/workflows/tests.yml"]) {
     assert.equal(isCodeFile(f), true, `${f} is CODE (everything not .md)`);
   }
 });
@@ -75,7 +75,7 @@ test("areaOf maps each of the 6 areas (loop over all members)", () => {
     tools: ["tools/operations/ci-gate.mjs", "tools/operations/batch.sh", "tools/bank_tools/slip_coverage.py"],
     tests: ["tests/ci-select.test.mjs", "tests/test_ci_image.py"],
     server: ["server/http_server/serve.py", "server/math_engine/__init__.py", "api/index.py"],
-    client: ["app.js", "app.css", "index.html", "views/views.js", "vendor/marked.min.js", "requirements.txt"],
+    client: ["client/answer/drill_core/app.js", "client/answer/drill_core/app.css", "index.html", "client/cluck/openui_views/views.js", "client/vendor/marked.min.js", "requirements.txt"],
   };
   const seen = new Set();
   for (const [area, files] of Object.entries(expect)) {
@@ -98,7 +98,7 @@ test("BIG: 7 code files -> full (>=7 is inclusive)", () => {
 });
 
 test("BIG: >=3 areas -> full", () => {
-  const cross = ["README.md", "server/http_server/serve.py", "app.js"]; // docs + server + client
+  const cross = ["README.md", "server/http_server/serve.py", "client/answer/drill_core/app.js"]; // docs + server + client
   assert.equal(BIG_AREAS, 3, "SOURCE M4: >=3 areas");
   assert.equal(isBig(cross), true, "3 distinct areas (docs, server, client) is BIG");
   assert.equal(decideSelection({ files: cross, affectedCounts: {}, totalUnits: TOTAL }).kind, "full");
@@ -154,10 +154,10 @@ test("HUB is per-file, not the union (INTENT: no summing counts)", () => {
 // --- A3: a one-file PR runs fewer units than all ---------------------------------------
 test("A3: one non-hub file -> affected, fewer units than all", () => {
   // SOURCE A3: `--affected app.css` selects a strict subset of the suite. Assert the relation.
-  const appCss = affectedUnits("app.css");
+  const appCss = affectedUnits("client/answer/drill_core/app.css");
   assert.ok(appCss.length > 0, "app.css affects at least one unit");
   assert.ok(appCss.length < TOTAL, `A3: app.css affects ${appCss.length} < ${TOTAL} (fewer than all)`);
-  const d = decideSelection({ files: ["app.css"], affectedCounts: { "app.css": appCss.length }, totalUnits: TOTAL });
+  const d = decideSelection({ files: ["client/answer/drill_core/app.css"], affectedCounts: { "client/answer/drill_core/app.css": appCss.length }, totalUnits: TOTAL });
   assert.equal(d.kind, "affected", `a one-file app.css PR runs the affected subset, got ${d.kind}`);
 });
 
@@ -210,7 +210,7 @@ test("zero-.pw: a logic-only PR is affected with no block work (skip_block)", ()
 
 // --- the CLI (no git: --file injects the diff; --total injects the unit count) ----------
 test("CLI: server/http_server/serve.py (hub) -> full, app.css -> affected, README.md -> docs", () => {
-  for (const [file, kind] of [["server/http_server/serve.py", "full"], ["app.css", "affected"], ["README.md", "docs"]]) {
+  for (const [file, kind] of [["server/http_server/serve.py", "full"], ["client/answer/drill_core/app.css", "affected"], ["README.md", "docs"]]) {
     const r = cli(["--total", String(TOTAL), "--file", file]);
     assert.equal(r.status, 0, `CLI ${file}: exit 0; stderr: ${r.stderr}`);
     assert.match(r.stdout, new RegExp(`^${kind}\\b`), `CLI ${file} must print "${kind} ...", got: ${r.stdout}`);

@@ -4,14 +4,10 @@
 export const ROOT = ".";
 export const SERVER = ["server/*/*.py", "api/"];
 export const DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"];
-export const CLIENT = [
-  "*.js", "*.css", "*.mjs", "index.html", "calc.html", "privacy.html",
-  "blind/", "calc/", "copy/", "design/explain-box.js", "design/explain-box.css",
-  "rewards/", "vendor/",
-];
-export const SHARED = ["views/"];
+export const CLIENT = ["client/", "index.html", "calc.html", "privacy.html", "sw.js"];
+export const SHARED = ["shared/openui/"];
 export const TOOLS = ["tools/"];
-export const LABS = ["design/*-lab.html", "try/views-demo.*"];
+export const LABS = ["client/labs/*-lab.html", "client/labs/views_demo/views-demo.*"];
 
 export const PATHS = Object.freeze({
   ROOT, SERVER, DATA, CLIENT, SHARED, TOOLS, LABS,

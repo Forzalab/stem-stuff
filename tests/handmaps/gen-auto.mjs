@@ -133,14 +133,14 @@ function pyEdge(from, mod) {
 }
 for (const f of files) {
   if (/\.py$/.test(f)) {
-    if (f.startsWith("vendor/") || f.startsWith("tests/node_modules/")) continue;
+    if (f.startsWith("client/vendor/") || f.startsWith("tests/node_modules/")) continue;
     const text = fs.readFileSync(path.join(ROOT, f), "utf8");
     // `from pkg import name` also names pkg.name (a module inside a package), besides the bare name (same-folder import)
     for (const m of text.matchAll(PY_FROM_RE)) [m[1], ...pyNames(m[2]).map((nm) => `${m[1]}.${nm}`), ...pyNames(m[2])].forEach((mod) => pyEdge(f, mod));
     for (const m of text.matchAll(PY_IMPORT_RE)) pyNames(m[1]).forEach((mod) => pyEdge(f, mod));
     continue;
   }
-  if (!/\.(?:mjs|cjs|js)$/.test(f) || f.startsWith("vendor/")) continue;
+  if (!/\.(?:mjs|cjs|js)$/.test(f) || f.startsWith("client/vendor/")) continue;
   const text = fs.readFileSync(path.join(ROOT, f), "utf8");
   for (const re of IMPORT_RES) {
     for (const m of text.matchAll(re)) {
