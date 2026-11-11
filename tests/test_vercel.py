@@ -146,6 +146,17 @@ class Wsgi(unittest.TestCase):
         self.assertEqual(missing, [])
 
 
+class VercelLimits(unittest.TestCase):
+    """vercel.json stays under Vercel's hard limits: 256 includeFiles per function, 2048 redirects, 2048 rewrites."""
+    def test_counts_under_limits(self):
+        with open(os.path.join(ROOT, "vercel.json")) as f:
+            cfg = json.load(f)
+        for name, fn in cfg.get("functions", {}).items():
+            self.assertLessEqual(len(fn.get("includeFiles", [])), 256, name)
+        self.assertLessEqual(len(cfg.get("redirects", [])), 2048)
+        self.assertLessEqual(len(cfg.get("rewrites", [])), 2048)
+
+
 class Kv(unittest.TestCase):
     def setUp(self):
         self.db, self.old = {}, (serve.KV, serve._kv, serve._gen["loaded"])
