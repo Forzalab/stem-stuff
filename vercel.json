@@ -17,7 +17,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{server/serve.py,server/acct.py,server/expr.py,server/slips.py,server/livefig.py,server/views_gate.py,server/oui.py,views/registry.json,views/library.json,SCHEMA.md,server/data/prompts/**,server/data/problems.json,server/data/skills.json,server/data/banks/**}",
+      "includeFiles": "{server/serve.py,server/acct.py,server/expr.py,server/slips.py,server/livefig.py,server/views_gate.py,server/oui.py,views/registry.json,views/library.json,SCHEMA.md,server/data/{prompts/**,problems.json,skills.json,banks/**}}",
       "maxDuration": 60
     }
   },

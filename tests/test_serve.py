@@ -1885,7 +1885,9 @@ class Explain(unittest.TestCase):
         self.assertNotIn("ALGEBRA THIS NEEDS", serve.explain_prompt(dict(BANK["CALC1_X2P"], saccharine={"key": "k"}), "a"))
         self.assertNotIn("skills", serve.view(p, "sugar"))                                  # server only
         with open(os.path.join(paths.REPO, "vercel.json")) as f:
-            self.assertIn("server/data/skills.json", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # the function bundle carries the catalog
+            inc = json.load(f)["functions"]["api/index.py"]["includeFiles"]
+        self.assertIn("server/data/{", inc); self.assertIn("skills.json", inc)   # the function bundle carries the catalog
+        self.assertLessEqual(len(inc), 256)   # Vercel rejects a longer includeFiles (ship run 107 failed on P's 259-char list)
 
     def test_prompt_reads_md_given_as_lines(self):                                    # PHYS_HIA's body: md is a list (live crash, Oct 5)
         p = dict(BANK["CALC1_X2P"], body=[{"type": "text", "md": ["line one", "line two"]}], key="k")
