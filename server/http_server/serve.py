@@ -152,7 +152,11 @@ def bridge(path):
     return None
 
 
-BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
+BUNDLE_DIRS = ("", "client/answer/drill_core", "client/answer/explain_box", "client/answer/navigation", "client/answer/answer_strip",
+               "client/calc/coach", "client/calc/model_picker", "client/cluck", "client/cluck/figures", "client/cluck/jev_nudges",
+               "client/cluck/openui_views", "client/resources/texts", "client/rewards", "client/shell", "client/shell/repair",
+               "client/shell/stages", "client/shell/telemetry", "client/shell/toast", "client/shell/welcome", "client/vendor",
+               "client/vendor/fonts", "client/vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
 REPAIR_PATH = re.compile(r"^/repair/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
@@ -3403,7 +3407,7 @@ def fig_images(p):
 def _geo_line():
     """the Geometry line of views/prompt/all.md (OpenUI Lang, profile stem), "" when missing"""
     try:
-        with open(os.path.join(ROOT, "views", "prompt", "all.md"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "shared", "openui", "prompt", "all.md"), encoding="utf-8") as f:
             return next((x.strip() for x in f if x.startswith("- `Geometry(")), "")
     except OSError:
         return ""
@@ -3415,7 +3419,7 @@ GEO_LINE = _geo_line()
 def _view_lines(names):
     """the lines of views/prompt/all.md for these components, in this order (the generated library prompt: one source of truth)"""
     try:
-        with open(os.path.join(ROOT, "views", "prompt", "all.md"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "shared", "openui", "prompt", "all.md"), encoding="utf-8") as f:
             lines = [x.strip() for x in f]
     except OSError:
         return ""
@@ -3588,7 +3592,7 @@ def cram_data():
 
 def cram_json():
     """calc/cram.json parsed (re-read when it changes); {} on any problem. STEM_CRAM points at a test copy."""
-    path = os.environ.get("STEM_CRAM") or os.path.join(ROOT, "calc", "cram.json")
+    path = os.environ.get("STEM_CRAM") or os.path.join(ROOT, "client", "calc", "cram.json")
     try:
         sig = (path, os.stat(path).st_mtime_ns)
         if _cram_json_cache["sig"] != sig:

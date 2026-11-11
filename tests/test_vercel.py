@@ -44,7 +44,8 @@ class BuildPublic(unittest.TestCase):
         self.assertEqual([f for f in os.listdir(self.out) if f.startswith(".")], [], "a dotfile (.env.local holds tokens) reached public/")
 
     def test_client_is_there(self):
-        for f in ("index.html", "app.js", "app.css", "sw.js", "offline.js", "vendor/katex/katex.min.js"):
+        for f in ("index.html", "sw.js", "client/answer/drill_core/app.js", "client/answer/drill_core/app.css", "client/shell/offline.js",
+                  "client/vendor/katex/katex.min.js"):
             self.assertTrue(os.path.exists(os.path.join(self.out, f)), f)
 
 
