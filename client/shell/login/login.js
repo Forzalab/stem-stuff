@@ -17,7 +17,7 @@
    Lazy: qrcode-generator loads on open (it draws), jsQR (~257 KB) only once the dialog is up, never on a plain page view. */
 (function (root) {
   "use strict";
-  const HERE = location.href;   // the app root: acct/, vendor/, mycluck.mjs sit beside this file
+  const HERE = document.currentScript && document.currentScript.src ? new URL("../../../", document.currentScript.src).href : location.href;   // the app root (login.js sits in client/shell/login/): acct/, client/vendor/, client/pure_logic_modules/ resolve from here: acct/, vendor/, mycluck.mjs sit beside this file
   const at = p => new URL(p, HERE).href;
   const KEY = "stem-acct", TOKEN = /^[A-Za-z0-9_-]{16,128}$/, MAX = 1600;               // MAX: a picked photo is scaled to this side for jsQR
   const QR = "client/vendor/qrcode_generator/qrcode.js", JSQR = "client/vendor/jsqr/jsQR.js";
