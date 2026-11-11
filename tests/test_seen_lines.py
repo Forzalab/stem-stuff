@@ -22,14 +22,14 @@ def lines():
 
 
 def titles():
-    d = json.load(open(os.path.join(ROOT, "problems.json"), encoding="utf-8"))
+    d = json.load(open(os.path.join(ROOT, "server", "data", "problems.json"), encoding="utf-8"))
     return sorted({p["title"] for p in d if isinstance(p, dict) and isinstance(p.get("title"), str)}, key=len)[:6] + ["Limit from a table"]
 
 
 class SeenLinesAiw(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "node not on PATH")
     def test_no_filled_line_is_blocked(self):
-        if not os.path.exists(os.path.join(ROOT, "aiw.py")):
+        if not os.path.exists(os.path.join(ROOT, "server", "aiw.py")):
             self.skipTest("aiw.py is absent on this branch (it lands with PR #189 / p41b); run it by hand: git show origin/ccr-eaf1a3c3-xs301g-p41b:aiw.py")
         sys.path.insert(0, paths.SERVER_DIR)
         try:

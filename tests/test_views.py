@@ -52,8 +52,8 @@ class Registry(unittest.TestCase):
             self.skipTest("engine/ not importable")
         self.assertEqual(gv.problems(REG, served), [])
         bad = gv.problems(REG, served - {"graph.mst"} | {"graph.new"})
-        self.assertIn("tool graph.mst: ships in the registry but engine/ has no such tool", bad)
-        self.assertIn("tool graph.new: engine/ serves it but the registry does not list it", bad)
+        self.assertIn("tool graph.mst: ships in the registry but server/engine/ has no such tool", bad)
+        self.assertIn("tool graph.new: server/engine/ serves it but the registry does not list it", bad)
 
     def test_banned_props(self):
         for name in ("color", "size", "icon", "style"):

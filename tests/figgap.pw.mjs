@@ -19,7 +19,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8866), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "figgap-")), BANKS = join(TMP, "banks");
 mkdirSync(BANKS); writeFileSync(join(BANKS, "BANK_FG1.json"), JSON.stringify({ v: 1, problems: [] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "unused" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "unused" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 const head = "There are two rules here: forces balance and torques balance.\n\n", tail = "The rod does not spin and does not move.\n- No spin means **torque** balance.";

@@ -1,6 +1,6 @@
 """Measure every button from pixels (Pillow) and check they match: one button system.
 
-    python3 serve.py 8812 &
+    python3 server/serve.py 8812 &
     python3 tools/audits/button_audit.py [http://localhost:8812] [outdir]
 
 Runs tools/audits/button_audit.mjs (Playwright) for screenshots + boxes, then from the PNG pixels only:

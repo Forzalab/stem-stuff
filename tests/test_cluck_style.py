@@ -29,7 +29,7 @@ def sys_text(v4, window_open=False):
 class StyleCard(unittest.TestCase):
     def test_file_loaded(self):
         """the card = Tony's v7 Cluck prompt (Nov 8), verbatim; the old "show me stage N" flow is gone (one reply = one stepper)"""
-        v7 = open(os.path.join(ROOT, "prompts", "cluck-style.txt"), encoding="utf-8", newline="").read()
+        v7 = open(os.path.join(ROOT, "server", "data", "prompts", "cluck-style.txt"), encoding="utf-8", newline="").read()
         self.assertEqual(serve.STYLE_V4, v7.strip())
         self.assertTrue(serve.STYLE_V4.startswith("You are Cluck"))
         for k in ("GOAL", "MODE", "Pictures", "Steps", "Truth", "Tutor note"):
@@ -47,11 +47,11 @@ class StyleCard(unittest.TestCase):
             self.assertEqual(sum("cache_control" in b for b in blocks), 2)
 
     def test_deepseek_head_has_the_card_too(self):
-        src = open(os.path.join(ROOT, "serve.py"), encoding="utf-8").read()
+        src = open(os.path.join(ROOT, "server", "serve.py"), encoding="utf-8").read()
         self.assertIn("(\"\\n\\n\" + STYLE_V4) if STYLE_V4 else \"\"", src)
 
     def test_letter_is_untouched_byte_for_byte(self):
-        self.assertEqual(serve.PROMPT_V4, open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8", newline="").read())
+        self.assertEqual(serve.PROMPT_V4, open(os.path.join(ROOT, "server", "data", "prompts", "cluck-v4.txt"), encoding="utf-8", newline="").read())
 
     def test_anchor_stepper_passes_the_gate_and_tex_never_holds_the_answer(self):
         """stepper (Nov 8): a Steps with a Geometry anchor + per-step tex / lit passes the gate; an answer in a step formula drops that step"""

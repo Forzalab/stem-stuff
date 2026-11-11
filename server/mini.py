@@ -17,8 +17,9 @@ import urllib.request
 import livefig
 import views_gate
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(ROOT, "prompts", "mini-cluck.txt"), encoding="utf-8") as _f:
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root (this file lives in server/)
+DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+with open(os.path.join(DATA, "prompts", "mini-cluck.txt"), encoding="utf-8") as _f:
     PROMPT = _f.read()
 MINI_MODEL = os.environ.get("MINI_MODEL", "claude-sonnet-5-5")   # TUNABLE: the Oct 26 bench (TONY-DECISIONS #17b) picks it
 MAX_TOKENS = 200

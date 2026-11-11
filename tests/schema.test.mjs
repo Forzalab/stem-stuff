@@ -130,7 +130,7 @@ test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the pr
 
 // practice banks (docs/design/BANK.md): banks/BANK_XXX.json, the same format; problem codes shared with another file = the same problem
 {
-  const dir = new URL("../banks/", import.meta.url), seen = new Map(problems.map(p => [p.code, JSON.stringify(p)]));
+  const dir = new URL("../server/data/banks/", import.meta.url), seen = new Map(problems.map(p => [p.code, JSON.stringify(p)]));
   for (const f of existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")) : []) {
     test(`banks/${f}: name, schema, no clashing codes`, () => {
       assert.match(f, /^BANK_[A-Z0-9]{3,6}\.json$/);
@@ -154,8 +154,8 @@ test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the pr
   const CUTOFF = 20261022, root = new URL("../", import.meta.url);
   const slipsGate = file => spawnSync("python3", [fileURLToPath(new URL("tools/bank_tools/slips.py", root)), "--strict", fileURLToPath(file)], { encoding: "utf8" });
   const said = r => `${r.error ?? ""}${r.stdout}${r.stderr}`;
-  const dir = new URL("banks/", root);
-  const all = [new URL("problems.json", root), ...(existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")).sort().map(f => new URL(f, dir)) : [])];
+  const dir = new URL("server/data/banks/", root);
+  const all = [new URL("server/data/problems.json", root), ...(existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")).sort().map(f => new URL(f, dir)) : [])];
   for (const file of all.filter(u => (JSON.parse(readFileSync(u, "utf8")).v ?? 1) >= CUTOFF)) {
     test(`${fileURLToPath(file).slice(fileURLToPath(root).length)}: slips gate (tools/bank_tools/slips.py --strict)`, () => {
       const r = slipsGate(file);
@@ -399,14 +399,14 @@ test("codes unique, suffixes unique across subjects", () => {
 
 // skills.json (SCHEMA.md "Skills"): the catalog validates, ids are unique, families exist; every question's skills are known ids
 {
-  const S = JSON.parse(readFileSync(new URL("../skills.json", import.meta.url), "utf8")), check = validator("skills");
+  const S = JSON.parse(readFileSync(new URL("../server/data/skills.json", import.meta.url), "utf8")), check = validator("skills");
   const ids = new Set(S.skills.map(s => s.id));
   test("skills.json: schema, unique ids, known families", () => {
     assert.ok(check(S), JSON.stringify(check.errors, null, 1));
     assert.equal(ids.size, S.skills.length, "duplicate skill id");
     for (const s of S.skills) assert.ok(s.family in S.families, `${s.id}: unknown family ${s.family}`);
   });
-  const dir = new URL("../banks/", import.meta.url);
+  const dir = new URL("../server/data/banks/", import.meta.url);
   const files = [["problems.json", problems], ...(existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")).map(f => [f, JSON.parse(readFileSync(new URL(f, dir), "utf8")).problems ?? []]) : [])];
   test("saccharine.skills: every id is in skills.json", () => {
     for (const [f, ps] of files) for (const p of ps) {
@@ -564,8 +564,8 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     const run = (...a) => spawnSync("node", [fileURLToPath(new URL("tools/bank_tools/schema-check.mjs", root)), ...a], { encoding: "utf8" });
     assert.equal(run(fileURLToPath(file)).status, 0);
     assert.equal(run("--repair", fileURLToPath(file)).status, 0);
-    assert.equal(run(fileURLToPath(new URL("problems.json", root))).status, 0);
-    const r = run("--repair", fileURLToPath(new URL("problems.json", root)));
+    assert.equal(run(fileURLToPath(new URL("server/data/problems.json", root))).status, 0);
+    const r = run("--repair", fileURLToPath(new URL("server/data/problems.json", root)));
     assert.equal(r.status, 1, r.stdout + r.stderr);
     assert.match(r.stdout, /^problems: .*welcome/m);
   });
@@ -627,7 +627,7 @@ test("schema: vary overlays on an mc item", () => {
   // W132 lint: a num item / num part with no `unit` key warns on stderr (the gate still passes); "" = unitless on purpose, no warning
   test("unit lint (W132): problems.json passes but warns on its one blank num (CALC1_A9R); a fixture with every unit set warns on none", () => {
     const run = f => spawnSync("node", [fileURLToPath(new URL("../tools/bank_tools/schema-check.mjs", import.meta.url)), f], { encoding: "utf8" });
-    const r = run(fileURLToPath(new URL("../problems.json", import.meta.url)));
+    const r = run(fileURLToPath(new URL("../server/data/problems.json", import.meta.url)));
     assert.equal(r.status, 0, r.stdout + r.stderr);
     assert.match(r.stderr, /^problems: warn: 1 num without a unit: CALC1_A9R$/m);
     const tmp = join(mkdtempSync(join(tmpdir(), "unl-")), "BANK_UNL.json"), b = edit(p => { delete p.PHYS_UNA.unit; delete p.PHYS_UNB.parts[0].unit; });

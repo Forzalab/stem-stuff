@@ -31,7 +31,7 @@ test("a known file maps to known units", () => {
 });
 
 test("serve.py reaches both pipes", () => {
-  const out = affected("serve.py");
+  const out = affected("server/serve.py");
   assert.match(out, /^unittest$/m);
   assert.match(out, /^npm$/m);
   assert.match(out, /^ux-flows@phone$/m);
@@ -53,8 +53,8 @@ test("an unknown logic path falls back to the logic runners", () => {
 });
 
 test("a root module imported by serve.py inherits serve.py's units", () => {
-  const serve = new Set(affected("serve.py").trim().split("\n"));
-  const expr = new Set(affected("expr.py").trim().split("\n"));
+  const serve = new Set(affected("server/serve.py").trim().split("\n"));
+  const expr = new Set(affected("server/expr.py").trim().split("\n"));
   assert.ok(serve.size > 10, "serve.py should reach many units");
   for (const u of serve) assert.ok(expr.has(u), `expr.py is missing ${u}`);
 });

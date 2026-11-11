@@ -12,7 +12,7 @@ export function schema(name) {
 }
 
 export const validator = name => new Ajv2020({ allErrors: true, strict: true, strictRequired: false, strictTypes: false }).compile(schema(name));
-export const bank = () => JSON.parse(readFileSync(new URL("problems.json", root), "utf8"));
+export const bank = () => JSON.parse(readFileSync(new URL("server/data/problems.json", root), "utf8"));
 
 /* repair / welcome / twin links (SCHEMA.md "Repair ladder, noob tier, welcome, twins"): what the schema cannot say, as a list of faults
    ([] = sound). need = the front-door bank (schema-check --repair): exactly one welcome item and at least one repair. */

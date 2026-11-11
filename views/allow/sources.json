@@ -1,5 +1,5 @@
 [
- {"path": "problems.json", "course": "calc"},
+ {"path": "server/data/problems.json", "course": "calc"},
  {"path": "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/1.txt", "course": "calc", "external": true},
  {"path": "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/2.txt", "course": "calc", "external": true},
  {"path": "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/3.txt", "course": "calc", "external": true},
@@ -38,8 +38,8 @@
  {"path": "/home/claude/brain/_drift/archive/2026-09/2026-09-26T2120-alt-calc-phys2a-practice/Outlines/Exam 3 Outline.pdf", "course": "phys2a", "external": true},
  {"path": "/home/claude/brain/_drift/archive/2026-09/2026-09-26T2120-alt-calc-phys2a-practice/Outlines/Exam 4 Outline.pdf", "course": "phys2a", "external": true},
  {"path": "/home/claude/brain/projects/calc/_files/phys2a-exam3-bank/src/webassign-q10-q11-hw11-and-psyc-guide.txt", "course": "phys2a", "external": true},
- {"path": "banks/BANK_PSY6.json", "course": "socpsy"},
- {"path": "banks/BANK_PSY7.json", "course": "socpsy"},
+ {"path": "server/data/banks/BANK_PSY6.json", "course": "socpsy"},
+ {"path": "server/data/banks/BANK_PSY7.json", "course": "socpsy"},
  {"path": "/home/claude/brain/projects/socpsy/_files/socpsy-exam2-bank/bank.md", "course": "socpsy", "external": true},
  {"path": "/home/claude/brain/projects/socpsy/_files/socpsy-exam3/bank-ch8.md", "course": "socpsy", "external": true},
  {"path": "/home/claude/brain/projects/socpsy/Chapter_4_PSYC_5_1_.txt", "course": "socpsy", "external": true},

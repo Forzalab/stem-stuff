@@ -84,7 +84,7 @@ def feed_all(parts, cls=serve.Xyz):
 class PromptFile(unittest.TestCase):
     def test_correct_cheer_names_the_value_not_the_letter(self):
         # W2: the model wrote "Yes! d is right!" in prod; the correct scene's example names the value and a rule forbids the letter
-        with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "server", "data", "prompts", "cluck-v4.txt"), encoding="utf-8") as f:
             txt = f.read()
         i = txt.index("- RESULT: correct")
         scene = txt[i:txt.index("- RESULT: wrong")]
@@ -92,7 +92,7 @@ class PromptFile(unittest.TestCase):
         self.assertIn("Never name a choice letter when RESULT is correct.", txt)
 
     def test_byte_equal(self):
-        with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), "rb") as f:
+        with open(os.path.join(ROOT, "server", "data", "prompts", "cluck-v4.txt"), "rb") as f:
             mine = f.read()
         if os.path.exists(BRAIN):
             with open(BRAIN, "rb") as f:

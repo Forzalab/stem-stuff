@@ -6,7 +6,7 @@ Per bank one coverage line, `BANK_X: <n> num units, <n> with form, <n> folded`, 
 slips are whole-answer only (no inner slip; fine for a count like "3"). Report only: never a gate failure, never --strict's exit code.
 tools/build_and_ship/ship.sh runs --strict on every bank it deploys.
 
-Run: python3 tools/bank_tools/slips.py [banks/BANK_X.json ...]     (default: problems.json + banks/*.json; report only)
+Run: python3 tools/bank_tools/slips.py [server/data/banks/BANK_X.json ...]     (default: server/data/problems.json + server/data/banks/*.json; report only)
      python3 tools/bank_tools/slips.py --strict ...                 (exit 1 on a gate failure; on an older bank, on any uncovered slip)
      python3 tools/bank_tools/slips.py --golden                     (rewrite the parity fixtures both test suites read, from slips.py:
                                                           tests/fixtures/slips-golden.json (its own forms) and slips-golden-banks.json
@@ -22,6 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "server"))     # server/slips.py is the root module
 if str(ROOT / "tools" / "bank_tools") not in sys.path:
     sys.path.append(str(ROOT / "tools" / "bank_tools"))     # tools/bank_tools/tol.py when loaded by path (tests), after ROOT so `slips` is the root module
 import slips  # noqa: E402  (the root module, not this file)
@@ -83,7 +84,7 @@ CORNERS = ("1/2/3", "8/2*(2+2)", "(1+2)+3", "1-2-3", "10-2-(3+4)", "-(3+4)", "-(
 def live_forms():
     """every `form` of the live banks (problems.json + banks/*.json), in file order, once each"""
     out = []
-    for path in [ROOT / "problems.json", *sorted((ROOT / "banks").glob("*.json"))]:
+    for path in [ROOT / "server" / "data" / "problems.json", *sorted((ROOT / "server" / "data" / "banks").glob("*.json"))]:
         for p in json.loads(path.read_text(encoding="utf-8"))["problems"]:
             out += [u["form"] for _, u in slips.units(p) if isinstance(u.get("form"), str) and u["form"] not in out]
     return out
@@ -146,7 +147,7 @@ def main(argv):
     strict = "--strict" in argv
     logp = argv[argv.index("--log") + 1] if "--log" in argv and argv.index("--log") + 1 < len(argv) else None
     argv = [a for i, a in enumerate(argv) if not (logp is not None and i == argv.index("--log") + 1)]
-    paths = [a for a in argv if not a.startswith("--")] or [ROOT / "problems.json", *sorted((ROOT / "banks").glob("*.json"))]
+    paths = [a for a in argv if not a.startswith("--")] or [ROOT / "server" / "data" / "problems.json", *sorted((ROOT / "server" / "data" / "banks").glob("*.json"))]
     total, evs = 0, []
     for path in paths:
         bad, rows = check(path, evs)

@@ -291,7 +291,7 @@ assert [Rational(q["answer"]) for q in f4["parts"]] == list(checks["F4R"][:2])
 print(f"sympy: {len(P_)} problems, all keys match")
 
 if "--write" in sys.argv:
-    path = ROOT / "problems.json"
+    path = ROOT / "server" / "data" / "problems.json"
     bank = json.loads(path.read_text())
     mine = {p["code"] for p in P_}
     bank["problems"] = [p for p in bank["problems"] if p["code"] not in mine] + P_

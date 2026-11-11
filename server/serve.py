@@ -52,7 +52,10 @@ import slips
 import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools", "build_and_ship"))
+SERVER = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(SERVER)
+DATA = os.path.join(SERVER, "data")   # the server's own data: problems.json, skills.json, banks/, prompts/
+sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
 try:
     import bundle  # tools/build_and_ship/bundle.py: builds stem-stuff.html (offline download)
 except Exception:  # noqa: BLE001
@@ -60,9 +63,8 @@ except Exception:  # noqa: BLE001
 
 MAIN = __name__ == "__main__"   # argv is ours only when run as the server (imported: tests, api/index.py on Vercel)
 PORT = int(sys.argv[1]) if MAIN and len(sys.argv) > 1 else 5567
-ROOT = os.path.dirname(os.path.abspath(__file__))
-BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
-BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (docs/design/BANK.md)
+BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(DATA, "problems.json")
+BANKS = os.environ.get("STEM_BANKS") or os.path.join(DATA, "banks")   # practice banks: banks/BANK_XXX.json (docs/design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q", "grid")
 DEFAULT_NUDGE = "Time to consult the duck oracle."
@@ -103,7 +105,7 @@ def family_hint(fam):
     return " ".join([FAMILY_HINT[first], *(FAMILY_HINT[f].removeprefix("QUACK. ") for f in rest)]).replace("{sign}", zodiac())
 
 # Server-only or private paths: never served.
-BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/", "/.env", "/scratch/")
+BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/server/", "/banks/", "/.env", "/scratch/")
 TRIES = os.environ.get("STEM_TRIES") or os.path.join(ROOT, "tries.json")
 BLOCK = {"/serve.py", "/deploy.sh", "/host.log", "/.host.pid", "/problems.json", "/tries.json", "/" + os.path.basename(BANK)}
 BUNDLE = os.path.join(ROOT, "stem-stuff.html")
@@ -2102,7 +2104,7 @@ def skill_ideas(p):
     """the plain-words idea of each algebra skill the question lists (saccharine.skills -> skills.json), [] without any"""
     if not _skills:
         try:
-            with open(os.path.join(ROOT, "skills.json"), encoding="utf-8") as f:
+            with open(os.path.join(DATA, "skills.json"), encoding="utf-8") as f:
                 _skills.update({s["id"]: s["idea"] for s in json.load(f)["skills"]})
         except (OSError, ValueError, KeyError):
             return []
@@ -2643,7 +2645,7 @@ def claude_cost(used):
 # same guards, and each arm falls back to the other before any visible text; only if both fail does the old OpenRouter chain answer.
 def _read_prompt_v4():
     try:
-        with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8", newline="") as f:
+        with open(os.path.join(DATA, "prompts", "cluck-v4.txt"), encoding="utf-8", newline="") as f:
             return f.read()
     except OSError as e:
         log("prompts/cluck-v4.txt missing:", e)
@@ -2656,7 +2658,7 @@ PROMPT_V4 = _read_prompt_v4()
 def _read_style_v4():
     """prompts/cluck-style.txt: the style card + good/bad pairs + two whole replies (PERMANENT, every bank; no expiry). "" when missing."""
     try:
-        with open(os.path.join(ROOT, "prompts", "cluck-style.txt"), encoding="utf-8", newline="") as f:
+        with open(os.path.join(DATA, "prompts", "cluck-style.txt"), encoding="utf-8", newline="") as f:
             return f.read().strip()
     except OSError as e:
         log("prompts/cluck-style.txt missing:", e)
@@ -3338,7 +3340,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=Tru
         yield ("\n" if sent else "") + CLUCK_NUDGE
 
 
-FIG_DIR = os.path.join(ROOT, "banks", "figs")
+FIG_DIR = os.path.join(DATA, "banks", "figs")
 _FIG_PNG = {}                                   # name -> base64 str (None once logged missing): read once, every turn replays the same bytes
 
 
@@ -3538,7 +3540,7 @@ _cram_json_cache = {"sig": None, "data": {}}
 
 def cram_data():
     """banks/cram/intel.json parsed (re-read when it changes); {} on any problem"""
-    path = os.path.join(ROOT, "banks", "cram", "intel.json")
+    path = os.path.join(DATA, "banks", "cram", "intel.json")
     try:
         sig = os.stat(path).st_mtime_ns
         if _cram_cache["sig"] != sig:

@@ -67,25 +67,28 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `steps.mjs` | Renumber step badges, pipe tables. | step badges |
 | `suggest.mjs` | Code box suggestion list. | code box |
 | `tug.mjs` | The Tug view (push-pull rope). | Tug view |
-| `serve.py` | The server: routes, grading, tries, LLM calls. | any server behaviour |
+| `server/serve.py` | The server: routes, grading, tries, LLM calls. | any server behaviour |
 | `api/index.py` | Vercel entry; imports serve.py. | Vercel routing |
-| `acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
-| `aiw.py` | Python port of the avoid-ai-writing detector. Has a CODEMAP header. | view string lint |
-| `aiw_rewrite.py` | LLM rewrite of lint-flagged view strings. | view string rewrite |
-| `copy_gate.py` | Gate checks for student-facing words (grade level, jargon). | view copy rules |
-| `expr.py` | Expression answers: ask for the student's work after a miss. | expression answers |
-| `livefig.py` | Live figures: one fig fence per reply as data. | figures in replies |
-| `mini.py` | Mini-Cluck server side (Socratic helper). | mini-Cluck prompts |
-| `oui.py` | OpenUI Lang 1.0 parser and validator in Python. Has a CODEMAP header. | reply view parsing |
-| `slips.py` | Slip families for a wrong plain-number answer. | slip hints on server |
-| `views_gate.py` | Server gate for Cluck's openui fences. | view fence gate |
+| `server/acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
+| `server/aiw.py` | Python port of the avoid-ai-writing detector. Has a CODEMAP header. | view string lint |
+| `server/aiw_rewrite.py` | LLM rewrite of lint-flagged view strings. | view string rewrite |
+| `server/copy_gate.py` | Gate checks for student-facing words (grade level, jargon). | view copy rules |
+| `server/expr.py` | Expression answers: ask for the student's work after a miss. | expression answers |
+| `server/livefig.py` | Live figures: one fig fence per reply as data. | figures in replies |
+| `server/mini.py` | Mini-Cluck server side (Socratic helper). | mini-Cluck prompts |
+| `server/oui.py` | OpenUI Lang 1.0 parser and validator in Python. Has a CODEMAP header. | reply view parsing |
+| `server/slips.py` | Slip families for a wrong plain-number answer. | slip hints on server |
+| `server/views_gate.py` | Server gate for Cluck's openui fences. | view fence gate |
+| `server/` | Python server and its data: moved from the repo root (serve, accounts, grading helpers, OpenUI parser). Covers all of server/. | server code, server layout |
+| `server/data/` | Server-only data: problems.json, skills.json, banks/, prompts/. See server/data/README.md. | questions, banks, prompts |
+| `server/vendor/` | Vendored server-side libs (avoid-ai-writing). Do not edit. See server/vendor/README.md. | never, unless updating a lib |
 | `deploy.sh` | One-shot install and deploy by hand. | by-hand deploy |
 | `vercel.json` | Vercel routes, function files (includeFiles), build command. | Vercel config |
-| `problems.json` | Question set (answers inside: never public). | questions |
-| `skills.json` | Skill list. | skills |
+| `server/data/problems.json` | Question set (answers inside: never public). | questions |
+| `server/data/skills.json` | Skill list. | skills |
 | `SCHEMA.md` | Format of problems, banks, graph blocks, ladders. | any data format |
 | `api/` | Vercel function entry. | Vercel entry |
-| `engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
+| `server/engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
 | `tools/build_and_ship/` | Build + ship the site (build_public.py, bundle.py, ship.sh, openui/). | build, deploy |
 | `tools/operations/` | Workflow + incident scripts (CI train batch.sh/ci-*.mjs, spend, prune). | CI, ops |
 | `tools/bank_tools/` | Bank checks + edits (slips.py, schema-check.mjs, tol.py, fig_png.mjs). | banks, problems |
@@ -99,8 +102,8 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `copy/` | Cluck line pools (JS data) and payload spec. | Cluck wording |
 | `views/` | OpenUI view registry, library.json, prompts. | view components |
 | `vendor/` | KaTeX, fonts, libs. Do not edit. | never, unless updating a lib |
-| `banks/` | Practice banks with answers (server only). | a bank |
-| `prompts/` | Runtime LLM system prompts. | Cluck prompt text |
+| `server/data/banks/` | Practice banks with answers (server only). | a bank |
+| `server/data/prompts/` | Runtime LLM system prompts. | Cluck prompt text |
 | `blind/` | Blind-locale test data. | blind test |
 | `calc/` | Calc Coach json and svg. | Calc Coach data |
 | `design/` | Live explain-box.* and the `*-lab.html` pages. Notes and plans are in `docs/design/`, mockups and shots in `archive/design/`. | explain box, a lab page |

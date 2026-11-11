@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { titleOf, texText, clip } from "../nav.js";
 
-const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
+const bank = JSON.parse(readFileSync(new URL("../server/data/problems.json", import.meta.url), "utf8"));
 
 test("every problem in problems.json gets a short plain title: no TeX, no markdown", () => {
   for (const p of bank.problems) {

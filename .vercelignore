@@ -1,4 +1,4 @@
-# Uploaded by `vercel deploy` from Tony's machine: banks/ and problems.json DO go up (answers stay server-side:
+# Uploaded by `vercel deploy` from Tony's machine: server/data/banks/ and server/data/problems.json DO go up (answers stay server-side:
 # tools/build_and_ship/build_public.py keeps them out of public/, vercel.json bundles them into api/index.py only).
 .git
 .claude

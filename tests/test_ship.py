@@ -1,6 +1,6 @@
-"""tools/build_and_ship/ship.sh --print-banks: which file each bank comes from ([banks-dir] > newest in the brain repo > checkout banks/),
+"""tools/build_and_ship/ship.sh --print-banks: which file each bank comes from ([banks-dir] > newest in the brain repo > checkout server/data/banks/),
 --no-brain, and BRAIN_TOKEN never reaching stdout/stderr (not even under bash -x). No worktree, no Vercel.
-ship.sh runs from a copy in a temp root, so this checkout's banks/ and .env stay out; HOME is a temp dir and SHIP_BRAIN_SEARCH is empty, so ~/brain and /home/claude/brain do too.
+ship.sh runs from a copy in a temp root, so this checkout's server/data/banks/ and .env stay out; HOME is a temp dir and SHIP_BRAIN_SEARCH is empty, so ~/brain and /home/claude/brain do too.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import base64
 import functools
@@ -113,7 +113,7 @@ class PrintBanks(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.root = os.path.join(self.tmp, "root")
         os.makedirs(os.path.join(self.root, "tools", "build_and_ship"))
-        os.makedirs(os.path.join(self.root, "banks"))
+        os.makedirs(os.path.join(self.root, "server", "data", "banks"))
         for f in ("ship.sh", "brain_banks.py"):
             shutil.copy(os.path.join(ROOT, "tools", "build_and_ship", f), os.path.join(self.root, "tools", "build_and_ship", f))
         self.home = os.path.join(self.tmp, "home")
@@ -164,9 +164,9 @@ class PrintBanks(unittest.TestCase):
         self.assertEqual(self.chosen(self.ship())["BANK_ZZ1.json"], ("brain", os.path.join(self.brain, self.OLD)))
 
     def test_brain_beats_checkout_banks_and_banks_dir_beats_both(self):
-        put(self.root, "banks/BANK_ZZ1.json", "{}")                       # a stale local copy never wins over the brain
+        put(self.root, "server/data/banks/BANK_ZZ1.json", "{}")           # a stale local copy never wins over the brain
         self.assertEqual(self.chosen(self.ship())["BANK_ZZ1.json"][0], "brain")
-        only = put(self.root, "banks/BANK_ZZ9.json", "{}")                # a bank the brain does not have still ships
+        only = put(self.root, "server/data/banks/BANK_ZZ9.json", "{}")    # a bank the brain does not have still ships
         self.assertEqual(self.chosen(self.ship())["BANK_ZZ9.json"], ("repo", only))
         extra = os.path.join(self.tmp, "extra")
         mine = put(extra, "BANK_ZZ1.json", "{}")
@@ -258,9 +258,10 @@ class PrintBanks(unittest.TestCase):
 class Gate(unittest.TestCase):
     """The bank gate: a bank set with one bank failing slips.py --strict or the "problems" schema stops before any Vercel step; a clean
     set (an older bank only warns) gets to `vercel deploy`. Vercel is a fake npx on PATH that logs its args; the root is a git repo with
-    an origin, so the run gets as far as a real one."""
+    an origin, so the run gets as far as a real one
+    The fake root has server/data/problems.json and the committed server/data/banks/figs PNGs; the banks go in server/data/banks/."""
     FILES = ("tools/build_and_ship/ship.sh", "tools/build_and_ship/brain_banks.py", "tools/build_and_ship/version.sh", "tools/bank_tools/slips.py", "tools/bank_tools/tol.py", "tools/bank_tools/schema-check.mjs",
-             "slips.py", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
+             "server/slips.py", "server/data/problems.json", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-gate-")
@@ -272,7 +273,8 @@ class Gate(unittest.TestCase):
         shutil.copytree(os.path.join(ROOT, "vendor", "katex"), os.path.join(self.root, "vendor", "katex"))
         os.symlink(os.path.join(ROOT, "tests", "node_modules"), os.path.join(self.root, "tests", "node_modules"))
         put(self.root, ".gitignore", "tests/node_modules\n")
-        put(self.root, "banks/.keep", "")
+        put(self.root, "server/data/banks/.keep", "")
+        shutil.copytree(os.path.join(ROOT, "server", "data", "banks", "figs"), os.path.join(self.root, "server", "data", "banks", "figs"))   # committed PNGs, as in a checkout
         os.makedirs(os.path.join(self.root, ".vercel"))                    # linked: no `vercel link`
         origin = os.path.join(self.tmp, "origin.git")
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", origin], check=True)
@@ -283,10 +285,10 @@ class Gate(unittest.TestCase):
         git(self.root, "push", "-q", "origin", "side:main")
         self.bin, self.log = os.path.join(self.tmp, "bin"), os.path.join(self.tmp, "npx.log")
         self.figs = os.path.join(self.tmp, "deployed-figs")                # what the upload's banks/figs held at `vercel deploy`
-        put(self.bin, "npx", '#!/bin/sh\necho "$*" >>"%s"\ncase "$*" in *" deploy"*) cp -r banks/figs "%s" 2>/dev/null; echo https://t.vercel.app ;; esac\n'
+        put(self.bin, "npx", '#!/bin/sh\necho "$*" >>"%s"\ncase "$*" in *" deploy"*) cp -r server/data/banks/figs "%s" 2>/dev/null; echo https://t.vercel.app ;; esac\n'
             % (self.log, self.figs))
         os.chmod(os.path.join(self.bin, "npx"), 0o755)
-        with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "server", "data", "problems.json"), encoding="utf-8") as f:
             ps = json.load(f)["problems"]
         self.num = next(p for p in ps if p["type"] == "num" and p.get("form"))
         self.fig = next(p for p in ps if p["code"] == FIG_CODE)
@@ -302,10 +304,18 @@ class Gate(unittest.TestCase):
         return subprocess.run(["bash", os.path.join(self.root, "tools", "build_and_ship", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
                               capture_output=True, text=True, env=e, timeout=180)
 
+    def unseed_fig(self):
+        """the deploy is built from origin/main, which holds the seeded PNG of FIG_CODE: commit + push its removal, so the gate must render it"""
+        os.remove(os.path.join(self.root, "server", "data", "banks", "figs", FIG_CODE + "-1.png"))
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "no PNG for the brain figure")
+        git(self.root, "push", "-q", "origin", "side:main")
+
     def fig_brain(self):
-        """a brain clone whose exam bank (like BANK_P3X) has one figure item: the bank exists only there, never in banks/ or banks/figs/"""
+        """a brain clone whose exam bank (like BANK_P3X) has one figure item: the bank exists only there, never in server/data/banks/ or its figs/"""
         brain = os.path.join(self.tmp, "brain")
         put(brain, "projects/calc/_files/exam3-bank/BANK_FIG.json", json.dumps({"v": 20261022, "problems": [self.fig]}))
+        self.unseed_fig()
         git(brain, "init", "-q")
         git(brain, "add", "-A")
         git(brain, "commit", "-q", "-m", "bank")
@@ -374,17 +384,17 @@ class Gate(unittest.TestCase):
 
 
 class FigPng(unittest.TestCase):
-    """tools/bank_tools/fig_png.mjs --root DIR: renders and checks DIR's problems.json + DIR/banks/*.json into DIR/banks/figs (ship.sh points it at the
+    """tools/bank_tools/fig_png.mjs --root DIR: renders and checks DIR/server/data/problems.json + DIR/server/data/banks/*.json into DIR/server/data/banks/figs (ship.sh points it at the
     deploy dir, which holds the brain banks); without --root it is this checkout, as before."""
     CODE = "ZZFIG_W1F"   # not in this checkout: a PNG for it here would mean --root leaked into the repo
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-figpng-")
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "server", "data", "problems.json"), encoding="utf-8") as f:
             p = next(p for p in json.load(f)["problems"] if p["code"] == FIG_CODE)
-        put(self.tmp, "banks/BANK_FIG.json", json.dumps({"v": 20261022, "problems": [dict(p, code=self.CODE)]}))
-        self.png = os.path.join(self.tmp, "banks", "figs", self.CODE + "-1.png")
+        put(self.tmp, "server/data/banks/BANK_FIG.json", json.dumps({"v": 20261022, "problems": [dict(p, code=self.CODE)]}))
+        self.png = os.path.join(self.tmp, "server", "data", "banks", "figs", self.CODE + "-1.png")
 
     def fig(self, *args):
         return subprocess.run(["node", os.path.join(ROOT, "tools", "bank_tools", "fig_png.mjs"), "--root", self.tmp, *args],
@@ -394,7 +404,7 @@ class FigPng(unittest.TestCase):
         r = self.fig("--check")
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
         self.assertIn(self.CODE + "-1.png", r.stderr)
-        put(self.tmp, "banks/figs/%s-1.png" % self.CODE, "png")
+        put(self.tmp, "server/data/banks/figs/%s-1.png" % self.CODE, "png")
         r = self.fig("--check")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("ok 1 figure PNGs", r.stdout)
@@ -411,7 +421,7 @@ class FigPng(unittest.TestCase):
         with open(self.png, "rb") as f:
             self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
         self.assertEqual(sorted(os.listdir(os.path.dirname(self.png))), [self.CODE + "-1.png"])
-        self.assertFalse(os.path.exists(os.path.join(ROOT, "banks", "figs", self.CODE + "-1.png")))
+        self.assertFalse(os.path.exists(os.path.join(ROOT, "server", "data", "banks", "figs", self.CODE + "-1.png")))
         self.assertEqual(self.fig("--check").returncode, 0)
 
 

@@ -1,5 +1,5 @@
 // Dogfood run: use the page like a student and screenshot every state (at 390x844 and 1920x1080).
-//   python3 serve.py 8812 &   node tools/audits/dogfood.mjs http://localhost:8812 archive/design/shots
+//   python3 server/serve.py 8812 &   node tools/audits/dogfood.mjs http://localhost:8812 archive/design/shots
 import { createRequire } from "node:module";
 import { writeFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,7 +10,7 @@ const [BASE = "http://localhost:8812", OUT = "archive/design/shots"] = process.a
 
 // a problems.json on "disk" for the upload flow (a real problem under a code the server doesn't have)
 const dir = mkdtempSync(join(tmpdir(), "dog-"));
-const prob = JSON.parse(readFileSync(new URL("../../problems.json", import.meta.url))).problems.find(p => p.code === "PHYS_F3N");
+const prob = JSON.parse(readFileSync(new URL("../../server/data/problems.json", import.meta.url))).problems.find(p => p.code === "PHYS_F3N");
 prob.code = "PHYS_Q7W";
 const file = join(dir, "problems.json");
 writeFileSync(file, JSON.stringify({ v: 1, problems: [prob] }));

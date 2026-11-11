@@ -26,7 +26,8 @@ const walk = (o, k) => {                                   // the same cut as te
   } else if (Array.isArray(o)) { if (o.every(x => typeof x === "string")) walk(o.join("\n"), k); else o.forEach(x => walk(x, k)); }
   else if (o && typeof o === "object") for (const [kk, v] of Object.entries(o)) walk(v, kk);
 };
-for (const f of [...readdirSync(root + "/banks").filter(f => f.endsWith(".json")).map(f => root + "/banks/" + f), root + "/problems.json"])
+const data = root + "/server/data";
+for (const f of [...readdirSync(data + "/banks").filter(f => f.endsWith(".json")).map(f => data + "/banks/" + f), data + "/problems.json"])
   walk(JSON.parse(readFileSync(f, "utf8")));
 process.stdout.write(JSON.stringify(out.map(t => [t, texPlain(t)])));
 """

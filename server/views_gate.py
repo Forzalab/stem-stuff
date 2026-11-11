@@ -13,7 +13,7 @@ import sys
 import livefig
 import oui
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root (this file lives in server/)
 # What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
 # through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
 CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip", "Doodle"}   # Doodle: a Steps anchor (stepper, Nov 8)

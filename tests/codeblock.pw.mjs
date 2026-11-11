@@ -29,7 +29,7 @@ const CODE = [
 const P = [{ code: "CSCI26_CB1", type: "mc", body: [{ type: "text", md: "What does the program print for $s$?\n\n```cpp\n" + CODE + "\n```" }],
   choices: [{ id: "a", md: "10" }, { id: "b", md: "30" }, { id: "c", md: "```cpp\nint s = 1 + 9;\n```" }, { id: "d", md: "20" }], correct: "a" }];
 writeFileSync(join(BANKS, "BANK_CB1.json"), JSON.stringify({ v: 1, problems: P }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let bad = 0;

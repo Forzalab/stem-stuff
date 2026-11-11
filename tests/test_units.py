@@ -11,7 +11,7 @@ import serve
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 with open(os.path.join(ROOT, "tests", "fixtures", "units-demo.json"), encoding="utf-8") as f:
     DEMO = json.load(f)["problems"]
-with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+with open(os.path.join(ROOT, "server", "data", "problems.json"), encoding="utf-8") as f:
     REPO = json.load(f)["problems"]
 with open(os.path.join(ROOT, "tests", "fixtures", "unit-twist.json"), encoding="utf-8") as f:
     UT = json.load(f)["problems"]                                   # W132a's fixture: two more num parts with units

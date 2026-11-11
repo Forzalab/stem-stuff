@@ -24,7 +24,7 @@ const PROBS = Array.from({ length: 8 }, (_, i) => ({ code: `CALC1_RDN${i + 1}`, 
   body: [{ type: "text", md: `Redo ${i + 1}: pick a.` }], correct: "a", choices: ["one", "two", "three", "four"].map((md, j) => ({ id: "abcd"[j], md })),
   saccharine: { title: `Practice Exam 2, Question ${i + 1}`, key: "Tick: a", slip: { b: "Not b.", c: "Not c." } } }));
 writeFileSync(join(banks, "BANK_RDN.json"), JSON.stringify({ v: 1, problems: PROBS }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 

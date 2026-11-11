@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "server"))
 import serve  # noqa: E402
 import slips  # noqa: E402
 
@@ -43,7 +44,7 @@ def bench(path):
 
 
 def main(argv):
-    for path in argv or [str(ROOT / "problems.json"), *map(str, sorted((ROOT / "banks").glob("*.json")))]:
+    for path in argv or [str(ROOT / "server" / "data" / "problems.json"), *map(str, sorted((ROOT / "server" / "data" / "banks").glob("*.json")))]:
         n, rows = bench(path)
         print(f"{path}: {n} inputs, {len(rows)} flips")
         print("\n".join(rows))

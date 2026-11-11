@@ -35,7 +35,7 @@ import re
 
 import aiw
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root (this file lives in server/)
 ALLOW_DIR = os.path.join(ROOT, "views", "allow")
 COMMON_PATH = os.path.join(ALLOW_DIR, "common-en.txt")
 FK_MIN_WORDS = 20

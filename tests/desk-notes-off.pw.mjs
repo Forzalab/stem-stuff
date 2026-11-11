@@ -21,7 +21,7 @@ const sac = { title: "Notes off", tip: "Pressure = force / area.", key: "$P=F/A$
 const prob = { code: "PHYS_DA1", title: "Notes off", type: "num", answer: "4", body: [{ type: "text", md: "What is 2 + 2?" }], noob: { tier: 1 }, saccharine: sac };
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_DNO.json"), JSON.stringify({ v: 1, problems: [prob] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_DNO", STEM_FRONT_TITLE: "Exam 3", STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_DNO", STEM_FRONT_TITLE: "Exam 3", STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 let failures = 0;
 async function step(name, fn) {

@@ -25,7 +25,7 @@ const snack = { ...real, code: "CALC1_B02", sugar_only: true, body: [{ type: "te
     original: { q: 1, body: [{ type: "text", md: "The original question 1." }], solution: ["Use: $p = mv$", "Answer: 2.0 m/s"] } } };
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_BL12.json"), JSON.stringify({ v: 1, problems: [real, snack] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

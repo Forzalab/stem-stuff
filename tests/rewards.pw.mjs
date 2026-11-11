@@ -30,7 +30,7 @@ const SOL = ["Use: $F = kx$", "$F = 2 \\cdot 3 = 6$ N", "Answer: 6 N"];
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_RW12.json"), JSON.stringify({ v: 1, problems: [
   real("CALC1_R01", 1), real("CALC1_R02", 2), real("CALC1_R03", 3), snack("CALC1_S01", "CALC1_R01", 7, SOL), snack("CALC1_S02", "CALC1_R03", 7, SOL)] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

@@ -300,7 +300,7 @@ async function run(browserType, label, opts = {}) {
     await step(`${label} ${vname} upload one problems.json: every problem loads, graded from the file`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
       // a bank with codes the server doesn't have: the upload is the only source
-      const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
+      const bank = JSON.parse(readFileSync(new URL("../server/data/problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace("_", "_Q");   // insert, not swap: a swap made codes collide
       await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
@@ -322,7 +322,7 @@ async function run(browserType, label, opts = {}) {
       await page.evaluate(() => localStorage.setItem("stem-q-upload", JSON.stringify({ v: 1, salt: "pin", pos: 0, seen: {}, hist: [], at: -1 })));   // a fresh queue for this upload
       await open("CALC1_T6B");
       assert.ok(await page.locator("#qnav").isHidden(), "nav shown for a server problem");
-      const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
+      const bank = JSON.parse(readFileSync(new URL("../server/data/problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace("_", "_N");
       const file = bank.problems.map(p => p.code), codes = file, n = codes.length;   // the list is file order (Tony, Oct 20)
             const f0 = file[0], k0 = codes.indexOf(f0);                                  // a fresh queue opens the file's first question

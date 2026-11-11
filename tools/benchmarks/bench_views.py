@@ -6,7 +6,7 @@ import concurrent.futures as cf, json, os, re, subprocess, sys, time, urllib.req
 tree, port, tag, reps = sys.argv[1], int(sys.argv[2]), sys.argv[3], int(sys.argv[4])
 HERE = os.path.dirname(os.path.abspath(__file__))
 S = os.path.dirname(os.path.dirname(HERE))
-BANK = json.load(open(os.path.join(S, "banks", "BANK_P3X.json")))["problems"]
+BANK = json.load(open(os.path.join(S, "server", "data", "banks", "BANK_P3X.json")))["problems"]
 P = {p["code"]: p for p in BANK}
 HARD = ["PHYS_SGU", "PHYS_T6Y", "PHYS_USR", "PHYS_FW6", "PHYS_75G"]
 WIDE = ["PHYS_96G", "PHYS_GVE", "PHYS_7HA", "PHYS_CL8", "PHYS_JJN", "PHYS_HCM", "PHYS_2EP"]
@@ -16,10 +16,10 @@ if os.environ.get("BENCH_FIVE"):
 else:
     JOBS = [(c, "w") for c in HARD for _ in range(reps)] + [(c, "w") for c in WIDE] + [("PHYS_2EP", "r")]
 env = dict(os.environ, CLUCK_ARM="claude", CLAUDE_API=os.environ["OPENROUTER_API_KEY"], CLAUDE_BASE="https://openrouter.ai/api",
-           CLAUDE_MODEL="anthropic/claude-sonnet-5.5", STEM_BANKS=os.path.join(S, "banks"), STEM_FRONT="BANK_P3X",
+           CLAUDE_MODEL="anthropic/claude-sonnet-5.5", STEM_BANKS=os.path.join(S, "server", "data", "banks"), STEM_FRONT="BANK_P3X",
            STEM_TRIES=os.path.join(HERE, f"tries-{tag}.json"))
 log = open(os.path.join(HERE, f"serve-{tag}.log"), "w")
-srv = subprocess.Popen(["python3", os.path.join(tree, "serve.py"), str(port)], env=env, stderr=log, stdout=log)
+srv = subprocess.Popen(["python3", os.path.join(tree, "server", "serve.py"), str(port)], env=env, stderr=log, stdout=log)
 for _ in range(100):
     try:
         urllib.request.urlopen(f"http://localhost:{port}/", timeout=1)

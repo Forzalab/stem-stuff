@@ -19,7 +19,7 @@ const PORT = +(process.argv[2] || 8823), BASE = `http://localhost:${PORT}`;
 const TRIES = join(mkdtempSync(join(tmpdir(), "partfb-")), "tries.json");
 const CODE = "CSCI26_M5V", SPOT = "QUACK. Redo the bottom of the fraction.";
 
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let fails = 0;

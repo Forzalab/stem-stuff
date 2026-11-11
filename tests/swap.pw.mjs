@@ -312,7 +312,7 @@ for (const [W, H] of SIZES) {
   /* ================= a bank upload replaces the problem: one scratchpad, the nav shows ================= */
   await step(`${T} upload a bank: the nav shows; a second problem load leaves one scratchpad`, async () => {
     await open("CALC1_T6B");
-    const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
+    const bank = JSON.parse(readFileSync(new URL("../server/data/problems.json", import.meta.url), "utf8"));
     for (const p of bank.problems) p.code = p.code.replace("_", "_N");   // insert, not swap: a swap made codes collide
     if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
