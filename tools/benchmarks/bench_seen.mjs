@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { jevModel } from "./jev-model.mjs";
 
-const SRC = readFileSync(new URL("../../intent.js", import.meta.url), "utf8");
+const SRC = readFileSync(new URL("../../client/cluck/jev_nudges/intent.js", import.meta.url), "utf8");
 export const tree = (() => { const w = { URLSearchParams }; w.window = w; vm.runInNewContext(SRC, w); return w.__stemJev.tree; })();
 
 const LINE = /^\+(\d+(?:\.\d+)?) {2}(\S+)(?: {2}(.*))?$/;
@@ -149,8 +149,8 @@ export function events(items) {
    that SHOWS (nudge:S2 …), the seen fire (seen:nod|short|full) and its silent pick (seen:quiet) */
 export function replay(ev, { seed = 1, src } = {}) {
   const J = loadJev(src), lines = [{ fam: {}, any: [] }][0];
-  const SL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../../copy/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
-  const NL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../../copy/nudge-lines.js", import.meta.url), "utf8"), w); return w.__stemNudgeLines; })();
+  const SL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../../client/resources/texts/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
+  const NL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../../client/resources/texts/nudge-lines.js", import.meta.url), "utf8"), w); return w.__stemNudgeLines; })();
   let t = 0, dismissAt = Infinity;
   const fires = [], j = J.create(() => t * 1000, {}, { rand: lcg(seed), lines: NL, seenLines: SL || lines, say: () => { dismissAt = t + DISMISS_S; return true; }, title: () => "" });
   const end = ev.length ? ev[ev.length - 1].t + 60 : 0, q = ev.slice();

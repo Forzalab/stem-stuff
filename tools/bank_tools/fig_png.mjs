@@ -48,9 +48,9 @@ const u = p => pathToFileURL(join(ROOT, p)).href;
 const LIGHT = "--page:#fff;--card:#fff;--float:#f2f4f7;--line:#c9d1dc;--ink:#111a26;--muted:#4f5d70;--paper:#fff;--field:#fff;--qbox:#fff;" +
   "--body:#fff;--bg:#fff;--ramp:#fff;--knock:rgb(255 255 255 / 0.85);--action:#1d5fc9;--c1:#1d5fc9;--c1-hi:#0e3f8f;--c2:#c25e00;--c3:#b4237a;--grid:#dde3ea;" +
   "--correct:#0a7d55;--wrong:#c22b44;--help:#c25e00";
-const html = `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="${u("vendor/katex/katex.min.css")}"><link rel="stylesheet" href="${u("app.css")}">
+const html = `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="${u("client/vendor/katex/katex.min.css")}"><link rel="stylesheet" href="${u("client/answer/drill_core/app.css")}">
 <style>:root,html,body{${LIGHT}} html,body{margin:0;background:#fff;color:var(--ink)} .fig{margin:0;background:#fff}</style>
-<script src="${u("vendor/katex/katex.min.js")}"></script><script src="${u("vendor/math.min.js")}"></script><script src="${u("graph.js")}"></script>
+<script src="${u("client/vendor/katex/katex.min.js")}"></script><script src="${u("client/vendor/math.min.js")}"></script><script src="${u("client/cluck/figures/graph.js")}"></script>
 <body><div class="fig" id="f"></div></body>`;
 const tmp = join(OUT, ".render.html");
 mkdirSync(OUT, { recursive: true });
