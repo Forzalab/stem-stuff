@@ -99,6 +99,7 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `tools/audits/` | UI screenshots + measures (button_audit, dogfood, splash_shots). | audit, UI |
 | `tools/author/` | Problem authoring loop (gen-loop.mjs). | authoring |
 | `tools/repo_checks/` | Repo checks (move_inventory, codemap, mutants). | checks, refactor |
+| `tools/repo_checks/client_paths.py` | Static path checker: dangling import/src/href/url in client files. | dangling path, checks |
 | `tests/` | All tests; run with tests/run-all.sh (--quick for the fast tier). | test or fixture |
 | `rewards/` | Coin and star fx scripts and icons. | rewards fx |
 | `copy/` | Cluck line pools (JS data) and payload spec. | Cluck wording |
