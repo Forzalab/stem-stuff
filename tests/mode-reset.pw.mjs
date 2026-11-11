@@ -14,7 +14,7 @@ const browser = await pw.chromium.launch();
 async function showCode(page) {
   for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) return; if (await page.isVisible(s)) await page.click(s); }
 }
-const sugarOn = page => page.evaluate(async () => (await import("./mode.mjs")).modeOf() === "sugar");   // the instance app.js uses
+const sugarOn = page => page.evaluate(async () => (await import("./client/pure_logic_modules/mode.mjs")).modeOf() === "sugar");   // the instance app.js uses
 const jar = async ctx => Object.fromEntries((await ctx.cookies(BASE)).map(c => [c.name, c]));
 try {
   for (const old of ["diet", "hard"]) {

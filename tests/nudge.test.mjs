@@ -7,8 +7,8 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
-const SRC = read("../intent.js");
-const LINES = (() => { const w = {}; w.window = w; vm.runInNewContext(read("../copy/nudge-lines.js"), w); return JSON.parse(JSON.stringify(w.__stemNudgeLines)); })();
+const SRC = read("../client/cluck/jev_nudges/intent.js");
+const LINES = (() => { const w = {}; w.window = w; vm.runInNewContext(read("../client/resources/texts/nudge-lines.js"), w); return JSON.parse(JSON.stringify(w.__stemNudgeLines)); })();
 const AIW = (() => { const m = { exports: {} }; vm.runInNewContext(read("vendor/aiw/patterns.js"), { module: m, console }); return m.exports; })();
 
 /* a fake browser with a clock the test moves (clock.t ms) */

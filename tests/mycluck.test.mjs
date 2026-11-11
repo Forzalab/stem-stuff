@@ -4,9 +4,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 const req = createRequire(import.meta.url);
-globalThis.qrcode = req("../vendor/qrcode-generator/qrcode.js");
-globalThis.jsQR = req("../vendor/jsqr/jsQR.js");
-const { drawCluck, decode, variant } = await import("../mycluck.mjs");
+globalThis.qrcode = req("../client/vendor/qrcode_generator/qrcode.js");
+globalThis.jsQR = req("../client/vendor/jsqr/jsQR.js");
+const { drawCluck, decode, variant } = await import("../client/pure_logic_modules/mycluck.mjs");
 
 const TOK = "q3Xv9LkP0aZ_8-mN2bR4tw";                 // 128-bit base64url, the shape acct.py mints (E1)
 const LINK = "https://stem-stuff.vercel.app/?k=" + TOK;

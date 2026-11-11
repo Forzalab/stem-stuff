@@ -9,7 +9,7 @@ import { isDeepStrictEqual } from "node:util";
 import {
   createParser, createStore, createStreamingParser, evaluate, evaluateRoot, jsonToOpenUI, markReactive, mergeStatements,
   parseStructuredRules, validate,
-} from "../vendor/openui-lang.mjs";
+} from "../client/vendor/openui-lang.mjs";
 
 export const FIXTURES = new URL("fixtures/openui/1.0/", import.meta.url);
 const read = (...p) => readFileSync(new URL(p.join("/"), FIXTURES), "utf8");

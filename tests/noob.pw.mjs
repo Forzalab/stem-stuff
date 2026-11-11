@@ -28,7 +28,7 @@ writeFileSync(join(BANKS, "BANK_P2X.json"), JSON.stringify({ v: 1, problems: COD
 writeFileSync(join(BANKS, "BANK_OTH1.json"), JSON.stringify({ v: 1, problems: [1, 2].map(n => ({ code: `CALC1_O0${n}`, type: "num", answer: "1", body: [{ type: "text", md: `Other ${n}` }] })) }));
 
 /* pin the queue's salt (nav.js shown() keeps hist, which deadOpen reads): one whose opener is two dead-easy, so slot 4 (the first review slot) has nothing older to re-show */
-const { qNew, qShow, qAnswer, ramp, rampAnswer } = await import("../shuffle.mjs");
+const { qNew, qShow, qAnswer, ramp, rampAnswer } = await import("../client/pure_logic_modules/shuffle.mjs");
 const tierOf = c => TIER[c] ?? 3;
 const plays = salt => { const st = qNew(salt), out = []; for (let i = 0; i < 5; i++) { const c = ramp(st, CODES, tierOf).code; qShow(st, c); st.hist.push({ c }); if (qAnswer(st, c, true)) rampAnswer(st, c, true, tierOf); out.push(c); } return out; };
 const SALT = Array.from({ length: 500 }, (_, i) => "n" + i).find(s => plays(s).slice(0, 2).every(c => TIER[c] === 0));
