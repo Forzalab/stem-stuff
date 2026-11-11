@@ -10,8 +10,8 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC = os.path.join(ROOT, "rewards", "icons")
-OUT = os.path.join(ROOT, "rewards", "icons.js")
+SRC = os.path.join(ROOT, "client", "rewards", "icons")
+OUT = os.path.join(ROOT, "client", "rewards", "icons.js")
 
 
 def text():
