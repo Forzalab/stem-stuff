@@ -24,7 +24,7 @@ const real = n => ({ code: `CALC1_TN${n}`, type: "mc", shuffle: false, body: [{ 
   correct: "a", wrong: [{ choice: "b", hint: "QUACK. Not b." }], saccharine: { title: `Practice Exam 2, Question ${n}`, key: "Use: a\nAnswer: a", slip: { b: "b slip" } } });
 writeFileSync(join(banks, "BANK_TNX.json"), JSON.stringify({ v: 1, problems: [1, 2, 3].map(real) }));
 writeFileSync(join(banks, "BANK_TNO.json"), JSON.stringify({ v: 1, problems: [real(9)] }));   // one question: Next has nowhere to go, so it says why
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 

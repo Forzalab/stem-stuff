@@ -1,5 +1,5 @@
 """aiw.py, the gate's Python port of the avoid-ai-writing detector (P4.1b), against the vendored JS
-(vendor/avoid-ai-writing/patterns.js @013d1db via tests/aiw-canon.mjs, one node call for all cases):
+(vendor/avoid_ai_writing/patterns.js @013d1db via tests/aiw-canon.mjs, one node call for all cases):
 - differential: the whole result (score, label, issues with type/text/index/severity/suggestion, stats, trinary
   classification, probabilities, confidence, highlight regions) is IDENTICAL to the JS one on
   (a) every input upstream's detector/patterns.test.js passes to analyzeText (recorded, tests/fixtures/aiw/corpus.json.gz;
@@ -24,7 +24,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import aiw  # noqa: E402
+from cluck_reply_checks import aiw  # noqa: E402
 
 CANON = os.path.join(ROOT, "tests", "aiw-canon.mjs")
 CORPUS = os.path.join(ROOT, "tests", "fixtures", "aiw", "corpus.json.gz")

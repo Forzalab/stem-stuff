@@ -178,7 +178,7 @@ test("SCHEMA.md patterns accept / refuse the same codes as isCode", () => {
     assert.equal(re.test(c), C.isCode(c), c);
 });
 test("serve.py: the bank id lengths are LEN.prefix; mode.mjs: its eaten words are RESERVED", () => {
-  const py = read("server/serve.py"), [lo, hi] = C.LEN.prefix;
+  const py = read("server/http_server/serve.py"), [lo, hi] = C.LEN.prefix;
   for (const name of ["BANK_CODE", "BANK_PATH"]) {
     const line = py.split("\n").find(l => l.startsWith(name + " ="));
     assert.ok(line, name);
@@ -224,7 +224,7 @@ test("bank versions (SCHEMA.md Version table): bankNotice reads the banner / dro
   const app = read("app.js");
   assert.match(app, /if \(nb\.dropped\) \{ if \(!quiet\) entryMsg\(nb\.dropped, "warn"\); return false; \}/);   // the line, not "not found"
   assert.match(app, /el\.className = codes\.BANNER_CLASS;[^\n]*panel\.prepend\(el\)/);                       // top of #qlist
-  assert.match(read("server/serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);
+  assert.match(read("server/http_server/serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);
 });
 
 test("inheritTol: a topic tol rides on every unit of its problems as topic_tol; tolOf order question > topic > bank (todo 32)", () => {

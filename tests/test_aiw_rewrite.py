@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
 
-import aiw_rewrite as R  # noqa: E402
+from cluck_reply_checks import aiw_rewrite as R  # noqa: E402
 
 with open(os.path.join(ROOT, "tests", "fixtures", "aiw_rewrite_js.json"), encoding="utf-8") as fh:
     JS = {c["text"]: c["issues"] for c in json.load(fh)["cases"]}

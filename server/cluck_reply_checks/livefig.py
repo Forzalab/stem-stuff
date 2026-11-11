@@ -10,7 +10,7 @@ import os
 import re
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root (this file lives in server/)
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # the repo root (this file lives in server/<package>/)
 
 # What a live figure may use: a strict subset of SCHEMA.md's kinds and marks (no circuit: its outputs are the answer; no param /
 # tangent / path: t-expressions are harder to check). Caps keep it small enough for a phone and for a ms gate.

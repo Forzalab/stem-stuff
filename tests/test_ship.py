@@ -261,7 +261,7 @@ class Gate(unittest.TestCase):
     an origin, so the run gets as far as a real one
     The fake root has server/data/problems.json and the committed server/data/banks/figs PNGs; the banks go in server/data/banks/."""
     FILES = ("tools/build_and_ship/ship.sh", "tools/build_and_ship/brain_banks.py", "tools/build_and_ship/version.sh", "tools/bank_tools/slips.py", "tools/bank_tools/tol.py", "tools/bank_tools/schema-check.mjs",
-             "server/slips.py", "server/data/problems.json", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
+             "server/answer_grading/slips.py", "server/data/problems.json", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-gate-")

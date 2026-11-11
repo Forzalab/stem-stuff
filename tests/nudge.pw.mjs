@@ -29,7 +29,7 @@ const LAD = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/ladder-pilot.json
 writeFileSync(join(banks, "formula-sheet.json"), readFileSync(join(ROOT, "tests/fixtures/formula-sheet-pilot.json")));
 writeFileSync(join(banks, "BANK_T95L.json"), JSON.stringify({ v: 1, problems: [{ ...PROBS[0], code: "CALC1_T95L1", title: "T95 ladder",
   saccharine: { title: LAD.title, part: LAD.part, ladder: LAD.ladder } }] }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

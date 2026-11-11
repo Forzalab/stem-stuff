@@ -33,9 +33,9 @@ import json
 import os
 import re
 
-import aiw
+from cluck_reply_checks import aiw
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root (this file lives in server/)
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # the repo root (this file lives in server/<package>/)
 ALLOW_DIR = os.path.join(ROOT, "views", "allow")
 COMMON_PATH = os.path.join(ALLOW_DIR, "common-en.txt")
 FK_MIN_WORDS = 20

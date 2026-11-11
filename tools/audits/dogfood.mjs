@@ -1,5 +1,5 @@
 // Dogfood run: use the page like a student and screenshot every state (at 390x844 and 1920x1080).
-//   python3 server/serve.py 8812 &   node tools/audits/dogfood.mjs http://localhost:8812 archive/design/shots
+//   python3 server/http_server/serve.py 8812 &   node tools/audits/dogfood.mjs http://localhost:8812 archive/design/shots
 import { createRequire } from "node:module";
 import { writeFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";

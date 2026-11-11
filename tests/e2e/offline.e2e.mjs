@@ -34,7 +34,7 @@ let site, browser;
 const freePort = () => new Promise(res => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); });
 async function serve() {
   const port = await freePort();
-  const proc = spawn("python3", [join(site, "serve.py"), String(port)], { stdio: "ignore" });
+  const proc = spawn("python3", [join(site, "server", "http_server", "serve.py"), String(port)], { stdio: "ignore" });
   for (let i = 0; i < 50; i++) {
     try { await fetch(`http://localhost:${port}/index.html`); return { port, proc, url: `http://localhost:${port}/` }; }
     catch { await new Promise(r => setTimeout(r, 100)); }

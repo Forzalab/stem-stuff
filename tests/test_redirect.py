@@ -28,7 +28,7 @@ class Redirect(unittest.TestCase):
     def setUpClass(cls):
         cls.port = free_port()
         env = {**os.environ, "STEM_REDIRECT": NEW + "/", "STEM_TRIES": os.devnull}
-        cls.srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "serve.py"), str(cls.port)], env=env,
+        cls.srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "server", "http_server", "serve.py"), str(cls.port)], env=env,
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:

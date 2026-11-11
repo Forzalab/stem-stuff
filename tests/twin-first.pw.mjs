@@ -26,7 +26,7 @@ const item = (c, i) => ({ code: c, type: "num", answer: ANS[c], body: [{ type: "
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 1, problems: CODES.map(item) }));
 
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

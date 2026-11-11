@@ -35,7 +35,7 @@ const utcToPT = (iso) => {
 };
 const ptDate = (y, m, d) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 const SOURCES = [
-  ["server/serve.py", 3534, /^CRAM_UNTIL = datetime\.datetime\((\d+), (\d+), (\d+), \d+, \d+, tzinfo=PT\)/, (m) => ptDate(m[1], m[2], m[3])],
+  ["server/http_server/serve.py", 3534, /^CRAM_UNTIL = datetime\.datetime\((\d+), (\d+), (\d+), \d+, \d+, tzinfo=PT\)/, (m) => ptDate(m[1], m[2], m[3])],
   ["calc/cram.json", 9, /"until":\s*"([^"]+)"/, (m) => utcToPT(m[1])],
   ["peek.js", 91, /var CRAM_UNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
   ["calc-coach.js", 13, /var EXAM_END = Date\.parse\('([^']+)'\)/, (m) => utcToPT(m[1])],

@@ -16,7 +16,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8893", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "calcpick-")), SHOTS = process.argv[3] || join(ROOT, "tests", "out");
 mkdirSync(SHOTS, { recursive: true });
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_TRIES: join(tmp, "tries.json"), KV_REST_API_URL: "", OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_TRIES: join(tmp, "tries.json"), KV_REST_API_URL: "", OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

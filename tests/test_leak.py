@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 from test_claude_pipe import Resp, sse_claude, sse_or  # noqa: E402
 
 TONY = "From the KEY: y_H = −r cos 53°. So the y-value of each H is a negative piece of r."

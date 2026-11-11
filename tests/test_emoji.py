@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 FAMILY = "\U0001F468‍\U0001F469‍\U0001F467‍\U0001F466"       # man ZWJ woman ZWJ girl ZWJ boy
 THUMB = "\U0001F44D\U0001F3FD"                                               # thumbs up, medium skin tone

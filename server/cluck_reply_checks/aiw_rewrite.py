@@ -32,7 +32,7 @@ from typing import Callable, Iterable
 log = logging.getLogger("aiw_rewrite")
 
 UPSTREAM = "conorbronsdon/avoid-ai-writing@013d1db (MIT)"
-PATTERNS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor", "avoid-ai-writing", "patterns.md")
+PATTERNS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "vendor", "avoid_ai_writing", "patterns.md")
 PATTERNS_SHA256 = "d5452a813006840b47273b0c1ddd4ca655733cbab4db9fbe19e803c03e77c499"
 
 TOKEN_BUDGET = 1500          # whole prompt (system + user), estimated
@@ -382,7 +382,7 @@ def parse_reply(reply: str) -> dict[str, str] | None:
 
 def _default_detect() -> Callable[[str], list[dict]] | None:
     try:
-        import aiw  # P4.1b Python port of detector/patterns.js
+        from cluck_reply_checks import aiw  # P4.1b Python port of detector/patterns.js
     except ImportError:
         return None
     fn = getattr(aiw, "analyze_text", None) or getattr(aiw, "analyzeText", None)

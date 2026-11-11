@@ -17,7 +17,7 @@ sys.argv = [sys.argv[0]]
 TMP = tempfile.mkdtemp(prefix="stem-tries-")
 os.environ.setdefault("STEM_TRIES", os.path.join(TMP, "tries.json"))
 os.environ.setdefault("STEM_TODAY", "2026-10-23")
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 FIX = json.load(open(os.path.join(ROOT, "tests", "fixtures", "proof-bank.json")))
 P = next(p for p in FIX["problems"] if p["type"] == "proof")

@@ -67,18 +67,18 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `steps.mjs` | Renumber step badges, pipe tables. | step badges |
 | `suggest.mjs` | Code box suggestion list. | code box |
 | `tug.mjs` | The Tug view (push-pull rope). | Tug view |
-| `server/serve.py` | The server: routes, grading, tries, LLM calls. | any server behaviour |
-| `api/index.py` | Vercel entry; imports serve.py. | Vercel routing |
-| `server/acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
-| `server/aiw.py` | Python port of the avoid-ai-writing detector. Has a CODEMAP header. | view string lint |
-| `server/aiw_rewrite.py` | LLM rewrite of lint-flagged view strings. | view string rewrite |
-| `server/copy_gate.py` | Gate checks for student-facing words (grade level, jargon). | view copy rules |
-| `server/expr.py` | Expression answers: ask for the student's work after a miss. | expression answers |
-| `server/livefig.py` | Live figures: one fig fence per reply as data. | figures in replies |
-| `server/mini.py` | Mini-Cluck server side (Socratic helper). | mini-Cluck prompts |
-| `server/oui.py` | OpenUI Lang 1.0 parser and validator in Python. Has a CODEMAP header. | reply view parsing |
-| `server/slips.py` | Slip families for a wrong plain-number answer. | slip hints on server |
-| `server/views_gate.py` | Server gate for Cluck's openui fences. | view fence gate |
+| `server/http_server/serve.py` | The server: routes, grading, tries, LLM calls. | any server behaviour |
+| `api/index.py` | Vercel entry; imports http_server/serve.py. | Vercel routing |
+| `server/accounts/acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
+| `server/cluck_reply_checks/aiw.py` | Python port of the avoid-ai-writing detector. Has a CODEMAP header. | view string lint |
+| `server/cluck_reply_checks/aiw_rewrite.py` | LLM rewrite of lint-flagged view strings. | view string rewrite |
+| `server/cluck_reply_checks/copy_gate.py` | Gate checks for student-facing words (grade level, jargon). | view copy rules |
+| `server/answer_grading/expr.py` | Expression answers: ask for the student's work after a miss. | expression answers |
+| `server/cluck_reply_checks/livefig.py` | Live figures: one fig fence per reply as data. | figures in replies |
+| `server/mini_cluck/mini.py` | Mini-Cluck server side (Socratic helper). | mini-Cluck prompts |
+| `server/cluck_reply_checks/oui.py` | OpenUI Lang 1.0 parser and validator in Python. Has a CODEMAP header. | reply view parsing |
+| `server/answer_grading/slips.py` | Slip families for a wrong plain-number answer. | slip hints on server |
+| `server/cluck_reply_checks/views_gate.py` | Server gate for Cluck's openui fences. | view fence gate |
 | `server/` | Python server and its data: moved from the repo root (serve, accounts, grading helpers, OpenUI parser). Covers all of server/. | server code, server layout |
 | `server/data/` | Server-only data: problems.json, skills.json, banks/, prompts/. See server/data/README.md. | questions, banks, prompts |
 | `server/vendor/` | Vendored server-side libs (avoid-ai-writing). Do not edit. See server/vendor/README.md. | never, unless updating a lib |
@@ -88,7 +88,7 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `server/data/skills.json` | Skill list. | skills |
 | `SCHEMA.md` | Format of problems, banks, graph blocks, ladders. | any data format |
 | `api/` | Vercel function entry. | Vercel entry |
-| `server/engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
+| `server/math_engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
 | `tools/build_and_ship/` | Build + ship the site (build_public.py, bundle.py, ship.sh, openui/). | build, deploy |
 | `tools/operations/` | Workflow + incident scripts (CI train batch.sh/ci-*.mjs, spend, prune). | CI, ops |
 | `tools/bank_tools/` | Bank checks + edits (slips.py, schema-check.mjs, tol.py, fig_png.mjs). | banks, problems |

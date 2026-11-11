@@ -10,8 +10,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import livefig  # noqa: E402
-import views_gate  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from cluck_reply_checks import views_gate  # noqa: E402
 
 CTX = livefig.context("T1", "A ladder leans on a wall: legs 3 m and 4 m. How long is the ladder?", "", [5.0])
 GEO = ('fig = Geometry("A 0,0; B 3,0; C 3,4", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "dim(A,B,3 m)", "dim(B,C,4 m)", '
@@ -116,7 +116,7 @@ class TugFlip(unittest.TestCase):
         self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
 
     def test_conservation_example_rows_pass_the_grammar_and_a_value_size_does_not(self):
-        import serve
+        from http_server import serve
         ex = serve.V4_VIEWS.split("Examples:\n")[1]
         rows = re.search(r'"PE \| [^\]]*', ex).group(0).split('", "')
         self.assertEqual(len(rows), 2)
@@ -272,9 +272,9 @@ class Stream(unittest.TestCase):
         self.assertEqual(livefig.strip("Look:\n```openui\n" + GOOD + "\n```\nThen."), "Look:\nThen.")
 
     def test_serve_uses_the_gate(self):
-        import serve
+        from http_server import serve
         self.assertIs(serve.views_gate.Fence, views_gate.Fence)
-        with open(os.path.join(ROOT, "server", "serve.py")) as f:
+        with open(os.path.join(ROOT, "server", "http_server", "serve.py")) as f:
             self.assertNotIn("livefig.Fence(", f.read())
 
 

@@ -27,7 +27,7 @@ writeFileSync(join(BANKS, "BANK_RV12.json"), JSON.stringify({ v: 1, problems: [
   { code: "CALC1_V02", type: "num", body: [{ type: "text", md: "Q2: type 2.02." }], answer: "2.02", nudge: "QUACK. Try again.", saccharine: sac("Question 2") },
   mc("CALC1_V03", 3, ["one", "two"]),
   mc("CALC1_V04", 4, ["one", "two", "three"])] }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

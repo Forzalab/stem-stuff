@@ -9,7 +9,7 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "archive", "author", "banks", "k", "log", "tests", "tools", "engine", "server", "node_modules", "__pycache__", "scratch", "docs"}
+SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "archive", "author", "banks", "k", "log", "tests", "tools", "math_engine", "server", "node_modules", "__pycache__", "scratch", "docs"}
 SKIP_FILES = {"problems.json", "tries.json", "tries.json.tmp", "serve.py", "deploy.sh", "host.log", ".host.pid",
               "requirements.txt", "vercel.json", ".vercelignore", ".gitignore", "stem-stuff.html", "stem-stuff.html.tmp", "2"}   # + every root *.py (server code) and dotfiles, see build()
 

@@ -28,7 +28,7 @@ const PROBS = [1, 2].map(n => ({ code: `CALC1_T96M${n}`, title: `Limit from a ta
   choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })),
   wrong: [{ choice: "b", error: "negation", hint: "QUACK. Look at the not." }, { choice: "c", error: "sign", hint: "QUACK. Check the sign." }, { choice: "d", error: "misread", hint: "QUACK. Reread it." }] }));
 writeFileSync(join(banks, "BANK_T96.json"), JSON.stringify({ v: 1, problems: PROBS }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

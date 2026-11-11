@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.tool("bank_tools"))
 import bank_notes  # noqa: E402
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 NOTE = {"on_topic": True, "field": "mechanics", "concept": "momentum", "asked": "a", "need": "both carts move after", "assumed": "divided by one mass",
         "real": "the total mass moves", "reproduces": True, "gap": "missing_piece", "evidence": "pick a", "confidence": "high"}

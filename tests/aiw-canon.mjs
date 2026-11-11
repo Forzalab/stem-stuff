@@ -1,10 +1,10 @@
-// The vendored avoid-ai-writing detector (vendor/avoid-ai-writing/patterns.js, MIT, @013d1db) as a stdin/stdout filter for the
+// The vendored avoid-ai-writing detector (vendor/avoid_ai_writing/patterns.js, MIT, @013d1db) as a stdin/stdout filter for the
 // differential test of the Python port (tests/test_aiw.py): reads a JSON list of [text, options] pairs and prints the list of
 // AIDetector.analyzeText results in the same order. `--time N` instead prints the mean ms per call over N passes.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-const AIDetector = createRequire(import.meta.url)("../server/vendor/avoid-ai-writing/patterns.js");
+const AIDetector = createRequire(import.meta.url)("../server/vendor/avoid_ai_writing/patterns.js");
 const cases = JSON.parse(readFileSync(0, "utf8"));
 const t = process.argv.indexOf("--time");
 if (t !== -1) {

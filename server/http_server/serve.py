@@ -46,15 +46,19 @@ import zoneinfo
 
 import sympy
 
-import expr
-import livefig
-import slips
-import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
-SERVER = os.path.dirname(os.path.abspath(__file__))
+SERVER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # server/ (this file lives in server/http_server/)
 ROOT = os.path.dirname(SERVER)
 DATA = os.path.join(SERVER, "data")   # the server's own data: problems.json, skills.json, banks/, prompts/
+if SERVER not in sys.path:
+    sys.path.insert(0, SERVER)   # `python3 server/http_server/serve.py 5599`: the sibling packages live in server/
+
+from answer_grading import expr  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from answer_grading import slips  # noqa: E402
+from cluck_reply_checks import views_gate  # noqa: E402
+
 sys.path.insert(0, os.path.join(ROOT, "tools", "build_and_ship"))
 try:
     import bundle  # tools/build_and_ship/bundle.py: builds stem-stuff.html (offline download)
@@ -4835,7 +4839,7 @@ def mini_route(cookie_header, body):
     """POST /mini {code, step, text?} -> {program} (OpenUI Lang). 400: not JSON, over MINI_MAX, image bytes, bad fields; 404: unknown or
     hidden code; 429: MINI_PER_HOUR. Not a try. A client key / solution / tol / stem field is never read. A program that says the key
     (mini.leaked) or fails views_gate is replaced by the authored line before it leaves."""
-    import mini
+    from mini_cluck import mini
     sid, cookie = new_sid(cookie_header)
     try:
         b = json.loads(body) if 0 < len(body) <= MINI_MAX else None
@@ -4861,7 +4865,7 @@ def mini_route(cookie_header, body):
 def calc_route(method, cookie_header, body):
     """GET /calc -> {model} (null = never picked); POST /calc {model} -> {model}. The calculator model (calc-pick.js, Tony Nov 6), kept per
     sid like progress (acct.get_calc / put_calc: it follows an account login and is kept by Save). 400: bad JSON or id; 503: the store is down."""
-    import acct
+    from accounts import acct
     sid, cookie = new_sid(cookie_header)
     try:
         if method == "GET":

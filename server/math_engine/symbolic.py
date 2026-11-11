@@ -4,7 +4,7 @@ back as {text (math.js-ish, ^ for powers), latex}."""
 import dataclasses
 import re
 
-from engine import EngineError, tool
+from math_engine import EngineError, tool
 
 EXPR = {"type": "string", "maxLength": 200}
 VAR = {"type": "string", "maxLength": 6}
@@ -16,7 +16,7 @@ RULE_NAMES = {"U": "Substitution", "Dont_know": "Unknown"}
 
 
 def _sym():
-    import serve
+    from http_server import serve
     return serve
 
 

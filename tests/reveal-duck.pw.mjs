@@ -20,7 +20,7 @@ const num = n => ({ code: `PHYS_RD${n}`, title: `Roll ${n}`, type: "num", answer
   wrong: [{ value: "1.636", error: "spin", hint: "QUACK. Spin." }, { value: "0.650", error: "trig", hint: "QUACK. Trig." }], saccharine: { title: `Roll ${n}`, key: "Answer: 1.38", slip: {} } });
 const mc = { code: "PHYS_RDM", title: "Pick", type: "mc", shuffle: false, body: [{ type: "text", md: "Pick one." }], correct: "a", choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })) };
 writeFileSync(join(BANKS, "BANK_RDK.json"), JSON.stringify({ v: 1, problems: [num(1), num(2), mc] }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); } }

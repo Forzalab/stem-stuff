@@ -15,7 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import slips  # noqa: E402
+from answer_grading import slips  # noqa: E402
 
 FIX = os.path.join(ROOT, "tests", "fixtures")
 GOLD = "1/((4/3)^2+(1/3)^2+(2/3)^2)"
@@ -378,7 +378,7 @@ class K2(unittest.TestCase):
 
     def test_flag_env(self):                      # a fresh interpreter: no env -> k=2 (the pair); SLIP_K=1 -> k=1 (no slip, the old output)
         import subprocess
-        code = "import slips; print(slips.SLIP_K, slips.match('10-(3+2)', -7))"
+        code = "from answer_grading import slips; print(slips.SLIP_K, slips.match('10-(3+2)', -7))"
         base = {k: v for k, v in os.environ.items() if k != "SLIP_K"}
         base["PYTHONPATH"] = os.pathsep.join(p for p in (paths.SERVER_DIR, base.get("PYTHONPATH", "")) if p)  # slips lives in server/
         run = lambda env: subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True, check=True).stdout.split()

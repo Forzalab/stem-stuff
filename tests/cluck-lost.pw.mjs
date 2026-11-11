@@ -25,7 +25,7 @@ writeFileSync(join(banks, "BANK_CLS.json"), JSON.stringify({ v: 1, problems: [{ 
   wrong: [{ choice: "b", error: "misread", hint: "QUACK. Which masses sit on the axis?" }], saccharine: { title: "Lost 1", key: "Tick: a" } }] }));
 const DIED = "Not quite. You used the old number.\n\nHere is the setup.\n\n\n\nThe two right masses are 2a from the axis.\n\nHere is the torque:\n\nUse rotational Newton's 2n"
   + "\x1e" + JSON.stringify({ error: "S-TEST1", why: "upstream" }) + "\n\n(Cluck stopped early. Sorry!)";
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 

@@ -52,7 +52,7 @@ test("hail-mary slot: a flag, on while its cram data is live", () => assert.equa
 test("no new reply format: the reply component library, prompts and renderers do not know Calc Coach", () => {
   const lib = Object.keys(J("views/library.json").components);
   assert.deepEqual(lib, ["View", "Head", "Text", "Legend", "Table", "Tug", "Flip", "Callout", "Steps", "Step", "Hints", "Predict", "Reveal", "Answer", "Doodle", "Graph", "Geometry"]);
-  for (const f of ["server/data/prompts/cluck-v4.txt", "server/data/prompts/mini-cluck.txt", "views/registry.json", "views/library.json", "views.js", "server/oui.py", "server/views_gate.py"])
+  for (const f of ["server/data/prompts/cluck-v4.txt", "server/data/prompts/mini-cluck.txt", "views/registry.json", "views/library.json", "views.js", "server/cluck_reply_checks/oui.py", "server/cluck_reply_checks/views_gate.py"])
     assert.doesNotMatch(readFileSync(join(ROOT, f), "utf8"), /calc[ -_]?coach|CalcCoach|stemCalc/i, f);
   for (const f of readdirSync(join(ROOT, "views/prompt"))) assert.doesNotMatch(readFileSync(join(ROOT, "views/prompt", f), "utf8"), /calc[ -_]?coach/i, f);
 });

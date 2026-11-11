@@ -13,8 +13,8 @@ sys.path.insert(0, paths.tool("benchmarks"))
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import bench_figs as b  # noqa: E402
-import livefig  # noqa: E402
-import serve  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from http_server import serve  # noqa: E402
 
 GPT = """QUUUACK (flaps)
 

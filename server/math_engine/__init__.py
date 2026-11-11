@@ -1,8 +1,8 @@
-"""Engine server core (render plan v2, Part B/D): deterministic tools with a JSON Schema in and out. Their output IS the truth a view
+"""Math engine server core (render plan v2, Part B/D): deterministic tools with a JSON Schema in and out. Their output IS the truth a view
 shows; the model never types a value an engine can compute. Server side only (V2 amended, Tony Oct 18): Query statements resolve
 in the gate, no public engine endpoint. One API, three clients later: author MCP (P2.1), the gate (P4.1), tests.
 
-    import engine
+    import math_engine as engine
     engine.call("graph.trace", {"algo": "dijkstra", "graph": block, "start": "A"})   -> dict (checked against the tool's out schema)
     engine.spec()                                                                      -> [{name, description, input, output}]
 
@@ -12,7 +12,7 @@ import importlib
 
 VERSION = "0.1.0"          # part of the view cache key (item, picks, lib version, engine version): bump when any tool's output changes
 TOOLS = {}
-MODULES = ("engine.graph", "engine.symbolic")
+MODULES = ("math_engine.graph", "math_engine.symbolic")
 
 
 class EngineError(ValueError):

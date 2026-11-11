@@ -6,7 +6,7 @@ import json
 import os
 import unittest
 
-import serve
+from http_server import serve
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 with open(os.path.join(ROOT, "tests", "fixtures", "units-demo.json"), encoding="utf-8") as f:

@@ -13,10 +13,10 @@ import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TODAY", "2026-11-04")
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import aiw  # noqa: E402
-import livefig  # noqa: E402
-import serve  # noqa: E402
-import views_gate  # noqa: E402
+from cluck_reply_checks import aiw  # noqa: E402
+from cluck_reply_checks import livefig  # noqa: E402
+from http_server import serve  # noqa: E402
+from cluck_reply_checks import views_gate  # noqa: E402
 
 AFTER = datetime.datetime(2026, 11, 20, 12, 0, tzinfo=serve.PT)
 
@@ -47,7 +47,7 @@ class StyleCard(unittest.TestCase):
             self.assertEqual(sum("cache_control" in b for b in blocks), 2)
 
     def test_deepseek_head_has_the_card_too(self):
-        src = open(os.path.join(ROOT, "server", "serve.py"), encoding="utf-8").read()
+        src = open(os.path.join(ROOT, "server", "http_server", "serve.py"), encoding="utf-8").read()
         self.assertIn("(\"\\n\\n\" + STYLE_V4) if STYLE_V4 else \"\"", src)
 
     def test_letter_is_untouched_byte_for_byte(self):

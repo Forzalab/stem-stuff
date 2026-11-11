@@ -36,7 +36,7 @@ const stub = createServer(async (req, res) => {                              // 
   res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: "The ball also spins. Egg-cellent." } }] })}\n\ndata: [DONE]\n\n`);
 });
 await new Promise(r => stub.listen(0, "127.0.0.1", r));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
   OPENROUTER_BASE: `http://127.0.0.1:${stub.address().port}`, OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 

@@ -35,7 +35,7 @@ const { qFresh } = await import("../shuffle.mjs");
 const same = (a, s) => qFresh(a, s).every((c, i) => c === a[i]);
 const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => same(BANK.problems.map(p => p.code), s) && same(FILE.problems.map(p => p.code), s));
 const PIN = s => { try { for (const k of ["stem-q-BANK_AB12", "stem-q-upload"]) if (!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } };
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

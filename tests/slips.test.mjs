@@ -41,7 +41,7 @@ test("match: the first family within tol (or to 3 s.f.), else null; a bad form o
 });
 
 test("FAMILY_HINT is byte-equal to serve.py's", () => {
-  const py = readFileSync(new URL("../server/serve.py", import.meta.url), "utf8").match(/FAMILY_HINT = \{([\s\S]*?)\n\}/)[1];
+  const py = readFileSync(new URL("../server/http_server/serve.py", import.meta.url), "utf8").match(/FAMILY_HINT = \{([\s\S]*?)\n\}/)[1];
   const want = Object.fromEntries([...py.matchAll(/"(\w+)":\s*"([^"]*)"/g)].map(m => [m[1], m[2]]));
   assert.deepEqual(FAMILY_HINT, want);
 });
@@ -150,7 +150,7 @@ test("zodiac: the tropical season of a date, the same table as serve.py zodiac (
   for (const [d, want] of [[at(2026, 3, 20), "Pisces"], [at(2026, 3, 21), "Aries"], [at(2026, 4, 19), "Aries"], [at(2026, 4, 20), "Taurus"],
     [at(2026, 10, 22), "Libra"], [at(2026, 10, 23), "Scorpio"], [at(2026, 12, 21), "Sagittarius"], [at(2026, 12, 22), "Capricorn"],
     [at(2027, 1, 1), "Capricorn"], [at(2027, 1, 19), "Capricorn"], [at(2027, 1, 20), "Aquarius"], [at(2027, 2, 19), "Pisces"]]) assert.equal(zodiac(d), want, String(d));
-  const py = readFileSync(new URL("../server/serve.py", import.meta.url), "utf8").match(/ZODIAC = \(([\s\S]*?)\)\n/)[1];
+  const py = readFileSync(new URL("../server/http_server/serve.py", import.meta.url), "utf8").match(/ZODIAC = \(([\s\S]*?)\)\n/)[1];
   assert.deepEqual(ZODIAC, [...py.matchAll(/\((\d+), "(\w+)"\)/g)].map(m => [+m[1], m[2]]), "byte-equal to serve.py ZODIAC");
   assert.equal(fillSign("QUACK, it's {sign} season."), `QUACK, it's ${zodiac()} season.`);
 });

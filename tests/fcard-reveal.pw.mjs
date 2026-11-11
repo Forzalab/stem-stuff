@@ -23,7 +23,7 @@ writeFileSync(join(banks, "formula-sheet.json"), JSON.stringify({ v: 3, groups: 
   { id: "FA", tex: "W = F d" }, { id: "FB", tex: "K = \\tfrac12 m v^2" }, { id: "FC", tex: "P = W / t" }] }] }));
 const item = (code, extra) => ({ code, title: code, type: "num", body: [{ type: "text", md: "Reveal " + code }], answer: "42", saccharine: { title: code, part: ["FA", "FB", "FC"], ...extra } });
 writeFileSync(join(banks, "BANK_FRV.json"), JSON.stringify({ v: 1, problems: [item("CALC1_FR1"), item("CALC1_FR2", { ladder: { mid: [{ of: "FA", tex: "F = m a" }], arrows: [{ from: "FA", to: "FB" }] } })] }));
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 let failures = 0;
 async function step(name, fn) {

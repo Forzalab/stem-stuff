@@ -185,7 +185,7 @@ gate() {
   python3 - "$ROOT" "${GATE[@]}" <<'PY' >&2 || rc=1
 import json, re, sys
 sys.path.insert(0, sys.argv[1] + "/server")
-import slips
+from answer_grading import slips
 sunset = re.search(r"^\| `%d` \|.*\| `([0-9-]+)` \|$" % slips.CUTOFF, open(sys.argv[1] + "/SCHEMA.md", encoding="utf-8").read(), re.M)[1]
 for p in sys.argv[2:]:
     v = json.load(open(p, encoding="utf-8")).get("v", 1)

@@ -13,8 +13,8 @@ import paths
 sys.path.insert(0, paths.SERVER_DIR)
 # serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import mini  # noqa: E402
-import serve  # noqa: E402
+from mini_cluck import mini  # noqa: E402
+from http_server import serve  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CTX = {"code": "K_VF", "stem": "A cart starts at 3.0 m/s and slows at 0.50 m/s^2 for 4.0 s. Final speed?", "numbers": "v_i = 3.0 m/s, a = -0.50 m/s^2, t = 4.0 s",

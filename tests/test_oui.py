@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for paths)
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
-import oui  # noqa: E402
+from cluck_reply_checks import oui  # noqa: E402
 
 FIX = os.path.join(ROOT, "tests", "fixtures", "openui", "1.0")
 CANON_JS = os.path.join(ROOT, "tests", "openui-canon.mjs")

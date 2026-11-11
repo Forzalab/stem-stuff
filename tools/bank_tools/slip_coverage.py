@@ -15,7 +15,7 @@ from collections import Counter
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "server"))
-import serve  # noqa: E402  (reads argv only when it is __main__; this never saves tries)
+from http_server import serve  # noqa: E402  (reads argv only when it is __main__; this never saves tries)
 
 
 def _unit(p, part):

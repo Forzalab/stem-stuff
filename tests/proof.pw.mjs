@@ -38,7 +38,7 @@ const stub = createServer((req, res) => {
 });
 await new Promise(ok => stub.listen(0, "127.0.0.1", ok));
 const STUB = stub.address().port;
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
   OPENROUTER_BASE: `http://127.0.0.1:${STUB}`, OPENROUTER_API_KEY: "stub-key", CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # tests/ (for pa
 import paths
 sys.path.insert(0, paths.SERVER_DIR)
 os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
-import serve  # noqa: E402
+from http_server import serve  # noqa: E402
 
 REPLY = ("Not quite. QUACK (っ˘ω˘ς)\n\nThe idea that fixes it is buoyancy.\n\nForces on the diver:\n```fig\n{\"type\":\"graph\",\"kind\":\"scene\"}\n```\n"
          "$$F_b=\\rho_w g V$$\nThe formula tells you the push is $9.8$ N per litre.\n")

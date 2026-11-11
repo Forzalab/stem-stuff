@@ -19,7 +19,7 @@ env = dict(os.environ, CLUCK_ARM="claude", CLAUDE_API=os.environ["OPENROUTER_API
            CLAUDE_MODEL="anthropic/claude-sonnet-5.5", STEM_BANKS=os.path.join(S, "server", "data", "banks"), STEM_FRONT="BANK_P3X",
            STEM_TRIES=os.path.join(HERE, f"tries-{tag}.json"))
 log = open(os.path.join(HERE, f"serve-{tag}.log"), "w")
-srv = subprocess.Popen(["python3", os.path.join(tree, "server", "serve.py"), str(port)], env=env, stderr=log, stdout=log)
+srv = subprocess.Popen(["python3", os.path.join(tree, "server", "http_server", "serve.py"), str(port)], env=env, stderr=log, stdout=log)
 for _ in range(100):
     try:
         urllib.request.urlopen(f"http://localhost:{port}/", timeout=1)

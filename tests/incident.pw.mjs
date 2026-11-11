@@ -50,7 +50,7 @@ const drop = createServer((req, res) => {
 await new Promise(r => stub.listen(0, "127.0.0.1", r));
 await new Promise(r => drop.listen(0, "127.0.0.1", r));
 const logs = [], traces = [], raw = [];
-const srv = spawn("python3", [join(ROOT, "server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_BASE: `http://127.0.0.1:${stub.address().port}`, OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: ["ignore", "ignore", "pipe"] });
 let part = "";   // a pipe chunk can end mid-line: whole lines only
 srv.stderr.on("data", d => {
