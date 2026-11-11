@@ -7,7 +7,7 @@
    window.stemLockHelp = { show(info), resume(code), close(), up }. app.js calls resume() when an item opens. While it is up the peek duck stays down and toasts yield. */
 (function () {
   "use strict";
-  var LOCKHELP_ART = "rewards/icons/duck-calm-nod-128.webp";   // placeholder: Tony drops the empathetic Cluck at rewards/icons/duck-help-256.webp and this constant changes
+  var LOCKHELP_ART = "client/rewards/icons/duck-calm-nod-128.webp";   // placeholder: Tony drops the empathetic Cluck at rewards/icons/duck-help-256.webp and this constant changes
   var KEY = "stem-lockhelp", NKEY = "stem-lockhelp-n", MAX_AGE = 24 * 3600 * 1000, g = window;
   var mem = null, el = null, cur = null, since = 0, prevFocus = null, left = false;
   function read() {
