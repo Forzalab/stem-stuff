@@ -1,6 +1,6 @@
 // Offline e2e (Chromium via playwright-core). Run: cd tests && npm run e2e
 // Browser: $CHROMIUM, else /opt/pw-browsers/chromium-*/chrome-linux/chrome. Skips if none.
-// Uses the repo's index.html/app.js/app.css when present, else tests/e2e/fixture/.
+// Uses the repo's index.html + client/answer/drill_core/app.js/app.css when present, else tests/e2e/fixture/.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
@@ -47,7 +47,7 @@ before(async () => {
   if (skip) return;
   site = mkdtempSync(join(tmpdir(), "stem-offline-"));
   for (const f of readdirSync(repo)) if (!/^(\.|tests$|stem-stuff\.html)/.test(f)) cpSync(join(repo, f), join(site, f), { recursive: true });
-  const real = existsSync(join(repo, "index.html")) && existsSync(join(repo, "app.js")) && !process.env.E2E_FIXTURE;
+  const real = existsSync(join(repo, "index.html")) && existsSync(join(repo, "client/answer/drill_core/app.js")) && !process.env.E2E_FIXTURE;
   if (!real) for (const f of readdirSync(fixture)) cpSync(join(fixture, f), join(site, f));
   console.log("# app under test:", real ? "repo index.html" : "tests/e2e/fixture");
   symlinkSync(join(repo, "tests"), join(site, "tests"));

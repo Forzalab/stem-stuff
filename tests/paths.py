@@ -23,14 +23,10 @@ def bundle():
 ROOT = "."
 SERVER = ["server/*/*.py", "api/"]
 DATA = ["server/data/banks/", "server/data/prompts/", "server/data/problems.json", "server/data/skills.json"]
-CLIENT = [
-    "*.js", "*.css", "*.mjs", "index.html", "calc.html", "privacy.html",
-    "blind/", "calc/", "copy/", "design/explain-box.js", "design/explain-box.css",
-    "rewards/", "vendor/",
-]
-SHARED = ["views/"]
+CLIENT = ["client/", "index.html", "calc.html", "privacy.html", "sw.js"]
+SHARED = ["shared/openui/"]
 TOOLS = ["tools/"]
-LABS = ["design/*-lab.html", "try/views-demo.*"]
+LABS = ["client/labs/*-lab.html", "client/labs/views_demo/views-demo.*"]
 
 PATHS = {
     "ROOT": ROOT,

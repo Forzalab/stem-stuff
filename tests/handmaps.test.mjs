@@ -24,7 +24,7 @@ test("paths.mjs and paths.py export the same layout", () => {
 });
 
 test("a known file maps to known units", () => {
-  const out = affected("app.css");
+  const out = affected("client/answer/drill_core/app.css");
   assert.match(out, /^ux-flows@phone$/m);
   assert.match(out, /^telemetry$/m);
   assert.match(out, /^desk-layout@1$/m);
@@ -77,7 +77,7 @@ test("--report lists a file mapped to ALL logic", () => {
 });
 
 test("--report prints a median and the ALL files", () => {
-  const out = execFileSync("bash", [RUN, "--affected", "--report", "app.css", "index.html"], {
+  const out = execFileSync("bash", [RUN, "--affected", "--report", "client/answer/drill_core/app.css", "index.html"], {
     cwd: ROOT, encoding: "utf8",
   });
   assert.match(out, /^report: 2 files, median [0-9.]+ units\/file$/m);
