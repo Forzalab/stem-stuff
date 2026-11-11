@@ -9,8 +9,8 @@
 <meta name="stem-build" content="dev"><!-- tools/build_and_ship/build_public.py stamps the deploy's PR here (tools/build_and_ship/version.sh); the corner badge #ver shows it -->
 <meta name="stem-t" content=""><!-- telemetry (docs/design/plans/TELEMETRY.md): tools/build_and_ship/build_public.py stamps the PostHog project token + Clarity id here; empty = off -->
 <title>STEM drill</title>
-<script src="fx.js"></script><!-- blur gate (20261013-T40): sets html.fx-blur / fx-dim before the first paint; tiny, so it may block -->
-<script src="flight.js" defer></script><!-- flight recorder (incident.mjs): the page's last steps, in memory only. defer: it never blocks the parser, so the splash script below starts its 4 s cap on time; the first deferred script, so it still runs before app.js and its first net() -->
+<script src="client/shell/fx.js"></script><!-- blur gate (20261013-T40): sets html.fx-blur / fx-dim before the first paint; tiny, so it may block -->
+<script src="client/shell/telemetry/flight.js" defer></script><!-- flight recorder (incident.mjs): the page's last steps, in memory only. defer: it never blocks the parser, so the splash script below starts its 4 s cap on time; the first deferred script, so it still runs before app.js and its first net() -->
 <!-- Loading splash (docs/design/SPLASH.md): markup, this CSS and the script after it are inline so it paints before any file loads.
      No text. Colors are the app.css dark tokens (--paper --sheet --c1 --ink), copied here because app.css is not loaded yet. -->
 <style>
@@ -38,36 +38,36 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 </style>
 <noscript><style>#splash { display: none; }</style></noscript>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d2839'/%3E%3Cpath d='M6 24C12 24 14 8 26 8' fill='none' stroke='%237ab8ff' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23e7edf6'/%3E%3C/svg%3E">
-<script src="vendor/katex/katex.min.js" defer></script>
-<script src="vendor/math.min.js" defer></script>
-<script src="vendor/marked.min.js" defer></script>
-<script src="design/explain-box.js" defer></script>
-<script type="module" src="figcheck.js"></script><!-- figure invariants + the label packer (fable audit U3): a module runs in order with the defer scripts, so window.FigCheck is set before graph.js -->
-<script src="graph.js" defer></script>
-<script src="formula-figs.js" defer></script><!-- the formula sheet's pictures (docs/design/FORMULA-FIGS.md): data for graph.js, drawn in the "?" popover -->
-<script src="popover.js" defer></script><!-- the rich-context popup (docs/design/POPOVER.md): before app.js, which opens it -->
-<script src="copy/repair-lines.js" defer></script><script src="repair.js" defer></script><script src="welcome.js" defer></script><script src="calc-coach.js" defer></script><!-- the welcome Q1 (DESIGN-v3 §2, todo 119): app.js mounts welcome.js (repair.js's welcome variant) for the bank's welcome item -->
-<script src="telemetry.js" defer></script><!-- before app.js so window.stemT exists for its hooks; the libraries load after the first question -->
-<script src="copy/nudge-lines.js" defer></script><!-- J5 Cluck nudge lines (data only), read by intent.js -->
-<script src="copy/seen-lines.js" defer></script><!-- J6 seen lines (data only), read by intent.js -->
-<script src="intent.js" defer></script><!-- Jev log + rule counters + nudges, on for all (?jev=0 = off on this device); after telemetry.js: it wraps window.stemT -->
-<script src="toast.js" defer></script><!-- the one toast (docs/design/TOAST.md round 5): the stage lines + the notes (todo 112); before app.js, which shows the notes, and engine.js, which shows the stage lines -->
-<script src="copy/stage-lines.js" defer></script><script src="stages.js" defer></script><!-- 160 PR-B: the stage rows (words + tracker); before app.js, which reads window.Stages -->
-<script type="module" src="app.js"></script>
-<script type="module" src="cluck.js"></script><script type="module" src="shell.js"></script><!-- W152: app.js split in 3 (tools/client_generators/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->
-<script type="module" src="nav.js"></script>
+<script src="client/vendor/katex/katex.min.js" defer></script>
+<script src="client/vendor/math.min.js" defer></script>
+<script src="client/vendor/marked.min.js" defer></script>
+<script src="client/answer/explain_box/explain-box.js" defer></script>
+<script type="module" src="client/cluck/figures/figcheck.js"></script><!-- figure invariants + the label packer (fable audit U3): a module runs in order with the defer scripts, so window.FigCheck is set before graph.js -->
+<script src="client/cluck/figures/graph.js" defer></script>
+<script src="client/cluck/figures/formula-figs.js" defer></script><!-- the formula sheet's pictures (docs/design/FORMULA-FIGS.md): data for graph.js, drawn in the "?" popover -->
+<script src="client/shell/popover.js" defer></script><!-- the rich-context popup (docs/design/POPOVER.md): before app.js, which opens it -->
+<script src="client/resources/texts/repair-lines.js" defer></script><script src="client/shell/repair/repair.js" defer></script><script src="client/shell/welcome/welcome.js" defer></script><script src="client/calc/coach/calc-coach.js" defer></script><!-- the welcome Q1 (DESIGN-v3 §2, todo 119): app.js mounts welcome.js (repair.js's welcome variant) for the bank's welcome item -->
+<script src="client/shell/telemetry/telemetry.js" defer></script><!-- before app.js so window.stemT exists for its hooks; the libraries load after the first question -->
+<script src="client/resources/texts/nudge-lines.js" defer></script><!-- J5 Cluck nudge lines (data only), read by intent.js -->
+<script src="client/resources/texts/seen-lines.js" defer></script><!-- J6 seen lines (data only), read by intent.js -->
+<script src="client/cluck/jev_nudges/intent.js" defer></script><!-- Jev log + rule counters + nudges, on for all (?jev=0 = off on this device); after telemetry.js: it wraps window.stemT -->
+<script src="client/shell/toast/toast.js" defer></script><!-- the one toast (docs/design/TOAST.md round 5): the stage lines + the notes (todo 112); before app.js, which shows the notes, and engine.js, which shows the stage lines -->
+<script src="client/resources/texts/stage-lines.js" defer></script><script src="client/shell/stages/stages.js" defer></script><!-- 160 PR-B: the stage rows (words + tracker); before app.js, which reads window.Stages -->
+<script type="module" src="client/answer/drill_core/app.js"></script>
+<script type="module" src="client/cluck/cluck.js"></script><script type="module" src="client/shell/shell.js"></script><!-- W152: app.js split in 3 (tools/client_generators/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->
+<script type="module" src="client/answer/navigation/nav.js"></script>
 <!-- offline hook: offline.js (service worker registration, cache) is written separately; do not implement here -->
-<script src="offline.js" defer></script>
-<script src="brainrot.js" defer></script>
-<script src="lockhelp.js" defer></script><!-- the lock-out modal "Let me help you with that!" (lockhelp.js, Tony Nov 5) -->
-<script src="welcome-first.js"></script><script src="calc-pick.js" defer></script><script>addEventListener("DOMContentLoaded", function () { window.stemCalcPick && window.stemCalcPick.auto(); });</script><!-- the calculator model picker (calc-pick.js, Tony Nov 6): a fresh device sees it once, after the splash -->
-<script src="peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (docs/design/IDLE-PEEK.md) -->
-<script src="strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
+<script src="client/shell/offline.js" defer></script>
+<script src="client/cluck/brainrot.js" defer></script>
+<script src="client/cluck/jev_nudges/lockhelp.js" defer></script><!-- the lock-out modal "Let me help you with that!" (lockhelp.js, Tony Nov 5) -->
+<script src="client/shell/welcome/welcome-first.js"></script><script src="client/calc/model_picker/calc-pick.js" defer></script><script>addEventListener("DOMContentLoaded", function () { window.stemCalcPick && window.stemCalcPick.auto(); });</script><!-- the calculator model picker (calc-pick.js, Tony Nov 6): a fresh device sees it once, after the splash -->
+<script src="client/cluck/jev_nudges/peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (docs/design/IDLE-PEEK.md) -->
+<script src="client/answer/answer_strip/strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
 <!-- sugar rewards (docs/design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
-<script src="rewards/icons.js" defer></script>
-<script src="vendor/confetti.browser.js" defer></script>
-<script src="rewards/engine.js" defer></script>
-<script src="rewards/fx.js" defer></script>
+<script src="client/rewards/icons.js" defer></script>
+<script src="client/vendor/confetti.browser.js" defer></script>
+<script src="client/rewards/engine.js" defer></script>
+<script src="client/rewards/fx.js" defer></script>
 </head>
 <body>
 <div id="splash" aria-hidden="true">
@@ -103,22 +103,22 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 })();
 </script>
 <!-- The stylesheets sit here, after the splash and its script, on purpose: in the head they hold back the first paint, down here they only hold back what follows. -->
-<link rel="stylesheet" href="vendor/fonts/atkinson.css">
-<link rel="stylesheet" href="vendor/katex/katex.min.css">
-<link rel="stylesheet" href="design/explain-box.css">
-<link rel="stylesheet" href="app.css">
-<link rel="stylesheet" href="strip.css"><!-- the answer strip: the verdict drawer under a typed answer (strip.js; B3 PR-B1). After app.css: it layers on .ff / .wchip -->
-<link rel="stylesheet" href="nav.css">
-<link rel="stylesheet" href="vendor/fonts/press-start-2p.css">
-<link rel="stylesheet" href="rewards/rewards.css">
-<link rel="stylesheet" href="toast.css">
-<link rel="stylesheet" href="stages.css"><!-- 160 PR-B: the stage rows (stages.js) -->
-<link rel="stylesheet" href="repair.css">
-<link rel="stylesheet" href="welcome.css">
-<link rel="stylesheet" href="calc-coach.css"><!-- Calc Coach panel (docs/design/CALC-COACH.md): app chrome, not a reply format -->
-<link rel="stylesheet" href="calc-pick.css"><!-- the calculator model picker (calc-pick.js) -->
-<link rel="stylesheet" href="views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
-<link rel="modulepreload" href="views.js">
+<link rel="stylesheet" href="client/vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="client/vendor/katex/katex.min.css">
+<link rel="stylesheet" href="client/answer/explain_box/explain-box.css">
+<link rel="stylesheet" href="client/answer/drill_core/app.css">
+<link rel="stylesheet" href="client/answer/answer_strip/strip.css"><!-- the answer strip: the verdict drawer under a typed answer (strip.js; B3 PR-B1). After app.css: it layers on .ff / .wchip -->
+<link rel="stylesheet" href="client/answer/navigation/nav.css">
+<link rel="stylesheet" href="client/vendor/fonts/press-start-2p.css">
+<link rel="stylesheet" href="client/rewards/rewards.css">
+<link rel="stylesheet" href="client/shell/toast/toast.css">
+<link rel="stylesheet" href="client/shell/stages/stages.css"><!-- 160 PR-B: the stage rows (stages.js) -->
+<link rel="stylesheet" href="client/shell/repair/repair.css">
+<link rel="stylesheet" href="client/shell/welcome/welcome.css">
+<link rel="stylesheet" href="client/calc/coach/calc-coach.css"><!-- Calc Coach panel (docs/design/CALC-COACH.md): app chrome, not a reply format -->
+<link rel="stylesheet" href="client/calc/model_picker/calc-pick.css"><!-- the calculator model picker (calc-pick.js) -->
+<link rel="stylesheet" href="client/cluck/openui_views/views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
+<link rel="modulepreload" href="client/cluck/openui_views/views.js">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
