@@ -396,9 +396,11 @@ class Contact(unittest.TestCase):
 
 class Bundle(unittest.TestCase):
     def test_vercel_function_carries_the_gate(self):
+        inc = paths.bundle()
+        self.assertIn("server/livefig.py", inc)
         with open(os.path.join(paths.REPO, "vercel.json"), encoding="utf-8") as f:
-            inc = json.load(f)["functions"]["api/index.py"]["includeFiles"]
-        self.assertIn("livefig.py", inc)
+            raw = json.load(f)["functions"]["api/index.py"]["includeFiles"]
+        self.assertLessEqual(len(raw), 256)   # Vercel rejects the deploy above 256 chars (ship run 107)
         self.assertIn("SCHEMA.md", inc)
 
 

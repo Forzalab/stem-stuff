@@ -358,8 +358,7 @@ class Glue(unittest.TestCase):
         with open(os.path.join(paths.REPO, "vercel.json")) as f:
             rw = json.load(f)["rewrites"]
         self.assertIn({"source": "/diagnose", "destination": "/api/index?path=/diagnose"}, rw)
-        with open(os.path.join(paths.REPO, "vercel.json")) as f:
-            self.assertIn("expr.py", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # serve.py imports it on Vercel too
+        self.assertIn("server/expr.py", paths.bundle())   # serve.py imports it on Vercel too
 
 
 class Privacy(unittest.TestCase):
