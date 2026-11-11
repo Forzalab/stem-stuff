@@ -9,9 +9,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class RewardsAssets(unittest.TestCase):
     def test_licenses_next_to_the_files(self):
-        for f, words in (("vendor/confetti.browser.js", None), ("vendor/confetti.LICENSE.txt", "ISC License"),
-                         ("vendor/fonts/press-start-2p-latin-400-normal.woff2", None), ("vendor/fonts/OFL-press-start-2p.txt", "SIL Open Font License"),
-                         ("rewards/icons/LICENSE-fluentui-emoji.txt", "MIT License")):
+        for f, words in (("client/vendor/confetti.browser.js", None), ("client/vendor/confetti.LICENSE.txt", "ISC License"),
+                         ("client/vendor/fonts/press-start-2p-latin-400-normal.woff2", None), ("client/vendor/fonts/OFL-press-start-2p.txt", "SIL Open Font License"),
+                         ("client/rewards/icons/LICENSE-fluentui-emoji.txt", "MIT License")):
             p = os.path.join(ROOT, f)
             self.assertTrue(os.path.isfile(p), f)
             if words:
