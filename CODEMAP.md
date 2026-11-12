@@ -109,9 +109,11 @@ Line numbers are never kept. Moved or added a file? Update its row in the same P
 | `server/data/prompts/` | Runtime LLM system prompts. | Cluck prompt text |
 | `client/shell/blind/` | Blind-locale test data. | blind test |
 | `client/calc/` | Calc Coach json and svg. | Calc Coach data |
-| `design/` | Live explain-box.* and the `*-lab.html` pages. Notes and plans are in `docs/design/`, mockups and shots in `archive/design/`. | explain box, a lab page |
 | `docs/` | Notes, plans and MC.md (multiple choice A–E and hints). `docs/design/` holds the design notes and plans. | a design note, a plan, MC |
 | `docs/MC.md` | Multiple choice (A–E) and hints. | MC answers, hints |
 | `archive/` | Old mockups, shots and prototype pages (`archive/design/`, `archive/try/`). Not shipped; kept for reference. | an old mockup or prototype |
 | `client/labs/views_demo/` | The views demo only (views-demo*). Old prototype pages moved to `archive/try/`. | views demo |
 | `.github/workflows/` | CI: tests.yml, ship.yml, prune.yml, spend.yml. | CI |
+| `client/answer/explain_box/explain-box.css` | Styles of the explain box. | explain box look |
+| `client/answer/explain_box/explain-box.js` | Explain box: auto-growing textarea + edit-history snapshots (docs/design/EXPLAIN-BOX.md). | the explain box |
+| `client/labs/` | Design labs: standalone `*-lab.html` pages (login, mini, popover, repair, welcome). | a lab page |
