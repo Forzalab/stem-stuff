@@ -10,6 +10,7 @@ import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mock
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
   clClose: { get: () => clClose, enumerable: true },
+  clUserClose: { get: () => clUserClose, enumerable: true },
   clGone: { get: () => clGone, set: v => { clGone = v; }, enumerable: true },   // let
   clOpen: { get: () => clOpen, enumerable: true },
   qSeen: { get: () => qSeen, enumerable: true },
@@ -554,8 +555,8 @@ function clEl() {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) bridge.origPeeked();   // folded away after a solve: looking again is a peek
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
   });
-  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (docs/design/DISMISS.md)
-  cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
+  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clUserClose(true)));   // desktop: the X dismisses the column (docs/design/DISMISS.md)
+  cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", () => clUserClose());   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
   clDrag(el);
   const bd = el.querySelector(".cl-bd"), ro = new ResizeObserver(clMore);   // the scroll-down hint follows the scroll, the sheet's size and the text as it types in
@@ -581,13 +582,13 @@ function clDrag(el) {
     el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
     el.style.transform = down ? `translateY(${down}px)` : "";
     el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
-    root.style.setProperty("--da", dimAt(pos, peek, innerHeight));
+    cl.dim?.style.setProperty("--da", dimAt(pos, peek, innerHeight));     // on the dim itself: a var on <html> restyles the whole page every frame (drag lag, Tony Nov 12)
   };
   const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
   const settle = to => {
     if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
     full = to === 0; pos = to; paint();
-    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
+    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
     state(full ? "full" : "peek");
   };
   const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
@@ -598,6 +599,7 @@ function clDrag(el) {
       let dt = Math.min(0.032, (now - last) / 1000); last = now;
       while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - 34 * vel) * h; pos += vel * h; dt -= h; }
       if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
+      if (to >= innerHeight && pos >= innerHeight - 1) { settle(to); return; }   // leaving (UIP5): gone once the top edge is off screen, no wait for the spring's tail
       if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
       paint(); raf = requestAnimationFrame(step);
     };
@@ -605,9 +607,13 @@ function clDrag(el) {
   };
   cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
     cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
-    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da");
+    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da");
     grab.setAttribute("aria-label", "Expand Cluck to full screen");
   };
+  /* UIP5 (Tony Q5 "rise"): the phone sheet rises from the bottom edge by its own spring and leaves down the same path; a drag catches it (begin cancels the frame) */
+  const dock = () => { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; };
+  cl.sheetIn = () => { if (!phone() || bridge.reduceMQ.matches) return; dock(); pos = innerHeight; paint(); go(peek); };
+  cl.sheetOut = () => { if (full) { if (pos > innerHeight - 1) return; } else { if (el.dataset.state !== "moving") { dock(); pos = peek; } } go(innerHeight); };
   const begin = y => {                                                      // a press became a drag
     cancelAnimationFrame(raf);
     if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
@@ -661,12 +667,12 @@ function clPlace() {                                                        // s
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
   if (clGone && bridge.sideMQ.matches) { if (auto) return; clGoneSet(false); }    // dismissed (DISMISS.md): an auto-open waits for the student; a tap brings the column back
   window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
-  clEl(); if (!cl.open) cl.y = scrollY;
+  clEl(); const rise = !cl.open; if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
   cl.perm = clPerm();
   if (cl.perm && !S.finished && S.prob.wish && !cluckOff && !S.prob.original && (!wish || wish.code !== S.code)) wish = idleWish();   // V2: before any miss the box holds the opener + starters, not a blank
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
-  clPlace(); clTop(); clAsk(true); clTab(tab, !auto); bridge.padRule();
+  clPlace(); clTop(); if (rise) cl.sheetIn?.(); clAsk(true); clTab(tab, !auto); bridge.padRule();
   bridge.layoutFreeze();
   dispatchEvent(new CustomEvent("stem:layers"));                            // nav.js: the iOS Back button
   if (bridge.sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
@@ -683,6 +689,11 @@ function cluckToast() {
     if (!at || at.hidden || !at.getClientRects().length || noteAt() || !toast("Cluck lives in Ask Cluck. Tap it to reopen.", at)) return;
     try { localStorage.setItem("stem-ob-cluck", "1"); } catch { /* shown, not kept */ }
   }, 80);
+}
+/* the three student closes (X, a tap on the dim, Escape / iOS Back): on a phone the sheet leaves down first (UIP5); every programmatic close stays instant */
+function clUserClose(dismiss) {
+  if (!cl || !cl.open || clPerm()) return;
+  if (!bridge.sideMQ.matches && !bridge.reduceMQ.matches && cl.sheetOut) cl.sheetOut(); else clClose(dismiss);
 }
 function clClose(dismiss, force) {                                         // force: clReset only (a new question empties the box, applyMT opens it again)
   if (!cl || !cl.open || (clPerm() && !force)) return;
@@ -767,7 +778,7 @@ function clBack() {
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
-window.stemCluckClose = () => clClose(false);                               // nav.js: the iOS Back button closes the sheet
+window.stemCluckClose = () => clUserClose(false);                               // nav.js: the iOS Back button closes the sheet
 window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
 window.stemCluckModal = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
 window.stemLayout = () => { if (S) bridge.layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)

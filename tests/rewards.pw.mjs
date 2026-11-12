@@ -249,7 +249,8 @@ try {
     assert.equal(await p.isVisible("#cluck .cl-bar"), true, "phone: the H3a header (Lane 2)");
     assert.equal(await p.isHidden("#cluck .cl-x2"), true);
     assert.deepEqual(await p.$eval("#cluck", e => { const r = e.getBoundingClientRect(), q = document.querySelector("#blocks > :not(.ptitle)").getBoundingClientRect(); return [r.left, r.width, r.top > q.top && r.top < innerHeight / 2, getComputedStyle(e).borderTopLeftRadius]; }), [0, 390, true, "30px"], "phone: popup K1 under the question's first lines; corners 30px at the dock (CHATBOX PICK r2, Tony Oct 13 + Oct 17, supersedes the P3 10px squircle)");
-    await p.click("#cluck .cl-bar .cl-x"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "the X closes it");
+    await p.click("#cluck .cl-bar .cl-x"); await p.waitForFunction(() => document.querySelector("#origHd").getAttribute("aria-expanded") === "false", null, { timeout: 2000 }).catch(() => {});   // UIP5: the phone sheet leaves down first
+    assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "the X closes it");
     await p.click("#orig .rw-free"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "a tap on the FREE sticker works the card too");
     assert.equal(await p.isVisible("#cluck .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");

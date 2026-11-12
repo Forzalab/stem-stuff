@@ -1014,7 +1014,8 @@ html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }
    going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
 html:not(.side) .cl { --rr: 30px; border-top-left-radius: var(--rr); border-top-right-radius: var(--rr);   /* MORE ROUND (V3 melt): 30px at the dock, 0 at full, in proportion to the drag (--pp: 0 dock, 1 full) */
   filter: drop-shadow(0 -6px 36px color-mix(in srgb, var(--glow) calc(9% * (1 - var(--pp, 0))), transparent)); }   /* a faint, wide orange haze above the top edge (Vision Pro glass: low alpha, soft), gone at full */
-html:not(.side) .cl::before { opacity: 1; }   /* the ember top light at 100% (was 60%) */
+html:not(.side) .cl::before { opacity: 1; }
+html:not(.side) .cl:is([data-state="dragging"], [data-state="moving"]) { filter: none; }   /* drag lag (Tony, Nov 12): the drop-shadow filter re-rasterized the whole sheet every frame; it comes back at rest */   /* the ember top light at 100% (was 60%) */
 html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, .8); }   /* 80% at the dock, 96% at full: a hard dim, no blur */
 html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 44px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
 html:not(.side) .cl-grab i { position: absolute; top: 12px; left: 50%; width: 32px; height: 4px; margin-left: -16px; border-radius: 2px; background: var(--help-muted); opacity: .7; }
