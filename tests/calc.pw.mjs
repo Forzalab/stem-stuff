@@ -39,7 +39,7 @@ async function fresh(init = {}, at = "2026-11-06T18:00:00Z", opts = {}) {
   init = { ...init };
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", ...opts });
   await cramOn(ctx);
-  await ctx.addInitScript(() => document.documentElement.classList.add("cc-calc-on"));   // the TI/Casio chip is hidden for now (calc-coach.css); these specs still test it
+  await ctx.addInitScript(() => document.addEventListener("readystatechange", () => document.documentElement.classList.add("cc-calc-on"), { once: true }));   // the TI/Casio chip is hidden for now (calc-coach.css); these specs still test it
   await ctx.addInitScript(([init, at]) => {                                  // the device's clock, pinned (the exam-day gate): Date.now() and new Date() read it, time still runs
     window.__ccToastMs = 300; window.__ccOfferMs = 99999999;
     const R = Date, off = R.parse(at) - R.now();

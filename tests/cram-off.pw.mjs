@@ -39,7 +39,7 @@ const PIN = new Date("2026-11-07T12:00:00Z");                      // inside wel
 async function newPage() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await ctx.clock.setFixedTime(PIN);
-  await ctx.addInitScript(() => document.documentElement.classList.add("cc-calc-on"));   // the TI/Casio chip is hidden for now (calc-coach.css); these specs still test it
+  await ctx.addInitScript(() => document.addEventListener("readystatechange", () => document.documentElement.classList.add("cc-calc-on"), { once: true }));   // the TI/Casio chip is hidden for now (calc-coach.css); these specs still test it
   await ctx.addInitScript(() => { window.__welcomeFirst = true; });   // automated browsers otherwise skip welcome-first (only the flag may stop the redirect)
   await ctx.route("**/client/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cram) }));
   const page = await ctx.newPage(); const errs = []; page.on("pageerror", e => errs.push(e.message)); page.errs = errs;
