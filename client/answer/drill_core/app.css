@@ -68,6 +68,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-to
 /* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
    nothing, like the docked videos' row. Safari has no scrollbar-color: the -webkit- bar there, same look */
 html { scrollbar-width: none; }
+html { overflow-x: clip; }   /* fix-sheet-width (Tony Nov 12, Firefox phone): KaTeX's hidden MathML copy of a long choice (P3R #6, 433px at 412) still widened the page, and the fixed Cluck sheet (.cl, inset 0) stretched with it: its right corner fell off-screen. Every formula already scrolls in its own box; the page never scrolls sideways. clip (not hidden) keeps sticky + the window scroller. */
 html::-webkit-scrollbar { display: none; }
 body * { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
 @media (hover: hover) { body *:not(:hover):not(:focus-within) { scrollbar-color: transparent transparent; } }   /* Tony, Oct 18: the thumb shows only while the pointer is over the box or focus is in it */
