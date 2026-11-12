@@ -4,7 +4,7 @@
    One component, two token sets: on the card the page tokens, inside .ai-box Cluck's warm remap; zero branches in the renderer.
    Motion (F18, STYLE §2.8): 120 / 200 / 300 ms, scoped to views until app.css closes STYLE §9 row 6. */
 
-.vw { --d-fast: 120ms; --d-move: 200ms; --d-dim: 300ms; --vw-chip: calc(var(--btn) * 2 / 3); --vw-fig: min(28svh, calc(var(--btn) * 5)); }
+.vw { --vw-chip: calc(var(--btn) * 2 / 3); --vw-fig: min(28svh, calc(var(--btn) * 5)); }
 .ai-box .vw { --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); }
 
 /* F8: slots in the root's order; an empty slot holds two lines so a late statement fills, never pushes what is above */
@@ -109,7 +109,7 @@
 .vw-steps > .vw-cap, .vw-steps > .vw-st + .vw-cap { margin-top: var(--s1); }
 .vw-sr { position: absolute; width: .0625rem; height: .0625rem; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .vw-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--btn); }
-.vw-top .vw-pips i { transition: background-color var(--d-fast) ease, border-color var(--d-fast) ease; }
+.vw-top .vw-pips i { transition: background-color var(--d-fast) var(--ease-out), border-color var(--d-fast) var(--ease-out); }
 .vw-top .vw-pips i.on { border-color: var(--muted); background: var(--muted); }
 .vw-top .vw-pips i.cur { border-color: var(--ink); background: var(--ink); }
 .vw-foot .btn { width: auto; grid-auto-flow: column; gap: var(--s2); padding: 0 var(--s4); white-space: nowrap; }
@@ -122,7 +122,7 @@
 .vw-anchor :is(.gm-dim, .gm-angle, .gm-right) { stroke-width: 1.5; }   /* §2 guide */
 .vw-anchor .gm-arrow { stroke-width: 3; }   /* §2 force */
 .vw-anchor .gm-fill.vw-lit:not(.ly2, .ly3) { fill: color-mix(in srgb, var(--ink) 40%, var(--body)); }   /* §6: a lit layer-1 face, 40 % */
-.vw-anchor .vw-dim { transition: stroke var(--d-dim) ease, fill var(--d-dim) ease; }
+.vw-anchor .vw-dim { transition: stroke var(--d-dim) var(--ease-out), fill var(--d-dim) var(--ease-out); }
 .vw-anchor .vw-dim:not([class*="tn-"]) { --ink: var(--muted); }   /* an unlit hued part takes .ly3 (views.js): its layer-3 shade, app.css */
 .vw-anchor .vw-hide { display: none; }
 .vw-anchor .gm-t { font-weight: var(--w-em); }

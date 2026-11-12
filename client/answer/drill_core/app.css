@@ -68,6 +68,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-to
 /* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
    nothing, like the docked videos' row. Safari has no scrollbar-color: the -webkit- bar there, same look */
 html { scrollbar-width: none; }
+html { overflow-x: clip; }   /* fix-sheet-width (Tony Nov 12, Firefox phone): KaTeX's hidden MathML copy of a long choice (P3R #6, 433px at 412) still widened the page, and the fixed Cluck sheet (.cl, inset 0) stretched with it: its right corner fell off-screen. Every formula already scrolls in its own box; the page never scrolls sideways. clip (not hidden) keeps sticky + the window scroller. */
 html::-webkit-scrollbar { display: none; }
 body * { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
 @media (hover: hover) { body *:not(:hover):not(:focus-within) { scrollbar-color: transparent transparent; } }   /* Tony, Oct 18: the thumb shows only while the pointer is over the box or focus is in it */
@@ -226,7 +227,7 @@ html.bar-mini .bar-tab {
   display: grid; place-items: center; width: 100%; max-width: none !important; height: 44px; padding: 0; margin: 0;   /* 44: HIG tap target */
   background: none; border: 0; color: var(--muted); touch-action: none;
 }
-html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .3s ease; }
+html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .3s var(--ease-out); }
 html.bar-mini:not(.bar-open) .dock { padding: 0 var(--gut) env(safe-area-inset-bottom); }
 html.bar-mini:not(.bar-open) .dock > :not(.bar-tab) { display: none; }
 html.bar-mini.bar-open .dock { padding-top: 0; }
@@ -435,7 +436,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
   padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
   background: var(--sheet); border: var(--bw) solid var(--line); border-radius: 8px; color: var(--ink);   /* a 1px --line edge at rest; every state is the same 1px in its tone */
-  transition: border-color .18s ease-out, background-color .18s ease-out;
+  transition: border-color .18s ease-out, background-color .18s ease-out, transform 100ms ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 .opt .badge {
@@ -650,7 +651,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
    96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. PALETTE-v3 §6: after a right
    answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
-:root { --d-fast: 180ms; --d-move: 300ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
+:root { --d-fast: 120ms; --d-move: 200ms; --d-dim: 300ms; --ease-out: ease-out; --ease-sheet: cubic-bezier(.32,.72,0,1); --nxw: calc(var(--btn) * 2); --vgw: 28px; }
 .nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
   color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
@@ -1216,10 +1217,10 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
    Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
    its space, so nothing below it moves under the finger. Swap's toggle is in <main>, so it is never inside the hidden bar.
    Not on desktop: there the bar holds the entry box, which a mouse has to reach while the scratchpad still has focus. */
-.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .3s ease, opacity .3s ease, visibility 0s; }
+.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .3s var(--ease-out), opacity .3s var(--ease-out), visibility 0s; }
 html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
   transform: translateY(-100%); opacity: 0; visibility: hidden; pointer-events: none;
-  transition: transform .3s ease, opacity .3s ease, visibility 0s .3s;
+  transition: transform .3s var(--ease-out), opacity .3s var(--ease-out), visibility 0s .3s;
 }
 
 /* ---------- Swap: keyboard up = one pane above the keyboard (docs/design/SWAP.md) ----------
@@ -1230,10 +1231,10 @@ html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
 .btn-tgl { width: auto; display: inline-flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); }
 .btn-tgl::before {                       /* the active side's pill */
   content: ""; position: absolute; top: 4px; bottom: 4px; left: 6px; width: 36px; border-radius: 6px; background: var(--raised);
-  transition: transform .33s ease;
+  transition: transform .33s var(--ease-out);
 }
 .btn-tgl:hover { background: var(--sheet); }
-.btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s ease, transform .33s ease; }
+.btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s var(--ease-out), transform .33s var(--ease-out); }
 .btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--action); }
 .btn-tgl[data-pane="scratch"]::before { transform: translateX(36px); }   /* one icon (24px) + the gap */
 
@@ -1355,7 +1356,7 @@ html.mt #scratch { min-height: var(--pad-max, 8rem); }
 html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
 html.mt.mt-a #problem { display: none; }
 .mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-weight: var(--w-em);
-  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .33s ease; }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
+  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .33s var(--ease-out); }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
 /* phones: the pad is off the page until the Scratchpad button opens the pad page */
 html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
@@ -1438,7 +1439,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 .cl-back > .ico { color: var(--help); }
 .cl-back .hk { flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .cl-back .hk-t { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--help-muted); font-weight: 400; }
-.cl-back .hk-t.roll { animation: hk-roll .45s ease both; }
+.cl-back .hk-t.roll { animation: hk-roll .45s var(--ease-out) both; }
 @keyframes hk-roll { from { transform: translateY(60%); opacity: 0; } to { transform: none; opacity: 1; } }
 .cl-back .hk-go { flex: none; }
 .cl-back:hover .hk-go { text-decoration: underline; }
@@ -1464,7 +1465,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
   :root { --t-md: 1.3125rem; --t-sm: 1.1875rem; --t-xs: 1rem; --t-lg: 1.375rem; --btn: 56px; --ico: 28px; }
 }
 
-::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: ease; }
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -1537,7 +1538,8 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 .ck-sky i { position: absolute; inset: 0 0 -16px; opacity: 0; }
-.ck-sky .l1 { background: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, color-mix(in srgb, var(--help) 6%, transparent) 0%, color-mix(in srgb, var(--help) 2.5%, transparent) 50%, transparent 75%); }
+/* fix-sky-grain (Tony Nov 12: the sunrise arc "splits"): the l1 tail is < 1 RGB step per pixel, so 8-bit rounds it into one navy -> warm jump (an arc on OLED). A longer eased tail + a faint grain, masked to the same ellipse, breaks that jump up (dither). Grain rides l1's opacity. */
+.ck-sky .l1 { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px, radial-gradient(150% 80% at var(--sun-x, 50%) 110%, color-mix(in srgb, var(--help) 6%, transparent) 0%, color-mix(in srgb, var(--help) 2.5%, transparent) 50%, color-mix(in srgb, var(--help) 1.4%, transparent) 60%, color-mix(in srgb, var(--help) .6%, transparent) 70%, color-mix(in srgb, var(--help) .15%, transparent) 78%, transparent 86%); -webkit-mask-image: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, #000 0%, #000 50%, transparent 90%); mask-image: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, #000 0%, #000 50%, transparent 90%); }
 .ck-sky .l2 { background: radial-gradient(70% 60% at var(--sun-x, 50%) 108%, color-mix(in srgb, var(--help) 18%, transparent) 0%, color-mix(in srgb, var(--help) 7%, transparent) 45%, transparent 72%); }
 .ck-sky .l3 { background: radial-gradient(38% 30% at var(--sun-x, 50%) 104%, color-mix(in srgb, var(--help) 14%, transparent) 0%, color-mix(in srgb, var(--help) 5%, transparent) 55%, transparent 80%); }
 /* the duck: a button, a clip window; the art grows from the window's bottom edge. 44px+ target at the peek (eyes need ~42 / 52px: AMA 12) */
@@ -1664,3 +1666,10 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
 #fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
 @media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
+/* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5% and lighten; small controls dip 3%.
+   Transform only, instant in (the finger is the cause); .opt eases back out. .opt.jolt / .pop animations still win (animation beats :active).
+   :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: the colour only. */
+.opt:active:not(:disabled) { background: var(--raised); border-color: var(--muted); transform: scale(.985); }
+:is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: scale(.97); }
+:is(.btn, .opt, .nx, .vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go) { touch-action: manipulation; }
+@media (prefers-reduced-motion: reduce) { .opt:active:not(:disabled), :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: none; } }

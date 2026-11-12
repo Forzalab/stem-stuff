@@ -22,7 +22,7 @@
 .ff.rbox.strip .vk[role="button"] { width: var(--btn); height: var(--btn); margin-right: 0; }   /* the reveal box's static icon grew a 44px+ target (it was 24px beside the old chip segment) */
 
 .vdrawer {
-  --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  --ease-drawer: var(--ease-sheet);
   position: absolute; z-index: 2; box-sizing: border-box; display: flex; align-items: center; gap: var(--s1);
   padding: calc(var(--vd-tuck, 2px) + var(--s1)) var(--s1) var(--s1);     /* --vd-tuck (strip.js place): how far the top is tucked behind the box's bottom edge (2px behind a border, 0 under a verdict line) */
   background: color-mix(in srgb, var(--page) 93%, var(--help));          /* the page warmed 7% toward Cluck's orange (round 12b); the edge below stays neutral */
