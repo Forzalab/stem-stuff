@@ -1076,8 +1076,14 @@ html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
 /* the scroll-down hint (Tony, Oct 19, variant A; app.js clMore): more text below = .cl-bd.below. A fade over the field's top edge (STYLE.md 2.7
    "Fades and glows": the sheet's own --sheet, 2.5rem, no taps): 12px of ramp, then solid, and the disc sits in the solid part, so it never
    covers a line you can read (the mock's disc sat on "r = 249 m"). A 28px disc in the ask field's colour, a 44px target; no loop, no pulse */
-.cl-ft::before { content: ""; position: absolute; inset: auto 0 100%; height: 2.5rem; pointer-events: none; opacity: 0;
-  background: linear-gradient(transparent, var(--sheet) var(--s3)); }
+.cl-ft::before { content: none; }   /* (was a --sheet band over the text; Tony Nov 12: "not a solid bar", the text itself fades, see .cl-bd mask below) */
+/* scroll fades (Tony, Nov 12, like the Claude app; UIP7 top): the TEXT fades out toward the edge where more is hidden. A mask on the body,
+   no colour band: the ramp starts at the very edge (fully faded) and is gone 4rem in. .below = more under, .above = scrolled down */
+.cl-bd { --fb: 0px; --ft: 0px; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); }
+.cl-bd.below { --fb: 4rem; } .cl-bd.above { --ft: 2.5rem; }
+@property --fb { syntax: "<length>"; inherits: false; initial-value: 0px; } @property --ft { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@media (prefers-reduced-motion: no-preference) { .cl-bd { transition: --fb .18s ease-out, --ft .18s ease-out; } }
 .cl-ft .cl-more { position: absolute; z-index: 1; left: 50%; bottom: 100%; width: 44px; height: 44px; margin: 0 0 -8px -22px; padding: 0; border: 0;
   display: grid; place-items: center; background: none; color: var(--help-on); cursor: pointer; opacity: 0; visibility: hidden; }   /* the disc's foot on the field's 8px top gap */
 .cl-more::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--ai-pill); }

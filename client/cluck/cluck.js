@@ -842,7 +842,9 @@ function clReset() {                                                        // a
    per reply (the box text, then each chat reply) and "bottom" once per reply that showed it */
 function clMore(late) {
   if (!cl) return;
-  const bd = cl.el.querySelector(".cl-bd"), on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
+  const bd = cl.el.querySelector(".cl-bd");
+  bd.classList.toggle("above", cl.open && bd.scrollTop > 8);              // UIP7: text under the header fades too
+  const on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
   if (on === bd.classList.contains("below")) { clearTimeout(cl.moreT); cl.moreT = 0; return; }
   if (on && late !== true) { cl.moreT ||= setTimeout(() => { cl.moreT = 0; clMore(true); }, 150); return; }   // it shows once the sheet has settled (side by side the column re-fits ~70ms after it opens): no flash; it hides at once
   bd.classList.toggle("below", on);
