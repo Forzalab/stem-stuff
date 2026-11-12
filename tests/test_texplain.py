@@ -57,7 +57,7 @@ def grammar(plain):
 class TexPlainGrammar(unittest.TestCase):
     def test_bank_expressions_parse_in_to_python(self):
         url = lambda p: json.dumps("file://" + os.path.join(ROOT, p))  # noqa: E731
-        out = subprocess.run(["node", "--input-type=module", "-e", JS % (url("nav.js"), json.dumps(ROOT))],
+        out = subprocess.run(["node", "--input-type=module", "-e", JS % (url("client/answer/navigation/nav.js"), json.dumps(ROOT))],
                              check=True, capture_output=True, text=True, cwd=os.path.join(ROOT, "tests")).stdout
         pairs = json.loads(out)
         skipped, parsed, sides_ok, bad = {}, 0, 0, []

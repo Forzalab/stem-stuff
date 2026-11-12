@@ -28,7 +28,7 @@ for (const W of [390, 1280]) {
   page.on("pageerror", e => errors.push(String(e)));
   page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   const open = async (qs = "") => {
-    await page.goto(`${BASE}/try/views-demo.html${qs}`);
+    await page.goto(`${BASE}/client/labs/views_demo/views-demo.html${qs}`);
     await page.waitForFunction(() => document.documentElement.getAttribute("data-ready") === "1", null, { timeout: 15000 });
     await page.evaluate(() => document.fonts.ready);
   };
@@ -48,7 +48,7 @@ for (const W of [390, 1280]) {
   }, ANSWER);
 
   await step(`${W} streamed: append-only paint, every view done, no answer before Check`, async () => {
-    await page.goto(`${BASE}/try/views-demo.html`);
+    await page.goto(`${BASE}/client/labs/views_demo/views-demo.html`);
     await page.waitForSelector('#v1 [data-slot="head"].on');
     await page.evaluate(() => { window.__head = document.querySelector('#v1 [data-slot="head"]').firstChild; window.__slots = document.querySelectorAll("#v1 .vw-slot").length; });
     await page.waitForFunction(() => document.documentElement.getAttribute("data-ready") === "1", null, { timeout: 15000 });

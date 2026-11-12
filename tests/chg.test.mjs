@@ -1,7 +1,7 @@
 // chg.mjs: what a snack changed from its original (TODO A, Oct 5). Marks the changed numbers, and the words of a short swap.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { changes, markNums } from "../chg.mjs";
+import { changes, markNums } from "../client/pure_logic_modules/chg.mjs";
 
 const T = md => ({ type: "text", md });
 const marks = s => [...s.matchAll(/\uE000([^\uE001]*)\uE001|\\htmlClass\{chg\}\{([^}]*)\}/g)].map(m => m[1] ?? m[2]);

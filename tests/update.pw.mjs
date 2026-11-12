@@ -55,7 +55,7 @@ try {
     await page.waitForTimeout(1500);
     assert.equal(await bar(page).count(), 0);
   });
-  appendFileSync(join(SITE, "app.css"), "\n/* v2 */\n");
+  appendFileSync(join(SITE, "client", "answer", "drill_core", "app.css"), "\n/* v2 */\n");
   await step("changed file: the bar shows", async () => {
     await page.reload();
     await bar(page).waitFor({ state: "visible", timeout: 5000 });
@@ -65,7 +65,7 @@ try {
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);
     await page.waitForTimeout(1500);
     assert.equal(await bar(page).count(), 0);
-    const css = await page.evaluate(async () => (await caches.match(new URL("app.css", location.href).href)) ?.text());
+    const css = await page.evaluate(async () => (await caches.match(new URL("client/answer/drill_core/app.css", location.href).href)) ?.text());
     assert.ok(css && css.includes("/* v2 */"), "the cache holds the new app.css");
   });
   // A deploy: tools/build_and_ship/ship.sh writes version.json, tools/build_and_ship/build_public.py stamps sw.js + the index meta (the real stamp(), on SITE)
@@ -98,7 +98,7 @@ try {
     assert.deepEqual(await ver(page), ["#91", "#91"], "tap: the new version");
   });
   await step("a deploy on a slow network (the old worker sees the changed files first): ONE tap → the new version, no second bar", async () => {
-    slow = /^vendor\/math\.min\.js$/;                      // the new sw.js precaches it: its install takes 4 s
+    slow = /^client\/vendor\/math\.min\.js$/;                      // the new sw.js precaches it: its install takes 4 s
     deploy("#92", "ccc3333");
     await page.reload();
     await page.keyboard.press("Shift");                    // she taps around while it loads: busy

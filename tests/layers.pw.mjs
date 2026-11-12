@@ -16,16 +16,16 @@ const fig = layer => ({ type: "graph", kind: "scene", alt: "A block on a table w
   { mark: "force", at: [0, 0], angle: 90, len: 2, label: "$N$" },
   { mark: "force", at: [0, 0], angle: 0, len: 2, label: "$F$", ...(layer == null ? {} : { layer }) }] });
 const rgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(", ")})`;
-const css = read("app.css"), HEX = (n, hue = "sky") => new RegExp(`(?::root|:root, \\.fig, \\.vw) \\{[^}]*--fig-${hue}-${n}: (#[0-9a-f]{6})`).exec(css)[1];   // W163: a force with no colour gets a palette hue; F sorts before N, so F is sky, N amber
+const css = read("client/answer/drill_core/app.css"), HEX = (n, hue = "sky") => new RegExp(`(?::root|:root, \\.fig, \\.vw) \\{[^}]*--fig-${hue}-${n}: (#[0-9a-f]{6})`).exec(css)[1];   // W163: a force with no colour gets a palette hue; F sorts before N, so F is sky, N amber
 let failures = 0;
 const step = async (name, fn) => { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); } };
 const browser = await pw.chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
 await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body><div id="a" class="fig"></div><div id="b" class="fig"></div><div id="c" class="fig"></div></body></html>`);
-await page.addScriptTag({ content: read("vendor/math.min.js") });
-await page.addScriptTag({ content: read("figcheck.js"), type: "module" });   // window.FigCheck (autoHues) before graph.js, as index.html orders them
+await page.addScriptTag({ content: read("client/vendor/math.min.js") });
+await page.addScriptTag({ content: read("client/cluck/figures/figcheck.js"), type: "module" });   // window.FigCheck (autoHues) before graph.js, as index.html orders them
 await page.waitForFunction(() => window.FigCheck);
-await page.addScriptTag({ content: read("graph.js") });
+await page.addScriptTag({ content: read("client/cluck/figures/graph.js") });
 const draw = (id, g) => page.evaluate(([id, g]) => { const el = document.getElementById(id); Graph.render(el, g); const f = el.querySelector('[data-mark="force"]:last-of-type') || [...el.querySelectorAll('[data-mark="force"]')].pop();
   return { html: el.innerHTML, stroke: getComputedStyle(f.querySelector("line,polyline,path")).stroke, ly: [...el.querySelectorAll("svg .ly2, svg .ly3")].map(e => e.getAttribute("class")), lbl: [...el.querySelectorAll(".lbl")].map(e => e.className) }; }, [id, g]);
 await step("layer omitted = layer 1: identical drawing, no layer class, stroke is the token's own colour", async () => {

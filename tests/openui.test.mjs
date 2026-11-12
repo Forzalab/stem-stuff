@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { caseIds, runCase, spec } from "./openui-canon.mjs";
-import { createStreamingParser, generateSystemPrompt } from "../vendor/openui-lang.mjs";
+import { createStreamingParser, generateSystemPrompt } from "../client/vendor/openui-lang.mjs";
 
 const repo = new URL("../", import.meta.url);
 const text = p => readFileSync(new URL(p, repo), "utf8");
@@ -40,11 +40,11 @@ test("streaming parser: a completed statement never changes as more text arrives
 });
 
 test("bundle: one self-contained module, no telemetry, MIT notice first", () => {
-  const src = text("vendor/openui-lang.mjs");
+  const src = text("client/vendor/openui-lang.mjs");
   const [head] = src.split("\n");
   assert.match(head, /^\/\*! OpenUI Lang core 1\.0\.2 .*MIT License, Copyright \(c\) 2011-2024 Thesys Inc\./);
   for (const bad of ['from"', "import(", "require(", "posthog", "fetch(", "sendBeacon", "XMLHttpRequest", "process.env"])
     assert.ok(!src.includes(bad), bad);
-  assert.match(text("vendor/openui-lang.LICENSE.txt"), /^The MIT License \(MIT\)\n\nCopyright \(c\) 2011-2024 Thesys Inc\./);
+  assert.match(text("client/vendor/openui-lang.LICENSE.txt"), /^The MIT License \(MIT\)\n\nCopyright \(c\) 2011-2024 Thesys Inc\./);
   assert.match(text("tools/build_and_ship/openui/build.sh"), /^VERSION=1\.0\.2 /m);
 });

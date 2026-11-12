@@ -7,7 +7,7 @@ import vm from "node:vm";
 import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_PROVIDER, JEV_MODEL, JEV_MODELS, tree } from "../tools/benchmarks/bench_seen.mjs";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
-const win = () => { const w = { URLSearchParams, setInterval() {}, performance: { now: () => 0 } }; w.window = w; vm.runInNewContext(read("../intent.js"), w); return w; };
+const win = () => { const w = { URLSearchParams, setInterval() {}, performance: { now: () => 0 } }; w.window = w; vm.runInNewContext(read("../client/cluck/jev_nudges/intent.js"), w); return w; };
 
 /* one real session through create(): item A earned (2 wrong, right), item B quick, item C one wrong then right */
 function dumped() {

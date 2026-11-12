@@ -36,7 +36,7 @@ class BrainrotList(unittest.TestCase):
         self.assertIn('["Brainrot", [["aaaaaaaaaaa", "Down in \\"Ohio\\" 🤣", 0], ["bbbbbbbbbbb", "skibidi toilet", 1]]]', once)
 
     def test_the_shipped_list(self):
-        with open(os.path.join(ROOT, "brainrot.js"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "client", "cluck", "brainrot.js"), encoding="utf-8") as f:
             src = f.read()
         self.assertEqual(src.count("/* list:start"), 1)
         self.assertEqual(src.count("// list:end"), 1)
@@ -81,7 +81,7 @@ class BrainrotList(unittest.TestCase):
                 self.assertTrue(isinstance(r[0], str) and len(r[0]) == 11, r)
                 self.assertTrue(isinstance(r[1], str) and r[1], r)
                 self.assertIn(r[2], (0, 1), r)
-        with open(os.path.join(ROOT, "brainrot.js"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "client", "cluck", "brainrot.js"), encoding="utf-8") as f:
             self.assertEqual(self.names(f.read()), self.WANT)
         out, _ = self.run_main({})
         self.assertEqual(self.names(out), self.WANT)

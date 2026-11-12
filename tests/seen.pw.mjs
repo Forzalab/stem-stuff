@@ -21,7 +21,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8876", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "j6-")), banks = join(tmp, "banks"), shots = process.argv[3] || tmp;
 mkdirSync(banks); mkdirSync(shots, { recursive: true });
-const LINES = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(join(ROOT, "copy/seen-lines.js"), "utf8"), w); return JSON.parse(JSON.stringify(w.__stemSeenLines)); })();
+const LINES = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(join(ROOT, "client/resources/texts/seen-lines.js"), "utf8"), w); return JSON.parse(JSON.stringify(w.__stemSeenLines)); })();
 const txt = md => [{ type: "text", md }];
 /* tries: 3 so "two wrong, then right" is reachable on a 4-choice mc (the default is 2 tries: the 2nd wrong locks it) */
 const PROBS = [1, 2].map(n => ({ code: `CALC1_T96M${n}`, title: `Limit from a table ${n}`, type: "mc", shuffle: false, tries: 3, body: txt(`Question ${n}: pick one.`), correct: "a",

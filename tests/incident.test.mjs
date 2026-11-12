@@ -1,7 +1,7 @@
 // incident.mjs (SCHEMA.md "Incidents"): the code format, the one record's fields, and never any student text in it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ALPHA, CODE_RE, KEYS, ERR_MAX, newCode, errText, reason, incident, traceparent, traceOf, diagLine, aiState } from "../incident.mjs";
+import { ALPHA, CODE_RE, KEYS, ERR_MAX, newCode, errText, reason, incident, traceparent, traceOf, diagLine, aiState } from "../client/pure_logic_modules/incident.mjs";
 
 test("diag line (flight recorder P1, debug mode only): build, endpoint + status, seconds, the AI's state from the server's reason or /health", () => {
   const r = { code: "E-7K3QX", where: "explain", reason: "http", status: 504, ms: 20100 };

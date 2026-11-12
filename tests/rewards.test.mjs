@@ -4,7 +4,7 @@ import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const src = readFileSync(new URL("../rewards/engine.js", import.meta.url), "utf8");
+const src = readFileSync(new URL("../client/rewards/engine.js", import.meta.url), "utf8");
 const mem = new Map();
 globalThis.localStorage = { getItem: k => mem.has(k) ? mem.get(k) : null, setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
 new Function(src)();
@@ -19,7 +19,7 @@ const fresh = () => R.use("T" + n++);
 beforeEach(() => { script = []; mem.clear(); R.gap(); fresh(); });
 
 test("inert until use(): no state, answer() pays nothing", () => {
-  const src2 = readFileSync(new URL("../rewards/engine.js", import.meta.url), "utf8");
+  const src2 = readFileSync(new URL("../client/rewards/engine.js", import.meta.url), "utf8");
   const g = { localStorage: globalThis.localStorage };
   new Function("window", src2)(g);
   assert.equal(g.Rewards.on(), false);

@@ -8,8 +8,8 @@
 <title>Privacy · STEM drill</title>
 <!-- the footer link's page (docs/design/plans/TELEMETRY.md): a few plain lines, no telemetry on this page itself
      (telemetry.js is loaded only for its signals() helper: there is no <meta name="stem-t"> here, so it records nothing) -->
-<link rel="stylesheet" href="vendor/fonts/atkinson.css">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="client/vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="client/answer/drill_core/app.css">
 <style>
 .pv { max-width: 40rem; margin: 0 auto; padding: var(--s6) var(--gut) var(--s7); }
 .pv h1 { margin: 0 0 var(--s4); font-size: var(--t-lg); line-height: 1.2; }
@@ -41,7 +41,7 @@
   </div>
   <a class="back" href="./">Back to questions</a>
 </main>
-<script src="telemetry.js"></script>
+<script src="client/shell/telemetry/telemetry.js"></script>
 <script>
 /* the privacy signal this browser sends (telemetry.js signals(), the same check that turns recording off), in one plain line */
 (function () {

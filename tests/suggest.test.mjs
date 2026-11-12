@@ -1,8 +1,8 @@
 // Code box suggestions (suggest.mjs): banks first, questions last, order kept inside each group.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { suggest, remember, normalize, normalizeLink, entry } from "../suggest.mjs";
-import { ANY } from "../codes.mjs";
+import { suggest, remember, normalize, normalizeLink, entry } from "../client/pure_logic_modules/suggest.mjs";
+import { ANY } from "../client/pure_logic_modules/codes.mjs";
 
 test("typing P2X lists the bank before the questions", () => {
   const codes = ["PHYS_P2XA", "CALC1_P2X", "BANK_P2X", "PHYS_P2XB", "BANK_P2XQ", "CALC1_T6B"];

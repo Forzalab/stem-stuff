@@ -21,11 +21,15 @@ const CLUCK_MARK = "/* ---------- Cluck the genie (";
 const SHELL_MARK = "/* ---------- sugar rewards (";
 const SPLIT_MARK = "/* split-app.mjs";   // the output's banner: an input that has it is already split
 const PARTS = ["app", "cluck", "shell"];
+/* where each part lives (repo-relative, the client/ + shared/ layout). The monolith's relative imports are written from app.js's folder; a part imports from its own folder. */
+const PART_FILE = ["client/answer/drill_core/app.js", "client/cluck/cluck.js", "client/shell/shell.js"];
+const relTo = (p, target) => { const r = path.posix.relative(path.posix.dirname(PART_FILE[p]), target); return r.startsWith(".") ? r : "./" + r; };
+const fromPart = (p, from) => from.startsWith(".") ? relTo(p, path.posix.join(path.posix.dirname(PART_FILE[0]), from)) : from;
 /* top-level declarations that move to the END of app.js though they sit in a later part: the hash routing, which reads app.js names
    only, and which tests/next-dead.test.mjs reads in app.js (a test is never edited for the split) */
 const MOVE_TO_APP = ["hashCode", "fromHash"];
 
-const [inPath = path.join(ROOT, "app.js"), outDir = ROOT] = process.argv.slice(2);
+const [inPath = path.join(ROOT, PART_FILE[0]), outDir = ROOT] = process.argv.slice(2);
 const src = fs.readFileSync(inPath, "utf8");
 if (src.includes(SPLIT_MARK)) throw new Error(`${inPath} is already split: feed the one-file app.js (git show origin/main:app.js)`);
 const at = mark => { const i = src.indexOf("\n" + mark) + 1; if (i <= 0 || src.indexOf("\n" + mark, i) >= 0) throw new Error(`marker not found exactly once: ${mark}`); return i; };
@@ -120,15 +124,15 @@ const out = [0, 1, 2].map(p => {
   let head = banner(p);
   if (p > 0) {
     const ext = new Map();
-    for (const b of extImports[p]) { if (!ext.has(b.imp.from)) ext.set(b.imp.from, []); ext.get(b.imp.from).push(b); }
+    for (const b of extImports[p]) { const f = fromPart(p, b.imp.from); if (!ext.has(f)) ext.set(f, []); ext.get(f).push(b); }
     for (const [from, bs] of [...ext].sort()) {
       const ns = bs.filter(b => b.imp.kind === "ImportNamespaceSpecifier"), named = bs.filter(b => b.imp.kind !== "ImportNamespaceSpecifier");
       for (const b of ns) head += `import * as ${b.name} from "${from}";\n`;
       if (named.length) head += `import { ${named.map(b => b.imp.kind === "ImportDefaultSpecifier" ? `default as ${b.name}` : b.imp.imported === b.name ? b.name : `${b.imp.imported} as ${b.name}`).sort().join(", ")} } from "${from}";\n`;
     }
     const fromApp = new Set(importsOf[p].get(0) || []); fromApp.add(BRIDGE);
-    head += `import { ${list(fromApp)} } from "./app.js";\n`;
-    for (const [q, ns] of importsOf[p]) if (q !== 0) head += `import { ${list(ns)} } from "./${file[q]}";\n`;
+    head += `import { ${list(fromApp)} } from "${relTo(p, PART_FILE[0])}";\n`;
+    for (const [q, ns] of importsOf[p]) if (q !== 0) head += `import { ${list(ns)} } from "${relTo(p, PART_FILE[q])}";\n`;
     head += lnBlock(p);
     return head + chunk[p] + (exportsOf[p].size ? `\nexport { ${list(exportsOf[p])} };\n` : "");
   }
@@ -139,12 +143,12 @@ const out = [0, 1, 2].map(p => {
   const exp = new Set(exportsOf[0]); exp.add(BRIDGE);
   return chunk[0].slice(0, nl) + banner(0) + `export const ${BRIDGE} = {};   // the bridge to cluck.js + shell.js (split-app.mjs)\n` + lnBlock(0) + chunk[0].slice(nl) + `\nexport { ${list(exportsOf[0])} };\n`;
 });
-for (const p of PARTS.keys()) fs.writeFileSync(path.join(outDir, file[p]), out[p]);
+for (const p of PARTS.keys()) fs.writeFileSync(path.join(outDir, PART_FILE[p]), out[p]);
 
 /* index.html: the 2 new module scripts right after app.js; sw.js: both precached. Once each. */
 const patch = (f, test, from, to) => { const fp = path.join(outDir, f); const s = fs.readFileSync(fp, "utf8"); if (test.test(s)) return; if (!s.includes(from)) throw new Error(`${f}: anchor not found: ${from}`); fs.writeFileSync(fp, s.replace(from, to)); };
-patch("index.html", /src="cluck\.js"/, `<script type="module" src="app.js"></script>`, `<script type="module" src="app.js"></script>\n<script type="module" src="cluck.js"></script><script type="module" src="shell.js"></script><!-- W152: app.js split in 3 (tools/client_generators/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->`);
-patch("sw.js", /"cluck\.js"/, `"app.js", `, `"app.js", "cluck.js", "shell.js", `);
+patch("index.html", /src="client\/cluck\/cluck\.js"/, `<script type="module" src="${PART_FILE[0]}"></script>`, `<script type="module" src="${PART_FILE[0]}"></script>\n<script type="module" src="${PART_FILE[1]}"></script><script type="module" src="${PART_FILE[2]}"></script><!-- W152: app.js split in 3 (tools/client_generators/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->`);
+patch("sw.js", /"client\/cluck\/cluck\.js"/, `"${PART_FILE[0]}", `, `"${PART_FILE[0]}", "${PART_FILE[1]}", "${PART_FILE[2]}", `);
 
 const lines = out.map(s => s.split("\n").length);
 console.log(`split: app.js ${lines[0]} · cluck.js ${lines[1]} · shell.js ${lines[2]} lines; bridge ${viaLn.size} names; exports app ${exportsOf[0].size} · cluck ${exportsOf[1].size}`);

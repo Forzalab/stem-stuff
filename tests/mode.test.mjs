@@ -1,7 +1,7 @@
 // mode.mjs: the upload mirror of serve.py hidden() / view() (docs/design/EASY.md, docs/design/REWARDS-WIRING.md).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { hidden } from "../mode.mjs";
+import { hidden } from "../client/pure_logic_modules/mode.mjs";
 
 const snack = { code: "PHYS_SK1", type: "mc", sugar_only: true, choices: [{ id: "a", md: "1" }, { id: "b", md: "2" }], correct: "a",
   saccharine: { snack: true, before: "PHYS_R1" } };
@@ -15,7 +15,7 @@ test("diet leaves out sugar_only items (the snacks); sugar keeps them", () => {
 });
 
 test("sugar view: a snack carries snack, before and its original (serve.py view); diet never sees them", async () => {
-  const { view } = await import("../mode.mjs");
+  const { view } = await import("../client/pure_logic_modules/mode.mjs");
   const s = { ...snack, saccharine: { ...snack.saccharine, key: "k", original: { q: 2, body: [{ type: "text", md: "Orig" }], solution: ["Answer: 1"] } } };
   const v = view(s, "sugar");
   assert.equal(v.snack, true); assert.equal(v.before, "PHYS_R1"); assert.deepEqual(v.original.solution, ["Answer: 1"]);
@@ -26,7 +26,7 @@ test("sugar view: a snack carries snack, before and its original (serve.py view)
 });
 
 /* D6 (Oct 7): an old diet/hard browser goes back to sugar once (no flag stem-mode-v=2); after that DIET_ sticks across reloads.
-   A fake cookie jar stands in for document.cookie; each import("../mode.mjs?load=N") = one page load. */
+   A fake cookie jar stands in for document.cookie; each import("../client/pure_logic_modules/mode.mjs?load=N") = one page load. */
 function jar(init) {
   const kv = new Map(Object.entries(init)), writes = [];
   return { kv, writes, doc: {
@@ -36,7 +36,7 @@ function jar(init) {
   } };
 }
 let load = 0;
-const page = async j => { globalThis.document = j.doc; try { return await import("../mode.mjs?load=" + ++load); } finally { delete globalThis.document; } };
+const page = async j => { globalThis.document = j.doc; try { return await import("../client/pure_logic_modules/mode.mjs?load=" + ++load); } finally { delete globalThis.document; } };
 const as = (j, fn) => { globalThis.document = j.doc; try { fn(); } finally { delete globalThis.document; } };
 
 for (const old of ["diet", "hard"]) test(`D6: stem-mode=${old} without the flag → sugar once, flag set; a later DIET_ sticks across reloads`, async () => {

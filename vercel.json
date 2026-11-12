@@ -17,10 +17,152 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{server/{http_server/serve,accounts/acct,answer_grading/{expr,slips},cluck_reply_checks/{oui,views_gate,livefig}}.py,server/**/__init__.py,server/data/{prompts/**,problems.json,skills.json,banks/**},views/{registry,library}.json,SCHEMA.md}",
+      "includeFiles": "{server/{http_server/serve,accounts/acct,answer_grading/{expr,slips},cluck_reply_checks/{oui,views_gate,livefig}}.py,server/**/__init__.py,server/data/{prompts/**,problems.json,skills.json,banks/**},shared/openui/{registry,library}.json,SCHEMA.md}",
       "maxDuration": 60
     }
   },
+  "redirects": [
+    {
+      "source": "/app.css",
+      "destination": "/client/answer/drill_core/app.css",
+      "permanent": false
+    },
+    {
+      "source": "/blind/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/shell/blind/:f",
+      "permanent": false
+    },
+    {
+      "source": "/calc-coach.css",
+      "destination": "/client/calc/coach/calc-coach.css",
+      "permanent": false
+    },
+    {
+      "source": "/calc-pick.css",
+      "destination": "/client/calc/model_picker/calc-pick.css",
+      "permanent": false
+    },
+    {
+      "source": "/calc/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/calc/:f",
+      "permanent": false
+    },
+    {
+      "source": "/copy/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/resources/texts/:f",
+      "permanent": false
+    },
+    {
+      "source": "/design/explain-box.css",
+      "destination": "/client/answer/explain_box/explain-box.css",
+      "permanent": false
+    },
+    {
+      "source": "/design/explain-box.html",
+      "destination": "/archive/design/explain-box.html",
+      "permanent": false
+    },
+    {
+      "source": "/design/login-lab.html",
+      "destination": "/client/labs/login-lab.html",
+      "permanent": false
+    },
+    {
+      "source": "/design/mini-lab.html",
+      "destination": "/client/labs/mini-lab.html",
+      "permanent": false
+    },
+    {
+      "source": "/design/popover-lab.html",
+      "destination": "/client/labs/popover-lab.html",
+      "permanent": false
+    },
+    {
+      "source": "/design/repair-lab.html",
+      "destination": "/client/labs/repair-lab.html",
+      "permanent": false
+    },
+    {
+      "source": "/design/welcome-lab.html",
+      "destination": "/client/labs/welcome-lab.html",
+      "permanent": false
+    },
+    {
+      "source": "/figure-docs.txt",
+      "destination": "/client/cluck/figure_language/figure-docs.txt",
+      "permanent": false
+    },
+    {
+      "source": "/login.css",
+      "destination": "/client/shell/login/login.css",
+      "permanent": false
+    },
+    {
+      "source": "/minicluck.css",
+      "destination": "/client/cluck/mini_cluck/minicluck.css",
+      "permanent": false
+    },
+    {
+      "source": "/nav.css",
+      "destination": "/client/answer/navigation/nav.css",
+      "permanent": false
+    },
+    {
+      "source": "/repair.css",
+      "destination": "/client/shell/repair/repair.css",
+      "permanent": false
+    },
+    {
+      "source": "/rewards/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/rewards/:f",
+      "permanent": false
+    },
+    {
+      "source": "/stages.css",
+      "destination": "/client/shell/stages/stages.css",
+      "permanent": false
+    },
+    {
+      "source": "/strip.css",
+      "destination": "/client/answer/answer_strip/strip.css",
+      "permanent": false
+    },
+    {
+      "source": "/toast.css",
+      "destination": "/client/shell/toast/toast.css",
+      "permanent": false
+    },
+    {
+      "source": "/try/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/labs/views_demo/:f",
+      "permanent": false
+    },
+    {
+      "source": "/vendor/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/vendor/:f",
+      "permanent": false
+    },
+    {
+      "source": "/vendor/qrcode-generator/:f((?!.*\\.m?js$).*)",
+      "destination": "/client/vendor/qrcode_generator/:f",
+      "permanent": false
+    },
+    {
+      "source": "/views.css",
+      "destination": "/client/cluck/openui_views/views.css",
+      "permanent": false
+    },
+    {
+      "source": "/views/:f((?!.*\\.m?js$).*)",
+      "destination": "/shared/openui/:f",
+      "permanent": false
+    },
+    {
+      "source": "/welcome.css",
+      "destination": "/client/shell/welcome/welcome.css",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/p/:code.json",
@@ -81,6 +223,222 @@
     {
       "source": "/mini",
       "destination": "/api/index?path=/mini"
+    },
+    {
+      "source": "/app.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/blind/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/brainrot.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/calc-coach.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/calc-pick.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/calc/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/chg.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/cluck.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/codes.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/copy/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/design/explain-box.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/figcheck.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/flight.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/formula-figs.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/fx.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/graph.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/incident.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/intent.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/layout-core.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/layout-docs.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/lockhelp.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/login.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/minicluck.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/mode.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/mycluck.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/nav.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/offline.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/peek.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/popover.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/pops.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/quack.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/redo.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/repair.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/rewards/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/sheet.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/shell.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/shuffle.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/slips.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/speak.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/stages.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/steps.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/strip.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/suggest.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/telemetry.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/toast.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/try/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/tug.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/vendor/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/vendor/qrcode-generator/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/views-lib.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/views.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/views/:f(.*\\.m?js)",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/welcome-first.js",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
+      "source": "/welcome.js",
+      "destination": "/client/shell/stale_reload.js"
     }
   ]
 }

@@ -10,9 +10,9 @@ import { schema, root } from "./schemas.mjs";
 
 const read = f => readFileSync(new URL(f, root), "utf8");
 const w = {}; w.window = w;
-vm.runInNewContext(read("formula-figs.js"), w);
+vm.runInNewContext(read("client/cluck/figures/formula-figs.js"), w);
 const FIGS = JSON.parse(JSON.stringify(w.FormulaFigs || {}));   // the vm's objects have another realm's prototype
-const css = read("app.css");
+const css = read("client/answer/drill_core/app.css");
 const sheet = JSON.parse(read("tests/fixtures/formula-sheet-ids.json"));
 const ids = new Set(sheet.groups.flatMap(g => g.ids));
 const exam3 = new Set(sheet.groups.filter(g => g.exam.includes(3)).flatMap(g => g.ids));

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { titleOf, texText, clip } from "../nav.js";
+import { titleOf, texText, clip } from "../client/answer/navigation/nav.js";
 
 const bank = JSON.parse(readFileSync(new URL("../server/data/problems.json", import.meta.url), "utf8"));
 

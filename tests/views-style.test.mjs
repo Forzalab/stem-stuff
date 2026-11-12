@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { LIB } from "../views-lib.js";
+import { LIB } from "../client/cluck/openui_views/views-lib.js";
 
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 /** Declarations with their selector, comments stripped; keyframe steps count as selectors. */
@@ -22,7 +22,7 @@ function decls(file) {
   }
   return out;
 }
-const CSS = decls("views.css");
+const CSS = decls("client/cluck/openui_views/views.css");
 const fmt = d => `"${d.sel}" { ${d.prop}: ${d.value} }`;
 
 test("views.css: parsed", () => assert.ok(CSS.length > 80));
@@ -55,7 +55,7 @@ test("views.css: two weights only; motion only through the --d-* tokens (F18: 12
 });
 
 test("views.css: every animation is opt-in under prefers-reduced-motion: no-preference", () => {
-  const src = read("views.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const src = read("client/cluck/openui_views/views.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const anim = [...src.matchAll(/animation\s*:/g)].map(m => m.index);
   const block = src.indexOf("@media (prefers-reduced-motion: no-preference)");
   assert.ok(block > 0);

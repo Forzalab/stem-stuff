@@ -1,7 +1,7 @@
 // speak.mjs: Cluck's text read aloud (docs/design/EASY.md Phase 4). LaTeX and units come out as words.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { speakable } from "../speak.mjs";
+import { speakable } from "../client/pure_logic_modules/speak.mjs";
 
 test("math reads as words", () => {
   assert.equal(speakable("Use: $v_f = \\sqrt{v_i^2 + 2W/m}$"), "Use: v f equals root of (v i squared plus 2W over m)");

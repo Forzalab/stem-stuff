@@ -1,5 +1,5 @@
 {
- "active": false,
+ "active": true,
  "entries": [
   {
    "old": "tools/build_public.py",
@@ -959,6 +959,524 @@
    "pr": "P2",
    "ship": "yes",
    "bridge": false
+  },
+  {
+   "old": "app.css",
+   "new": "client/answer/drill_core/app.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "app.js",
+   "new": "client/answer/drill_core/app.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "blind/",
+   "new": "client/shell/blind/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "brainrot.js",
+   "new": "client/cluck/brainrot.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "calc-coach.css",
+   "new": "client/calc/coach/calc-coach.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "calc-coach.js",
+   "new": "client/calc/coach/calc-coach.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "calc-pick.css",
+   "new": "client/calc/model_picker/calc-pick.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "calc-pick.js",
+   "new": "client/calc/model_picker/calc-pick.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "calc/",
+   "new": "client/calc/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "chg.mjs",
+   "new": "client/pure_logic_modules/chg.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "cluck.js",
+   "new": "client/cluck/cluck.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "codes.mjs",
+   "new": "client/pure_logic_modules/codes.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "copy/",
+   "new": "client/resources/texts/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/explain-box.css",
+   "new": "client/answer/explain_box/explain-box.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/explain-box.html",
+   "new": "archive/design/explain-box.html",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/explain-box.js",
+   "new": "client/answer/explain_box/explain-box.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/login-lab.html",
+   "new": "client/labs/login-lab.html",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/mini-lab.html",
+   "new": "client/labs/mini-lab.html",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/popover-lab.html",
+   "new": "client/labs/popover-lab.html",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/repair-lab.html",
+   "new": "client/labs/repair-lab.html",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "design/welcome-lab.html",
+   "new": "client/labs/welcome-lab.html",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "figcheck.js",
+   "new": "client/cluck/figures/figcheck.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "figure-docs.txt",
+   "new": "client/cluck/figure_language/figure-docs.txt",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "flight.js",
+   "new": "client/shell/telemetry/flight.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "formula-figs.js",
+   "new": "client/cluck/figures/formula-figs.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "fx.js",
+   "new": "client/shell/fx.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "graph.js",
+   "new": "client/cluck/figures/graph.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "incident.mjs",
+   "new": "client/pure_logic_modules/incident.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "intent.js",
+   "new": "client/cluck/jev_nudges/intent.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "layout-core.mjs",
+   "new": "client/cluck/figure_language/layout-core.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "layout-docs.mjs",
+   "new": "client/cluck/figure_language/layout-docs.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "lockhelp.js",
+   "new": "client/cluck/jev_nudges/lockhelp.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "login.css",
+   "new": "client/shell/login/login.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "login.js",
+   "new": "client/shell/login/login.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "minicluck.css",
+   "new": "client/cluck/mini_cluck/minicluck.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "minicluck.js",
+   "new": "client/cluck/mini_cluck/minicluck.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "mode.mjs",
+   "new": "client/pure_logic_modules/mode.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "mycluck.mjs",
+   "new": "client/pure_logic_modules/mycluck.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "nav.css",
+   "new": "client/answer/navigation/nav.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "nav.js",
+   "new": "client/answer/navigation/nav.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "offline.js",
+   "new": "client/shell/offline.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "peek.js",
+   "new": "client/cluck/jev_nudges/peek.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "popover.js",
+   "new": "client/shell/popover.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "pops.js",
+   "new": "client/cluck/pops.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "quack.mjs",
+   "new": "client/pure_logic_modules/quack.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "redo.mjs",
+   "new": "client/pure_logic_modules/redo.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "repair.css",
+   "new": "client/shell/repair/repair.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "repair.js",
+   "new": "client/shell/repair/repair.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "rewards/",
+   "new": "client/rewards/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "sheet.mjs",
+   "new": "client/pure_logic_modules/sheet.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "shell.js",
+   "new": "client/shell/shell.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "shuffle.mjs",
+   "new": "client/pure_logic_modules/shuffle.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "slips.mjs",
+   "new": "client/pure_logic_modules/slips.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "speak.mjs",
+   "new": "client/pure_logic_modules/speak.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "stages.css",
+   "new": "client/shell/stages/stages.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "stages.js",
+   "new": "client/shell/stages/stages.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "steps.mjs",
+   "new": "client/pure_logic_modules/steps.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "strip.css",
+   "new": "client/answer/answer_strip/strip.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "strip.js",
+   "new": "client/answer/answer_strip/strip.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "suggest.mjs",
+   "new": "client/pure_logic_modules/suggest.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "telemetry.js",
+   "new": "client/shell/telemetry/telemetry.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "toast.css",
+   "new": "client/shell/toast/toast.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "toast.js",
+   "new": "client/shell/toast/toast.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "try/",
+   "new": "client/labs/views_demo/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "tug.mjs",
+   "new": "client/pure_logic_modules/tug.mjs",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "vendor/",
+   "new": "client/vendor/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "vendor/qrcode-generator/",
+   "new": "client/vendor/qrcode_generator/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "views-lib.js",
+   "new": "client/cluck/openui_views/views-lib.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "views.css",
+   "new": "client/cluck/openui_views/views.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "views.js",
+   "new": "client/cluck/openui_views/views.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "views/",
+   "new": "shared/openui/",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "welcome-first.js",
+   "new": "client/shell/welcome/welcome-first.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "welcome.css",
+   "new": "client/shell/welcome/welcome.css",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "welcome.js",
+   "new": "client/shell/welcome/welcome.js",
+   "pr": "B",
+   "ship": "yes",
+   "bridge": true
   }
  ]
 }

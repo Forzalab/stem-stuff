@@ -11,8 +11,8 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
-const LAB = process.argv[2] ? process.argv[2].replace(/\/$/, "") + "/design/repair-lab.html"
-  : "file://" + join(dirname(fileURLToPath(import.meta.url)), "..", "design", "repair-lab.html");
+const LAB = process.argv[2] ? process.argv[2].replace(/\/$/, "") + "/client/labs/repair-lab.html"
+  : "file://" + join(dirname(fileURLToPath(import.meta.url)), "..", "client", "labs", "repair-lab.html");
 
 let failures = 0;
 async function step(name, fn) {

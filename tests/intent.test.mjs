@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const SRC = readFileSync(new URL("../intent.js", import.meta.url), "utf8");
+const SRC = readFileSync(new URL("../client/cluck/jev_nudges/intent.js", import.meta.url), "utf8");
 
 /* a fake browser: search = location.search, store = localStorage, tele = window.__stemTelemetry (or none) */
 function load({ search = "", store = {}, tele } = {}) {
@@ -382,7 +382,7 @@ test("?jev=0 / DNT / stem-t-off: no stemJev.spot → the page shows the plain hi
 
 /* ---- W96 (todo 96, TONY-DECISIONS #40: "make jev much more dynamic") ---- */
 const W96 = load().win.__stemJev;
-const SEENL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../copy/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
+const SEENL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../client/resources/texts/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
 const lowRoll = () => 0;                                                // every roll at its lowest: the old QUIET roll always says quiet
 
 test("W96 (a) comeback: a right pick after >= 1 miss on the item always shows (no QUIET roll), even when every roll is low", () => {

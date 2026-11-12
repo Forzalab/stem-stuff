@@ -35,7 +35,7 @@ def put(base, rel, text):
 
 
 FIG_CODE = "CALC1_A9R"                                                   # a num item whose body[1] is a graph block
-FIG_ASSETS = ("graph.js", "app.css", "vendor/math.min.js")              # + vendor/katex/: what fig_png.mjs's page loads
+FIG_ASSETS = ("client/cluck/figures/graph.js", "client/answer/drill_core/app.css", "client/vendor/math.min.js")              # + vendor/katex/: what fig_png.mjs's page loads
 
 
 @functools.lru_cache(None)
@@ -270,7 +270,7 @@ class Gate(unittest.TestCase):
         for f in self.FILES:
             os.makedirs(os.path.dirname(os.path.join(self.root, f)), exist_ok=True)
             shutil.copy(os.path.join(ROOT, f), os.path.join(self.root, f))
-        shutil.copytree(os.path.join(ROOT, "vendor", "katex"), os.path.join(self.root, "vendor", "katex"))
+        shutil.copytree(os.path.join(ROOT, "client", "vendor", "katex"), os.path.join(self.root, "client", "vendor", "katex"))
         os.symlink(os.path.join(ROOT, "tests", "node_modules"), os.path.join(self.root, "tests", "node_modules"))
         put(self.root, ".gitignore", "tests/node_modules\n")
         put(self.root, "server/data/banks/.keep", "")
@@ -426,7 +426,7 @@ class FigPng(unittest.TestCase):
         for a in FIG_ASSETS:
             put(self.tmp, a, "")
             shutil.copy(os.path.join(ROOT, a), os.path.join(self.tmp, a))
-        shutil.copytree(os.path.join(ROOT, "vendor", "katex"), os.path.join(self.tmp, "vendor", "katex"))
+        shutil.copytree(os.path.join(ROOT, "client", "vendor", "katex"), os.path.join(self.tmp, "client", "vendor", "katex"))
         self.assertFalse(os.path.exists(self.png))
         r = self.fig()
         self.assertEqual(r.returncode, 0, r.stderr)

@@ -12,7 +12,7 @@ import * as eslintScope from "eslint-scope";
 import globals from "globals";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PARTS = ["app.js", "cluck.js", "shell.js"].filter(f => existsSync(join(ROOT, f)));
+const PARTS = ["client/answer/drill_core/app.js", "client/cluck/cluck.js", "client/shell/shell.js"].filter(f => existsSync(join(ROOT, f)));
 // what the classic scripts before app.js put on window (index.html: vendor/, graph.js, popover.js, welcome.js, design/explain-box.js)
 const LIBS = ["katex", "marked", "math", "Graph", "Pop", "Welcome", "ExplainBox", "Stages", "Repair"];
 const config = [{
@@ -32,21 +32,21 @@ for (const f of PARTS) test(`${f}: no undeclared name, no write to an import`, (
 
 // the bridge object (app.js export) that earlier parts reach later parts through: a local of the same name in any function makes
 // bridge.<x> there read the local (W152 CI: a local `ln` DOM line in xDiag ate ln.wish, Cluck never opened on a wrong working; no error)
-const BRIDGE = (readFileSync(join(ROOT, "app.js"), "utf8").match(/^export const (\w+) = \{\};\s+\/\/ the bridge/m) || [])[1];
+const BRIDGE = (readFileSync(join(ROOT, "client/answer/drill_core/app.js"), "utf8").match(/^export const (\w+) = \{\};\s+\/\/ the bridge/m) || [])[1];
 for (const f of PARTS) test(`${f}: nothing but app.js's export is named ${BRIDGE} (no shadowing)`, { skip: !BRIDGE && "app.js not split" }, () => {
   const ast = espree.parse(readFileSync(join(ROOT, f), "utf8"), { ecmaVersion: "latest", sourceType: "module", range: true, loc: true });
   const sm = eslintScope.analyze(ast, { ecmaVersion: 2022, sourceType: "module" });
   const own = sm.scopes.flatMap(sc => sc.variables.filter(v => v.name === BRIDGE).map(v => [sc.type, v.defs[0]?.type, v.defs[0]?.name.loc.start.line]));
-  const ok = own.filter(([type, def]) => type === "module" && (f === "app.js" ? def === "Variable" : def === "ImportBinding"));
+  const ok = own.filter(([type, def]) => type === "module" && (f === "client/answer/drill_core/app.js" ? def === "Variable" : def === "ImportBinding"));
   assert.deepEqual(own.filter(x => !ok.includes(x)), [], `${f}: a second ${BRIDGE} (scope, kind, line)`);
 });
 
 test("load order: index.html runs app.js, cluck.js, shell.js in a row; app.js imports neither later part", { skip: PARTS.length < 3 && "app.js not split" }, () => {
   const html = readFileSync(join(ROOT, "index.html"), "utf8");
-  const tags = [...html.matchAll(/<script type="module" src="(app|cluck|shell)\.js"><\/script>/g)].map(m => m[1]);
+  const tags = [...html.matchAll(/<script type="module" src="client\/(?:answer\/drill_core\/|cluck\/|shell\/)(app|cluck|shell)\.js"><\/script>/g)].map(m => m[1]);
   assert.deepEqual(tags, ["app", "cluck", "shell"]);
-  const app = readFileSync(join(ROOT, "app.js"), "utf8");
-  assert.doesNotMatch(app, /from\s+["']\.\/(cluck|shell)\.js["']|import\(["']\.\/(cluck|shell)\.js/, "app.js importing a later part makes it run LAST (ES cycle rule): TDZ errors at load");
+  const app = readFileSync(join(ROOT, "client/answer/drill_core/app.js"), "utf8");
+  assert.doesNotMatch(app, /from\s+["'][^"']*\/(cluck|shell)\.js["']|import\(["'][^"']*\/(cluck|shell)\.js/, "app.js importing a later part makes it run LAST (ES cycle rule): TDZ errors at load");
   const sw = readFileSync(join(ROOT, "sw.js"), "utf8");
   for (const f of PARTS) assert.match(sw, new RegExp(`"${f.replace(".", "\\.")}"`), `${f} not precached in sw.js BASE`);
 });

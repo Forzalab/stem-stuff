@@ -22,26 +22,26 @@ test("problems: network-first", () => {
   assert.equal(r("p/CALC1_T6B.json?v=2"), "problem");
 });
 test("shell: cache-first", () => {
-  for (const p of ["", "index.html", "privacy.html", "app.js", "app.css", "offline.js", "codes.mjs", "graph.js", "fx.js", "telemetry.js", "intent.js", "copy/nudge-lines.js", "copy/seen-lines.js", "copy/payload.mjs",
-    "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css",
-    "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", "vendor/fonts/press-start-2p-latin-400-normal.woff2"])
+  for (const p of ["", "index.html", "privacy.html", "client/answer/drill_core/app.js", "client/answer/drill_core/app.css", "client/shell/offline.js", "client/calc/cram.json", "client/pure_logic_modules/codes.mjs", "client/cluck/figures/graph.js", "client/shell/fx.js", "client/shell/telemetry/telemetry.js", "client/cluck/jev_nudges/intent.js", "client/resources/texts/nudge-lines.js", "client/resources/texts/seen-lines.js", "client/resources/texts/payload.mjs",
+    "client/vendor/katex/katex.min.js", "client/vendor/katex/fonts/KaTeX_Main-Regular.woff2", "client/answer/explain_box/explain-box.css",
+    "client/rewards/engine.js", "client/rewards/fx.js", "client/rewards/icons.js", "client/rewards/rewards.css", "client/vendor/confetti.browser.js", "client/vendor/fonts/press-start-2p-latin-400-normal.woff2"])
     assert.equal(r(p), "shell", p);
   for (const p of ["sw.js", "_vercel/insights/script.js", "tests/x.js", "tools/build_and_ship/bundle.py", "problems.json", "SCHEMA.md", "serve.py"]) assert.equal(r(p), "pass", p);
 });
 test("offline.js never stores or reads k/", () => {
-  const off = readFileSync(new URL("../offline.js", import.meta.url), "utf8");
+  const off = readFileSync(new URL("../client/shell/offline.js", import.meta.url), "utf8");
   assert.ok(!/["'`]k\//.test(off));
 });
 
 test("figcheck.js (fable audit U3) is precached and index.html loads it, as a module, before graph.js (graph.js places labels with it)", () => {
-  assert.ok(src.includes(`"figcheck.js"`), "sw.js BASE");
+  assert.ok(src.includes(`"client/cluck/figures/figcheck.js"`), "sw.js BASE");
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-  const fc = html.search(/<script type="module" src="figcheck\.js"><\/script>/), gr = html.search(/<script src="graph\.js" defer><\/script>/);
+  const fc = html.search(/<script type="module" src="client\/cluck\/figures\/figcheck\.js"><\/script>/), gr = html.search(/<script src="client\/cluck\/figures\/graph\.js" defer><\/script>/);
   assert.ok(fc >= 0, "index.html loads figcheck.js as a module (deferred, in document order with the defer scripts)");
   assert.ok(gr > fc, "before graph.js");
 });
 
 test("the sugar rewards files are precached (docs/design/REWARDS-WIRING.md §6)", () => {
-  for (const f of ["rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js",
-    "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2"]) assert.ok(src.includes(`"${f}"`), f);
+  for (const f of ["client/rewards/engine.js", "client/rewards/fx.js", "client/rewards/icons.js", "client/rewards/rewards.css", "client/vendor/confetti.browser.js",
+    "client/vendor/fonts/press-start-2p.css", "client/vendor/fonts/press-start-2p-latin-400-normal.woff2"]) assert.ok(src.includes(`"${f}"`), f);
 });

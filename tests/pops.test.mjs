@@ -7,8 +7,8 @@ import vm from "node:vm";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
 const w = {}; w.window = w;
-vm.runInNewContext(read("../copy/pops.js"), w);
-vm.runInNewContext(read("../pops.js"), w);
+vm.runInNewContext(read("../client/resources/texts/pops.js"), w);
+vm.runInNewContext(read("../client/cluck/pops.js"), w);
 const LINES = JSON.parse(JSON.stringify(w.__stemPopLines));
 const P = w.stemPops;
 

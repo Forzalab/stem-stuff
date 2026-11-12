@@ -19,10 +19,10 @@ test("views: bad stage, unknown recipe, empty src, unknown key fail", () => {
 });
 
 // views/library.json against the vendored OpenUI parser (P0.4, vendor/openui-lang.mjs); skipped until that file exists
-const vendor = new URL("../vendor/openui-lang.mjs", import.meta.url);
+const vendor = new URL("../client/vendor/openui-lang.mjs", import.meta.url);
 test("library.json: the vendored prompt generator and parser take it", { skip: !existsSync(vendor) && "vendor/openui-lang.mjs not here yet (P0.4)" }, async () => {
   const { generateSystemPrompt, createParser } = await import(vendor);
-  const lib = JSON.parse(readFileSync(new URL("../views/library.json", import.meta.url), "utf8"));
+  const lib = JSON.parse(readFileSync(new URL("../shared/openui/library.json", import.meta.url), "utf8"));
   const prompt = generateSystemPrompt({ library: lib });   // prints components[].signature under each componentGroups heading
   for (const g of lib.componentGroups) assert.ok(prompt.includes(`### ${g.name}\n`), g.name);
   for (const [name, c] of Object.entries(lib.components)) assert.ok(prompt.includes(`${c.signature} — ${c.description}`), name);

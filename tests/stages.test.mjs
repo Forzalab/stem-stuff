@@ -10,8 +10,8 @@ function load(now = { t: 0 }) {
   const el = { innerHTML: "", dataset: {} };
   const w = { Date: { now: () => now.t }, setInterval: () => 1, clearInterval: () => {}, document: {} };
   w.window = w;
-  vm.runInNewContext(read("../copy/stage-lines.js"), w);
-  vm.runInNewContext(read("../stages.js"), w);
+  vm.runInNewContext(read("../client/resources/texts/stage-lines.js"), w);
+  vm.runInNewContext(read("../client/shell/stages/stages.js"), w);
   return { S: w.Stages, el, now };
 }
 const RS = "\x1e", ev = (stage, at) => RS + JSON.stringify({ stage, at }) + "\n";

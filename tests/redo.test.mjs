@@ -1,7 +1,7 @@
 // redo.mjs: the redo state machine after a miss (DESIGN-v3 §3, §4, §5; Tony #25: recs 5 and 7).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rNew, rEvent, rDue, B_GAP, BACKOFF } from "../redo.mjs";
+import { rNew, rEvent, rDue, B_GAP, BACKOFF } from "../client/pure_logic_modules/redo.mjs";
 
 const ev = (st, type, tpl = "Q7", more = {}) => rEvent(st, { type, tpl, ...more });
 

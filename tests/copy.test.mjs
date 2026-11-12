@@ -2,12 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { validator } from "./schemas.mjs";
-import { build, replay, stringify, diff, MAX_EDITS, MAX_CHARS } from "../copy/payload.mjs";
+import { build, replay, stringify, diff, MAX_EDITS, MAX_CHARS } from "../client/resources/texts/payload.mjs";
 
 const root = new URL("../", import.meta.url);
 const validate = validator("copy");
 const ok = p => assert.ok(validate(p), JSON.stringify(validate.errors, null, 1));
-const example = JSON.parse(readFileSync(new URL("copy/example.json", root)));
+const example = JSON.parse(readFileSync(new URL("client/resources/texts/example.json", root)));
 
 test("copy example: schema", () => ok(example));
 test("copy example: history replays to final explanation", () =>

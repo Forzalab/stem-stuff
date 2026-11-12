@@ -29,7 +29,7 @@ function loadPlaywright() {
   try { return require("playwright"); } catch { return require("/opt/node22/lib/node_modules/playwright"); }
 }
 export const SAMPLE = "The quick brown fox jumps over the lazy dog and runs home";
-const REG = JSON.parse(readFileSync(join(ROOT, "views", "registry.json"), "utf8"));
+const REG = JSON.parse(readFileSync(join(ROOT, "shared", "openui", "registry.json"), "utf8"));
 
 /** {id, component, prop, role, wordClass} for each slot id, or an error string when the registry gives it no role. */
 export function roleOf(component, prop) {
@@ -47,7 +47,7 @@ async function startServer() {
   const proc = spawn("python3", ["server/http_server/serve.py", String(port)], { cwd: ROOT, stdio: "ignore" });
   const base = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
-    try { const r = await fetch(`${base}/views.js`); if (r.ok) return { base, proc }; } catch { /* not up yet */ }
+    try { const r = await fetch(`${base}/client/cluck/openui_views/views.js`); if (r.ok) return { base, proc }; } catch { /* not up yet */ }
     await new Promise(r => setTimeout(r, 100));
   }
   proc.kill(); throw new Error("serve.py did not start");
@@ -63,12 +63,12 @@ export async function measure(program, { out, width = 390, base, browser, css = 
     const ctx = await b.newContext({ viewport: { width, height: phone ? 844 : 900 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
     const page = await ctx.newPage();
     // the lab page (its tokens, fonts and CSS); its demo views are swapped for one mount once it is ready
-    await page.goto(`${base}/try/views-demo.html?fast=1`);
+    await page.goto(`${base}/client/labs/views_demo/views-demo.html?fast=1`);
     await page.waitForFunction(() => document.documentElement.getAttribute("data-ready") === "1", null, { timeout: 15000 });
     const res = await page.evaluate(async ({ program, SAMPLE, css }) => {
-      const { render } = await import("/views.js");
-      const { createParser } = await import("/vendor/openui-lang.mjs");
-      const { LIB, toSchema } = await import("/views-lib.js");
+      const { render } = await import("/client/cluck/openui_views/views.js");
+      const { createParser } = await import("/client/vendor/openui-lang.mjs");
+      const { LIB, toSchema } = await import("/client/cluck/openui_views/views-lib.js");
       document.querySelector("main").innerHTML = '<section class="dq" aria-label="measure"><div id="vm" class="dmount"></div></section>';
       if (css) document.head.appendChild(Object.assign(document.createElement("style"), { textContent: css }));
       const errs = [];

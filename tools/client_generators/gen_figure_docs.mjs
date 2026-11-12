@@ -101,8 +101,8 @@ function splitLayout(text) {
 
 function main() {
   const root = fileURLToPath(new URL("../..", import.meta.url));
-  const txt = readFileSync(path.join(root, "figure-docs.txt"), "utf8");
-  const layoutPath = path.join(root, "layout-docs.mjs");
+  const txt = readFileSync(path.join(root, "client", "cluck", "figure_language", "figure-docs.txt"), "utf8");
+  const layoutPath = path.join(root, "client", "cluck", "figure_language", "layout-docs.mjs");
   const region = generate(txt);
   const parts = splitLayout(readFileSync(layoutPath, "utf8"));
   if (process.argv.includes("--check")) {

@@ -2,11 +2,11 @@
 // Predict never holds the answer (F5) / Doodle fallback (VISUAL-FIRST). DOM = tests/views-dom.mjs (no jsdom here).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { render, stream, mountView, register, registered, splitStatements } from "../views.js";
+import { render, stream, mountView, register, registered, splitStatements } from "../client/cluck/openui_views/views.js";
 import { readFileSync } from "node:fs";
-import { LIB, MARKS, DOODLES } from "../views-lib.js";
-import { P10, P11, P2, DROPPED, chunk } from "../try/views-demo-src.js";
-import { makePredict } from "../try/views-demo-server.js";
+import { LIB, MARKS, DOODLES } from "../client/cluck/openui_views/views-lib.js";
+import { P10, P11, P2, DROPPED, chunk } from "../client/labs/views_demo/views-demo-src.js";
+import { makePredict } from "../client/labs/views_demo/views-demo-server.js";
 import { mount, html, byClass, one, all } from "./views-dom.mjs";
 
 const slots = m => byClass(m, "vw-slot");
@@ -18,7 +18,7 @@ test("registry: every library component has a drawing, and nothing is drawn that
 });
 
 test("library: views-lib.js loads views/library.json, the one source (no hand-kept list beside it)", () => {
-  const spec = JSON.parse(readFileSync(new URL("../views/library.json", import.meta.url), "utf8"));
+  const spec = JSON.parse(readFileSync(new URL("../shared/openui/library.json", import.meta.url), "utf8"));
   assert.deepEqual([LIB.id, LIB.version, LIB.root], [spec.id, spec.version, spec.root]);
   assert.deepEqual(Object.keys(LIB.components), Object.keys(spec.components));
   for (const [n, c] of Object.entries(spec.components)) {
@@ -27,7 +27,7 @@ test("library: views-lib.js loads views/library.json, the one source (no hand-ke
   }
   assert.deepEqual(MARKS, spec.marks);
   assert.deepEqual(DOODLES, spec.components.Doodle.props.properties.kind.enum);
-  const src = readFileSync(new URL("../views-lib.js", import.meta.url), "utf8");
+  const src = readFileSync(new URL("../client/cluck/openui_views/views-lib.js", import.meta.url), "utf8");
   assert.doesNotMatch(src, /\bLOCAL\b|type: "(string|array|integer)"/, "views-lib.js holds no component data of its own");
 });
 
@@ -297,7 +297,7 @@ test("stepper iteration 2 (smoke): the four abstract-mark scenes draw; title / l
 });
 
 test("prompt shape examples (smoke): every registry geo_prompt example and the program draw with no errors", () => {
-  const gp = JSON.parse(readFileSync(new URL("../views/registry.json", import.meta.url), "utf8")).geo_prompt;
+  const gp = JSON.parse(readFileSync(new URL("../shared/openui/registry.json", import.meta.url), "utf8")).geo_prompt;
   for (const x of gp.examples) {
     const v = render(`root = View([s])\ns = Steps(g, [a])\n${x.src}\na = Step("We look at it.")`, mount());
     assert.deepEqual(v.errors, [], x.idea);

@@ -15,9 +15,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8887), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "calc-app-")), BANKS = join(TMP, "banks");
 // the cram window is over (calc/cram.json enabled:false in the repo): this spec tests the cram surfaces, so it serves a forced-on copy (as cram-off.pw.mjs forces off)
-const CRAM_ON = JSON.stringify({ ...JSON.parse(readFileSync(join(ROOT, "calc", "cram.json"), "utf8")), enabled: true }), CRAM = join(TMP, "cram.json");
+const CRAM_ON = JSON.stringify({ ...JSON.parse(readFileSync(join(ROOT, "client", "calc", "cram.json"), "utf8")), enabled: true }), CRAM = join(TMP, "cram.json");
 writeFileSync(CRAM, CRAM_ON);
-const cramOn = (ctx) => ctx.route("**/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: CRAM_ON }));
+const cramOn = (ctx) => ctx.route("**/client/calc/cram.json", r => r.fulfill({ status: 200, contentType: "application/json", body: CRAM_ON }));
 
 const WLC = "PHYS_PWQ1";
 const num = (code, n) => ({ code, type: "num", answer: String(n + 2), body: [{ type: "text", md: `Plain ${n}: 2 + ${n}` }], noob: { tier: 1 } });
@@ -177,7 +177,7 @@ try {
           imgs: sl.map(e => e.querySelector("img.cc-anim")?.getAttribute("src")), pulse: getComputedStyle(document.querySelector(".cc-kc-last")).animationName, dots: document.querySelectorAll(".cc-rail i").length }; });
       assert.match(m.snap, /y mandatory/); assert.deepEqual([m.n, m.th, m.full, m.swipe, m.bob, m.pulse, m.dots], [2, ["amber", "cyan"], true, 1, "none", "none", 2]);
       assert.deepEqual(m.caps, keys, id + ": the verified keys"); assert.ok(m.r2 >= 1, "slide 2 has its key strip");
-      assert.deepEqual(m.btns, ["Show me step by step", "Show me step by step"]); assert.deepEqual(m.imgs, ["calc/rt/rt-1-solve.svg", "calc/rt/rt-2-store.svg"]);
+      assert.deepEqual(m.btns, ["Show me step by step", "Show me step by step"]); assert.deepEqual(m.imgs, ["client/calc/rt/rt-1-solve.svg", "client/calc/rt/rt-2-store.svg"]);
       await page.focus(".cc-deck"); await page.keyboard.press("ArrowDown");
       await page.waitForFunction(() => document.querySelectorAll(".cc-rail i")[1].className === "on");
       await page.click(".cc-slide:nth-child(2) button.cc-back"); await page.waitForSelector(".cc-ov .cc-count");   // opens the per-step walkthrough

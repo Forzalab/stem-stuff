@@ -2,12 +2,15 @@
 """Static path checker for client files (.html .js .mjs .css): every static reference must exist on disk.
 
 Checked: JS/MJS import/export-from/import("X") with a string literal, HTML src=/href=, CSS url() and @import.
-Skipped: remote, data:, blob:, mailto:, #, javascript:, empty, template (${ {{), bare module names ("katex"),
-and server routes (/api/ /p/ /state/ /repair/ /b/).
+Skipped: remote, data:, blob:, mailto:, #, javascript:, empty, template (${ {{), JS package specifiers (anything in
+a JS file not starting with ./ ../ or /, e.g. "katex", "node:assert/strict"), server routes (/api/ /p/ /state/ /repair/ /b/),
+and files whose extension has no patterns (noted on stderr).
+tests/*.pw.mjs dynamic import("...") resolves from the repo root (it runs in the page), not from the spec's folder.
   client_paths.py [--root DIR] check [FILES...]
 No FILES = every tracked client file outside archive/ docs/ tests/ tools/ server/ api/ node_modules/ public/ and vendor/.
 Exit 0 and "0 dangling", or exit 1 and one "file:line: X -> resolved" line per dangling reference."""
 import argparse
+import fnmatch
 import os
 import re
 import subprocess
@@ -17,6 +20,8 @@ EXCLUDED_TOP = {"archive", "docs", "tests", "tools", "server", "api", "node_modu
 SKIP_PREFIXES = ("http:", "https:", "//", "data:", "blob:", "mailto:", "#", "javascript:",
                  "/api/", "/p/", "/state/", "/repair/", "/b/")
 JS = [r"""\b(?:from|import)\s*\(?\s*["']([^"'\n]+)["']"""]
+JS_EXTS = (".js", ".mjs")
+PW_SPECS = "tests/*.pw.mjs"
 PATTERNS = {
     ".js": JS, ".mjs": JS,
     ".html": [r"""\b(?:src|href)\s*=\s*["']([^"'\n]+)["']"""],
@@ -36,22 +41,23 @@ def tracked(root):
 
 
 def refs(path, ext):
-    """Yield (line number, raw reference) for each static reference in one file."""
+    """Yield (line number, raw reference, dynamic) for each static reference in one file; dynamic = import("...")."""
     regexes = [re.compile(p) for p in PATTERNS[ext]]
     with open(path, encoding="utf-8", errors="replace") as f:
         for n, line in enumerate(f, 1):
             for rx in regexes:
                 for m in rx.finditer(line):
-                    yield n, m.group(1)
+                    dynamic = m.group(0).startswith("import") and "(" in m.group(0)
+                    yield n, m.group(1), dynamic
 
 
 def target(ref, ext):
     """The path part of a reference that names an on-disk file, or None when it is not one."""
     if not ref or ref.startswith(SKIP_PREFIXES) or "${" in ref or "{{" in ref:
         return None
+    if ext in JS_EXTS and not ref.startswith(("./", "../", "/")):
+        return None  # JS package specifier, e.g. "katex", "ajv/dist/2020.js", "node:assert/strict"
     path = re.split(r"[?#]", ref, maxsplit=1)[0]
-    if ext in (".js", ".mjs") and "/" not in path and not path.startswith("."):
-        return None  # JS bare module name, e.g. "katex"; in HTML/CSS a bare name is a file next to the page
     return path or None
 
 
@@ -66,11 +72,16 @@ def check(root, files):
     dangling = []
     for f in files:
         ext = os.path.splitext(f)[1]
-        for n, ref in refs(os.path.join(root, f), ext):
+        if ext not in PATTERNS:
+            print(f"skip: {f} (no path patterns for {ext or 'no extension'})", file=sys.stderr)
+            continue
+        pw_spec = ext in JS_EXTS and fnmatch.fnmatch(f, PW_SPECS)
+        for n, ref, dynamic in refs(os.path.join(root, f), ext):
             path = target(ref, ext)
             if path is None:
                 continue
-            full = resolve(root, f, path)
+            base = "" if (pw_spec and dynamic) else f  # page-run import() in a pw spec: resolve from the root
+            full = resolve(root, base, path)
             if not os.path.exists(full):
                 dangling.append(f"{f}:{n}: {ref} -> {os.path.relpath(full, root).replace(os.sep, '/')}")
     return dangling

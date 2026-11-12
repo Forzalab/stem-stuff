@@ -1,0 +1,1660 @@
+/* Drill page. Tokens: docs/design/DESIGN-LANGUAGE.md. Freeze layer: docs/design/FREEZE.md. */.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check) */
+
+:root {
+  /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family per device, two weights (400, 600), five sizes.
+     Atkinson is the default everywhere; WebKit alone switches to SF (@supports below). Mono: the scratchpad, pre-formatted tables and the codeblock only */
+  --font: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
+  --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
+  /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
+     Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
+  --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc;
+  /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
+  --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
+  /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
+     A state is a 1px line + a trailing glyph in the solid colour on the unchanged row: no fill, the letter badge never changes.
+     On a card: correct 10.8:1, wrong 5.1:1, action 9.2:1; Next's label --correct-ink on --correct 9.9:1, on --correct-press 6.8:1 */
+  /* --sheet = the CONTROL fill (buttons, choice rows, the list card); --card / --qbox = the SURFACE (the question box). Same value today; split so
+     a theme can set the surface to the page and still give controls a shape (STYLE §2.1) */
+  --sheet: #14233a;
+  --action: #5aa9ff; --action-ink: #031428; --action-fill: #102542; --action-on: #8cc2ff; --focus: var(--action);
+  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #10261f; --correct-on: #bdead5; --correct-rim: #029e72;
+  --wrong: #eb596e; --wrong-ink: #391418; --wrong-fill: #2a1a24; --wrong-on: #ffd1d3; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 1px dashed edge; --wrong-fill / --correct-fill: soft (OKLCH chroma halved) */
+  /* one warm family, hue 55-70, lightness is the role (PALETTE-v3 §1): help = Cluck, hints, bulb, send; reward = the HUD, floats, toast,
+     bursts only (§4: never in a help surface, a CTA or a chip). --glow at alpha only. --help-deep never under text */
+  --help-on: #ffdcc0; --reward: #ffcd94; --help: #ff9a3e; --glow: #ff8204; --help-deep: #b05a00; --help-muted: #a99c8e;
+  --help-line: #643d1f; --help-fill: #2d1806; --help-sheet: #17130f; --help-rule: #271f16; --help-ink: #361900;
+  /* the reward rasters onto the ramp, OKLCH median hue of saturated pixels in the 62-70 gate (unified-v5 rasterhue; PICKER 8 "keep -34deg"):
+     --goldify for the already-gold star (94 -> 66.4). --duckgold = the pre-v5 duck tint (Tony Oct 17: "revert to the C duck"); outside the gate on purpose */
+  --goldify: hue-rotate(-34deg) saturate(1.1);
+  --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
+  --online: #5fd394;   /* Cluck's status dot (H3a) */
+  --c1: #92c0ff; --c1-hi: #c9e0ff; --c2: #ffb86b; --c3: #ff8fc8; --grid: #394a61;   /* figures only: --c1 is the locked force blue and --grid the decorative grid; neither follows --action / --line (a theme can retune those) */
+  /* the codeblock's syntax colour (T43, Tony Oct 18): Tokyo Night (enkia/tokyo-night-vscode-theme, MIT). On the --page well:
+     kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
+  --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
+  --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
+  --body: var(--card); --ramp: var(--card); --knock: rgb(11 20 34 / 0.85);   /* figure fills and label knockouts sit on the question box */
+  /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
+     · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
+  --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
+  --lh: 1.41; --lh-ui: 1.33; --lh-title: 1.25; --lh-xs: 1.38;
+  /* KaTeX at x-height parity with the text face: Atkinson .496 / KaTeX_Main .431 = 1.15em (measured); SF ~.52 -> 1.2em (provisional:
+     measure on a device, then pin). It replaces the stacked 1.08 / 1.1 multipliers. No font-size-adjust: every `font:` shorthand resets it */
+  --kx: 1.15em;
+  /* spacing scale (px): 4 8 12 16 24 32 48 */
+  --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
+  --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  /* size tokens: button, the fields that hold one (button + 2 x 2px border), its icon, the column. Desktop raises them (see the end of this file) */
+  --bw: 1px; --ring: 2px;   /* borders (STYLE.md 2.6): ONE line weight, dashed or solid (tone carries meaning, not width); one keyboard ring (2px, an outline) */
+  --btn: 48px; --fld: calc(var(--btn) + 4px); --ico: 24px; --col: 52rem;
+  /* elevation: two-part shadow, tighter part fades as the layer rises (Refactoring UI, "Creating depth") */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-2: 0 8px 16px -6px rgb(0 0 0 / 0.6), 0 1px 2px rgb(0 0 0 / 0.4);   /* the verdict drawer + finger bar (STYLE §2.7) */
+  --shadow-3: 0 10px 24px -6px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.35);
+  --shadow-4: 0 16px 36px -8px rgb(0 0 0 / 0.6), 0 3px 6px rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+}
+/* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
+   fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
+   box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
+.p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
+@supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
+  :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
+}
+.katex { font-size: var(--kx); }   /* after vendor/katex (index.html): replaces its 1.21em */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--freeze-h, 0px) + var(--s4)); }
+/* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
+   nothing, like the docked videos' row. Safari has no scrollbar-color: the -webkit- bar there, same look */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+body * { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+@media (hover: hover) { body *:not(:hover):not(:focus-within) { scrollbar-color: transparent transparent; } }   /* Tony, Oct 18: the thumb shows only while the pointer is over the box or focus is in it */
+@supports not (scrollbar-color: red blue) {
+  body ::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+  body ::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--edge); }
+  @media (hover: hover) { body *:not(:hover):not(:focus-within)::-webkit-scrollbar-thumb { background: transparent; } }   /* the thumb shows only while the pointer is over the box */
+}
+body {
+  margin: 0; min-height: 100vh; min-height: 100dvh;
+  background: var(--paper); color: var(--ink);
+  font: 400 var(--t-md)/var(--lh) var(--font); font-synthesis: none;   /* no faux bold or oblique, ever */
+  -webkit-tap-highlight-color: transparent;
+}
+/* No overflow on any ancestor of .freeze: it would become the sticky scroller (Safari and everyone else). */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; }
+:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.ico { width: 1.5rem; height: 1.5rem; flex: none; display: block; }
+
+/* ---------- entry box (dock) ---------- */
+.top { position: relative; padding-top: env(safe-area-inset-top); }
+/* phones, a problem open: the bar stays pinned to the top while a long question scrolls under it. It keeps its space (sticky), so the first line sits right under it at scroll 0; its --paper fill (nav.css border-image) hides what passes beneath; z-index in nav.css */
+html:not(.dock-bottom):not(.start) .top { position: sticky; top: 0; }   /* desktop too (Tony, Oct 19: the bar scrolled away and left the HUD popover / toasts pointing at the browser's top edge); the side columns stick under it (--top-h, app.js) */
+html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* not side by side (touch tablets, >= 720px): there the problem column and the notes column are sticky at the top themselves (html.side .freeze, #work), a pinned bar would hide their first lines */
+.dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
+.entry { position: relative; display: flex; align-items: center; gap: var(--s2); }
+/* code box (docs/design/STYLE.md "Code box"): the bar's language. As tall as the buttons beside it (--btn, tops and bottoms line up),
+   the buttons' --sheet surface, 2px --edge, 8px; its text is the bar's label text (--t-sm bold, like the list button).
+   Paste / Go sit flush inside the border as icon buttons (--btn minus the border, 6px: "inside a control"). */
+.code-box {
+  flex: 1 1 auto; min-width: 0; height: var(--btn); display: flex; align-items: center;
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 8px; padding-left: var(--s3);
+  transition: background-color .18s ease-out, border-color .18s ease-out, box-shadow .18s ease-out;
+}
+.code-box:hover { border-color: var(--muted); }
+/* field focus, everywhere (STYLE.md 2.6): the border turns --focus and a 1px inset doubles it to 2px. No outer ring */
+.code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.code-box input {
+  flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
+  font-family: inherit; font-size: max(1rem, var(--t-sm)); font-weight: var(--w-em); line-height: 1; letter-spacing: 0.05em; text-transform: uppercase;   /* the text face (Tony found the Mono "hideous" here); a field: never under 16px (iOS zooms on focus) */
+  color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
+}
+.code-box input:focus { outline: none; }
+.code-box input::placeholder { color: var(--hint); opacity: 1; }   /* the open problem's code */
+.code-box .btn { width: calc(var(--btn) - 4px); height: calc(var(--btn) - 4px); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.code-box .btn:hover { background: var(--raised); color: var(--ink); }
+.code-box .btn:focus-visible { outline-offset: -3px; }
+.code-box .btn-go { background: var(--action); color: var(--field); }   /* the arrow: the one filled control, only once a code is typed */
+.code-box .btn-go:hover { background: var(--action-on); }
+/* suggestions (suggest.mjs): codes this browser knows that contain what is typed, banks first. Floats over the page
+   (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
+.code-sug {
+  position: absolute; z-index: 31; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;   /* 31: over an open question list (nav.css, z 30), or a tap on a suggestion lands on the list (G2c row 06) */
+  max-height: min(22rem, 50vh, var(--sug-max, 100vh)); max-height: min(22rem, 50dvh, var(--sug-max, 100dvh)); overflow-y: auto; overscroll-behavior: contain; scroll-padding: var(--s1);   /* --sug-max: the room the visual viewport leaves (app.js sugFit); the list scrolls inside itself */
+  background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
+}
+.dock-bottom .code-sug { top: auto; bottom: calc(100% + var(--s2)); }
+/* phones: the fixed dock (z 20) is its own stacking context inside .top, beside the open question list (z 30), so the list's z 30 beat the
+   suggestions' z 31 (which only ranks inside the dock) and a tap on a suggestion over the list's area landed on the list (G2c row 06). While
+   suggestions show, the dock ranks above the list; the dock sits at the bottom, so it covers none of the list's rows. */
+.dock-bottom .dock:has(.code-sug:not([hidden])) { z-index: 31; }
+.code-sug li {
+  display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border-radius: 6px; cursor: pointer;
+  font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; color: var(--ink);
+}
+.code-sug li .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.code-sug li:hover, .code-sug li[aria-selected="true"] { background: var(--raised); }
+.code-sug li[aria-selected="true"] .ico { color: var(--action); }
+/* start page (html.start: no problem open). Like a search home page: the entry alone, centred, under one line of title.
+   The upload and paste buttons sit inside one wide rounded field; it rests on --shadow-1 and lifts to --shadow-3 on hover / focus. */
+.start-title { display: none; }
+html.start main, html.start .qnav, html.start .qlist { display: none !important; }
+html.start .top {
+  display: grid; place-items: center; min-height: 100vh; min-height: 100dvh;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+html.start .dock { width: 100%; max-width: calc(40rem + 2 * var(--gut)); padding: 0 var(--gut) var(--s7); }
+html.start .start-title {
+  display: block; margin: 0 auto var(--s5); text-align: center;   /* auto: centred like the entry under it in the bottom dock */ text-wrap: balance;
+  font-size: var(--t-xl); font-weight: var(--w-em); line-height: var(--lh-title); color: var(--ink);
+}
+html.start .entry {
+  gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 10px;
+  box-shadow: var(--shadow-1);
+  transition: border-color .18s ease-out, box-shadow .3s ease-out;
+}
+html.start .entry:hover { border-color: var(--muted); box-shadow: var(--shadow-3); }
+html.start .entry:focus-within { border-color: var(--focus); box-shadow: var(--shadow-3), inset 0 0 0 1px var(--focus); }
+html.start .code-box, html.start .code-box:hover, html.start .code-box:focus-within { height: 100%; padding-left: var(--s2); background: none; border: 0; box-shadow: none; }
+html.start .code-box input { font-size: var(--t-md); }
+html.start .code-box input::placeholder { text-transform: none; font-weight: 400; }
+html.start .entry .btn, html.start .code-box .btn { width: var(--btn); height: var(--btn); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+html.start .entry .btn:hover { background: var(--raised); color: var(--ink); }
+html.start .entry .btn:focus-visible { outline-offset: -3px; }
+html.start .code-box .btn-go { background: var(--action); color: var(--field); }
+html.start .code-box .btn-go:hover { background: var(--action-on); }
+html.start .entry-msg { text-align: center; }
+/* phones: the bottom dock becomes the whole visible area, the field centred in it; with the keyboard up it is the area above
+   the keyboard (--kb-top / --kb-bottom from visualViewport, app.js layoutDock), so the field stays in view */
+html.start.dock-bottom .dock {
+  top: var(--kb-top, 0px); bottom: var(--kb-bottom, 0px); max-width: none;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: max(var(--s4), env(safe-area-inset-top)) var(--gut) max(var(--s4), env(safe-area-inset-bottom));
+  background: var(--paper); box-shadow: none;
+}
+html.start.dock-bottom .dock > * { width: 100%; max-width: 40rem; }
+html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh, var(--sug-max, 100vh)); max-height: min(16rem, 40dvh, var(--sug-max, 100dvh)); }
+.entry-msg { margin: var(--s2) 0 0; color: var(--wrong); font-size: var(--t-sm); }
+.entry-msg:empty { display: none; }
+/* app.js incHTML: "Send Tony this code: E-7K3QX" after a failure line (incident.mjs). Readable for a screenshot, selectable; a tap copies */
+.inc { color: var(--ink); font-size: var(--t-sm); font-weight: normal; user-select: text; -webkit-user-select: text; cursor: copy; }
+.inc b { font-family: var(--mono); letter-spacing: .04em; white-space: nowrap; }
+.wchip .inc { display: block; cursor: inherit; }   /* Cluck's chip: the code on its own line; the tap stays the chip's */
+.inc-off { display: block; color: var(--muted); font-size: var(--t-xs); }   /* tracking off: no report went out (incident.mjs) */
+.inc-diag { display: block; color: var(--muted); font-family: var(--mono); font-size: var(--t-xs); }   /* debug mode only: the flight recorder's diag line (incident.mjs diagLine) */
+.entry-msg.ok { color: var(--correct); }
+/* upload results (app.js entryMsg): the words carry the state too. STYLE.md 2.1: there is no warning colour and --mark is never a
+   warning (tests/style.test.mjs), so a partial result is plain ink between the green and the red */
+.entry-msg.warn { color: var(--ink); }
+
+/* phones and touch: the box is a thumb bar fixed at the bottom centre; it rides on the iOS keyboard while the
+   code is typed (--kb-bottom from visualViewport) and steps aside while the keyboard serves another field */
+.dock-bottom .dock {
+  position: fixed; z-index: 20; left: 0; right: 0; bottom: var(--kb-bottom, 0px); max-width: none;
+  padding: var(--s3) var(--gut) max(var(--s3), env(safe-area-inset-bottom));
+  background: var(--paper); box-shadow: 0 -10px 24px -8px rgb(0 0 0 / 0.55);
+}
+.dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
+/* scroll edges (STYLE.md "Fades and glows"; Tony, Oct 13): what scrolls under a pinned bar fades into the bar's own --paper over --s5
+   instead of a hard cut. Outside the bar's box, static, taps pass through: nothing moves, nothing is blocked. The dock's lies on empty
+   page at the end (the dock's room under the last line). The top bar's would soften the question box's top edge at rest, so it shows
+   only once the page has scrolled (html.scrolled, app.js); no transition, nothing animates.
+   Not while the list's dim is up (it would lift the dimmed page) */
+html.scrolled.dock-bottom:not(.start):not(.side):not(.ql-open) .top::before, .dock-bottom .dock::before,
+html.scrolled:not(.dock-bottom):not(.start):not(.ql-open) .top::before {   /* D (Tony, Oct 21): the desktop bar fades too; fade only, no backdrop blur */
+  content: ""; position: absolute; left: 0; right: 0; height: var(--s5); pointer-events: none; }
+html.scrolled.dock-bottom:not(.start):not(.side):not(.ql-open) .top::before,
+html.scrolled:not(.dock-bottom):not(.start):not(.ql-open) .top::before { top: 100%; background: linear-gradient(var(--paper), transparent); }
+.dock-bottom .dock::before { bottom: 100%; background: linear-gradient(transparent, var(--paper)); }
+.dock-bottom.dock-away .dock { display: none; }
+/* C8 (Tony, Oct 5 clutter pass): phones, a bank open: no code bar and no strip; it comes up with the list (app.js drill:qlist), or with a load error */
+.dock-bottom.qnav-on:not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .dock { display: none; }
+/* C7: desktop, a question opened without a bank: the code box rests as a label with the code; a tap opens the box (app.js codeChip) */
+#codeChip { display: none; }   /* an id: .btn-label (nav.css) would show it */
+html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .entry { display: none; }
+html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) #codeChip { display: inline-flex; }
+.dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
+/* bar strip (phones, a problem open): 44px (the tap target) with an up-chevron. Revealed, the full bar lies OVER the page (--dock-h stays the strip's),
+   so nothing under it moves or shrinks; its top edge holds the same tab, chevron down, to put it away. No problem open: the full bar. */
+.bar-tab { display: none; }
+html.bar-mini .bar-tab {
+  display: grid; place-items: center; width: 100%; max-width: none !important; height: 44px; padding: 0; margin: 0;   /* 44: HIG tap target */
+  background: none; border: 0; color: var(--muted); touch-action: none;
+}
+html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .3s ease; }
+html.bar-mini:not(.bar-open) .dock { padding: 0 var(--gut) env(safe-area-inset-bottom); }
+html.bar-mini:not(.bar-open) .dock > :not(.bar-tab) { display: none; }
+html.bar-mini.bar-open .dock { padding-top: 0; }
+html.bar-mini.bar-open .bar-tab { margin-bottom: var(--s1); }
+html.bar-mini.bar-open .bar-tab .ico { transform: none; }
+/* the text keeps clear of where the revealed bar lies (--bar-over: its height above the strip, measured on reveal), so revealing it
+   never hides the caret: the box's bottom band (already there for Cut / Copy) is at least that tall */
+html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { padding-bottom: max(56px, calc(var(--bar-over, 76px) + 4px)); }
+
+/* ---------- one button system ----------
+   Every button on the page (upload, submit arrows, copy, expand, file picker) is .btn:
+   48x48, 8px radius, 2px border, 24px icon drawn at 2px stroke, same hover / focus / active.
+   .btn-go is the one filled variant: the submit arrow. Fields that hold an arrow are 52px tall with a 2px border,
+   so the 48px arrow sits flush inside them. */
+.btn {
+  flex: none; position: relative; box-sizing: border-box; width: var(--btn); height: var(--btn); margin: 0; padding: 0;
+  display: inline-grid; place-items: center;
+  background: var(--sheet); color: var(--ink); border: var(--bw) solid transparent; border-radius: 8px;   /* fill-first: the fill carries a button, no idle line (Tony, Oct 3) */
+  cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
+  transition: background-color .18s ease-out, border-color .18s ease-out;
+}
+.btn .ico, .btn > svg { width: var(--ico); height: var(--ico); }
+.btn:hover { background: var(--raised); }
+.btn:focus-visible, label.btn:focus-within { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.btn:active { transform: translateY(1px); }
+.btn-go { background: var(--action); border-color: var(--action); color: var(--field); }
+.btn-go:hover { background: var(--action-on); border-color: var(--action-on); }
+/* freeform arrow with nothing typed yet: visible, dimmed, not clickable */
+.btn-go:disabled { opacity: 0.45; cursor: default; }
+.btn-go:disabled:hover { background: var(--action); border-color: var(--action); }
+/* the second try's 10 s (app.js startWait): the submit is the progress bar. A CCW clock sweep from 12 o'clock, mirrored on the ::before layer; the icon is not mirrored */
+@property --sweep { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes sweep { to { --sweep: 360deg; } }
+@property --drain { syntax: '<percentage>'; initial-value: 100%; inherits: false; }
+@keyframes drain { to { --drain: 0%; } }
+/* ONE neutral subtle tone for the whole wait (Tony Nov 5: the blue looked out of place): --wait-fill = --line at 40%, no new colour.
+   Typed / choose-all: the Check fills CCW with it. Single MC: each live, un-picked option's fill drains 100% -> 0% (the struck wrong pick shows none). */
+:root { --wait-fill: color-mix(in srgb, var(--line) 40%, transparent); }
+.btn-go.waiting, .btn-go.waiting:hover { background: var(--sheet); border-color: var(--line); color: var(--ink); cursor: default; overflow: hidden; isolation: isolate; }
+.btn-go.waiting::before { content: ""; position: absolute; inset: 0; z-index: -1; transform: scaleX(-1); pointer-events: none; background: conic-gradient(from 0deg, var(--wait-fill) var(--sweep), transparent 0); animation: sweep 10s linear var(--wd, 0s) forwards; }
+.choices.waiting .opt[data-w]:not(:disabled, .wrong) { cursor: default; background-image: linear-gradient(to right, var(--wait-fill) var(--drain), transparent 0); animation: drain 10s linear var(--wd, 0s) forwards; }
+/* the miss's x (the strip's way back to the drawer) stays up in the same slot during the wait: the sweep is the bar, its arrow steps aside so the x never sits on it */
+#q:has(.ff > .vk[data-v="i-x"]) #ansGo.waiting .ico { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .btn-go.waiting::before, .choices.waiting .opt[data-w]:not(:disabled, .wrong) { animation: none; } }
+.btn[hidden] { display: none; }
+
+/* ---------- main column ---------- */
+main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); padding-bottom: max(var(--s7), env(safe-area-inset-bottom)); }
+
+/* ---------- freeze layer: problem + question stay on screen while you write (FREEZE.md) ---------- */
+#sentinel { height: 1px; margin-bottom: -1px; }
+.freeze {
+  position: -webkit-sticky; position: sticky; top: var(--kb-top, 0px); z-index: 10;
+  margin: 0 calc(-1 * var(--gut)); padding: var(--s2) var(--gut) var(--s3);
+  background: var(--paper);
+  transition: box-shadow .225s ease-out;
+}
+.freeze.stuck { box-shadow: var(--shadow-3); border-bottom: 1px solid var(--line); padding-top: max(var(--s2), env(safe-area-inset-top)); }
+.freeze-in {
+  position: relative;
+  max-height: var(--freeze-max, 60vh); max-height: var(--freeze-max, 60svh);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.freeze.clipped .freeze-in {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent);
+}
+.freeze.open { position: relative; top: 0; }
+.freeze.open .freeze-in { max-height: none; overflow: visible; }
+/* expand chevron: a centred pull-tab hanging fully BELOW the layer, so it never covers the answer controls (submit arrows are on the right edge) */
+/* grab handle (Tony: variant A): a 36x4 pill 8px under the strip's bottom edge; the touch area (88x44) hangs below the edge, invisible,
+   so it never covers an answer control; below it is only the Scratchpad title (not a control) */
+.more {
+  position: absolute; left: 50%; top: 100%; width: 88px; height: 44px; margin-left: -44px; z-index: 3;
+  display: grid; place-items: start center; padding: var(--s2) 0 0; background: none; border: 0; border-radius: 8px; touch-action: none;
+}
+.more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .18s ease-out; }
+.more:hover::before { background: var(--muted); }
+
+.p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
+.pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: var(--w-em); color: var(--muted); }
+/* the question-box tags (W139, Tony Oct 31: one look, the Twist chip's): .qtag = 24px, a 6px corner, a quiet --edge outline on --sheet,
+   --ink glyph + word at --t-xs / --w-em. The retry tag (app.js retryTag; not a control, role=status) and the Twist chip (a button) both wear it.
+   The retry tag keeps its own glyph; only that glyph carries the state: --reward while a Pity roll is owed, --correct once closed right */
+.qtag { display: inline-flex; align-items: center; gap: var(--s1); vertical-align: baseline; height: var(--s5); padding: 0 var(--s2);
+  border: var(--bw) solid var(--edge); border-radius: 6px; background: var(--sheet); color: var(--ink); font-size: var(--t-xs);
+  font-weight: var(--w-em); line-height: 1; white-space: nowrap; }
+.qtag .ico { width: 1em; height: 1em; }
+.qtag svg[viewBox] { width: 14px; height: 14px; }
+.rtag { margin: 0 0 var(--s2); }
+/* REVEAL-TRAY (Tony, Nov 3: "Pity roll" + "Twist" stacked): with the Twist chip in the title row under it, the retry tag floats into that row, so the tags sit side
+   by side before the title and wrap only when out of room; it is one tag tall (24px) and the title row is at least that, so nothing after it moves in */
+#rtag:not([hidden]):has(+ .blocks > .ptitle:first-child > .twist-chip) { float: left; margin: 0 var(--s2) 0 0; }
+#problem:has(> #rtag:not([hidden]) + .blocks > .ptitle:first-child > .twist-chip) { display: flow-root; }
+.rtag.rt-owe .ico { color: var(--reward); }
+.rtag:is(.rt-won, .rt-kept) .ico { color: var(--correct); }
+.blocks > * + * { margin-top: var(--s3); }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p, .md ul, .md ol { margin: 0 0 var(--s3); max-width: 65ch; }
+.md li + li { margin-top: var(--s1); }
+.mx { white-space: nowrap; }                                        /* math + the punctuation touching it: one unit (app.js md) */
+.md .katex-display { margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.tbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }   /* y hidden: a 1–2 px KaTeX overflow made it a wheel trap */
+.md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.md th, .md td { padding: var(--s1) var(--s4); border-bottom: 1px solid var(--line); }
+.md th { color: var(--muted); font-weight: var(--w-em); border-bottom: var(--bw) solid var(--edge); }
+.md code { font-family: var(--font); font-size: 1em; font-variant-numeric: tabular-nums; background: var(--field); padding: 0 var(--s1); border-radius: 4px; }
+/* emphasis = weight only (TD2): 600 in the running ink, never colour, never italic; headings in markdown stay on the ladder */
+.md :is(b, strong, em) { font-weight: var(--w-em); font-style: normal; color: inherit; }
+.md :is(h1, h2, h3) { margin: 0 0 var(--s3); font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
+.md blockquote { margin: 0 0 var(--s3); padding-left: var(--s3); border-left: 1px solid var(--line); }
+/* the codeblock (T43, app.js codeblock; STYLE.md "Codeblock"; Tony, Oct 18: mock A's well + syntax colour). A --page well with the
+   card's margin around it, 8px radius. Header: language left, the T44 slot, then Copy. --mono 16px, 400 only (no bold keywords).
+   A long line wraps hanging under its own indent + 2ch; only a real line gets a number. Colour: the Tokyo Night tokens (--syn-*, :root) */
+.cb { --cbx: var(--s3); --g: 2ch; --cb-lh: 1.55; margin: var(--s3) 0; background: var(--page); border-radius: 8px; }
+.opt .cb { --cbx: 0px; margin: 0; background: none; border-radius: 0; }   /* in a choice row: no fill (no box in a box), no Copy (the row is a button) */
+.opt .cb-hd { min-height: 0; border-bottom: 0; }
+.opt .cb pre { padding-bottom: 0; }
+.opt .cb .t-com { color: var(--muted); }                            /* --syn-com is 4.1:1 on the row's --card; --muted 8.4:1 */
+.opt .txt > p { margin: 0; }
+.cb-hd { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 0 0 var(--cbx); border-bottom: var(--bw) solid var(--line); }
+.cb-lang { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
+.cb-act { margin-left: auto; display: flex; align-items: center; }
+.cb-slot { width: 0; }                                              /* T44 run / step / reset go here; empty in T43 */
+.cb-copy { width: 44px; height: 44px; background: transparent; color: var(--muted); border-radius: 6px; }
+.cb-copy .ico { width: 20px; height: 20px; }
+.cb-copy:hover { background: var(--raised); color: var(--ink); }
+.cb-copy.done { color: var(--correct); }
+.cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
+.cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
+.cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + (var(--ind) + 2) * 1ch); text-indent: calc(-1 * (var(--ind) + 2) * 1ch); }
+.cb .l::before { content: counter(ln); position: absolute; left: var(--cbx); width: var(--g); text-indent: 0; text-align: right; color: var(--muted); user-select: none; -webkit-user-select: none; }
+.cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
+.cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
+
+.fig { position: relative; width: 100%; margin: var(--s2) 0; }
+.fig svg { display: block; overflow: visible; }
+.fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+/* FIGURE shade steps (W157, Tony's amendment: figures only; app chrome never reads these). Per hue (the figure palette: ink c1 c2 c3 muted + ok bad mark)
+   three Tailwind-style steps --fig-<hue>-1|2|3: 1 = the hue's own token (so a mark with no layer is drawn exactly as before), 2 / 3 = real,
+   less-dim shades computed by tools/client_generators/layer_steps.mjs on the figure bg (--body): label text >= 4.5:1 (WCAG 1.4.3, so strokes pass 1.4.11's 3:1),
+   adjacent steps dL* >= 12 where the 4.5:1 floor leaves the room (else the best equal split). tests/layers.test.mjs recomputes every hue x step x theme.
+   Dark navy page set here; Cluck's warm set under .ai-box .fig / .vw. The app is dark only today; a light theme adds its own set (1 = darkest). Never opacity. */
+:root, .fig, .vw { --fig-ink-1: var(--ink); --fig-muted-1: var(--muted); --fig-c1-1: var(--c1); --fig-c2-1: var(--c2); --fig-c3-1: var(--c3); --fig-ok-1: var(--correct); --fig-bad-1: var(--wrong); --fig-mark-1: var(--reward); --fig-sky-1: #5eb8ff; --fig-amber-1: #ffd23f; --fig-orange-1: #e0803a; --fig-violet-1: #8f78f5; --fig-pink-1: #f87fe0; --fig-cyan-1: #2fd9e6; }
+:root { --fig-ink-2: #c3c9d3; --fig-ink-3: #a1a8b3; --fig-muted-2: #8f9eb3; --fig-muted-3: #778599; --fig-c1-2: #7ba2d9; --fig-c1-3: #6385b3; --fig-c2-2: #d29a5f; --fig-c2-3: #a47d53; --fig-c3-2: #d97daf; --fig-c3-3: #b56b98; --fig-ok-2: #42c096; --fig-ok-3: #379b7f; --fig-bad-2: #e2576b; --fig-bad-3: #dc5569; --fig-mark-2: #d4ad81; --fig-mark-3: #ab8f70; --fig-sky-2: #52a1df; --fig-sky-3: #4789c0; --fig-amber-2: #d4b13c; --fig-amber-3: #ab9238; --fig-orange-2: #cf7839; --fig-orange-3: #bf7038; --fig-violet-2: #8a74ed; --fig-violet-3: #8672e7; --fig-pink-2: #d871c7; --fig-pink-3: #b964af; --fig-cyan-2: #29b5c3; --fig-cyan-3: #23919f; }
+/* a mark's layer picks step N of its own hue (every token is a hue): .ly2 / .ly3 on an svg <g>, a label span or a view element; tone="hue" (openui,
+   .tn-<hue>) paints the whole mark in that hue's step instead (--ink / --muted / --c1 are what its strokes and labels read). */
+.ly2 { --ink: var(--fig-ink-2); --muted: var(--fig-muted-2); --c1: var(--fig-c1-2); --c2: var(--fig-c2-2); --c3: var(--fig-c3-2); }
+.ly3 { --ink: var(--fig-ink-3); --muted: var(--fig-muted-3); --c1: var(--fig-c1-3); --c2: var(--fig-c2-3); --c3: var(--fig-c3-3); }
+.tn-ink { --ink: var(--fig-ink-1); --muted: var(--fig-ink-1); --c1: var(--fig-ink-1); }
+.tn-ink.ly2 { --ink: var(--fig-ink-2); --muted: var(--fig-ink-2); --c1: var(--fig-ink-2); }
+.tn-ink.ly3 { --ink: var(--fig-ink-3); --muted: var(--fig-ink-3); --c1: var(--fig-ink-3); }
+.tn-muted { --ink: var(--fig-muted-1); --muted: var(--fig-muted-1); --c1: var(--fig-muted-1); }
+.tn-muted.ly2 { --ink: var(--fig-muted-2); --muted: var(--fig-muted-2); --c1: var(--fig-muted-2); }
+.tn-muted.ly3 { --ink: var(--fig-muted-3); --muted: var(--fig-muted-3); --c1: var(--fig-muted-3); }
+.tn-c1 { --ink: var(--fig-c1-1); --muted: var(--fig-c1-1); --c1: var(--fig-c1-1); }
+.tn-c1.ly2 { --ink: var(--fig-c1-2); --muted: var(--fig-c1-2); --c1: var(--fig-c1-2); }
+.tn-c1.ly3 { --ink: var(--fig-c1-3); --muted: var(--fig-c1-3); --c1: var(--fig-c1-3); }
+.tn-c2 { --ink: var(--fig-c2-1); --muted: var(--fig-c2-1); --c1: var(--fig-c2-1); }
+.tn-c2.ly2 { --ink: var(--fig-c2-2); --muted: var(--fig-c2-2); --c1: var(--fig-c2-2); }
+.tn-c2.ly3 { --ink: var(--fig-c2-3); --muted: var(--fig-c2-3); --c1: var(--fig-c2-3); }
+.tn-c3 { --ink: var(--fig-c3-1); --muted: var(--fig-c3-1); --c1: var(--fig-c3-1); }
+.tn-c3.ly2 { --ink: var(--fig-c3-2); --muted: var(--fig-c3-2); --c1: var(--fig-c3-2); }
+.tn-c3.ly3 { --ink: var(--fig-c3-3); --muted: var(--fig-c3-3); --c1: var(--fig-c3-3); }
+.tn-ok { --ink: var(--fig-ok-1); --muted: var(--fig-ok-1); --c1: var(--fig-ok-1); }
+.tn-ok.ly2 { --ink: var(--fig-ok-2); --muted: var(--fig-ok-2); --c1: var(--fig-ok-2); }
+.tn-ok.ly3 { --ink: var(--fig-ok-3); --muted: var(--fig-ok-3); --c1: var(--fig-ok-3); }
+.tn-bad { --ink: var(--fig-bad-1); --muted: var(--fig-bad-1); --c1: var(--fig-bad-1); }
+.tn-bad.ly2 { --ink: var(--fig-bad-2); --muted: var(--fig-bad-2); --c1: var(--fig-bad-2); }
+.tn-bad.ly3 { --ink: var(--fig-bad-3); --muted: var(--fig-bad-3); --c1: var(--fig-bad-3); }
+.tn-mark { --ink: var(--fig-mark-1); --muted: var(--fig-mark-1); --c1: var(--fig-mark-1); }
+.tn-mark.ly2 { --ink: var(--fig-mark-2); --muted: var(--fig-mark-2); --c1: var(--fig-mark-2); }
+.tn-mark.ly3 { --ink: var(--fig-mark-3); --muted: var(--fig-mark-3); --c1: var(--fig-mark-3); }
+/* W163 auto-hue palette (tools/client_generators/layer_steps.mjs PALETTE): six Tailwind-style hue families, no green or red; a figure mark with no tone / colour gets the next one,
+   keyed by its own name (views.js autoHue, graph.js), so each force / role reads as its own colour. tone="sky" etc. also works by hand. */
+.tn-sky { --ink: var(--fig-sky-1); --muted: var(--fig-sky-1); --c1: var(--fig-sky-1); }
+.tn-sky.ly2 { --ink: var(--fig-sky-2); --muted: var(--fig-sky-2); --c1: var(--fig-sky-2); }
+.tn-sky.ly3 { --ink: var(--fig-sky-3); --muted: var(--fig-sky-3); --c1: var(--fig-sky-3); }
+.tn-amber { --ink: var(--fig-amber-1); --muted: var(--fig-amber-1); --c1: var(--fig-amber-1); }
+.tn-amber.ly2 { --ink: var(--fig-amber-2); --muted: var(--fig-amber-2); --c1: var(--fig-amber-2); }
+.tn-amber.ly3 { --ink: var(--fig-amber-3); --muted: var(--fig-amber-3); --c1: var(--fig-amber-3); }
+.tn-orange { --ink: var(--fig-orange-1); --muted: var(--fig-orange-1); --c1: var(--fig-orange-1); }
+.tn-orange.ly2 { --ink: var(--fig-orange-2); --muted: var(--fig-orange-2); --c1: var(--fig-orange-2); }
+.tn-orange.ly3 { --ink: var(--fig-orange-3); --muted: var(--fig-orange-3); --c1: var(--fig-orange-3); }
+.tn-violet { --ink: var(--fig-violet-1); --muted: var(--fig-violet-1); --c1: var(--fig-violet-1); }
+.tn-violet.ly2 { --ink: var(--fig-violet-2); --muted: var(--fig-violet-2); --c1: var(--fig-violet-2); }
+.tn-violet.ly3 { --ink: var(--fig-violet-3); --muted: var(--fig-violet-3); --c1: var(--fig-violet-3); }
+.tn-pink { --ink: var(--fig-pink-1); --muted: var(--fig-pink-1); --c1: var(--fig-pink-1); }
+.tn-pink.ly2 { --ink: var(--fig-pink-2); --muted: var(--fig-pink-2); --c1: var(--fig-pink-2); }
+.tn-pink.ly3 { --ink: var(--fig-pink-3); --muted: var(--fig-pink-3); --c1: var(--fig-pink-3); }
+.tn-cyan { --ink: var(--fig-cyan-1); --muted: var(--fig-cyan-1); --c1: var(--fig-cyan-1); }
+.tn-cyan.ly2 { --ink: var(--fig-cyan-2); --muted: var(--fig-cyan-2); --c1: var(--fig-cyan-2); }
+.tn-cyan.ly3 { --ink: var(--fig-cyan-3); --muted: var(--fig-cyan-3); --c1: var(--fig-cyan-3); }
+.fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
+.fig-alt { box-sizing: border-box; padding: var(--s3) var(--s4); border: var(--bw) solid var(--line); border-radius: 8px; }   /* graph.js degrade (U7): a figure figcheck could not fix shows its alt text in this plain box */
+.lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
+.lbl.tick { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---------- question ---------- */
+.q { margin-top: var(--s3); }
+.choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }   /* minmax: a fix box (an input, ~20ch wide) never widens the column past the card */
+.ch { position: relative; }
+.opt {
+  width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
+  background: var(--sheet); border: var(--bw) solid var(--line); border-radius: 8px; color: var(--ink);   /* a 1px --line edge at rest; every state is the same 1px in its tone */
+  transition: border-color .18s ease-out, background-color .18s ease-out;
+}
+.opt:hover:not(:disabled) { border-color: var(--muted); }
+.opt .badge {
+  flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
+  border: var(--bw) solid var(--line); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-md); line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* TR12: never changes with state */
+}
+.opt .badge .ico { width: 1.1rem; height: 1.1rem; }
+.opt .txt { min-width: 0; overflow-wrap: anywhere; }
+.opt .txt .katex { white-space: nowrap; }                          /* a choice's formula is one unit: "d =" never alone on a line; app.js fitMath shrinks it to fit */
+.opt .txt .kx-scroll { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; scrollbar-width: thin; }   /* app.js fitMath: too wide even at 85% */
+.opt[aria-checked="true"] { border: var(--bw) solid var(--action); padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); }
+.opt[aria-checked="true"] .badge { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+/* lock-in (Tony, Sep 30: "who wants to be a millionaire"; no glow): the other choices fade, the rest of the page dims */
+/* only while open; never the question or the top bar. Picking also hides the code bar and the grab handle (Tony, Oct 2) */
+.q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: .35; }
+html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
+html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
+.ch, .top, #problem, #work, #fb { transition: opacity .375s ease-out, filter .45s ease-out; }
+/* V1 thin light (PALETTE-v3-THINLIGHT §2): right / wrong = a 1px ring in the state colour + its glyph at the row's right end (.vg, app.js glyph());
+   no fill, the badge keeps its rest look. The 1px ring takes its extra half pixel back from the padding: nothing moves */
+.opt:is(.right, .wrong) { border-width: var(--bw); padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); }
+.opt.wrong { border-color: var(--wrong); color: var(--muted); }
+.opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
+.opt.right { border-color: var(--correct); }
+.opt.right.reveal { border-style: dashed; }   /* the right row the student missed */
+.opt :is(.badge, .badge .ico) { transition: none; }
+.opt[aria-checked="true"]:is(.right, .wrong) .badge { background: none; border-color: var(--line); color: var(--muted); }   /* the verdict replaces the selected look */
+.ch .vg { position: absolute; right: 16px; top: 50%; margin-top: -10px; width: 20px; height: 20px; pointer-events: none; }   /* centred in the arrow's 48px slot */
+.ch .vg .ico { width: 20px; height: 20px; }
+.opt.right .vg { color: var(--correct); }
+.opt.wrong .vg { color: var(--wrong); }
+.ch.cue .vg { right: calc(var(--nxw) + 10px); }   /* 8px left of Next */
+/* one-shot feedback (Tony, Oct 6 TK1; app.js nudge): a wrong pick shakes once, a right one pulses twice. Transform only: nothing
+   around it moves. Reduced motion: still (the colour and the icon already say it) */
+@keyframes opt-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes opt-pop { 0%, 100% { transform: none; } 50% { transform: scale(1.025); } }
+.opt.jolt { animation: opt-jolt .54s ease-out; }
+.opt.pop { animation: opt-pop .42s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .opt.jolt, .opt.pop { animation: none; } }
+.opt.pend { border-color: var(--action); border-style: dashed; }
+.ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
+/* pick all (docs/design/CHOOSE-ALL.md §4): a square check badge (empty until ticked), the letter beside it, no arrow in the row;
+   one Check under the list. Never one row, no lock-in dimming (many rows can be ticked). */
+.choices.all .opt { padding-right: var(--s3); }
+.choices.all .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: var(--s3); }
+.choices.all .opt.right .badge { background: none; border-color: var(--correct); color: var(--correct); }   /* pick-all: the square is the glyph slot */
+.choices.all .opt.right.reveal .badge { border-style: dashed; }
+.choices.all .opt.wrong .badge { background: none; border-color: var(--wrong); color: var(--wrong); }
+.choices.all .opt .badge { width: 1.5rem; height: 1.5rem; border-radius: 4px; }
+.choices.all .opt .badge .ico { width: 1rem; height: 1rem; }
+.choices.all .opt[aria-checked="false"]:not(.wrong):not([data-mark="x"]) .badge .ico { visibility: hidden; }
+.choices.all .opt .lt { flex: none; margin-left: calc(-1 * var(--s1)); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-sm); }
+.choices.all .opt.wrong .lt { color: var(--wrong); }
+/* prove mode (fix): a row the student X'd: red x in the box, its text lightly struck, its fix box under it (indented to the text) */
+.choices.all .opt[data-mark="x"] .badge { border-color: var(--wrong); color: var(--wrong); }
+.choices.all .opt[data-mark="x"]:not(.wrong) .txt { text-decoration: line-through; text-decoration-color: var(--muted); }
+/* sugar kept rows (app.js keep(); look B, Tony Oct 20): ticked and right at a miss, fixed. A 1px --correct ring, the --correct-fill wash, text --correct-on (12.4:1), the green check in the
+   square like .right. No dim, no tag; fresh ticks keep the blue. A 150 ms colour fade, no pop (a miss is a wrong try) */
+.choices.all .opt.kept, .choices.all .opt.kept:hover { border: var(--bw) solid var(--correct); background: var(--correct-fill); color: var(--correct-on); cursor: default;
+  padding: var(--s2) var(--s3); transition: border-color .15s ease-out, background-color .15s ease-out, color .15s ease-out; }
+.choices.all .opt.kept .lt { color: var(--correct); }
+.choices.all .opt.kept .badge { background: none; border-color: var(--correct); color: var(--correct); }
+@media (prefers-reduced-motion: reduce) { .choices.all .opt.kept { transition: none; } }
+.ch .fix { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); }
+.ch .fix[hidden] { display: none; }
+.chk { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); margin-top: var(--s2); }
+.chk .cluck { flex: 1; min-width: 0; align-items: center; }   /* a short wrong-answer hint, in the room left of Check (app.js feedback) */
+.chk .cluck > .ico { margin-top: 0; }
+.chk .cluck .md { overflow-wrap: anywhere; }
+.q.closed .chk:not(.cue) { display: none; }   /* closed: the Check row goes, unless it carries Next (T17b-1) */
+.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check). No try dots (Tony, Nov 3 16:23) */
+
+/* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
+   The selected pill holds the arrow flush at its right end, so it alone reserves the arrow's room (56px, as in the stacked list).
+   Pills size to their text and share the spare width. Wrong keeps the strike + dashed red; right keeps the green border and
+   shows its check where the arrow was. */
+.choices.inline { display: flex; gap: var(--s2); }
+.choices.inline .ch { flex: 1 1 auto; min-width: 3rem; }
+.choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); }
+.choices.inline .opt:is(.right, .wrong, [aria-checked="true"]) { padding-left: var(--s3); padding-top: var(--s2); padding-bottom: var(--s2); }   /* the state ring takes its half pixel back: nothing moves */
+.choices.inline .opt:is(.right, .wrong):not([aria-checked="true"]) { padding-right: var(--s3); }
+.choices.inline .opt.right { color: var(--correct); }   /* pills: no badge, the label carries the state colour (10.8:1) */
+.choices.inline .opt.wrong { color: var(--wrong); }   /* 5.1:1, bold-free 18px: AA */
+.choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
+.choices.inline .opt .badge { display: none; }
+.choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: calc(var(--btn) * 2 + 8px); }   /* T17b-1: the selected pill keeps Next's room (96px) from the start, so its Check rect is where Next lands */
+.choices.inline .vg { right: 14px; }
+
+.ff {
+  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw));   /* the arrow's room is always reserved (it sits --bw inside the border) */
+  background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px;
+}
+.ff:hover { border-color: var(--muted); }
+.ff:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
+.ff input {
+  flex: 1 1 auto; min-width: 0; height: var(--btn); margin: 0; padding: 0 var(--s2) 0 0;
+  font-family: inherit; font-variant-numeric: tabular-nums; font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+}
+.ff input:focus { outline: none; }
+.ff input::placeholder { color: var(--hint); opacity: 1; }
+/* Material floating label (Tony, Nov 3 18:14): empty and idle, the placeholder sits inside; focus or text, it floats onto the top border as the
+   short "Answer" (the long "Ex: ..." placeholder goes), and comes back on blur when empty. CSS only: the label is the input's next sibling.
+   Its fill covers the border line only (transparent above it), so it needs no knowledge of the card's colour */
+.ff > .fl { position: absolute; left: calc(var(--s3) - 4px); top: 50%; padding: 0 4px; transform: translateY(-50%); pointer-events: none;
+  font-size: var(--t-md); line-height: 1.2; color: var(--hint); opacity: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box;
+  max-width: calc(100% - var(--s3) - var(--btn) - var(--s3));   /* one line, stops short of Check */
+  background: linear-gradient(transparent calc(50% - 1px), var(--field) calc(50% - 1px));
+  transition: top var(--d-fast, 150ms) ease-out, font-size var(--d-fast, 150ms) ease-out, opacity var(--d-fast, 150ms) ease-out; }
+.ff input:is(:focus, :not(:placeholder-shown)) ~ .fl { top: 0; font-size: var(--t-xs); opacity: 1; color: var(--muted); }
+.ff input:focus ~ .fl { color: var(--focus); }
+.ff input:focus::placeholder { color: transparent; }
+/* the grey hint line steps aside while the label floats on the border (Tony, Nov 4); only boxes with a .fl */
+#q:has(.ff input:is(:focus, :not(:placeholder-shown)) ~ .fl) > .how { display: none; }
+.ff.ok { border-color: var(--correct); }   /* V1: a 1px --correct edge, no fill */
+.ff.done input { color: var(--correct); }
+/* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
+.q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
+.q.closed .ff:not(.cue) { opacity: 0.5; }   /* mc rows never dim (V1 thin light: the rings and the strike tell the story); a closed box dims even when right (Tony, Oct 2), its green edge + check stay. The box that carries Next (T17b-1 .cue) never dims: Next is live; out of tries its text goes --muted instead */
+.q.closed .ff:hover { border-color: var(--edge); }
+/* DOT-1 (Tony, Nov 2): the orange status dot on a WRONG answer element that has Cluck help; the top-right corner of its border, like .cl-dot.
+   Wrong = a struck choice row (.ch), a typed box (#ff) or a multi part whose verdict mark is the x / lock (one dot per wrong tick). Help = Cluck's chip or peek is on the page
+   (sugar + a key; a multi part gets it once the item closes). Gone for good once the question is right. Hides (fade) while Cluck's sheet is open, back on close.
+   Never inside a dimmed box: a closed mc row never dims, but a shut part does (.ff.shut), so a part's dot is on the .part, in the grid area of its box */
+:root { --dot-t: .18s; }
+@media (prefers-reduced-motion: reduce) { :root { --dot-t: 0s; } }
+.mparts .part { position: relative; }
+html:has(:is(#wish, .rbox) .wchip, .cl-peek) .q:not(:has(.opt.right:not(.reveal, .kept))) :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after {
+  content: ""; position: absolute; grid-area: bx; z-index: 3; top: calc(var(--ring) * -1); right: calc(var(--ring) * -1); width: 10px; height: 10px; border-radius: 50%;
+  background: var(--help); outline: var(--ring) solid var(--card); pointer-events: none; transition: opacity var(--dot-t) ease-out, visibility var(--dot-t);
+}
+html:has(#cluck:not([hidden])) .q :is(.ch, .ff, .part)::after { opacity: 0; visibility: hidden; }
+.q.closed .ff.ok { border-color: var(--correct); }
+.q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+/* W104 Sleeping guard (app.js guard; mock-opus/104 v4 = layout + motion only, type and colour are the site's): a quiet row under a closed MC's choices.
+   Locked: a --muted padlock, words in --muted with the lead in --ink. Redeemed: the lead is the retry tag's
+   word in --correct at the same --w-em (no new size, no bold green). Feather burst: live redeem only, motion allowed only */
+.guard { position: relative; display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); border-top: var(--bw) solid var(--edge); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; pointer-events: none; }
+/* locked: the mock's frosted veil. The row rises over the lower choices; its ::before blurs what is behind it, faded in from the top by a mask. Next stays above it */
+.guard.lock { margin-top: calc(-1 * var(--s7)); padding: var(--s7) 0 0; border-top: 0; isolation: isolate; }
+.guard.lock::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent, var(--page) 55%); -webkit-backdrop-filter: blur(var(--s2)); backdrop-filter: blur(var(--s2));
+  -webkit-mask-image: linear-gradient(transparent, #000 45%); mask-image: linear-gradient(transparent, #000 45%); }
+@media (prefers-reduced-transparency: reduce) { .guard.lock::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--page) 88%, transparent); } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .guard.lock::before { background: color-mix(in srgb, var(--page) 88%, transparent); } }
+.q.closed .nx { z-index: 1; }
+.guard p { margin: 0; }
+.guard b { color: var(--ink); font-weight: var(--w-em); }
+.guard .gd-win { color: var(--correct); }
+.gd-burst { position: relative; flex: none; width: var(--s6); height: var(--s6); }   /* anchor for the feather burst (no icon) */
+.gd-lock { flex: none; order: -1; width: var(--s5); height: var(--s5); color: var(--muted); }
+.gd-lock .ico { width: 100%; height: 100%; }
+.burst i { position: absolute; left: 50%; top: 50%; width: var(--s1); height: var(--s2); margin: calc(-0.5 * var(--s2)) 0 0 calc(-0.5 * var(--s1)); border-radius: 50% 50% 50% 0; background: var(--reward); opacity: 0; }
+.burst i:nth-child(1) { --a: 0deg; } .burst i:nth-child(2) { --a: 45deg; } .burst i:nth-child(3) { --a: 90deg; } .burst i:nth-child(4) { --a: 135deg; }
+.burst i:nth-child(5) { --a: 180deg; } .burst i:nth-child(6) { --a: 225deg; } .burst i:nth-child(7) { --a: 270deg; } .burst i:nth-child(8) { --a: 315deg; }
+@media (prefers-reduced-motion: no-preference) {
+  .guard.won.live .burst i { animation: gd-fl 700ms ease-out both; }
+}
+@keyframes gd-fl { from { opacity: 1; transform: rotate(var(--a)) translateY(0); } to { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--s5))); } }
+.how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
+.ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, docs/design/EASY.md) */
+/* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.
+   The same mark sits on the original's numbers in "See reference solution", so the eye links the pair. */
+mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2px var(--help); text-underline-offset: 0.2em; text-decoration-skip-ink: none; }
+.chg-chip { margin: 0 0 var(--s3); color: var(--muted); font-size: var(--t-xs); }
+/* W133 the Twist chip (app.js twistChip; todo 133): the .qtag look as a button, left of the title, its own glyph (TWIST_SVG).
+   A tap opens its note popover. Only on a twist item: no twist, no chip, no row */
+.twist-chip { margin: 0 var(--s2) 0 0; font: inherit; font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.twist-chip:hover, .twist-chip[aria-expanded="true"] { background: var(--raised); }
+.twist-chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.how code { color: var(--ink); }
+/* multi: one row per part (archive/design/mockups/multi-prompts.html). Phone: "a)" and its sub-question, its own box under the text (aligned to
+   the text). From 40rem: marker, text and box on one line, box at a fixed 16rem. Each box holds its own arrow (hidden while the box is empty, like the code box's) and
+   shows its own verdict: ok (green, read-only), bad (dashed red + this part's hint under the row), shut (out of tries: dim). */
+.mparts { display: grid; gap: var(--s4); }
+.mparts .part {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
+  column-gap: var(--s2); row-gap: var(--s2); align-items: start;
+}
+.mparts .part.nopr { grid-template-areas: "mk bx"; }
+.mparts .part.hinted { grid-template-areas: "mk pr" ". bx" ". ht"; }
+.mparts .part.nopr.hinted { grid-template-areas: "mk bx" ". ht"; }
+.mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
+.mparts .mk { grid-area: mk; font-weight: var(--w-em); color: var(--action); }
+.mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
+.mparts .ff { grid-area: bx; }
+.ff .send { position: absolute; right: var(--bw); top: var(--bw); }   /* 48px centred in the 52px box, 2px from the outer edge with either border: nothing jumps */
+/* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
+.ff .vk { position: absolute; right: var(--bw); top: var(--bw); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
+.ff .vk .ico { width: var(--ico); height: var(--ico); }
+.ff .vk[data-v="i-ok"] { color: var(--correct); }
+.ff .vk[data-v="i-x"] { color: var(--wrong); }
+.ff .vk[data-v="i-lock"] { color: var(--muted); }
+.mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
+.phint:empty { display: none; }
+@media (min-width: 40rem) {
+  .mparts .part { grid-template-columns: 2rem minmax(0, 1fr) 16rem; grid-template-areas: "mk pr bx"; column-gap: var(--s3); }
+  .mparts .part.nopr { grid-template-areas: "mk bx bx"; }
+  .mparts .part.hinted { grid-template-areas: "mk pr bx" ". ht ht"; }
+  .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
+  .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
+}
+.ff:is(.bad, .ok, .done, .shut, .lock) input::placeholder { color: transparent; }
+.ff:is(.bad, .ok, .done, .shut, .lock) input ~ .fl { opacity: 0 !important; }   /* a box with a verdict shows no placeholder and no border label (Tony, Nov 4) */
+#q:has(#ansGo:not([hidden], :disabled, .waiting)) .ff > .vk[data-v="i-x"] { display: none; }   /* editing after a miss: the arrow replaces the x (still in the DOM) */
+.ff.bad { border: var(--bw) dashed var(--wrong-rim); }   /* 1px like every line: the dash is what says "not accepted" (survives greyscale) */
+/* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
+.ff.shut, .ff.shut input { cursor: not-allowed; }
+.ff.shut:not(.cue) { opacity: 0.5; }   /* right ones too: closed = looks disabled (the one with Next: not dimmed, T17b-1) */
+.ff.shut:hover { border-color: var(--edge); }
+.ff.shut.ok, .ff.shut.ok:hover { border-color: var(--correct); }
+.ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+/* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
+   96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. PALETTE-v3 §6: after a right
+   answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
+:root { --d-fast: 180ms; --d-move: 300ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
+.nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
+  color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
+  padding: 0 var(--s2) 0 var(--s3); border-radius: 6px; background: var(--raised); border: var(--bw) solid var(--line); color: var(--ink); }
+:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal, .kept)) .chk.cue) .nx .nf { background: var(--correct); border-color: var(--correct); color: var(--correct-ink); }
+:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal, .kept)) .chk.cue) .nx:active .nf { background: var(--correct-press); border-color: var(--correct-press); }
+.nx:active .nf { transform: translateY(1px); }
+.nx:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.nx .ico { width: 20px; height: 20px; }
+.q.closed .nx { cursor: pointer; }
+.ch .nx { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }   /* exactly on the row's Check */
+.ff .nx { position: absolute; right: var(--bw); top: var(--bw); }                       /* exactly on the box's Check */
+/* the carrier makes room: its text stops short of Next, the verdict icon moves to the left of Next */
+.ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
+.ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 8px); }
+.ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 8px + var(--vgw)); }   /* + the glyph left of Next */
+.ff.cue { padding-right: calc(var(--btn) * 3 + var(--bw)); }
+.ff.cue .vk { right: calc(var(--nxw) + var(--bw)); }
+.q .ff.cue:focus-within { border-color: var(--edge); box-shadow: none; }   /* focus on Next is Next's ring, not the closed box's */
+.q .ff.cue.ok:focus-within { border-color: var(--correct); }
+.ff.cue:not(.ok) :is(input, .lead) { color: var(--muted); }   /* out of tries: the box with Next is not dimmed (Next is live); its text goes --muted */
+.choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
+.choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 8px); }
+.choices.inline .ch.cue .vg { display: none; }   /* the pill's check would sit under Next: the green ring says it (no reflow, the pill keeps its width) */
+/* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
+.q.closed :is(.ch, .opt) { transition: none; }
+html:has(#q.closed) :is(#work, #fb) { transition: none; }
+/* a reward overlay is up (a burst still playing when the next answer comes in): the page behind it does not tween, so the tap is not a second moving group (one blink) */
+html:has(.fx-ov) :is(.ch, .opt, .btn, #problem, #work, #fb) { transition: none; }
+/* fix A (sugar right row / box): the row is V1's, as in diet; a 3px --field ring round a 44px Next face keeps the green face off the green ring.
+   Sugar moves the mc slot 4px in from the ring (Check too, so its rect stays inside Next) */
+html.sugar .ch :is(.send, .nx) { right: 6px; }
+html.sugar .ch.cue .opt, html.sugar .choices.inline .opt[aria-checked="true"], html.sugar .choices.inline .probe .opt { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 12px + var(--vgw)); }
+html.sugar .ch.cue .vg { right: calc(var(--nxw) + 14px); }
+html.sugar .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .ch.cue:has(.opt.right) .nx .nf, html.sugar .ff.cue.ok .nx .nf { position: relative; border-radius: 6px; padding: 0 6px 0 10px; }
+/* the ring: a --field plate 1px outside Next's 96x48 box, under the face (2px in) = 3px of --field all round. Not a shadow (STYLE §2.7), not an outline (that is the keyboard ring) */
+html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::before { content: ""; position: absolute; inset: -1px; border-radius: calc(6px + 3px); background: var(--field); }   /* the face radius + the ring */
+/* the shared one-shot motion token (palette §9): Next lands once, after the verdict colour; the calm nod after Next. Never a loop */
+.g-next { animation: g-next-in var(--d-move) ease-out var(--d-fast) both; }
+@keyframes g-next-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes g-next-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes g-nod { 0%, 100% { transform: none; } 45% { transform: rotate(-8deg) translateY(2px); } }
+.g-nod { transform-origin: 40% 95%; animation: g-nod 540ms ease-out calc(var(--d-fast) + var(--d-move)) 1 both; }
+@media (prefers-reduced-motion: reduce) { .g-next { animation: g-next-fade var(--d-move) linear both; } .g-nod { animation: none; } }
+/* the duck chip (sugar; app.js wishPaint on a closed question): the official 48px pose + the word, the live label-button look. No wiggle */
+.wish.cue { margin-top: var(--s3); }
+.cue-chip { box-sizing: border-box; height: var(--btn); margin: 0; display: inline-flex; align-items: center; gap: var(--s2); padding: 0 var(--s4) 0 var(--s1);
+  background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--edge); border-radius: 8px; font: inherit; font-size: var(--t-sm); font-weight: var(--w-em);
+  line-height: 1; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.cue-chip:hover { background: var(--raised); }
+.cue-chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cue-chip .dk { display: block; flex: none; height: 48px; width: auto; }
+.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
+.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--qbox); border-radius: 0 0 10px 10px; }
+.preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); line-height: 1.5; min-height: 1.5em; overflow: hidden; transition: height 150ms ease-out; }
+/* W91 (Tony, Oct 26: "the WHOLE LAYOUT add height suddenly for the latex math"): one line is reserved from the question's open (every num/expr key in the
+   fixtures + banks renders in one line); app.js pvFit() ratchets the room up for taller math (animated, never shrinks while the question is open) and scales
+   the math down inside .pvi past 3 lines */
+.preview > .pvi { transform-origin: 0 0; }
+@media (prefers-reduced-motion: reduce) { .preview { transition: none; } }
+/* W137 expression answers: the working's own value, dim; the off span underlined; the prompt / syntax line under the box */
+.preview .xval { color: var(--muted); opacity: .75; white-space: nowrap; }
+.preview .xoff { color: var(--wrong-rim); text-decoration-color: currentColor; }
+.xline { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); line-height: 1.5; }
+.xline:empty { display: none; }
+.xline.bad, .xline.nudge { color: var(--ink); }
+/* Tony's todo 95 "ghost gap": the sheet open hides #wish (the duck chip under the closed question); the spent room would show as a blank band, so it goes
+   with the chip, in the same move (Check itself still moves nothing: the chip holds the place until the sheet opens) */
+#q:has(+ #wish[hidden]) .preview.spent, html.side #q:has(+ #wish[data-box]) .preview.spent { display: none; }   /* V2: the permanent box keeps #wish unhidden (strip.js reads #wish.hidden for its chip); data-box = the box shows Cluck's text: the spent room folds as it did when #wish hid */
+/* T19 sugar reveal (r4 mock, palette §3 "sugar answer reveal"): out of tries in sugar shows the answer. mc: the right row is the green .opt.right
+   (+ .reveal: the answer, not the student's pick). Typed: this line, in the preview's room (a multi: the part's hint slot). The check and the word say it, never the hue alone */
+.ansl { margin: 0; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
+.ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--correct); }   /* T23: the reveal's green = the right row's green */
+.rv-duck { flex: none; display: inline-flex; width: 1.25rem; height: 1.25rem; color: var(--help-deep); }   /* the shared reveal-line duck, dark variant (Tony Nov 3) */
+.rv-duck .ico, .ansl .rv-duck .ico { width: 100%; height: 100%; color: var(--help-deep); }
+.ansl b { color: var(--correct); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ansl > :is(.ansv, b) { margin-left: calc(.2em - var(--s2)); }   /* Tony, Nov 4: the gap before the value = the gap after it. The flex gap would be 8px before the value but one word space (.2em in Atkinson) after it, so the value sits one word space from the words before it: the same space as inside the line */
+.ansl > b { margin-right: calc(.2em - var(--s2)); }   /* a bare value (no unit): the same word space before the copy icon */
+.ansl .ansu { color: var(--ink); font-weight: 400; }   /* W132: the unit after the value, plain ink (Tony: "green ok, but put units in white") */
+.ansl .ansu sup { font-size: .75em; line-height: 0; position: relative; top: -.4em; vertical-align: baseline; }   /* m/s^2: raised, the line keeps its height (no jank) */
+.preview:has(.ansl) { color: var(--ink); }
+/* W107 proof box (Tony approved, Oct 27): the .ff field grown tall for a whole proof, Check pinned in its top-right corner (the Next slot) */
+.ff.proof { height: auto; align-items: stretch; padding-top: var(--s2); padding-bottom: var(--s2); }
+.ff.proof textarea {
+  flex: 1 1 auto; min-width: 0; min-height: 10rem; margin: 0; padding: 0 var(--s2) 0 0; resize: vertical;
+  font-family: var(--mono); font-size: var(--t-sm); line-height: 1.5; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+}
+.ff.proof textarea:focus { outline: none; }
+.ff.proof textarea::placeholder { color: var(--hint); opacity: 1; }
+.ff.proof.done textarea { color: var(--correct); }
+.ff.proof textarea:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+.rubric { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0 0; }
+.rubric[hidden] { display: none; }
+.rubric .rb { display: inline-flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s2); border: var(--bw) solid var(--edge); border-radius: 6px; font-size: var(--t-sm); color: var(--ink); }
+.rubric .rb .ico { flex: none; width: 1rem; height: 1rem; }
+.rubric .rb:is(.ok, .correct) { border-color: var(--correct); }
+.rubric .rb:is(.ok, .correct) .ico { color: var(--correct); }
+.rubric .rb:is(.missing, .wrong, .partial) .ico { color: var(--wrong); }
+.preview.proofref { margin-left: 0; overflow: visible; }
+.proofref .refmd { margin-top: var(--s1); color: var(--ink); }
+
+/* feedback */
+.fb:empty { display: none; }
+.fb { margin-top: var(--s3); display: grid; gap: var(--s2); }
+.verdict { display: flex; align-items: center; gap: var(--s2); font-weight: var(--w-em); margin: 0; }
+.verdict.ok { color: var(--correct); }
+.verdict.bad { color: var(--wrong); }
+.verdict.wait, .verdict.lock { color: var(--muted); font-weight: 400; }
+.verdict .ico { width: 1.25rem; height: 1.25rem; }
+.verdict .btn { margin-left: auto; flex: none; }
+.verdict .btn .ico { width: var(--ico); height: var(--ico); }
+.cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 12px; padding: var(--s3) var(--s4); }
+.cluck > .ico { color: var(--help); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
+.cluck .md p { margin: 0; }
+.cluck, .cl { --cl-in: 20px; }   /* INNER MARGIN (Tony, Oct 13, i20): Cluck's text, math and controls sit 20px in from the side */
+#fb .cluck, #wish .cluck { padding-inline: var(--cl-in); }
+.cluck > div { flex: 1; min-width: 0; }
+/* Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint, ~3 lines, the last fading into the card's own fill; the rest is in the sheet */
+.wtext.cl-steps { position: relative; max-height: calc(3 * var(--lh) * 1em); margin-top: 12px; overflow: hidden; cursor: auto; }
+.cl-steps:empty { display: none; }
+.cl-steps::after { content: ""; position: absolute; inset: auto 0 0; height: calc(1.8 * var(--lh) * 1em); pointer-events: none; background: linear-gradient(to bottom, transparent, var(--sheet)); }
+/* E1 = T2 (app.js ctaHTML): duck + label + chevron, one 48px row 8px wider than the text each side, no fill at rest or pressed */
+.cl-cta { display: flex; align-items: center; gap: var(--s2); width: calc(100% + 2 * var(--s2)); min-height: var(--btn); margin: 0 calc(-1 * var(--s2)) calc(-1 * var(--s2)); padding: 0 var(--s2);
+  border: 0; border-radius: 10px; background: none; color: var(--help); font: inherit; font-size: var(--t-md); font-weight: var(--w-em); line-height: 1.2; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: color .18s ease-out; }
+.cl-cta .ico { flex: none; width: 24px; height: 24px; transition: transform .18s ease-out; }
+.cl-cta .ico:first-child { transform-origin: 50% 80%; }
+.cl-cta .ico:last-child { width: 20px; height: 20px; }
+.cl-cta:active { color: var(--help); }
+@media (prefers-reduced-motion: no-preference) {   /* pressed: the duck tilts once, the chevron nudges toward the sheet */
+  .cl-cta:active .ico:first-child { transform: rotate(-14deg); }
+  .cl-cta:active .ico:last-child { transform: translateX(3px); }
+}
+/* the brainrot corner (brainrot.js, docs/design/FORMULA-CARD.md round 2 pick 1): two bare videos, iOS picture-in-picture plain */
+.rot { position: fixed; z-index: 30; left: 0; top: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.rot[hidden] { display: none; }
+.rot.snap { transition: transform .3s ease-out; }
+.rot .duo { position: relative; display: grid; gap: var(--s2); width: var(--w, 176px); }
+.rot.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }   /* still playing, out of sight */
+.rot .vid { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: var(--field); box-shadow: var(--shadow-3); }
+.rot.drag .vid { box-shadow: var(--shadow-4); }
+.rot .vid iframe { position: absolute; left: -18%; top: -18%; width: 136%; height: 136%; border: 0; pointer-events: none; }   /* the whole duo drags; the oversize crops YouTube's title strip and logo */
+.rot.parked { transform: translate(-300vw, 0) !important; pointer-events: none; }   /* warmed, out of sight */
+.rot .ctl { position: absolute; z-index: 1; top: var(--s1); right: var(--s1); display: flex; gap: var(--s1); opacity: 0; pointer-events: none; transition: opacity .3s ease-out; }
+.rot:hover .ctl, .rot.show .ctl, .rot:focus-within .ctl { opacity: 1; pointer-events: auto; }
+@media (hover: none) { .rot:hover:not(.show) .ctl { opacity: 0; pointer-events: none; } }
+.rot .ctl button, .rot .rtab { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--ink);
+  background: color-mix(in srgb, var(--field) 72%, transparent); cursor: pointer; }
+.rot .ctl .ico, .rot .rtab .ico { width: 1.25rem; height: 1.25rem; }
+.rot .rtab { display: none; height: 96px; border-radius: 0 10px 10px 0; box-shadow: var(--shadow-3); }
+.rot .rtab.r { border-radius: 10px 0 0 10px; }
+/* desktop / tablet side by side (brainrot.js home(); Tony, Oct 4 "B: top of notes"): its own slot at the top of the notes column */
+.rot.docked { position: relative; z-index: 5; left: auto; margin: 0 0 var(--s2); touch-action: auto; cursor: auto; }   /* not .dock: that is the top bar's class (app.css padding, nav.css display: contents) */
+/* 9:16 frames side by side, at most 40vh tall (Tony, Oct 5); a landscape video is centre-cropped: its iframe is 136% of the frame's
+   height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
+/* docked: all 3 in one box that scrolls sideways (Tony, Oct 5), two in view, a visible thin bar */
+.rot.docked .duo { container-type: inline-size; display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--s3); }   /* 5 videos (todo 135, W135b): a snap keeps the box's inner padding at the start (the thin scrollbar stays: app.css:61). A size container: the frames size off its width (100cqw) */
+.rot.docked .vid { flex: none; height: round(down, min(40dvh, 100dvh - 22rem, (100cqw - 3 * var(--s5)) / 3.5 * 16 / 9), 1px); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card. A short window (under ~880px: 1366x768 at 150%) gives up video height first, 22rem stays for the bar, the labels, a 96px notes box and the foot (W129 L3: the column fits). The height is set, whole px (the width follows: 9:16), so the column is a whole number of px tall: 3.5 in view made it 402.66px at 2560x1440, the page (centred up-down) came out 0.22px taller than the column's floor, and the fold re-centred it by 0.11px, re-drawing the bar's text (W135c, desk-layout L6) */
+.rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
+/* 3.5 in view (W135b, Tony Oct 31: "we can fit 3.5 visually, 5 total"): 3 frames + 3 gaps + half the 4th fill the box, the 5th waits behind the
+   scroll. The cue ("with gradient fade as a scorll cue too"): a fade to the box's own colour over the edge that has more row behind it, gone at
+   that end (brainrot.js ends()); it lays over the box, takes no room and no clicks */
+.shelf { position: relative; }
+.shelf .fade { display: none; }
+.rot.docked .fade { display: block; position: absolute; z-index: 1; top: 0; bottom: 0; width: 3rem; pointer-events: none; transition: opacity .2s ease-out; will-change: opacity; }   /* will-change: each fade its own layer for good; without it (over the players' iframes) Chromium at 125% re-drew the sash, the send arrow and Next when the fold hid the fades (W135c, desk-layout L6) */
+.rot.docked .fade.l { left: 0; border-radius: 10px 0 0 10px; background: linear-gradient(to right, var(--qbox), transparent); }
+.rot.docked .fade.r { right: 0; border-radius: 0 10px 10px 0; background: linear-gradient(to left, var(--qbox), transparent); }
+.rot.docked .shelf.at-start .fade.l, .rot.docked .shelf.at-end .fade.r { opacity: 0; }
+.rot.docked.stashed .fade { display: none; }
+.rot-hd { display: none; }
+/* the label row's one control (Tony, Oct 5): a quiet text link, level with "Explain"; 44px tall to touch */
+.rot-link { display: none; }
+.rot.docked .rot-link { display: inline-flex; align-items: center; min-height: 44px; margin: -10px 0 -10px auto;   /* touched at 44px, laid out at the label's height */ padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--t-sm);
+  text-decoration: underline; text-decoration-color: var(--edge); text-underline-offset: 4px; cursor: pointer; }
+.rot.docked .rot-link:hover { color: var(--ink); text-decoration-color: currentColor; }
+.rot-link:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.rot:not(.docked) .vid:nth-child(n + 3) { display: none; }                  /* the corner keeps two */
+.rot.docked .rot-hd { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s2); }
+html.side .rot-hd .xb-label { margin-bottom: 0; }                          /* the row carries the gap */   /* labels level with "Question" */
+.rot.docked.stashed .rot-hd { margin-bottom: 0; }
+.rot.docked.parked { display: none; transform: none !important; }
+.rot.stashed .rtab { display: grid; }
+.rot.docked .rtab, .rot.docked .ctl { display: none; }   /* docked, the header's button is the one toggle */
+.rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
+/* sugar: the original beside a snack (app.js origRender; docs/design/REWARDS-WIRING.md §4). A --sheet card like the formula card; on phones on
+   top of the problem, folded; side by side in the pad column, in the scratchpad's place while open */
+.orig { position: relative; margin: var(--s2) 0 var(--s3); border-radius: 10px; background: var(--sheet); }   /* the header is the casino hint card: .rw-hint in rewards/rewards.css (T1) */
+.orig-body { font-size: var(--t-md); line-height: var(--lh); }               /* in Cluck's sheet ("Similar steps"): the steps look of Cluck's own text */
+.orig-body .md { color: var(--ai-text); }
+.orig-h { margin: var(--s5) 0 var(--s3); color: var(--ai-text); font-weight: var(--w-em); }
+.orig-sol { list-style: none; margin: 0; padding: 0; counter-reset: os; color: var(--ai-text); }
+.orig-sol li { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--s3); margin-top: var(--s3); counter-increment: os; }
+.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
+.orig-sol li:has(+ li:not([hidden]))::after { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--help); }
+.orig-sol li > * { min-width: 0; }
+.orig-sol li[hidden] { display: none; }
+.orig-peek { margin-top: var(--s2); }
+html.side #work > .orig { margin: 0; }
+/* Key formulas (Tony, Oct 5: a textbook recap block, "hybrid of 4 and 5", archive/design/mockups/formula-use.html ?v=7): the site's blue, a 1px
+   --c1 frame on a 10% --c1 tint, the bulb + "Key formulas" notched into the top border (its background is the page above the line and the
+   tint below, so the line breaks clean), the formulas centred in order of use, a thin arrow between. Not a field: no hover, no caret */
+.fcard { --fc-tint: color-mix(in srgb, var(--action) 10%, var(--paper));
+  position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--line); border-radius: 10px; background: var(--fc-tint); }   /* W3: a quiet rim; bright --action stays for selected states */
+.fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
+  padding: 0 var(--s2); background: linear-gradient(var(--fc-above, var(--paper)) 50%, var(--fc-tint) 50%); color: var(--action); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
+.fc-notch .ico { width: 1.125rem; height: 1.125rem; }
+.fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }   /* minmax(0, ...): a formula wider than the screen (BUOY, 529px at 390) shrinks its row to the box and scrolls in .fm; an auto column grew to it and pushed the "?" and the page sideways (Oct 26) */
+.fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
+.fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: .5em var(--s1); margin-block: -.5em; }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped. The .5em above and below holds a \frac / \tfrac12 / \sqrt that rises or drops past the 1.4 line (overflow-x: auto makes y clip too: the ½ in K = ½mv² lost its bottom, todo 115, Oct 29); the -.5em margin gives it back, so the rows sit where they did */
+.fcard .fm .katex { white-space: nowrap; }
+.fcard .to { color: var(--action); opacity: .7; line-height: 1; padding: var(--s1) 0; }
+.fcard .to svg { display: block; width: 16px; height: 16px; }
+/* thinking ladder + "?" docs (Tony, Oct 21; SCHEMA.md "Formula ladder"): a formula row is the math + a small "?"; the "?" opens the sheet's doc for it
+   right under the row (static, no AI). Middle pieces pop inside the card, smaller, one per Jev hit. [hidden] must win over the display rules below */
+.fcard .f { display: flex; align-items: center; gap: var(--s2); }
+.fcard .f > :first-child { margin-left: auto; }
+.fcard .f > :last-child { margin-right: auto; }
+.fcard .f > .fm { flex: 0 1 auto; min-width: 0; }
+.fcard .f.mid { font-size: var(--t-sm); color: var(--muted); }
+/* a piece's For/Why notes (Oct 23, brain ladder-ui-2026-10-23/RESEARCH.md): quiet captions, not a second headline (RUI p.33: softer colour, not
+   smaller). Muted 400, ragged-left in a ~34ch column 4px under the piece, 12px before the next (group gap > inner gap, RUI p.83). Under the piece on desktop too:
+   beside it pushed the piece off the card's centred spine (formula-use.html ?v=7), and 4px under already binds it */
+.fcard .f.mid:has(.fhs) { flex-wrap: wrap; justify-content: center; row-gap: 0; }
+.fcard .f.mid:has(.fhs) > * { margin-inline: 0; }
+.fcard .f.mid:has(.fhs:not([hidden])) { margin-bottom: var(--s3); }
+.fcard .fhs { flex: 1 0 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: var(--s1); }
+.fcard .fh { width: min(100%, 34ch); font-size: var(--t-xs); line-height: 1.35; text-align: start; color: var(--muted); white-space: normal; }
+.fcard .fh b { font-weight: var(--w-em); margin-right: var(--s1); }                    /* a quiet run-in label: weight only, no blue (blue = tap targets) */
+.fh-more { position: relative; flex: none; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--t-xs);
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.fh-more::after { content: ""; position: absolute; inset: -11px -6px; }            /* a bigger tap target round a small word, like .fq */
+.fh-more[aria-expanded="true"] { color: var(--ink); }
+.fh-more:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.fcard :is(.f, .to, .fhs, .fh-more)[hidden] { display: none; }
+/* the "?" is small and quiet (Tony, Oct 23: "too big"): a 16px muted ring, blue on hover/focus/open; the 44px tap area is its ::after */
+.fq { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 1px solid currentColor; border-radius: 50%;
+  background: transparent; color: var(--muted); font: inherit; font-size: 0.6875rem; font-weight: var(--w-em); line-height: 1; cursor: pointer; }
+.fq::after { content: ""; position: absolute; inset: -14px; }                      /* the 44px tap target round a 16px mark */
+.fq:is(:hover, :focus-visible) { color: var(--action); }
+.fq[aria-expanded="true"] { border-color: var(--action); background: var(--action); color: var(--paper); }
+.fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* tap-to-copy (todo 108): a formula card row and a revealed answer copy their math as plain, grader-exact text. Quiet like the "?":
+   a 16px muted icon, blue on hover/focus, green when done; the tap area is its ::after, 44px square like the "?"'s. Each reaches 14px past its mark, so after
+   a "?" it sits 28px off (the row's 8px gap + 20px): the two areas meet, never overlap (W108c: a 12px gap let the copy take the "?"'s right 8px) */
+.mcopy { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 0; background: transparent;
+  color: var(--muted); cursor: pointer; }
+.mcopy .ico { width: 1rem; height: 1rem; }
+.mcopy::after { content: ""; position: absolute; inset: -14px; }
+.fq + .mcopy { margin-left: 20px; }
+.fcard .fq { z-index: 1; }   /* rows sit ~24px apart, so areas meet across rows too: there the "?" wins (the copy is on top of nothing it shares) */
+.mcopy:is(:hover, :focus-visible) { color: var(--action); }
+.mcopy.done { color: var(--correct); }
+.mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+/* the revealed answer's line sits in the preview's one-line room (overflow: hidden, W91); the copy's 44px tap area would be clipped to it, so the room shows
+   its overflow while it holds the answer at full size (a scaled answer keeps the clip). The question is closed then: the box above is disabled */
+.preview:has(.ansl .mcopy):not(:has(> .pvi[style*="scale"])) { overflow: visible; }
+.fd-sym { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.fd-sym li { display: grid; grid-template-columns: minmax(2.5rem, max-content) minmax(0, 1fr) auto; align-items: baseline; gap: var(--s2); }
+.fd-s { overflow-x: auto; overflow-y: hidden; color: var(--ink); }
+.fd-u { color: var(--muted); white-space: nowrap; }
+.pop .fd-sym { margin-top: var(--s2); }
+.fd-w, .fd-x { margin: var(--s2) 0 0; }
+.fd-w b, .fd-x b { font-weight: var(--w-em); color: var(--ink); margin-right: var(--s1); }
+.fd-x { overflow-wrap: anywhere; }
+/* the row's picture (formula-figs.js, docs/design/FORMULA-FIGS.md): under the formula, at the popover's full width (graph.js measures it, so the
+   popover is fixed-width when it has one); calm: no frame, the surface's own tokens (.pop sets --body/--knock), labels at --t-xs */
+.pop.fd-has-fig { width: min(var(--pop-w), calc(100vw - 32px)); }
+.pop .fd-fig { margin: var(--s1) 0 var(--s2); }
+.pop .fd-fig .lbl { font-size: var(--t-xs); }
+@keyframes lad-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) { .fcard :is(.lad-in, .fhs) { animation: lad-in var(--d-move, 200ms) ease-out both; } }   /* .fhs: notes opened by "why?" slide in too */
+/* Popover (popover.js, docs/design/POPOVER.md; Tony, Oct 23, after shadcn/ui Popover: rounded-md, 1px border, soft shadow, p-3, w-72, text-sm). App chrome on
+   the site's tokens: the raised --float surface, --line rim, --shadow-3; a bold --ink title, a --muted body. Fixed, placed by popover.js; over the bars */
+.pop { --pop-w: 18rem; --body: var(--float); --knock: color-mix(in srgb, var(--float) 85%, transparent);
+  position: fixed; z-index: 40; top: 0; left: 0; box-sizing: border-box; width: max-content; max-width: min(var(--pop-w), calc(100vw - 32px));
+  padding: var(--s3); border: 1px solid var(--line); border-radius: 6px; background: var(--float); box-shadow: var(--shadow-3);
+  color: var(--muted); font-size: var(--t-sm); line-height: 1.45; text-align: left; overflow-wrap: break-word; }
+.pop:focus { outline: none; }                                                       /* it takes focus for screen readers; its anchor shows the open state */
+.pop > :first-child { margin-top: 0; }
+.pop > :last-child { margin-bottom: 0; }
+.pop p { margin: var(--s1) 0 0; }
+.pop-h { margin: 0 0 var(--s2); overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); text-align: center; color: var(--ink); font-size: var(--t-md); line-height: 1.4; }   /* a formula header: the card row's size */
+.pop-h .katex { white-space: nowrap; }
+.pop .pop-t { margin: 0; color: var(--ink); font-weight: var(--w-em); }            /* the title line */
+.pop-x { color: var(--muted); }                                                     /* a tiny example, under the body */
+.pop-x b { color: var(--ink); font-weight: var(--w-em); margin-right: var(--s1); }
+.pop-act { display: flex; justify-content: flex-end; margin-top: var(--s3); }      /* action: ONE outlined button (STYLE.md §4: the filled one is the page's submit) */
+.pop-act .btn { width: auto; padding: 0 var(--s3); font: inherit; white-space: nowrap; }   /* the site's secondary .btn, sized to its words (.btn-tgl precedent) */
+.pop-fig { margin: 0 calc(-1 * var(--s1)); }                                        /* media: a graph.js figure, drawn at the popover's width */
+.pop-cap { font-size: var(--t-xs); text-align: center; }
+.pop[data-variant="note"] { --pop-w: 16rem; padding: var(--s2) var(--s3); }
+.pop[data-variant="term"] { --pop-w: 16rem; }
+.pop[data-variant="media"] { width: min(20rem, calc(100vw - 32px)); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) { .pop { animation: pop-in 120ms ease-out both; } .pop[data-side="top"] { animation-name: pop-up; } }
+@keyframes pop-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* Cluck the genie (docs/design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
+.wish { margin-top: var(--s3); }
+.wbar { display: flex; gap: var(--s2); align-items: center; }
+.wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
+/* ---------- Cluck's surfaces (docs/design/STYLE.md): tokens on .ai-skin, never :root ----------
+   Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; archive/design/mockups/cluck-colors.html): ref 2's neutral dark base (math reads on a
+   calm surface), ref 1's ember light only at the top, our tangerine as the one accent, dark ink on every orange fill (white on orange = 2.9:1).
+   Contrast on --help-sheet: --ai-text 14.9, --help-muted 6.9, --help 8.75; --help-ink on --help 7.67 */
+.ai-skin, html.sugar :is(#fb .cluck, #wish) {
+  /* PALETTE-v3 §3: the aliases that duplicated the help family (--ai, -soft, -send, -send-ink, -on-ct, -sheet, -muted, -rule, -ink, -edge)
+     folded into :root's --help*; --ai-strong retired into --ai-text (no white inside a help surface). Kept: the sheet's own container pair */
+  --ai-field: #130e0a; --ai-text: #ece6df;
+  --ai-tint: #221c16;   /* RM3 (Tony, Oct 5): a warm-neutral sheet; wells one tone up, no borders */
+  --ai-ct: #4a2a10;   /* the container: step numbers, the boxed answer, the student's bubble, the LIVE chip (--help-on on it 11.0:1) */
+  --ai-pill: #2b231d;   /* the ask pill */ --ai-line: rgb(255 154 60 / 0.35); --ai-glow: rgb(255 130 4 / 0.26); --ai-hair: rgb(255 220 180 / 0.07);
+  /* soft UI (Tony, Oct 5: "neomorphism"): one light source top-left; raised = warm highlight + dark shade, inset = the reverse. Shadows never
+     carry meaning alone (WCAG 1.4.11): every control keeps a solid fill or a 1px edge */
+  --ai-nm-up: -5px -5px 12px rgb(255 170 90 / 0.05), 6px 6px 14px rgb(0 0 0 / 0.6);
+  --ai-nm-in: inset 4px 4px 10px rgb(0 0 0 / 0.6), inset -3px -3px 8px rgb(255 190 120 / 0.05);
+  --ai-nm-btn: -3px -3px 8px rgb(255 170 90 / 0.1), 4px 4px 10px rgb(0 0 0 / 0.6);
+}
+/* Cluck's box = its own service on the site: the base tokens remap inside it, so .btn, .ff and the text follow */
+.ai-box { --sheet: var(--help-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--help-muted); --hint: var(--help-muted);
+  --line: var(--help-rule); --edge: var(--ai-line); --knock: rgb(16 19 26 / 0.85); background: var(--sheet); color: var(--ink); }   /* figure labels knock out on the sheet, not the navy question box */
+/* live figures inside Cluck (Tony, Oct 17: "all BLUE" on the warm sheet): graph.js reads --c1/--c2/--c3/--c1-hi/--body from the cascade, so the
+   remap lives here, on Cluck's figures only; question-card figures keep the page tokens. Series = the --help ramp, fills (graph.js FILL .22) are
+   those at low alpha, the sheet shows through the node fill. No new hex; --ink/--muted/--grid/--knock are already remapped by .ai-box */
+.ai-box .fig, .cluck .fig, .ai-box .vw { --fig-ink-2: #cac4be; --fig-ink-3: #a8a29c; --fig-muted-2: #978c7f; --fig-muted-3: #877c71; --fig-c1-2: #d88336; --fig-c1-3: #b26d2e; --fig-c2-2: #d8baa2; --fig-c2-3: #b29a86; --fig-c3-2: #d39965; --fig-c3-3: #a97b52; --fig-ok-2: #44c092; --fig-ok-3: #3b9c77; --fig-bad-2: #de5568; --fig-bad-3: #d45164; --fig-mark-2: #d5ac7c; --fig-mark-3: #ae8c65; --fig-sky-2: #539ed9; --fig-sky-3: #4783b2; --fig-amber-2: #d8b237; --fig-amber-3: #b0912f; --fig-orange-2: #cc7536; --fig-orange-3: #b86a31; --fig-violet-2: #8872e7; --fig-violet-3: #826ddc; --fig-pink-2: #d66fc1; --fig-pink-3: #b760a3; --fig-cyan-2: #2ab3bd; --fig-cyan-3: #269096; --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); --bg: var(--help-sheet); }
+/* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
+.cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.cl::before { content: ""; position: absolute; inset: 0 0 auto; height: min(220px, 100%); pointer-events: none; opacity: .6; transition: opacity .9s ease-out;   /* ref 1's ember light, top only */
+  background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
+.cl:has(.wrun)::before, .cl.wbusy::before { opacity: 1; }                   /* brighter while Cluck thinks and types */
+@media (prefers-reduced-motion: no-preference) {                            /* and it breathes, subtly (Tony, Oct 5); still under reduced motion */
+  .cl:has(.wrun)::before, .cl.wbusy::before { animation: wember 2.4s ease-in-out infinite; }
+}
+@keyframes wember { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+.cl > * { position: relative; }
+.cl[hidden] { display: none; }
+html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - var(--cl-top, var(--s4)) - var(--foot, var(--s7))); }   /* the column is the sticky one; as tall as its content, at most the window below where the column starts (--cl-top, app.js layoutMT; Tony, Oct 6: no empty bottom). Past that the sheet's body scrolls and the ask field stays on screen. The foot keeps main's own bottom padding (--foot, app.js padFoot: --s7, more when the footer's box is taller), so the page is never taller than the window for it (W129 L1: no page scroll that looks like the column scrolling itself) and the ask field ends 24px above the fixed footer (#privacy / #ver, L3) */
+html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
+html.side #work.cl-on > #rot { flex: none; }
+html.side #work.cl-on > .cl { flex-grow: 1; }   /* the sheet fills the column under the videos, however tall they are (W135b: 3.5 in view made them shorter) */
+html.side.sugar #work.cl-on { min-height: calc(100dvh - var(--cl-top, 100dvh) - var(--foot, var(--s7))); }   /* BIG PLAN V1: the permanent box fills the window below its top, whatever the page measured above the bar (--pg-top is read before the box is there, the column then settles short and the page shifts at the first tap) */
+html.side #work.cl-on .rot.docked .vid { height: round(down, min(40dvh, 100dvh - 32rem, (100cqw - 3 * var(--s5)) / 3.5 * 16 / 9), 1px); }   /* a window under ~1040px with the sheet open: the videos give up height first, so his text keeps its lines (the sheet now ends 48px up, clear of the footer: W129 L3) and the bar + ask field fit at 1366x768 at 125% (L1) */
+html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
+/* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
+   squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
+html:not(.side) .cl { --cl-edge: var(--ai-line); }   /* the rim: Cluck's warm orange edge (35%), set on the sheet itself; a body-level var() froze the page's blue --edge before .ai-box could remap it (Tony, Oct 18) */
+html:not(.side) .cl { position: fixed; z-index: 45; inset: var(--cl-top, 112px) 0 0; overflow: hidden; border: 1px solid var(--cl-edge); border-bottom: 0; border-radius: 10px 10px 0 0; }
+html.cl-open body { overflow: hidden; }
+.cl-dim { display: none; }
+/* blur gate (20261013-T40, fx.js): a .glass surface blurs only on html.fx-blur, and minimally (Tony: "blur minimally").
+   html.fx-dim (weak device, reduced transparency, Save-Data, no backdrop-filter) gets a plain dim instead: no backdrop-filter at all */
+html.fx-blur .glass { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+html.fx-dim .glass { background-color: color-mix(in srgb, var(--paper) 86%, transparent); }   /* nearly opaque --paper */
+html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }   /* a tap above the sheet closes it */
+/* the phone sheet drags (app.js clDrag, sheet.mjs; Tony's CHATBOX PICK r2): a grab handle on top, the header drags too; up = full screen with the corners
+   going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
+html:not(.side) .cl { --rr: 30px; border-top-left-radius: var(--rr); border-top-right-radius: var(--rr);   /* MORE ROUND (V3 melt): 30px at the dock, 0 at full, in proportion to the drag (--pp: 0 dock, 1 full) */
+  filter: drop-shadow(0 -6px 36px color-mix(in srgb, var(--glow) calc(9% * (1 - var(--pp, 0))), transparent)); }   /* a faint, wide orange haze above the top edge (Vision Pro glass: low alpha, soft), gone at full */
+html:not(.side) .cl::before { opacity: 1; }   /* the ember top light at 100% (was 60%) */
+html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, .8); }   /* 80% at the dock, 96% at full: a hard dim, no blur */
+html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 44px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+html:not(.side) .cl-grab i { position: absolute; top: 12px; left: 50%; width: 32px; height: 4px; margin-left: -16px; border-radius: 2px; background: var(--help-muted); opacity: .7; }
+html:not(.side) .cl-grab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -4px; }
+html:not(.side) .cl-bar { padding-top: 30px; touch-action: none; cursor: grab; }   /* 22px lower: clears the 44px grab */
+html:not(.side) .cl-bd { overscroll-behavior: contain; }
+/* the ask field floats as a rectangular pill (V3 melt): 12px in from the sheet's edges, 14px corners; both relax to the full-width bar as the sheet goes full */
+html:not(.side) .cl-ft { padding: var(--s2) calc(12px * (1 - var(--pp, 0))) calc(12px * (1 - var(--pp, 0)) + env(safe-area-inset-bottom)) ; }
+html:not(.side) .cl-ft .ask { --ask-r: calc(14px * (1 - var(--pp, 0))); border-radius: calc(var(--ask-r)); }
+html.side .cl-grab { display: none; }
+html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+/* header H3a (Tony, Oct 13): 48px duck avatar, a solid green dot cut out of it by a 4px gap ring, the PEACH name at 21px, TUTOR, the X in a 10px squircle */
+.cl-bar { flex: none; display: flex; align-items: center; gap: var(--s3); width: auto; min-height: 68px; padding: var(--s2) var(--s2) var(--s2) var(--cl-in); }
+.cl-avw { position: relative; flex: none; width: 48px; height: 48px; }
+.cl-av { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--ai-tint); color: var(--help);
+  -webkit-mask: radial-gradient(circle 9px at calc(100% - 8px) calc(100% - 8px), transparent 98%, #000 100%);
+          mask: radial-gradient(circle 9px at calc(100% - 8px) calc(100% - 8px), transparent 98%, #000 100%); }
+.cl-av .ico { width: 32px; height: 32px; }
+.cl-dot { position: absolute; right: 3px; bottom: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--online); }   /* 9.9:1 on the sheet */
+.cl-title { font-size: 1.3125rem; font-weight: var(--w-em); line-height: var(--lh-title); color: var(--help-on); }
+.cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); letter-spacing: 0.05em; line-height: var(--lh-xs); }
+.cl-bar .cl-x { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 10px; background: var(--ai-tint); color: var(--ai-text); cursor: pointer; }
+.cl-bar .cl-x .ico { width: 24px; height: 24px; }
+html.side.sugar .cl-bar .cl-x { display: none; }                          /* BIG PLAN V1: desktop sugar has no close (app.js clPerm); phones and diet keep it */
+.cl-x2 { display: none; }                                                  /* B5 (Tony, Oct 18): the header bar + its X on desktop too; no corner X */
+/* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain" */
+.cl-verify { display: none; margin: var(--s2) 0 0; color: var(--help-muted); font-size: var(--t-xs); }   /* Tony: under Cluck's own text only */
+.cl:has(.wtext:not(:empty)) .cl-verify { display: block; }
+/* the thread (Tony, Oct 5: explain-column.html C1 "Discord cozy"): avatar left, name + tag + time, the text under; Cluck is a chat user */
+.cl .msg { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); margin: 0 calc(-1 * var(--s2)); padding: var(--s1) var(--s2); border-radius: 6px; }
+.cl .msg > .av { grid-row: 1 / 3; }
+html:not(.side) .cl .msg { display: block; margin: 0; padding: 0; }      /* phone: no avatar column, the text uses the whole width */
+html:not(.side) .cl .msg > .av { display: none; }
+.cl .msg > :not(.av) { grid-column: 2; min-width: 0; }
+.cl .av { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--ai-tint); color: var(--help); }
+.cl .av .ico { width: 22px; height: 22px; }
+/* the student: a --ai-ct bubble on the right, no edge */
+html .cl .msg.me { display: block; align-self: flex-end; max-width: 80%; margin: 0; padding: var(--s3) var(--s4); border-radius: 16px 16px 4px 16px; background: var(--ai-ct); }
+.cl .msg.me .md { margin: 0; color: var(--help-on); line-height: 1.4; overflow-wrap: anywhere; }
+/* "See reference solution": the original's steps, folded under Cluck's text after a miss (Tony's wording) */
+.cl-fold { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 48px; margin-top: var(--s5); padding: 0; border: 0; border-top: 1px solid var(--help-rule);
+  background: none; color: var(--ai-text); font: inherit; font-weight: var(--w-em); font-size: var(--t-sm); text-align: left; cursor: pointer; }
+.cl-fold[hidden] { display: none; }
+#clTabEP[hidden] + .cl-fold { margin-top: 0; border-top: 0; }               /* no text above it: the fold is the sheet's first line */
+.cl-fold-t { flex: 1; }
+.cl-fold-n { color: var(--help-muted); font-weight: 400; font-size: var(--t-xs); }
+.cl-fold .ico { width: 20px; height: 20px; color: var(--help-muted); transition: transform .3s ease-out; }
+.cl-fold[aria-expanded="true"] .ico { transform: rotate(180deg); }
+.cl-fold:hover .cl-fold-t { text-decoration: underline; text-decoration-color: var(--help); text-underline-offset: 4px; }
+.cl-fold:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s4) var(--s5); }
+html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
+.cl-pane[hidden] { display: none; }
+.cl-thread { display: flex; flex-direction: column; gap: 24px; margin-top: 24px; }   /* V3 compact (Tony, Oct 13): 24 between turns */
+.cl-thread:empty { display: none; }
+/* one speaker, one format (Tony, Oct 5): a reply sits on the sheet like the first answer, no card */
+.cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
+.cl-ft[hidden] { display: none; }
+/* the scroll-down hint (Tony, Oct 19, variant A; app.js clMore): more text below = .cl-bd.below. A fade over the field's top edge (STYLE.md 2.7
+   "Fades and glows": the sheet's own --sheet, 2.5rem, no taps): 12px of ramp, then solid, and the disc sits in the solid part, so it never
+   covers a line you can read (the mock's disc sat on "r = 249 m"). A 28px disc in the ask field's colour, a 44px target; no loop, no pulse */
+.cl-ft::before { content: ""; position: absolute; inset: auto 0 100%; height: 2.5rem; pointer-events: none; opacity: 0;
+  background: linear-gradient(transparent, var(--sheet) var(--s3)); }
+.cl-ft .cl-more { position: absolute; z-index: 1; left: 50%; bottom: 100%; width: 44px; height: 44px; margin: 0 0 -8px -22px; padding: 0; border: 0;
+  display: grid; place-items: center; background: none; color: var(--help-on); cursor: pointer; opacity: 0; visibility: hidden; }   /* the disc's foot on the field's 8px top gap */
+.cl-more::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--ai-pill); }
+.cl-more .ico { position: relative; width: 20px; height: 20px; }
+.cl-more:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -4px; border-radius: 50%; }
+.cl-bd.below + .cl-ft::before, .cl-bd.below + .cl-ft .cl-more { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: no-preference) { .cl-ft::before, .cl-ft .cl-more { transition: opacity .18s ease-out, visibility .18s; } }
+/* the ask field: image 3's rim, tangerine → peach → pink → sky and back; still at rest, turning while Cluck types or answers */
+.ask { display: flex; gap: var(--s2); align-items: flex-end; padding: var(--s2) var(--s2) var(--s2) var(--s5); --ask-r: 10px; border-radius: calc(var(--ask-r)); border: 1.5px solid transparent;   /* square-ish like the code box (Tony, Oct 5: only the Cluck chip stays a pill); RM3 tonal fill; the rim (the one listed --bw exception, STYLE.md 2.6) shows only while Cluck types */
+  background: var(--ai-pill) padding-box; }
+/* the rim turns on the compositor (Nov 3 prod: the old @property --wang animation repainted a conic gradient on the MAIN thread every frame, and it
+   stuttered with the caret while a reply streamed): a big square of the same gradient rotates by transform behind the field (transform animations
+   run off the main thread), a fill of the pill colour covers all but the 1.5px rim, overflow clips the square to the field */
+.cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { position: relative; overflow: hidden; isolation: isolate; }
+.cl:has(.wtext.wrun) .ask::before, .cl.wbusy .ask::before { content: ""; position: absolute; z-index: -2; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
+  translate: -50% -50%; background: conic-gradient(from 270deg, var(--help), var(--c2) 15%, var(--c3) 32%, var(--c1) 50%, var(--c3) 72%, var(--help));
+  animation: wspin 3.6s linear infinite; will-change: transform; pointer-events: none; }
+.cl:has(.wtext.wrun) .ask::after, .cl.wbusy .ask::after { content: ""; position: absolute; z-index: -1; inset: 1.5px; border-radius: calc(max(0px, var(--ask-r) - 1.5px)); background: var(--ai-pill); pointer-events: none; }
+@keyframes wspin { to { transform: rotate(360deg); } }
+.cl-st { display: flex; align-items: center; gap: var(--s3); margin: 0; color: var(--muted); font-size: var(--t-xs); line-height: 1.4; }   /* W2: the status line between turns, no box */
+.cl-st > i { flex: 1; height: 0; border-top: 1px solid var(--line); }
+.cl-st-b { flex: 0 1 auto; min-width: 0; max-width: 85%; white-space: nowrap; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: center; overflow-wrap: anywhere; }
+button.cl-st-b { cursor: pointer; min-height: 32px; }
+button.cl-st-b:hover { color: var(--ink); }
+button.cl-st-b:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.ask .ff { flex: 1; min-height: var(--btn); padding: 0; border: 0; background: none; box-shadow: none; }
+.ask .ff:focus-within { box-shadow: none; }
+.ask:focus-within { box-shadow: inset 0 0 0 1px var(--help); }
+.ask .ff { height: auto; }                                             /* G: the box grows with its textarea */
+.ask .ff textarea {                                                      /* talk, not an answer: the sans, not the answers' mono */
+  --pv: calc((var(--btn) - 1.4em) / 2);                                  /* one line = the old field's --btn height */
+  flex: 1 1 auto; display: block; width: 100%; min-width: 0; box-sizing: border-box; height: var(--btn); max-height: min(calc(7em + var(--btn)), 40vh);   /* 6 lines of 1.4em */
+  margin: 0; padding: var(--pv) var(--s2) var(--pv) 0; border: 0; background: transparent; resize: none; overflow-x: hidden; overflow-y: hidden;
+  font-family: inherit; font-size: var(--t-md); font-weight: 400; line-height: 1.4; color: var(--ai-text); caret-color: var(--focus);
+  white-space: pre-wrap; overflow-wrap: anywhere; transition: none; }
+.ask .ff textarea:focus { outline: none; }
+.ask .ff textarea::placeholder { color: var(--help-muted); opacity: 1; }
+.ask .left { flex: none; line-height: var(--btn); font-size: var(--t-xs); font-weight: var(--w-em); color: var(--help-on); white-space: nowrap; }
+.ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 8px; background: var(--help); color: var(--help-ink); cursor: pointer; }
+.ask .send .ico { width: 26px; height: 26px; }
+.ask .send:hover { filter: brightness(1.08); }
+.ask .send:disabled { opacity: .45; cursor: default; filter: none; }
+/* the Dock chatbar (Tony, Oct 5: explain-column.html bar 2): a full-bleed band at the card's foot, Discord's input; a tonal send (9.97:1) */
+.cl-ft { padding: var(--s2) 0 0; }
+.cl-ft .ask { padding: var(--s2) var(--s2) var(--s2) var(--cl-in); --ask-r: 0px; border-radius: calc(var(--ask-r)); }
+html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radius: var(--ask-r); border-bottom-right-radius: var(--ask-r); }
+.cl-ft .ask .send { width: 44px; height: 44px; background: var(--ai-ct); color: var(--help-on); }
+.cl-ft .ask .send .ico { width: 22px; height: 22px; }
+.cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
+.cl .done-row p { margin: 0; color: var(--help-muted); font-size: var(--t-sm); }
+/* Cluck's text, straight on the sheet (image 3: no box around it) */
+.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
+.wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
+.wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
+.wtext .wcode { font-family: var(--mono); font-size: .9em; background: var(--help-fill); color: var(--help-on); padding: 0 var(--s1); border-radius: 4px; }   /* `code` in Cluck's reply */
+#cluck .vw-foot .btn { background: none; color: var(--help); border-color: var(--help-line); }   /* a stepper's Back / Next in Cluck: the chat's --help family */
+#cluck .vw-foot .btn:hover { background: var(--help-fill); }
+#cluck .vw-foot .btn[disabled] { color: var(--help-muted); border-color: var(--help-rule); background: none; cursor: default; }
+.wtext .wstatic .vw-static { display: block; width: 100%; max-width: 420px; height: auto; }   /* W113: a view's static image (app.js viewImage) */
+#wish.gone { visibility: hidden; }                          /* desktop with the sheet open: no chip, no peek, their room stays (app.js wishPaint .cl-room, W129 L4) */
+.cl-room { flex: none; }
+.cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
+.wtext.wreply { cursor: auto; }
+.wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
+.wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
+.wtext .wtbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }   /* a GFM pipe table in a reply: the .vw-tb look (views.css); y hidden, the cell padding keeps KaTeX ink inside */
+.wtext .wtbl table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); line-height: var(--lh-ui); font-variant-numeric: tabular-nums; }
+.wtext .wtbl th { padding: var(--s1) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--edge); color: var(--muted); font-weight: var(--w-em); text-align: left; }
+.wtext .wtbl td { padding: var(--s2) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--line); vertical-align: top; min-width: 4ch; }
+.wtext .wtbl tr:last-child td { border-bottom: 0; }
+.wtext .wtug, .wtext .wflip { max-width: none; }   /* a Tug (tug.mjs, styled in views.css) takes the full width */
+.wtext b { font-weight: var(--w-em); color: var(--ai-text); }
+.wtext .wmath { margin: 20px 0; text-align: center; overflow-x: auto; overflow-y: hidden; }   /* NO NESTED BOX (Tony, Oct 13): no well, no padding; V3: 20 around an equation */
+.wtext .weq + .weq { margin-top: 12px; }                                   /* V3: 12 between stacked equations */
+.wtext .wmath.wans { background: none; border-color: transparent; padding: 0; }
+.wtext .katex:has(.fbox) { display: inline-block; padding: 0 var(--s1); border-radius: 6px; background: var(--ai-ct); color: var(--help-on); }   /* the boxed answer (RM3): the container pair */
+.wtext .katex .fbox { border-color: transparent; }
+.wtext .wmath .katex-display { margin: 0; }   /* the callout spaces its lines (.weq + .weq); KaTeX's 1em on top of that leaves holes */
+.wtext .wgap { height: var(--s1); }   /* + the next line's s2 = s3, a step's gap */
+.wtext .wlist { margin: var(--s2) 0; padding-left: var(--s5); }
+.wtext .wlist li + li { margin-top: var(--s1); }
+.wtext .wl + .wl:not(.wgap, .wmath, .wlist, .wstep) { margin-top: 12px; }   /* V3: 12 between paragraphs */   /* sentences get a breath between them (not steps: this outranked .wstep) */
+.wtext > .wl:first-child { margin-top: 0; }
+.wtext .wretry { min-height: 2.75rem; padding: 0 var(--s3); margin-left: var(--s1); font: inherit; font-weight: 600; color: var(--ai-text); background: none; border: 1px solid currentColor; border-radius: 10px; cursor: pointer; }   /* a failed explain: a real 44px tap target in the sheet */
+.wtext .wsbody > :last-child, .wtext > .wl:last-child { margin-bottom: 0; }   /* a step's last list/callout margin stays inside the grid item and doubled the step gap */
+/* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
+.wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
+.wtext .wstep:has(+ .wstep)::before { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--help); }
+.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
+.wtext .wstitle { font-weight: var(--w-em); color: var(--ai-text); }
+.wtext .wssub { font-size: var(--t-xs); color: var(--help-muted); }
+.wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--help-rule); }
+.wcaret { display: inline-block; width: .5em; height: 1.2em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
+@keyframes wblink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask, .cl .ask::before { animation: none !important; } }
+
+/* ---------- scratchpad + copy ---------- */
+/* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
+.work { margin-top: var(--s1); }
+.work .xb { margin-top: 0; }
+.freeze:has(.more:not([hidden])) ~ .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
+.xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: var(--w-em); }
+.xb-label .ico { width: 1.25rem; height: 1.25rem; }
+/* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
+.xb-save { margin-left: var(--s1); font-size: var(--t-xs); font-weight: 400; color: var(--hint); }
+.xb-save.saving {
+  color: var(--ink);
+  -webkit-mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
+  mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
+  animation: xb-sweep 2.1s linear infinite;
+}
+@keyframes xb-sweep { from { -webkit-mask-position: 100% 0; mask-position: 100% 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .xb-save.saving { animation: none; -webkit-mask: none; mask: none; color: var(--hint); } }
+/* Tony: limit line length and wrap. ch is measured in the textarea's own font. */
+/* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
+   + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
+   stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
+.xb-field { position: relative; font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
+.xb-field textarea { max-width: none; padding-bottom: calc(var(--btn) + 8px); transition: none; }
+/* free padding 30px: last line (25.6px at 16px/1.6) + 30px >= button (48) + inset (6), so only the LAST line can reach the button */
+/* focus: the field rule (explain-box.css), one 2px edge, no outer ring (Tony: two glows, "ew") */
+.xb-field textarea:focus, .xb-field textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--focus); }
+.xb-field textarea.xb-free { padding-bottom: 1.875rem; }
+.xb-copy { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
+#copy.done { color: var(--correct); border-color: var(--correct); }
+/* C9 (Tony, Oct 5): the joke stays, in the body font; typed notes keep the mono */
+.xb-field textarea::placeholder { font-family: var(--font); }
+
+@media (max-width: 34rem) {
+  :root { --gut: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)); }
+  main { padding-top: var(--s4); }
+  .p { padding: var(--s3) var(--s4); }
+  :where(.qnav-on.dock-bottom) main { padding-top: var(--s1); }   /* list row → question box = question box → answers (12px; Tony, Oct 3) */
+}
+/* ---------- top bar steps away while the scratchpad has focus (docs/design/SWAP.md) ----------
+   Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
+   its space, so nothing below it moves under the finger. Swap's toggle is in <main>, so it is never inside the hidden bar.
+   Not on desktop: there the bar holds the entry box, which a mouse has to reach while the scratchpad still has focus. */
+.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .3s ease, opacity .3s ease, visibility 0s; }
+html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
+  transform: translateY(-100%); opacity: 0; visibility: hidden; pointer-events: none;
+  transition: transform .3s ease, opacity .3s ease, visibility 0s .3s;
+}
+
+/* ---------- Swap: keyboard up = one pane above the keyboard (docs/design/SWAP.md) ----------
+   JS (layoutDock/layoutSwap in app.js) adds html.swap while the phone keyboard is up and a field in <main> has focus, then
+   html.swap-problem or html.swap-scratch. <main> becomes a fixed stage exactly as tall as the visible viewport (--vv-h), at its top
+   (--kb-top): iOS keeps fixed elements on the layout viewport, so both come from visualViewport. */
+.stage { display: contents; }
+.btn-tgl { width: auto; display: inline-flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); }
+.btn-tgl::before {                       /* the active side's pill */
+  content: ""; position: absolute; top: 4px; bottom: 4px; left: 6px; width: 36px; border-radius: 6px; background: var(--raised);
+  transition: transform .33s ease;
+}
+.btn-tgl:hover { background: var(--sheet); }
+.btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s ease, transform .33s ease; }
+.btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--action); }
+.btn-tgl[data-pane="scratch"]::before { transform: translateX(36px); }   /* one icon (24px) + the gap */
+
+html.swap { overflow: hidden; overscroll-behavior: none; }
+html.swap body { min-height: var(--swap-doc-h, 100dvh); }            /* keeps the page's scroll position while <main> leaves the flow */
+html.swap body::before { content: ""; position: fixed; z-index: 14; left: 0; right: 0; top: var(--kb-top, 0px); height: var(--vv-h, 100dvh); background: var(--paper); }
+html.swap main {
+  position: fixed; z-index: 15; top: var(--kb-top, 0px); left: 0; right: 0; width: min(100%, 52rem); margin: 0 auto;
+  height: var(--vv-h, 100dvh); display: flex; flex-direction: column; gap: var(--s2);
+  padding: max(var(--s2), env(safe-area-inset-top)) var(--gut) var(--s2);
+}
+html.swap #sentinel { display: none; }
+html.swap #swap { flex: none; align-self: flex-start; }
+/* both panes share one grid cell; the one not shown stays laid out (and focusable) but see-through and untouchable, so focus can move into it before it appears */
+html.swap .stage { flex: 1 1 0; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); position: relative; overflow: clip; padding-bottom: 6px; }
+html.swap .stage > .freeze, html.swap .stage > .work { grid-area: 1 / 1; min-width: 0; min-height: 0; }
+html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) ~ .work */
+html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
+html.swap .more { display: none; }
+/* the card: problem + how line + answer, one surface */
+html.swap .freeze-in { background: var(--qbox); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
+html.swap .p, html.swap .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
+html.swap .q, html.swap .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
+html.swap .fb { margin: 0; padding: var(--s2) var(--s4) 0; }
+html.swap .fb:empty { display: none; }
+html.swap .xb { margin: 0; }
+html.swap .xb-field { max-width: none; }
+html.swap .xb textarea { min-height: calc(3 * 1.6em + 0.75rem + 1.75rem + 4px); }   /* 3 lines above the keyboard */
+html.swap #xb > .xb-label, html.swap.swap-scratch #q > :not(.how), html.swap.swap-scratch #fb {   /* visually hidden, still there for screen readers and focus */
+  position: absolute; width: 1px; height: 1px; min-height: 0; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* PROBLEM pane: the card fills the stage; the question scrolls inside it, from its start; the how line and the answer are pinned at its bottom */
+html.swap-problem .freeze { align-self: stretch; z-index: 2; }
+html.swap-problem .freeze-in { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+html.swap-problem #problem { flex: 1 1 auto; min-height: 3rem; overflow-y: auto; overscroll-behavior: contain; }
+html.swap-problem #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; }
+html.swap-problem #q { order: 3; flex: 0 0 auto; max-height: 80%; overflow-y: auto; overscroll-behavior: contain; }
+html.swap-problem #fcard { order: 4; flex: none; margin: var(--s2) var(--s4) var(--s4); }   /* v49 img2: no order put it between the question and the answer, on the frame */
+html.swap .fcard { --fc-above: var(--qbox); }                                     /* the notch's top half is the pane, not the page (a black block on --qbox) */
+html.swap-problem .work { align-self: end; z-index: 1; opacity: 0; pointer-events: none; }
+html.swap-problem .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
+html.swap-problem .freeze.clipped #problem { -webkit-mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); }
+/* SCRATCHPAD pane: a peek of the card at the top (its start, never scrolled to the end; the whole question when it fits, else clamped
+   with its own scroll and a fade), the scratchpad anchored to the bottom and growing upward */
+html.swap-scratch .freeze { align-self: start; z-index: 2; }
+html.swap-scratch .freeze.no-peek { display: none; }
+html.swap-scratch .freeze-in { max-height: var(--peek-max, 40%); overflow-y: auto; }
+html.swap-scratch .how { margin: 0; }
+html.swap-scratch .q { padding-top: 0; }
+html.swap-scratch .work { align-self: end; z-index: 1; }
+html.swap-scratch #scratch { min-height: var(--pad-max, auto); }   /* the box fills the room under the peek (layoutSwap): writing space right up to the question */
+/* Tony (Sep 29): text runs to the bottom of the box. A textarea can't wrap around the corner, so in this pane Copy leaves the box
+   for the toggle row (top right, same 48px buttons): no band is reserved and no line can reach a button. <main> is the containing block. */
+html.swap-scratch .stage, html.swap-scratch .xb-field { position: static; }
+html.swap-scratch .xb-copy { top: max(var(--s2), env(safe-area-inset-top)); bottom: auto; right: var(--gut); }
+html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-free { padding-bottom: 0.75rem; }
+
+/* ---------- keyboard up: the pad peek (PROBLEM pane), the fix word's caption ---------- */
+/* one line pinned just above the keyboard: the pencil and the pad's last line (mono, dimmed, ellipsis). A glimpse, not a button. */
+.pad-peek { display: none; }
+html.swap-problem .pad-peek {
+  display: flex; flex: none; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s1); margin-top: calc(-1 * var(--s1));
+  color: var(--hint); font: 400 var(--t-sm)/1.3 var(--font); font-variant-numeric: tabular-nums; cursor: pointer; touch-action: manipulation;
+}
+html.swap-problem .pad-peek .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.pad-peek span { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+html.swap-problem .stage { padding-bottom: 0; }
+/* keyboard up: no expand icon, no pill, no toggle; switching is closing the keyboard, tapping the question, or the pad peek */
+html.kbup:not(.mt) #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !important; }   /* the pad page keeps q | a with the keyboard up (Tony, Oct 3); it never takes focus */
+#swap { display: none !important; }
+.fix-how { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); color: var(--muted); font-size: var(--t-sm); line-height: 1.35; }
+
+/* ---------- multitask (docs/design/MULTITASK.md) ---------- */
+/* the pad page's tool row (round 3d, variant 3), inside the pad's box: q | a at the left; collapse, Copy at the right (Copy only with text: collapse takes its spot) */
+.xb-field .mt-mode, .xb-field .mt-exp { position: absolute; bottom: 6px; color: var(--ink); }
+.xb-field .mt-mode { left: 6px; }
+.xb-field .mt-exp { right: calc(12px + var(--btn) + var(--xb-sb, 0px)); }
+.xb-field:has(#copy[hidden]) .mt-exp { right: calc(6px + var(--xb-sb, 0px)); }
+.xb-field .mt-exp .ico { width: var(--ico); height: var(--ico); }
+.mt-mode[data-pane="problem"] .t-doc, .mt-mode[data-pane="scratch"] .t-pen { color: var(--action); }
+.sash { display: none; }
+.pstrip { display: none; }
+
+/* phone: the pad page (variant 9). <main> is the stage over the visible area (as Swap's): problem tile, the handle in a 16px gap, the pad */
+html.mt { overflow: hidden; overscroll-behavior: none; }
+html.mt body { min-height: var(--swap-doc-h, 100dvh); }
+html.mt body::before { content: ""; position: fixed; z-index: 14; left: 0; right: 0; top: var(--kb-top, 0px); height: var(--vv-h, 100dvh); background: var(--paper); }
+html.mt main {
+  position: fixed; z-index: 15; top: var(--kb-top, 0px); left: 0; right: 0; width: min(100%, 52rem); margin: 0 auto;
+  height: var(--vv-h, 100dvh); display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: calc(var(--r, .5) * (100% - var(--s3))) var(--s3) minmax(0, 1fr);
+  padding: max(var(--s2), env(safe-area-inset-top)) var(--s2) max(var(--s2), env(safe-area-inset-bottom));   /* the tool row stays above the home indicator */
+}
+html.mt.mt-fit main { grid-template-rows: var(--tile-h, 33%) var(--s3) minmax(0, 1fr); }   /* the tile hugs its content (layoutMT) */
+html.mt.mt-r0 main { grid-template-rows: auto var(--s3) minmax(0, 1fr); }
+html.mt #sentinel, html.mt .pad-peek, html.mt .more { display: none; }
+html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-height: 0; }
+html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--qbox); border-radius: 10px; }
+html.mt.mt-r0 .freeze-in { max-height: calc(var(--vv-h, 100dvh) * .45); }
+html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
+html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
+html.mt #fb:empty { display: none; }
+html.mt #q { order: 3; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+html.mt .p, html.mt .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s6); }   /* bottom room: the end of a scroll lands with air, not on the edge (Tony, Oct 3: KISS over a bounce) */
+html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s6); }
+html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
+html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }
+html.mt .xb { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--s2); margin: 0; }
+html.mt .xb-label .xb-name, html.mt #xbName, html.mt .xb-label > .ico { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+html.mt .xb-label { display: contents; }                                         /* no header row: the tool row is in the pad */
+html.mt .xb { position: relative; }
+html.mt #xbSave { position: absolute; z-index: 1; left: calc(6px + 88px + var(--s3)); bottom: calc(6px + (var(--btn) - 1.2em) / 2); margin: 0; }   /* saving / saved, in the tool row right of q | a */
+html.mt .xb-field { flex: 1 1 auto; min-height: 0; max-width: none; }
+html.mt .xb-field textarea, html.mt .xb-field textarea.xb-free { padding-bottom: calc(var(--btn) + var(--s4)); }   /* the tool row's band, always */
+html.mt .xb-field::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: calc(var(--btn) + 12px); border-top: 1px solid var(--line); pointer-events: none; }
+html.mt #scratch { min-height: var(--pad-max, 8rem); }
+
+/* round 3b: the tile shows the problem (q) or the answer control (a), never both */
+html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
+html.mt.mt-a #problem { display: none; }
+.mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-weight: var(--w-em);
+  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .33s ease; }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
+/* phones: the pad is off the page until the Scratchpad button opens the pad page */
+html.pad-off #work, html.pad-off #sash { display: none; }
+html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
+html.pad-off .freeze-in { max-height: none; overflow: visible; }
+html.pad-off .more { display: none; }
+html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + var(--s4)); }   /* the dock bar only: on the left the Scratchpad button may sit over the last row; it drags away (Tony, Oct 5: "remove the bottom gap") */
+html.fab-on:has(#padFab:not(.left)) main { padding-bottom: calc(var(--dock-h, 0px) + 56px + var(--s4)); }   /* bottom right (Tony, Oct 5 ~10:0x): room at the page end so Check scrolls clear of it */
+.pad-fab {
+  position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); bottom: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
+  display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 10px; background: var(--raised); color: var(--ink);
+  box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+.pad-fab.left { right: auto; left: max(var(--s4), env(safe-area-inset-left)); }
+.pad-fab[hidden], html.bar-open .pad-fab { display: none; }   /* the revealed code bar owns the bottom (its buttons stay reachable) */
+.pad-fab .ico { width: var(--ico); height: var(--ico); }
+.pad-fab.dragging { box-shadow: var(--shadow-4); cursor: grabbing; }
+.pad-fab:hover { background: var(--sheet); }
+.pad-fab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .mt-mode .qa-l { transition: none; } }
+
+/* the handle: a 36x4 --edge pill in the gap, touched big (88x44 phone, 48 wide desktop); --muted on hover and while dragging */
+html.mt .sash, html.side .sash { display: block; position: relative; touch-action: none; cursor: row-resize; outline: none; }
+.sash::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
+.sash::after { content: ""; position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; }
+.sash:hover::before, html.mt-drag .sash::before { background: var(--muted); }
+html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   /* thin bar (round 3d) */
+.sash:focus-visible::before { outline: var(--ring) solid var(--focus); outline-offset: 3px; }
+
+/* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
+html.side main {
+  max-width: min(100%, calc(var(--col) * 1.7)); display: grid; align-items: start;
+  grid-template-columns: calc(var(--r, .5) * (100% - var(--s6))) var(--s6) minmax(0, 1fr);   /* 32px between the halves (Tony, Oct 5: 16 read cramped) */
+}
+html.side.mt-r0 main { grid-template-columns: 52px var(--s6) minmax(0, 1fr); }
+/* the bar + the page sit snug in the middle of the window, up-down too (Tony, Oct 6 sketch: "snug in the center"). Auto margins
+   split the spare height above the bar and below the page; a page taller than the window gets none, so it starts at the top as
+   before. Every other body child is fixed or absolute. width: 100%: an auto cross margin would shrink the item to its content */
+html.side:not(.start) body { display: flex; flex-direction: column; }
+html.side:not(.start):not(.dock-bottom) body > .top { width: 100%; margin-top: auto; }   /* beats nav.css .qnav-on:not(.dock-bottom):not(.start) .top { margin: 0 auto } */
+html.side:not(.start) body > main { width: 100%; margin-bottom: auto; }
+html.side #sentinel { grid-column: 1 / -1; }
+html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
+html.side .freeze-in { max-height: none; overflow: visible; }   /* one scroller on desktop: the page (Tony, Oct 18: the box trapped the wheel; a contain scroller capped below the fold) */
+html.side #work { position: sticky; top: var(--s4); align-self: start; min-height: calc(100dvh - var(--cl-top, 100dvh) - var(--foot, var(--s7)) - var(--pg-top, 0px)); box-sizing: border-box; }   /* the notes pad stays in view while the page scrolls the question. At least the window below its top (W129 L4): the body centres the page ("snug in the center", below), so a column that shrank (the brainrot fold, notes capped at 48rem, a short Cluck reply) re-centred the whole page under the student. Less the room above the bar (--pg-top, app.js pageTop): a centred page keeps as much room below it as above */
+html.side:not(.dock-bottom) .freeze, html.side:not(.dock-bottom) .freeze.stuck, html.side:not(.dock-bottom) #work { top: calc(var(--top-h, 0px) + var(--s4)); }   /* under the pinned desktop bar */
+html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
+html.side .more { display: none; }
+html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; cursor: col-resize; }
+html.side .sash::before { position: sticky; display: block; top: calc(50dvh - 24px);   /* the grip sits mid-window (Tony, Oct 18: the 16rem cap is gone) */ left: auto; width: 4px; height: 48px; margin: 0 auto; background: var(--muted); z-index: 1; }
+html.side .sash:hover::before, html.side.mt-drag .sash::before { background: var(--ink); }
+html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; box-sizing: border-box; background: none; }   /* the 48px touch area only: no rail (Tony, Oct 18) */
+html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
+html.side .xb-label { margin-bottom: var(--s2); }
+@media (min-width: 720px) { html.sugar #xb { visibility: hidden; } }   /* desktop sugar has no notes box, from the first paint (Tony Nov 2: static on html.sugar, not padRule layer toggling, so it neither leaks before a layer nor flips back). Same 720 as app.js sideMQ; diet and phones keep it. visibility, not display:none: the box height is the column floor the page is centred on (pageTop, W129 L4) */
+html:not(.side).no-pad .pad-peek { display: none; }   /* app.js padRule: phone sugar has no pad, so no peek of it above the keyboard */
+.q-label { display: none; }
+html.side .freeze .q-label { display: flex; }                                       /* side by side only: the boxes start level */
+html.side.mt-r0 .freeze .q-label, html.mt .freeze .q-label { display: none; }   /* the pad page's .xb-label rule (display: contents) must not show it */
+html.side #scratch { min-height: min(var(--pad-max, 60vh), 48rem); }   /* fills to the window bottom, but never a 3000-px box when zoomed far out */
+html.side.mt-r0 .freeze-in { display: none; }
+html.side .pstrip {
+  display: grid; place-items: center; width: 52px; min-height: min(60vh, 32rem); padding: var(--s3) 0; border: 0; border-radius: 10px;
+  background: var(--qbox); color: var(--muted); font-size: var(--t-sm); font-weight: var(--w-em);
+}
+html.side .pstrip[hidden] { display: none; }
+html.side .pstrip:hover { background: var(--raised); color: var(--ink); }
+html.side .pstrip span { writing-mode: vertical-rl; }
+/* Cluck's column dismissed (desktop; docs/design/DISMISS.md, Tony Oct 20, mock-dismiss variant A + B4): one centred column, the question
+   one ladder step up (--t-md to --t-lg), no "Question" label (nothing sits beside it). app.js clGoneSet / clBackSync */
+html.side.cl-gone main { grid-template-columns: minmax(0, 1fr); }
+html.side.cl-gone .freeze, html.side.cl-gone .freeze.stuck { width: min(100%, calc(var(--col) * 0.85)); margin: 0 auto; }
+html.side.cl-gone .sash, html.side.cl-gone #work, html.side.cl-gone .pstrip, html.side.cl-gone .freeze .q-label { display: none; }
+html.side.cl-gone #problem, html.side.cl-gone #q { font-size: var(--t-lg); }
+html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
+/* B4: the way back, a hairline row under the verdict (the .cl-fold shape, no box); H: its line rotates, "Show him" stays */
+.cl-back { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 48px; margin-top: var(--s4); padding: 0; border: 0; border-top: 1px solid var(--line);
+  background: none; color: var(--help-on); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); text-align: left; cursor: pointer; }
+.cl-back[hidden] { display: none; }
+.cl-back > .ico { color: var(--help); }
+.cl-back .hk { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.cl-back .hk-t { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--help-muted); font-weight: 400; }
+.cl-back .hk-t.roll { animation: hk-roll .45s ease both; }
+@keyframes hk-roll { from { transform: translateY(60%); opacity: 0; } to { transform: none; opacity: 1; } }
+.cl-back .hk-go { flex: none; }
+.cl-back:hover .hk-go { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .cl-back .hk-t.roll { animation: none; } }
+
+/* ---------- desktop: wide window + fine pointer (the complement of app.js dockMQ: the top entry bar, not the phone dock) ----------
+   Bigger: the column, the type scale and the one button size grow together (tokens only, so every rule above follows).
+   The type steps up with the window height too: the frozen layer (problem + answer) may take 60% of a 720-960px window (app.js
+   layoutFreeze), so a 768px-tall window gets a small step and the answer box stays uncut.
+   No top offset over a question (C13, Tony Oct 5: ~90px of nothing at 1920); the start page centres its entry itself (html.start). */
+@media (min-width: 700.02px) and (pointer: fine) {
+  :root {
+    --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --t-lg: 1.3125rem; --t-xl: 2.25rem;
+    --btn: 50px; --ico: 25px;
+    --col: clamp(52rem, 42.3rem + 21.4vw, 68rem);     /* 1024: 56rem, 1366: 60.5rem, 1920: 68rem (gutters included) */
+  }
+  .xb-field textarea { font-size: var(--t-sm); }       /* explain-box.css sets it in rem, not inherited */
+}
+@media (min-width: 700.02px) and (min-height: 56rem) and (pointer: fine) {
+  :root { --t-md: 1.1875rem; --t-sm: 1.0625rem; --btn: 52px; --ico: 26px; }
+}
+@media (min-width: 100rem) and (min-height: 56rem) and (pointer: fine) {
+  :root { --t-md: 1.3125rem; --t-sm: 1.1875rem; --t-xs: 1rem; --t-lg: 1.375rem; --btn: 56px; --ico: 28px; }
+}
+
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: ease; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- the note (#toast: toast.js stemToast.note, app.js toast(); rules: docs/design/STYLE.md §3 Toast; todo 112) ----------
+   The page's own paper, the part divider's 1px --line hairline as its edge (--shadow-1 only: Impeccable flags hairline + wide shadow); text in the part prompt's style (400, --t-md).
+   No accent colour, no icon. JS sets left/top from the wrong box; --px = the verdict mark's x (the caret). On MC (.row) it lies
+   exactly on the struck-out choice, no caret. 200ms ease-out, 8px; reduced motion = fade only (app.css turns transitions off, so
+   these are animations). Sharp words (toast.css, docs/design/TOAST.md round 5): fill `backwards`, never `both` (a held identity matrix keeps the
+   card on its own layer and Windows paints the words without subpixel AA); toast.js puts it on whole px. */
+#toast {
+  position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
+  display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
+  background: var(--paper); color: var(--ink); border: var(--bw) solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);   /* --bw like every box: when picks conflict, the more unified one wins (Tony, Oct 3) */
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: pretty; cursor: pointer;   /* not balance: balance halves the lines but the box keeps the unbalanced width (v49: "4 words b4 newline") */
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
+}
+#toast.on { visibility: visible; animation: toast-in .3s ease-out backwards; }
+#toast::before {
+  content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
+}
+#toast.up::before { top: auto; bottom: -8px; transform: rotate(225deg); }                         /* above its anchor: caret on the bottom edge */
+#toast.row { min-height: 0; padding: var(--s2) var(--s3); }                                       /* MC: on the struck text, caret left at the X */
+#toast.row::before { top: calc(50% - 7px); left: -8px; transform: rotate(-45deg); }
+/* B (Tony, Oct 28: HUD tips, the pad-mode note): the words left, then a 44px close button centred on the right, toast.css's .stoast-x look */
+#toast.has-x { justify-content: space-between; gap: var(--s2); padding-right: 4px; text-align: left; }
+#toast .toast-x {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center; margin: -8px 0; padding: 0; border: 0; border-radius: 8px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+#toast .toast-x svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+#toast .toast-x:hover { color: var(--ink); }
+#toast .toast-x:focus-visible { outline-offset: -3px; }   /* the global :focus-visible ring, drawn inside the 44px box */
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes toast-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #toast.on { animation: toast-fade .2s linear backwards; } }
+/* "New version ready" (offline.js): stays until tapped; top centre, a --raised button */
+#updateBar {
+  position: fixed; z-index: 60; top: max(var(--s3), env(safe-area-inset-top)); left: 0; right: 0; margin: 0 auto;   /* not translate: toast-in animates transform */
+  width: max-content; max-width: calc(100vw - 2 * var(--gut)); min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
+  background: var(--raised); color: var(--ink); border: var(--bw) solid var(--muted); border-radius: 10px; box-shadow: var(--shadow-1);
+  font: inherit; font-size: var(--t-md); font-weight: var(--w-em); line-height: var(--lh); text-align: center; cursor: pointer;
+  touch-action: manipulation; animation: toast-in .3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) { #updateBar { animation: toast-fade .2s linear both; } }
+/* which deploy this is (offline.js showVer: the PR, tools/build_and_ship/version.sh). Quiet chrome: smallest type, the lowest text colour (--hint, 5.7:1 on --paper), never in the way */
+#ver { position: fixed; z-index: 1; right: max(var(--s2), env(safe-area-inset-right)); bottom: max(var(--s1), env(safe-area-inset-bottom));
+  color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
+#ver::after { content: attr(data-v); }
+@media (hover: hover) and (pointer: fine) { html.side #privacy { min-height: 24px; } }   /* desktop + mouse: the link's box fits the 24px foot, off the notes pad's and Cluck's corner (Tony, Oct 19) */
+.dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
+
+.cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
+
+/* ---------- Cluck's duck + sky (peek.js window.stemDuck; T45 idle peek, docs/design/IDLE-PEEK.md) ----------
+   One duck, one sky, for every Cluck rise. V3 "sky first" (Tony, Oct 15): the sky warms slowly (0.6-4.4 s), the duck peeks, eyes only
+   (4.6 s), holds, comes up (6.2-6.8 s), then the line. Each rise replays the same run; down = duck out 300 ms, sky out 400 ms. The sun core
+   sits under the duck (--sun-x from peek.js); the sky fades out past its column's edges, never a hard cut. Colours: --help only, mixed with
+   transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
+.ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
+.ck-rise[hidden] { display: none; }
+/* the dim (Tony, todo 169): the page behind the bottom third eases darker so the sky + duck read; --scrim at an alpha only, under the sky (::before paints first). Same run + fade-out as the sky; opacity only, so reduced motion needs no variant. */
+.ck-rise::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 33.34%; pointer-events: none; opacity: 0;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--scrim) 45%, transparent)); }
+.ck-rise.on::before { animation: ck-dim var(--d-sky) both; }
+.ck-rise.out::before { opacity: 0; animation: none; transition: opacity .6s ease-in; }
+@keyframes ck-dim { 0%, 8.3% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
+html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
+.ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
+.ck-sky i { position: absolute; inset: 0 0 -16px; opacity: 0; }
+.ck-sky .l1 { background: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, color-mix(in srgb, var(--help) 6%, transparent) 0%, color-mix(in srgb, var(--help) 2.5%, transparent) 50%, transparent 75%); }
+.ck-sky .l2 { background: radial-gradient(70% 60% at var(--sun-x, 50%) 108%, color-mix(in srgb, var(--help) 18%, transparent) 0%, color-mix(in srgb, var(--help) 7%, transparent) 45%, transparent 72%); }
+.ck-sky .l3 { background: radial-gradient(38% 30% at var(--sun-x, 50%) 104%, color-mix(in srgb, var(--help) 14%, transparent) 0%, color-mix(in srgb, var(--help) 5%, transparent) 55%, transparent 80%); }
+/* the duck: a button, a clip window; the art grows from the window's bottom edge. 44px+ target at the peek (eyes need ~42 / 52px: AMA 12) */
+.ck-peek { position: absolute; left: calc(var(--cx, 50%) - var(--dw) / 2); bottom: env(safe-area-inset-bottom, 0px); width: var(--dw); height: var(--vis);
+  overflow: hidden; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.ck-peek:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.ck-duck { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 122 / 128; transform: translateY(var(--vis));
+  background: url(../../rewards/icons/duck-ask-hmm-128.webp) center / contain no-repeat; pointer-events: none;
+  filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
+.ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s2)); transform: translateX(-50%); margin: 0;
+  color: var(--help-muted); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.3; white-space: nowrap; opacity: 0; }
+/* J6 seen: the "felt hollow" tap, a 28px target (24 min) beside the duck, a hollow ring; it shows with the line (same keyframes as .ck-say) */
+.ck-hollow { position: absolute; left: calc(var(--cx, 50%) + var(--dw) / 2 + 4px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); width: 28px; height: 28px;
+  padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; opacity: 0; }
+.ck-hollow[hidden] { display: none; }
+.ck-hollow::before { content: ""; position: absolute; inset: 8px; border: var(--bw) solid var(--help-muted); border-radius: 50%; }
+.ck-hollow:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.ck-rise.on .ck-hollow { animation: ck-say var(--d-sky) both; }
+.ck-rise.out .ck-hollow { opacity: 0; pointer-events: none; transition: opacity .45s ease-in; }
+@media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
+.ck-rise.on .l1 { animation: ck-l1 var(--d-sky) both; }
+.ck-rise.on .l2 { animation: ck-l2 var(--d-sky) both; }
+.ck-rise.on .l3 { animation: ck-l3 var(--d-sky) both; }
+.ck-rise.on .ck-duck { animation: ck-duck var(--d-sky) both; }
+.ck-rise.on .ck-say { animation: ck-say var(--d-sky) both; }
+.ck-rise.out .ck-sky { opacity: 0; transition: opacity .6s ease-in; }
+.ck-rise.out :is(.ck-peek, .ck-say) { opacity: 0; transition: opacity .45s ease-in; }
+.ck-rise.out .ck-peek { pointer-events: none; }
+/* 7.2 s: l1 0.6 → 3.0 → 4.4 s; l2 1.0 → 3.2 → 4.4 s; l3 2.0 → 4.4 s; the sky layers rise 4 / 8 / 14px (§2.8 cap) */
+@keyframes ck-l1 { 0%, 8.3% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 41.7% { opacity: .8; transform: translateY(-2px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-4px); } }
+@keyframes ck-l2 { 0%, 13.9% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 44.4% { opacity: .8; transform: translateY(-4px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-8px); } }
+@keyframes ck-l3 { 0%, 27.8% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-14px); } }
+/* the duck: peek 4.6 → 5.1 s (eyes only), hold, up 6.2 → 6.8 s; the line 6.8 → 7.1 s */
+@keyframes ck-duck { 0%, 63.9% { transform: translateY(var(--vis)); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 70.8%, 86.1% { transform: translateY(calc(var(--vis) - var(--pk))); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 94.4%, 100% { transform: translateY(0); } }
+@keyframes ck-say { 0%, 94.4% { opacity: 0; } 98.6%, 100% { opacity: 1; } }
+/* reduced motion: no movement. The same phases as opacity only: the duck at its rest place, 45% at the peek, 100% up */
+@media (prefers-reduced-motion: reduce) {
+  .ck-rise.on .l1 { animation-name: ck-rl1; } .ck-rise.on .l2 { animation-name: ck-rl2; } .ck-rise.on .l3 { animation-name: ck-rl3; }
+  .ck-rise.on .ck-duck { animation-name: ck-rduck; }
+  .ck-duck { transform: none; opacity: 0; }
+  .ck-sky i { transform: none; }
+}
+@keyframes ck-rl1 { 0%, 8.3% { opacity: 0; } 41.7% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rl2 { 0%, 13.9% { opacity: 0; } 44.4% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rl3 { 0%, 27.8% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rduck { 0%, 63.9% { opacity: 0; } 66.7%, 86.1% { opacity: .45; } 88.9%, 100% { opacity: 1; } }
+
+/* search mode (phones, app.js codingOn): the code field has focus -> the page behind it is hidden, not removed (no reflow, no keyboard jump); solid paper, nothing peeks under the suggestion list */
+html.coding.dock-bottom:not(.start) body { background: var(--paper); }
+html.coding.dock-bottom:not(.start) :is(#main, #padFab, #padPeek, #swap, #toast, #qnav, #qlist, #qlDim, .rw-hud) { visibility: hidden; }
+html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dvh); }   /* the freed room is the list's: no 22rem cap */
+
+/* ---------- 114r v1f REVEAL BOX (Tony Nov 2: "build + ship"; brain mock-opus/114r/v1f.html; app.js rboxSync) ----------
+   A closed typed single-field question in sugar: [ answer field (tinted by the verdict, keeps your answer, struck when wrong) | flush Ask Cluck ] [ Next ].
+   Ask Cluck = the field's right segment in Cluck's brown, its 1px border brown in EVERY state, 1px over the field's border, same top / right / bottom edges.
+   Next = the live .nx, outside the field, in the room the field gives up (its Check slot). The duck is the simple inline SVG, 22px beside the label (Tony 03:20: no overflow above the field). Nothing is
+   added under the field after Check (the chip row is gone), so nothing moves. Phones (.tight): the segment is the duck only.
+   B3 PR-B1 (Tony "ship it", Nov 2): Ask Cluck is no longer the field's right segment. strip.js docks the chip in the verdict drawer under the bar (strip.css);
+   rboxSync still tints the field and moves Next outside. */
+.ff.rbox { --nxw: 88px; margin-right: calc(var(--nxw) + var(--s2)); padding-right: 0; gap: var(--s2); }
+@media (min-width: 40rem) { .ff.rbox { --nxw: calc(var(--btn) * 2); } }
+.ff.rbox > .nx { right: calc(-1 * (var(--bw) + var(--nxw) + var(--s2))); top: calc(-1 * var(--bw)); height: var(--fld); }
+.ff.rbox.ok { background: var(--correct-fill); border-color: var(--correct-rim); }
+.ff.rbox.cue:not(.ok) { background: var(--wrong-fill); border-color: var(--wrong-rim); border-style: solid; }
+.q .ff.rbox.cue.ok:focus-within { border-color: var(--correct-rim); }
+.ff.rbox.cue:not(.ok) input { color: var(--wrong-on); text-decoration: line-through; text-decoration-color: var(--wrong); }
+.ff.rbox.ok input { color: var(--correct-on); }
+.ff.rbox .vk { order: 1; position: static; flex: none; width: var(--ico); height: auto; margin-right: var(--s2); }
+#wish.cue:empty { display: none; }
+/* BIG PLAN V2: the permanent box's idle starters (app chrome, like .wchip; Tony Nov 2) and the no-key / done note. A starter is a quiet outlined pill in the help colours, wraps, min tap size */
+.cl-starters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+.cl-starters[hidden], .cl-note[hidden] { display: none; }
+.cl-starter { cursor: pointer; box-sizing: border-box; min-height: 36px; padding: 0 var(--s3); border: var(--bw) solid var(--help-line); border-radius: 16px; background: var(--help-fill); color: var(--help); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); text-align: left; -webkit-tap-highlight-color: transparent; }
+.cl-starter:hover { border-color: var(--help); }
+.cl-starter:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cl-note { margin: var(--s4) 0 0; color: var(--help-muted); font-size: var(--t-md); line-height: 1.5; }
+
+/* the subject pass swap (app.js wishSwap): a changed prose line fades in; reduced motion just swaps */
+#cluck .wswap { animation: wswap var(--d-move) ease-out; }
+@keyframes wswap { from { opacity: .25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #cluck .wswap { animation: none; } }
+html.side .cl:is(.wbusy, :has(.wtext.wrun)) .cl-ft .ask::after { border-radius: 0; border-bottom-left-radius: max(0px, calc(var(--ask-r) - 1.5px)); border-bottom-right-radius: max(0px, calc(var(--ask-r) - 1.5px)); }   /* the sheet's field is round at its foot only */
+.cue-chip .dk.ico { width: 32px; height: 32px; color: var(--help); }   /* the chip off the drawer: the tangerine duck on the sheet */
+
+/* Proof items (Tony, Nov 4: "NO NESTED BOX. NO."): the proof box takes the notes pad's place in the split. app.js proofHome moves #q (the
+   how line, the box, the chips, the reference) and #fb (the verdict) into #work; the pane (#q there) is the one bordered box. */
+html.proof-split #xb { display: none; }
+html.proof-split.pad-off #stage > #work { display: flex; margin-top: var(--s3); }   /* the proof screen, not typing: the pane sits in the page under the question (app.js proofTyping) */
+html.proof-split #stage > #work { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
+html.proof-split #work > #q { position: relative; flex: 1 1 auto; min-height: 0; margin: 0; padding: var(--s3); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
+  background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; }
+html.proof-split #work > #q:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+html.proof-split #work > #q.closed { opacity: 1; }
+html.proof-split #stage > #work { overflow-y: auto; overscroll-behavior: contain; }   /* a ladder under the verdict: the whole column scrolls, so the last step + Skip are reachable on a phone */
+html.proof-split #work > #q { min-height: 8rem; }                                          /* ...and the proof box is never crushed */
+html.proof-split #work > #rpHost { flex: 0 0 auto; }
+html.proof-split #work > #fb { flex: none; margin: 0; max-height: 34%; overflow-y: auto; }
+html.proof-split #work > #fb:empty { display: none; }
+html.proof-split #q .ff.proof { flex: 1 0 auto; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+html.proof-split #q .ff.proof textarea { min-height: 6rem; resize: none; padding-right: calc(var(--btn) + var(--s2)); }
+html.proof-split #q > .how { flex: none; }
+html.proof-split:not(.side) #q:has(.ans:focus, #ansGo:active) > .how { display: none; }   /* phone, keyboard up in the proof box: the grey hint goes, the box gets the room. :active holds it through the Check tap: the tap blurs the box first, and the hint coming back mid-tap moved Check out from under the finger (no click, no /check) */
+/* the answer strip's drawer (strip.css) hangs below the bar, and the bar is the pane's last row: #q is a clipper, so after a verdict the pane keeps the drawer's height free under the bar (open or shut, so closing it moves nothing) */
+html.proof-split #work > #q:has(> #ff.strip) { padding-bottom: calc(var(--s3) + 3.5rem); }
+html.side.proof-split #work.cl-on > #q { display: flex; }
+html.side.proof-split #work.cl-on > #fb:not(:empty) { display: block; }
+
+/* ---------- LOCK-HELP (lockhelp.js; Tony Nov 5): "Let me help you with that!". Jev's help_modal. A dimmed full screen; ON it (no box, no card, no border, no
+   background): Cluck's say-line, the big Cluck, two buttons. No backdrop tap, no Escape. Art: LOCKHELP_ART in lockhelp.js (placeholder until Tony's new Cluck). ---------- */
+html.lh-on, html.lh-on body { overflow: hidden; }
+.lockhelp { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: var(--gut, 16px);
+  background: color-mix(in srgb, var(--page) 88%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.lh-col { display: grid; justify-items: center; gap: var(--s3); width: min(22rem, 100%); text-align: center; }
+.lh-say { margin: 0; width: 100%; text-align: center; color: var(--help-muted); font-size: var(--t-md, 1.125rem); font-weight: var(--w-em); line-height: 1.3; }   /* the .ck-say tokens, in the flow (not the peek's absolute spot) */
+.lh-duck { width: 128px; height: auto; max-width: 100%; aspect-ratio: 122 / 128; object-fit: contain;
+  filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
+.lh-btns { display: flex; flex-direction: column; align-items: stretch; gap: var(--s3); width: 100%; margin-top: var(--s2); }   /* stacked, full width, the primary on top */
+.lh-btns .btn { width: 100%; min-width: 0; padding: 0 var(--s3); font: inherit; font-weight: var(--w-em); text-align: center; justify-content: center; }
+.proof-len { margin: var(--s1) 0 0; font-size: var(--t-sm); color: var(--muted, inherit); }
+.proof-len[hidden] { display: none; }

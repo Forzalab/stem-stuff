@@ -1,7 +1,7 @@
 // pipeTable (steps.mjs): a strict GFM pipe table in Cluck's reply (Tony's PHYS_SGU shot, Nov 3 16:16) renders as a table, not raw "| a | b |" lines.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pipeTable } from "../steps.mjs";
+import { pipeTable } from "../client/pure_logic_modules/steps.mjs";
 
 const SHOT = ["Here is the push and the pull side by side:", "", "| factor | what changed | effect on $P$ |", "", "|---|---|---|", "",
   "| **V** | down to $\\frac13$ | up |", "", "| **T** | down to $\\frac12$ | down |", "", "Put both into one ratio:"];
@@ -28,7 +28,7 @@ test("anything not strict returns null", () => {
   assert.deepEqual(pipeTable(["| a | b |", "|---|---|", "| 1 | 2 |", "| 3 |"], 0), { head: ["a", "b"], rows: [["1", "2"]], next: 3 }, "a short LAST line is a row still arriving: the table so far, the line left for pipeHold");
 });
 test("pipeHold: a table still arriving is held (no raw bars), a finished table and prose are not", async () => {
-  const { pipeHold } = await import("../steps.mjs");
+  const { pipeHold } = await import("../client/pure_logic_modules/steps.mjs");
   const H = "| factor | what changed | effect on $P$ |", S = "|---|---|---|";
   assert.equal(pipeHold([H], 0), 1, "a lone header");
   assert.equal(pipeHold(["intro", "", H, ""], 2), 3, "a header then blanks (the blank line itself is an ordinary gap)");

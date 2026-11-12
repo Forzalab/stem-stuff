@@ -10,8 +10,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const J = f => JSON.parse(readFileSync(join(ROOT, f), "utf8"));
 const store = {};
 globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
-const CC = createRequire(import.meta.url)(join(ROOT, "calc-coach.js"));
-const data = () => structuredClone({ layout: J("calc/calc-layout.json"), steps: J("calc/calc-steps.json"), keys: J("calc/calc-keys.json"), pad: J("calc/calc-pad.json") });
+const CC = createRequire(import.meta.url)(join(ROOT, "client/calc/coach/calc-coach.js"));
+const data = () => structuredClone({ layout: J("client/calc/calc-layout.json"), steps: J("client/calc/calc-steps.json"), keys: J("client/calc/calc-keys.json"), pad: J("client/calc/calc-pad.json") });
 
 test("schema: the shipped research data validates", () => assert.deepEqual(CC.validate(data()), []));
 test("schema: catches a step with no press, a missing screen_verified flag and a nameless model", () => {
@@ -50,11 +50,11 @@ test("promo: exam-day copy until 2026-11-09T23:59 Los Angeles, neutral after; on
 });
 test("hail-mary slot: a flag, on while its cram data is live", () => assert.equal(CC.FLAGS.hailMary, true));
 test("no new reply format: the reply component library, prompts and renderers do not know Calc Coach", () => {
-  const lib = Object.keys(J("views/library.json").components);
+  const lib = Object.keys(J("shared/openui/library.json").components);
   assert.deepEqual(lib, ["View", "Head", "Text", "Legend", "Table", "Tug", "Flip", "Callout", "Steps", "Step", "Hints", "Predict", "Reveal", "Answer", "Doodle", "Graph", "Geometry"]);
-  for (const f of ["server/data/prompts/cluck-v4.txt", "server/data/prompts/mini-cluck.txt", "views/registry.json", "views/library.json", "views.js", "server/cluck_reply_checks/oui.py", "server/cluck_reply_checks/views_gate.py"])
+  for (const f of ["server/data/prompts/cluck-v4.txt", "server/data/prompts/mini-cluck.txt", "shared/openui/registry.json", "shared/openui/library.json", "client/cluck/openui_views/views.js", "server/cluck_reply_checks/oui.py", "server/cluck_reply_checks/views_gate.py"])
     assert.doesNotMatch(readFileSync(join(ROOT, f), "utf8"), /calc[ -_]?coach|CalcCoach|stemCalc/i, f);
-  for (const f of readdirSync(join(ROOT, "views/prompt"))) assert.doesNotMatch(readFileSync(join(ROOT, "views/prompt", f), "utf8"), /calc[ -_]?coach/i, f);
+  for (const f of readdirSync(join(ROOT, "shared/openui/prompt"))) assert.doesNotMatch(readFileSync(join(ROOT, "shared/openui/prompt", f), "utf8"), /calc[ -_]?coach/i, f);
 });
 
 test("routine deck: strip keys come from the verified steps; telemetry events carry ids and phases only", () => {
