@@ -99,12 +99,13 @@ async function cluck(vp, watch = false) {
   await page.waitForTimeout(400);                                       // KaTeX + the 180 ms fade
   return page;
 }
-/* the hint's geometry: the disc (.cl-more's 28px ::before), the fade's solid top (its 12px ramp ends there), and every text line's
-   visible part: inside the body's box and above that solid top (below it the fade hides the text). Lines = text-node line boxes + KaTeX */
+/* the hint's geometry: the disc (.cl-more's 28px ::before), where the body's mask fade starts (4rem above its bottom), and every text line's
+   visible part: inside the body's box and above that line (below it the text fades out). Lines = text-node line boxes + KaTeX */
 const geo = page => page.evaluate(() => {
   const bd = document.querySelector("#cluck .cl-bd"), ft = document.querySelector("#cluck .cl-ft"), b = document.querySelector("#cluck .cl-more");
   const br = b.getBoundingClientRect(), disc = { left: br.left + 8, right: br.right - 8, top: br.top + 8, bottom: br.bottom - 8 };
-  const fb = getComputedStyle(ft, "::before"), band = parseFloat(fb.height), solid = ft.getBoundingClientRect().top - band + 12, box = bd.getBoundingClientRect();
+  // the fade is a mask on the body (Tony Nov 12, #525): text is fully clear only above its 4rem ramp; --fb eases 0 <-> 4rem
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize), fbv = parseFloat(getComputedStyle(bd).getPropertyValue("--fb")) || 0, box = bd.getBoundingClientRect(), solid = box.bottom - 4 * rem;
   const lines = [], walk = document.createTreeWalker(bd, NodeFilter.SHOW_TEXT);
   for (let t; (t = walk.nextNode());) {
     if (!t.textContent.trim() || !t.parentElement.checkVisibility()) continue;
@@ -114,7 +115,7 @@ const geo = page => page.evaluate(() => {
   const seen = lines.map(l => ({ ...l, top: Math.max(l.top, box.top), bottom: Math.min(l.bottom, box.bottom, solid) })).filter(l => l.bottom - l.top > 0.5);
   const hits = seen.filter(l => Math.min(l.right, disc.right) - Math.max(l.left, disc.left) > 0.5 && Math.min(l.bottom, disc.bottom) - Math.max(l.top, disc.top) > 0.5);
   const ask = document.querySelector("#cluck .ask").getBoundingClientRect();
-  return { below: bd.classList.contains("below"), op: +getComputedStyle(b).opacity, fade: +fb.opacity, vis: b.checkVisibility({ visibilityProperty: true }),
+  return { below: bd.classList.contains("below"), op: +getComputedStyle(b).opacity, fade: fbv >= 4 * rem - 1 ? 1 : fbv <= 0 ? 0 : fbv / (4 * rem), vis: b.checkVisibility({ visibilityProperty: true }),
     disc, solid, ask: ask.top, n: seen.length, hits: hits.map(h => h.t), top: bd.scrollTop, h: bd.clientHeight, max: bd.scrollHeight - bd.clientHeight };
 });
 
