@@ -165,3 +165,7 @@
   #problem > .cc-row { position: absolute; bottom: calc(100% + 6px); right: 0; margin: 0; z-index: 1; }   /* above the card, beside the "Question" label: it never covers the stem */
   #problem > .cc-row .cc-cta { flex: 0 0 156px; }
 }
+/* HIDDEN FOR NOW (Tony, Nov 12): the "TI/Casio tricks" chip is off on the item card; its row goes when the chip was alone. Code + panel stay.
+   Undo = delete these 2 lines. Tests turn it back on with html.cc-calc-on (calc.pw / cram-off.pw init script). */
+html:not(.cc-calc-on) .cc-cta-calc { display: none; }
+html:not(.cc-calc-on) .cc-row:has(> .cc-cta-calc:only-child) { display: none; }
