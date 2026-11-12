@@ -938,6 +938,7 @@ function clLab(b, st, lab) {                                                // t
   if (!st._html) { b.append(lab); return; }
   const m = document.createElement("span"); m.className = "cl-st-m"; m.innerHTML = st._html;
   b.append(m, " " + lab.slice(-1));
+  requestAnimationFrame(() => m.classList.toggle("cut", m.scrollWidth > m.clientWidth + 1));   // only a clipped line fades
 }
 function clHist(land) {                                                     // idempotent: add the first line, fold/open each turn, land on the latest
   if (!cl) return;
