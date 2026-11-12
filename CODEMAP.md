@@ -2,7 +2,7 @@
 
 Open this file first. Find the row for what you touch, then open only that file.
 Big files start with a CODEMAP HEADER (purpose, sections, related files). Find a section with: grep -n "== §<name> ==" <file>
-Line numbers are never kept. Moved or added a file? Update its row in the same PR (CI/lint checks this).
+Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_checks/codemap.py fix`, then fill its rows in the same PR (rules: brain `_files/skills/codemap/SKILL.md`; CI checks this).
 
 | path | owns | open when you touch |
 |---|---|---|
