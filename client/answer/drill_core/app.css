@@ -1101,6 +1101,12 @@ html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
 .cl-st > i { flex: 1; height: 0; border-top: 1px solid var(--line); }
 .cl-st-b { flex: 0 1 auto; min-width: 0; max-width: 85%; white-space: nowrap; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: center; overflow-wrap: anywhere; }
 button.cl-st-b { cursor: pointer; min-height: 32px; }
+/* a math choice (KaTeX) in the line: one line, cut with an ellipsis, the ✓/✗ stays visible; a tap (.wrap) shows all of it, wrapped */
+.cl-st-b:has(> .cl-st-m) { display: inline-flex; align-items: baseline; gap: .25em; max-width: 85%; }
+.cl-st-m { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-st.wrap .cl-st-b:has(> .cl-st-m) { white-space: normal; }
+.cl-st.wrap .cl-st-m { white-space: normal; overflow: visible; }
+span.cl-st-b:has(> .cl-st-m) { cursor: pointer; }
 button.cl-st-b:hover { color: var(--ink); }
 button.cl-st-b:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ask .ff { flex: 1; min-height: var(--btn); padding: 0; border: 0; background: none; box-shadow: none; }
