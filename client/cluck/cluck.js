@@ -922,14 +922,23 @@ function clTry(t) {                                                         // {
   if (t.c != null && !val) val = "none";                                    // a choose-all with nothing ticked ("neither" can be the key)
   if (!val) return null;
   const pre = t.c != null ? "chose " : "typed ", cut = val.length > CL_ST_MAX ? val.slice(0, CL_ST_MAX - 1).trimEnd() + "\u2026" : val;   // a long (code) choice: cut at ~28 chars, the full text in the title
-  return { v: t.v, label: pre + cut, full: pre + val };
+  const md = t.c != null ? [].concat(t.c).map(id => (u.choices || []).find(c => c.id === id)?.md ?? "").filter(Boolean).join(", ") : "";
+  const html = /\$/.test(md) ? esc(pre) + clMathHTML(md) : "";            // a math choice: drawn with KaTeX, cut by CSS (one line, tap = all)
+  return { v: t.v, label: pre + cut, full: pre + val, html };
 }
+const clMathHTML = md => String(md).split(/(\$\$?[^$]+\$\$?)/).map(x => /^\$/.test(x) ? wishMath(x.replace(/^\$+|\$+$/g, ""), false, esc(x)) : esc(x.replace(/`/g, ""))).join("");
 window.__clTry = clTry;   // tests (as __drill): the status line's label for a try
 function clStatus(tr) {
   const d = document.createElement("div"); d.className = "cl-st"; d.dataset.v = tr.v; const mark = tr.v === "correct" ? "✓" : "✗";
-  d.dataset.t = `${tr.label} ${mark}`; d.dataset.full = `${tr.full || tr.label} ${mark}`;
+  d.dataset.t = `${tr.label} ${mark}`; d.dataset.full = `${tr.full || tr.label} ${mark}`; d._html = tr.html || "";
   d.innerHTML = '<i aria-hidden="true"></i><span class="cl-st-b"></span><i aria-hidden="true"></i>';
   return d;
+}
+function clLab(b, st, lab) {                                                // the label: KaTeX for a math choice (mark kept outside the cut), else plain text
+  if (!st._html) { b.append(lab); return; }
+  const m = document.createElement("span"); m.className = "cl-st-m"; m.innerHTML = st._html;
+  b.append(m, " " + lab.slice(-1));
+  requestAnimationFrame(() => m.classList.toggle("cut", m.scrollWidth > m.clientWidth + 1));   // only a clipped line fades
 }
 function clHist(land) {                                                     // idempotent: add the first line, fold/open each turn, land on the latest
   if (!cl) return;
@@ -945,9 +954,13 @@ function clHist(land) {                                                     // i
     const b = document.createElement(fold ? "button" : "span"); b.className = "cl-st-b"; b.title = st.dataset.full; if (st.dataset.full !== lab) b.setAttribute("aria-label", st.dataset.full);
     if (fold) {
       b.type = "button"; b.setAttribute("aria-expanded", String(open));
-      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; b.append(lab);
+      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; clLab(b, st, lab);
       b.addEventListener("click", () => { st._open = !open; clHist(); st.querySelector(".cl-st-b").focus({ preventScroll: true }); });
-    } else b.textContent = lab;
+    } else {
+      clLab(b, st, lab);
+      if (st._html) b.addEventListener("click", () => { st.classList.toggle("wrap"); });   // a long math line: tap = the whole line, wrapped
+    }
+    st.classList.toggle("wrap", !!st._html && fold && open);                // an opened miss shows its whole line too
     st.children[1].replaceWith(b);
   });
   if (land && segs.length > 1 && !pane.hidden) {                           // the sheet opens on the latest reply
