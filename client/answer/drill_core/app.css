@@ -1658,3 +1658,9 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .lh-btns .btn { width: 100%; min-width: 0; padding: 0 var(--s3); font: inherit; font-weight: var(--w-em); text-align: center; justify-content: center; }
 .proof-len { margin: var(--s1) 0 0; font-size: var(--t-sm); color: var(--muted, inherit); }
 .proof-len[hidden] { display: none; }
+/* UIP2 (POLISH-SPEC §3): one ring, one tempo at the verdict. A wrong typed field shows ONE ring, the red dash (the caret already says focus;
+   the arrow's keyboard ring stays). The send arrow and the hint card fade in with the row (g-next-fade is opacity only). Reduced motion: no fade. */
+.ff.bad:focus-within { box-shadow: none; border-color: var(--wrong-rim); }
+.ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
+#fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
+@media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
