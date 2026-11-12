@@ -1660,6 +1660,12 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .lh-btns .btn { width: 100%; min-width: 0; padding: 0 var(--s3); font: inherit; font-weight: var(--w-em); text-align: center; justify-content: center; }
 .proof-len { margin: var(--s1) 0 0; font-size: var(--t-sm); color: var(--muted, inherit); }
 .proof-len[hidden] { display: none; }
+/* UIP2 (POLISH-SPEC §3): one ring, one tempo at the verdict. A wrong typed field shows ONE ring, the red dash (the caret already says focus;
+   the arrow's keyboard ring stays). The send arrow and the hint card fade in with the row (g-next-fade is opacity only). Reduced motion: no fade. */
+.ff.bad:focus-within { box-shadow: none; border-color: var(--wrong-rim); }
+.ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
+#fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
+@media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
 /* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5% and lighten; small controls dip 3%.
    Transform only, instant in (the finger is the cause); .opt eases back out. .opt.jolt / .pop animations still win (animation beats :active).
    :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: the colour only. */
