@@ -1,5 +1,5 @@
 // The second try costs 10 s (Tony Nov 5; sugar, 2-try items): after the first wrong verdict the submit IS a CCW clock-sweep progress bar,
-// disabled for 10 s (typed Check, choose-all Check); a single MC's live, un-picked options each drain 100% -> 0% (no ring). One neutral subtle tone, no blue (Tony Nov 5). Diet: no wait. Reload mid-wait: restarts. Reduced motion: no sweep.
+// disabled for 10 s (typed Check, choose-all Check); a single MC's live, un-picked options each drain 100% -> 0% (no ring). One neutral subtle tone, no blue (Tony Nov 5). Diet: no wait. Reload mid-wait: keeps the deadline (sessionStorage stem-wait). Reduced motion: no sweep.
 // /check is answered by the test (route); page.clock moves Date / timers (CSS animations run in real time).
 //   STEM_TODAY=2026-10-23 python3 serve.py 8813 &   then   STEM_TODAY=2026-10-23 node tests/retry-wait.pw.mjs http://localhost:8813
 import { createRequire } from "node:module";
@@ -107,14 +107,14 @@ await step("(d) diet mode: no wait", async () => {
   await page.context().close();
 });
 
-await step("(e) reload during the wait: it restarts at 10 s", async () => {
+await step("(e) reload during the wait: it keeps the deadline (no restart to 10 s; tests/tab-countdown.pw.mjs)", async () => {
   const page = await mk(b); await typedFirstWrong(page);
   await ff(page, 8000);
   await page.reload(); await page.waitForSelector("#ansGo", { timeout: 8000 });
   await page.waitForTimeout(300);
-  assert.equal(await dis(page, "#ansGo"), "true", "waiting again after the reload");
-  await ff(page, 5000); assert.equal(await dis(page, "#ansGo"), "true", "still waiting 5 s into the new wait");
-  await ff(page, 5100); assert.equal(await dis(page, "#ansGo"), null);
+  assert.equal(await dis(page, "#ansGo"), "true", "still waiting after the reload");
+  await ff(page, 1500); assert.equal(await dis(page, "#ansGo"), "true", "still waiting: ~2 s of the original 10 s are left");
+  await ff(page, 1100); assert.equal(await dis(page, "#ansGo"), null, "ready when the original deadline passes");
   await page.context().close();
 });
 
