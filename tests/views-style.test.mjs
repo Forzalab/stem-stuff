@@ -50,7 +50,10 @@ test("views.css: two weights only; motion only through the --d-* tokens (F18: 12
   const timed = CSS.filter(d => /^(transition|animation)/.test(d.prop) && d.value !== "none");
   assert.ok(timed.length >= 3);
   assert.deepEqual(timed.filter(d => /\d+m?s\b/.test(d.value) || !/var\(--d-(fast|move|dim)\)/.test(d.value)).map(fmt), []);
-  const root = CSS.filter(d => d.sel === ".vw" && /^--d-/.test(d.prop)).map(d => `${d.prop}:${d.value}`);
+  // UIP10: the motion table lives once in app.css :root (every page that loads views.css loads app.css); views.css defines none
+  assert.deepEqual(CSS.filter(d => /^--d-/.test(d.prop)).map(fmt), []);
+  const app = read("client/answer/drill_core/app.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const root = [...app.matchAll(/:root\s*\{[^}]*\}/g)].flatMap(m => [...m[0].matchAll(/(--d-(?:fast|move|dim))\s*:\s*([^;}]+)/g)].map(x => `${x[1]}:${x[2].trim()}`));
   assert.deepEqual(root, ["--d-fast:120ms", "--d-move:200ms", "--d-dim:300ms"]);
 });
 
