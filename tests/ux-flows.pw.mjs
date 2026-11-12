@@ -227,6 +227,9 @@ flow(43, "offline-sw", async (page, w, ctx) => {
   if (!(await page.evaluate(() => !!navigator.serviceWorker.controller))) await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 8000 });
   await opened(page, C.single);
+  // the first problem fetch can run before the worker controls the page, so it is never cached; one controlled load caches it (test race, Nov 11)
+  await page.reload();
+  await opened(page, C.single);
   /* sw.js precaches the shell: wait until everything the page itself loads, plus privacy.html and telemetry.js, is in the cache */
   const need = await page.evaluate(() => [...new Set([...document.querySelectorAll("script[src], link[href]")].map(e => e.src || e.href).concat(["privacy.html", "client/shell/telemetry/telemetry.js", "client/shell/offline.js", "index.html"].map(p => new URL(p, location.href).href)))]
     .filter(u => new URL(u).origin === location.origin));
