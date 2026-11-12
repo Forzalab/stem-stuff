@@ -33,7 +33,7 @@ async function open(code, viewport) {
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-noob-P2X", "1"); } catch { /* blocked */ } });
   const page = await ctx.newPage(), log = [], errs = [];
   page.on("pageerror", e => errs.push(e.message));
-  page.on("response", r => { const u = new URL(r.url()); if (/\/(check|repair\/)/.test(u.pathname)) log.push(`${r.request().method()} ${u.pathname} ${r.status()}`); });
+  page.on("response", r => { const u = new URL(r.url()); if (/^\/(check|repair\/)/.test(u.pathname)) log.push(`${r.request().method()} ${u.pathname} ${r.status()}`); });
   await page.goto(BASE + "/#" + code);
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
   await page.waitForSelector("#q #ans", { timeout: 4000 });

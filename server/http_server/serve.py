@@ -4998,8 +4998,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def bridged(self, hit, head=False):                  # BRIDGE: hit from bridge(); stub = rewrite (200 JS), redirect = 307
         kind, target = hit
         if kind == "redirect":
+            q = self.path.partition("?")[2]               # keep the query, as Vercel redirects do (?live was lost)
             self.send_response(307)
-            self.send_header("Location", target)
+            self.send_header("Location", target + ("?" + q if q else ""))
             self.send_header("Content-Length", "0")
             self.end_headers()
             return

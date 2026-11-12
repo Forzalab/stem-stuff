@@ -22,7 +22,7 @@ try {
   const errs = []; page.on("pageerror", e => errs.push(e.message));
   const sent = [];
   await page.route("**/mini", r => { sent.push(JSON.parse(r.request().postData() || "{}")); r.fulfill({ status: 200, contentType: "text/plain", body: PROG }); });
-  await page.goto(BASE + "/design/mini-lab.html?live");
+  await page.goto(BASE + "/client/labs/mini-lab.html?live");
   const mini = () => page.$$eval(".ai-box .pop.mini", ps => ps.length);
   const at = sel => page.$eval(sel, el => { const b = el.getBoundingClientRect(), t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return el.contains(t) ? "clear" : t.className; });
 
