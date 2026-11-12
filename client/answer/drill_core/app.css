@@ -226,7 +226,7 @@ html.bar-mini .bar-tab {
   display: grid; place-items: center; width: 100%; max-width: none !important; height: 44px; padding: 0; margin: 0;   /* 44: HIG tap target */
   background: none; border: 0; color: var(--muted); touch-action: none;
 }
-html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .3s ease; }
+html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .3s var(--ease-out); }
 html.bar-mini:not(.bar-open) .dock { padding: 0 var(--gut) env(safe-area-inset-bottom); }
 html.bar-mini:not(.bar-open) .dock > :not(.bar-tab) { display: none; }
 html.bar-mini.bar-open .dock { padding-top: 0; }
@@ -650,7 +650,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
    96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. PALETTE-v3 §6: after a right
    answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
-:root { --d-fast: 180ms; --d-move: 300ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
+:root { --d-fast: 120ms; --d-move: 200ms; --d-dim: 300ms; --ease-out: ease-out; --ease-sheet: cubic-bezier(.32,.72,0,1); --nxw: calc(var(--btn) * 2); --vgw: 28px; }
 .nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
   color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
@@ -1216,10 +1216,10 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
    Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
    its space, so nothing below it moves under the finger. Swap's toggle is in <main>, so it is never inside the hidden bar.
    Not on desktop: there the bar holds the entry box, which a mouse has to reach while the scratchpad still has focus. */
-.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .3s ease, opacity .3s ease, visibility 0s; }
+.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .3s var(--ease-out), opacity .3s var(--ease-out), visibility 0s; }
 html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
   transform: translateY(-100%); opacity: 0; visibility: hidden; pointer-events: none;
-  transition: transform .3s ease, opacity .3s ease, visibility 0s .3s;
+  transition: transform .3s var(--ease-out), opacity .3s var(--ease-out), visibility 0s .3s;
 }
 
 /* ---------- Swap: keyboard up = one pane above the keyboard (docs/design/SWAP.md) ----------
@@ -1230,10 +1230,10 @@ html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
 .btn-tgl { width: auto; display: inline-flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); }
 .btn-tgl::before {                       /* the active side's pill */
   content: ""; position: absolute; top: 4px; bottom: 4px; left: 6px; width: 36px; border-radius: 6px; background: var(--raised);
-  transition: transform .33s ease;
+  transition: transform .33s var(--ease-out);
 }
 .btn-tgl:hover { background: var(--sheet); }
-.btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s ease, transform .33s ease; }
+.btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s var(--ease-out), transform .33s var(--ease-out); }
 .btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--action); }
 .btn-tgl[data-pane="scratch"]::before { transform: translateX(36px); }   /* one icon (24px) + the gap */
 
@@ -1355,7 +1355,7 @@ html.mt #scratch { min-height: var(--pad-max, 8rem); }
 html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
 html.mt.mt-a #problem { display: none; }
 .mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-weight: var(--w-em);
-  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .33s ease; }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
+  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .33s var(--ease-out); }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
 /* phones: the pad is off the page until the Scratchpad button opens the pad page */
 html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
@@ -1438,7 +1438,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 .cl-back > .ico { color: var(--help); }
 .cl-back .hk { flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .cl-back .hk-t { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--help-muted); font-weight: 400; }
-.cl-back .hk-t.roll { animation: hk-roll .45s ease both; }
+.cl-back .hk-t.roll { animation: hk-roll .45s var(--ease-out) both; }
 @keyframes hk-roll { from { transform: translateY(60%); opacity: 0; } to { transform: none; opacity: 1; } }
 .cl-back .hk-go { flex: none; }
 .cl-back:hover .hk-go { text-decoration: underline; }
@@ -1464,7 +1464,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
   :root { --t-md: 1.3125rem; --t-sm: 1.1875rem; --t-xs: 1rem; --t-lg: 1.375rem; --btn: 56px; --ico: 28px; }
 }
 
-::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: ease; }
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 

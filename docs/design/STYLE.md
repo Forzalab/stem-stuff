@@ -173,11 +173,15 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 
 ### 2.8 Motion
 
-| token (proposed) | value | for |
+| token | value | for |
 |---|---|---|
 | `--d-fast` | 120ms | hover, border and color changes |
 | `--d-move` | 200ms | show / hide, slide, swap crossfade, toast in and out, splash out |
 | `--d-dim` | 300ms | the lock-in dimming of the rest of the page |
+| `--ease-out` | ease-out | enter and feedback |
+| `--ease-sheet` | cubic-bezier(.32,.72,0,1) | verdict drawer, finger bar, Cluck sheet |
+
+Defined once in app.css :root; no other file defines a duration token.
 
 - Easing: `ease-out` (enter and feedback). No bounce, no elastic, no spring overshoot.
 - Move at most 14px. Animate `opacity` and `transform` only; never animate layout (height, top, width).
