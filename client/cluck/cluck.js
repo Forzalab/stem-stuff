@@ -599,6 +599,7 @@ function clDrag(el) {
       let dt = Math.min(0.032, (now - last) / 1000); last = now;
       while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - 34 * vel) * h; pos += vel * h; dt -= h; }
       if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
+      if (to >= innerHeight && pos >= innerHeight - 1) { settle(to); return; }   // leaving (UIP5): gone once the top edge is off screen, no wait for the spring's tail
       if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
       paint(); raf = requestAnimationFrame(step);
     };
