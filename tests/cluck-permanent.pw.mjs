@@ -138,11 +138,11 @@ for (const w of W.filter(w => w < 720)) {
     await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
     s = await box(page);
     assert.ok(s.box && s.x, "open with the X: " + JSON.stringify(s));
-    await page.keyboard.press("Escape"); await page.waitForTimeout(300);
+    await page.keyboard.press("Escape"); await page.waitForFunction(() => !window.stemCluckOpen(), null, { timeout: 2000 }).catch(() => {});   // UIP5: the phone sheet leaves down first
     assert.ok(!(await box(page)).open, "Escape closes it");
     await page.evaluate(() => window.stemIdleTap());
     await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
-    await page.click("#cluck .cl-bar .cl-x"); await page.waitForTimeout(300);
+    await page.click("#cluck .cl-bar .cl-x"); await page.waitForFunction(() => !window.stemCluckOpen(), null, { timeout: 2000 }).catch(() => {});   // UIP5: the phone sheet leaves down first
     assert.ok(!(await box(page)).open, "the X closes it");
     await page.context().close();
   });
