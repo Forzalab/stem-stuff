@@ -122,7 +122,7 @@ function note(text) {
   if (there && !(m && m.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }))) toast(text, at, { loose: true });
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, docs/design/DISMISS.md)
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clUserClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, docs/design/DISMISS.md)
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
