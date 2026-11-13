@@ -1328,10 +1328,22 @@ function waitClear() {
     if (x.dataset.lbl) { x.setAttribute("aria-label", x.dataset.lbl); delete x.dataset.lbl; }
   });
 }
+/* the deadline survives a reload / a discarded tab coming back (same tab only: sessionStorage, one item at a time). Wall-clock: an expired one means ready, not a new 10 s. */
+const WAIT_KEY = "stem-wait";
+function waitSaved(code) {
+  try { const o = JSON.parse(sessionStorage.getItem(WAIT_KEY) || "null"); return o && o.code === code && typeof o.until === "number" ? o : null; } catch (e) { return null; }
+}
+function waitSave(code, w) { try { sessionStorage.setItem(WAIT_KEY, JSON.stringify({ code, until: w.until, t0: w.t0 })); } catch (e) {} }
+function waitForget(code) { try { if (waitSaved(code)) sessionStorage.removeItem(WAIT_KEY); } catch (e) {} }
 function startWait() {
   if (!S || S.finished || modeOf() !== "sugar" || S.triesLeft !== 1 || maxTries(S.prob) !== 2 || /^(proof|multi)$/.test(S.prob.type)) return;
   const fresh = !S.wait, mine = S;
-  if (fresh) { S.wait = { until: Date.now() + WAIT_MS, t0: Date.now() }; window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "start", waited_ms: 0 }); }
+  if (fresh) {
+    const sv = waitSaved(S.code);
+    if (sv && sv.until <= Date.now()) return;                                          // the wait ran out before the reload: ready, no new 10 s
+    if (sv) S.wait = { until: sv.until, t0: sv.t0 };                                    // this tab's own wait, picked up where it was
+    else { S.wait = { until: Date.now() + WAIT_MS, t0: Date.now() }; waitSave(S.code, S.wait); window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "start", waited_ms: 0 }); }
+  }
   clearTimeout(waitTimer); clearInterval(waitTick);
   waitPaint(); if (S.prob.type !== "mc") $("#ansGo").hidden = false;                // the typed Check is the bar: up even though the miss hid it (a reload paints the miss first)
   const red = waitReduced(), say = n => { if (red) waitLive().textContent = `Check unlocks in ${n} s`; };
@@ -1350,7 +1362,7 @@ function startWait() {
 }
 function cancelWait(left) {   // the item closed or another opened: the wait stops (left = the student walked away mid-wait)
   if (left && S && S.wait) window.stemT?.("retry_wait", { code: S.code, item: S.code, phase: "left", waited_ms: Date.now() - S.wait.t0 });
-  if (S) S.wait = null;
+  if (S) { S.wait = null; waitForget(S.code); }
   waitClear();
 }
 function waitSubmitted() {   // the first submit after the unlock
