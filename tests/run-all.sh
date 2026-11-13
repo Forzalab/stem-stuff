@@ -164,6 +164,7 @@ weight() {
     fcard-reveal) echo 8 ;; codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip|repair-gap) echo 5 ;; blind|katex-wrap|measure-slots|net-retry|views-oui|views-static) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font) echo 1 ;;
     retry-wait) echo 49 ;;   # local estimate: 49.0 s, STEM_TODAY=2026-10-23, shared server (not CI-measured)
+    tab-countdown) echo 20 ;;   # local estimate, shares the retry-wait clock setup (not CI-measured)
     calc) echo 18 ;;   # Calc Coach smoke (calc-coach.js), own server + fixture bank, 390 only
     calc-pick) echo 8 ;;   # the calculator model picker smoke (calc-pick.js), own server, 390 only; local ~6 s
     welcome-first) echo 8 ;;   # the once-per-user welcome redirect (welcome-first.js), own server; local ~5 s
@@ -231,7 +232,7 @@ tags() {
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
     guard) echo "@layout @real-time" ;;   # W104 sleeping guard, own server
     queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
-    cluck-rise|idle-peek|nudge|seen|retry-wait) echo "@logic @fast-time" ;;   # these install page.clock today
+    cluck-rise|idle-peek|nudge|seen|retry-wait|tab-countdown) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
     calc) echo "@layout @real-time" ;;   # Calc Coach in the app (own serve.py, fixture bank)
     calc-pick) echo "@logic @real-time" ;;   # the calculator model picker smoke, own server
