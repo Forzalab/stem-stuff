@@ -510,7 +510,7 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = bridge.FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck">${icon("i-duck", "dk ico" + (nod && !q ? " g-nod" : ""))}<span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    el.innerHTML = `<!-- KEEP AS IS: the Ask Cluck / See steps drawer is MEANT to cover the choice under it (Tony, Nov 13). Do not add space or move it to uncover a choice. Ask Tony before any behavior change. --><div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck">${icon("i-duck", "dk ico" + (nod && !q ? " g-nod" : ""))}<span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
   /* GENMISS (Tony, Nov 3): the Q3 = C inline peek + "okay, but how?" card is gone: on every wrong try, matched or generic, on every layout, the only Cluck entry is the strip tray's "Ask Cluck" (the chip below) */
   } else {
@@ -927,7 +927,7 @@ function askFit(ta) {
 const clPlain = md => /[$\\]/.test(String(md ?? "")) ? clTex(md) : String(md ?? "").replace(/`/g, "").replace(/\s+/g, " ").trim();   // plain text (code) stays as shown; only TeX is flattened
 const clTex = md => String(md ?? "").replace(/\\(?:text|mathrm|mathbf|textbf)\{([^}]*)\}/g, "$1").replace(/\\circ/g, "°").replace(/\\cdot/g, "·").replace(/\\times/g, "×").replace(/\\pi/g, "π")
   .replace(/\\[,;:! ]|~/g, " ").replace(/\\([%$&#_{}])/g, "$1").replace(/\\(?:left|right|mathit)\b/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[$*`{}]/g, "").replace(/\s+/g, " ").trim();
-const CL_ST_MAX = 28;
+const CL_ST_MAX = 28, CL_ST_LONG = 24;                                   // LONG: a math choice past this many flat chars shows its letter
 function clTry(t) {                                                         // { v, label } of a graded try; null = no status line (no grade, or no value to show)
   if (!t || (t.v !== "correct" && t.v !== "wrong") || !S || S.prob.type === "proof") return null;   // a proof has no value to name
   const p = S.prob, u = p.type === "multi" && Number.isInteger(t.part) ? p.parts?.[t.part] || p : p;
@@ -936,6 +936,10 @@ function clTry(t) {                                                         // {
   if (!val) return null;
   const pre = t.c != null ? "chose " : "typed ", cut = val.length > CL_ST_MAX ? val.slice(0, CL_ST_MAX - 1).trimEnd() + "\u2026" : val;   // a long (code) choice: cut at ~28 chars, the full text in the title
   const md = t.c != null ? [].concat(t.c).map(id => (u.choices || []).find(c => c.id === id)?.md ?? "").filter(Boolean).join(", ") : "";
+  if (/\$/.test(md) && val.length > CL_ST_LONG) {                          // a long formula: its letter instead ("chose C ✓", Tony Nov 13); the formula stays in the title
+    const ls = [].concat(t.c).map(id => document.querySelector(`#q .opt[data-id="${CSS.escape(id)}"]`)?.dataset.l).filter(Boolean);
+    if (ls.length) return { v: t.v, label: pre + ls.join(", "), full: pre + val, html: "" };
+  }
   const html = /\$/.test(md) ? esc(pre) + clMathHTML(md) : "";            // a math choice: drawn with KaTeX, cut by CSS (one line, tap = all)
   return { v: t.v, label: pre + cut, full: pre + val, html };
 }

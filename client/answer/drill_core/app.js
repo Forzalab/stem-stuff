@@ -926,7 +926,7 @@ function repairPick(mine, d) {
 const LETTERS = "ABCDE";
 function renderQuestion() {
   const q = $("#q"), p = S.prob;
-  q.classList.remove("closed");
+  q.classList.remove("closed", "solved");
   $("#freezeIn").classList.toggle("boxed", p.type === "multi");      // multi: question + boxes in one box (Tony's sketch)
   if (S.wl) return welcomeQ(q);
   if (p.type === "mc") {
@@ -1871,6 +1871,7 @@ function guard() {
 function finish() {
   S.finished = true; cancelWait();
   $("#q").classList.add("closed");
+  $("#q").classList.toggle("solved", S.tries.at(-1)?.v === "correct");   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
   cueNext();
