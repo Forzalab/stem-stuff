@@ -603,13 +603,14 @@ function clDrag(el) {
     else { el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da"); }
     state(full ? "full" : "peek");
   };
-  const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
+  const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34 with momentum / 39 without), the mock's; reduced motion: an instant snap
     cancelAnimationFrame(raf);
     if (bridge.reduceMQ.matches) { settle(to); return; }
     let vel = v0, last = performance.now(); el.dataset.state = "moving";
+    const c = Math.abs(v0) > 50 ? 34 : 39;                                  // UIP6: no momentum (a tap, a paused drag) = critical damping 39 = 2*sqrt(380), no wobble
     const step = now => {
       let dt = Math.min(0.032, (now - last) / 1000); last = now;
-      while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - 34 * vel) * h; pos += vel * h; dt -= h; }
+      while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - c * vel) * h; pos += vel * h; dt -= h; }
       if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
       if (to >= innerHeight && pos >= innerHeight - 1) { settle(to); return; }   // leaving (UIP5): gone once the top edge is off screen, no wait for the spring's tail
       if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
@@ -635,7 +636,9 @@ function clDrag(el) {
   const track = y => { pos = clampPos(d.p0 + y - d.y0, innerHeight); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };
   const end = () => {
     const was = d; d = null; root.classList.remove("cl-drag"); if (!was) return;
-    const [t0, y0] = was.s[0], [t1, y1] = was.s.at(-1), v = Math.max(-3000, Math.min(3000, t1 > t0 ? (y1 - y0) / (t1 - t0) * 1000 : 0));
+    /* UIP6: honest release speed. Only samples from the last 100 ms count; a finger that paused > 80 ms before lifting releases at v = 0 (no stale fling) */
+    const [t1, y1] = was.s.at(-1), [t0, y0] = was.s.find(([t]) => t1 - t <= 100) || was.s.at(-1);
+    const v = performance.now() - t1 > 80 ? 0 : Math.max(-3000, Math.min(3000, t1 > t0 ? (y1 - y0) / (t1 - t0) * 1000 : 0));
     go(snapTo(pos, peek, innerHeight, v, was.full), v);
   };
   const toggle = () => { if (!full) begin(0); d = null; root.classList.remove("cl-drag"); go(full ? peek : 0); };   // a tap / Enter on the grab
