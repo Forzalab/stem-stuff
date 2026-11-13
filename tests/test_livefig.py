@@ -82,7 +82,7 @@ class Resp(io.BytesIO):
 class Gate(unittest.TestCase):
     def test_every_valid_fixture_passes(self):
         for g in FIX["valid"]:
-            self.assertIsNone(livefig.check(g, ctx()), g["kind"])
+            self.assertEqual(livefig.check(g, ctx()), "subject" if g["kind"] == "bars" else None, g["kind"])   # bars: off in replies (Tony Nov 13)
 
     def test_every_bad_fixture_is_dropped_with_its_reason(self):
         for case in FIX["invalid"]:
@@ -100,6 +100,7 @@ class Gate(unittest.TestCase):
 
     def test_the_unknown_in_another_unit_is_a_leak(self):
         c = livefig.context("X", "Run the sun for 2.0 us.", "bill = $2.33 \\times 10^{13}$ dollars = $\\boxed{23.3}$ trillion", [23.3])
+        c.kinds = ("scene", "cartesian", "bars")                           # the leak rule itself (bars are off by default since Nov 13)
         bars = {"type": "graph", "kind": "bars", "alt": "Where the bill comes from.", "groups": [{"label": "bill", "bars": [{"label": "$", "value": 2.33}]}]}
         self.assertEqual(livefig.check(bars, c), "leak:value=2.33")     # live Haiku, Oct 17: the answer's mantissa as a bar
 
@@ -118,7 +119,7 @@ class Gate(unittest.TestCase):
 
     def test_rule_names_the_allowed_kinds_with_an_example_each(self):
         r = livefig.rule(ctx())
-        self.assertIn("ONLY these kinds: scene, cartesian, bars.", r)
+        self.assertIn("ONLY these kinds: scene, cartesian.", r)
         self.assertNotIn('"kind":"network","alt"', r)
         r = livefig.rule(net_ctx())
         self.assertIn("ONLY these kinds: network.", r)
@@ -126,6 +127,7 @@ class Gate(unittest.TestCase):
         for k, ex in livefig.EXAMPLE.items():    # every example passes its own gate
             c = net_ctx() if k == "network" else livefig.context("X", "", "", [])
             c.verts = {"A", "B", "C"} if k == "network" else c.verts
+            if k == "bars": c.kinds = ("scene", "cartesian", "bars")   # off by default (Nov 13); the example itself stays valid
             self.assertIsNone(livefig.check(json.loads(ex), c), k)
 
     def test_network_is_the_key_subgraph_only(self):
@@ -234,7 +236,8 @@ class Stream(unittest.TestCase):
 
     def test_two_figures_at_most(self):
         # todo 113 (Tony Oct 28: "may mix 2"): two visuals per reply; a third is dropped
-        out, log = self.run_fence([fence(FIX["valid"][0]), "x", fence(FIX["valid"][1]), "y", fence(FIX["valid"][0])], ctx())
+        ok = [g for g in FIX["valid"] if g["kind"] in ("scene", "cartesian")]
+        out, log = self.run_fence([fence(ok[0]), "x", fence(ok[1]), "y", fence(ok[0])], ctx())
         self.assertEqual(out.count("```fig"), 2)
         self.assertEqual(log, ["ok", "ok", "second"])
         self.assertEqual(livefig.FIGS_MAX, 2)

@@ -862,6 +862,7 @@ html.side #work > .orig { margin: 0; }
   position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--line); border-radius: 10px; background: var(--fc-tint); }   /* W3: a quiet rim; bright --action stays for selected states */
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
   padding: 0 var(--s2); background: linear-gradient(var(--fc-above, var(--paper)) 50%, var(--fc-tint) 50%); color: var(--action); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
+body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the recap (Tony, Nov 13: less clutter) */
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }   /* minmax(0, ...): a formula wider than the screen (BUOY, 529px at 390) shrinks its row to the box and scrolls in .fm; an auto column grew to it and pushed the "?" and the page sideways (Oct 26) */
 .fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
