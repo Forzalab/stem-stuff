@@ -575,20 +575,32 @@ function clEl() {
    The grab + the header drag; the body drags only when it cannot scroll that way (scrolled to top for a pull down; not yet full for a pull up). */
 function clDrag(el) {
   const root = document.documentElement, grab = el.querySelector(".cl-grab"), bar = el.querySelector(".cl-bar"), bd = el.querySelector(".cl-bd");
-  let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null;
-  const phone = () => !bridge.sideMQ.matches;
-  const paint = () => {
-    const top = Math.min(pos, peek), down = Math.max(0, pos - peek);
-    el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
-    el.style.transform = down ? `translateY(${down}px)` : "";
+  let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null, laid = false;
+  const phone = () => !bridge.sideMQ.matches, ft = el.querySelector(".cl-ft");
+  /* Tony, Nov 12 drag lag: --cl-top used to move every frame above the dock, so the browser laid the whole sheet out per frame. lay(true) lays the
+     sheet out once at full height (top 0), the body held at its docked height; from then on only transform moves the sheet and the footer
+     (which stays on the screen bottom). settle() puts the normal --cl-top layout back. */
+  const lay = on => {
+    if (on && !laid) { const h = bd.getBoundingClientRect().height; el.style.top = "0px"; bd.style.flex = "none"; bd.style.height = h + "px"; ft.style.marginTop = "auto"; laid = true; }
+    else if (!on && laid) { el.style.top = ""; bd.style.flex = ""; bd.style.height = ""; ft.style.marginTop = ""; laid = false; }
+  };
+  const paint = rest => {
+    if (!rest && pos < peek) lay(true);                                    // above the dock: laid out at full height from here on
+    const L = laid || full ? 0 : peek, dy = pos - L;                       // the layout top the sheet sits at: 0 (full, or laid out at full) or the dock
+    el.style.transform = dy ? `translateY(${dy}px)` : "";
+    ft.style.transform = laid ? `translateY(${-Math.min(pos, peek)}px)` : "";   // the footer: pinned to the screen bottom above the dock, with the sheet below it
+    el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
     el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
     cl.dim?.style.setProperty("--da", dimAt(pos, peek, innerHeight));     // on the dim itself: a var on <html> restyles the whole page every frame (drag lag, Tony Nov 12)
   };
   const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
   const settle = to => {
     if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
-    full = to === 0; pos = to; paint();
-    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
+    full = to === 0; pos = to; lay(false);                                  // the normal layout again: --cl-top is written here, at rest only
+    el.style.transform = ""; ft.style.transform = "";
+    el.style.setProperty("--cl-top", (full ? 0 : peek) + "px");
+    if (full) paint(true);
+    else { el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da"); }
     state(full ? "full" : "peek");
   };
   const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
@@ -607,7 +619,7 @@ function clDrag(el) {
   };
   cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
     cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
-    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da");
+    lay(false); el.style.transform = ""; ft.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da");
     grab.setAttribute("aria-label", "Expand Cluck to full screen");
   };
   /* UIP5 (Tony Q5 "rise"): the phone sheet rises from the bottom edge by its own spring and leaves down the same path; a drag catches it (begin cancels the frame) */
@@ -617,6 +629,7 @@ function clDrag(el) {
   const begin = y => {                                                      // a press became a drag
     cancelAnimationFrame(raf);
     if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
+    lay(true); paint();                                                     // the drag's layout, once; from here --cl-top is not written until settle
     d = { y0: y, p0: pos, full, s: [[performance.now(), y]] }; root.classList.add("cl-drag"); el.dataset.state = "dragging";
   };
   const track = y => { pos = clampPos(d.p0 + y - d.y0, innerHeight); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };
