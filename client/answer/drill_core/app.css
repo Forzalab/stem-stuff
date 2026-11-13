@@ -1681,6 +1681,7 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
 #fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
 @media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
+html.fx-busy :is(.ch .send, #fb > .cluck) { animation: none; }   /* one group at a time (blink-fx): a burst still playing keeps the stage; the row just appears */
 /* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5%, small controls 3%.
    Transform only, instant in and out (the finger is the cause; no eased return: blink-fx one-group rule). .opt.jolt / .pop animations still win (animation beats :active).
    :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: no dip. */

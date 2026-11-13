@@ -251,7 +251,7 @@ try {
     const r = await sampled(lp, "a", 10500);
     report("level up, then the next question right ~1 s later", r);
     check(await lp.evaluate(() => window.__lvl), "the level-up burst played");
-    check(r.peak <= 1, `peak ${r.peak} groups at once`);
+    check(r.peak <= 1, `peak ${r.peak} groups at once: ${JSON.stringify(r.timeline.filter(([, g]) => g.length > 1).slice(0, 3))}`);   // which groups (run-all shows only the FAIL line)
     await lc.close();
   });
 
