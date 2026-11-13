@@ -345,7 +345,9 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 3000 });   // the wish loop has stopped
   assert.ok(!/typing/i.test(await sheetTxt()), "no 'typing' text left on a failure");
   assert.equal(await page.evaluate(() => document.querySelectorAll("#cluck .wtext .wcaret").length), 0, "no caret forever on a failure");
-  assert.ok(await tappable("#cluck .wtext .wretry"), "the sheet's Try again is tappable");
+  // Nov 13: the sheet may still be rising (spring) here; elementFromPoint mid-rise hits the button's old spot. Poll, don't sample once
+  { let ok = false; for (let t = 0; t < 20 && !(ok = await tappable("#cluck .wtext .wretry")); t++) await page.waitForTimeout(100);
+    assert.ok(ok, "the sheet's Try again is tappable"); }
   assert.equal((await page.textContent("#cluck .wtext .wretry")).trim(), "Try again");
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-explain500-chromium.png`) });
   const before = asks;
