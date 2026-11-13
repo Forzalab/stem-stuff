@@ -115,6 +115,21 @@ await step("drag up across the dock: --cl-top holds during the drag, footer stay
   await page.context().close();
 });
 
+await step("UIP6: a tap on the grab (no momentum) springs back to the dock with no overshoot (critical damping)", async () => {
+  const page = await openSheet();
+  const dock = (await geo(page)).top;
+  await page.click("#cluck .cl-grab"); await settled(page);
+  assert.equal((await geo(page)).state, "full", "tap: full");
+  await page.evaluate(() => { window.__tops = []; const el = document.getElementById("cluck"); (function f() { window.__tops.push(el.getBoundingClientRect().top); if (window.__tops.length < 120) requestAnimationFrame(f); })(); });
+  await page.click("#cluck .cl-grab"); await settled(page); await page.waitForTimeout(300);
+  const max = Math.max(...await page.evaluate(() => window.__tops));
+  console.log("     tap-back:", JSON.stringify({ dock, max }));
+  assert.equal((await geo(page)).state, "peek", "second tap: peek");
+  assert.ok(max <= dock + 0.05, `no overshoot past the dock: max top ${max} vs dock ${dock}`);
+  assert.deepEqual(page.errs, [], "no page errors");
+  await page.context().close();
+});
+
 await step("a small pull down, then release: --cl-top holds, the sheet ends at the same docked top as before the drag", async () => {
   const page = await openSheet();
   const before = await geo(page);
