@@ -140,7 +140,7 @@ for (const [tag, vp] of VPS) {
     assert.equal(asked, 1, "exactly one Cluck request: opening reuses the stream");
     assert.equal(page.ai, 1, "one /explain from the page");
     await page.click("#cluck .cl-bar .cl-x");
-    await page.clock.runFor(300);
+    await page.clock.runFor(600);                                         // UIP5: the phone sheet leaves down first
     assert.equal(await cluckOpen(page), false, "the bar's X closes it");
     assert.deepEqual(page.errs, [], "no page errors");
     await page.context().close();

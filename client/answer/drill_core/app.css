@@ -1014,7 +1014,8 @@ html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }
    going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
 html:not(.side) .cl { --rr: 30px; border-top-left-radius: var(--rr); border-top-right-radius: var(--rr);   /* MORE ROUND (V3 melt): 30px at the dock, 0 at full, in proportion to the drag (--pp: 0 dock, 1 full) */
   filter: drop-shadow(0 -6px 36px color-mix(in srgb, var(--glow) calc(9% * (1 - var(--pp, 0))), transparent)); }   /* a faint, wide orange haze above the top edge (Vision Pro glass: low alpha, soft), gone at full */
-html:not(.side) .cl::before { opacity: 1; }   /* the ember top light at 100% (was 60%) */
+html:not(.side) .cl::before { opacity: 1; }
+html:not(.side) .cl:is([data-state="dragging"], [data-state="moving"]) { filter: none; }   /* drag lag (Tony, Nov 12): the drop-shadow filter re-rasterized the whole sheet every frame; it comes back at rest */   /* the ember top light at 100% (was 60%) */
 html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, .8); }   /* 80% at the dock, 96% at full: a hard dim, no blur */
 html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 44px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
 html:not(.side) .cl-grab i { position: absolute; top: 12px; left: 50%; width: 32px; height: 4px; margin-left: -16px; border-radius: 2px; background: var(--help-muted); opacity: .7; }
@@ -1077,8 +1078,14 @@ html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
 /* the scroll-down hint (Tony, Oct 19, variant A; app.js clMore): more text below = .cl-bd.below. A fade over the field's top edge (STYLE.md 2.7
    "Fades and glows": the sheet's own --sheet, 2.5rem, no taps): 12px of ramp, then solid, and the disc sits in the solid part, so it never
    covers a line you can read (the mock's disc sat on "r = 249 m"). A 28px disc in the ask field's colour, a 44px target; no loop, no pulse */
-.cl-ft::before { content: ""; position: absolute; inset: auto 0 100%; height: 2.5rem; pointer-events: none; opacity: 0;
-  background: linear-gradient(transparent, var(--sheet) var(--s3)); }
+.cl-ft::before { content: none; }   /* (was a --sheet band over the text; Tony Nov 12: "not a solid bar", the text itself fades, see .cl-bd mask below) */
+/* scroll fades (Tony, Nov 12, like the Claude app; UIP7 top): the TEXT fades out toward the edge where more is hidden. A mask on the body,
+   no colour band: the ramp starts at the very edge (fully faded) and is gone 4rem in. .below = more under, .above = scrolled down */
+.cl-bd { --fb: 0px; --ft: 0px; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); }
+.cl-bd.below { --fb: 4rem; } .cl-bd.above { --ft: 2.5rem; }
+@property --fb { syntax: "<length>"; inherits: false; initial-value: 0px; } @property --ft { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@media (prefers-reduced-motion: no-preference) { .cl-bd { transition: --fb .18s ease-out, --ft .18s ease-out; } }
 .cl-ft .cl-more { position: absolute; z-index: 1; left: 50%; bottom: 100%; width: 44px; height: 44px; margin: 0 0 -8px -22px; padding: 0; border: 0;
   display: grid; place-items: center; background: none; color: var(--help-on); cursor: pointer; opacity: 0; visibility: hidden; }   /* the disc's foot on the field's 8px top gap */
 .cl-more::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--ai-pill); }
@@ -1102,6 +1109,14 @@ html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
 .cl-st > i { flex: 1; height: 0; border-top: 1px solid var(--line); }
 .cl-st-b { flex: 0 1 auto; min-width: 0; max-width: 85%; white-space: nowrap; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: center; overflow-wrap: anywhere; }
 button.cl-st-b { cursor: pointer; min-height: 32px; }
+/* a math choice (KaTeX) in the line: one line, clipped with a fade, the ✓/✗ stays visible; a tap (.wrap) shows all of it, wrapped */
+.cl-st-b:has(> .cl-st-m) { display: inline-flex; align-items: baseline; gap: .25em; max-width: 85%; }
+.cl-st-m { min-width: 0; overflow: hidden; white-space: nowrap; }   /* no text-overflow: KaTeX's blocks are atomic (split at =), an ellipsis drops a whole block */
+.cl-st-m.cut { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 2.5em), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 2.5em), transparent); }   /* clipped mid-math: the end fades out (Tony, Nov 12) */
+.cl-st.wrap .cl-st-m { -webkit-mask-image: none; mask-image: none; }
+.cl-st.wrap .cl-st-b:has(> .cl-st-m) { white-space: normal; }
+.cl-st.wrap .cl-st-m { white-space: normal; overflow: visible; }
+span.cl-st-b:has(> .cl-st-m) { cursor: pointer; }
 button.cl-st-b:hover { color: var(--ink); }
 button.cl-st-b:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ask .ff { flex: 1; min-height: var(--btn); padding: 0; border: 0; background: none; box-shadow: none; }
@@ -1660,6 +1675,12 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .lh-btns .btn { width: 100%; min-width: 0; padding: 0 var(--s3); font: inherit; font-weight: var(--w-em); text-align: center; justify-content: center; }
 .proof-len { margin: var(--s1) 0 0; font-size: var(--t-sm); color: var(--muted, inherit); }
 .proof-len[hidden] { display: none; }
+/* UIP2 (POLISH-SPEC §3): one ring, one tempo at the verdict. A wrong typed field shows ONE ring, the red dash (the caret already says focus;
+   the arrow's keyboard ring stays). The send arrow and the hint card fade in with the row (g-next-fade is opacity only). Reduced motion: no fade. */
+.ff.bad:focus-within { box-shadow: none; border-color: var(--wrong-rim); }
+.ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
+#fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
+@media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
 /* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5% and lighten; small controls dip 3%.
    Transform only, instant in (the finger is the cause); .opt eases back out. .opt.jolt / .pop animations still win (animation beats :active).
    :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: the colour only. */

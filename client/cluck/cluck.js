@@ -10,6 +10,7 @@ import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mock
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
   clClose: { get: () => clClose, enumerable: true },
+  clUserClose: { get: () => clUserClose, enumerable: true },
   clGone: { get: () => clGone, set: v => { clGone = v; }, enumerable: true },   // let
   clOpen: { get: () => clOpen, enumerable: true },
   qSeen: { get: () => qSeen, enumerable: true },
@@ -554,8 +555,8 @@ function clEl() {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) bridge.origPeeked();   // folded away after a solve: looking again is a peek
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
   });
-  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (docs/design/DISMISS.md)
-  cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
+  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clUserClose(true)));   // desktop: the X dismisses the column (docs/design/DISMISS.md)
+  cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", () => clUserClose());   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
   clDrag(el);
   const bd = el.querySelector(".cl-bd"), ro = new ResizeObserver(clMore);   // the scroll-down hint follows the scroll, the sheet's size and the text as it types in
@@ -581,13 +582,13 @@ function clDrag(el) {
     el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
     el.style.transform = down ? `translateY(${down}px)` : "";
     el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
-    root.style.setProperty("--da", dimAt(pos, peek, innerHeight));
+    cl.dim?.style.setProperty("--da", dimAt(pos, peek, innerHeight));     // on the dim itself: a var on <html> restyles the whole page every frame (drag lag, Tony Nov 12)
   };
   const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
   const settle = to => {
     if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
     full = to === 0; pos = to; paint();
-    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
+    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
     state(full ? "full" : "peek");
   };
   const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
@@ -598,6 +599,7 @@ function clDrag(el) {
       let dt = Math.min(0.032, (now - last) / 1000); last = now;
       while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - 34 * vel) * h; pos += vel * h; dt -= h; }
       if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
+      if (to >= innerHeight && pos >= innerHeight - 1) { settle(to); return; }   // leaving (UIP5): gone once the top edge is off screen, no wait for the spring's tail
       if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
       paint(); raf = requestAnimationFrame(step);
     };
@@ -605,9 +607,13 @@ function clDrag(el) {
   };
   cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
     cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
-    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da");
+    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da");
     grab.setAttribute("aria-label", "Expand Cluck to full screen");
   };
+  /* UIP5 (Tony Q5 "rise"): the phone sheet rises from the bottom edge by its own spring and leaves down the same path; a drag catches it (begin cancels the frame) */
+  const dock = () => { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; };
+  cl.sheetIn = () => { if (!phone() || bridge.reduceMQ.matches) return; dock(); pos = innerHeight; paint(); go(peek); };
+  cl.sheetOut = () => { if (full) { if (pos > innerHeight - 1) return; } else { if (el.dataset.state !== "moving") { dock(); pos = peek; } } go(innerHeight); };
   const begin = y => {                                                      // a press became a drag
     cancelAnimationFrame(raf);
     if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
@@ -661,12 +667,12 @@ function clPlace() {                                                        // s
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
   if (clGone && bridge.sideMQ.matches) { if (auto) return; clGoneSet(false); }    // dismissed (DISMISS.md): an auto-open waits for the student; a tap brings the column back
   window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
-  clEl(); if (!cl.open) cl.y = scrollY;
+  clEl(); const rise = !cl.open; if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
   cl.perm = clPerm();
   if (cl.perm && !S.finished && S.prob.wish && !cluckOff && !S.prob.original && (!wish || wish.code !== S.code)) wish = idleWish();   // V2: before any miss the box holds the opener + starters, not a blank
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
-  clPlace(); clTop(); clAsk(true); clTab(tab, !auto); bridge.padRule();
+  clPlace(); clTop(); if (rise) cl.sheetIn?.(); clAsk(true); clTab(tab, !auto); bridge.padRule();
   bridge.layoutFreeze();
   dispatchEvent(new CustomEvent("stem:layers"));                            // nav.js: the iOS Back button
   if (bridge.sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
@@ -683,6 +689,11 @@ function cluckToast() {
     if (!at || at.hidden || !at.getClientRects().length || noteAt() || !toast("Cluck lives in Ask Cluck. Tap it to reopen.", at)) return;
     try { localStorage.setItem("stem-ob-cluck", "1"); } catch { /* shown, not kept */ }
   }, 80);
+}
+/* the three student closes (X, a tap on the dim, Escape / iOS Back): on a phone the sheet leaves down first (UIP5); every programmatic close stays instant */
+function clUserClose(dismiss) {
+  if (!cl || !cl.open || clPerm()) return;
+  if (!bridge.sideMQ.matches && !bridge.reduceMQ.matches && cl.sheetOut) cl.sheetOut(); else clClose(dismiss);
 }
 function clClose(dismiss, force) {                                         // force: clReset only (a new question empties the box, applyMT opens it again)
   if (!cl || !cl.open || (clPerm() && !force)) return;
@@ -767,7 +778,7 @@ function clBack() {
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
-window.stemCluckClose = () => clClose(false);                               // nav.js: the iOS Back button closes the sheet
+window.stemCluckClose = () => clUserClose(false);                               // nav.js: the iOS Back button closes the sheet
 window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
 window.stemCluckModal = () => !!cl && cl.open && !cl.perm;                 // Cluck's sheet is in the way (toast yields, Escape is his): not the permanent box (BIG PLAN V1)
 window.stemLayout = () => { if (S) bridge.layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
@@ -842,7 +853,9 @@ function clReset() {                                                        // a
    per reply (the box text, then each chat reply) and "bottom" once per reply that showed it */
 function clMore(late) {
   if (!cl) return;
-  const bd = cl.el.querySelector(".cl-bd"), on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
+  const bd = cl.el.querySelector(".cl-bd");
+  bd.classList.toggle("above", cl.open && bd.scrollTop > 8);              // UIP7: text under the header fades too
+  const on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
   if (on === bd.classList.contains("below")) { clearTimeout(cl.moreT); cl.moreT = 0; return; }
   if (on && late !== true) { cl.moreT ||= setTimeout(() => { cl.moreT = 0; clMore(true); }, 150); return; }   // it shows once the sheet has settled (side by side the column re-fits ~70ms after it opens): no flash; it hides at once
   bd.classList.toggle("below", on);
@@ -922,14 +935,23 @@ function clTry(t) {                                                         // {
   if (t.c != null && !val) val = "none";                                    // a choose-all with nothing ticked ("neither" can be the key)
   if (!val) return null;
   const pre = t.c != null ? "chose " : "typed ", cut = val.length > CL_ST_MAX ? val.slice(0, CL_ST_MAX - 1).trimEnd() + "\u2026" : val;   // a long (code) choice: cut at ~28 chars, the full text in the title
-  return { v: t.v, label: pre + cut, full: pre + val };
+  const md = t.c != null ? [].concat(t.c).map(id => (u.choices || []).find(c => c.id === id)?.md ?? "").filter(Boolean).join(", ") : "";
+  const html = /\$/.test(md) ? esc(pre) + clMathHTML(md) : "";            // a math choice: drawn with KaTeX, cut by CSS (one line, tap = all)
+  return { v: t.v, label: pre + cut, full: pre + val, html };
 }
+const clMathHTML = md => String(md).split(/(\$\$?[^$]+\$\$?)/).map(x => /^\$/.test(x) ? wishMath(x.replace(/^\$+|\$+$/g, ""), false, esc(x)) : esc(x.replace(/`/g, ""))).join("");
 window.__clTry = clTry;   // tests (as __drill): the status line's label for a try
 function clStatus(tr) {
   const d = document.createElement("div"); d.className = "cl-st"; d.dataset.v = tr.v; const mark = tr.v === "correct" ? "✓" : "✗";
-  d.dataset.t = `${tr.label} ${mark}`; d.dataset.full = `${tr.full || tr.label} ${mark}`;
+  d.dataset.t = `${tr.label} ${mark}`; d.dataset.full = `${tr.full || tr.label} ${mark}`; d._html = tr.html || "";
   d.innerHTML = '<i aria-hidden="true"></i><span class="cl-st-b"></span><i aria-hidden="true"></i>';
   return d;
+}
+function clLab(b, st, lab) {                                                // the label: KaTeX for a math choice (mark kept outside the cut), else plain text
+  if (!st._html) { b.append(lab); return; }
+  const m = document.createElement("span"); m.className = "cl-st-m"; m.innerHTML = st._html;
+  b.append(m, " " + lab.slice(-1));
+  requestAnimationFrame(() => m.classList.toggle("cut", m.scrollWidth > m.clientWidth + 1));   // only a clipped line fades
 }
 function clHist(land) {                                                     // idempotent: add the first line, fold/open each turn, land on the latest
   if (!cl) return;
@@ -945,9 +967,13 @@ function clHist(land) {                                                     // i
     const b = document.createElement(fold ? "button" : "span"); b.className = "cl-st-b"; b.title = st.dataset.full; if (st.dataset.full !== lab) b.setAttribute("aria-label", st.dataset.full);
     if (fold) {
       b.type = "button"; b.setAttribute("aria-expanded", String(open));
-      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; b.append(lab);
+      b.innerHTML = `<span class="cl-st-c" aria-hidden="true">${open ? "▾" : "▸"}</span> `; clLab(b, st, lab);
       b.addEventListener("click", () => { st._open = !open; clHist(); st.querySelector(".cl-st-b").focus({ preventScroll: true }); });
-    } else b.textContent = lab;
+    } else {
+      clLab(b, st, lab);
+      if (st._html) b.addEventListener("click", () => { st.classList.toggle("wrap"); });   // a long math line: tap = the whole line, wrapped
+    }
+    st.classList.toggle("wrap", !!st._html && fold && open);                // an opened miss shows its whole line too
     st.children[1].replaceWith(b);
   });
   if (land && segs.length > 1 && !pane.hidden) {                           // the sheet opens on the latest reply
