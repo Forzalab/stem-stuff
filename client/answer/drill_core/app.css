@@ -1672,7 +1672,9 @@ html.side.proof-split #work.cl-on > #fb:not(:empty) { display: block; }
    background): Cluck's say-line, the big Cluck, two buttons. No backdrop tap, no Escape. Art: LOCKHELP_ART in lockhelp.js (placeholder until Tony's new Cluck). ---------- */
 html.lh-on, html.lh-on body { overflow: hidden; }
 .lockhelp { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: var(--gut, 16px);
-  background: color-mix(in srgb, var(--page) 88%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  background: color-mix(in srgb, var(--page) 88%, transparent); }
+html.fx-blur .lockhelp { -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }   /* blur only on fx-blur (fx.js) */
+html.fx-dim .lockhelp { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--page) 88%, transparent); }   /* fx-dim: a plain 88% dim */
 .lh-col { display: grid; justify-items: center; gap: var(--s3); width: min(22rem, 100%); text-align: center; }
 .lh-say { margin: 0; width: 100%; text-align: center; color: var(--help-muted); font-size: var(--t-md, 1.125rem); font-weight: var(--w-em); line-height: 1.3; }   /* the .ck-say tokens, in the flow (not the peek's absolute spot) */
 .lh-duck { width: 128px; height: auto; max-width: 100%; aspect-ratio: 122 / 128; object-fit: contain;
@@ -1687,6 +1689,7 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
 #fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
 @media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
+html.fx-busy :is(.ch .send, #fb > .cluck) { animation: none; }   /* one group at a time (blink-fx): a burst still playing keeps the stage; the row just appears */
 /* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5%, small controls 3%.
    Transform only, instant in and out (the finger is the cause; no eased return: blink-fx one-group rule). .opt.jolt / .pop animations still win (animation beats :active).
    :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: no dip. */
@@ -1694,3 +1697,4 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: scale(.97); }
 :is(.btn, .opt, .nx, .vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go) { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) { .opt:active:not(:disabled), :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: none; } }
+@media (prefers-contrast: more) { :root { --line: var(--muted); --hint: var(--muted); } .cl-dim { opacity: .96; } .glass { backdrop-filter: none; background-color: var(--paper); } }
