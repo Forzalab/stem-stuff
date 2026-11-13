@@ -61,7 +61,7 @@ try {
   });
   await step("Esc closes it: no dim, focus back on the step, mini_dismiss logged", async () => {
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(50);
+    await page.waitForSelector(".pop.mini", { state: "detached", timeout: 2000 });   // it leaves after its 100 ms exit
     assert.equal(await mini(), 0);
     assert.equal(await page.$$eval(".dim", d => d.length), 0);
     assert.equal(await page.evaluate(() => document.activeElement.id), "s2");
@@ -70,7 +70,7 @@ try {
   await step("X closes it too", async () => {
     await page.click("#open");
     await page.click(".pop.mini .mini-x");
-    await page.waitForTimeout(50);
+    await page.waitForSelector(".pop.mini", { state: "detached", timeout: 2000 });
     assert.equal(await mini(), 0);
     assert.equal(await page.$$eval(".dim", d => d.length), 0);
     assert.deepEqual(await page.evaluate(() => window.ev.filter(e => e[0] === "mini_dismiss").map(e => e[1].how)), ["esc", "x"]);

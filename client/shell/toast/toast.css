@@ -33,7 +33,7 @@
 .stoast-x:hover { color: var(--ink); }
 .stoast-x:focus-visible { outline: 2px solid var(--focus, #8fb0ff); outline-offset: -2px; }
 @keyframes stoast-in { from { opacity: 0; transform: translateY(8px); } }
-@keyframes stoast-out { to { opacity: 0; transform: translateY(4px); } }
+@keyframes stoast-out { to { opacity: 0; transform: translateY(8px); } }
 @keyframes stoast-fade { from { opacity: 0; } }
 @keyframes stoast-fade-out { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
