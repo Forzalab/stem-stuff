@@ -119,6 +119,7 @@ try {
       assert.ok(Math.abs(s.under - 6) <= 1 || s.under < 0, JSON.stringify(s));
       if (SHOTS && w !== 1440) await page.screenshot({ path: join(SHOTS, `twist-popover-${w}.png`) });
       await page.keyboard.press("Escape");
+      await page.waitForSelector(".pop", { state: "detached", timeout: 2000 });
       assert.equal(await page.locator(".pop").count(), 0);
     });
     await step(`${w}: the chip's tap opens the same popover; a second tap closes it`, async () => {
@@ -126,6 +127,7 @@ try {
       assert.equal(await page.locator(".pop").textContent(), POP);
       if (SHOTS && w !== 1440) await page.locator("#problem").screenshot({ path: join(SHOTS, `twist-chip-${w}.png`) });
       await page.click("#twistChip");
+      await page.waitForSelector(".pop", { state: "detached", timeout: 2000 });
       assert.equal(await page.locator(".pop").count(), 0);
     });
     await step(`${w}: once per device: the next twist and a reload show no toast; the chip stays`, async () => {

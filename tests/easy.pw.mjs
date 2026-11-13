@@ -317,13 +317,13 @@ try {
     assert.deepEqual(fig, { at: 1, role: "img", alt: true, drawn: true, inside: true, labels: true, inView: true }, "the picture sits under the formula: graph.js, role img, its alt as the label, KaTeX labels, inside the popover");
     await q[0].click();
     assert.deepEqual(await open(), [0], "one popover at a time");
-    await q[0].click();
+    await q[0].click(); await page.waitForSelector(".pop", { state: "detached", timeout: 2000 });
     assert.deepEqual(await open(), [], "a second tap closes (and removes it)");
     assert.equal(await q[0].getAttribute("aria-expanded"), "false");
-    await q[1].click(); await page.keyboard.press("Escape");
+    await q[1].click(); await page.keyboard.press("Escape"); await page.waitForSelector(".pop", { state: "detached", timeout: 2000 });
     assert.deepEqual(await open(), [], "Escape closes");
     assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#fcard .fq")[1]), true, "focus goes back to its ?");
-    await q[1].click(); await page.click("#fcard .fc-notch");
+    await q[1].click(); await page.click("#fcard .fc-notch"); await page.waitForSelector(".pop", { state: "detached", timeout: 2000 });
     assert.deepEqual(await open(), [], "a tap outside closes");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
