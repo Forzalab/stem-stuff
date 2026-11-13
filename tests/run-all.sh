@@ -231,8 +231,8 @@ tags() {
     autosave|bank|blind|choose-all|choose-all-spam|done|easy|flight|incident|mcclick|mode-reset|nav-stable|ios-back|net-retry|next-dead|prefix) echo "@logic @real-time" ;;
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
     guard) echo "@layout @real-time" ;;   # W104 sleeping guard, own server
-    queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
-    cluck-rise|idle-peek|nudge|seen|retry-wait|tab-countdown) echo "@logic @fast-time" ;;   # these install page.clock today
+    queue-walk|redo-note|next-reset|tab-countdown) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
+    cluck-rise|idle-peek|nudge|seen|retry-wait) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
     calc) echo "@layout @real-time" ;;   # Calc Coach in the app (own serve.py, fixture bank)
     calc-pick) echo "@logic @real-time" ;;   # the calculator model picker smoke, own server
