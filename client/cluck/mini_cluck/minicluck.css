@@ -3,7 +3,8 @@
 .mini-host { display: contents; }                                          /* a token scope, no box: the .pop inside is fixed */
 /* the dim: under the popup (z 40), over the page and its bars; minicluck.js cuts a clear hole over the stem and the student's work */
 .mini-dim { position: fixed; inset: 0; z-index: 39; background: color-mix(in srgb, var(--scrim) 55%, transparent); }
-@supports (backdrop-filter: blur(1px)) { .mini-dim { backdrop-filter: blur(2px); } }
+@supports (backdrop-filter: blur(1px)) { html.fx-blur .mini-dim { backdrop-filter: blur(2px); } }   /* blur only on fx-blur (fx.js) */
+html.fx-dim .mini-dim { background: color-mix(in srgb, var(--scrim) 88%, transparent); }   /* fx-dim: a plain 88% dim, no blur */
 
 .pop.mini { --pop-w: 18rem; width: min(var(--pop-w), calc(100vw - 32px)); padding: var(--s2) var(--s3) var(--s3);
   border-color: var(--edge); background: var(--sheet); color: var(--ink); }

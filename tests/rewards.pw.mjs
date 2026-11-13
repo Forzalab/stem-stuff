@@ -246,6 +246,7 @@ try {
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "phone: folded");
     await p.click("#origHd");
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "the tap opens it");
+    await p.waitForFunction(() => document.querySelector("#cluck")?.dataset.state !== "moving", null, { timeout: 2000 }).catch(() => {});   // UIP5: the sheet rises first; measure it docked
     assert.equal(await p.isVisible("#cluck .cl-bar"), true, "phone: the H3a header (Lane 2)");
     assert.equal(await p.isHidden("#cluck .cl-x2"), true);
     assert.deepEqual(await p.$eval("#cluck", e => { const r = e.getBoundingClientRect(), q = document.querySelector("#blocks > :not(.ptitle)").getBoundingClientRect(); return [r.left, r.width, r.top > q.top && r.top < innerHeight / 2, getComputedStyle(e).borderTopLeftRadius]; }), [0, 390, true, "30px"], "phone: popup K1 under the question's first lines; corners 30px at the dock (CHATBOX PICK r2, Tony Oct 13 + Oct 17, supersedes the P3 10px squircle)");
