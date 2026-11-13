@@ -951,9 +951,15 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 .pop[data-variant="note"] { --pop-w: 16rem; padding: var(--s2) var(--s3); }
 .pop[data-variant="term"] { --pop-w: 16rem; }
 .pop[data-variant="media"] { width: min(20rem, calc(100vw - 32px)); }
-@keyframes pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: no-preference) { .pop { animation: pop-in 120ms ease-out both; } .pop[data-side="top"] { animation-name: pop-up; } }
-@keyframes pop-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.pop { transform-origin: center top; }                                             /* grows from its anchor side */
+.pop[data-side="top"] { transform-origin: center bottom; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes pop-up { from { opacity: 0; transform: translateY(4px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .pop { animation: pop-in 120ms ease-out both; } .pop[data-side="top"] { animation-name: pop-up; }
+  .pop.out { animation: pop-in 100ms ease-in reverse both; } .pop.out[data-side="top"] { animation-name: pop-up; }   /* the exit: the entrance reversed (popover.js retire) */
+}
+.pop.out { pointer-events: none; }                                                  /* a closing popover takes no taps */
 /* Cluck the genie (docs/design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }

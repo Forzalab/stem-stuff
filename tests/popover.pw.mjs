@@ -22,6 +22,7 @@ try {
   const errs = []; page.on("pageerror", e => errs.push(e.message));
   await page.goto(LAB);
   const live = () => page.$$eval(".pop:not(.is-static)", ps => ps.map(p => [p.dataset.variant, p.id]));
+  const gone = () => page.waitForSelector(".pop:not(.is-static)", { state: "detached", timeout: 2000 }).catch(() => {});   // a close leaves after its 100 ms exit
   const exp = id => page.getAttribute("#" + id, "aria-expanded");
 
   await step("lazy: nothing in the page until a tap; a tap builds one, wired to its trigger", async () => {
@@ -37,15 +38,15 @@ try {
     assert.deepEqual((await live()).map(x => x[0]), ["term"]);
     assert.equal(await exp("tDoc"), "false");
     assert.equal(await page.getAttribute("#tDoc", "aria-controls"), null);
-    await page.click("#tTerm");
+    await page.click("#tTerm"); await gone();
     assert.deepEqual(await live(), []);
     assert.equal(await exp("tTerm"), "false");
   });
   await step("Esc closes it and gives focus back to its trigger; an outside tap closes it", async () => {
-    await page.click("#tNote"); await page.keyboard.press("Escape");
+    await page.click("#tNote"); await page.keyboard.press("Escape"); await gone();
     assert.deepEqual(await live(), []);
     assert.equal(await page.evaluate(() => document.activeElement.id), "tNote");
-    await page.click("#tNote"); await page.mouse.click(5, 5);
+    await page.click("#tNote"); await page.mouse.click(5, 5); await gone();
     assert.deepEqual(await live(), []);
   });
   await step("keyboard: Enter on a trigger opens it", async () => {
