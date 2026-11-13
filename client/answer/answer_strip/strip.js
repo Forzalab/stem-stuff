@@ -17,6 +17,7 @@
   var seen = new WeakMap();                                   // host -> { key, open, still }: one entry per rendered host, gone with it
   var drawer = null, owner = null, shutT = 0, queued = false;  // owner = the host element the (single) drawer hangs from
   var CHEV = '<svg class="ico" aria-hidden="true"><use href="#i-down"/></svg>';
+  /* KEEP AS IS: the Ask Cluck / See steps drawer is MEANT to cover the choice under it (Tony, Nov 13). Do not add space or move it to uncover a choice. Ask Tony before any behavior change. */
   var WORDS = { "Explain my mistake": "Ask Cluck", "See Cluck's steps": "See steps" };   // STYLE §5: the drawer's labels (the chips keep their full names for screen readers)
   var TIP_KEY = "stem-strip-badge", TIP = "Tap the badge to bring Cluck back.";
 

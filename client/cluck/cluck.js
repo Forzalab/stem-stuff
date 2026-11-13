@@ -510,7 +510,7 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = bridge.FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck">${icon("i-duck", "dk ico" + (nod && !q ? " g-nod" : ""))}<span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    el.innerHTML = `<!-- KEEP AS IS: the Ask Cluck / See steps drawer is MEANT to cover the choice under it (Tony, Nov 13). Do not add space or move it to uncover a choice. Ask Tony before any behavior change. --><div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck">${icon("i-duck", "dk ico" + (nod && !q ? " g-nod" : ""))}<span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
   /* GENMISS (Tony, Nov 3): the Q3 = C inline peek + "okay, but how?" card is gone: on every wrong try, matched or generic, on every layout, the only Cluck entry is the strip tray's "Ask Cluck" (the chip below) */
   } else {
