@@ -436,7 +436,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
   padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
   background: var(--sheet); border: var(--bw) solid var(--line); border-radius: 8px; color: var(--ink);   /* a 1px --line edge at rest; every state is the same 1px in its tone */
-  transition: border-color .18s ease-out, background-color .18s ease-out, transform 100ms ease-out;
+  transition: border-color .18s ease-out, background-color .18s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 .opt .badge {
@@ -1681,10 +1681,10 @@ html.lh-on, html.lh-on body { overflow: hidden; }
 .ch .send { animation: g-next-fade var(--d-fast) ease-out both; }
 #fb > .cluck { animation: g-next-fade var(--d-move) ease-out both; }
 @media (prefers-reduced-motion: reduce) { .ch .send, #fb > .cluck { animation: none; } }
-/* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5% and lighten; small controls dip 3%.
-   Transform only, instant in (the finger is the cause); .opt eases back out. .opt.jolt / .pop animations still win (animation beats :active).
-   :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: the colour only. */
-.opt:active:not(:disabled) { background: var(--raised); border-color: var(--muted); transform: scale(.985); }
+/* UIP1 press feedback (POLISH-SPEC §3): a press answers on contact, not on lift. Choices dip 1.5%, small controls 3%.
+   Transform only, instant in and out (the finger is the cause; no eased return: blink-fx one-group rule). .opt.jolt / .pop animations still win (animation beats :active).
+   :is() specificity (0,3,0) beats strip.css's `.vdrawer > .wchip { transform: none }` only while pressed. Reduced motion: no dip. */
+.opt:active:not(:disabled) { transform: scale(.985); }   /* dip only, instant both ways: a colour or eased return still moves after the lift and overlapped a playing burst (blink-fx peak 2, Nov 12) */
 :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: scale(.97); }
 :is(.btn, .opt, .nx, .vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go) { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) { .opt:active:not(:disabled), :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: none; } }
