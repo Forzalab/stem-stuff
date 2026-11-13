@@ -21,6 +21,7 @@
 .q.closed .ff.strip .vk[role="button"] { cursor: pointer; }
 .ff.rbox.strip .vk[role="button"] { width: var(--btn); height: var(--btn); margin-right: 0; }   /* the reveal box's static icon grew a 44px+ target (it was 24px beside the old chip segment) */
 
+/* KEEP AS IS: the Ask Cluck / See steps drawer is MEANT to cover the choice under it (Tony, Nov 13). Do not add space or move it to uncover a choice. Ask Tony before any behavior change. */
 .vdrawer {
   --ease-drawer: var(--ease-sheet);
   position: absolute; z-index: 2; box-sizing: border-box; display: flex; align-items: center; gap: var(--s1);

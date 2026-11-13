@@ -34,9 +34,9 @@ NUM_RE = re.compile(r"\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 FENCE_MAX = 4000                   # a fence longer than this is dropped unread
 # Which kinds a figure may be, from the bank's profile.subject (its first dotted part). Tony, Oct 17: "the figure MUST MATCH whatever
 # topic it is" (a network graph showed up on a physics ramp). Unknown or missing subject: the physics-ish set, never a network.
-SUBJECT_KINDS = {"physics": ("scene", "cartesian", "bars"), "cs": ("network",), "discrete": ("network",),
+SUBJECT_KINDS = {"physics": ("scene", "cartesian"), "cs": ("network",), "discrete": ("network",),
                  "math": ("cartesian",), "calc": ("cartesian",)}
-DEFAULT_KINDS = ("scene", "cartesian", "bars")
+DEFAULT_KINDS = ("scene", "cartesian")   # no "bars" in Cluck replies (Tony, Nov 13: it flashed while streaming, "basically useless")
 
 
 def on():
@@ -662,13 +662,11 @@ FIGURE (the one exception to "no code" in Format: this fence is allowed): draw O
 - graphs and trees (MST, Kruskal, Prim, shortest path, Dijkstra, coloring, BFS/DFS): "network"; draw only the part that proves the idea: the odd cycle, the path, the cut, the edge that changes things. At most 6 nodes. The question's own graph is already on screen; never redraw it. Weighted edges get "w"; the edges chosen get "color":"c1" and "label" "1", "2", ... in the order chosen; a coloring colors the nodes.
 - forces, free-body, incline, spring, pulley: "scene" with the body and every force arrow.
 - motion over time, F-x, PV, work as an area: "cartesian", the area shaded.
-- energy before/after, an energy split: "bars".
 - orbits: "scene": a disk for the planet, a dot for the satellite, an arc for the orbit, the force arrow toward the center, radii as seg.
 Physics never uses "network"; a graph-theory question always does. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON. The line right before the fence names what is drawn ("Forces on the block:", "The graph on A to D:").
 The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never the answer",...}. K and its keys:
 - "cartesian": "x":{"min":a,"max":b,"label":"$x$"},"y":{...},"marks":[...]; marks: fn {"mark":"fn","y":"2*x+1"}, shade {"f","g","from","to"}, vline {"x"}, hline {"y"}, point {"at":[x,y]}, seg/arrow {"from":[x,y],"to":[x,y]}, arc {"at","r","from","to"}, poly {"pts"}, text {"at","text"}; geometry: right {"at":corner,"from","to"} (right-angle square), dim {"from","to","label","side":"l|r"} (a length), angle {"at":vertex,"from","to","label"} (arc + label), circle {"c":[x,y],"r"}. Set "equal":true for geometry.
 - "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text, right, dim, angle, circle.
-- "bars": "unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]}] (at most 3 groups of 4 bars).
 - "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b","w":4,"color":"c1","label":"1"}] (at most 6 nodes: the key subgraph).
 Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted, or a hue sky amber orange violet pink cyan), "dash": true. A force with no "color" gets its own hue automatically: leave it off. At most 6 labels, 12 marks.
 Any mark (a network node or edge too) may add "layer": 1, 2 or 3: 1 = what the question asks about (the default), 2 = given forces / values, 3 = implied or context. Never put layer 2 or 3 on tone=bad (red stays layer 1). Layers 2 and 3 are drawn in dimmer shades of the same color, still readable; use them to keep a busy figure calm.

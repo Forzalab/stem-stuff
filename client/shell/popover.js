@@ -23,6 +23,7 @@
   }
   function open(anchor, o = {}) {
     close();
+    leaving.splice(0).forEach(x => x.remove());                                 // another popover opens at once: a leaving one goes now
     const el = make(o);
     (o.host || document.body).append(el);                                     // in the page first: a media figure measures its width
     if (o.build) o.build(el);
@@ -37,10 +38,22 @@
   function close(focusBack) {
     if (!cur) return;
     const { el, anchor } = cur; cur = null;
-    el.remove(); anchor.setAttribute("aria-expanded", "false"); anchor.removeAttribute("aria-controls");
+    anchor.setAttribute("aria-expanded", "false"); anchor.removeAttribute("aria-controls");   // the state flips at once; only the node waits
+    retire(el);
     layers();
     if (focusBack && anchor.isConnected) anchor.focus();
   }
+  /* the exit: the entrance keyframes reversed over 100 ms (.pop.out in app.css), then the node goes. Instant under reduced motion; a 150 ms
+     timer goes too if animationend never comes (display none, a stopped animation). leaving: nodes on their way out, cleared by the next open */
+  let leaving = [];
+  function retire(el) {
+    if (reduced()) { el.remove(); return; }
+    el.classList.add("out"); leaving.push(el);
+    const gone = () => { clearTimeout(t); el.remove(); leaving = leaving.filter(x => x !== el); };
+    const t = setTimeout(gone, 150);
+    el.addEventListener("animationend", e => { if (e.target === el) gone(); });
+  }
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   const toggle = (anchor, o) => cur && cur.anchor === anchor ? (close(), null) : open(anchor, o);
 
   /* fixed (STYLE.md §5: overlays are fixed), centred under its align element; clamped inside the viewport (alignment gives way, never overflow);

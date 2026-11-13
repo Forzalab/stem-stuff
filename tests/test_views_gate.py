@@ -216,7 +216,7 @@ class Stream(unittest.TestCase):
 
     def test_two_visuals_per_reply_across_fig_and_openui(self):
         # todo 113 (Tony Oct 28: Opus "may mix 2"): a ```fig and a view both go out; a third visual is dropped
-        fig = "```fig\n" + livefig.EXAMPLE["bars"] + "\n```"
+        fig = "```fig\n" + livefig.EXAMPLE["cartesian"] + "\n```"
         out, log = run([fig + "\nand\n```openui\n" + GOOD + "\n```\nend"])
         self.assertIn("```fig", out)
         self.assertIn("```openui", out)
