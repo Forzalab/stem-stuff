@@ -90,10 +90,24 @@ function rewardMulti(mine) {
   if (!rewardOn() || S !== mine || !S.solved) return;
   rewardGo(S, { correct: true, firstTry: !S.tries.some(t => t.v === "wrong") });
 }
+/* BUG-MASTERY: Rewards.mastery() had no caller, so no landmark toast ever fired. Called beside RW().answer(), for BOTH outcomes of a
+   closed question (a miss and a right), so XP is untouched. tpl = the template's code (a twin names it in parent_template). A closed miss
+   on a template starts its track; a right on a template in a redo round = the repair; a twin solo (first try) right/wrong = twin_a / twin_b.
+   Snacks and dead-easy have no template track. */
+function rwMastery(mine, o) {
+  const p = mine.prob;
+  if (p.snack || p.dead || (!o.correct && o.open)) return;
+  const tpl = p.twin ? p.parent_template : mine.code;
+  if (!tpl) return;
+  if (p.twin) RW().mastery({ type: p.twin === "b" ? "twin_b" : "twin_a", tpl, ok: o.correct && o.firstTry });
+  else if (!o.correct) RW().mastery({ type: "miss", tpl, b: false });
+  else if (window.stemRedo.has(mine.code)) RW().mastery({ type: "repair_done", tpl });
+}
 function rewardGo(mine, o) {
   const p = mine.prob;
   const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, dead: !!p.dead, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
+  rwMastery(mine, o);
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
   if (!o.correct && !o.open && !p.dead) setTimeout(() => rwTip("miss", $("#rwHud .rw-streak")), 1050);   // T37: a closed miss (often a T19 reveal, 0 XP); the count waits. Dead-easy has no count
   const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right

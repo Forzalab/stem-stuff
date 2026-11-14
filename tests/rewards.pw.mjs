@@ -464,6 +464,17 @@ try {
     await p.waitForSelector("#rwHud:not([hidden])");
     return [c, p];
   };
+  await step("BUG-MASTERY: rewardGo feeds Rewards.mastery(): a closed miss on a template starts its track; a right on a twin counts it", async () => {
+    const [c, p] = await fresh(1280);
+    await p.evaluate(() => { window.__mt = []; const M = window.Rewards.mastery; window.Rewards.mastery = ev => { window.__mt.push({ ...ev }); return M(ev); }; });
+    await go(p, "CALC1_R01");
+    await pick(p, "b"); await pick(p, "c");                                     // both tries wrong: the question closes as a miss
+    await p.waitForFunction(() => window.__mt.length > 0, null, { timeout: 4000 }).catch(() => { /* asserted below */ });
+    const mt = await p.evaluate(() => window.__mt);
+    assert.ok(mt.some(e => e.type === "miss" && e.tpl === "CALC1_R01"), "mastery got the miss: " + JSON.stringify(mt));
+    await c.close();
+  });
+
   const hudFit = p => p.evaluate(() => {
     const vis = e => e && e.checkVisibility(), r = e => e.getBoundingClientRect(), hud = document.querySelector("#rwHud"), H = r(hud), bad = [];
     const items = [...hud.children].filter(e => !e.matches(".rw-tap") && vis(e)), prev = document.querySelector("#qprev");
