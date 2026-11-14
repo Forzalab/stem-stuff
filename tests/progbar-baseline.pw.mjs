@@ -93,6 +93,8 @@ try {
     assert.deepEqual(await p.evaluate(() => window.__drill.state.tries.map(t => [t.c, t.v])), [["b", "wrong"]]);
     assert.equal(await p.evaluate(() => window.Rewards.state().xp), 1, "the +1 for trying is kept");
     assert.equal(await p.$eval("#q", q => q.classList.contains("closed")), false, "a try left: not finished");
+    await p.evaluate(() => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => 0.99;   // no drop: the engine rolls a random drop (a legend is +50 XP, 3% flake)
+      try { return A(o); } finally { Math.random = r; R.answer = A; } }; });
     await pick(p, "a");                                                         // the closing right
     ev = await p.evaluate(() => window.__ev);
     assert.deepEqual(ev.map(e => e.right), [false, true]);
@@ -186,6 +188,17 @@ try {
     st = await pb();
     assert.equal(st.notches.length, 3); assert.equal(st.notches[2].q, "CALC1_PM1");
     assert.equal(await p.evaluate(() => !!document.querySelector("[class*=pb-]")), false, "no DOM yet");
+    await c.close();
+  });
+
+  await step("P4 feed: a full set stays readable, rolls over lazily on the next submit (sets+1, run carries)", async () => {
+    const [c, p] = await fresh(browser);
+    await p.evaluate(() => localStorage.setItem("stem-pb:BANK_PB1", JSON.stringify({ v: 1, n: 7, run: 2, sets: 0, notches: Array.from({ length: 7 }, (_, i) => ({ q: "X" + i, f: 1, c: true })) })));
+    await go(p, "CALC1_P02");
+    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem("stem-pb:BANK_PB1")).notches.length), 7, "opening does not roll");
+    await pick(p, "a");
+    const st = await p.evaluate(() => JSON.parse(localStorage.getItem("stem-pb:BANK_PB1")));
+    assert.deepEqual([st.sets, st.run, st.notches.map(x => x.q)], [1, 3, ["CALC1_P02"]], "rolled, run carried, new notch in slot 0");
     await c.close();
   });
 
