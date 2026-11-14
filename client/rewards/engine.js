@@ -272,8 +272,10 @@
     })(t0);
   }
   function render(gain) {
-    if (!ui || !s || !ui.el.isConnected) return;
+    if (!s) return;
     var st = state();
+    if (cfg.stage !== false) stageToasts(st.won, st.goal);                  // PROGBAR P2: not behind the HUD guard (IMPACT R2); cfg.stage:false = off
+    if (!ui || !ui.el.isConnected) return;
     countUp(st.xp, +gain || 0);
     ui.lvlN.textContent = st.level;
     ui.bar.style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
@@ -284,7 +286,6 @@
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
     ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
-    stageToasts(st.won, st.goal);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
     pop(st);

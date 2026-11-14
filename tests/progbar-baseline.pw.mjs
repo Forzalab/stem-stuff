@@ -144,7 +144,7 @@ try {
     await c2.close();
   });
 
-  await step("stage toasts: start line once per bank at 0 done; a landmark crossing toasts the quarter; the toast needs the HUD mounted (render() guard)", async () => {
+  await step("stage toasts: start line once per bank at 0 done; a landmark crossing toasts the quarter; the toast no longer needs the HUD mounted (P2); config stage:false turns it off", async () => {
     const [c, p] = await fresh(browser);
     assert.equal(await toastNow(p), "Ready when you are.", "the start line, anchored by the engine config");
     assert.equal(await p.evaluate(() => typeof window.Rewards.config().toastAt), "function");
@@ -154,13 +154,19 @@ try {
     assert.ok(await conquer(p, "Q1"), "Q1 conquered");
     assert.equal(await toastNow(p), "1 question done. Quack on!", "the render() after a conquest shows the 25% landmark");
     assert.equal(await p.evaluate(() => window.Rewards.state().stage), "1 question done. Quack on!", "the popover line is the same words");
-    /* IMPACT R2: stageToasts lives inside render()'s `if (!ui || !s || !ui.el.isConnected) return` guard: unmount the strip and the toast never comes */
+    /* IMPACT R2, changed on purpose by PROGBAR P2: stageToasts no longer sits behind render()'s HUD guard, so an unmounted strip still toasts;
+       Rewards.config({ stage: false }) is the one switch that turns them off (the P6 flip decides, INTEG 2) */
     await p.evaluate(() => { window.stemToast.clear(); document.querySelector("#rwHud").remove(); });
     await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
     assert.ok(await conquer(p, "Q2"), "Q2 conquered");
     await p.evaluate(() => window.Rewards.render(0));
+    assert.equal(await toastNow(p), "Halfway there!", "no HUD in the page: the stage toast still comes");
+    await p.evaluate(() => { window.Rewards.config({ stage: false }); window.stemToast.clear(); });
+    await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
+    assert.ok(await conquer(p, "Q3"), "Q3 conquered");
+    await p.evaluate(() => window.Rewards.render(0));
     await p.waitForTimeout(1200);
-    assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on")), false, "no HUD in the page = no stage toast (a hidden HUD still toasts)");
+    assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on")), false, "config stage:false = no stage toast");
     await c.close();
   });
 } finally {
