@@ -1,4 +1,27 @@
-/* Drill page. Tokens: docs/design/DESIGN-LANGUAGE.md. Freeze layer: docs/design/FREEZE.md. */.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check) */
+/* ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+/*   FILE: app.css */
+/*   WHAT: Styles of the drill page: tokens (:root), entry box, one button system, freeze layer, question, Cluck's surfaces, note, duck, lock-help. */
+/*   START HERE: colours and tokens: the :root block at the top (no anchor); entry bar -> §entry-box; a button -> §one-button; the freeze layer -> §freeze; Cluck's look -> §cluck-surfaces; the note -> §note. */
+/*   FIND A SECTION: grep -n "== §<name> ==" app.css   (names below; line numbers are never kept) */
+/*   SECTIONS (in file order): */
+/*     §entry-box       entry box (dock) */
+/*     §one-button      one button system */
+/*     §main-column     main column */
+/*     §freeze          freeze layer */
+/*     §question        question */
+/*     §default-cue     T17b-1 default cue (labelled Next) */
+/*     §cluck-surfaces  Cluck's surfaces */
+/*     §scratchpad-copy scratchpad + copy */
+/*     §multitask       multitask */
+/*     §note            the note (#toast) */
+/*     §duck            Cluck's duck + sky */
+/*     §lock-help       LOCK-HELP modal */
+/*   RELATED: */
+/*     app.js       the markup and classes it toggles */
+/*     nav.css      nav and list styles */
+/*     views.css    view styles */
+/*   ===== END CODEMAP HEADER ===== */
+/* Drill page. Tokens: docs/design/STYLE.md §2. Freeze layer: docs/design/FREEZE.md. */.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check) */
 
 :root {
   /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family per device, two weights (400, 600), five sizes.
@@ -91,6 +114,7 @@ button:disabled { cursor: default; }
 :focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ico { width: 1.5rem; height: 1.5rem; flex: none; display: block; }
 
+/* == §entry-box == */
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 /* phones, a problem open: the bar stays pinned to the top while a long question scrolls under it. It keeps its space (sticky), so the first line sits right under it at scroll 0; its --paper fill (nav.css border-image) hides what passes beneath; z-index in nav.css */
@@ -237,6 +261,7 @@ html.bar-mini.bar-open .bar-tab .ico { transform: none; }
    never hides the caret: the box's bottom band (already there for Cut / Copy) is at least that tall */
 html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { padding-bottom: max(56px, calc(var(--bar-over, 76px) + 4px)); }
 
+/* == §one-button == */
 /* ---------- one button system ----------
    Every button on the page (upload, submit arrows, copy, expand, file picker) is .btn:
    48x48, 8px radius, 2px border, 24px icon drawn at 2px stroke, same hover / focus / active.
@@ -274,9 +299,11 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 @media (prefers-reduced-motion: reduce) { .btn-go.waiting::before, .choices.waiting .opt[data-w]:not(:disabled, .wrong) { animation: none; } }
 .btn[hidden] { display: none; }
 
+/* == §main-column == */
 /* ---------- main column ---------- */
 main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); padding-bottom: max(var(--s7), env(safe-area-inset-bottom)); }
 
+/* == §freeze == */
 /* ---------- freeze layer: problem + question stay on screen while you write (FREEZE.md) ---------- */
 #sentinel { height: 1px; margin-bottom: -1px; }
 .freeze {
@@ -428,6 +455,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
 .lbl.tick { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* == §question == */
 /* ---------- question ---------- */
 .q { margin-top: var(--s3); }
 .choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }   /* minmax: a fix box (an input, ~20ch wide) never widens the column past the card */
@@ -648,6 +676,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .ff.shut:hover { border-color: var(--edge); }
 .ff.shut.ok, .ff.shut.ok:hover { border-color: var(--correct); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+/* == §default-cue == */
 /* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
    96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. PALETTE-v3 §6: after a right
    answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
@@ -964,6 +993,7 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
 .wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
+/* == §cluck-surfaces == */
 /* ---------- Cluck's surfaces (docs/design/STYLE.md): tokens on .ai-skin, never :root ----------
    Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; archive/design/mockups/cluck-colors.html): ref 2's neutral dark base (math reads on a
    calm surface), ref 1's ember light only at the top, our tangerine as the one accent, dark ink on every orange fill (white on orange = 2.9:1).
@@ -1197,6 +1227,7 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 @keyframes wblink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask, .cl .ask::before { animation: none !important; } }
 
+/* == §scratchpad-copy == */
 /* ---------- scratchpad + copy ---------- */
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
 .work { margin-top: var(--s1); }
@@ -1329,6 +1360,7 @@ html.kbup:not(.mt) #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display
 #swap { display: none !important; }
 .fix-how { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); color: var(--muted); font-size: var(--t-sm); line-height: 1.35; }
 
+/* == §multitask == */
 /* ---------- multitask (docs/design/MULTITASK.md) ---------- */
 /* the pad page's tool row (round 3d, variant 3), inside the pad's box: q | a at the left; collapse, Copy at the right (Copy only with text: collapse takes its spot) */
 .xb-field .mt-mode, .xb-field .mt-exp { position: absolute; bottom: 6px; color: var(--ink); }
@@ -1491,6 +1523,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
+/* == §note == */
 /* ---------- the note (#toast: toast.js stemToast.note, app.js toast(); rules: docs/design/STYLE.md §3 Toast; todo 112) ----------
    The page's own paper, the part divider's 1px --line hairline as its edge (--shadow-1 only: Impeccable flags hairline + wide shadow); text in the part prompt's style (400, --t-md).
    No accent colour, no icon. JS sets left/top from the wrong box; --px = the verdict mark's x (the caret). On MC (.row) it lies
@@ -1542,6 +1575,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
 
+/* == §duck == */
 /* ---------- Cluck's duck + sky (peek.js window.stemDuck; T45 idle peek, docs/design/IDLE-PEEK.md) ----------
    One duck, one sky, for every Cluck rise. V3 "sky first" (Tony, Oct 15): the sky warms slowly (0.6-4.4 s), the duck peeks, eyes only
    (4.6 s), holds, comes up (6.2-6.8 s), then the line. Each rise replays the same run; down = duck out 300 ms, sky out 400 ms. The sun core
@@ -1669,6 +1703,7 @@ html.proof-split #work > #q:has(> #ff.strip) { padding-bottom: calc(var(--s3) + 
 html.side.proof-split #work.cl-on > #q { display: flex; }
 html.side.proof-split #work.cl-on > #fb:not(:empty) { display: block; }
 
+/* == §lock-help == */
 /* ---------- LOCK-HELP (lockhelp.js; Tony Nov 5): "Let me help you with that!". Jev's help_modal. A dimmed full screen; ON it (no box, no card, no border, no
    background): Cluck's say-line, the big Cluck, two buttons. No backdrop tap, no Escape. Art: LOCKHELP_ART in lockhelp.js (placeholder until Tony's new Cluck). ---------- */
 html.lh-on, html.lh-on body { overflow: hidden; }

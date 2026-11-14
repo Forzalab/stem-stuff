@@ -10,10 +10,10 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `calc.html` | The Calc Coach page. | Calc Coach page markup |
 | `privacy.html` | The privacy page. | privacy text |
 | `sw.js` | Service worker: precache list BASE, cache rules, VERSION stamp. | a new root file must work offline; cache bugs |
-| `client/answer/drill_core/app.js` | The drill: code entry, grading on device, Cluck box, scratchpad, Copy. | answer flow, Cluck UI, boot order |
-| `client/cluck/cluck.js` | The Cluck genie, split out of app.js (152a; cut at the genie banner): wish render, Cluck box, replies. Reaches app.js through `bridge`. | Cluck box, reply render, wish figures |
-| `client/shell/shell.js` | The shell, split out of app.js (152a; cut at the sugar-rewards banner): rewards, copy math, freeze, Swap, Multitask, resume. Reaches app.js through `bridge`. | rewards, Swap, Multitask, dock layout |
-| `client/answer/drill_core/app.css` | Styles of the drill page and tokens. | colours, sizes, layout of the drill page |
+| `client/answer/drill_core/app.js` | The drill: code entry, grading on device, Cluck box, scratchpad, Copy. Has a CODEMAP header. | answer flow, Cluck UI, boot order |
+| `client/cluck/cluck.js` | The Cluck genie, split out of app.js (152a; cut at the genie banner): wish render, Cluck box, replies. Reaches app.js through `bridge`. Has a CODEMAP header. | Cluck box, reply render, wish figures |
+| `client/shell/shell.js` | The shell, split out of app.js (152a; cut at the sugar-rewards banner): rewards, copy math, freeze, Swap, Multitask, resume. Reaches app.js through `bridge`. Has a CODEMAP header. | rewards, Swap, Multitask, dock layout |
+| `client/answer/drill_core/app.css` | Styles of the drill page and tokens. Has a CODEMAP header. | colours, sizes, layout of the drill page |
 | `client/answer/navigation/nav.js` | Prev / Next, question list, TeX to plain text. Has a CODEMAP header. | question order, list, titles |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
 | `client/cluck/figures/graph.js` | SVG renderer of graph blocks (cartesian, scene, circuit, network). Has a CODEMAP header. | a figure looks wrong |

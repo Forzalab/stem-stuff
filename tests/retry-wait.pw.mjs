@@ -110,7 +110,7 @@ await step("(d) diet mode: no wait", async () => {
 
 await step("(e) reload during the wait: it keeps the deadline (no restart to 10 s; tests/tab-countdown.pw.mjs)", async () => {
   const page = await mk(b); await typedFirstWrong(page);
-  await ff(page, 8000);
+  await ff(page, 5000);   // ~5 s stay on the clock: a slow reload (CI load; the flowing clock keeps running) cannot eat the 1 s bar below
   const deadline = () => page.evaluate(() => JSON.parse(sessionStorage.getItem("stem-wait") || "null")?.until ?? null);
   const until0 = await deadline();
   await page.reload(); await page.waitForSelector("#ansGo", { timeout: 8000 });

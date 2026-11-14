@@ -1,3 +1,25 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: shell.js
+// WHAT: The shell, part 3 of 3 of the drill page (split-app.mjs): sugar rewards, the original beside a snack, scratchpad and Copy, freeze, Swap, Multitask, resume, boot. Reaches app.js through bridge.
+// START HERE: rewards -> §rewards; Copy text -> §copy-math; scratchpad or its autosave -> §scratchpad-copy, §scratchpad-autosave; dock, freeze or Swap -> §freeze, §swap; Multitask -> §multitask; startup order -> §boot.
+// FIND A SECTION: grep -n "== §<name> ==" shell.js   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §rewards         sugar rewards
+//   §snack-original  the original beside a snack
+//   §scratchpad-copy scratchpad + Copy
+//   §scratchpad-autosave scratchpad autosave
+//   §copy-math       copy math as plain text
+//   §freeze          freeze layer
+//   §swap            Swap
+//   §multitask       Multitask
+//   §resume          resume
+//   §boot            boot
+// RELATED:
+//   app.js       part 1: owns the drill; bridge.<name> from there
+//   cluck.js     part 2
+//   rewards/     engine.js and fx.js
+//   copy/        payload.mjs
+// ===== END CODEMAP HEADER =====
 /* split-app.mjs (W152): part 3 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 import { markNums } from "../pure_logic_modules/chg.mjs";
 import { build, stringify } from "../resources/texts/payload.mjs";
@@ -32,6 +54,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
   setTile: { get: () => setTile, enumerable: true },
   sideMQ: { get: () => sideMQ, enumerable: true },
 });
+/* == §rewards == */
 /* ---------- sugar rewards (docs/design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
    Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
    an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
@@ -80,6 +103,7 @@ function rewardGo(mine, o) {
   // with a try left it waits, unshown (Tony, Oct 5 clutter pass C12: nothing moves up there while the eye belongs on the hint)
   requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
 }
+/* == §snack-original == */
 /* ---------- the original beside a snack (spec 1b; docs/design/REWARDS-WIRING.md §4) ----------
    A snack (one constant swapped) shows its Practice Exam 2 original with the worked solution. Desktop (side by side): in the pad column,
    in the scratchpad's place while it is open. Phone: a card on top of the problem, folded until tapped. Fading per original question:
@@ -212,6 +236,7 @@ function comeback() {
   say("Comeback. Missed it before, got it now.");
 }
 
+/* == §scratchpad-copy == */
 /* ---------- scratchpad + Copy ---------- */
 let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
 function mountBox() {
@@ -235,6 +260,7 @@ function mountBox() {
   ta.addEventListener("input", () => { if (ta.selectionEnd === ta.value.length && ta.scrollHeight > ta.clientHeight) ta.scrollTop = ta.scrollHeight; });
   autosave(ta);
 }
+/* == §scratchpad-autosave == */
 /* ---------- scratchpad autosave (archive/design/shots/autosave-*.png): draft per bank + code in localStorage.
    3 s after the last edit: "saving" (a light band sweeps through it), then "saved", gone after 2 s. Reduced motion: no sweep. */
 const SAVE_IDLE = 3000, SAVE_SHOW = 700, SAVED_SHOW = 2000;
@@ -304,6 +330,7 @@ document.addEventListener("click", async e => {
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 
+/* == §copy-math == */
 /* ================= copy math as plain text (todo 108, Tony's answers: plan and-a-todo-list-dapper-yeti) =================
    KaTeX renders htmlAndMathml (screen readers; the MathML's annotation is the TeX source), so a drag over math copied both the hidden
    MathML text and the visible glyphs ("x2x^2"). One capture copy listener: a formula the selection touches is copied whole, as texPlain
@@ -380,6 +407,7 @@ document.addEventListener("click", async e => {
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 
+/* == §freeze == */
 /* ================= freeze layer (docs/design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip
    with its own scroll instead of covering the scratchpad. On iOS Safari the keyboard does not shrink the layout
@@ -538,6 +566,7 @@ function toggleMore() {
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
 }
+/* == §swap == */
 /* ================= Swap (docs/design/SWAP.md) =================
    Keyboard up = ONE pane fills the visible area above the keyboard: the problem (card, answer pinned at its bottom) or the
    scratchpad (question peek on top, the box anchored to the bottom and growing upward). One icon toggle switches; focusing a field
@@ -669,6 +698,7 @@ function backInView() {
   requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
 }
 
+/* == §multitask == */
 /* ================= Multitask (docs/design/MULTITASK.md) =================
    Phone (< 720px): the pad is hidden; the floating Scratchpad button (#padFab) opens the pad page: the tile on top, one drag handle in
    the gap, the pad below. The tile's q | a switch: q = the problem only, a = the answer control only (round 3b). It opens on q with a big
@@ -997,6 +1027,7 @@ new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !
 let qW = 0;
 new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
 
+/* == §resume == */
 /* ================= resume (docs/design/RELOAD.md) =================
    Back from bfcache (pageshow persisted) or a long-hidden tab: requests older than the timeout are aborted (background timers are
    throttled, so theirs may not have fired), busy is cleared, the controls that should be live are live again, the layout reruns. */
@@ -1022,6 +1053,7 @@ addEventListener("pageshow", e => {
 });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 
+/* == §boot == */
 /* ================= boot ================= */
 addEventListener("hashchange", fromHash);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
