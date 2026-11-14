@@ -64,18 +64,22 @@ const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.s
 const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
 const rwTF = p => p.type === "mc" && maxTries(p) === 1 && (p.choices || []).length === 2;   // a True/False row: a coin flip pays less
 window.stemSkipSnack = () => modeOf() === "sugar" && !!RW() && RW().on() && RW().skipSnack();   // nav.js: Next steps over a snack while cruising
+/* RWUI (PROGBAR P2, PORT-ARCH §D2; INTEG 7: the old juice goes off in the SAME flip as the bar comes on). One flag per old per-answer piece;
+   all true = today's behaviour. setRWUI(false) (the P6 flip, under html.ui-v7) turns every old piece off at once; stage toasts keep their own
+   flag (INTEG 2 decides them) and no longer need the HUD mounted (engine.js render()). */
+export const RWUI = { hud: true, float: true, coins: true, burst: true, tips: true, stage: true };
+export const setRWUI = on => { for (const k of ["hud", "float", "coins", "burst", "tips"]) RWUI[k] = !!on; };
 let rwHud = null;
 function rwSync() {
   const on = rewardOn();
   if (on) {
+    RW().config({ stage: RWUI.stage, toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")), toastClear: "#fb" });   // REVEAL-TRAY (Nov 3): never on the hint card (desktop's foot spot lay on it after a miss); Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
     RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
-    RW().use(rwKey());
-    if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud);
-      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")), toastClear: "#fb" });   // REVEAL-TRAY (Nov 3): never on the hint card (desktop's foot spot lay on it after a miss); Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
-      RW().mountHUD(rwHud); }
+    RW().use(rwKey());   // use() renders, and render() now fires the start toast: config FIRST or it takes the default spot (reveal-tray 1280)
+    if (RWUI.hud && !rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud); RW().mountHUD(rwHud); }
     else RW().render(0);
   }
-  if (rwHud) rwHud.hidden = !on;
+  if (rwHud) rwHud.hidden = !on || !RWUI.hud;
 }
 function rewardTry(a, r) {
   if (!rewardOn() || (r.verdict !== "correct" && r.verdict !== "wrong")) return;
@@ -189,25 +193,28 @@ function origPlace() {
    so a right answer still feels much bigger (docs/design/REWARDS.md: a loss dressed up as a win) */
 function rewardTick(res, mine) {
   const coin = $("#rwCoin"), fx = FXL(), n = res.xp + (mine.rwHeld || 0); mine.rwHeld = 0;
-  if (fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, `+${n}`, "fx-float-sm");
+  if (RWUI.float && fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, `+${n}`, "fx-float-sm");
   RW().render(n);
 }
 const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
 async function rewardShow(mine, res) {
   const fx = FXL();
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
-  fx.pop && fx.pop(at);                                                          // the bells on every correct: pop, sparks + confetti,
-  fx.sparks && fx.sparks(at, mine.prob.snack || mine.prob.dead ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
-  fx.float && fx.float(at, `+${res.xp} XP`);
+  if (RWUI.float) {
+    fx.pop && fx.pop(at);                                                        // the bells on every correct: pop, sparks + confetti,
+    fx.sparks && fx.sparks(at, mine.prob.snack || mine.prob.dead ? "small" : "medium");           // "+N XP" rising, coins to the HUD, a shine on the coin pill
+    fx.float && fx.float(at, `+${res.xp} XP`);
+  }
   const coin = $("#rwCoin");
   rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
-  if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
+  if (RWUI.coins && rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
   fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct! +${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
   if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
   /* flow C (Tony, Oct 21): one beat per answer, at most one overlay. A level up is the only overlay, with the slot reels spinning inside
      it when the same answer dropped; any other drop (WIN / BONUS / LEGEND) or a streak note is the banner (LEGEND: gold + small confetti) */
+  if (!RWUI.burst) { if (mine.rwBack) comeback(); return; }                  // the bar's flip: no overlay, no banner (the set-end overlay is P8)
   if (res.burst === "levelup" && fx.burst) {                                 // engine.js: a level up from a +1 or a dead-easy one stays quiet
     await fx.burst("levelup", { title: "LEVEL UP", sub: `LEVEL ${res.level}`, drop: res.drop || null });
     if (mine.rwBack) comeback();
@@ -234,7 +241,7 @@ function rwRedoTip() {
   if (S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) rwTip("redo", $("#rtag"));
 }
 function rwTip(beat, at) {
-  if (!rewardOn() || noteAt() || !rwSeen(at)) return false;
+  if (!RWUI.tips || !rewardOn() || noteAt() || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
   try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false;
     if (!toast(lines[n], at, { x: true, allow: ".rot-link" })) return false;                         // HUD B (Tony, Oct 28): caret + an X. It may lie on the brainrot link for its 2 s (the Next note's exception: at 1280 the link sits right under the count). No place: next time, uncounted
