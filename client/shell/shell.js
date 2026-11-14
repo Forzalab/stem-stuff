@@ -73,7 +73,7 @@ let rwHud = null;
 function rwSync() {
   const on = rewardOn();
   if (on) {
-    RW().config({ stage: RWUI.stage, toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")), toastClear: "#fb" });   // REVEAL-TRAY (Nov 3): never on the hint card (desktop's foot spot lay on it after a miss); Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
+    RW().config({ stage: RWUI.stage, toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")), toastClear: "#fb, #q .cc-welcome" });   // BUG-TOAST-CALC: nor on the Calc card (a card with no tap of its own under the foot spot); REVEAL-TRAY (Nov 3): never on the hint card (desktop's foot spot lay on it after a miss); Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
     RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
     RW().use(rwKey());   // use() renders, and render() now fires the start toast: config FIRST or it takes the default spot (reveal-tray 1280)
     if (RWUI.hud && !rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud); RW().mountHUD(rwHud); }
