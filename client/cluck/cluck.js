@@ -1,3 +1,21 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: cluck.js
+// WHAT: The Cluck genie, part 2 of 3 of the drill page (split-app.mjs): wish render, the reply stream and figures, Cluck's sheet, the ask field. Reaches app.js through bridge.
+// START HERE: the reply stream or cache -> §genie; a figure in a reply -> §live-figs; the peek -> §peek; the sheet or its closes -> §sheet, §dismiss; the ask box -> §ask-field.
+// FIND A SECTION: grep -n "== §<name> ==" cluck.js   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §genie           the Cluck genie (easy mode, after a wrong answer)
+//   §live-figs       live figures and views in a reply
+//   §peek            the peek: start of the steps
+//   §sheet           Cluck's sheet: one home for what Cluck shows
+//   §dismiss         dismiss Cluck's column (desktop)
+//   §ask-field       the ask field
+// RELATED:
+//   app.js       part 1: owns the drill; bridge.<name> from there
+//   shell.js     part 3
+//   peek.js      Cluck's duck and sky
+//   views.js     OpenUI Lang renderer
+// ===== END CODEMAP HEADER =====
 /* split-app.mjs (W152): part 2 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 import { traceparent } from "../pure_logic_modules/incident.mjs";
 import { modeOf } from "../pure_logic_modules/mode.mjs";
@@ -23,6 +41,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
   wishPaint: { get: () => wishPaint, enumerable: true },
   wishReset: { get: () => wishReset, enumerable: true },
 });
+/* == §genie == */
 /* ---------- Cluck the genie (docs/design/EASY.md Phase 4): easy mode, after a wrong answer ----------
    The first wrong answer of a question asks /explain in the background (at most WISH_AUTO questions an hour in this browser), so
    the solution is ready when the student looks. Past the cap nothing fires: "Ask Cluck" does it. The text is plain + $LaTeX$, read
@@ -209,6 +228,7 @@ const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").
 const wishLine = l => esc(l).split(/`([^`\n]+)`/).map((s, i) => (i % 2 ? `<code class="wcode">${s}</code>`
   : s.replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"))).join("") || "&nbsp;";
 const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
+/* == §live-figs == */
 /* live figures (serve.py + livefig.py, Claude path only): the server sends at most one checked graph block per reply as
    "\n```fig\n<json>\n```\n". wishHTML puts a .wfig placeholder in its place (an unclosed fence shows nothing: never raw JSON);
    wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
@@ -475,6 +495,7 @@ function wishStgHost(w) {
   return h;
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
+/* == §peek == */
 /* the peek: only the start of the steps (the rest is under the fade); wishCut never splits a $..$ */
 const peekHTML = w => wishHTML(w.text.slice(0, wishCut(w.text, 600, w.done)));
 let peekRaf = 0;
@@ -532,6 +553,7 @@ function wishPaint() {
   bridge.layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
+/* == §sheet == */
 /* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
    One scroll, no tabs (Tony, Oct 5: variant a of archive/design/mockups/cluck-merge.html): Cluck's explanation of your miss on top (the box
    text, then the follow-up chat, the ask field pinned at the bottom), and under it the original's worked solution in a fold, "See
@@ -724,6 +746,7 @@ function clClose(dismiss, force) {                                         // fo
   if (dismiss === true && bridge.sideMQ.matches && !bridge.origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
   if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
 }
+/* == §dismiss == */
 /* ---------- dismiss Cluck's column (desktop; docs/design/DISMISS.md, Tony Oct 20: "B4 look with H humor") ----------
    html.side only: the X, Escape, or the sash dragged to the right edge folds the whole right column; the question column centres and
    its type steps up. Under the verdict, one hairline row (B4) brings it back. Its sassy line rotates (H; the one humour exception in
@@ -880,6 +903,7 @@ function clMore(late) {
   if (on && m?.k !== k) { cl.more = { k }; window.stemT?.("cluck_more", { act: "shown" }); }
   else if (!on && cl.open && m?.k === k && !m.end) { m.end = true; window.stemT?.("cluck_more", { act: "bottom" }); }   // scrolled to the end (a close is not "bottom")
 }
+/* == §ask-field == */
 /* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
 /* V2: the permanent box's own words. Idle (before any miss): Cluck's opener line (the idle wish's text) + three starter chips; each sends through the ask field's pipe, so it counts against the 5.
    A question with no Cluck key: the note instead (CL_COPY.nokey). Right on the first try, no steps asked yet: the note points at the duck chip */

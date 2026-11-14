@@ -1,3 +1,27 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: app.js
+// WHAT: The drill page, part 1 of 3 (split-app.mjs; index.html runs app.js, cluck.js, shell.js in that order): code entry, grading on device, answer box, MC / freeform / multi answers, repair ladder.
+// START HERE: a grading or verdict bug -> §grading; code bar or upload -> §entry-box; question markdown or TeX -> §markdown-tex; banks -> §banks; a wrong-answer repair -> §repair-ladder; MC or typed arrow -> §mc-arrow, §freeform; multi-part -> §multi.
+// FIND A SECTION: grep -n "== §<name> ==" app.js   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §markdown-tex    markdown + TeX
+//   §grading         grading: the one place
+//   §entry-box       code bar + upload
+//   §banks           practice banks
+//   §problem-state   problem state
+//   §twist-chip      the Twist chip + its one-time toast
+//   §welcome-q1      the welcome Q1
+//   §repair-ladder   repair ladder after a miss
+//   §mc-arrow        MC: one arrow
+//   §second-try      the second try costs 10 s
+//   §freeform        freeform: the same arrow
+//   §multi           multi: every part
+// RELATED:
+//   cluck.js     part 2: the Cluck genie, reached through bridge
+//   shell.js     part 3: rewards, Copy, Swap, Multitask, boot
+//   nav.js       Prev / Next, question list
+//   app.css      styles
+// ===== END CODEMAP HEADER =====
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: docs/design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 /* ./copy/payload.mjs: used by cluck.js / shell.js only (split-app.mjs) */
@@ -136,6 +160,7 @@ function vmark(box, id) {
 const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries, fight it later."
   : r.verdict === "wrong" ? "Not quite. One more try, I swear." : "";
 
+/* == §markdown-tex == */
 /* ================= markdown + TeX ================= */
 /* bug 7: a typed answer as TeX, numbers as typed. math.js toTex prints 222222 as 2.22222·10^{+5} (format upperExp 5);
    a number JS writes plainly stays plain, a typed e-number (1.2e-7) keeps the ·10^ form */
@@ -219,6 +244,7 @@ function md(text, inline = false, big = false) {
   });
 }
 
+/* == §grading == */
 /* ================= grading: THE one place =================
    Server problems: POST /check grades (answers never reach the browser). Reply shape (SCHEMA.md "Grading"):
      { verdict: "correct"|"wrong"|"invalid"|"locked", triesLeft, error?, hint?, repeat?, part? }
@@ -421,6 +447,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   return R(left() <= 0 ? shut(out) : out);
 }
 
+/* == §entry-box == */
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
 let mtForced = false;                                                          // phone: the split opened by itself for a proof item (isProof), not by the Open notes button
@@ -573,6 +600,7 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 const retryLoad = $("#retryLoad");
+/* == §banks == */
 /* ================= practice banks (docs/design/BANK.md) =================
    BANK_XXX = a file on the server (banks/BANK_XXX.json). The server keeps the answers, this browser's progress (marks) and
    where it was in each bank (at). localStorage "stem-src" = the live list: a bank code, or "file" for an uploaded file. */
@@ -652,6 +680,7 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
   if (S && S.code === to && !modeFlip) { putCode(""); entryMsg(""); } else await load(to);
   return true;
 }
+/* == §problem-state == */
 /* ================= problem state ================= */
 let busy = false;    // a grading request is out (MC and typed answers)
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
@@ -774,6 +803,7 @@ function proofHome() {
   else if (!on && !fi.contains($("#q"))) fi.append($("#q"), $("#fb"));
   root.classList.toggle("proof-split", on);
 }
+/* == §twist-chip == */
 /* ---------- the Twist chip + its one-time toast (W133, todo 133; copy LOCKED, Tony Oct 29, verbatim) ----------
    An item with `twist: true` (SCHEMA.md) gets a small "Twist" chip in the card's header, left of the title (the title row when sugar
    shows one, else a header row of its own). A tap opens a note popover (popover.js, docs/design/POPOVER.md) with TWIST_POP. The first twist
@@ -825,6 +855,7 @@ function drawFigures() {
   document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
 
+/* == §welcome-q1 == */
 /* ---------- the welcome Q1 (todo 119; brain design-round-66 DESIGN-v3 §2, TONY-DECISIONS #5) ----------
    A bank's `welcome: true` item opens first on a fresh device, once per bank and device: welcome.js (repair.js's welcome variant; its
    ladder from GET /repair/<code>, served for this item before any try) takes the answer box's place, the question stays above it.
@@ -856,6 +887,7 @@ function welcomeQ(q) {
   window.CalcCoach?.welcomeCard(q);                                              // Calc Coach's welcome entry (calc-coach.js): app chrome under the ladder, never a reply
 }
 
+/* == §repair-ladder == */
 /* ---------- the repair ladder after a miss (brain design-round-66 DESIGN-v3 §3, T8; Tony Nov 3) ----------
    Every graded wrong try on an item with `repair` draws its ladder (repair.js, variant "repair") under the verdict: GET /repair/<code>
    is sent only after the /check that recorded the miss (403 before it), 404 = no ladder = nothing changes. Not on the welcome item or in
@@ -922,6 +954,7 @@ function repairPick(mine, d) {
   select(o); submitMC();
 }
 
+/* == §mc-arrow == */
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
 const LETTERS = "ABCDE";
 function renderQuestion() {
@@ -1288,6 +1321,7 @@ function nudge(o, cls) {
   o.classList.add(cls);
   o.addEventListener("animationend", () => o.classList.remove(cls), { once: true });
 }
+/* == §second-try == */
 /* ---------- the second try costs 10 s (Tony Nov 5; sugar, 2-try items only) ----------
    The first wrong verdict starts S.wait = { until }. The submit is the progress bar: a typed item's #ansGo and a choose-all's #mcGo get a CCW clock sweep (app.css .waiting),
    a single MC's live, un-picked options drain 100% -> 0% in the same neutral tone and ignore taps (aria-disabled + .waiting only: o.disabled means "struck wrong"). Typing / ticking stay allowed.
@@ -1429,6 +1463,7 @@ async function submitAll() {
   feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
 }
 
+/* == §freeform == */
 /* ---------- freeform: the same arrow, flush inside the input ---------- */
 function wireFF() {
   const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo"), pv = $("#preview"), mathy = /^(num|expr)$/.test(S.prob.type);
@@ -1625,6 +1660,7 @@ function proofWait(r) {
   bridge.layoutFreeze();
 }
 
+/* == §multi == */
 /* ---------- multi: every part has its own arrow, verdict, tries and lockout ---------- */
 const partEls = i => { const r = document.querySelector(`#q .part[data-i="${i}"]`); return { row: r, box: r.querySelector(".ff"), inp: r.querySelector(".ans"), go: r.querySelector(".send"), hint: r.querySelector(".phint") }; };
 function wireParts() {

@@ -11,7 +11,7 @@
         tracked code file with no row and no folder row gets a `TODO | TODO` stub row. Prints one line per change.
 Prints PASS or FAIL lines; exit 0 / 1."""
 import ast, difflib, os, re, subprocess, sys, tempfile
-BIG = "aiw.py oui.py graph.js nav.js".split()   # files that carry a header today; add a name when a split PR gives a file one
+BIG = "aiw.py oui.py graph.js nav.js client/answer/drill_core/app.js client/cluck/cluck.js client/shell/shell.js client/answer/drill_core/app.css".split()   # files that carry a header today; add a name when a split PR gives a file one
 
 
 def comments(argv):
