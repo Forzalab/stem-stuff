@@ -30,7 +30,7 @@ import * as codes from "../../pure_logic_modules/codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "../../pure_logic_modules/suggest.mjs";
 import { match as slipMatch, slipSpot, familyHint } from "../../pure_logic_modules/slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "../../pure_logic_modules/mode.mjs";
-import { pbKey, pbLoad, pbSubmit } from "../../pure_logic_modules/progbar.mjs";
+import { pbKey, pbLoad, pbSubmit, pbFull, pbNext } from "../../pure_logic_modules/progbar.mjs";
 import { quack, withQuack } from "../../pure_logic_modules/quack.mjs";
 /* ./speak.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { changes } from "../../pure_logic_modules/chg.mjs";
@@ -1919,7 +1919,8 @@ function guard() {
 }
 /* PROGBAR-P4 (PORT-ARCH D2): a closed question = one notch submit, fed from finish() (settle() reaches it for a multi). State only, no DOM:
    saved under pbKey(bank) via pbLoad's tolerant read; blocked/throwing storage is a silent no-op. A restore (painting) is not a submit.
-   A full set holds (extra submits ignored) until the bar UI calls pbNext on the Next press (later phase). */
+   A full set stays readable (the P8 set-end overlay reads it) and rolls over lazily: the next submit calls pbNext first (sets + 1, run carries).
+   left = bank questions after this one not yet in the set (position-based; 0 on the last one ends a short set early). */
 function pbFeed() {
   try {
     if (!bank || painting || !S) return;
@@ -1927,7 +1928,9 @@ function pbFeed() {
     const multi = S.prob.type === "multi", n = multi ? S.parts.length : 1;
     const f = multi ? S.parts.filter(x => x.ok).length / n : S.tries.some(x => x.v === "correct") ? 1 : 0;
     const r = window.stemRedo?.get?.(), retry = !!r && r.codes.includes(S.code);
-    pbSubmit(st, { q: S.code, f, retry });
+    if (pbFull(st)) pbNext(st);
+    const at = bank.codes.indexOf(S.code), left = at < 0 ? undefined : bank.codes.slice(at + 1).filter(c => !st.notches.some(x => x.q === c)).length;
+    pbSubmit(st, { q: S.code, f, retry }, left);
     localStorage.setItem(k, JSON.stringify(st));
   } catch { /* storage blocked: the bar state is optional */ }
 }

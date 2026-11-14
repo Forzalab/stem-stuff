@@ -189,6 +189,17 @@ try {
     await c.close();
   });
 
+  await step("P4 feed: a full set stays readable, rolls over lazily on the next submit (sets+1, run carries)", async () => {
+    const [c, p] = await fresh(browser);
+    await p.evaluate(() => localStorage.setItem("stem-pb:BANK_PB1", JSON.stringify({ v: 1, n: 7, run: 2, sets: 0, notches: Array.from({ length: 7 }, (_, i) => ({ q: "X" + i, f: 1, c: true })) })));
+    await go(p, "CALC1_P02");
+    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem("stem-pb:BANK_PB1")).notches.length), 7, "opening does not roll");
+    await pick(p, "a");
+    const st = await p.evaluate(() => JSON.parse(localStorage.getItem("stem-pb:BANK_PB1")));
+    assert.deepEqual([st.sets, st.run, st.notches.map(x => x.q)], [1, 3, ["CALC1_P02"]], "rolled, run carried, new notch in slot 0");
+    await c.close();
+  });
+
 } finally {
   await browser.close();
   srv.kill();
