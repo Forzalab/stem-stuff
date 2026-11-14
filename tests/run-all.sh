@@ -271,7 +271,7 @@ tags() {
     desk-layout@1|desk-layout@2|desk-layout@3) echo "@layout @real-time" ;;   # W129 L1-L6: the desktop columns, the pixel-diff gate on every tap
     expr) echo "@logic @real-time" ;;   # W137 expression answers: own 2 serve.py (EXPR_MODE on / off) + a fake Claude, 390 / 1440 / 1366
     progbar-baseline) echo "@logic @real-time" ;;   # PROGBAR P1 HUD baseline, own server
-    toast-calc) echo "@layout" ;;   # BUG-TOAST-CALC, own server
+    toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
     desk-notes-off) echo "@layout @real-time" ;;   # W97 desktop notes: diet kept, sugar hidden from first paint, phone kept
     units) echo "@layout @real-time" ;;   # W132 the answer line's unit: colour, weight, gap, same line; real clipboard
     twist) echo "@layout @real-time" ;;   # W133 the Twist chip, its popover, the one-time toast and its cover rule (#q, Next) at 390 / 1366 / 1440
