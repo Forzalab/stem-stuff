@@ -58,6 +58,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/pure_logic_modules/incident.mjs` | Incident codes the student can read out. | incident codes |
 | `client/pure_logic_modules/mode.mjs` | Sugar or diet mode per browser. | mode switch |
 | `client/pure_logic_modules/mycluck.mjs` | My Cluck login image (pixels + QR). | login image |
+| `client/pure_logic_modules/progbar.mjs` | Notch progress bar state: sets of 7, answered order, partial, streak run, carry (not wired yet). | progress bar rules |
 | `client/pure_logic_modules/quack.mjs` | Random QUACK prefixes for hint feedback. | hint prefix |
 | `client/pure_logic_modules/redo.mjs` | What happens after a miss on an item with a ladder. | redo rules |
 | `client/pure_logic_modules/sheet.mjs` | Pure maths of Cluck's phone sheet. | sheet drag |
