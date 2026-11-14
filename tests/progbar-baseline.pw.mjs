@@ -148,7 +148,7 @@ try {
     const [c, p] = await fresh(browser);
     assert.equal(await toastNow(p), "Ready when you are.", "the start line, anchored by the engine config");
     assert.equal(await p.evaluate(() => typeof window.Rewards.config().toastAt), "function");
-    assert.equal(await p.evaluate(() => window.Rewards.config().toastClear), "#fb");
+    assert.equal(await p.evaluate(() => window.Rewards.config().toastClear), "#fb, #q .cc-welcome");
     await p.evaluate(() => { window.Rewards.config({ goal: 4 }); window.stemToast.clear(); });
     await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
     assert.ok(await conquer(p, "Q1"), "Q1 conquered");
