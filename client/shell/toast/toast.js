@@ -104,16 +104,20 @@
   var late = 0;
   function expire() { if (busy() && late++ < 32) { timer = setTimeout(expire, 250); return; } late = 0; hide(false, 'expired'); }   // at most 8 s more: a stuck fx-busy never pins it
   function arm(ms) { clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(expire, ms); }
+  /* the words into `t` with the number v: "Bold line\nsecond line" = a bold head, a break, the rest (BUG-COACHBOLD: count()'s put() used to rewrite it flat) */
+  function render(t, o, v) {
+    t.textContent = '';
+    var text = String(o.text), parts = text.split('{#}'), head;
+    var at = text.indexOf('\n'), hd = at > 0 ? text.slice(0, at) : '';
+    if (hd && hd.indexOf('{#}') < 0) { head = d.createElement('b'); head.className = 'stoast-h'; head.textContent = hd; t.append(head, d.createElement('br')); parts = text.slice(at + 1).split('{#}'); }
+    parts.forEach(function (s, k) {
+      if (k) { var b = d.createElement('span'); b.className = 'stoast-n'; b.textContent = v; t.appendChild(b); }
+      t.appendChild(d.createTextNode(s));
+    });
+  }
   function count(o) {
     var t = el.querySelector('.stoast-t'), i = el.querySelector('.stoast-bar i'), n = o.num || [0, 0];
-    var put = function (v) {
-      var parts = String(o.text).split('{#}');
-      t.textContent = '';
-      parts.forEach(function (s, k) {
-        if (k) { var b = d.createElement('span'); b.className = 'stoast-n'; b.textContent = v; t.appendChild(b); }
-        t.appendChild(d.createTextNode(s));
-      });
-    };
+    var put = function (v) { render(t, o, v); };   // the same renderer as next(): a stale tween never flattens the bold head
     i.style.transition = 'none'; i.style.setProperty('--p', o.from || 0); void i.offsetWidth; i.style.transition = '';
     el.dataset.done = '0';
     var fin = function () { put(n[1]); i.style.setProperty('--p', o.to || 0); el.dataset.done = '1'; };
@@ -143,9 +147,7 @@
     el.classList.remove('out', 'on');
     el.style.width = '';
     actionPut(o);
-    var tt = el.querySelector('.stoast-t'), full = String(o.text).split('{#}').join(o.num ? o.num[1] : ''), nl = full.indexOf('\n');
-    if (nl > 0) { tt.textContent = ''; var hb = d.createElement('b'); hb.className = 'stoast-h'; hb.textContent = full.slice(0, nl); tt.append(hb, d.createElement('br'), full.slice(nl + 1)); }   // "Bold line\nsecond line"
-    else tt.textContent = full;
+    render(el.querySelector('.stoast-t'), o, o.num ? o.num[1] : '');
     if (!place()) { cur = null; actionPut({}); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
     q.shift();
     el.querySelector('.sr-only').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
