@@ -29,6 +29,7 @@ desk-layout@1
 desk-layout@2
 desk-layout@3
 desk-notes-off
+progbar-baseline
 disabled
 dismiss
 done
