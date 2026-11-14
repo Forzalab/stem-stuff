@@ -190,6 +190,46 @@ Defined once in app.css :root; no other file defines a duration token.
 - Direct manipulation (the sash, dragging the Scratchpad button) follows the finger with no transition; the release snap is `--d-move` ease-out. Why: the hand moves it, so it is not layout animation.
 - Reduced motion: `app.css` turns off every transition. Every `@keyframes` and every View Transition needs its own `prefers-reduced-motion` rule: no movement; a fade of `--d-move` or less, or an instant change. Snaps are instant.
 
+### 2.9 Grid and ratios (TARGET for the `html.ui-v7` redesign, Nov 14)
+
+Status: target values for the v7 redesign port. **Not in `app.css` yet.** They land with the token PR of the port (`client/shared_ui/design_tokens.css`, plan: brain `projects/calc/_files/ui-polish/PORT-ARCH.md`). Until then §2.3 to §2.5 describe the live app; see §9 row 17.
+Source: grid + ratio audit of the v7 mocks (brain `projects/calc/_files/ui-polish/grid-audit/AUDIT.md`, overlays `*-grid.png`), Müller-Brockmann *Grid Systems*, Refactoring UI (spacing system), Impeccable.
+
+Columns (Swiss grid: every card, tile and field edge snaps to a column edge):
+
+| breakpoint | margin | columns | gutter | tile gap | blocks |
+|---|---|---|---|---|---|
+| phone (< 768px) | 16 | 12 (read as 4 visual columns of span 3) | 8 | 8 | 12 inside a group, 16 between groups |
+| desktop (≥ 768px, checked at 1280) | 32 | 12 | 24 (between cases / columns) | 8 (inside a group) | one case = span 4 (span 6 for bento) |
+
+Vertical rhythm:
+- Atom 4, step 8. Scale 4 8 12 16 24 32 48 64 (= `--s1`…`--s7` + 64). 12 only inside components. Reject 7, 9, 14, 18, 20, 22, 25, 26, 28. Why: off-scale values broke the 8px rhythm in the audit.
+- Whole-px line-heights only: xs 13/16, sm 15/20, md 17/24, lg 20/28, xl 28/32. Why: `line-height: 1.41` gave fractional box heights (74.94, 112.9).
+- Boxes sit on whole px (a send button at y = 1252.69 snapped its glyph by 0.5px).
+
+Radii (inner = outer − inset):
+
+| radius | for |
+|---|---|
+| 28 | a container that wraps a 16 surface at inset 12 (Cluck box around the Ask field) |
+| 16 | surfaces: tile, card, field, toast / tray |
+| 12 | controls: button, chip, avatar tile |
+| 8 | marks; a button nested in a field at inset 8 |
+
+Shape: `corner-shape: superellipse(1.52)` with the CSS radius at 1.35× the Apple radius (16 / 12 / 8 ≈ Apple 12 / 9 / 6); fallback plain arcs at the Apple radius. On glass (`backdrop-filter`) use plain `border-radius`: corner-shape breaks the blur in Chromium 153.
+
+Sizes and ratios:
+
+| thing | size / ratio |
+|---|---|
+| button | 48 (send button nested in the Ask field 44, glyph centred by ink bbox ≤ 0.5px) |
+| chip | 44 tall |
+| field | Ask 56 visible, typed 64 to 72 (legend line-height 16, insets 8) |
+| choice card (cards case, span 4) | `aspect-ratio: 3/2` (audit: 1.36 to 1.60 drift) |
+| bento | unit 96 + gap 8; tile padding 24/16/16; tall tile = exactly 2 units; 3-up tile 5:4, 2-up 2:1; no hero tile in a quiz (fairness) |
+| True/False half | row 104, 5:3 |
+| long-answer tile | full row, ≈ 6:1 |
+
 ---
 
 ## 3. Components
@@ -463,3 +503,4 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 | 14 | `nav.css` gone rows | `--hint` is 4.46:1 on `--sheet`, 3.92:1 on `--raised`. | Raise `--hint` to `#899ab3`, or `--muted` for the struck title. |
 | 15 | `design/DESIGN-LANGUAGE.md`, `design/specimen.html` | A site `--blue` #3a67d8 the app does not have. | Remove; specimen buttons use `.btn` / `--c1`. |
 | 16 | `app.css` desktop tokens vs `app.js` `sideMQ` | Desktop type scale switches at `700.02px` + `pointer: fine`; side by side at 720px. | One breakpoint constant. |
+| 17 | §2.9 vs `app.css` | §2.9 grid, line-heights and radii are v7 targets; the live app still uses §2.3 to §2.5 (radii 10/12/8/6, `--gut` 20, fractional line-heights). | The ui-v7 token PR adopts §2.9, then folds §2.3 to §2.5 into it and deletes this row. |
