@@ -169,6 +169,26 @@ try {
     assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on")), false, "config stage:false = no stage toast");
     await c.close();
   });
+  await step("P4 feed: finish()/settle() write stem-pb:<bank> (state only): right, wrong-then-out, multi partial; no DOM change", async () => {
+    const [c, p] = await fresh(browser);
+    const pb = () => p.evaluate(() => JSON.parse(localStorage.getItem("stem-pb:BANK_PB1") || "null"));
+    assert.equal(await pb(), null, "opening a question writes nothing");
+    await go(p, "CALC1_P02"); await pick(p, "b");
+    assert.equal(await pb(), null, "a wrong with a try left is not a closed question");
+    await pick(p, "a");
+    let st = await pb();
+    assert.deepEqual([st.v, st.run, st.notches.map(x => [x.q, x.f, x.c])], [1, 1, [["CALC1_P02", 1, true]]]);
+    await go(p, "CALC1_P03"); await pick(p, "b"); await pick(p, "c");
+    st = await pb();
+    assert.deepEqual([st.run, st.notches.map(x => [x.q, x.f, x.c])], [0, [["CALC1_P02", 1, true], ["CALC1_P03", 0, false]]], "out of tries = wrong notch, run broken");
+    await go(p, "CALC1_PM1"); await typePart(p, 0, "1"); await typePart(p, 1, "2");
+    await p.waitForFunction(() => window.__drill.state.finished === true, null, { timeout: 6000 });
+    st = await pb();
+    assert.equal(st.notches.length, 3); assert.equal(st.notches[2].q, "CALC1_PM1");
+    assert.equal(await p.evaluate(() => !!document.querySelector("[class*=pb-]")), false, "no DOM yet");
+    await c.close();
+  });
+
 } finally {
   await browser.close();
   srv.kill();

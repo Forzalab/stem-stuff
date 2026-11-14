@@ -30,6 +30,7 @@ import * as codes from "../../pure_logic_modules/codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "../../pure_logic_modules/suggest.mjs";
 import { match as slipMatch, slipSpot, familyHint } from "../../pure_logic_modules/slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "../../pure_logic_modules/mode.mjs";
+import { pbKey, pbLoad, pbSubmit } from "../../pure_logic_modules/progbar.mjs";
 import { quack, withQuack } from "../../pure_logic_modules/quack.mjs";
 /* ./speak.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { changes } from "../../pure_logic_modules/chg.mjs";
@@ -1916,8 +1917,23 @@ function guard() {
     ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
     : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
+/* PROGBAR-P4 (PORT-ARCH D2): a closed question = one notch submit, fed from finish() (settle() reaches it for a multi). State only, no DOM:
+   saved under pbKey(bank) via pbLoad's tolerant read; blocked/throwing storage is a silent no-op. A restore (painting) is not a submit.
+   A full set holds (extra submits ignored) until the bar UI calls pbNext on the Next press (later phase). */
+function pbFeed() {
+  try {
+    if (!bank || painting || !S) return;
+    const k = pbKey(bank.code), st = pbLoad(localStorage.getItem(k));
+    const multi = S.prob.type === "multi", n = multi ? S.parts.length : 1;
+    const f = multi ? S.parts.filter(x => x.ok).length / n : S.tries.some(x => x.v === "correct") ? 1 : 0;
+    const r = window.stemRedo?.get?.(), retry = !!r && r.codes.includes(S.code);
+    pbSubmit(st, { q: S.code, f, retry });
+    localStorage.setItem(k, JSON.stringify(st));
+  } catch { /* storage blocked: the bar state is optional */ }
+}
 function finish() {
   S.finished = true; cancelWait();
+  pbFeed();
   $("#q").classList.add("closed");
   $("#q").classList.toggle("solved", S.tries.at(-1)?.v === "correct");   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
