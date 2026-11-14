@@ -93,6 +93,8 @@ try {
     assert.deepEqual(await p.evaluate(() => window.__drill.state.tries.map(t => [t.c, t.v])), [["b", "wrong"]]);
     assert.equal(await p.evaluate(() => window.Rewards.state().xp), 1, "the +1 for trying is kept");
     assert.equal(await p.$eval("#q", q => q.classList.contains("closed")), false, "a try left: not finished");
+    await p.evaluate(() => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => 0.99;   // no drop: the engine rolls a random drop (a legend is +50 XP, 3% flake)
+      try { return A(o); } finally { Math.random = r; R.answer = A; } }; });
     await pick(p, "a");                                                         // the closing right
     ev = await p.evaluate(() => window.__ev);
     assert.deepEqual(ev.map(e => e.right), [false, true]);
