@@ -49,3 +49,32 @@
    The float family: no edge (the 1px --line goes), the --float fill (navy-700 on the navy-950 page) + --shadow-3 separate it from the page; radius 16 (surface).
    Text --ink on --float 14:1, the close glyph --muted 8:1. The bar track keeps --sheet (decoration; the --reward fill carries the value). */
 html.ui-v7 .stoast { border-width: 0; border-radius: 16px; background: var(--float); box-shadow: var(--shadow-3); }
+
+/* ---------- the row toast (html.ui-v7 + o.row, toast.js rowPut; DUCK-V8-TOAST, TOAST-GAP, tray9 direction C2). Flag off: no rule here applies.
+   Card = the duck's 80 px box on the left, the words start at box right + 32 (column-gap), text block then 16 to the bar, 5 capsules, a bare
+   close in the top-right corner (its 44 hit box sits in the 40 px right padding, so no word runs under it). Fit-content height, no border. */
+html.ui-v7 .stoast.stoast-v7 {
+  grid-template-columns: 80px minmax(0, 1fr); column-gap: 32px; row-gap: 0; align-items: center;
+  padding: 24px 40px 24px 24px; border: 0; border-radius: 24px; background: var(--float); box-shadow: var(--shadow-3);
+  font: 400 17px/24px var(--font, system-ui, sans-serif); color: var(--ink);
+}
+html.ui-v7 .stoast.stoast-v7.on { animation: stoast-in .2s var(--ease-sheet, cubic-bezier(.32, .72, 0, 1)) backwards; }
+html.ui-v7 .stoast.stoast-v7.out { animation: stoast-out .15s var(--ease-sheet, cubic-bezier(.32, .72, 0, 1)) forwards; }
+html.ui-v7 .stoast-v7 .stoast-duck { display: block; width: 80px; height: 80px; }
+html.ui-v7 .stoast-v7 .stoast-duck img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+html.ui-v7 .stoast-v7 .stoast-b { display: block; min-width: 0; }
+html.ui-v7 .stoast-v7 .stoast-t { margin: 0; font: 700 18px/24px var(--font, system-ui, sans-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.ui-v7 .stoast-v7 .stoast-s { margin: 0; font: 400 15px/20px var(--font, system-ui, sans-serif); color: var(--muted); }
+html.ui-v7 .stoast-v7 .stoast-s[hidden] { display: none; }
+html.ui-v7 .stoast-v7 .stoast-bar { display: flex; gap: 4px; height: 8px; margin: 16px 0 0; border-radius: 0; background: none; }
+html.ui-v7 .stoast-v7 .stoast-bar::after { display: none; }
+html.ui-v7 .stoast-v7 .stoast-bar i {
+  position: relative; flex: 1 1 0; height: 8px; border-radius: 999px; overflow: hidden; transform: none; transition: none;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+html.ui-v7 .stoast-v7 .stoast-bar i::after {   /* 5 capsules: each fills as --p crosses its own fifth (clamp = 0 before, 1 after) */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--help); transform-origin: left center;
+  transform: scaleX(clamp(0, calc(var(--p, 0) * 5 - var(--k, 0)), 1));
+}
+html.ui-v7 .stoast-v7 .stoast-x { position: absolute; top: 8px; right: 0; width: 44px; height: 44px; display: grid; place-items: center; }
+html.ui-v7 .stoast-v7 .stoast-x svg { width: 16px; height: 16px; }   /* 16 px glyph = ~11 px ink */

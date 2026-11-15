@@ -85,6 +85,16 @@
     if (p < 3 / 4) return "Halfway there!";                                                            // COPY-PENDING
     return "Only " + (total - done) + " to go, you got this!";                                        // COPY-PENDING
   }
+  /* the row toast's words (html.ui-v7 only, TOAST-TITLE): a short bold title + a dim subtitle, the same beats as stage() */
+  function stageRow(done, total) {
+    var p = done / total;
+    if (!done) return ['Ready when you are', ''];
+    if (p >= 1) return ['🎉 All done!', ''];
+    if (p < 1 / 2) return [done + (done === 1 ? ' question' : ' questions') + ' done.', 'Quack on!'];
+    if (p < 3 / 4) return ['Halfway there!', ''];
+    return ['Only ' + (total - done) + ' to go!', 'You got this!'];
+  }
+  var v7 = function () { return !!(document.documentElement && document.documentElement.classList.contains('ui-v7')); };
   /* the landmark a count has reached: 0 none, 1-3 = 25 / 50 / 75 %, 4 = all done */
   function landmark(done, total) { return done >= total ? 4 : Math.floor(4 * done / total); }
   /* the stage toast (toast.js): the start line once per bank, then one per landmark crossed; the bar fills from the last count to this one */
@@ -92,7 +102,12 @@
     var T = g.stemToast, at = cfg.toastAt || function () { return document.querySelector('#q'); };
     if (shownWon == null) {
       shownWon = won;
-      if (!won && !started[key] && T) { started[key] = 1; T.show({ text: stage(0, goal), from: 0, to: 0, at: at, clear: cfg.toastClear, until: Date.now() + 15000 }); }   // the start line: now-ish or never
+      if (!won && !started[key] && T) {                                       // the start line: now-ish or never
+        started[key] = 1;
+        var s0 = { text: stage(0, goal), from: 0, to: 0, at: at, clear: cfg.toastClear, until: Date.now() + 15000 };
+        if (v7()) { var r0 = stageRow(0, goal); s0.text = r0[0]; s0.sub = r0[1]; s0.row = true; s0.duck = 'start'; s0.segs = 5; }
+        T.show(s0);
+      }
       return;
     }
     var p0 = shownWon; shownWon = won;
@@ -102,6 +117,11 @@
         from: k === landmark(p0, goal) + 1 ? p0 / goal : (k - 1) / 4, to: k === b ? Math.min(1, won / goal) : k / 4 };
       if (/^\d+ /.test(line)) { o.text = line.replace(/^\d+/, '{#}'); o.num = [p0, n]; }                  // the count goes up
       else if (/^Only \d+ /.test(line)) { o.text = line.replace(/^Only \d+/, 'Only {#}'); o.num = [goal - p0, goal - n]; }   // the rest goes down
+      if (v7()) {                                                             // the row (ui-v7): title + subtitle, the landmark's duck, 5 capsules
+        var rw = stageRow(n, goal);
+        o.text = o.num ? rw[0].replace(/^\d+/, '{#}').replace(/^Only \d+/, 'Only {#}') : rw[0];
+        o.sub = rw[1]; o.row = true; o.duck = 'landmark'; o.segs = 5;
+      }
       T.show(o);
     }
   }
