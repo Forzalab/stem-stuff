@@ -1,0 +1,57 @@
+/* qcard.css: QCARD-SWISS v2 (qcard.js), html.ui-v7 ONLY. Flag off = nothing here applies.
+   ONE Swiss grid: the card padding --qpad is the left edge of the hero title, the meta, the figure and the setup; type and gaps on the 4px baseline
+   (line heights 4 x n, gaps 8 / 16 / 24 / 32). Title bottom-left of the hero band with a dark bottom scrim; Ask Cluck stays top right (cluckbtn.css), out of the flow,
+   the hero's top padding keeps the title clear of it (never beside it). Ghost = ECHO B (brain longq DESIGN.md, Q-NUM decision: 6 Archivo 900 copies, step (-12,0), opacity .7 .55 .42 .3 .2 .12 x --qa1, LITE: blur 0). */
+@font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
+html.ui-v7 #problem.qc7 { --qpad: 24px; --qa1: .05; position: relative; isolation: isolate; padding: var(--qpad); }
+html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 16px; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 32px; } }
+html.ui-v7 #problem.qc7 > .blocks { position: relative; z-index: 1; }
+html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
+
+/* GHOST: clipped by its own box (the card keeps no overflow), under the text, never takes a tap */
+html.ui-v7 .qghostbox { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+html.ui-v7 .qghost { position: absolute; right: -8px; top: -20px; font: 900 232px/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.07em; white-space: nowrap; color: var(--action); font-variant-numeric: tabular-nums; user-select: none; }
+html.ui-v7 .qghost i { font-style: normal; position: absolute; right: 0; top: 0; z-index: calc(10 - var(--k)); filter: none; transform: translate(calc(var(--k) * -12px), 0); }
+html.ui-v7 .qghost i:nth-child(1) { position: relative; opacity: calc(var(--qa1) * .7); }
+html.ui-v7 .qghost i:nth-child(2) { opacity: calc(var(--qa1) * .55); }
+html.ui-v7 .qghost i:nth-child(3) { opacity: calc(var(--qa1) * .42); }
+html.ui-v7 .qghost i:nth-child(4) { opacity: calc(var(--qa1) * .3); }
+html.ui-v7 .qghost i:nth-child(5) { opacity: calc(var(--qa1) * .2); }
+html.ui-v7 .qghost i:nth-child(6) { opacity: calc(var(--qa1) * .12); }
+@media (min-width: 900px) { html.ui-v7 .qghost { font-size: 300px; } }
+
+/* Ask Cluck: top right of the card, out of the flow (cluckbtn.css floats it; here the hero owns the room under it) */
+html.ui-v7 #problem.qc7 > .cluckbtn { position: absolute; top: var(--qpad); right: var(--qpad); float: none; margin: 0; z-index: 3; }
+
+/* HERO: a full-bleed band on the card, title bottom-left, scrim under the text */
+html.ui-v7 #problem.qc7 .qhero { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 224px; margin: calc(-1 * var(--qpad)) calc(-1 * var(--qpad)) 0; padding: calc(var(--qpad) + 52px) var(--qpad) 24px; border-radius: inherit; }
+html.ui-v7 #problem.qc7 .qhero::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(to top, rgb(2 4 13 / .8) 0, rgb(2 4 13 / .5) 45%, rgb(2 4 13 / 0) 100%); }
+html.ui-v7 #problem.qc7 .qhero:last-child { margin-bottom: calc(-1 * var(--qpad)); padding-bottom: var(--qpad); }
+html.ui-v7 #problem.qc7 .qlead { margin: 0; max-width: 24ch; color: var(--ink); font-family: var(--font); font-weight: 800; text-wrap: balance; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+html.ui-v7 #problem.qc7 .qlead.l { font-size: 36px; line-height: 40px; letter-spacing: -.035em; }
+html.ui-v7 #problem.qc7 .qlead.m { font-size: 28px; line-height: 32px; letter-spacing: -.025em; max-width: 28ch; }
+html.ui-v7 #problem.qc7 .qlead.s { font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: -.005em; max-width: 40ch; }
+@media (min-width: 900px) {
+  html.ui-v7 #problem.qc7 .qhero { min-height: 280px; }
+  html.ui-v7 #problem.qc7 .qlead.l { font-size: 48px; line-height: 52px; }
+  html.ui-v7 #problem.qc7 .qlead.m { font-size: 34px; line-height: 40px; }
+  html.ui-v7 #problem.qc7 .qlead.s { font-size: 24px; line-height: 32px; }
+}
+html.ui-v7 #problem.qc7 .qlead .katex { font-size: .95em; }
+/* meta: the small line under the title. 12px is the smallest legible size, so the big line carries the poster ratio */
+html.ui-v7 #problem.qc7 .qmeta { margin: 16px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+html.ui-v7 #problem.qc7 .qmeta .ptitle { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 40ch; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
+
+/* body on the same left edge: figure, setup */
+html.ui-v7 #problem.qc7 .blocks > .qhero ~ * { margin-top: 24px; }
+html.ui-v7 #problem.qc7 .blocks > .qhero + * { margin-top: 32px; }
+html.ui-v7 #problem.qc7 .blocks > .qshow { margin-top: 0; }
+html.ui-v7 #problem.qc7 .qsetup { max-width: 60ch; color: var(--muted); font-size: 17px; line-height: 24px; }
+html.ui-v7 #problem.qc7 .qsetup p, html.ui-v7 #problem.qc7 .qsetup ul, html.ui-v7 #problem.qc7 .qsetup ol { margin: 0 0 8px; max-width: none; }
+html.ui-v7 #problem.qc7 .qsetup > :last-child { margin-bottom: 0; }
+html.ui-v7 #problem.qc7 .qsetup.qfold { max-height: 72px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(100% - 24px), transparent); mask-image: linear-gradient(#000 calc(100% - 24px), transparent); }
+html.ui-v7 #problem.qc7 .qshow { display: block; min-height: 44px; padding: 0; border: 0; background: none; color: var(--action); font: inherit; font-size: var(--t-sm, .9375rem); font-weight: 600; cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+html.ui-v7 #problem.qc7 .qshow:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
