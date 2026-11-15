@@ -8,6 +8,8 @@ html.ui-v7 .rp { background: var(--sheet); border: 0; border-radius: 16px; paddi
 html.ui-v7 section.wl { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); padding-top: calc(var(--s5) + 10px); }
 html.ui-v7 section.wl .rp { background: none; padding: 0; border-radius: 0; }
 html.ui-v7 section.wl .rp-line { left: var(--s5); }
+/* GAP-BATCH1 B (ui-v7 phones): the intro pill starts clear of the bottom-left stash tab (44px column, app.css .rot.stashed) */
+@media (max-width: 700px) { html.ui-v7 section.wl .rp-line { left: max(var(--s5), 52px); } }
 html.ui-v7 .rp-step, html.ui-v7 section.wl .rp-step { border-top: 0; padding: var(--s3) 0; }          /* the divider rules go: more room between steps instead */
 html.ui-v7 .rp-n[data-auto] { border-radius: 8px; }
 

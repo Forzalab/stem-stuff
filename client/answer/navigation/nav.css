@@ -99,6 +99,11 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 }
 :root { --ql-dim: rgb(0 0 0 / 0.55); }
 html.ql-open .ql-dim { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .225s ease-out; }
+/* GAP-BATCH1 C (ui-v7): the question menu is the float family (the stage toast's fill, radius 16, shadow-3, no edge), the same as the other popups */
+html.ui-v7 .qlist { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); }
+html.ui-v7 .qlist a:hover, html.ui-v7 .qlist a[aria-current] { background: var(--sheet); }
+/* ...and the orange intro pill under the dimmed page no longer peeks out below the list */
+html.ui-v7.ql-open section.wl .rp-line { visibility: hidden; }
 /* the bar stays lifted while the dim fades out (z-index steps after .15s), and its colour is always on (it is the page's) */
 .top { border-image: linear-gradient(var(--paper) 0 0) fill 0 / 0 / 0 100vw; }
 html.ql-open .top { z-index: 47; }
