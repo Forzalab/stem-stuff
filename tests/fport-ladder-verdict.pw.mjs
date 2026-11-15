@@ -1,6 +1,6 @@
 // F-PORT ladder + verdict smoke (PROTO-3WAY pick F, port f-port-ladder-verdict; brain ui-polish/proto3way/SPEC.md R5, REVIEW2 section 3; ui-v7-decisions VERDICT-DUCK-BLEED, CONTRAST-PORT).
 // Flag ON (?ui=v7): the welcome ladder card, its chips, its Final answer input and Check button have NO border (width 0, fill steps instead), chip text >= 4.5:1, tap >= 44,
-// the verdict drawer is a borderless float whose big duck bleeds past its bottom edge (~28% cut). Flag OFF (?ui=off): today's 1px edges, no duck.
+// the verdict drawer is a borderless float with only its two buttons (no duck/mask), about its flag-off height. Flag OFF (?ui=off): today's 1px edges.
 // Own serve.py, throwaway banks, a stub OpenRouter (the drawer needs a live Cluck). Smoke size, feature-local:   node tests/fport-ladder-verdict.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -51,7 +51,7 @@ async function step(name, fn) {
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 async function open(w, flag, hash = "") {
   const phone = w < 500;
-  const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 2, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
@@ -74,6 +74,21 @@ const ladder = page => page.evaluate(() => {
     ctl: ctl.map(e => { const cs = getComputedStyle(e), fill = bg(e), t = over(rgba(cs.color), fill);
       return { cls: e.className, bw: bw(e), radius: cs.borderTopLeftRadius, h: Math.round(e.getBoundingClientRect().height), cr: e.matches(".rp-chip, .rp-check") ? +ratio(t, fill).toFixed(2) : null, dashed: cs.borderTopStyle === "dashed" }; }) };
 });
+/* open the Roll item, miss it, and return the open verdict drawer's height (the same flow for either flag) */
+async function drawerH(w, flag) {
+  const page = await open(w, flag, "#PHYS_FP2");
+  try {
+    await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+    const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
+    await typeAnswer("1.636");
+    if (!await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 4000 }).then(() => true, () => false)) {
+      await page.waitForTimeout(2200); await typeAnswer("0.650");
+      await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+    }
+    await page.waitForTimeout(600);
+    return await page.evaluate(() => document.querySelector("#q .vdrawer:not([hidden])").getBoundingClientRect().height);
+  } finally { await page.context().close(); }
+}
 const ZERO = "0px 0px 0px 0px";
 const W = [390, 1366];
 try {
@@ -102,7 +117,7 @@ try {
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
-    await step(`${w}: flag on: verdict drawer is a borderless float; the duck bleeds past its bottom edge`, async () => {
+    await step(`${w}: flag on: verdict drawer is a borderless float, buttons only (no duck), height <= flag-off + 8`, async () => {
       const page = await open(w, "v7", "#PHYS_FP2");
       try {
         await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
@@ -116,14 +131,21 @@ try {
         await page.waitForTimeout(600);
         const d = await page.evaluate(() => {
           const e = document.querySelector("#q .vdrawer:not([hidden])"), cs = getComputedStyle(e), p = getComputedStyle(e, "::after"), r = e.getBoundingClientRect();
-          const h = parseFloat(p.height), bottom = parseFloat(p.bottom);
-          return { bw: ["Top", "Right", "Bottom", "Left"].map(s => cs["border" + s + "Width"]).join(" "), overflow: cs.overflow, h: r.height, duck: h, bottom, cut: -bottom / h,
-            mask: p.maskImage || p.webkitMaskImage, content: p.content, right: parseFloat(p.right), btns: [...e.querySelectorAll("button")].map(b => ({ w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), bw: getComputedStyle(b).borderTopWidth })) };
+          return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), h: r.height, after: p.content, mask: p.maskImage || p.webkitMaskImage,
+            btns: [...e.querySelectorAll("button")].map(b => ({ w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), bw: getComputedStyle(b).borderTopWidth })) };
         });
         const bad = await page.evaluate(() => { const e = document.querySelector("#q .ff.bad, #q .ff.rbox.cue:not(.ok)"); if (!e) return null; const cs = getComputedStyle(e), i = getComputedStyle(e.querySelector("input") || e);
           return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), bg: cs.backgroundColor, color: i.color }; });
         const kids = await page.evaluate(() => [...document.querySelectorAll("#q .ff.bad *, #q .ff.rbox.cue:not(.ok) *")].filter(e => e.getClientRects().length).map(e => { const cs = getComputedStyle(e); return { c: String(e.className.baseVal ?? e.className).slice(0, 24) || e.tagName, bw: cs.borderTopWidth + cs.borderRightWidth + cs.borderBottomWidth + cs.borderLeftWidth }; }).filter(x => x.bw !== "0px0px0px0px"));
         assert.deepEqual(kids, [], "a border inside the wrong box (its X button): " + JSON.stringify(kids));
+        const slot = await page.evaluate(() => { const ff = document.querySelector("#q .ff.bad"), b = ff.querySelector(".btn-go"), cs = getComputedStyle(b), r = ff.getBoundingClientRect(), hit = document.elementFromPoint(r.right - 2, r.bottom - 2);
+          return { bg: cs.backgroundColor, bw: cs.borderTopWidth, after: getComputedStyle(ff, "::after").content, hit: !!hit && !!hit.closest(".ff"), hitDrawer: !!hit && !!hit.closest(".vdrawer"), shadow: getComputedStyle(ff).boxShadow }; });
+        assert.equal(slot.bg, "rgb(51, 20, 31)", "the X slot = --wrong-deep #33141f"); assert.equal(slot.bw, "0px");
+        assert.ok(!slot.hitDrawer, "the tray must not show in the row's rounded bottom-right corner: " + JSON.stringify(slot));
+        assert.ok(slot.after === "none" || slot.after === "normal", "no pointer wedge: " + slot.after);
+        assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector("#q .ff.bad .btn-go"), "::before").display === "none"), "no sweep wedge in the X slot");
+        assert.notEqual(slot.shadow, "none", "the row casts a shadow onto the tray");
+        if (SHOTS) { const bb = await page.locator("#q .ff.bad").boundingBox(); await page.screenshot({ path: join(SHOTS, `corner-${w}.png`), clip: { x: Math.max(0, bb.x + bb.width - 120), y: bb.y + bb.height - 40, width: 120 + 8, height: 100 } }); }
         assert.ok(bad, "a judged-wrong typed box");
         assert.equal(bad.bw, ZERO, "wrong box has no dash: " + JSON.stringify(bad));
         assert.equal(bad.bg, "rgb(62, 20, 30)", "the MC bento wrong fill #3e141e");
@@ -131,15 +153,27 @@ try {
         const cr = (L(bad.color) + 0.05) / (L(bad.bg) + 0.05); assert.ok(cr >= 4.5, "wrong text contrast " + cr.toFixed(2));
         if (SHOTS) { await page.locator("#q .vdrawer").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `verdict-${w}.png`) }); }
         assert.equal(d.bw, ZERO, "drawer border: " + JSON.stringify(d));
-        assert.ok(d.duck >= 96, "a big duck: " + d.duck);
-        assert.ok(d.cut > 0.2 && d.cut < 0.36, "~28% of the duck hangs below the drawer edge: " + d.cut);
-        assert.match(d.mask, /svg\+xml/, "the duck mask");
-        assert.equal(d.overflow, "hidden", "the card's bottom edge cuts the duck");
+        assert.ok(d.after === "none" || d.after === "normal", "no pseudo-element duck on the drawer: " + d.after);
+        assert.ok(!d.mask || d.mask === "none", "no mask on the drawer: " + d.mask);
+        const off = await drawerH(w, "off");
+        assert.ok(d.h <= off + 8, `drawer height ${d.h} vs flag-off ${off} (+8 max)`);
         for (const b of d.btns) assert.ok(b.bw === "0px" && b.h >= 44 && b.w >= 44, "drawer button: " + JSON.stringify(b));
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
   }
+  await step("390: flag on: right answer = green row, tick slot --correct-deep, no border", async () => {
+    const page = await open(390, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
+      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await page.waitForTimeout(700);
+      const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
+        return { row: fs.backgroundColor, rbw: fs.borderTopWidth, slot: cs.backgroundColor, h: v.getBoundingClientRect().height }; });
+      assert.equal(m.slot, "rgb(11, 42, 31)", "tick slot = --correct-deep #0b2a1f"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
+      if (SHOTS) await page.screenshot({ path: join(SHOTS, "right-390.png") });
+    } finally { await page.context().close(); }
+  });
   await step("flag off: ladder keeps its 1px edges", async () => {
     const page = await open(1366, "off");
     try {

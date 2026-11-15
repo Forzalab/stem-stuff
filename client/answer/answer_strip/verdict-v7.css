@@ -1,17 +1,7 @@
-/* verdict-v7.css: the verdict drawer (strip.js .vdrawer: Ask Cluck + close, hung under the answer bar), PROTO-3WAY pick F + VERDICT-DUCK-BLEED
-   (Tony Nov 14: "dip a bit into bottom right"; ref refs/proto3way-nov14/duo-widget-owl-bleed.jpg). Under html.ui-v7 only: flag off = strip.css, untouched.
-   The drawer is a float (--float navy-700, --shadow-3), no edge; the big duck is a tone-on-tone silhouette (--chip) in the bottom-right corner, 28% of it cut by the drawer's bottom edge.
-   Behaviour is unchanged (it still hangs from the bar and covers what is under it; strip.js place() sizes it). The Ask chip keeps --help-ink on --help (dark ink on orange, CONTRAST-PORT);
-   the close button is a navy chip. Duck art: the app duck (app.js DUCK: ellipse body, round head, beak) as an inline svg mask. */
-html.ui-v7 .vdrawer {
-  --vd-duck: 112px;                                                    /* the silhouette's box; 28% of it hangs below the bottom edge */
-  min-height: calc(var(--vd-duck) - 16px); padding: calc(var(--vd-tuck, 2px) + var(--s3)) calc(var(--vd-duck) - var(--s2)) var(--s3) var(--s3);
-  gap: var(--s2); overflow: hidden; background: var(--float); border: 0; border-radius: 0 0 16px 16px; box-shadow: var(--shadow-3);
-}
-html.ui-v7 .vdrawer::after {
-  content: ""; position: absolute; right: var(--s2); bottom: calc(var(--vd-duck) * -0.28); width: var(--vd-duck); height: var(--vd-duck); pointer-events: none;
-  background: var(--chip); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 2 24 20.5'%3E%3Cellipse cx='10' cy='16' rx='9' ry='6'/%3E%3Ccircle cx='15' cy='8' r='5'/%3E%3Cpath d='M19.5 7.5l4 1.5-4 1.6z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 2 24 20.5'%3E%3Cellipse cx='10' cy='16' rx='9' ry='6'/%3E%3Ccircle cx='15' cy='8' r='5'/%3E%3Cpath d='M19.5 7.5l4 1.5-4 1.6z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
+/* verdict-v7.css: the verdict drawer (strip.js .vdrawer: Ask Cluck + close, hung under the answer bar), PROTO-3WAY pick F. Under html.ui-v7 only: flag off = strip.css, untouched.
+   The drawer is a float (--float navy-700, --shadow-3), no edge, just the two buttons (Tony Nov 14: "remove the bkg duck, make it only the button, not too tight"): padding and gap on --s2
+   (8px), so it keeps about its old footprint (strip.js place() sizes it as before). The Ask chip keeps --help-ink on --help (dark ink on orange, CONTRAST-PORT); the close button is a navy chip. */
+html.ui-v7 .vdrawer { padding: calc(var(--vd-tuck, 2px) + var(--s2)) var(--s2) var(--s2); gap: var(--s2); background: var(--float); border: 0; border-radius: 0 0 16px 16px; margin-left: -12px; box-shadow: var(--well), var(--shadow-3); }   /* margin-left: the row's 12px corner radius, so the tray slides out from UNDER the row and its square top-right corner never shows past the round one; --well = a dark top inset where it tucks under */
 html.ui-v7 .vdrawer > .wchip { border: 0; border-radius: 12px; z-index: 1; }
 html.ui-v7 .vdrawer > .wchip:hover { border: 0; }
 html.ui-v7 .vdrawer > .vd-x { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); z-index: 1; }
@@ -22,5 +12,14 @@ html.ui-v7 .vdrawer > .vd-x:hover { background: color-mix(in srgb, var(--chip) 8
 html.ui-v7 .ff { --mc-wrong: #3e141e; }
 html.ui-v7 .ff.bad, html.ui-v7 .ff.bad:focus-within, html.ui-v7 .ff.rbox.cue:not(.ok), html.ui-v7 .q .ff.rbox.cue:not(.ok):focus-within { border: 0; border-radius: 12px; background: var(--mc-wrong); }
 html.ui-v7 .ff.bad input, html.ui-v7 .ff.rbox.cue:not(.ok) input { color: var(--wrong-on); }
-html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.bad:focus-within { box-shadow: none; outline: 0; }   /* the typing caret says focus; no blue rim on a wrong box */
+html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.bad:focus-within, html.ui-v7 #q .ff.rbox.ok { box-shadow: var(--shadow-raise); outline: 0; }   /* the judged row sits above the tray: a tight shadow cast down (light from above); the caret says focus */
 html.ui-v7 .ff.bad *, html.ui-v7 .ff.rbox.cue:not(.ok) * { border: 0; box-shadow: none; }
+/* the status slot: the X (wrong) / tick (right) sits in a deep step of the row's own hue (REVIEW2 s3 item 4), glyph in --wrong / --correct, a small raise shadow, no edge */
+html.ui-v7 .ff { --mc-right: #0c2c22; --wrong-deep: #33141f; --correct-deep: #0b2a1f; }
+html.ui-v7 .ff.rbox.ok { background: var(--mc-right); }
+html.ui-v7 #q .ff.bad .btn-go { background: var(--wrong-deep); box-shadow: var(--shadow-raise); border: 0; border-radius: 12px; }
+html.ui-v7 .ff.rbox.ok .vk { width: 40px; height: 40px; align-self: center; border-radius: 12px; background: var(--correct-deep); box-shadow: var(--shadow-raise); }
+/* the little pointer wedge above the X (app.css "Cluck is here" ::after): the tray now reads as sliding out from under the row, no pointer needed */
+html.ui-v7 :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after { content: none !important; }
+/* the light wedge above the X is the retry-wait sweep (app.css .btn-go.waiting::before, a conic countdown): under ui-v7 the X slot stays a calm solid fill (the .waiting state itself is unchanged) */
+html.ui-v7 .btn-go.waiting::before { display: none; }
