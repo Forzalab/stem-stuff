@@ -116,17 +116,18 @@
     });
   }
   function count(o) {
-    var t = el.querySelector('.stoast-t'), i = el.querySelector('.stoast-bar i'), n = o.num || [0, 0];
+    var t = el.querySelector('.stoast-t'), bar = el.querySelector('.stoast-bar'), i = bar.querySelector('i'), n = o.num || [0, 0];
+    var setP = function (v) { bar.style.setProperty('--p', v); i.style.setProperty('--p', v); };   // the row's segments read --p from the bar
     var put = function (v) { render(t, o, v); };   // the same renderer as next(): a stale tween never flattens the bold head
-    i.style.transition = 'none'; i.style.setProperty('--p', o.from || 0); void i.offsetWidth; i.style.transition = '';
+    i.style.transition = 'none'; setP(o.from || 0); void i.offsetWidth; i.style.transition = '';
     el.dataset.done = '0';
-    var fin = function () { put(n[1]); i.style.setProperty('--p', o.to || 0); el.dataset.done = '1'; };
+    var fin = function () { put(n[1]); setP(o.to || 0); el.dataset.done = '1'; };
     if (reduced()) { fin(); return; }
     put(n[0]);
     cancelAnimationFrame(raf);
     setTimeout(function () {                                             // after the 200 ms slide: fill + count, 600 ms
       if (!cur || cur !== o) return;
-      i.style.setProperty('--p', o.to || 0);
+      setP(o.to || 0);
       var t0 = performance.now();
       (function step(tm) {
         if (cur !== o) return;
@@ -146,6 +147,7 @@
     cur = o; mount();
     el.classList.remove('out', 'on');
     el.style.width = '';
+    rowPut(o);
     actionPut(o);
     render(el.querySelector('.stoast-t'), o, o.num ? o.num[1] : '');
     if (!place()) { cur = null; actionPut({}); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
@@ -167,6 +169,25 @@
     }
     arm(o.ms || 4000);
     if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
+  }
+  /* the row toast (html.ui-v7 only, DUCK-V8-TOAST / TOAST-GAP): o.row + o.duck (a mood: start, landmark, twist, cram, miss, late) = the duck
+     in an 80 px box on the left, the words start at box right + 32, the title (1 line), an optional dim subtitle (o.sub), 5 capsules, a bare close.
+     Flag off, or no o.row: the plain markup, untouched. */
+  var PLAIN_B = '<p class="stoast-t" aria-hidden="true"></p><span class="stoast-bar" aria-hidden="true"><i></i></span><span class="sr-only" role="status"></span>';
+  var ROW_B = '<p class="stoast-t" aria-hidden="true"></p><p class="stoast-s"></p><span class="stoast-bar" aria-hidden="true">' +
+    [0, 1, 2, 3, 4].map(function (k) { return '<i style="--k:' + k + '"></i>'; }).join('') + '</span><span class="sr-only" role="status"></span>';
+  function rowPut(o) {
+    var row = !!o.row && d.documentElement.classList.contains('ui-v7');
+    el.classList.toggle('stoast-v7', row);
+    var duck = el.querySelector('.stoast-duck'), b = el.querySelector('.stoast-b');
+    if (!row) {
+      if (el.dataset.kind === 'row') { if (duck) duck.remove(); b.innerHTML = PLAIN_B; el.dataset.kind = 'plain'; }
+      return;
+    }
+    if (!duck) { duck = d.createElement('span'); duck.className = 'stoast-duck'; duck.setAttribute('aria-hidden', 'true'); duck.innerHTML = '<img alt="" width="80" height="80">'; el.insertBefore(duck, el.firstChild); }
+    duck.querySelector('img').src = 'client/rewards/icons/duck8-' + (o.duck || 'start') + '.webp';
+    if (el.dataset.kind !== 'row') { b.innerHTML = ROW_B; el.dataset.kind = 'row'; }
+    var sub = el.querySelector('.stoast-s'); sub.textContent = o.sub || ''; sub.hidden = !o.sub;
   }
   /* the short toast's parts (W133): no bar, and at most one action button under the words */
   function actionPut(o) {
