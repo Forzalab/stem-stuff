@@ -23,10 +23,15 @@
 /*   ===== END CODEMAP HEADER ===== */
 /* Drill page. Tokens: docs/design/STYLE.md §2. Freeze layer: docs/design/FREEZE.md. */.preview.spent { visibility: hidden; }   /* the question closed: its room stays (T17b-1: nothing moves after Check) */
 
+/* ONE text face site-wide (owner, Nov 15: "set --font to that grotesque"). Latin subset, variable 400-900, SIL OFL. */
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }
+
 :root {
-  /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family per device, two weights (400, 600), five sizes.
-     Atkinson is the default everywhere; WebKit alone switches to SF (@supports below). Mono: the scratchpad, pre-formatted tables and the codeblock only */
-  --font: "Atkinson Hyperlegible", system-ui, sans-serif;
+  /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family, two weights (400, 600), five sizes.
+     Schibsted Grotesk everywhere (--font, the face of all body text). Inputs keep Atkinson Hyperlegible (owner rule INPUT-FONT: --font-input).
+     Mono: the scratchpad, pre-formatted tables and the codeblock only */
+  --font: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-input: "Atkinson Hyperlegible", system-ui, sans-serif;
   --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
@@ -98,8 +103,8 @@ html.ui-v7 {
 .p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
 /* NO-BORDER 1 (Tony Nov 14, option A; ui-v7 only): the question card is a bg step (--card on --page), no inset edge; shadow-1 only, its colour differs from the page */
 html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }   /* DEPTH 1: the question card .p is lifted in the DEPTH block at the end of this file */
-@supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
-  :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
+@supports (font: -apple-system-body) {   /* WebKit only: keeps the KaTeX size WebKit has always had (1.2em); the font stack itself is no longer browser-specific */
+  :root { --kx: 1.2em; }
 }
 .katex { font-size: var(--kx); }   /* after vendor/katex (index.html): replaces its 1.21em */
 *, *::before, *::after { box-sizing: border-box; }
@@ -151,7 +156,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 .code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: max(1rem, var(--t-sm)); font-weight: var(--w-em); line-height: 1; letter-spacing: 0.05em; text-transform: uppercase;   /* the text face (Tony found the Mono "hideous" here); a field: never under 16px (iOS zooms on focus) */
+  font-family: var(--font-input); font-size: max(1rem, var(--t-sm)); font-weight: var(--w-em); line-height: 1; letter-spacing: 0.05em; text-transform: uppercase;   /* the text face (Tony found the Mono "hideous" here); a field: never under 16px (iOS zooms on focus) */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
@@ -597,7 +602,7 @@ html.ui-v7 .choices:not(.all) .opt.wrong:not(.reveal):not([aria-checked="true"])
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: var(--btn); margin: 0; padding: 0 var(--s2) 0 0;
-  font-family: inherit; font-variant-numeric: tabular-nums; font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: var(--font-input); font-variant-numeric: tabular-nums; font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
@@ -1250,7 +1255,7 @@ button.cl-st-b:focus-visible { outline: var(--ring) solid var(--focus); outline-
   --pv: calc((var(--btn) - 1.4em) / 2);                                  /* one line = the old field's --btn height */
   flex: 1 1 auto; display: block; width: 100%; min-width: 0; box-sizing: border-box; height: var(--btn); max-height: min(calc(7em + var(--btn)), 40vh);   /* 6 lines of 1.4em */
   margin: 0; padding: var(--pv) var(--s2) var(--pv) 0; border: 0; background: transparent; resize: none; overflow-x: hidden; overflow-y: hidden;
-  font-family: inherit; font-size: var(--t-md); font-weight: 400; line-height: 1.4; color: var(--ai-text); caret-color: var(--focus);
+  font-family: var(--font-input); font-size: var(--t-md); font-weight: 400; line-height: 1.4; color: var(--ai-text); caret-color: var(--focus);
   white-space: pre-wrap; overflow-wrap: anywhere; transition: none; }
 .ask .ff textarea:focus { outline: none; }
 .ask .ff textarea::placeholder { color: var(--help-muted); opacity: 1; }
@@ -1343,7 +1348,7 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .xb-field textarea.xb-free { padding-bottom: 1.875rem; }
 .xb-copy { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
 #copy.done { color: var(--correct); border-color: var(--correct); }
-/* C9 (Tony, Oct 5): the joke stays, in the body font; typed notes keep the mono */
+/* C9 (Tony, Oct 5): the joke stays, in the body font; typed notes keep the mono (the .xb-field textarea is the scratchpad, not the Cluck composer) */
 .xb-field textarea::placeholder { font-family: var(--font); }
 
 @media (max-width: 34rem) {
