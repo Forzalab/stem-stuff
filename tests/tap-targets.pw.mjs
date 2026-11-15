@@ -108,7 +108,8 @@ for (const [label, vp, phone] of VIEWS) {
   const errs = []; let page;
   const fresh = async () => { if (page) await page.close(); page = await ctx.newPage(); page.on("pageerror", e => errs.push(String(e))); };   // one page per step: a hash change re-opens nothing
   try {
-    await step(`${label}: #privacy hit area is 44 tall (${phone ? "start page" : "question open, side by side"})`, async () => {
+    // desktop + mouse keeps #privacy at 24px on purpose (Tony Oct 19: off Cluck's corner; a 44px area stole Cluck send clicks, flight spec): touch only
+    if (phone) await step(`${label}: #privacy hit area is 44 tall (start page)`, async () => {
       await fresh();
       await page.goto(BASE + (phone ? "/" : "/#BANK_FCC"));
       if (!phone) await page.waitForFunction(() => /^#CALC1_/.test(location.hash) && !!document.querySelector("#fcard .fq"), null, { timeout: 15000 });
