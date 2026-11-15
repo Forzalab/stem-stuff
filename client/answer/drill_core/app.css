@@ -41,7 +41,7 @@
      a theme can set the surface to the page and still give controls a shape (STYLE §2.1) */
   --sheet: #14233a;
   --action: #5aa9ff; --action-ink: #031428; --action-fill: #102542; --action-on: #8cc2ff; --focus: var(--action);
-  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #10261f; --correct-on: #bdead5; --correct-rim: #029e72;
+  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #10261f; --correct-on: #bdead5; --correct-soft: #b4f7dc; --correct-rim: #029e72;
   --wrong: #eb596e; --wrong-ink: #391418; --wrong-fill: #2a1a24; --wrong-on: #ffd1d3; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 1px dashed edge; --wrong-fill / --correct-fill: soft (OKLCH chroma halved) */
   /* one warm family, hue 55-70, lightness is the role (PALETTE-v3 §1): help = Cluck, hints, bulb, send; reward = the HUD, floats, toast,
      bursts only (§4: never in a help surface, a CTA or a chip). --glow at alpha only. --help-deep never under text */
