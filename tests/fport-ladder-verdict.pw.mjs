@@ -270,6 +270,18 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
+  for (const w of W) await step(`${w}: flag on (round 5): the Check button and the field well are apple squircles (corner-shape superellipse, 16px radius)`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      await page.locator("#ff :is(input, textarea)").first().fill("1.5"); await page.waitForTimeout(300);
+      const m = await page.evaluate(() => { const b = document.querySelector("#q #ff.ff .send"), ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(b), fs = getComputedStyle(ff);
+        return { supports: CSS.supports("corner-shape", "superellipse(1.52)"), btn: cs.cornerShape, btnR: cs.borderTopLeftRadius, well: fs.cornerShape, wellR: fs.borderTopLeftRadius }; });
+      if (m.supports) { assert.match(m.btn, /superellipse/, "button corner-shape: " + JSON.stringify(m)); assert.match(m.well, /superellipse/, "well corner-shape: " + JSON.stringify(m)); }
+      assert.equal(m.btnR, "16px"); assert.equal(m.wellR, "16px");
+      assert.deepEqual(page.errs, [], "page errors");
+    } finally { await page.context().close(); }
+  });
   await step("flag off: ladder keeps its 1px edges", async () => {
     const page = await open(1366, "off");
     try {

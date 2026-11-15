@@ -69,3 +69,8 @@ html.ui-v7 #q .ff .btn-go.waiting::before { display: none; }
    states, so the mark centres on the row (and the pill) like the cross; the row keeps 48px of room on the right for it. */
 html.ui-v7 #q .ff.rbox { padding-right: 48px; }
 html.ui-v7 #q .ff.rbox .vk { position: absolute; order: 0; margin: 0; right: 14px; top: 50%; transform: translateY(-50%); }
+/* round 5 (Tony, Nov 15: "make the check button apple squircle too"): the Check arrow (.send / .btn-go in the field, blue when typed) and the field well share the progbar's
+   squircle (client/answer/progbar/progbar.css: corner-shape superellipse(1.52) under @supports) and its 16px tile radius, so the two shapes agree. ui-v7 only; the fallback is the 16px round corner. */
+@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .ff, #q .ff .send, .code-box, .code-box .btn-go) { corner-shape: superellipse(1.52); } }
+html.ui-v7 #q .ff, html.ui-v7 .code-box { border-radius: 16px; }
+html.ui-v7 #q .ff .send, html.ui-v7 .code-box .btn-go { border-radius: 16px; }
