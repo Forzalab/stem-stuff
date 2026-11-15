@@ -28,8 +28,9 @@ html.ui-v7 #qlistName { min-width: 0; max-width: none; }
 html.ui-v7 #qlistBtn[aria-expanded="true"] { background: var(--float); }
 /* iOS back replaces the list ICON (INTEG B1 default a): the back button leads the tile, the title stays and gives way first */
 html.ui-v7 #qback { flex: none; width: var(--pb-hit); }
-html.ui-v7 .pb-list:has(#qback:not([hidden])) #qlistBtn { padding-left: 0; }
-html.ui-v7 .pb-list:has(#qback:not([hidden])) #qlistBtn .ico { display: none; }
+/* only where iOS Back is drawn (nav.css: html.ios #qback is the one that shows); elsewhere #qback stays display:none while unhidden, so the icon + padding stay (BANKTILE-FIT) */
+html.ui-v7.ios .pb-list:has(#qback:not([hidden])) #qlistBtn { padding-left: 0; }
+html.ui-v7.ios .pb-list:has(#qback:not([hidden])) #qlistBtn .ico { display: none; }
 html.ui-v7 .pb-nav .btn { width: var(--pb-hit); display: inline-grid; place-items: center; }
 html.ui-v7 .qnav .pb-nav .btn:disabled { opacity: 1; color: var(--muted); }
 html.ui-v7 .qnav .pb-nav .btn:disabled .ico { opacity: .4; }

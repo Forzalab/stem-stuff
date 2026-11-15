@@ -515,6 +515,10 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .opt:is(.right, .wrong) { border-width: var(--bw); padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); }
 .opt.wrong { border-color: var(--wrong); color: var(--muted); }
 .opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
+/* Tony Nov 14: wrong pick text + letter red-tinted (--wrong-on), not muted blue */
+html.ui-v7 .opt.wrong:not(.reveal) { color: var(--wrong-on); }
+html.ui-v7 .opt.wrong:not(.reveal) .badge { color: var(--wrong-on); }
+html.ui-v7 .choices:not(.all) .opt.wrong:not(.reveal):not([aria-checked="true"]) .badge { background: var(--wrong-fill); }   /* the glyph slot takes the row's red fill, not the ink dot */
 .opt.right { border-color: var(--correct); }
 .opt.right.reveal { border-style: dashed; }   /* the right row the student missed */
 .opt :is(.badge, .badge .ico) { transition: none; }
