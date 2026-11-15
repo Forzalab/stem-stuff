@@ -82,15 +82,22 @@
    navy mock (brain ui-polish/hintbox/v71/palette.css). Flag off = the :root values above, untouched. Sits right after the :root block: same
    specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
 html.ui-v7 {
-  --page: #02040d; --card: #0a1020; --sheet: #0d142a; --float: #141d36; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
+  --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
+  /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the top edge of a raised control (a hand-picked solid, not white alpha), --shadow-raise = the small contact shadow under it, --press = pressed in,
+     --well = a recessed field (dark top inset). Raised controls = a solid lit top + a tight shadow below; resting cards/tiles = colour only; never a border. */
+  --lit-top: inset 0 1px 0 #141d36;   /* a hand-picked SOLID navy-700 on the navy-800 face (RUI: not semi-transparent white, that greys out and reads as a border) */   /* NAVY-MIN: --card = --sheet = navy-800 (the one resting surface), --chip = navy-600 (badge slot, empty notch), --float = navy-700 (above the page only) */
+  --lit-action: inset 0 1px 0 #74b8ff;   /* hand-picked lighter blue, same hue as --action */
+  --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
+  --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
+  --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
 }
 /* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
    fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
    box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
 .p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
 /* NO-BORDER 1 (Tony Nov 14, option A; ui-v7 only): the question card is a bg step (--card on --page), no inset edge; shadow-1 only, its colour differs from the page */
-html.ui-v7 .p, html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }
+html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }   /* DEPTH 1: the question card .p is lifted in the DEPTH block at the end of this file */
 @supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
   :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
 }
@@ -478,11 +485,11 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 /* NO-BORDER 1 (ui-v7 only): an unchosen row has no 1px edge; rest = a bg step (--float on the --card page), hover = one step more. The chosen row keeps its
    edge (selected state); pending (dashed) and the missed-right reveal keep theirs. Verdict rows (right / wrong) take a tint fill, the glyph says it. */
-html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal) { border-width: 0; background: var(--float); }
-html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal):hover:not(:disabled) { background: color-mix(in srgb, var(--float) 85%, var(--ink)); }
+html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal) { border-width: 0; background: var(--sheet); }   /* NAVY-MIN: options rest on the one surface (navy-800), depth is the lit top + shadow below */
+html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal):hover:not(:disabled) { background: var(--float); }   /* hover = navy-700, a tiny lift */
 html.ui-v7 .opt.right:not(.reveal):not([aria-checked="true"]) { background: var(--correct-fill); }
 html.ui-v7 .opt.wrong:not(.reveal):not([aria-checked="true"]) { background: var(--wrong-fill); }
-html.ui-v7 .opt:not([aria-checked="true"]) .badge { border-width: 0; background: color-mix(in srgb, var(--ink) 12%, transparent); }   /* the glyph slot: a filled dot, no ring */
+html.ui-v7 .opt:not([aria-checked="true"]) .badge { border-width: 0; background: var(--chip); }   /* the glyph slot: a filled dot, no ring */
 .opt .badge {
   flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
   border: var(--bw) solid var(--line); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-md); line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* TR12: never changes with state */
@@ -1754,3 +1761,26 @@ html.fx-busy :is(.ch .send, #fb > .cluck) { animation: none; }   /* one group at
 :is(.btn, .opt, .nx, .vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go) { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) { .opt:active:not(:disabled), :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: none; } }
 @media (prefers-contrast: more) { :root { --line: var(--muted); --hint: var(--muted); } .cl-dim { opacity: .96; } .glass { backdrop-filter: none; background-color: var(--paper); } }
+/* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only; brain ui-polish/depth/PROPOSALS.txt). Last in the file so it wins the equal-specificity rules above
+   (html.side .cl, .ask:focus-within, .ff:focus-within). Light from above: raised = a lit top + a small shadow below, pressed = inset, never a border.
+   Nav tiles (.pb, progbar.css) stay flat. */
+/* D1 buttons + option rows: the primary (Check / Go) and each option row are raised; pressed = inset, no outer shadow */
+html.ui-v7 .opt:not([aria-checked="true"]) { box-shadow: var(--lit-top), var(--shadow-raise); }
+html.ui-v7 .opt[aria-checked="true"] { box-shadow: none; }   /* checked = no lit top, no shadow below (RUI: pressed = no shadow) */
+html.ui-v7 .opt:active:not(:disabled) { box-shadow: none; }
+html.ui-v7 .btn-go:not(.waiting) { box-shadow: var(--lit-action), var(--shadow-raise); }
+html.ui-v7 .btn-go:not(.waiting):active { box-shadow: none; }
+/* D2 question card: no shadow at all; .boxed .q stays flat */
+html.ui-v7 .p { box-shadow: none; }   /* resting card: depth = colour only (navy-800 on navy-950), no edge, no lift shadow */
+/* D3/4 Cluck box: unchanged (desk keeps its shadow-3); no rim, no lit top */
+html.ui-v7 .ask { box-shadow: var(--well); }   /* the recessed well; the rotating rim (::before/::after) paints over it while Cluck types */
+html.ui-v7 .ask:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--help); }
+html.ui-v7 .ask .send { box-shadow: none; }   /* NAVY-MIN: flat, a button sitting in the field, not a key */
+/* D5/6 proof box + short answer: recessed wells. The fill is --field (page navy) on the --card box: 1.08:1 against WCAG 1.4.11's 3:1, so the
+   1px --edge stays on both fields (the gate is measured in tests/depth.pw.mjs). Focus keeps its one ring. */
+html.ui-v7 .xb textarea { box-shadow: var(--well); }
+html.ui-v7 .xb textarea:focus { box-shadow: var(--well), inset 0 0 0 1px var(--focus); }
+html.ui-v7 #q .ff { box-shadow: var(--well); }
+html.ui-v7 #q .ff:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--focus); }
+/* owner rule (ui-v7, DEPTH 1): no circles except the Cluck profile avatar. The option letter badge is a rounded square (8px), never 50% */
+html.ui-v7 .opt .badge { border-radius: 8px; }

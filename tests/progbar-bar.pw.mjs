@@ -174,8 +174,8 @@ try {
     await c2.close();
   });
   // COLOR-TOKENS 1 (Tony Nov 14): under html.ui-v7 the base surface tokens take the navy mock; flag off keeps the old values.
-  const TOK = { "--page": "#02040d", "--card": "#0a1020", "--sheet": "#0d142a", "--float": "#141d36", "--line": "#556791", "--wrong": "#f0667a", "--wrong-on": "#ffc4c9", "--correct-on": "#b9efd8", "--help": "#ffa63e", "--help-sheet": "#16110d" };
-  const OLD = { "--page": "#02060c", "--card": "#0b1422", "--sheet": "#14233a", "--float": "#1b2b40", "--line": "#5e7899", "--wrong": "#eb596e", "--wrong-on": "#ffd1d3", "--correct-on": "#bdead5", "--help": "#ff9a3e", "--help-sheet": "#17130f" };
+  const TOK = { "--page": "#02040d", "--card": "#0d142a", "--sheet": "#0d142a", "--float": "#141d36", "--chip": "#283352", "--line": "#556791", "--wrong": "#f0667a", "--wrong-on": "#ffc4c9", "--correct-on": "#b9efd8", "--help": "#ffa63e", "--help-sheet": "#16110d" };
+  const OLD = { "--page": "#02060c", "--card": "#0b1422", "--sheet": "#14233a", "--float": "#1b2b40", "--chip": "", "--line": "#5e7899", "--wrong": "#eb596e", "--wrong-on": "#ffd1d3", "--correct-on": "#bdead5", "--help": "#ff9a3e", "--help-sheet": "#17130f" };
   const tokens = p => p.evaluate(names => names.map(n => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase()), Object.keys(TOK));
   await step("COLOR-TOKENS 1: ?ui=v7 base surfaces take the navy mock; flag off keeps the old values", async () => {
     const [c, p] = await fresh(browser, "on");
@@ -208,7 +208,15 @@ try {
     assert.equal(on.chosen.bw, "1px", "chosen option row keeps its edge (selected state)");
     assert.ok(on.card, "a question card (.p) is on the page");
     assert.equal(on.card.bw, "0px", "question card: no edge");
-    assert.doesNotMatch(on.card.shadow, /inset/, "question card: no inset edge");
+    // precise (NAVY-MIN): an EDGE = an all-around inset ring (inset 0 0 Npx, zero y offset) or a border; a LIT TOP = inset 0 Ypx 0 <alpha <= .12>, no blur/spread, top only (allowed)
+    const layers = on.card.shadow === "none" ? [] : on.card.shadow.split(/,(?![^(]*\))/).map(x => x.trim()).filter(x => /\binset\b/.test(x));
+    const num = x => { const m = x.replace(/rgba?\([^)]*\)|hsla?\([^)]*\)|color\([^)]*\)/g, "").match(/-?[\d.]+px/g) || []; return m.map(parseFloat); };
+    const alpha = x => { const m = x.match(/rgba?\(([^)]*)\)/); if (!m) return 1; const p = m[1].split(/[ ,\/]+/).filter(Boolean); return p.length > 3 ? parseFloat(p[3]) : 1; };
+    for (const l of layers) {
+      const [ox, oy, blur, spread] = num(l);
+      assert.ok(!(ox === 0 && oy === 0 && (spread || 0) > 0), "question card: no all-around inset ring: " + l);
+      assert.ok(ox === 0 && oy > 0 && (blur || 0) === 0 && (spread || 0) === 0 && alpha(l) <= 0.12, "question card: an inset layer must be a lit top (inset 0 Ypx 0, alpha <= .12): " + l);
+    }
     assert.deepEqual(p.__errs, []);
     await c.close();
     const [c2, q] = await fresh(browser, "off");
