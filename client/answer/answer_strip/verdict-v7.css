@@ -35,3 +35,28 @@ html.ui-v7 .ff.ok, html.ui-v7 .ff.rbox.ok, html.ui-v7 .q .ff.rbox.cue.ok:focus-w
 html.ui-v7 .ff.ok { background: var(--mc-right); }
 html.ui-v7 .ff.ok input { color: var(--correct-on); }
 html.ui-v7 #q .ff.ok:not(.rbox) { border-radius: 16px; }
+
+/* NO BORDER (Tony Nov 15): the typed answer field (.ff) and the code box are wells, not outlined boxes. Refactoring UI p.155-157, the INSET light-source technique:
+   (1) a dark top inner shadow (the lip above blocks the light), (2) a lighter bottom lip facing the sky (hand-picked navy, not white alpha), (3) a fill a step off the page.
+   Zero border in every state (idle, hover, focus, typed, wrong, correct). Focus: no border, the soft accent glow added to the inset stack (keyboard focus stays visible).
+   The judged states (.bad / .ok / .rbox.ok) keep their MC fills and raise (below). Flag off: app.css untouched. The Cluck composer is not in these selectors.
+   #q is on the field's selector because app.css "html.ui-v7 #q .ff { box-shadow: var(--well) }" sits at that specificity. */
+html.ui-v7 #q .ff, html.ui-v7 #q .ff:hover, html.ui-v7 #q .ff:focus-within,
+html.ui-v7 .code-box, html.ui-v7 .code-box:hover, html.ui-v7 .code-box:focus-within {
+  border: 0;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 #2a3a66;
+}
+html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box {
+  background: #060b1b;
+}
+html.ui-v7 #q .ff:focus-within, html.ui-v7 .code-box:focus-within {
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 #2a3a66, 0 0 0 2px var(--focus);
+}
+html.ui-v7 .ff .fl { border: 0; outline: 0; }
+html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.ok, html.ui-v7 #q .ff.rbox.ok { box-shadow: var(--shadow-raise); }
+
+/* the typed field's tick / cross (Tony Nov 15): no button. No raised tile, no fill, no shadow, no hover; just the glyph in the field. It stays a click target only for the
+   toast "Tap Ask Cluck for help" (strip.js); aria-hidden, not in the tab order (strip.js icon()). The judged row's Check slot loses its raised fill too (the retry bar stays). */
+html.ui-v7 #q .ff .vk { pointer-events: auto; cursor: default; background: none; box-shadow: none; border-radius: 0; width: 24px; height: 24px; }
+html.ui-v7 #q .ff .vk:hover, html.ui-v7 #q .ff .vk:focus-visible { background: none; outline: 0; }
+html.ui-v7 #q .ff.bad .btn-go, html.ui-v7 #q .ff.rbox.ok .btn-go { background: none; box-shadow: none; }

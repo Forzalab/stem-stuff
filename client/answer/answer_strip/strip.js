@@ -127,6 +127,9 @@
     if (!on) {
       ["role", "tabindex", "aria-expanded", "aria-label"].forEach(function (a) { vk.removeAttribute(a); }); vk.setAttribute("aria-hidden", "true"); return;
     }
+    if (h.kind === "ff" && D.documentElement.classList.contains("ui-v7")) {   // ui-v7 (Tony Nov 15): the typed field's mark is decoration, not a button; the verdict is in the live region
+      ["role", "tabindex", "aria-expanded", "aria-label"].forEach(function (a) { vk.removeAttribute(a); }); vk.setAttribute("aria-hidden", "true"); return;
+    }
     vk.removeAttribute("aria-hidden");
     if (h.kind === "ff") { vk.setAttribute("role", "button"); vk.setAttribute("tabindex", "0"); }
     vk.setAttribute("aria-label", open ? "Hide Cluck's help" : "Show Cluck's help");
@@ -236,6 +239,8 @@
   D.addEventListener("focusin", function (e) { sheetFocus = !!(e.target.closest && e.target.closest("#cluck, .vdrawer")); }, true);
   var BTN = "#q .ff .vk[role=button], #q .vkb";
   D.addEventListener("click", function (e) {
+    var mark = e.target.closest && e.target.closest("#q .ff .vk");   // ui-v7: the typed field's tick / cross is no button; a tap points to Ask Cluck (no drawer)
+    if (mark && D.documentElement.classList.contains("ui-v7")) { e.preventDefault(); if (window.stemToast) window.stemToast.show({ text: "Tap Ask Cluck for help", bar: false, ms: 3000, at: mark }); return; }
     var vk = e.target.closest && e.target.closest(BTN);
     if (vk) { e.preventDefault(); toggle(vk); }
   });

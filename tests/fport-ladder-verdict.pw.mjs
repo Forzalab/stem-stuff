@@ -133,7 +133,7 @@ try {
         assert.deepEqual(kids, [], "a border inside the wrong box (its X button): " + JSON.stringify(kids));
         const slot = await page.evaluate(() => { const ff = document.querySelector("#q .ff.bad"), b = ff.querySelector(".btn-go"), cs = getComputedStyle(b), r = ff.getBoundingClientRect(), hit = document.elementFromPoint(r.right - 2, r.bottom - 2);
           return { bg: cs.backgroundColor, bw: cs.borderTopWidth, dotR: getComputedStyle(ff, "::after").borderTopLeftRadius, dotOutline: getComputedStyle(ff, "::after").outlineWidth, hit: !!hit && !!hit.closest(".ff"), hitDrawer: !!hit && !!hit.closest(".vdrawer"), shadow: getComputedStyle(ff).boxShadow }; });
-        assert.equal(slot.bg, "rgb(51, 20, 31)", "the X slot = --wrong-deep #33141f"); assert.equal(slot.bw, "0px");
+        assert.equal(slot.bg, "rgba(0, 0, 0, 0)", "the X slot is no raised tile (ui-v7: glyph only)"); assert.equal(slot.bw, "0px");
         assert.ok(!slot.hitDrawer, "the tray must not show in the row's rounded bottom-right corner: " + JSON.stringify(slot));
         assert.ok(slot.dotR !== "50%" && slot.dotOutline === "0px", "the Cluck dot is no circle / no ring: " + slot.dotR + " " + slot.dotOutline);
         const wait = await page.evaluate(() => { const b = document.querySelector("#q .ff.bad .btn-go"), cs = b && getComputedStyle(b, "::before"); return b && b.classList.contains("waiting") ? { bgi: cs.backgroundImage, h: cs.height, name: cs.animationName } : null; });
@@ -162,7 +162,7 @@ try {
       await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await page.waitForTimeout(900);
       const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
         return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height, text: getComputedStyle(ff.querySelector("input")).color }; });
-      assert.equal(m.slot, "rgb(11, 42, 31)", "tick slot = --correct-deep #0b2a1f"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
+      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is glyph only, no --correct-deep tile"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
       assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
       // the correct fill is the MC bento right tile: --mc-right #0c2c22 + --correct-on text (#b9efd8), on the reveal pill and on a plain judged-right box
@@ -171,6 +171,42 @@ try {
         return { bg: cs.backgroundColor, bw: cs.borderTopWidth, r: cs.borderTopLeftRadius, color: i.color }; });
       assert.deepEqual(plain, { bg: "rgb(12, 44, 34)", bw: "0px", r: "16px", color: "rgb(185, 239, 216)" }, "the plain judged-right box = the MC right tile (was the soft --correct-fill): " + JSON.stringify(plain));
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
+    } finally { await page.context().close(); }
+  });
+  for (const w of W) await step(`${w}: flag on: typed answer field is a borderless inset well in idle, focus and typed (no border line, the glow on focus)`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      await page.waitForTimeout(300);
+      const read = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(ff);
+        return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor }; });
+      const idle = await read();
+      assert.equal(idle.bw, ZERO, "idle: no border " + JSON.stringify(idle));
+      assert.ok(/rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/.test(idle.shadow) && /rgb\(42, 58, 102\) 0px -1px 0px 0px inset/.test(idle.shadow), "idle: inset top shadow + lighter bottom lip: " + idle.shadow);
+      await page.locator("#ff :is(input, textarea)").first().focus(); await page.waitForTimeout(250);
+      const focus = await read();
+      assert.equal(focus.bw, ZERO, "focus: no border " + JSON.stringify(focus));
+      assert.ok(/rgb\(90, 169, 255\) 0px 0px 0px 2px/.test(focus.shadow), "focus: soft accent glow in the inset stack: " + focus.shadow);
+      await page.locator("#ff :is(input, textarea)").first().fill("1.5"); await page.waitForTimeout(250);
+      const typed = await read();
+      assert.equal(typed.bw, ZERO, "typed: no border " + JSON.stringify(typed));
+      assert.deepEqual(page.errs, [], "page errors");
+    } finally { await page.context().close(); }
+  });
+  for (const w of W) await step(`${w}: flag on: the typed field's tick/cross is no button (aria-hidden, no tab stop); a tap shows the toast, opens nothing`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.636"); await f.press("Enter");
+      await page.waitForSelector("#q .ff.bad .vk", { timeout: 8000 }); await page.waitForTimeout(600);
+      const a = await page.evaluate(() => { const v = document.querySelector("#q .ff .vk"); return { role: v.getAttribute("role"), tab: v.getAttribute("tabindex"), hidden: v.getAttribute("aria-hidden"), expanded: v.getAttribute("aria-expanded") }; });
+      assert.deepEqual(a, { role: null, tab: null, hidden: "true", expanded: null }, "the mark is decoration: " + JSON.stringify(a));
+      await page.locator("#q .ff .vk").first().click({ force: true });
+      await page.waitForFunction(() => [...document.querySelectorAll(".stoast-t")].some(e => e.textContent.trim() === "Tap Ask Cluck for help" && e.getClientRects().length), null, { timeout: 12000 }).then(() => true, () => false)
+        .then(ok => assert.ok(ok, "the tap shows the toast 'Tap Ask Cluck for help'"));
+      const drawer = await page.evaluate(() => { const d = document.querySelector("#q .vdrawer:not([hidden])"); return !!d && d.getClientRects().length > 0; });
+      assert.equal(drawer, false, "nothing else opens (no verdict drawer)");
+      assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
   await step("flag off: ladder keeps its 1px edges", async () => {
