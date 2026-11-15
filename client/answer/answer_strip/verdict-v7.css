@@ -1,7 +1,20 @@
-/* verdict-v7.css: the verdict drawer (strip.js .vdrawer: Ask Cluck + close, hung under the answer bar), PROTO-3WAY pick F. Under html.ui-v7 only: flag off = strip.css, untouched.
-   The drawer is a float (--float navy-700, --shadow-3), no edge, just the two buttons (Tony Nov 14: "remove the bkg duck, make it only the button, not too tight"): padding and gap on --s2
-   (8px), so it keeps about its old footprint (strip.js place() sizes it as before). The Ask chip keeps --help-ink on --help (dark ink on orange, CONTRAST-PORT); the close button is a navy chip. */
-html.ui-v7 .vdrawer { padding: calc(var(--vd-tuck, 2px) + var(--s2)) var(--s2) var(--s2); gap: var(--s2); background: var(--float); border: 0; border-radius: 0 0 16px 16px; margin-left: -12px; box-shadow: var(--well), var(--shadow-3); }   /* margin-left: the row's 12px corner radius, so the tray slides out from UNDER the row and its square top-right corner never shows past the round one; --well = a dark top inset where it tucks under */
+/* verdict-v7.css: the verdict CARD (strip.js .vdrawer), PROTO-3WAY column F + REVIEW2 s3 item 4. Under html.ui-v7 only: flag off = strip.css, untouched.
+   Tony Nov 14 (markup-verdict-line-to-card): "the thats it line: should go away and be replaced by our newer card design. and RIGHT MARGIN". The verdict line (.ansl, the same node, moved in by
+   strip.js adopt()) is the card's top: the verdict word + the answer + the copy button; the buttons (See steps / Ask Cluck + collapse) are below it. Fill = the judged row's own step
+   (right green-900 #0c2c22, wrong / out of tries red-900 #3e141e, no verdict yet --float), radius 16, no edge. strip.js place() sets left / width = the row's left edge to the answer
+   group's right edge. Depth from #559 stays: the row casts --shadow-raise, the card is tucked under it, --well at the join. No duck (Tony removed it). */
+html.ui-v7 .vdrawer { --vd-fill: var(--float); flex-wrap: wrap; padding: calc(var(--vd-tuck, 2px) + var(--s2)) var(--s2) var(--s2); gap: var(--s2); background: var(--vd-fill); border: 0; border-radius: 16px; margin-left: 0; box-shadow: var(--well); }   /* --well = a dark top inset where it tucks under the row */
+html.ui-v7 .vdrawer[data-st="ok"] { --vd-fill: #0c2c22; }
+html.ui-v7 .vdrawer:is([data-st="wrong"], [data-st="lock"]) { --vd-fill: #3e141e; }
+html.ui-v7 .vdrawer > .ansl { order: -1; flex: 1 0 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--s1) 0 var(--s2); font-size: var(--t-md, var(--t-sm)); color: var(--ink); }   /* the verdict line, now the card's top row; the copy keeps its 44px tap area */
+html.ui-v7 .vdrawer > .ansl .rv-duck { display: none; }
+html.ui-v7 .vdrawer > .ansl .mcopy { margin-left: auto; }
+html.ui-v7 .vdrawer[data-st="ok"] > .ansl > span:first-child { color: var(--correct-on); }
+html.ui-v7 .vdrawer:is([data-st="wrong"], [data-st="lock"]) > .ansl > span:first-child { color: var(--wrong-on); }
+/* no orange on red (REVIEW2): on the red card the Ask Cluck chip is a warm-900 chip (#351d09) with light ink */
+html.ui-v7 .vdrawer:is([data-st="wrong"], [data-st="lock"]) > .wchip { background: #351d09; color: var(--help-on); }
+html.ui-v7 .vdrawer:is([data-st="wrong"], [data-st="lock"]) > .wchip:hover { background: color-mix(in srgb, #351d09 80%, var(--help-on)); }
+html.ui-v7 .vdrawer:is([data-st="wrong"], [data-st="lock"]) > .wchip svg.dk.ico { color: var(--help-on); }
 html.ui-v7 .vdrawer > .wchip { border: 0; border-radius: 12px; z-index: 1; }
 html.ui-v7 .vdrawer > .wchip:hover { border: 0; }
 html.ui-v7 .vdrawer > .vd-x { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); z-index: 1; }

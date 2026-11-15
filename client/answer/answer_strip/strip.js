@@ -92,15 +92,29 @@
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
     d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
     d.style.setProperty("--vd-tuck", b.tuck + "px");
-    /* html.ui-v7 only (Tony: the tray must not hide the verdict line): a revealed-answer / verdict line right under the box ("That's it!", "Not it. The answer is ...") keeps its room;
-       the tray then hangs from the line's bottom edge instead of tucking under the box */
-    if (D.documentElement.classList.contains("ui-v7")) {
-      var ln = D.querySelector("#q .ansl"), cb = ln && containing(d);
-      if (ln && ln.getClientRects().length && cb) {
-        var c = cb.getBoundingClientRect(), lb = ln.getBoundingClientRect(), y = lb.bottom - c.top - cb.clientTop + cb.scrollTop + 8;
-        if (y > b.bottom) { d.style.top = y + "px"; d.style.setProperty("--vd-tuck", "0px"); }
-      }
+    /* html.ui-v7 only (Tony Nov 14, "the thats it line: should go away and be replaced by our newer card design. and RIGHT MARGIN"): the tray is the verdict CARD. The verdict line
+       (.ansl: "That's it! The answer is ..." / "Not it. ...", copy button) is moved INTO it (the same node, so the live-region text and the copy handler stay), above the buttons; the
+       card spans the row's left edge to the answer group's right edge (the row + its Next / Check column = the row's parent), the same gutter as the cards above. */
+    if (V7()) {
+      if (!d.hidden && !d.classList.contains("vd-shut")) adopt(d);
+      var g = h.g || h.at, cb = d.offsetParent || D.documentElement, c = cb.getBoundingClientRect(), base = c.left + cb.clientLeft - cb.scrollLeft;
+      var gr = g.getBoundingClientRect(), pr = g.parentElement ? g.parentElement.getBoundingClientRect() : gr, right = Math.max(gr.right, pr.right);
+      d.style.left = Math.round((gr.left - base) * 10) / 10 + "px"; d.style.width = Math.round((right - gr.left) * 10) / 10 + "px";
     }
+  }
+  function V7() { return D.documentElement.classList.contains("ui-v7"); }
+  /* the verdict line lives in #preview (app.js writes and rewrites it there); the open card borrows it. One line only: a stale one in the card gives way to a fresh one in #preview */
+  function adopt(d) {
+    var S = state(), fresh = [].filter.call(D.querySelectorAll("#q .ansl"), function (l) { return !d.contains(l); }), old = d.querySelector(":scope > .ansl");
+    if (!fresh.length) return;
+    if (old) old.remove();
+    for (var i = 0; i < fresh.length - 1; i++) fresh[i].remove();
+    var ln = fresh[fresh.length - 1]; ln.dataset.vc = S ? S.code : ""; d.insertBefore(ln, d.firstChild);
+  }
+  function release(d) {                                       // the card is shut or gone: the line goes back where app.js keeps it (#preview), so a collapsed tray does not hide the answer
+    var ln = d.querySelector(":scope > .ansl"), host = $("#preview"), S = state();
+    if (!ln) return;
+    if (host && S && ln.dataset.vc === S.code && !host.querySelector(".ansl")) host.appendChild(ln); else ln.remove();
   }
   function show(d, still) {
     clearTimeout(shutT);
@@ -113,9 +127,9 @@
   function hide(d, instant) {
     clearTimeout(shutT);
     if (d.hidden) return;
-    if (instant || getComputedStyle(d).animationName === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) { d.hidden = true; d.classList.remove("vd-shut"); unlift(); return; }
+    if (instant || getComputedStyle(d).animationName === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) { d.hidden = true; d.classList.remove("vd-shut"); unlift(); release(d); return; }
     d.classList.add("vd-shut");
-    shutT = setTimeout(function () { d.hidden = true; d.classList.remove("vd-shut"); unlift(); }, 260);   // 240ms + a frame; animationend would not fire on a hidden tab
+    shutT = setTimeout(function () { d.hidden = true; d.classList.remove("vd-shut"); unlift(); release(d); }, 260);   // 240ms + a frame; animationend would not fire on a hidden tab
   }
   function clean() {                                          // strip every mark the strip put on the question
     D.querySelectorAll("#q .strip").forEach(function (e) { e.classList.remove("strip"); });
@@ -126,7 +140,7 @@
   function drop() {                                           // no drawer wanted: tear it down, put nothing back
     if (!drawer) return;
     var d = drawer; drawer = null; owner = null; clearTimeout(shutT);
-    clean(); d.remove();
+    release(d); clean(); d.remove();
   }
   function icon(h, on, open) {                                // the verdict icon (typed / multi) or the .vkb over a row's mark is the way back (aria-expanded)
     var vk = h.ic; if (!vk) return;
