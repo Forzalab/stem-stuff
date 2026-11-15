@@ -183,7 +183,7 @@
     }
     chip = drawer.querySelector(".wchip");
     var hid = !!(wish && wish.hidden);                        // desktop with Cluck's sheet open: #wish is hidden and so is its chip (wishPaint)
-    if (chip.hidden !== hid) chip.hidden = hid;
+    if (chip && chip.hidden !== hid) chip.hidden = hid;
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
     if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
