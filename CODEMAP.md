@@ -30,8 +30,10 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/answer_strip/strip.css` | Styles of the answer strip. | strip look |
 | `client/answer/answer_strip/bento.js` | MC options as a bento2 mosaic behind `html.ui-v7`: measures one-line values, writes grid spans on `.ch`. Inert with the flag off. | MC tile layout |
 | `client/answer/answer_strip/bento.css` | MC option look under `html.ui-v7`: state by fill (no borders), mosaic geometry. | MC option colours, tile look |
+| `client/answer/answer_strip/verdict-v7.css` | Verdict drawer under `html.ui-v7`: float fill, no edge, the big duck bleeding off the bottom-right (+ `verdict-duck.png` mask). | drawer look, duck |
 | `client/shell/repair/repair.js` | Repair ladder UI after a miss. | repair steps |
 | `client/shell/repair/repair.css` | Styles of the repair ladder. | repair look |
+| `client/shell/repair/ladder-v7.css` | Ladder card, its chips and input, under `html.ui-v7`: state by fill, no edges. | ladder card colours |
 | `client/cluck/jev_nudges/intent.js` | Event-line log and rule counters (Jev); decides help modal. | Jev rules, help timing |
 | `client/cluck/jev_nudges/lockhelp.js` | "Let me help you with that!" modal. | lock help |
 | `client/shell/stages/stages.js` | Cluck's live step list while he works. | wait UI |
