@@ -84,15 +84,13 @@
 html.ui-v7 {
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
-  /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the lit top edge of a raised control (6% ink, the progbar tile's
-     5% idea), --lit-warm = the same on Cluck's warm rim, --shadow-raise = the small contact shadow under it, --press = pressed in (no outer shadow),
-     --well = a recessed field (dark top inset, lit bottom lip). Raised = a lit top + a small shadow; never a border. */
-  --lit-top: inset 0 1px 0 hsl(222 60% 85% / .07);   /* NAVY-MIN: --card = --sheet = navy-800 (the one resting surface), --chip = navy-600 (badge slot, empty notch), --float = navy-700 (above the page only) */
-  --lit-warm: inset 0 1px 0 rgb(255 190 120 / 0.12);
-  --lit-action: inset 0 1px 0 color-mix(in srgb, var(--action) 70%, #fff);   /* hand-picked lighter top, not a white overlay */
+  /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the top edge of a raised control (a hand-picked solid, not white alpha), --shadow-raise = the small contact shadow under it, --press = pressed in,
+     --well = a recessed field (dark top inset). Raised controls = a solid lit top + a tight shadow below; resting cards/tiles = colour only; never a border. */
+  --lit-top: inset 0 1px 0 #141d36;   /* a hand-picked SOLID navy-700 on the navy-800 face (RUI: not semi-transparent white, that greys out and reads as a border) */   /* NAVY-MIN: --card = --sheet = navy-800 (the one resting surface), --chip = navy-600 (badge slot, empty notch), --float = navy-700 (above the page only) */
+  --lit-action: inset 0 1px 0 #74b8ff;   /* hand-picked lighter blue, same hue as --action */
   --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
-  --well: inset 0 2px 3px rgb(0 0 0 / 0.5), inset 0 -1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+  --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
 }
 /* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
    fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
@@ -1768,15 +1766,13 @@ html.fx-busy :is(.ch .send, #fb > .cluck) { animation: none; }   /* one group at
    Nav tiles (.pb, progbar.css) stay flat. */
 /* D1 buttons + option rows: the primary (Check / Go) and each option row are raised; pressed = inset, no outer shadow */
 html.ui-v7 .opt:not([aria-checked="true"]) { box-shadow: var(--lit-top), var(--shadow-raise); }
-html.ui-v7 .opt[aria-checked="true"] { box-shadow: var(--press); }   /* checked = no lit top, inset feel */
-html.ui-v7 .opt:active:not(:disabled) { box-shadow: var(--press); }
+html.ui-v7 .opt[aria-checked="true"] { box-shadow: none; }   /* checked = no lit top, no shadow below (RUI: pressed = no shadow) */
+html.ui-v7 .opt:active:not(:disabled) { box-shadow: none; }
 html.ui-v7 .btn-go:not(.waiting) { box-shadow: var(--lit-action), var(--shadow-raise); }
-html.ui-v7 .btn-go:not(.waiting):active { box-shadow: var(--press); }
-/* D2 question card: a lit top only; .boxed .q stays flat */
-html.ui-v7 .p { box-shadow: var(--lit-top); }   /* NAVY-MIN: resting card = lit top only, no second shadow */
-/* D3/4 Cluck: the warm rim stays (phone sheet); the lit top is added. The desk box keeps its shadow-3 and gains the same lit top */
-html.ui-v7:not(.side) .cl { box-shadow: var(--lit-warm); }
-html.ui-v7.side .cl { box-shadow: var(--lit-warm), var(--shadow-3); }
+html.ui-v7 .btn-go:not(.waiting):active { box-shadow: none; }
+/* D2 question card: no shadow at all; .boxed .q stays flat */
+html.ui-v7 .p { box-shadow: none; }   /* resting card: depth = colour only (navy-800 on navy-950), no edge, no lift shadow */
+/* D3/4 Cluck box: unchanged (desk keeps its shadow-3); no rim, no lit top */
 html.ui-v7 .ask { box-shadow: var(--well); }   /* the recessed well; the rotating rim (::before/::after) paints over it while Cluck types */
 html.ui-v7 .ask:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--help); }
 html.ui-v7 .ask .send { box-shadow: none; }   /* NAVY-MIN: flat, a button sitting in the field, not a key */

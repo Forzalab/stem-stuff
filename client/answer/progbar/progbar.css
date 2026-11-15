@@ -10,7 +10,7 @@ html.ui-v7 .qnav { --pb-tile: 52px; --pb-r: 16px; --pb-hit: 44px; --pb-gap: 6px;
 /* ---------- tiles: solid, matte, one moulded top edge ---------- */
 html.ui-v7 .pb-list, html.ui-v7 .pb-nav, html.ui-v7 .pb {
   box-sizing: border-box; flex: none; display: flex; align-items: center; min-width: 0; height: var(--pb-tile);
-  border-radius: var(--pb-r); background: var(--sheet); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 5%, transparent); overflow: hidden;
+  border-radius: var(--pb-r); background: var(--sheet); box-shadow: none; overflow: hidden;   /* resting tile: colour only (navy-800 on the page), no lit top */
 }
 html.ui-v7 .pb[hidden] { display: none; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 :is(.pb-list, .pb-nav, .pb, .pb-n) { corner-shape: superellipse(1.52); } }
