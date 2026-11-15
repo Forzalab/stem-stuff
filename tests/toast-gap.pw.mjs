@@ -1,5 +1,5 @@
-// Smoke: the row reward toast under html.ui-v7 (DUCK-V8-TOAST, TOAST-GAP, tray9 C2). Every beat at 390 + 1366: the duck sits in a fixed 80 x 80
-// box, the words start at box right + 32 (+-1), the duck is the beat's mood webp, the title is one line at 390, the close never sits on a word.
+// Smoke: the row reward toast under html.ui-v7 (DUCK-V8-TOAST, TOAST-GAP, tray9 C2). Every beat at 390 + 1366: the duck sits in a square box (TOAST-DYN: 44 + gap 12 for 1 line,
+// 64 + gap 16 for 2-3 lines), the words start at box right + gap (+-1), the duck is the beat's mood webp, the title is one line at 390, the close never sits on a word.
 // Flag off: the plain toast, unchanged. Own serve.py with a fixture bank:  node tests/toast-gap.pw.mjs [port] [shots dir]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -48,9 +48,9 @@ const geo = p => p.evaluate(() => {
   const r = s => { const e = t.querySelector(s); return e ? e.getBoundingClientRect().toJSON() : null; };
   const img = t.querySelector(".stoast-duck img");
   return { card: t.getBoundingClientRect().toJSON(), box: r(".stoast-duck"), words: r(".stoast-b"), title: r(".stoast-t"), x: r(".stoast-x"), src: img ? img.getAttribute("src") : null,
-    titleH: t.querySelector(".stoast-t").getBoundingClientRect().height, row: t.classList.contains("stoast-v7"), text: t.querySelector(".stoast-t").textContent };
+    titleH: t.querySelector(".stoast-t").getBoundingClientRect().height, row: t.classList.contains("stoast-v7"), one: t.classList.contains("stoast-1l"), text: t.querySelector(".stoast-t").textContent };
 });
-const shown = p => p.waitForFunction(() => { const t = document.querySelector(".stoast.on"); return t && !t.getAnimations({ subtree: true }).length && t.dataset.done === "1"; }, null, { timeout: 9000 });
+const shown = p => p.waitForFunction(() => { const t = document.querySelector(".stoast.on"); return t && !t.getAnimations({ subtree: true }).filter(a => a.animationName !== "stoast-drain").length && t.dataset.done === "1"; }, null, { timeout: 9000 });
 /* one beat: show it through the one toast API (the same call the engine makes), wait for it to land, check the geometry */
 async function beat(p, o, w, mood, opts = {}) {
   await p.evaluate(() => window.stemToast && window.stemToast.clear());
@@ -60,22 +60,28 @@ async function beat(p, o, w, mood, opts = {}) {
   const g = await geo(p);
   assert.ok(g && g.row, `${w} ${mood}: the row toast is on`);
   assert.equal(g.src, `client/rewards/icons/duck8-${mood}.webp`, `${w} ${mood}: duck img`);
-  assert.ok(Math.abs(g.box.width - 80) < 0.5 && Math.abs(g.box.height - 80) < 0.5, `${w} ${mood}: duck box 80x80, got ${g.box.width}x${g.box.height}`);
-  assert.ok(Math.abs(g.words.left - (g.box.right + 32)) <= 1, `${w} ${mood}: words start at box right + 32 (box ${g.box.right}, words ${g.words.left})`);
+  geom(g, `${w} ${mood}`);
   assert.ok(g.words.right <= g.card.right - 40 + 1, `${w} ${mood}: no word under the close`);
   if (w < 600) assert.ok(g.titleH <= 25, `${w} ${mood}: title is one line at 390, got ${g.titleH}px`);
   return g;
 }
+/* TOAST-DYN rule (approved design change, replaces the fixed 80 box / gap 32): box square, 44 + gap 12 for 1 line, 64 + gap 16 for 2-3 lines */
+function geom(g, tag) {
+  const one = g.one, want = one ? 44 : 64, gap = one ? 12 : 16;
+  assert.ok(Math.abs(g.box.width - g.box.height) < 0.5 && Math.abs(g.box.width - want) < 0.5, `${tag}: duck box ${want} square (${one ? "1 line" : "multi"}), got ${g.box.width}x${g.box.height}`);
+  assert.ok(Math.abs(g.words.left - (g.box.right + gap)) <= 1, `${tag}: words start at box right + ${gap} (box ${g.box.right}, words ${g.words.left})`);
+  assert.ok(g.x.width >= 44 && g.x.height >= 44, `${tag}: close hit area >= 44`);
+}
 const SH = (p, name) => p.screenshot({ path: join(SHOTS, name) });
 
 for (const w of [390, 1366]) {
-  await step(`${w}: start beat (0 done): duck8-start, box 80, words at box right + 32, title one line`, async () => {
+  await step(`${w}: start beat (0 done): duck8-start, dyn box, words at box right + gap, title one line`, async () => {
     const { ctx, p, errs } = await fresh(w, true);
     await shown(p);
     const g = await geo(p);
     assert.ok(g && g.row && g.src.endsWith("duck8-start.webp"), "start row");
     assert.equal(g.text, "Ready when you are", "start line");
-    assert.ok(Math.abs(g.words.left - (g.box.right + 32)) <= 1 && Math.abs(g.box.width - 80) < 0.5, "start geometry");
+    geom(g, "start"); assert.ok(g.one, "start is 1 line");
     if (w < 600) assert.ok(g.titleH <= 25, "start title one line at 390");
     await SH(p, `toast-start-${w}.png`);
     assert.deepEqual(errs, [], "no page errors");
@@ -92,7 +98,7 @@ for (const w of [390, 1366]) {
     const g = await geo(p);
     assert.ok(g.src.endsWith("duck8-landmark.webp"), "landmark duck");
     assert.equal(g.text, "1 question done.", "title");
-    assert.ok(Math.abs(g.words.left - (g.box.right + 32)) <= 1 && Math.abs(g.box.width - 80) < 0.5, "landmark geometry");
+    geom(g, "landmark"); assert.ok(!g.one, "title + subtitle = multi");
     if (w < 600) assert.ok(g.titleH <= 25, "landmark title one line");
     await SH(p, `toast-landmark-${w}.png`);
     await ctx.close();
