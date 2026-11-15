@@ -2,7 +2,7 @@
 // Flag ON (?ui=v7): single-choice mc options lay out as a bento2 mosaic (12-col grid, a fraction stands 2 rows tall, short options sit in rows of 1-3),
 // and every state is a fill step: NO border on idle / hover / picked / right / wrong / revealed, no lit-top shadow on a resting tile.
 // Sentence options wrap inside bento3 tiles (no holes). Flag OFF: no .bento class, today's 1px --line edge.
-// Own serve.py, throwaway banks. Smoke size, feature-local:   node tests/mc-bento.pw.mjs [port]      (SHOTS=<dir> also saves screenshots)
+// PHONE-FILL (<= 480px): justified rows fill the answer area (steps below). Own serve.py, throwaway banks. Smoke size, feature-local:   node tests/mc-bento.pw.mjs [port]      (SHOTS=<dir> also saves screenshots)
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -26,6 +26,7 @@ writeFileSync(join(BANKS, "BANK_MB1.json"), JSON.stringify({ v: 1, problems: [
   { ...mc("CALC1_MB03", ch("$13$", "A fairly long answer that wraps over a couple of lines", "$\\dfrac{11}{2}$", "$-9$", "$22$"), ["a", "c"]), pick: "all", miss: "QUACK. miss",
     wrong: ["b", "d", "e"].map(c => ({ choice: c, error: "misread", hint: "QUACK. Not " + c })) },   // pick-all: bento too
   mc("CALC1_MB02", ch("It grows without bound as x increases to infinity, then levels off", "It stays constant on the whole interval", "It decreases and then levels off after a long time", "It oscillates forever around zero", "None of these statements is true")),   // sentences: list fallback
+  mc("CALC1_MB04", ch("$1.11\\ \\text{N·m}$", "$-4.47\\ \\text{N·m}$", "$8.07\\ \\text{N·m}$", "$4.47\\ \\text{N·m}$", "$-5.37\\ \\text{N·m}$")),   // real torque answers: \text{N·m} used to print a red \cdotp
 ] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
@@ -60,7 +61,7 @@ const look = (p, sel) => p.evaluate(s => {
 const boxes = p => p.evaluate(() => [...document.querySelectorAll("#q .ch")].map(e => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; }));
 const rgb = h => { const n = parseInt(h.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
 
-for (const W of (process.env.WIDTHS ? process.env.WIDTHS.split(",").map(Number) : [360, 390, 768, 1366, 1920])) {
+for (const W of (process.env.WIDTHS ? process.env.WIDTHS.split(",").map(Number) : [768, 1024, 1366, 1920])) {
   await step(`flag on @${W}: layout is a mosaic (fraction 2 rows tall, all tiles inside the group, no overflow)`, async () => {
     const [c, p] = await open("on", "CALC1_MB01", W, W >= 1000 ? 800 : 844);
     assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid");
@@ -118,7 +119,7 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   await c.close();
 });
 await step("flag on: sentence options are bento tiles too (wrapped, no holes, no overflow, still no border)", async () => {
-  for (const W of [360, 1366]) {
+  for (const W of [768, 1366]) {
     const [c, p] = await open("on", "CALC1_MB02", W, W >= 1000 ? 800 : 844);
     assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid");
     const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height - (parseFloat(getComputedStyle(g).paddingBottom) || 0) + 8) / (parseFloat(g.style.getPropertyValue("--bu")) + 8)), occ = new Set(); let dup = 0;
@@ -132,7 +133,7 @@ await step("flag on: sentence options are bento tiles too (wrapped, no holes, no
   }
 });
 await step("flag on: pick-all (choose-all) is a bento too: grid, no holes, tickable, letter + square mark", async () => {
-  for (const W of [390, 1366]) {
+  for (const W of [768, 1366]) {
     const [c, p] = await open("on", "CALC1_MB03", W, W >= 1000 ? 800 : 844);
     const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height - (parseFloat(getComputedStyle(g).paddingBottom) || 0) + 8) / (parseFloat(g.style.getPropertyValue("--bu")) + 8)), occ = new Set();
       for (const e of g.children) { const m = e.style.gridColumn.match(/(\d+) \/ span (\d+)/), q = e.style.gridRow.match(/(\d+) \/ span (\d+)/); for (let y = +q[1]; y < +q[1] + +q[2]; y++) for (let x = +m[1]; x < +m[1] + +m[2]; x++) occ.add(x + "," + y); }
@@ -154,6 +155,62 @@ await step("flag off: no mosaic, today's 1px --line edge, no change", async () =
   await p.click("#q .opt[data-id='b']"); await p.waitForTimeout(300);
   assert.equal((await look(p, "#q .opt[data-id='b']")).bw, "1px 1px 1px 1px", "flag off picked keeps its edge");
   await c.close();
+});
+/* ---- PHONE-FILL: <= 480px, MC / pick-all answers are justified rows that fill the answer area ---- */
+const fillMeasure = p => p.evaluate(() => {
+  const g = document.querySelector("#q .choices"), r = g.getBoundingClientRect(), os = [...g.querySelectorAll(".opt")], chk = document.querySelector("#q .chk"), cr = chk && chk.getBoundingClientRect();
+  const ys = os.map(o => o.getBoundingClientRect());
+  const order = ys.map((b, i) => [Math.round(b.top / 4), b.left, i]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
+  return { fill: g.dataset.fill || "", bottom: r.bottom, ih: innerHeight, chkTop: cr ? cr.top : null, chkBottom: cr ? cr.bottom : null, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+    ovf: os.filter(o => { const t = o.querySelector(".txt"), tr = t.getBoundingClientRect(), b = o.getBoundingClientRect(); return tr.height > b.height - 11.5 || o.scrollWidth > o.clientWidth + 1 || t.scrollWidth > t.clientWidth + 1; }).length,
+    small: ys.filter(b => b.width < 44 || b.height < 44).length, inorder: order.every((v, i) => v === i), n: os.length, fs: os.map(o => parseFloat(getComputedStyle(o.querySelector(".txt")).fontSize)) };
+});
+await step("phone fill: justified rows fill the area (no empty band), no overflow, tap >= 44, reading order, no h-scroll (single, sentences, pick-all)", async () => {
+  for (const [W, H] of [[390, 844], [360, 740]]) for (const code of ["CALC1_MB01", "CALC1_MB02", "CALC1_MB03", "CALC1_MB04"]) {
+    const [c, p] = await open("on", code, W, H);
+    const m = await fillMeasure(p);
+    assert.ok(m.fill, `${W} ${code}: fill layout on`);
+    if (m.chkTop == null) assert.ok(Math.abs(m.bottom - (m.ih - 8)) <= 2, `${W} ${code}: last row bottom ${m.bottom} within 2px of the area bottom ${m.ih - 8}`);
+    else assert.ok(m.chkTop - m.bottom <= 12 && m.chkBottom <= m.ih, `${W} ${code}: block reaches the Check row (${m.bottom} -> ${m.chkTop}), Check inside the viewport (${m.chkBottom} <= ${m.ih})`);
+    assert.equal(m.ovf, 0, `${W} ${code}: no tile overflow`); assert.equal(m.small, 0, `${W} ${code}: tap >= 44`); assert.ok(m.inorder, `${W} ${code}: reading order A,B,C`); assert.ok(m.sw <= m.cw, "no h-scroll");
+    assert.ok(m.fs.every(f => f >= 10 && f <= 15 || m.fs.length), `${W} ${code}: font ` + m.fs);
+    await shot(p, `fill-${W}-${code}`);
+    await c.close();
+  }
+});
+await step("phone fill: a picked tile keeps its text clear of the Check arrow; scrolling it into view clears the top bar", async () => {
+  const [c, p] = await open("on", "CALC1_MB02", 360, 740);
+  await p.click("#q .opt[data-id='c']"); await p.waitForTimeout(400);
+  assert.equal(await p.getAttribute("#q .opt[data-id='c']", "aria-checked"), "true");
+  const m = await fillMeasure(p); assert.equal(m.ovf, 0, "no overflow with the arrow shown");
+  const hit = await p.evaluate(() => {
+    const s = document.querySelector("#q .ch:has(.opt[data-id='c']) .send");
+    document.body.style.minHeight = "2600px"; scrollTo(0, 185); s.scrollIntoView({ block: "start" });
+    const r = s.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { top: r.top, ok: e === s || s.contains(e), t: e && (e.className || e.tagName) };
+  });
+  assert.ok(hit.ok && hit.top >= 68, "Check arrow below the top bar and hit-testable: " + JSON.stringify(hit));
+  await c.close();
+});
+await step("phone fill: font shrinks to fit a long option; rows grow (the page scrolls) instead of clipping when the area is too small", async () => {
+  const [c, p] = await open("on", "CALC1_MB02", 360, 400);
+  const m = await fillMeasure(p);
+  assert.equal(m.ovf, 0, "nothing clipped"); assert.ok(m.fs.some(f => f < 15), "a long sentence shrank below 15px: " + m.fs); assert.ok(m.fs.every(f => f >= 10), "never below 10px: " + m.fs);
+  await c.close();
+});
+await step("tablet / desktop keep the bento engine: no fill class at 768 / 1024", async () => {
+  for (const W of [768, 1024]) { const [c, p] = await open("on", "CALC1_MB01", W, 800); assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.fill || ""), ""); assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid"); await c.close(); }
+});
+await step("answers with \\text{N·m} render with no red KaTeX error text", async () => {
+  for (const W of [390, 1024]) {
+    const [c, p] = await open("on", "CALC1_MB04", W, 800);
+    const bad = await p.evaluate(() => [...document.querySelectorAll("#q .choices .txt")].filter(t => t.querySelector(".katex-error, [style*='cc0000']") || /cdotp/.test(t.textContent.replace(/\s/g, ""))).length);
+    assert.equal(bad, 0, `${W}: no red cdotp`);
+    await c.close();
+  }
+});
+await step("flag off at 390: no fill class", async () => {
+  const [c, p] = await open("off", "CALC1_MB01"); assert.equal(await p.evaluate(() => !!document.querySelector("#q .choices").dataset.fill), false); await c.close();
 });
 await step("no page errors (flag on)", async () => {
   const [c, p] = await open("on", "CALC1_MB01");
