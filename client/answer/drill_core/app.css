@@ -82,13 +82,15 @@
    navy mock (brain ui-polish/hintbox/v71/palette.css). Flag off = the :root values above, untouched. Sits right after the :root block: same
    specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
 html.ui-v7 {
-  --page: #02040d; --card: #060b1b; --sheet: #0d142a; --float: #141d36; --line: #556791;
+  --page: #02040d; --card: #0a1020; --sheet: #0d142a; --float: #141d36; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
 }
 /* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
    fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
    box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
 .p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
+/* NO-BORDER 1 (Tony Nov 14, option A; ui-v7 only): the question card is a bg step (--card on --page), no inset edge; shadow-1 only, its colour differs from the page */
+html.ui-v7 .p, html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }
 @supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
   :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
 }
@@ -474,6 +476,13 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
   transition: border-color .18s ease-out, background-color .18s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--muted); }
+/* NO-BORDER 1 (ui-v7 only): an unchosen row has no 1px edge; rest = a bg step (--float on the --card page), hover = one step more. The chosen row keeps its
+   edge (selected state); pending (dashed) and the missed-right reveal keep theirs. Verdict rows (right / wrong) take a tint fill, the glyph says it. */
+html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal) { border-width: 0; background: var(--float); }
+html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal):hover:not(:disabled) { background: color-mix(in srgb, var(--float) 85%, var(--ink)); }
+html.ui-v7 .opt.right:not(.reveal):not([aria-checked="true"]) { background: var(--correct-fill); }
+html.ui-v7 .opt.wrong:not(.reveal):not([aria-checked="true"]) { background: var(--wrong-fill); }
+html.ui-v7 .opt:not([aria-checked="true"]) .badge { border-width: 0; background: color-mix(in srgb, var(--ink) 12%, transparent); }   /* the glyph slot: a filled dot, no ring */
 .opt .badge {
   flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
   border: var(--bw) solid var(--line); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-md); line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* TR12: never changes with state */

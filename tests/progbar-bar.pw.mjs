@@ -155,7 +155,7 @@ try {
     await c2.close();
   });
   // COLOR-TOKENS 1 (Tony Nov 14): under html.ui-v7 the base surface tokens take the navy mock; flag off keeps the old values.
-  const TOK = { "--page": "#02040d", "--card": "#060b1b", "--sheet": "#0d142a", "--float": "#141d36", "--line": "#556791", "--wrong": "#f0667a", "--wrong-on": "#ffc4c9", "--correct-on": "#b9efd8", "--help": "#ffa63e", "--help-sheet": "#16110d" };
+  const TOK = { "--page": "#02040d", "--card": "#0a1020", "--sheet": "#0d142a", "--float": "#141d36", "--line": "#556791", "--wrong": "#f0667a", "--wrong-on": "#ffc4c9", "--correct-on": "#b9efd8", "--help": "#ffa63e", "--help-sheet": "#16110d" };
   const OLD = { "--page": "#02060c", "--card": "#0b1422", "--sheet": "#14233a", "--float": "#1b2b40", "--line": "#5e7899", "--wrong": "#eb596e", "--wrong-on": "#ffd1d3", "--correct-on": "#bdead5", "--help": "#ff9a3e", "--help-sheet": "#17130f" };
   const tokens = p => p.evaluate(names => names.map(n => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase()), Object.keys(TOK));
   await step("COLOR-TOKENS 1: ?ui=v7 base surfaces take the navy mock; flag off keeps the old values", async () => {
@@ -165,6 +165,37 @@ try {
     await c.close();
     const [c2, q] = await fresh(browser, "off");
     assert.deepEqual(await tokens(q), Object.keys(OLD).map(n => OLD[n]), "flag off = old");
+    await c2.close();
+  });
+  // NO-BORDER 1 (Tony Nov 14, option A): under ui-v7 an empty notch is a tint fill with no edge (only the next slot rings), the question card has
+  // no inset edge, an unchosen option row has no 1px edge; the chosen row keeps its edge. Flag off keeps every edge.
+  await step("NO-BORDER 1: ?ui=v7 empty notch = tint, no edge (.next keeps its ring); question card + unchosen option row: no edge; chosen row keeps it; flag off unchanged", async () => {
+    const [c, p] = await fresh(browser, "on");
+    await go(p, "CALC1_P01");
+    await p.waitForSelector("#q .opt");
+    await p.click('#q .opt[data-id="a"]');
+    const on = await p.evaluate(() => {
+      const st = e => { const s = getComputedStyle(e); return { bw: s.borderTopWidth, shadow: s.boxShadow, bg: s.backgroundColor }; };
+      const q = s => document.querySelector(s);
+      return { empty: st(q("#pbTile .pb-n:not(.next)")), next: st(q("#pbTile .pb-n.next")), rest: st(q("#q .opt:not([aria-checked='true'])")),
+        chosen: st(q("#q .opt[aria-checked='true']")), card: q(".p") ? st(q(".p")) : null };
+    });
+    assert.equal(on.empty.bw, "0px", "empty notch: no edge");
+    assert.equal(on.empty.shadow, "none", "empty notch: no inset ring");
+    assert.notEqual(on.empty.bg, "rgba(0, 0, 0, 0)", "empty notch: a tint fill, not a hole");
+    assert.equal(on.next.bw, "0px", "next slot: no border width");
+    assert.notEqual(on.next.shadow, "none", "the next slot keeps its ring");
+    assert.equal(on.rest.bw, "0px", "unchosen option row: no edge");
+    assert.equal(on.chosen.bw, "1px", "chosen option row keeps its edge (selected state)");
+    assert.ok(on.card, "a question card (.p) is on the page");
+    assert.equal(on.card.bw, "0px", "question card: no edge");
+    assert.doesNotMatch(on.card.shadow, /inset/, "question card: no inset edge");
+    assert.deepEqual(p.__errs, []);
+    await c.close();
+    const [c2, q] = await fresh(browser, "off");
+    await go(q, "CALC1_P01"); await q.waitForSelector("#q .opt");
+    const off = await q.evaluate(() => { const s = getComputedStyle(document.querySelector("#q .opt:not([aria-checked='true'])")); return s.borderTopWidth; });
+    assert.equal(off, "1px", "flag off: option edge stays");
     await c2.close();
   });
 
