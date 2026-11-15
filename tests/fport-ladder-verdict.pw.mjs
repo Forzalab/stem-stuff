@@ -230,16 +230,43 @@ try {
         return { ol: cs.outlineStyle, sh: getComputedStyle(ff).boxShadow, fl: fl ? getComputedStyle(fl).display : "none", ptr: ff.hasAttribute("data-ptr") }; });
       assert.equal(mouse.fl, "none", "no caption"); assert.ok(!mouse.ol || mouse.ol === "none", "mouse focus: no outline: " + JSON.stringify(mouse));
       assert.ok(!/0px 0px 0px 2px/.test(mouse.sh), "mouse focus: no glow ring: " + mouse.sh);
-      // keyboard: blur then Tab into the field
-      await page.evaluate(() => document.activeElement && document.activeElement.blur());
-      await page.evaluate(() => { document.querySelector("#q #ff.ff").closest("body").focus(); });
-      let hit = false; for (let k = 0; k < 40 && !hit; k++) { await page.keyboard.press("Tab"); hit = await page.evaluate(() => document.activeElement && document.activeElement.tagName === "INPUT" && !!document.activeElement.closest("#q #ff.ff")); }
+      assert.deepEqual(page.errs, [], "page errors");
+    } finally { await page.context().close(); }
+  });
+  for (const w of W) await step(`${w}: flag on (round 4): a fresh field, Tab in = the offset outline on the whole field (not the input), no glow; mouse focus = no ring`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      await page.evaluate(() => { document.activeElement && document.activeElement.blur(); document.body.focus(); });
+      let hit = false; for (let k = 0; k < 40 && !hit; k++) { await page.keyboard.press("Tab"); hit = await page.evaluate(() => document.activeElement.tagName === "INPUT" && !!document.activeElement.closest("#q #ff.ff")); }
       assert.ok(hit, "Tab reaches the field");
-      const kb = await page.evaluate(() => { const i = document.activeElement, cs = getComputedStyle(i); return { ol: cs.outlineStyle, w: cs.outlineWidth, off: cs.outlineOffset }; });
-      assert.deepEqual(kb, { ol: "solid", w: "2px", off: "4px" }, "keyboard focus: the offset outline: " + JSON.stringify(kb));
-      await page.waitForTimeout(200);
-      const sh = await page.evaluate(() => getComputedStyle(document.querySelector("#q #ff.ff")).boxShadow);
-      assert.ok(!/0px 0px 0px 2px/.test(sh), "keyboard focus: no glow ring behind the outline");
+      const kb = await page.evaluate(() => { const i = document.activeElement, ff = getComputedStyle(document.querySelector("#q #ff.ff")); return { input: getComputedStyle(i).outlineStyle, ol: ff.outlineStyle, w: ff.outlineWidth, off: ff.outlineOffset, sh: ff.boxShadow }; });
+      assert.deepEqual([kb.input, kb.ol, kb.w, kb.off], ["none", "solid", "2px", "4px"], "keyboard focus: the outline wraps the field: " + JSON.stringify(kb));
+      assert.ok(!/0px 0px 0px 2px/.test(kb.sh), "no glow ring: " + kb.sh);
+      await page.evaluate(() => document.activeElement.blur());
+      await page.locator("#q #ff.ff input").first().click({ force: true }); await page.waitForTimeout(200);
+      const ms = await page.evaluate(() => getComputedStyle(document.querySelector("#q #ff.ff")).outlineStyle);
+      assert.ok(ms === "none", "mouse focus: no ring: " + ms);
+      assert.deepEqual(page.errs, [], "page errors");
+    } finally { await page.context().close(); }
+  });
+  for (const w of W) await step(`${w}: flag on (round 4): typed + Enter (keyboard): the judged input shows no outline; the cross and the tick are centred on the pill within 1px`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      const tabTo = async () => { await page.evaluate(() => { document.activeElement && document.activeElement.blur(); document.body.focus(); }); for (let k = 0; k < 40; k++) { await page.keyboard.press("Tab"); if (await page.evaluate(() => document.activeElement.tagName === "INPUT" && !!document.activeElement.closest("#ff"))) return; } throw new Error("Tab never reached the field"); };
+      const dy = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), v = ff.querySelector(".vk"), r = ff.getBoundingClientRect(), vr = v.getBoundingClientRect(); return { dy: +((vr.top + vr.height / 2) - (r.top + r.height / 2)).toFixed(1), input: getComputedStyle(ff.querySelector("input")).outlineStyle, cls: ff.className }; });
+      await tabTo(); await page.keyboard.type("1.636"); await page.keyboard.press("Enter");
+      await page.waitForSelector("#q .ff.bad .vk", { timeout: 9000 }); await page.waitForTimeout(500);
+      const wrong = await dy();
+      assert.ok(Math.abs(wrong.dy) <= 1, "wrong: the cross centred on the field within 1px: " + JSON.stringify(wrong));
+      assert.equal(wrong.input, "none", "wrong: the judged input shows no outline (a keyboard submit): " + JSON.stringify(wrong));
+      await page.waitForFunction(() => !window.__drill.state.wait, null, { timeout: 12000 });
+      await tabTo(); await page.keyboard.type("1.38"); await page.keyboard.press("Enter");
+      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 9000 }); await page.waitForTimeout(800);
+      const right = await dy();
+      assert.ok(Math.abs(right.dy) <= 1, "correct: the tick centred on the pill within 1px: " + JSON.stringify(right));
+      assert.equal(right.input, "none", "correct: no input outline: " + JSON.stringify(right));
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });

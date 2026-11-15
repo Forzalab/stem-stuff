@@ -50,9 +50,9 @@ html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box {
   background: #060b1b;
 }
 /* focus (Tony Nov 15, round 3): no glow. Keyboard focus = the offset outline (focus-visible); a mouse or tap focus (strip.js sets [data-ptr] on pointerdown) shows no ring, only the well */
-html.ui-v7 #q .ff input:focus-visible, html.ui-v7 .code-box input:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 2px; }
-html.ui-v7 #q .ff input:focus:not(:focus-visible), html.ui-v7 .code-box input:focus:not(:focus-visible) { outline: none; }
-html.ui-v7 #q .ff[data-ptr] input:focus-visible, html.ui-v7 .code-box[data-ptr] input:focus-visible { outline: none; }
+/* round 4: the outline wraps the whole field (the well), never the inner input; the input itself never shows one. A judged field (.bad / .ok) shows none either. */
+html.ui-v7 #q .ff input:focus-visible, html.ui-v7 #q .ff input:focus, html.ui-v7 .code-box input:focus-visible, html.ui-v7 .code-box input:focus { outline: none; }
+html.ui-v7 #q .ff:has(input:focus-visible):not(.bad):not(.ok):not(.rbox):not([data-ptr]), html.ui-v7 .code-box:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 16px; }
 html.ui-v7 #q .ff input:focus::placeholder { color: var(--hint); }   /* the placeholder shows while the field is empty, focus or not */
 html.ui-v7 #q > .how { display: block !important; }   /* the hint line stays (the caption's :has rule hid it on focus) */
 html.ui-v7 .ff > .fl { display: none; }   /* Tony Nov 15 (round 3): no floating caption; the placeholder is the only label, and it hides when typing */
@@ -65,3 +65,7 @@ html.ui-v7 #q .ff .vk:hover, html.ui-v7 #q .ff .vk:focus-visible { background: n
 html.ui-v7 #q .ff.bad .btn-go, html.ui-v7 #q .ff.rbox.ok .btn-go { background: none; box-shadow: none; }
 /* the retry-wait bar (app.css .btn-go.waiting::before, red 3px) drew a dot under the cross: hidden under ui-v7 (the wait itself is unchanged) */
 html.ui-v7 #q .ff .btn-go.waiting::before { display: none; }
+/* round 4: the reveal pill's mark (.ff.rbox .vk, app.css: position static, a flex item) sat 12px high: its translate ran with no absolute box. Absolute under ui-v7 in both
+   states, so the mark centres on the row (and the pill) like the cross; the row keeps 48px of room on the right for it. */
+html.ui-v7 #q .ff.rbox { padding-right: 48px; }
+html.ui-v7 #q .ff.rbox .vk { position: absolute; order: 0; margin: 0; right: 14px; top: 50%; transform: translateY(-50%); }
