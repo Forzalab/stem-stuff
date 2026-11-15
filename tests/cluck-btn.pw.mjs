@@ -108,8 +108,7 @@ try {
       await page.waitForFunction(() => document.querySelector("#cluckBtn") && !document.querySelector("#cluckBtn").hasAttribute("aria-disabled"), null, { timeout: 8000 });
       const sw = await page.evaluate(() => { const b = document.querySelector("#cluckBtn"), cs = getComputedStyle(b, "::before"); return { dur: cs.transitionDuration, ease: cs.transitionTimingFunction, origin: cs.transformOrigin.split(" ")[0] }; });
       assert.equal(sw.dur.split(",")[0], "0.24s"); assert.equal(sw.ease.split(",")[0], "ease-out"); assert.equal(sw.origin, "0px", "sweeps in from the left");
-      await page.waitForSelector("#cluckBtn.cb-sheen", { state: "attached", timeout: 3000 });   // wrong try = the tinted sheen
-      assert.match(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage), /90, 169, 255|color\(srgb 0\.35/, "tinted site blue, not white");
+      await page.waitForSelector("#cluckBtn.cb-sheen, #cluckBtn.cb-shake", { state: "attached", timeout: 4000 });   // wrong try = the sheen; the stub reply that lands next = the duck head shake (the later event wins)
       const g = await geo(page);
       assert.equal(g.ladder, 0, "no old entry"); assert.equal(g.aria, null); assert.equal(g.bg, "rgb(20, 29, 54)", "base stays; the fill layer sweeps"); assert.equal(g.shadow !== "none", true, "the slight raise");
       assert.equal(await page.evaluate(() => document.querySelectorAll("#q .ff .vk[role=button], #q .vdrawer, #wish .wchip, .wchip").length), 0);
@@ -139,6 +138,8 @@ try {
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), false, "ends by itself");
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await page.waitForTimeout(350);
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), true, "Jev S6 sheen");
+      assert.match(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage), /gradient/, "a band");
+      assert.equal(await page.evaluate(() => /(?:90, 169, 255|0\.35|#5aa9ff)/i.test(getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage)), true, "tinted site blue --action, not white");
       await page.waitForTimeout(1200);
       await page.evaluate(() => window.stemCluckBtn.sheen("reply")); await page.waitForTimeout(400);
       assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-duck")).animationName; }), "cb-shake", "reply = duck head shake, chip still");
