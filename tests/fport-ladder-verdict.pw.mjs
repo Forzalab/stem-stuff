@@ -120,6 +120,15 @@ try {
           return { bw: ["Top", "Right", "Bottom", "Left"].map(s => cs["border" + s + "Width"]).join(" "), overflow: cs.overflow, h: r.height, duck: h, bottom, cut: -bottom / h,
             mask: p.maskImage || p.webkitMaskImage, content: p.content, right: parseFloat(p.right), btns: [...e.querySelectorAll("button")].map(b => ({ w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), bw: getComputedStyle(b).borderTopWidth })) };
         });
+        const bad = await page.evaluate(() => { const e = document.querySelector("#q .ff.bad, #q .ff.rbox.cue:not(.ok)"); if (!e) return null; const cs = getComputedStyle(e), i = getComputedStyle(e.querySelector("input") || e);
+          return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), bg: cs.backgroundColor, color: i.color }; });
+        const kids = await page.evaluate(() => [...document.querySelectorAll("#q .ff.bad *, #q .ff.rbox.cue:not(.ok) *")].filter(e => e.getClientRects().length).map(e => { const cs = getComputedStyle(e); return { c: String(e.className.baseVal ?? e.className).slice(0, 24) || e.tagName, bw: cs.borderTopWidth + cs.borderRightWidth + cs.borderBottomWidth + cs.borderLeftWidth }; }).filter(x => x.bw !== "0px0px0px0px"));
+        assert.deepEqual(kids, [], "a border inside the wrong box (its X button): " + JSON.stringify(kids));
+        assert.ok(bad, "a judged-wrong typed box");
+        assert.equal(bad.bw, ZERO, "wrong box has no dash: " + JSON.stringify(bad));
+        assert.equal(bad.bg, "rgb(62, 20, 30)", "the MC bento wrong fill #3e141e");
+        const L = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const cr = (L(bad.color) + 0.05) / (L(bad.bg) + 0.05); assert.ok(cr >= 4.5, "wrong text contrast " + cr.toFixed(2));
         if (SHOTS) { await page.locator("#q .vdrawer").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `verdict-${w}.png`) }); }
         assert.equal(d.bw, ZERO, "drawer border: " + JSON.stringify(d));
         assert.ok(d.duck >= 96, "a big duck: " + d.duck);

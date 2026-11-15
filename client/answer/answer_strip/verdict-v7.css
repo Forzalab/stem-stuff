@@ -16,3 +16,11 @@ html.ui-v7 .vdrawer > .wchip { border: 0; border-radius: 12px; z-index: 1; }
 html.ui-v7 .vdrawer > .wchip:hover { border: 0; }
 html.ui-v7 .vdrawer > .vd-x { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); z-index: 1; }
 html.ui-v7 .vdrawer > .vd-x:hover { background: color-mix(in srgb, var(--chip) 82%, var(--ink)); }
+
+/* the judged-wrong typed box (Tony Nov 14: "dashed red edge should be gone too, more like our bento answer card on wrong state"): no dash, the MC bento wrong look
+   (bento.css --mc-wrong red-900 fill, --wrong-on text, 12px tile family radius). The flag-off .ff.bad dashed --wrong-rim rule (app.css, style.test.mjs 2.6) is untouched. */
+html.ui-v7 .ff { --mc-wrong: #3e141e; }
+html.ui-v7 .ff.bad, html.ui-v7 .ff.bad:focus-within, html.ui-v7 .ff.rbox.cue:not(.ok), html.ui-v7 .q .ff.rbox.cue:not(.ok):focus-within { border: 0; border-radius: 12px; background: var(--mc-wrong); }
+html.ui-v7 .ff.bad input, html.ui-v7 .ff.rbox.cue:not(.ok) input { color: var(--wrong-on); }
+html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.bad:focus-within { box-shadow: none; outline: 0; }   /* the typing caret says focus; no blue rim on a wrong box */
+html.ui-v7 .ff.bad *, html.ui-v7 .ff.rbox.cue:not(.ok) * { border: 0; box-shadow: none; }
