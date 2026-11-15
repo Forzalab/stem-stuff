@@ -161,10 +161,15 @@ try {
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
       await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await page.waitForTimeout(900);
       const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
-        return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height }; });
+        return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height, text: getComputedStyle(ff.querySelector("input")).color }; });
       assert.equal(m.slot, "rgb(11, 42, 31)", "tick slot = --correct-deep #0b2a1f"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
       assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
+      // the correct fill is the MC bento right tile: --mc-right #0c2c22 + --correct-on text (#b9efd8), on the reveal pill and on a plain judged-right box
+      assert.equal(m.text, "rgb(185, 239, 216)", "right text = --correct-on: " + m.text);
+      const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"); ff.classList.remove("rbox"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
+        return { bg: cs.backgroundColor, bw: cs.borderTopWidth, r: cs.borderTopLeftRadius, color: i.color }; });
+      assert.deepEqual(plain, { bg: "rgb(12, 44, 34)", bw: "0px", r: "16px", color: "rgb(185, 239, 216)" }, "the plain judged-right box = the MC right tile (was the soft --correct-fill): " + JSON.stringify(plain));
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });
