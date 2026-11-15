@@ -218,6 +218,7 @@ weight() {
     depth) echo 25 ;;   # DEPTH 1 ui-v7 light-from-above: lit tops, well + gate, own server (estimate until CI timing)   # PROGBAR P5 v9d bar DOM/CSS behind html.ui-v7: flag off untouched, flag on geometry + states, own server (estimate until CI timing)
     mc-bento) echo 25 ;;   # MC-BENTO ui-v7 mosaic layout + state by fill, no borders; flag off unchanged, own server (estimate until CI timing)
     toast-calc) echo 35 ;;   # BUG-TOAST-CALC: toast rect vs #q cards at 1280 + 390, own server (estimate until CI timing)
+    fport-hint-toast) echo 20 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     fport-ladder-verdict) echo 30 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     desk-notes-off) echo 14 ;;   # W97 desktop notes box kept: diet shows, sugar hides (static html.sugar), phone keeps it, own server, local run ~14 s (estimate until CI timing)
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
@@ -287,6 +288,7 @@ tags() {
     depth) echo "@layout @real-time" ;;   # DEPTH 1 depth shadows + 3:1 field gate, own server   # PROGBAR P5 bar geometry at 360 / 390 / 1280, own server
     mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 5 widths, own server
     toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
+    fport-hint-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     wide-content) echo "@layout @real-time" ;;   # WIDE-CONTENT, own server
     fport-ladder-verdict) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     desk-notes-off) echo "@layout @real-time" ;;   # W97 desktop notes: diet kept, sugar hidden from first paint, phone kept
@@ -444,7 +446,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|progbar-wave|depth|brainrot-b|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3|tap-targets|wide-content|mc-bento|fport-ladder-verdict) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|brainrot-b|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3|fport-hint-toast|progbar-wave|tap-targets|wide-content|mc-bento|fport-ladder-verdict) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
