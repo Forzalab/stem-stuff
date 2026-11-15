@@ -42,7 +42,7 @@
   // list:end
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const any = a => a[Math.floor(Math.random() * a.length)];
-  const N = Math.min(8, CATS.length);
+  const N = Math.min(document.documentElement.classList.contains("ui-v7") ? 8 : 5, CATS.length);   // B2 (Tony, Nov 14): 8 under html.ui-v7 only; flag off keeps the 5 of before
   const PICK = shuffle(CATS.map((_, i) => i)).slice(0, N), VIDS = PICK.map(c => any(CATS[c][1]));   // BRAINROT-B2: up to 8 random categories (all of them today), one video each, new every load (Tony, Oct 26: 3; Oct 29: 6; Oct 31: "5 total"; Nov 14: "add more videos"); the corner shows 2 (app.css)
   /* BRAINROT-B2 bento: the docked v7 mosaic's cells by tile count: [rows, [[row, unit col, units tall, units wide] per tile]] on the 12-col grid (a unit = 3 cols); slot 0 = the hero (2x2), then
      tall (1x2) / wide (2x1) / small (1x1) ones, interlocked, no holes. A tap swaps the hero's cells with the tapped tile's (grid-area only; the iframes never move). */
