@@ -266,12 +266,11 @@
       mv.suppress = false;
       if (!torus() || e.button > 0) return;
       stopCoast(); mv.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, moved: false };
-      try { shelf.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
-    }, { passive: true });
+    }, { passive: true });   // no capture yet: capturing at pointerdown retargets the click to the shelf, so a tap never reached the tile
     shelf.addEventListener("pointermove", e => {
       const d = mv.drag; if (!d || e.pointerId !== d.id) return;
       if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
-      d.moved = true;
+      d.moved = true; try { shelf.setPointerCapture(e.pointerId); } catch { /* synthetic */ }   // a drag (not a tap) owns the pointer
       const ex = e.clientX - d.lx, ey = e.clientY - d.ly; d.lx = e.clientX; d.ly = e.clientY;
       nudge(-ex, -ey); mv.vx = .6 * mv.vx - .4 * ex; mv.vy = .6 * mv.vy - .4 * ey;
     }, { passive: true });

@@ -926,8 +926,8 @@ html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradi
 /* desktop dock (BRAINROT-B2, Tony Nov 14: "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): no box, the mosaic fills the whole notes column.
    8 tiles on a 12-col grid, gap 8: --rows rows of --R px; each tile's cells come from brainrot.js LAYOUT (--a = its grid-area), 1x1 / 2x1 / 1x2 / 2x2 interlocked, no holes. No 9:16 on any tile: every video is
    centre-cropped to its tile (cover, from the container units below). R = a unit's width x .8 (whole px, on 4); the block is taller than the window and scrolls in it (the torus). */
-/* the dock is a window onto the mosaic, 40% of the notes column (about: column top + foot = 206px; 180px at least, 360px at most). The Cluck sheet takes the rest */
-html.ui-v7 .rot.docked { --rot-dock-h: clamp(180px, calc((100dvh - 206px) * .4), 360px); }
+/* the dock is a window onto the mosaic, 40% of the notes column (about: column top 100 + foot 48 = 148px, the TOP-GAP band gone; 180px at least, 360px at most). The Cluck sheet takes the rest */
+html.ui-v7 .rot.docked { --rot-dock-h: clamp(180px, calc((100dvh - 148px) * .4), 360px); }
 /* the torus (BRAINROT torus, Tony Nov 15): the window is fixed-height, the mosaic inside it is a 2 x 2 world of the same block (duo + three copies), moved by a transform.
    The mask is a subtle fade at its top and bottom edge */
 html.ui-v7 .rot.docked .shelf { height: var(--rot-dock-h); overflow: hidden; overflow: clip; position: relative;   /* clip: nothing may scroll the window (scrollIntoView) */ touch-action: none; overscroll-behavior: contain;
@@ -1846,5 +1846,7 @@ html.ui-v7 .opt .badge { border-radius: 8px; }
 
 /* GAP-BATCH1 (ui-v7 only). B: the old star "1" level badge is retired (Q2: star level leaves the bar). */
 html.ui-v7 #rwHud .rw-lvl { display: none; }
+/* TOP-GAP (Tony, Nov 15): the HUD is empty until the first reward (coin + streak hidden, level retired), yet its 48px box + margin pushed the headings ~95px down. Collapsed until it has something to show. */
+html.ui-v7 #rwHud.rw-z-xp.rw-z-st { display: none; }
 /* D: the miss hint is the float family (the stage toast's fill, radius 16, shadow-3, no edge), not the old filled duck card */
 html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }

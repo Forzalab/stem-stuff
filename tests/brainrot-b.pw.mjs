@@ -73,14 +73,25 @@ try {
     assert.ok(await page.$$eval("#rot .duo:not(.dupe) .vid", vs => { const s = document.querySelector("#rot .shelf").getBoundingClientRect(); return vs.filter(v => { const r = v.getBoundingClientRect(); return r.bottom > s.top && r.top < s.bottom && r.right > s.left && r.left < s.right; }).every(v => v.querySelector("iframe").hasAttribute("src")); }), "every tile in the window has its player loaded (the torus loads a tile when it shows)");
     /* the sheet (open from load) keeps its header and the ask field in the window; the page does not scroll */
     const sh = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight, cl: document.querySelector("#work .cl").getBoundingClientRect().top, ask: document.querySelector("#work .cl-ft .ask").getBoundingClientRect().bottom }));
+    const gap = await page.evaluate(() => ({ main: document.querySelector("#main").getBoundingClientRect().top, work: document.querySelector("#work").getBoundingClientRect(), dock: document.querySelector("#rot .shelf").getBoundingClientRect().height }));
+    assert.ok(gap.main <= 80 && gap.work.top <= 104, "TOP-GAP: no empty band under the top bar (the idle HUD takes no room): " + JSON.stringify([gap.main, gap.work.top]));
+    assert.ok(gap.dock <= gap.work.height * .4 + 1 && gap.dock >= gap.work.height * .3 || gap.dock === 360, `the dock is ~40% of the column: ${gap.dock} of ${gap.work.height}`);
     assert.ok(sh.sh <= sh.ih && sh.ask <= sh.ih && sh.cl < sh.ask - 100, "Cluck's sheet fits: " + JSON.stringify(sh));
     const frames = await page.$$eval("#rot iframe", es => es.map(e => e.src)), before = vs[3];
-    await page.click("#rot .duo:not(.dupe) .vid:nth-child(4)"); await page.waitForTimeout(200);
+    /* the dock is a capped window onto a torus, so tile 4 may be out of it: wheel the world until some copy of tile k=3 shows (centre inside the window), then tap THAT copy (original or .dupe) */
+    const seen = () => page.evaluate(() => { const s = document.querySelector("#rot .shelf").getBoundingClientRect(); const vs = [...document.querySelectorAll("#rot .vid[data-k='3']")];
+      const i = vs.findIndex(v => { const r = v.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; return cx > s.left + 4 && cx < s.right - 4 && cy > s.top + 20 && cy < s.bottom - 20; }); vs.forEach(v => v.removeAttribute("data-tap")); if (i >= 0) vs[i].setAttribute("data-tap", "1"); return i; });
+    const sb = (await rect(page, "#rot .shelf"))[0]; await page.mouse.move(sb.x + sb.w / 2, sb.y + sb.h / 2);
+    for (let i = 0; i < 40 && await seen() < 0; i++) { await page.mouse.wheel(0, 60); await page.waitForTimeout(40); }
+    assert.ok(await seen() >= 0, "tile 4 can be wheeled into the window");
+    await page.click("#rot .vid[data-tap]"); await page.waitForTimeout(200);
     assert.equal(await big(), 3, "the tapped one is the hero now");
+    assert.deepEqual(await page.$$eval("#rot .vid.hero", es => [...new Set(es.map(e => e.dataset.k))]), ["3"], "every copy agrees on the hero");
     const after = await rect(page, "#rot .duo:not(.dupe) .vid");
     assert.ok(Math.abs(after[3].w - vs[0].w) <= 1 && Math.abs(after[3].h - vs[0].h) <= 1 && Math.abs(after[3].x - vs[0].x) <= 1, "it took the hero's cells");
     assert.ok(Math.abs(after[0].w - before.w) <= 1 && Math.abs(after[0].h - before.h) <= 1 && Math.abs(after[0].x - before.x) <= 1, "and the old hero took its cells");
-    assert.deepEqual(await page.$$eval("#rot iframe", es => es.map(e => e.src)), frames, "no iframe reloaded");
+    const now = await page.$$eval("#rot iframe", es => es.map(e => e.src));   // the wheel may load more tiles (lazy, by design); none that had a player may change or reload
+    assert.deepEqual(frames.map((f, i) => f && f !== "about:blank" && f !== BASE + "/" ? now[i] : f), frames, "no loaded iframe reloaded");
     await c.close();
   });
   await step("flag off, phone 390: still no brainrot at all (the Oct 17 rule stays)", async () => {
