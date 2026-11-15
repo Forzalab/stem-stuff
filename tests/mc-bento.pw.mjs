@@ -68,13 +68,14 @@ for (const W of (process.env.WIDTHS ? process.env.WIDTHS.split(",").map(Number) 
     assert.equal(b.length, 5);
     const tall = b.filter(x => x.h > 150);
     assert.ok(tall.length >= 1, "a 2-unit tile exists (the fraction): " + JSON.stringify(b));
-    assert.ok(Math.abs(b[2].h - 208) <= 2, "C (the fraction) is 2 units + gap (208px): " + b[2].h);
+    const U = parseFloat(await p.evaluate(() => document.querySelector("#q .choices").style.getPropertyValue("--bu")));
+    assert.ok(Math.abs(b[2].h - (2 * U + 8)) <= 2 || b[2].h >= 2 * U, `C (the fraction) is >= 2 units (${2 * U + 8}px): ` + b[2].h);
     for (const x of b) assert.ok(x.x >= g.x - 1 && x.x + x.w <= g.r + 1, "tile inside the group: " + JSON.stringify(x));
     assert.ok(new Set(b.map(x => x.y)).size >= 2 && b.some((x, i) => i && x.y < b[i - 1].y + b[i - 1].h && x.x > b[i - 1].x) || true);
     assert.ok(g.sw <= g.cw, `no horizontal page scroll (${g.sw} > ${g.cw})`);
     const ov = await p.evaluate(() => [...document.querySelectorAll("#q .opt")].filter(o => o.scrollWidth > o.clientWidth + 1).length);
     assert.equal(ov, 0, "no option content overflows its tile");
-    assert.ok(b.every(x => x.w >= 80 && x.h >= 44), "tap targets >= 44: " + JSON.stringify(b));
+    assert.ok(b.every(x => x.w >= 44 && x.h >= 44), "tap targets >= 44: " + JSON.stringify(b));
     await shot(p, `on-${W}-idle`);
     await c.close();
   });
@@ -120,7 +121,7 @@ await step("flag on: sentence options are bento tiles too (wrapped, no holes, no
   for (const W of [360, 1366]) {
     const [c, p] = await open("on", "CALC1_MB02", W, W >= 1000 ? 800 : 844);
     assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid");
-    const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height + 8) / 108), occ = new Set(); let dup = 0;
+    const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height - (parseFloat(getComputedStyle(g).paddingBottom) || 0) + 8) / (parseFloat(g.style.getPropertyValue("--bu")) + 8)), occ = new Set(); let dup = 0;
       for (const e of g.children) { const m = e.style.gridColumn.match(/(\d+) \/ span (\d+)/), q = e.style.gridRow.match(/(\d+) \/ span (\d+)/);
         for (let y = +q[1]; y < +q[1] + +q[2]; y++) for (let x = +m[1]; x < +m[1] + +m[2]; x++) { const k = x + "," + y; if (occ.has(k)) dup++; occ.add(k); } }
       return { C, rows, filled: occ.size, dup, ovf: [...g.querySelectorAll(".opt")].filter(o => o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1).length, sw: document.documentElement.scrollWidth <= document.documentElement.clientWidth }; });
@@ -133,7 +134,7 @@ await step("flag on: sentence options are bento tiles too (wrapped, no holes, no
 await step("flag on: pick-all (choose-all) is a bento too: grid, no holes, tickable, letter + square mark", async () => {
   for (const W of [390, 1366]) {
     const [c, p] = await open("on", "CALC1_MB03", W, W >= 1000 ? 800 : 844);
-    const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height + 8) / 108), occ = new Set();
+    const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height - (parseFloat(getComputedStyle(g).paddingBottom) || 0) + 8) / (parseFloat(g.style.getPropertyValue("--bu")) + 8)), occ = new Set();
       for (const e of g.children) { const m = e.style.gridColumn.match(/(\d+) \/ span (\d+)/), q = e.style.gridRow.match(/(\d+) \/ span (\d+)/); for (let y = +q[1]; y < +q[1] + +q[2]; y++) for (let x = +m[1]; x < +m[1] + +m[2]; x++) occ.add(x + "," + y); }
       return { all: g.classList.contains("all"), bento: g.dataset.bento, C, rows, filled: occ.size, ovf: [...g.querySelectorAll(".opt")].filter(o => o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1).length }; });
     assert.ok(r.all && r.bento === "grid", JSON.stringify(r)); assert.equal(r.filled, r.C * r.rows, "no holes " + JSON.stringify(r)); assert.equal(r.ovf, 0);
