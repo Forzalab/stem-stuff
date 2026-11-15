@@ -10,6 +10,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { launchBrowser } from "./pw-browser.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -54,7 +55,7 @@ const prevEverOff = (page, ms) => page.evaluate(ms => new Promise(res => {
   setTimeout(() => { clearInterval(t); res(off); }, ms);
 }), ms);
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
   await ctx.addInitScript(s => { try { if (!localStorage.getItem("stem-q-BANK_NV12")) localStorage.setItem("stem-q-BANK_NV12", JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } }, SEED);

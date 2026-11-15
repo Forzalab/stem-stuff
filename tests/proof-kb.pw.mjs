@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { launchBrowser } from "./pw-browser.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -13,7 +14,7 @@ const PORT = +(process.argv[2] || 8879);
 const srv = spawn("python3", ["server/http_server/serve.py", String(PORT)], { cwd: ROOT, stdio: "ignore" });
 await new Promise(ok => setTimeout(ok, 1500));
 let fail = 0;
-const b = await pw.chromium.launch();
+const b = await launchBrowser(pw);
 try {
   const c = await b.newContext({ ...pw.devices["Pixel 7"], viewport: { width: 412, height: 860 } });
   const p = await c.newPage();
