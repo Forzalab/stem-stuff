@@ -63,10 +63,10 @@
     function cost(sel, Hh) {
       var c = 25 * Hh, shapes = {}, ns = 0;
       sel.forEach(function (x, ix) {
-        var cells = x.cs * x.rs; c += 5 * (cells - minCells[ix]);
+        var cells = x.cs * x.rs; c += 8 * (cells - minCells[ix]);
         shapes[x.cs + "x" + x.rs] = 1;
         var ar = tileW(x.cs, R, C) / unitsH(x.rs); c += 4 * Math.abs(Math.log(ar));
-        if (x.cs === 1 && ms[ix].kind === "t") c += 6 + 2 * Math.max(0, Math.round(ms[ix].by[0].h / 24) - 3);   // a 1-col text tile: narrow, hard to read when it wraps a lot
+        if (x.cs === 1 && ms[ix].kind === "t") c += 6 + 6 * Math.max(0, Math.round(ms[ix].by[0].h / 24) - 3);   // a 1-col text tile: narrow, hard to read when it wraps a lot
         c += hash(ms[ix].text + x.cs + "x" + x.rs);
       });
       for (var k in shapes) ns++;
