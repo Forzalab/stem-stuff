@@ -7,9 +7,9 @@
      off   = no key / diet / out of asks / not a Cluck question -> "Cluck isn't available here."   (hover on desktop, tap on a phone, Enter / Space: a note from the toast family)
      ready = a press does what the old chip did (cluck.js window.stemCluckAsk.enter)
    disabled -> ready: the fill sweeps in left to right, 240 ms ease-out (a scaleX layer); reduced motion = instant (cluckbtn.css).
-   Sheen: window.stemCluckBtn.sheen(why) plays one light sweep + a small spring (the streak WAVE's 0.9 s feel, progbar.js) whenever something happens where an old entry used to appear:
-     wrong (a wrong try unlocked Cluck) · right / out (the steps are ready, app.js cueChip) · reply (Cluck's reply finished while the sheet is closed) ·
-     Jev: jev-s6 (help-avoidance nudge), jev-stuck (the "stuck? ask me" duck), jev-open-help (the "Let me help you" modal opened the panel). Only while ready; none with reduced motion.
+   Emphasis (CLUCK-EMPHASIS): window.stemCluckBtn.sheen(why) plays once, whenever something happens where an old entry used to appear:
+     reply (Cluck's reply finished, sheet closed) = duck HEAD SHAKE · right (steps unlocked) = duck NOD · every other = blue-tinted (--action) SHEEN: wrong (a wrong try unlocked Cluck), out (out of tries, app.js cueChip) ·
+     Jev: jev-s6 (help-avoidance nudge), jev-stuck (the "stuck? ask me" duck), jev-open-help (the "Let me help you" modal opened the panel). Disabled -> ready also ends with a small spring hop of the duck (.cb-hop). Only while ready; none with reduced motion; no halo, no whole-chip nudge.
    Reads cluck.js through window.stemCluckAsk { state, enter }; writes <html class="cluck-ready"> (app.css keeps the orange "Cluck has help here" dot on it). */
 (function (g) {
   "use strict";
@@ -29,7 +29,7 @@
     btn.append(why);
     btn.addEventListener("click", press);
     btn.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse" && locked()) tell(); });   // desktop: hover; a phone has no hover, its tap is the click
-    btn.addEventListener("animationend", function (e) { if (/^cb-/.test(e.animationName)) btn.classList.remove("cb-sheen"); });
+    
   }
   var locked = function () { return !!btn && btn.getAttribute("aria-disabled") === "true"; };
   function tell() {
@@ -54,21 +54,24 @@
     var st = state(), was = b.getAttribute("data-st");
     if (was !== st) {
       b.setAttribute("data-st", st);
-      if (st === "ready") { b.removeAttribute("aria-disabled"); enabledAt = Date.now(); } else b.setAttribute("aria-disabled", "true");
+      if (st === "ready") { b.removeAttribute("aria-disabled"); enabledAt = Date.now(); if (was && !reduced()) hop(b); } else b.setAttribute("aria-disabled", "true");
       why.textContent = MSG[st] || "";
     }
     H.classList.toggle("cluck-ready", st === "ready");
   }
+  function hop(b) { b.classList.remove("cb-hop"); void b.offsetWidth; b.classList.add("cb-hop"); setTimeout(function () { b.classList.remove("cb-hop"); }, 800); }
   function later() { if (!raf) raf = requestAnimationFrame(sync); }
+  var KIND = { reply: "cb-shake", right: "cb-nod" };    // CLUCK-EMPHASIS: reply ready = duck head shake, steps unlocked = duck nod, every other trigger = the tinted sheen
   function sheen(reason) {
     if (!on() || !btn || reduced() || state() !== "ready") return;
     sync();
+    var cls = KIND[reason] || "cb-sheen", duck = cls !== "cb-sheen";
     clearTimeout(sheenT);
-    sheenT = setTimeout(function () {                     // just unlocked: let the fill sweep in first, then the light passes over it
+    sheenT = setTimeout(function () {                     // just unlocked: the fill sweeps in (and the duck hops) first, then the emphasis plays
       if (!btn || locked()) return;
-      btn.classList.remove("cb-sheen"); void btn.offsetWidth; btn.classList.add("cb-sheen"); btn.dataset.sheen = reason || "";
-      clearTimeout(endT); endT = setTimeout(function () { if (btn) btn.classList.remove("cb-sheen"); }, 1100);   // animationend does not fire if the media query flips mid-sweep
-    }, Math.max(0, 260 - (Date.now() - enabledAt)));
+      btn.classList.remove("cb-sheen", "cb-shake", "cb-nod"); void btn.offsetWidth; btn.classList.add(cls); btn.dataset.sheen = reason || "";
+      clearTimeout(endT); endT = setTimeout(function () { if (btn) btn.classList.remove("cb-sheen", "cb-shake", "cb-nod"); }, 1100);   // animationend does not fire if the media query flips mid-play
+    }, Math.max(0, (duck ? 760 : 260) - (Date.now() - enabledAt)));
   }
   function start() {
     if (!on()) return;
