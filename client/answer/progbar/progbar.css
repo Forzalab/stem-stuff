@@ -73,3 +73,8 @@ html.ui-v7.qnav-on:not(.dock-bottom):not(.start) .top > #rwHud { grid-row: 2; gr
 
 /* saboteur: the auto top margin (app.css side rule) soaked up a half pixel of body slack and put the bar, and every tile in it, 0.5px off the 4px grid */
 html.ui-v7.side:not(.start):not(.dock-bottom) body > .top, html.ui-v7 body > .top { margin-top: 0; }
+
+/* question-menu button fits its label (flex-style): on the phone bar the list tile does not shrink (basis = label), capped at 45% of the bar, and the notch tile gives way first
+   (notches 12 -> 8, gap 5 -> 4, pad 10 -> 8; min tile 7*8+6*4+2*8 = 96). Ellipsis only past the cap. Desktop: grid column, cap 320px (--pb-list-max above). */
+html.ui-v7.dock-bottom .qnav { --pb-n-min: 8px; --pb-n-gap: 4px; --pb-pad: 8px; }
+html.ui-v7.dock-bottom .pb-list { flex: 0 0 auto; max-width: 45%; }
