@@ -169,3 +169,6 @@
    Undo = delete these 2 lines. Tests turn it back on with html.cc-calc-on (calc.pw / cram-off.pw init script). */
 html:not(.cc-calc-on) .cc-cta-calc { display: none; }
 html:not(.cc-calc-on) .cc-row:has(> .cc-cta-calc:only-child) { display: none; }
+
+/* CRAM-CTA-OFF (Tony Nov 14): under ui-v7 the item card's TI/Casio + Hail Mary buttons are cut; the calc tip lives in the toast (CALC-TOAST). Flag off unchanged. */
+html.ui-v7 #problem > .cc-row, html.ui-v7 .cc-row { display: none !important; }
