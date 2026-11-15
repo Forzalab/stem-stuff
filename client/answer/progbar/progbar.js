@@ -40,7 +40,7 @@ function render() {
   if (!code) return;
   let raw = null; try { raw = localStorage.getItem(pbKey(code)); } catch { /* blocked: an empty set */ }
   const v = pbView(pbLoad(raw));
-  tile.innerHTML = `<span class="pb-ns">${v.map(x => `<i class="pb-n ${x.state}${x.streak ? " streak" : ""}"${x.state === "partial" ? ` style="--f:${+x.f.toFixed(3)}"` : ""}>${x.state === "partial" ? "<u></u>" : ""}</i>`).join("")}</span>`;
+  tile.innerHTML = `<span class="pb-ns">${v.map(x => `<i class="pb-n ${x.state}${x.streak ? " streak" : ""}"${x.state === "partial" ? ` style="--f:${+x.f.toFixed(3)}"` : ""}>${x.state === "partial" || x.streak ? "<u></u>" : ""}</i>`).join("")}</span>`;
   const n = c => v.filter(x => x.state === c).length, run = v.filter(x => x.streak).length;
   tile.setAttribute("aria-label", `This set: ${n("right") + n("wrong") + n("partial")} of ${v.length} answered, ${n("right")} right, ${n("partial")} partly right, ${n("wrong")} wrong${run ? `, ${run} right in a row` : ""}`);
 }

@@ -74,7 +74,7 @@ try {
     await c.close();
   });
 
-  await step("flag ON @390: three tiles in order, 52 high, notch tile 7 empty notches (first ringed) at 16x32, gap 5, no h-scroll, hits >= 44", async () => {
+  await step("flag ON @390: three tiles in order, 52 high, notch tile 7 empty notches (first ringed) at 16x24, gap 5, no h-scroll, hits >= 44", async () => {
     const [c, p] = await fresh(browser, "on");
     await p.waitForSelector("#pbTile .pb-n");
     const g = await geo(p);
@@ -82,7 +82,7 @@ try {
     for (const t of [g.list, g.tile, g.nav]) assert.equal(Math.round(t.h), 52, "tile height 52");
     assert.ok(g.list.r <= g.tile.x + 0.5 && g.tile.x + g.tile.w <= g.nav.x + 0.5, "list | notches | nav, left to right, no overlap");
     assert.ok(g.list.x >= 11.5 && g.nav.r <= g.vw - 11.5, "phone margin 12");
-    assert.ok(g.ns.every(n => Math.abs(n.h - 32) < 0.6 && n.w >= 11.9 && n.w <= 16.1), JSON.stringify(g.ns));
+    assert.ok(g.ns.every(n => Math.abs(n.h - 24) < 0.6 && n.w >= 11.9 && n.w <= 16.1), JSON.stringify(g.ns));
     assert.ok(Math.abs(g.ns[1].x - g.ns[0].x - g.ns[0].w - 5) < 0.6, "gap 5");
     assert.ok(g.sw <= g.vw, "no h-scroll");
     assert.ok(g.prev.w >= 44 && g.next.w >= 44 && g.prev.h >= 44 && g.btn.h >= 44, "hit targets >= 44");
@@ -108,7 +108,7 @@ try {
     await p.waitForFunction(() => document.querySelectorAll("#pbTile .pb-n.streak").length === 3);
     assert.deepEqual(await states(p), ["right", "wrong", "partial", "right streak", "right streak", "right streak", "next"]);
     const s = await geo(p);
-    assert.ok(s.ns[3].h > s.ns[0].h && Math.abs(s.ns[3].h - 40) < 0.6, "streak notch 40 high");
+    assert.ok(s.ns[3].h > s.ns[0].h && Math.abs(s.ns[3].h - 32) < 0.6, "streak notch 32 high");
     assert.match(s.aria, /^This set: 6 of 7 answered, 4 right, 1 partly right, 1 wrong, 3 right in a row$/);
     await p.reload(); await p.waitForSelector("#pbTile .pb-n.streak");
     assert.equal((await states(p)).length, 7, "a reload keeps the set (storage, not memory)");
@@ -127,11 +127,11 @@ try {
     await c.close();
   });
 
-  await step("flag ON @1280: one row, list left | notches centred (166 wide, 16x32, gap 5) | nav right; HUD sits under, no overlap", async () => {
+  await step("flag ON @1280: one row, list left | notches centred (166 wide, 16x24, gap 5) | nav right; HUD sits under, no overlap", async () => {
     const [c, p] = await fresh(browser, "on", 1280, 720);
     const g = await geo(p);
     assert.equal(Math.round(g.tile.w), 166); assert.equal(Math.round(g.tile.h), 52);
-    assert.ok(g.ns.every(n => Math.abs(n.w - 16) < 0.6 && Math.abs(n.h - 32) < 0.6), JSON.stringify(g.ns));
+    assert.ok(g.ns.every(n => Math.abs(n.w - 16) < 0.6 && Math.abs(n.h - 24) < 0.6), JSON.stringify(g.ns));
     assert.ok(g.list.r < g.tile.x && g.tile.x + g.tile.w < g.nav.x, "left to right"); assert.ok(Math.abs(g.list.y - g.tile.y) < 1 && Math.abs(g.nav.y - g.tile.y) < 1, "one row");
     assert.ok(Math.abs((g.tile.x + g.tile.w / 2) - g.vw / 2) < 140, "notch tile near the centre");
     const hud = await p.evaluate(() => { const h = document.querySelector("#rwHud")?.getBoundingClientRect(), t = document.querySelector("#pbTile").getBoundingClientRect(); return h ? h.top >= t.bottom - 0.5 : true; });
