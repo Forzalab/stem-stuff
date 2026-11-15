@@ -23,7 +23,10 @@
    a small one swaps it into the large slot, CSS order only, no iframe moves, no reload). The floating corner is two 9:16 players side by side, with – / ✕ above
    them (never over the picture, always shown). And phones SHOW it (the Oct 17 "phones get none" rule is lifted under ui-v7): a phone starts stashed as a 44x96 tab
    jutting from the screen edge whose background is a clipped slice of the playing first video (the live iframe itself, shown through the tab: nothing moves, so no
-   reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32. */
+   reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32.
+   BRAINROT-B2 (Tony, Nov 14, "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): docked v7 is now 8 videos (all 8 categories, one each) in a
+   full-width interlocked bento (LAYOUT below: hero 2x2 + tall + wide + small, 12-col grid, gap 8, every video cover-cropped to its tile; app.css BRAINROT-B2 block). Lazy rule unchanged: the first 3 iframes load at once,
+   the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768. */
 (() => {
   /* list:start (tools/client_generators/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
   const CATS = [
@@ -39,7 +42,17 @@
   // list:end
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const any = a => a[Math.floor(Math.random() * a.length)];
-  const PICK = shuffle(CATS.map((_, i) => i)).slice(0, 5), VIDS = PICK.map(c => any(CATS[c][1]));   // 5 random categories, one video each, new every load (Tony, Oct 26: 3; Oct 29: 6; Oct 31: "5 total"); the corner shows 2 (app.css)
+  const N = Math.min(document.documentElement.classList.contains("ui-v7") ? 8 : 5, CATS.length);   // B2 (Tony, Nov 14): 8 under html.ui-v7 only; flag off keeps the 5 of before
+  const PICK = shuffle(CATS.map((_, i) => i)).slice(0, N), VIDS = PICK.map(c => any(CATS[c][1]));   // BRAINROT-B2: up to 8 random categories (all of them today), one video each, new every load (Tony, Oct 26: 3; Oct 29: 6; Oct 31: "5 total"; Nov 14: "add more videos"); the corner shows 2 (app.css)
+  /* BRAINROT-B2 bento: the docked v7 mosaic's cells by tile count: [rows, [[row, unit col, units tall, units wide] per tile]] on the 12-col grid (a unit = 3 cols); slot 0 = the hero (2x2), then
+     tall (1x2) / wide (2x1) / small (1x1) ones, interlocked, no holes. A tap swaps the hero's cells with the tapped tile's (grid-area only; the iframes never move). */
+  const area = (r, c, h, w) => `${r} / ${c * 3 - 2} / ${r + h} / ${(c + w) * 3 - 2}`;
+  const LAYOUT = {
+    8: [4, [[1, 1, 2, 2], [1, 3, 2, 1], [1, 4, 1, 1], [2, 4, 2, 1], [3, 1, 2, 1], [3, 2, 1, 2], [4, 2, 1, 2], [4, 4, 1, 1]]],
+    7: [3, [[1, 1, 2, 2], [1, 3, 2, 1], [1, 4, 1, 1], [2, 4, 2, 1], [3, 1, 1, 1], [3, 2, 1, 1], [3, 3, 1, 1]]],
+    6: [3, [[1, 1, 2, 2], [1, 3, 2, 1], [1, 4, 1, 1], [2, 4, 2, 1], [3, 1, 1, 2], [3, 3, 1, 1]]],
+    5: [2, [[1, 1, 2, 2], [1, 3, 1, 1], [1, 4, 1, 1], [2, 3, 1, 1], [2, 4, 1, 1]]],
+  };
   const esc = t => t.replace(/[&"<]/g, c => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;" })[c]);
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
@@ -128,6 +141,9 @@
     duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}"><span class="now" aria-hidden="true"><span class="eq"><b></b><b></b><b></b></span>Playing</span><iframe ${i > 2 ? "data-src" : "src"}="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     duo.insertAdjacentHTML("beforeend", `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`);   // a child of the duo, not of the first player: v7 floats it above the picture, flag off still lays it on the first player's corner
     duo.querySelectorAll("iframe").forEach(listen);
+    const lay = LAYOUT[VIDS.length] || LAYOUT[5];
+    duo.style.setProperty("--rows", lay[0]);
+    duo.querySelectorAll(".vid").forEach((v, i) => { const a = lay[1][i]; if (a) v.style.setProperty("--a", area(...a)); });
     duo.querySelector(".vid").classList.add("hero");                    // the large one when docked on v7 (the playing one); a tap on a small one moves it
     /* 4-5 (docked only: the corner keeps 2) wait until the row is scrolled to them: loading="lazy" alone still loads a frame a few
        screens off (Chromium's lazy-load margin), so their src goes in when the frame first shows inside the box (Tony, Oct 29) */
@@ -188,7 +204,9 @@
   /* v7 docked mosaic: the tapped small player takes the large slot (the .hero class + CSS order; the iframes never move, so nothing reloads) */
   function bigger(v) {
     if (v.classList.contains("hero")) return;
-    duo.querySelector(".hero")?.classList.remove("hero"); v.classList.add("hero"); tiles();
+    const h = duo.querySelector(".hero"), a = h.style.getPropertyValue("--a");
+    h.style.setProperty("--a", v.style.getPropertyValue("--a")); v.style.setProperty("--a", a);   // the two trade cells
+    h.classList.remove("hero"); v.classList.add("hero"); tiles();
   }
   /* the small ones are buttons ("show this one big") only in the docked v7 mosaic; everywhere else they are plain frames */
   function tiles() {
