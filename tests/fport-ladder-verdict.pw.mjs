@@ -117,23 +117,16 @@ try {
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
-    await step(`${w}: flag on: verdict drawer is a borderless float, buttons only (no duck), height <= flag-off + 8`, async () => {
+    await step(`${w}: flag on: wrong row: no tray is shown (VERDICT-CARD, #563), the X slot is the Cluck button`, async () => {
       const page = await open(w, "v7", "#PHYS_FP2");
       try {
         await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
         const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
         await typeAnswer("1.636");
         await page.waitForFunction(() => window.__drill && window.__drill.state && window.__drill.state.tries.length === 1, null, { timeout: 6000 });
-        if (!await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 4000 }).then(() => true, () => false)) {
-          await page.waitForTimeout(2200); await typeAnswer("0.650");
-          await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
-        }
+        await page.waitForSelector("#q .vdrawer .wchip", { state: "attached", timeout: 8000 });
         await page.waitForTimeout(600);
-        const d = await page.evaluate(() => {
-          const e = document.querySelector("#q .vdrawer:not([hidden])"), cs = getComputedStyle(e), p = getComputedStyle(e, "::after"), r = e.getBoundingClientRect();
-          return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), h: r.height, after: p.content, mask: p.maskImage || p.webkitMaskImage,
-            btns: [...e.querySelectorAll("button")].map(b => ({ w: Math.round(b.getBoundingClientRect().width), h: Math.round(b.getBoundingClientRect().height), bw: getComputedStyle(b).borderTopWidth })) };
-        });
+        const d = await page.evaluate(() => { const e = document.querySelector("#q .vdrawer"); return { shown: e.getClientRects().length > 0 }; });
         const bad = await page.evaluate(() => { const e = document.querySelector("#q .ff.bad, #q .ff.rbox.cue:not(.ok)"); if (!e) return null; const cs = getComputedStyle(e), i = getComputedStyle(e.querySelector("input") || e);
           return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), bg: cs.backgroundColor, color: i.color }; });
         const kids = await page.evaluate(() => [...document.querySelectorAll("#q .ff.bad *, #q .ff.rbox.cue:not(.ok) *")].filter(e => e.getClientRects().length).map(e => { const cs = getComputedStyle(e); return { c: String(e.className.baseVal ?? e.className).slice(0, 24) || e.tagName, bw: cs.borderTopWidth + cs.borderRightWidth + cs.borderBottomWidth + cs.borderLeftWidth }; }).filter(x => x.bw !== "0px0px0px0px"));
@@ -156,27 +149,22 @@ try {
         const L = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
         const cr = (L(bad.color) + 0.05) / (L(bad.bg) + 0.05); assert.ok(cr >= 4.5, "wrong text contrast " + cr.toFixed(2));
         if (SHOTS) { await page.locator("#q .vdrawer").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `verdict-${w}.png`) }); }
-        assert.equal(d.bw, ZERO, "drawer border: " + JSON.stringify(d));
-        assert.ok(d.after === "none" || d.after === "normal", "no pseudo-element duck on the drawer: " + d.after);
-        assert.ok(!d.mask || d.mask === "none", "no mask on the drawer: " + d.mask);
-        const off = await drawerH(w, "off");
-        assert.ok(d.h <= off + 8, `drawer height ${d.h} vs flag-off ${off} (+8 max)`);
-        for (const b of d.btns) assert.ok(b.bw === "0px" && b.h >= 44 && b.w >= 44, "drawer button: " + JSON.stringify(b));
+        assert.equal(d.shown, false, "no verdict tray is shown under the row");
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
   }
-  for (const w of W) await step(`${w}: flag on: right answer = green row (no border), tick slot --correct-deep, verdict line not covered`, async () => {
+  for (const w of W) await step(`${w}: flag on: right answer = green row (no border), tick slot --correct-deep, verdict line stays hidden (live region), no tray`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
       await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await page.waitForTimeout(900);
       const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
-        return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer:not([hidden])"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top + 0.5 || a.top >= b.bottom) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height }; });
+        return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height }; });
       assert.equal(m.slot, "rgb(11, 42, 31)", "tick slot = --correct-deep #0b2a1f"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
-      assert.ok(m.ln && !m.ln.hit, "the verdict line is covered by the tray: " + JSON.stringify(m.ln));
+      assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });

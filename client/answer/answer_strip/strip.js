@@ -92,15 +92,18 @@
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
     d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
     d.style.setProperty("--vd-tuck", b.tuck + "px");
-    /* html.ui-v7 only (Tony: the tray must not hide the verdict line): a revealed-answer / verdict line right under the box ("That's it!", "Not it. The answer is ...") keeps its room;
-       the tray then hangs from the line's bottom edge instead of tucking under the box */
-    if (D.documentElement.classList.contains("ui-v7")) {
-      var ln = D.querySelector("#q .ansl"), cb = ln && containing(d);
-      if (ln && ln.getClientRects().length && cb) {
-        var c = cb.getBoundingClientRect(), lb = ln.getBoundingClientRect(), y = lb.bottom - c.top - cb.clientTop + cb.scrollTop + 8;
-        if (y > b.bottom) { d.style.top = y + "px"; d.style.setProperty("--vd-tuck", "0px"); }
-      }
-    }
+  }
+  /* html.ui-v7 only (Tony Nov 14, #563: "remove the overflow tray altogether, make that the cluck button"): there is no visible tray. The .vdrawer stays in the DOM (display none, verdict-v7.css) only as the
+     chip's home, so app.js's `.rbox .wchip` lookups still find it; the verdict slot (the typed row's .vk, mc's .vkb) is the Cluck button and clicks that chip: right = See steps, wrong = Ask Cluck. */
+  function V7() { return D.documentElement.classList.contains("ui-v7"); }
+  function chipOf() { return drawer && drawer.querySelector(".wchip"); }
+  function slot(h, on) {                                      // the verdict slot's face under ui-v7: a duck (typed row), the chip's name as its label
+    var vk = h.ic; if (!vk || !on) return;
+    var c = chipOf(), lab = h.v === "ok" ? "See steps" : "Ask Cluck";
+    if (c) { var t = c.querySelector(":scope > span:last-child"); if (t && /\S/.test(t.textContent) && !c.hidden) lab = t.textContent.trim(); }
+    vk.setAttribute("aria-label", lab); vk.removeAttribute("aria-expanded");
+    (h.more || []).forEach(function (b) { b.setAttribute("aria-label", lab); b.removeAttribute("aria-expanded"); });
+    if (h.kind === "ff" && !vk.querySelector(".vk-duck")) vk.insertAdjacentHTML("beforeend", '<svg class="ico vk-duck" aria-hidden="true"><use href="#i-duck"/></svg>');
   }
   function show(d, still) {
     clearTimeout(shutT);
@@ -208,7 +211,9 @@
     else if (!want && !drawer.hidden) hide(drawer);
     place(h, drawer);
     hs.forEach(function (x) { if (x.v && x.ic) icon(x, true, want && x === h); });
+    if (V7()) hs.forEach(function (x) { if (x.v && x.ic) slot(x, true); });
     (h.more || []).forEach(function (b) { b.setAttribute("aria-label", want ? "Hide Cluck's help" : "Show Cluck's help"); b.setAttribute("aria-expanded", want ? "true" : "false"); b.removeAttribute("aria-hidden"); });
+    if (V7()) { hs.forEach(function (x) { if (x.v && x.ic) slot(x, true); }); }
     drawer._h = h;
   }
   function later() { if (!queued) { queued = true; queueMicrotask(sync); } }
@@ -231,6 +236,7 @@
     var ff = ic.closest(".ff"), ch = ic.closest(".ch");
     var h = hostsOf(q, S).filter(function (x) { return ff ? x.el === ff : x.kind === "list" ? !!ch && !!ch.closest(".choices.all") : x.row === ch; })[0];
     if (!h) return;
+    if (V7()) { var c = chipOf(); if (c && !c.hidden) c.click(); return; }
     var st = seen.get(h.el);
     if (owner === h.el && st.open && drawer && !drawer.hidden) { close(false); return; }
     if (owner && owner !== h.el) { var o = seen.get(owner); if (o) o.open = false; if (drawer) hide(drawer, true); }
