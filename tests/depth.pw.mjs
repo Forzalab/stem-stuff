@@ -76,13 +76,11 @@ const gate = (p, sel) => p.evaluate(s => {
 /* computed order puts the inset last: "<colour> 0px 1px 0px 0px inset" */
 const LIT = /0px 1px 0px 0px inset/, WELL = /0px 2px 3px 0px inset/;
 
-await step("flag on: an unchosen .opt row is raised (lit top + tiny shadow), no edge at rest", async () => {
+await step("flag on: an unchosen .opt tile is colour only (MC-BENTO: no lit top, no shadow, no edge at rest)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP01");
   const o = await css(p, "#q .opt:not([aria-checked='true']):not(.pend):not(.reveal)");
   assert.ok(o, "an .opt row is shown");
-  assert.match(o.shadow, LIT, "the lit top edge: " + o.shadow);
-  assert.match(o.shadow, /rgb\(20, 29, 54\) 0px 1px 0px 0px inset/, "the lit top is a solid navy-700, not white alpha: " + o.shadow);
-  assert.match(o.shadow, /0px 1px 2px/, "the tiny shadow: " + o.shadow);
+  assert.equal(o.shadow, "none", "Tony Nov 14: a lit top on a resting tile reads as a border: " + o.shadow);
   assert.equal(o.bw, "0px", "rest edge stays gone (NO-BORDER 1)");
   const card = await css(p, "#q .p, .p");
   assert.equal(o.bg, card.bg, "NAVY-MIN: option rest fill = card fill (one surface, navy-800)");
@@ -97,7 +95,7 @@ await step("flag on: the option letter badge is a rounded square, not a circle (
   const b = await css(p, "#q .opt .badge");
   assert.ok(b, "an option badge is shown");
   const r = await p.evaluate(() => getComputedStyle([...document.querySelectorAll("#q .opt .badge")].find(e => e.getClientRects().length)).borderTopLeftRadius);
-  assert.equal(r, "8px", "badge radius: " + r);
+  assert.ok(["8px", "0px"].includes(r), "badge is a rounded square or (MC-BENTO corner letter) no shape, never a circle: " + r);
   await c.close();
 });
 await step("flag on: the primary .btn-go is raised (lit top + small shadow)", async () => {
