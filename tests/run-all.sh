@@ -281,6 +281,7 @@ tags() {
     depth) echo "@layout @real-time" ;;   # DEPTH 1 depth shadows + 3:1 field gate, own server   # PROGBAR P5 bar geometry at 360 / 390 / 1280, own server
     mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 5 widths, own server
     toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
+    wide-content) echo "@layout @real-time" ;;   # WIDE-CONTENT, own server
     fport-ladder-verdict) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     desk-notes-off) echo "@layout @real-time" ;;   # W97 desktop notes: diet kept, sugar hidden from first paint, phone kept
     units) echo "@layout @real-time" ;;   # W132 the answer line's unit: colour, weight, gap, same line; real clipboard
