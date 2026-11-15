@@ -1,0 +1,59 @@
+/* bento.css: the MC answers, PROTO-3WAY pick F (port f-port-mc). Everything is under html.ui-v7: flag off = no rule here applies.
+   (A) STATE BY FILL (brain ui-polish/color-tokens/fable-review/REVIEW2.txt section 3, items 1-2, followed literally; SPEC R5): an option has NO 1px border and NO outline in any state;
+       idle = navy-800 (--sheet #0d142a), hover = --float (#141d36), picked = --action-fill #102542, right = green-900 #0c2c22, wrong = red-900 #3e141e,
+       revealed (the missed right one) = navy-600 (--chip #283352), dimmed = same fill with text grey-400 #7a8aae (no opacity). The only edges left are the 2px focus ring (unchanged)
+       and the notch .next ring (progbar.css). Resting tiles carry NO lit top (Tony: it reads as a border) and no shadow.
+   (B) the mosaic: bento.js writes grid-column / grid-row on each .ch; .choices.bento is the 12-column grid (row unit 96, gap 8, radius 16). The letter is a 12px corner label (no badge),
+       the value is centred (28px math / 22px text). Pick-all (.all) and the stacked-list fallback keep their row layout and get (A) only. */
+
+/* ---- (A) state by fill: every option, list or mosaic ---- */
+html.ui-v7 .choices {
+  --mc-right: #0c2c22;    /* REVIEW2 green-900 */
+  --mc-wrong: #3e141e;    /* REVIEW2 red-900 hsl(345 52% 16%): 11.0:1 with --wrong-on */
+  --mc-letter: #a7b5d2;   /* REVIEW2 grey-300: idle corner letter (8.6:1 on #0d142a) */
+  --mc-dim: #7a8aae;      /* REVIEW2 grey-400: dimmed text (5.3:1 on #0d142a) */
+}
+html.ui-v7 .choices .ch > .opt.opt { border-width: 0; box-shadow: none; background: var(--sheet); }
+html.ui-v7 .choices .ch > .opt.opt:hover:not(:disabled):not([aria-checked="true"]):not(.right):not(.wrong):not(.reveal) { background: var(--float); }
+html.ui-v7 .choices .ch > .opt.opt[aria-checked="true"], html.ui-v7 .choices .ch > .opt.opt.pend { background: var(--action-fill); }
+html.ui-v7 .choices .ch > .opt.opt.right:not(.reveal) { background: var(--mc-right); color: var(--correct-on); }
+html.ui-v7 .choices .ch > .opt.opt.wrong:not(.reveal) { background: var(--mc-wrong); color: var(--wrong-on); }
+html.ui-v7 .choices .ch > .opt.opt.reveal { background: var(--chip); color: var(--ink); }
+html.ui-v7 .choices .ch > .opt.opt:active:not(:disabled) { box-shadow: none; }
+/* locked in: the other options keep their fill and dim their text (REVIEW2 "dimmed"), they do not fade out */
+html.ui-v7 .q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: 1; }
+html.ui-v7 .q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) > .opt { color: var(--mc-dim); }
+
+/* ---- (B) the mosaic ---- */
+html.ui-v7 .choices.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 96px; gap: 8px; }
+html.ui-v7 .choices.bento .ch { display: grid; min-width: 0; }
+html.ui-v7 .choices.bento .ch > .opt.opt {
+  position: relative; display: grid; place-items: center; min-height: 0; height: 100%; box-sizing: border-box; min-width: 0;
+  padding: 28px 20px 20px; border-radius: 16px; text-align: center; line-height: 1.2; color: var(--ink);
+  transition: background-color .2s ease-out, color .2s ease-out;
+}
+html.ui-v7 .choices.bento .ch > .opt.opt:active:not(:disabled) { transform: scale(.98); }
+html.ui-v7 .choices.bento .opt .txt, html.ui-v7 .mc-probe .opt .txt { white-space: nowrap; overflow-wrap: normal; text-align: center; font-size: 1.375rem; line-height: 28px; font-weight: var(--w-em); letter-spacing: -.01em; }
+html.ui-v7 .choices.bento .opt[data-pure="1"] .txt, html.ui-v7 .mc-probe .opt[data-pure="1"] .txt { font-size: 1.75rem; font-weight: var(--w); letter-spacing: 0; }
+html.ui-v7 .choices.bento .opt .txt .katex { font-size: 1em; }
+html.ui-v7 .choices.bento .opt .txt .kx-scroll { max-width: none; overflow: visible; }
+html.ui-v7 .mc-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; contain: layout; display: grid; justify-items: start; }
+html.ui-v7 .mc-probe .opt { display: block; width: max-content; padding: 0; border: 0; background: none; font: inherit; color: inherit; }
+html.ui-v7 .mc-probe .opt .txt { display: inline-block; }
+html.ui-v7 .mc-probe .katex { font-size: 1em; }
+/* the letter: a 12px corner label, no badge, no fill */
+html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.opt .badge.badge {
+  position: absolute; left: 14px; top: 12px; width: auto; height: 16px; padding: 0; border: 0; border-radius: 0; background: none;
+  color: var(--mc-letter); font-size: 12px; line-height: 16px; letter-spacing: .02em; font-weight: var(--w-em); display: block;
+}
+html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt[aria-checked="true"] .badge.badge { color: var(--action-on); }
+html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.right:not(.reveal) .badge.badge { color: var(--correct-on); }
+html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.wrong:not(.reveal) .badge.badge { color: var(--wrong-on); }
+html.ui-v7 .q:not(.closed) .choices.bento:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) .badge.badge { color: var(--mc-dim); }
+/* Check (the arrow) and Next sit in the tile's top-right / bottom-right corner; the value steps out of their way, no tile changes size */
+html.ui-v7 .choices.bento .ch > .send { right: 4px; top: 4px; margin: 0; width: 44px; height: 44px; }
+html.ui-v7 .choices.bento .ch > .nx { right: 6px; top: auto; bottom: 6px; margin: 0; width: 88px; height: 44px; }
+html.ui-v7 .choices.bento .ch:has(> .send:not([hidden])) > .opt.opt { padding-top: 52px; padding-bottom: 12px; }
+html.ui-v7 .choices.bento .ch.cue > .opt.opt { padding: 18px 20px 58px; }
+html.ui-v7 .choices.bento .ch .vg { right: 10px; top: 10px; margin: 0; display: block; }
+html.ui-v7 .choices.bento .ch.cue .vg { right: 10px; display: block; }
