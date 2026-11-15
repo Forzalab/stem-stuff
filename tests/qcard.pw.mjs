@@ -21,7 +21,9 @@ const long = { code: "PHYS_QL2", title: "Hydraulic lift", type: "num", answer: "
   body: [{ type: "text", md: "A $80\\ \\text{kg}$ student on the small piston balances a $1800\\ \\text{kg}$ elephant on a hydraulic lift piston of diameter $2.2\\ \\text{m}$; the lift holds oil of density $860\\ \\text{kg/m}^3$. The lift rises 2.55 m at most. At first the two pistons are at the same height. More students climb on. What is the smallest TOTAL number of students on the small piston?" }],
   saccharine: { title: "Hydraulic lift", key: "Answer: 4" } };
 mkdirSync(BANKS);
-writeFileSync(join(BANKS, "BANK_QCS.json"), JSON.stringify({ v: 1, problems: [short, long] }));
+const filler = Array.from({ length: 26 }, (_, i) => { const n = i + 3, c = "PHYS_F" + String(n).padStart(2, "0");
+  return { code: c, title: "Filler " + n, type: "num", answer: "1", tol: 0.01, unit: "", how: "Number only.", wrong: [{ value: "2", error: "off", hint: "QUACK. No." }], body: [{ type: "text", md: "Filler question " + n + "?" }], saccharine: { title: "Filler " + n, key: "Answer: 1" } }; });
+writeFileSync(join(BANKS, "BANK_QCS.json"), JSON.stringify({ v: 1, problems: [short, long, ...filler] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_QCS", STEM_FRONT_TITLE: "Exam 3",
   STEM_TODAY: "2026-11-03", STEM_TRIES: join(TMP, "tries.json"), CLAUDE_API: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
@@ -95,13 +97,32 @@ try {
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "idle: no will-change");
         await page.evaluate(() => { window.__ea = []; document.addEventListener("animationstart", e => { if (e.animationName !== "qecho") return; const an = e.target.getAnimations().find(x => x.animationName === "qecho"); window.__ea.push({ k: an ? Object.keys(an.effect.getKeyframes()[0]).filter(k => !["offset", "computedOffset", "easing", "composite"].includes(k)).sort().join() : "?", wc: getComputedStyle(e.target).willChange }); }, true); });
         await page.click("#qnext");
-        await page.waitForFunction(() => document.querySelector(".qghost").getAttribute("data-n") === "2", null, { timeout: 5000 });
+        await page.waitForFunction(() => document.querySelector(".qghost").getAttribute("data-n") !== "1", null, { timeout: 5000 });
         await page.waitForTimeout(150);
         const a = await page.evaluate(() => window.__ea);
         if (rm) assert.equal(a.length, 0, "reduced motion: no animation");
         else { assert.equal(a.length, 6, "6 trail copies animate"); assert.ok(a.every(x => x.k === "opacity,transform"), JSON.stringify(a)); assert.ok(a.every(x => /transform/.test(x.wc)), "will-change while running"); }
         await page.waitForTimeout(900);
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "will-change dropped after");
+      } finally { await page.context().close(); }
+    }
+  });
+  await step("stable layout across numbers 1, 2, 7, 10, 12, 28: the text's left edge never moves and the front numeral's INK edge sits on it (<= 1px); chip clear of the numeral", async () => {
+    for (const w of [390, 1366]) {
+      const page = await open(w, "v7", "PHYS_QS1"); const edges = [];
+      try {
+        for (const n of [1, 2, 7, 10, 12, 28]) {
+          const code = n === 1 ? "PHYS_QS1" : n === 2 ? "PHYS_QL2" : "PHYS_F" + String(n).padStart(2, "0");
+          if (n > 1) { await page.evaluate(c => { location.hash = c; }, code); await page.waitForFunction(c => document.querySelector("#pcode").textContent === c, code, { timeout: 8000 }); await page.waitForFunction(n => document.querySelector(".qghost").getAttribute("data-n") === String(n), n, { timeout: 5000 }); await page.waitForTimeout(700); }
+          const e = await page.evaluate(() => { const gh = document.querySelector(".qghost"), f = gh.firstChild, cs = getComputedStyle(gh), c = document.createElement("canvas").getContext("2d");
+            c.font = "900 " + parseFloat(cs.fontSize) + "px \"G Archivo\""; c.fontStretch = "semi-expanded"; c.letterSpacing = "0px";
+            const ink = f.getBoundingClientRect().left - c.measureText(f.textContent.charAt(0)).actualBoundingBoxLeft, card = document.querySelector("#problem").getBoundingClientRect(), r = s => document.querySelector(s).getBoundingClientRect(), b = document.querySelector("#cluckBtn").getBoundingClientRect(), fr = f.getBoundingClientRect();
+            return { n: gh.dataset.n, ink, text: r(".qhead").left - card.left, textR: card.right - r(".qmeta").right, inkRel: ink - card.left, qlead: r(".qlead").left - card.left, hit: b.left < fr.right && fr.left < b.right && b.top < fr.bottom && fr.top < b.bottom }; });
+          edges.push(e);
+        }
+        const t0 = edges[0].text;
+        for (const e of edges) { assert.ok(Math.abs(e.text - t0) < 0.5 && Math.abs(e.qlead - t0) < 0.5, `${w}: text left moved at q${e.n}: ${JSON.stringify(e)}`); assert.ok(Math.abs(e.inkRel - e.text) <= 1, `${w}: numeral ink edge ${e.inkRel} vs text ${e.text} at q${e.n}`); assert.ok(!e.hit, `${w}: chip touches the numeral at q${e.n}`); }
+        assert.ok(Math.abs(edges[0].textR - t0) <= 1, "symmetric inner padding: right margin = left");
       } finally { await page.context().close(); }
     }
   });

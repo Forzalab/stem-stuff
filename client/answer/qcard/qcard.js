@@ -53,7 +53,18 @@
     var c = ((D.getElementById("pcode") || {}).textContent || "").match(/(\d+)\D*$/);
     return c ? String(+c[1]) : "1";
   }
-  var animT = 0;
+  var animT = 0, cv = null;
+  /* the first digit's left side bearing at the ghost's real size / weight / width (canvas measure, no hard-coded font numbers): the glyph box is shifted left by it, so the numeral's
+     INK edge lands on --qc-pad, the text's left edge, for every digit (1, 2, 7, 12, 28 ...) */
+  function inkLeft(gh, num) {
+    if (!D.fonts) return;
+    if (!D.fonts.check('900 20px "G Archivo"')) { D.fonts.load('900 20px "G Archivo"', "0123456789").then(later, function () {}); return; }   // not loaded yet: measure again the moment it is
+    cv = cv || D.createElement("canvas").getContext("2d");
+    var px = parseFloat(g.getComputedStyle(gh).fontSize) || 132;
+    cv.font = '900 ' + px + 'px "G Archivo"'; if ("fontStretch" in cv) cv.fontStretch = "semi-expanded"; if ("letterSpacing" in cv) cv.letterSpacing = "0px";
+    var m = cv.measureText(num.charAt(0));
+    gh.style.setProperty("--lsb", (-m.actualBoundingBoxLeft).toFixed(2) + "px");
+  }
   function ghost(p) {
     var box = p.querySelector(":scope > .qghostbox");
     if (!box) {
@@ -63,6 +74,7 @@
       box.appendChild(gh); p.insertBefore(box, p.firstChild);
     }
     var num = number(), cur = box.firstChild, was = cur.getAttribute("data-n");
+    inkLeft(cur, num);
     if (was !== num) {
       cur.setAttribute("data-n", num); for (var j = 0; j < cur.children.length; j++) cur.children[j].textContent = num;
       if (was !== null) echo(box);                                          // a question change (not the first paint): the trail slides in
