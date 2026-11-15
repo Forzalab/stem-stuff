@@ -19,3 +19,6 @@ Open findings from the INTEG run that this baseline does not settle: B7 (bar ~85
 
 ## P2 (RWUI flag object)
 shell.js §rewards exports `RWUI` = { hud, float, coins, burst, tips, stage } (all true = today) and `setRWUI(on)` which flips hud/float/coins/burst/tips together (INTEG 7: old juice off in the SAME flip). rwSync mounts the HUD only while `RWUI.hud`, but always sets the toast config and calls `render(0)`. Stage toasts no longer need the HUD (see the row above).
+
+## P5 (bar DOM/CSS behind html.ui-v7)
+`client/answer/progbar/progbar.{js,css}`: with `html.ui-v7` on (fx.js: `?ui=v7` stores `stem-ui`, `?ui=off` clears), progbar.js re-parents `#qback`+`#qlistBtn` into `.pb-list`, `#qprev`+`#qnext` into `.pb-nav` and adds `#pbTile` (7 notches from `stem-pb:<bank>` via pbView). Flag off: no node added or moved, no rule applies (all css is `html.ui-v7 ...`). app.js pbFeed now also fires `drill:pb` after saving (the bar's re-render signal; state logic unchanged). The HUD, stage toasts and float stay ON until P6 (on desktop the HUD drops to a row under the bar while the flag is on). Smoke: `tests/progbar-bar.pw.mjs`. Not here: morph, streak wave (P7), set-end overlay (P8), verdict tile / code box move (cross-cutting rows).

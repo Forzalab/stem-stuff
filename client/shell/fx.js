@@ -64,6 +64,12 @@
     st.fx = g.fx; st.tier = g.tier; st.why = g.why;
   }
   try { H.classList.toggle("ios", isIOS(ua, N.maxTouchPoints)); } catch (e) { /* no class: no iOS-only chrome */ }
+  /* html.ui-v7 = the v7 redesign flag (brain ui-polish/PORT-ARCH.md §D2), default OFF until the flip. ?ui=v7 turns it on and remembers it (localStorage stem-ui), ?ui=off clears it. */
+  try {
+    var uiQ = new URLSearchParams(location.search).get("ui");
+    if (uiQ === "v7") localStorage.setItem("stem-ui", "v7"); else if (uiQ === "off") { localStorage.removeItem("stem-ui"); H.classList.remove("ui-v7"); }
+    if (localStorage.getItem("stem-ui") === "v7") H.classList.add("ui-v7");   // add only: a page (or a test) that set the class itself keeps it
+  } catch (e) { /* blocked storage: the flag stays off */ }
   var st = { info: info, fps: null };
   W.stemFx = st;
   try { apply(latched); } catch (e) { H.classList.add("fx-dim"); }
