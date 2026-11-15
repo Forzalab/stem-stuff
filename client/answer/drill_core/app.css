@@ -742,6 +742,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .q .ff.cue:focus-within { border-color: var(--edge); box-shadow: none; }   /* focus on Next is Next's ring, not the closed box's */
 .q .ff.cue.ok:focus-within { border-color: var(--correct); }
 .ff.cue:not(.ok) :is(input, .lead) { color: var(--muted); }   /* out of tries: the box with Next is not dimmed (Next is live); its text goes --muted */
+.choices.inline .ch:is(.strip, .cue) { min-width: 104px; }   /* the pill that carries (.strip = picked, .cue = Next in it) the reopen badge stays wide enough for a 44px badge that clears its centre (.vkb is min(--btn, 50% - 8px); Schibsted text made it 102px at 390) */
 .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
 .choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 8px); }
 .choices.inline .ch.cue .vg { display: none; }   /* the pill's check would sit under Next: the green ring says it (no reflow, the pill keeps its width) */
@@ -1314,7 +1315,7 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .wtext .wstitle { font-weight: var(--w-em); color: var(--ai-text); }
 .wtext .wssub { font-size: var(--t-xs); color: var(--help-muted); }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--help-rule); }
-.wcaret { display: inline-block; width: .5em; height: 1.2em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
+.wcaret { display: inline-block; width: .5em; margin-right: -.5em; height: 1.2em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }   /* margin-right -.5em: the caret never wraps alone onto a new line when the last word ends at the right edge (TYPE-B metrics hit this) */
 @keyframes wblink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask, .cl .ask::before { animation: none !important; } }
 
