@@ -108,7 +108,7 @@ const ev = (page, n) => page.evaluate(n => window.__ev.filter(e => e[0] === n).m
 await step("phone: unchanged; the X closes the sheet, nothing folds, no row", async () => {
   const page = await cluck(PHONE);
   await page.click("#cluck .cl-bar .cl-x");
-  await page.waitForTimeout(600);                                         // UIP5: the phone sheet leaves down first
+  await page.waitForFunction(() => !window.stemCluckOpen(), null, { timeout: 10000 });   // UIP5: the phone sheet leaves down on a rAF spring (~490 ms unloaded, longer when frames drop): wait for the close itself, not a fixed 600 ms
   const s = await page.evaluate(() => ({ gone: document.documentElement.classList.contains("cl-gone"), side: document.documentElement.classList.contains("side"), row: !!document.querySelector("#clBack:not([hidden])"), open: window.stemCluckOpen() }));
   assert.deepEqual(s, { gone: false, side: false, row: false, open: false });
   assert.deepEqual(page.errs, [], "no page errors");
