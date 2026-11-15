@@ -117,16 +117,16 @@ try {
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
-    await step(`${w}: flag on: wrong row: no tray is shown (VERDICT-CARD, #563), the X slot is the Cluck button`, async () => {
+    await step(`${w}: flag on: wrong row: no tray exists (VERDICT-CARD #563, CLUCK-BTN), the X slot is a plain status icon`, async () => {
       const page = await open(w, "v7", "#PHYS_FP2");
       try {
         await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
         const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
         await typeAnswer("1.636");
         await page.waitForFunction(() => window.__drill && window.__drill.state && window.__drill.state.tries.length === 1, null, { timeout: 6000 });
-        await page.waitForSelector("#q .vdrawer .wchip", { state: "attached", timeout: 8000 });
+        await page.waitForFunction(() => { const b = document.querySelector("#cluckBtn"); return !!b && !b.hasAttribute("aria-disabled"); }, null, { timeout: 8000 });   // CLUCK-BTN: the one button on the card replaces the tray
         await page.waitForTimeout(600);
-        const d = await page.evaluate(() => { const e = document.querySelector("#q .vdrawer"); return { shown: e.getClientRects().length > 0 }; });
+        const d = await page.evaluate(() => { const e = document.querySelector("#q .vdrawer"); return { shown: !!e && e.getClientRects().length > 0 }; });
         const bad = await page.evaluate(() => { const e = document.querySelector("#q .ff.bad, #q .ff.rbox.cue:not(.ok)"); if (!e) return null; const cs = getComputedStyle(e), i = getComputedStyle(e.querySelector("input") || e);
           return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), bg: cs.backgroundColor, color: i.color }; });
         const kids = await page.evaluate(() => [...document.querySelectorAll("#q .ff.bad *, #q .ff.rbox.cue:not(.ok) *")].filter(e => e.getClientRects().length).map(e => { const cs = getComputedStyle(e); return { c: String(e.className.baseVal ?? e.className).slice(0, 24) || e.tagName, bw: cs.borderTopWidth + cs.borderRightWidth + cs.borderBottomWidth + cs.borderLeftWidth }; }).filter(x => x.bw !== "0px0px0px0px"));
@@ -139,7 +139,7 @@ try {
         const wait = await page.evaluate(() => { const b = document.querySelector("#q .ff.bad .btn-go"), cs = b && getComputedStyle(b, "::before"); return b && b.classList.contains("waiting") ? { bgi: cs.backgroundImage, h: cs.height, name: cs.animationName } : null; });
         if (SHOTS && wait) await page.screenshot({ path: join(SHOTS, `waiting-${w}.png`) });
         assert.ok(!wait || (wait.bgi === "none" && wait.h === "3px" && wait.name === "vd-wait"), "the retry wait = a thin bar, not the conic wedge: " + JSON.stringify(wait));
-        const ln = await page.evaluate(() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer:not([hidden])"); if (!l || !l.getClientRects().length) return null; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { a: a.toJSON(), b: b.toJSON(), hit: !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top + 0.5 || a.top >= b.bottom) }; });
+        const ln = await page.evaluate(() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer:not([hidden])"); if (!l || !d || !l.getClientRects().length) return null; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { a: a.toJSON(), b: b.toJSON(), hit: !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top + 0.5 || a.top >= b.bottom) }; });
         assert.ok(!ln || !ln.hit, "the verdict line is covered by the tray: " + JSON.stringify(ln));
         assert.notEqual(slot.shadow, "none", "the row casts a shadow onto the tray");
         if (SHOTS) { const bb = await page.locator("#q .ff.bad").boundingBox(); await page.screenshot({ path: join(SHOTS, `corner-${w}.png`), clip: { x: Math.max(0, bb.x + bb.width - 120), y: bb.y + bb.height - 40, width: 120 + 8, height: 100 } }); }
@@ -148,7 +148,7 @@ try {
         assert.equal(bad.bg, "rgb(62, 20, 30)", "the MC bento wrong fill #3e141e");
         const L = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
         const cr = (L(bad.color) + 0.05) / (L(bad.bg) + 0.05); assert.ok(cr >= 4.5, "wrong text contrast " + cr.toFixed(2));
-        if (SHOTS) { await page.locator("#q .vdrawer").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `verdict-${w}.png`) }); }
+        if (SHOTS) { await page.locator("#q .ff.bad").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `verdict-${w}.png`) }); }
         assert.equal(d.shown, false, "no verdict tray is shown under the row");
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }

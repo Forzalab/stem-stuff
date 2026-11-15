@@ -1101,7 +1101,7 @@ function formulaCard() {
     const w = e.target.closest(".fh-more");
     if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
-    if ((S.fqTaps = (S.fqTaps || 0) + 1) >= 2 && !S.fqPeek && window.stemDuck?.say?.("stuck? ask me", { onOpen: () => window.stemIdleTap() })) S.fqPeek = true;   // the 2nd "?" tap on a question: the duck peeks (once); a tap on it opens Cluck, never auto
+    if ((S.fqTaps = (S.fqTaps || 0) + 1) >= 2 && !S.fqPeek && window.stemDuck?.say?.("stuck? ask me", { onOpen: () => window.stemIdleTap() })) { S.fqPeek = true; window.stemCluckBtn?.sheen("jev-stuck"); }   // the 2nd "?" tap on a question: the duck peeks (once); a tap on it opens Cluck, never auto
     const f = S.prob.formulas[b.dataset.i];
     Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => {
       const fig = window.FormulaFigs?.[f.id];
@@ -2102,6 +2102,7 @@ function cueChip(still) {
   if (!bridge.wish || bridge.wish.code !== S.code || bridge.wish.idle) { bridge.wishNew({ started: false }); bridge.wishFromCache(bridge.wish); }
   if (!still && bridge.wish.nod == null) { if (cueRight()) bridge.wish.nod = nodGate(); else { bridge.wish.nod = false; nodMiss(); } }
   bridge.wishPaint();
+  if (!still) window.stemCluckBtn?.sheen(cueRight() ? "right" : "out");      // the steps are ready (right) / Cluck can explain the last miss (out of tries): the one Ask Cluck button sheens (v7)
 }
 const cueRight = () => S.prob.type === "multi" ? !!S.solved : !!(document.querySelector("#q .opt.right:not(.reveal)") || $("#ff.ok"));   // a revealed row is the answer, not the student's pick
 /* the calm nod (r5 BRIEF reward rule 4): the first 3 rights of a PT day nod, then about 1 in 3, never twice in a row, and always on a

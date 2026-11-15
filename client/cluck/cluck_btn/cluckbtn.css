@@ -1,0 +1,38 @@
+/* cluckbtn.css: the one Ask Cluck button on the question card, html.ui-v7 only (cluckbtn.js). Chip look from the glossary popover's "Ask Cluck": duck + label, --chip navy, no border, a very
+   slight raise (--shadow-raise), radius 12 (the tile family). Roomier than the popover chip: min-height 44, 16 / 20 side padding, a 12 / 16 margin. Floats right at the card's top so the question
+   text wraps beside it (the reserved space: no overlap on any question type).
+   Disabled (aria-disabled="true", RESEARCH option A): the --float fill and the --navy-400 label (about 4.8:1), no raise, duck at 60%; same size and radius as enabled (no layout shift).
+   The enabled fill is a layer (::before) that scales in from the left, 240 ms ease-out; disabled -> enabled sweeps in, enabled -> disabled sweeps out; reduced motion = instant.
+   Emphasis (CLUCK-EMPHASIS), JS-timed, once per event, none with reduced motion: .cb-sheen = blue-tinted (--action) sweep (0.9 s, the streak WAVE's Td); .cb-shake / .cb-nod = the duck svg only; .cb-hop = the duck's spring hop after the unlock sweep. Never a halo ring, never a whole-chip nudge. */
+html.ui-v7 #problem { display: flow-root; }
+html.ui-v7 .cluckbtn {
+  --cb-fill: var(--chip, #283352); --cb-off: var(--float, #141d36); --cb-off-ink: #7a8aae;
+  position: relative; isolation: isolate; overflow: hidden; float: right; display: inline-flex; align-items: center; gap: 10px;
+  min-width: 44px; min-height: 44px; margin: 2px 0 12px 16px; padding: 10px 20px 10px 16px; border: 0; border-radius: 12px;
+  background: var(--cb-off); color: var(--cb-off-ink); font-family: inherit; font-weight: 600; font-size: var(--t-sm, .9375rem); line-height: 1.15; text-align: left; white-space: nowrap;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: none;
+  transition: color 240ms ease-out, box-shadow 240ms ease-out, transform 90ms ease-out;
+}
+html.ui-v7 .cluckbtn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cb-fill); transform: scaleX(0); transform-origin: left center; transition: transform 240ms ease-out; }
+html.ui-v7 .cluckbtn:not([aria-disabled="true"]) { color: var(--ink); box-shadow: var(--shadow-raise); }
+html.ui-v7 .cluckbtn:not([aria-disabled="true"])::before { transform: scaleX(1); }
+html.ui-v7 .cluckbtn .cb-duck { flex: none; width: 24px; height: 24px; color: var(--help, #ffa63e); --c2: var(--help-on, #ffdcc0); transition: opacity 240ms ease-out; }
+html.ui-v7 .cluckbtn[aria-disabled="true"] .cb-duck { opacity: .6; }
+html.ui-v7 .cluckbtn[aria-disabled="true"]:focus-visible, html.ui-v7 .cluckbtn:focus-visible { outline: var(--ring, 2px) solid var(--focus, #8cc2ff); outline-offset: 2px; }
+@media (hover: hover) { html.ui-v7 .cluckbtn[aria-disabled="true"] { cursor: not-allowed; } html.ui-v7 .cluckbtn:not([aria-disabled="true"]):hover::before { filter: brightness(1.12); } }
+html.ui-v7 .cluckbtn:not([aria-disabled="true"]):active { transform: scale(.97); }
+html.ui-v7 .cluckbtn::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none; opacity: 0; background-repeat: no-repeat;
+  background-image: linear-gradient(105deg, transparent 38%, color-mix(in srgb, var(--action, #5aa9ff) 18%, transparent) 50%, transparent 62%); background-size: 260% 100%; background-position: 160% 0; }   /* tinted: site blue --action, ~.18 alpha (CLUCK-SHEEN-BLUE), not white, not tangerine */
+@keyframes cb-sheen { 0% { opacity: 1; background-position: 160% 0; } 100% { opacity: 1; background-position: -60% 0; } }
+@keyframes cb-shake { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(-14deg); } 35% { transform: rotate(11deg); } 55% { transform: rotate(-7deg); } 75% { transform: rotate(3deg); } }
+@keyframes cb-nod { 0%, 50%, 100% { transform: translateY(0) rotate(0); } 25%, 75% { transform: translateY(2px) rotate(8deg); } }
+@keyframes cb-hop { 0% { transform: translateY(0); } 40% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+html.ui-v7 .cluckbtn .cb-duck { transform-origin: 50% 100%; }
+html.ui-v7 .cluckbtn.cb-sheen::after { animation: cb-sheen .9s ease-in-out 1 forwards; }                    /* every other trigger: the tinted sheen */
+html.ui-v7 .cluckbtn.cb-shake .cb-duck { animation: cb-shake .6s cubic-bezier(.36, .07, .19, .97) 1; }       /* Cluck reply ready: head shake, the chip stays still */
+html.ui-v7 .cluckbtn.cb-nod .cb-duck { animation: cb-nod .7s ease-in-out 1; }                                  /* steps unlocked (right answer): nod */
+html.ui-v7 .cluckbtn.cb-hop .cb-duck { animation: cb-hop .5s cubic-bezier(.34, 1.56, .64, 1) .2s 1 backwards; } /* disabled -> enabled: the sweep ends with a small spring hop */
+@media (prefers-reduced-motion: reduce) {
+  html.ui-v7 .cluckbtn, html.ui-v7 .cluckbtn::before, html.ui-v7 .cluckbtn .cb-duck { transition: none; }
+  html.ui-v7 .cluckbtn.cb-sheen::after, html.ui-v7 .cluckbtn.cb-shake .cb-duck, html.ui-v7 .cluckbtn.cb-nod .cb-duck, html.ui-v7 .cluckbtn.cb-hop .cb-duck { animation: none; }
+}
