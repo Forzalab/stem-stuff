@@ -1,6 +1,7 @@
-// QCARD-SWISS v2 smoke (Tony Nov 15; brain ui-v7-decisions): under html.ui-v7 the question card is a hero: the question sentence is the big title bottom-left,
-// the ECHO B ghost numeral (6 copies) sits behind it, the setup is folded with "Show all", the Twist chip stays visible (meta row), Ask Cluck stays top right
-// and never beside the title; title and body share ONE left edge. Flag off: the card is untouched. Own serve.py + throwaway bank.   node tests/qcard.pw.mjs [port]
+// QCARD-SWISS v3 smoke (owner pick V3, Nov 15; brain ui-v7-decisions): under html.ui-v7 the question card is ONE surface, top to bottom: ghost numeral (ECHO trail, 6 copies), headline,
+// ONE text block (setup + the question sentence; scrolls inside past a max height, no Show all), meta row (exam . q#, Twist chip, answer hint). Ask Cluck top right, SOLID (opaque, no border)
+// and never over the numeral's front copy. The echo animates on prev/next (transform + opacity only, will-change only while it runs, none under reduced motion). Flag off: untouched.
+// Own serve.py + throwaway bank.   node tests/qcard.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -39,41 +40,71 @@ async function open(w, flag, code) {
 }
 const geo = page => page.evaluate(() => {
   const r = s => { const e = document.querySelector(s); return e && e.getBoundingClientRect(); };
-  const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn");
-  return { lead: lead && lead.textContent.trim(), l: r(".qlead"), s: set && r(".qsetup"), p: r("#problem"), b: btn && btn.getBoundingClientRect(), hero: r(".qhero"),
+  const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn"), tx = document.querySelector("#blocks .qtext");
+  const cs = btn && getComputedStyle(btn), alpha = c => { const m = c.match(/rgba?\(([^)]+)\)/); const v = m[1].split(/[ ,\/]+/).filter(Boolean); return v.length > 3 ? +v[3] : 1; };
+  return { lead: lead && lead.textContent.trim(), l: r(".qlead"), s: set && r(".qsetup"), p: r("#problem"), b: btn && btn.getBoundingClientRect(), front: r(".qghost i:nth-child(1)"), head: r(".qhead"), meta: r(".qmeta"),
+    headTx: (document.querySelector(".qhead") || {}).textContent, metaTx: (document.querySelector(".qmeta") || {}).textContent,
     ghosts: document.querySelectorAll(".qghost i").length, ghostHidden: document.querySelector(".qghostbox").getAttribute("aria-hidden"), twist: !!document.querySelector(".qmeta #twistChip"),
-    fold: set && set.classList.contains("qfold"), show: !!document.querySelector(".qshow:not([hidden])"), sw: document.documentElement.scrollWidth, vw: innerWidth };
+    chipAlpha: alpha(cs.backgroundColor), chipBorder: cs.borderTopWidth, chipShadow: cs.boxShadow, txOv: tx && getComputedStyle(tx).overflowY, txMax: tx && getComputedStyle(tx).maxHeight, txH: tx && tx.clientHeight,
+    show: document.querySelectorAll(".qshow").length, sw: document.documentElement.scrollWidth, vw: innerWidth };
 });
+const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 try {
   for (const w of [390, 1366]) {
-    await step(`${w}: short question: the sentence is the title, bottom-left of the hero, 6 ghost copies, Twist chip kept in the meta row, Ask Cluck top right and clear of the title`, async () => {
+    await step(`${w}: short question: ghost 6 copies, headline + one text block + meta row (exam . q#, Twist chip, hint), Ask Cluck solid top right clear of the numeral`, async () => {
       const page = await open(w, "v7", "PHYS_QS1");
       try {
         const g = await geo(page);
         assert.equal(g.lead, "How fast is a rolling ball at the bottom?"); assert.equal(g.ghosts, 6); assert.equal(g.ghostHidden, "true"); assert.ok(g.twist, "Twist chip in the meta row");
-        assert.ok(g.l.bottom <= g.hero.bottom && g.hero.bottom - g.l.bottom < 120, "title low in the hero");
+        assert.equal(g.headTx, "Roll"); assert.match(g.metaTx, /exam 3 · q1/); assert.match(g.metaTx, /Number only\./);
+        assert.ok(g.front.bottom <= g.head.top, "numeral above the headline"); assert.ok(g.l.bottom <= g.meta.top + 0.5, "meta under the text");
         assert.ok(g.b && g.b.right > g.p.right - 40 && g.b.top < g.p.top + 40, "Ask Cluck top right");
-        assert.ok(g.b.bottom <= g.l.top, "title below the button, never beside it");
-        assert.equal(g.sw, g.vw, "no horizontal scroll");
-        assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).filter), "none", "LITE: blur 0");
+        assert.equal(g.chipAlpha, 1, "chip fill opaque"); assert.equal(g.chipBorder, "0px", "chip: no border"); assert.match(g.chipShadow, /0px 0px 0px 6px/, "halo plate");
+        assert.ok(!hit(g.b, g.front), "chip box does not touch the front numeral");
+        assert.equal(g.show, 0, "no Show all"); assert.equal(g.sw, g.vw, "no horizontal scroll");
       } finally { await page.context().close(); }
     });
-    await step(`${w}: long question: last sentence is the title, setup folded under it on the same left edge, Show all opens it`, async () => {
+    await step(`${w}: long question: setup then the question in ONE text block on one left edge, scroll container with a max height, no Show all`, async () => {
       const page = await open(w, "v7", "PHYS_QL2");
       try {
-        let g = await geo(page);
-        assert.match(g.lead, /^What is the smallest TOTAL number/); assert.ok(g.s, "setup kept"); if (w < 500) assert.ok(g.fold && g.show, "folded + Show all"); assert.equal(g.fold, g.show, "Show all only when folded");
-        assert.ok(Math.abs(g.l.left - g.s.left) < 0.5, "one left edge: title and setup");
-        assert.ok(g.s.top >= g.l.bottom, "setup under the title");
-        if (g.show) await page.click(".qshow"); g = await geo(page);
-        assert.equal(g.fold, false, "Show all opens it");
+        const g = await geo(page);
+        assert.match(g.lead, /^What is the smallest TOTAL number/); assert.ok(g.s, "setup kept");
+        assert.ok(Math.abs(g.l.left - g.s.left) < 0.5 && Math.abs(g.head.left - g.s.left) < 0.5 && Math.abs(g.meta.left - g.s.left) < 0.5, "one left edge: headline, text, meta");
+        assert.ok(g.s.top < g.l.top, "setup above the question");
+        assert.equal(g.txOv, "auto"); assert.equal(g.txMax, w < 900 ? "170px" : "190px"); assert.ok(g.txH <= (w < 900 ? 170 : 190) + 1, "text block capped");
+        assert.equal(g.show, 0, "no Show all"); assert.ok(!hit(g.b, g.front), "chip clear of the numeral");
       } finally { await page.context().close(); }
     });
   }
-  await step("flag off: the card is the one app.js draws (no hero, no ghost, no fold)", async () => {
+  await step("text block scrolls inside when over the max height (long setup)", async () => {
+    const page = await open(390, "v7", "PHYS_QL2");
+    try {
+      await page.evaluate(() => { const t = document.querySelector(".qtext"); const d = document.createElement("div"); d.className = "md qsetup"; d.innerHTML = "<p>" + "More setup text that goes on and on. ".repeat(40) + "</p>"; t.insertBefore(d, t.firstChild); });
+      const o = await page.evaluate(() => { const t = document.querySelector(".qtext"); t.scrollTop = 9999; return { h: t.clientHeight, sh: t.scrollHeight, st: t.scrollTop }; });
+      assert.ok(o.sh > o.h && o.st > 0 && o.h <= 171, JSON.stringify(o));
+    } finally { await page.context().close(); }
+  });
+  await step("echo animation: prev/next slides the trail in (transform + opacity only, will-change only while it runs); reduced motion: none", async () => {
+    for (const rm of [false, true]) {
+      const page = await open(1366, "v7", "PHYS_QS1");
+      try {
+        if (rm) await page.emulateMedia({ reducedMotion: "reduce" });
+        assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "idle: no will-change");
+        await page.click("#qnext");
+        await page.waitForFunction(() => document.querySelector(".qghost").getAttribute("data-n") === "2", null, { timeout: 5000 });
+        await page.waitForTimeout(60);
+        const a = await page.evaluate(() => ({ anims: document.getAnimations().filter(x => x.animationName === "qecho").map(x => Object.keys(x.effect.getKeyframes()[0]).filter(k => !["offset", "computedOffset", "easing", "composite"].includes(k)).sort().join()), wc: getComputedStyle(document.querySelector(".qghost i")).willChange }));
+        if (rm) assert.equal(a.anims.length, 0, "reduced motion: no animation");
+        else { assert.equal(a.anims.length, 6, "6 trail copies animate"); assert.ok(a.anims.every(k => k === "opacity,transform"), a.anims.join("|")); assert.match(a.wc, /transform/, "will-change while running"); }
+        await page.waitForTimeout(900);
+        assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "will-change dropped after");
+      } finally { await page.context().close(); }
+    }
+  });
+  await step("flag off: the card is the one app.js draws (no text block, no ghost)", async () => {
     const page = await open(1366, "off", "PHYS_QL2");
     try {
-      assert.equal(await page.evaluate(() => document.querySelectorAll(".qhero, .qghostbox, .qlead, .qsetup, .qshow, #problem.qc7").length), 0);
+      assert.equal(await page.evaluate(() => document.querySelectorAll(".qhead, .qtext, .qmeta, .qghostbox, .qlead, .qsetup, #problem.qc7").length), 0);
     } finally { await page.context().close(); }
   });
 } finally { await browser.close(); srv.kill(); }

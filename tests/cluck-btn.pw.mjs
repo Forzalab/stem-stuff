@@ -82,7 +82,7 @@ try {
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
       assert.ok(Math.abs(g.br.r - g.pr.r) < 40 && g.br.t - g.pr.t < 40, "top right of the card: " + JSON.stringify({ b: g.br, p: g.pr }));
       assert.equal(g.overlap, false, "the question text does not run under the button"); assert.equal(g.bw, "0px", "no border");
-      assert.equal(g.bg, "rgb(20, 29, 54)", "option A fill #141d36"); assert.equal(g.color, "rgb(122, 138, 174)", "option A label #7a8aae"); assert.equal(g.shadow, "none", "no raise while disabled");
+      assert.equal(g.bg, "rgb(20, 29, 54)", "option A fill #141d36"); assert.equal(g.color, "rgb(122, 138, 174)", "option A label #7a8aae"); assert.ok(g.shadow === "none" || /rgba\(7, 11, 22, 0\.35\) 0px 0px 0px 6px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a halo plate: qcard.css)");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");

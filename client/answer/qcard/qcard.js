@@ -1,10 +1,9 @@
-/* qcard.js: QCARD-SWISS v2, the question card redesign. BEHIND html.ui-v7 (fx.js, ?ui=v7). Flag off = this file touches nothing and the card is the one app.js draws.
-   Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered):
-   - HERO: the question sentence (the last sentence of the last text block) becomes the big title, bottom-left of a hero band on the card, with a dark bottom scrim
-     (Spotify-style) for legibility; the card's small meta (sugar title + the Twist chip) is the small line under it (type ratio ~ a Swiss poster: big bold : small meta).
-   - GHOST: the question number as an ECHO B numeral (6 Archivo 900 copies, step (-12,0) on x, opacity .7 .55 .42 .3 .2 .12 of --qa1, blur 0: the LITE tier) behind the text.
-   - SETUP: the rest of the text blocks stay in order under the hero, folded to 3 lines with a "Show all" button when they are longer.
-   Source: brain ui-polish/hintbox/v71/longq (DESIGN.md dir C), ui-v7-decisions QCARD-SWISS v2. Looks: qcard.css. The Twist chip is app.js twistChip (kept; moved into the meta row). */
+/* qcard.js: QCARD-SWISS v3, the question card redesign. BEHIND html.ui-v7 (fx.js, ?ui=v7). Flag off = this file touches nothing and the card is the one app.js draws.
+   Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered), top to bottom on ONE card background:
+   - GHOST: the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
+   - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
+     kept bold); the block scrolls inside past a max height (no Show all), then the small meta row: exam . q#, the Twist chip (app.js twistChip), the answer hint (#how).
+   Source: brain ui-polish/hintbox/v71/longq (DESIGN.md), ui-v7-decisions QCARD-SWISS v3 (owner picked V3). Looks: qcard.css. */
 (function (g) {
   "use strict";
   var D = g.document, H = D.documentElement;
@@ -45,8 +44,6 @@
     } else { while (p.firstChild) lead.appendChild(p.firstChild); }
     if (!plainLen(p) && !p.querySelector("*")) p.remove();
     if (!md.children.length || (!plainLen(md) && !md.querySelector(".katex"))) md.remove();
-    var n = plainLen(lead);
-    lead.className += n <= 70 ? " l" : n <= 140 ? " m" : " s";
     return lead;
   }
 
@@ -56,6 +53,7 @@
     var c = ((D.getElementById("pcode") || {}).textContent || "").match(/(\d+)\D*$/);
     return c ? String(+c[1]) : "1";
   }
+  var animT = 0;
   function ghost(p) {
     var box = p.querySelector(":scope > .qghostbox");
     if (!box) {
@@ -64,29 +62,33 @@
       for (var k = 0; k < 6; k++) { var i = D.createElement("i"); i.style.setProperty("--k", k); gh.appendChild(i); }
       box.appendChild(gh); p.insertBefore(box, p.firstChild);
     }
-    var num = number(), cur = box.firstChild;
-    if (cur.getAttribute("data-n") !== num) { cur.setAttribute("data-n", num); for (var j = 0; j < cur.children.length; j++) cur.children[j].textContent = num; }
+    var num = number(), cur = box.firstChild, was = cur.getAttribute("data-n");
+    if (was !== num) {
+      cur.setAttribute("data-n", num); for (var j = 0; j < cur.children.length; j++) cur.children[j].textContent = num;
+      if (was !== null) echo(box);                                          // a question change (not the first paint): the trail slides in
+    }
+  }
+  /* the echo animation: .qanim = transform + opacity keyframes (qcard.css); will-change only while it runs; off under prefers-reduced-motion */
+  function echo(box) {
+    if (g.matchMedia && g.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    box.classList.remove("qanim"); void box.offsetWidth; box.classList.add("qanim");
+    clearTimeout(animT); animT = setTimeout(function () { box.classList.remove("qanim"); }, 620);
   }
 
-  /* setup fold: > 3 lines (72px + a little for a tall fraction) -> clamp + "Show all" */
-  function fit(blocks) {
-    blocks.querySelectorAll(":scope > .qsetup").forEach(function (el) {
-      var btn = el.nextElementSibling && el.nextElementSibling.classList.contains("qshow") ? el.nextElementSibling : null;
-      var open = btn && btn.getAttribute("aria-expanded") === "true";
-      if (open) return;
-      el.classList.remove("qfold");
-      var tall = el.scrollHeight > 80;
-      el.classList.toggle("qfold", tall);
-      if (tall && !btn) {
-        btn = D.createElement("button"); btn.type = "button"; btn.className = "qshow"; btn.textContent = "Show all"; btn.setAttribute("aria-expanded", "false");
-        btn.addEventListener("click", function () {
-          var o = btn.getAttribute("aria-expanded") !== "true";
-          btn.setAttribute("aria-expanded", o ? "true" : "false"); btn.textContent = o ? "Show less" : "Show all"; el.classList.toggle("qfold", !o);
-        });
-        el.after(btn);
-      }
-      if (btn) btn.hidden = !tall;
-    });
+  function exam() { var n = D.getElementById("qlistName"); return n ? n.textContent.trim() : ""; }
+  function hint() { var h = D.querySelector("#q #how"); return h ? h.textContent.trim() : ""; }
+  function span(cls, txt) { var e = D.createElement("span"); e.className = cls; e.textContent = txt; return e; }
+  function meta(m) {
+    var a = m.querySelector(".qexam"), h = m.querySelector(".qhint"), e = exam(), t = (e ? e.toLowerCase() + " \u00b7 " : "") + "q" + number(), x = hint();
+    if (!a) { a = span("qexam", ""); m.insertBefore(a, m.firstChild); }
+    if (a.textContent !== t) a.textContent = t;
+    if (x && !h) { h = span("qhint qdot", ""); m.appendChild(h); }
+    if (h) { if (h.textContent !== x) h.textContent = x; h.hidden = !x; }
+  }
+  /* the text block scrolls inside past its max height: focusable then, so the keyboard can scroll it */
+  function scrollable(t) {
+    var over = t.scrollHeight > t.clientHeight + 1;
+    if (over) { t.tabIndex = 0; t.setAttribute("role", "region"); t.setAttribute("aria-label", "Question text"); } else { t.removeAttribute("tabindex"); t.removeAttribute("role"); t.removeAttribute("aria-label"); }
   }
 
   function build() {
@@ -101,20 +103,37 @@
     if (!blocks.children.length) return;
     p.classList.add("qc7");
     ghost(p);
-    if (!blocks.querySelector(":scope > .qhero")) {
+    if (!blocks.querySelector(":scope > .qtext")) {
       var lead = takeLead(blocks);
       if (lead) {
-        var hero = D.createElement("div"); hero.className = "qhero";
-        hero.appendChild(lead);
-        var meta = D.createElement("div"); meta.className = "qmeta";
-        var t = blocks.querySelector(":scope > .ptitle");          // sugar title and/or the Twist chip (app.js twistChip): the small line under the title
-        if (t) meta.appendChild(t);
-        if (meta.children.length) hero.appendChild(meta);
-        blocks.insertBefore(hero, blocks.firstChild);
-        blocks.querySelectorAll(":scope > .md").forEach(function (m) { if (!m.classList.contains("qlead")) m.classList.add("qsetup"); });
+        var kids = Array.prototype.slice.call(blocks.children), figs = [], texts = [], rest = [], pt = null, chg = null, tw = null;
+        kids.forEach(function (c) {
+          if (c.classList.contains("fig")) figs.push(c);
+          else if (c.classList.contains("md")) { c.classList.add("qsetup"); texts.push(c); }
+          else if (c.classList.contains("ptitle")) pt = c;
+          else if (c.classList.contains("chg-chip")) chg = c;
+          else rest.push(c);
+        });
+        var head = null, m = D.createElement("div"); m.className = "qmeta";
+        if (pt) {
+          tw = pt.querySelector(".twist-chip");
+          var title = Array.prototype.filter.call(pt.childNodes, function (n) { return n.nodeType === 3; }).map(function (n) { return n.nodeValue; }).join("").trim();
+          if (title) { head = D.createElement("h2"); head.className = "qhead"; head.textContent = title; }
+        }
+        var tx = D.createElement("div"); tx.className = "qtext";
+        texts.forEach(function (c) { tx.appendChild(c); }); tx.appendChild(lead);
+        if (tw) m.appendChild(tw);
+        figs.forEach(function (c) { blocks.appendChild(c); });
+        if (head) blocks.appendChild(head);
+        if (chg) blocks.appendChild(chg);
+        blocks.appendChild(tx); blocks.appendChild(m);
+        rest.forEach(function (c) { blocks.appendChild(c); });
+        if (pt) pt.remove();
       }
     }
-    fit(blocks);
+    var mm = blocks.querySelector(":scope > .qmeta"), tt = blocks.querySelector(":scope > .qtext");
+    if (mm) meta(mm);
+    if (tt) { scrollable(tt); if (tt.tabIndex === 0 && !tt.hasAttribute("data-s")) { tt.setAttribute("data-s", "1"); tt.scrollTop = tt.scrollHeight; } }   // overflowing: open at the question (the end), the setup scrolls up
   }
   function later() { if (!raf) raf = requestAnimationFrame(build); }
 
