@@ -50,7 +50,7 @@ const geo = p => p.evaluate(() => {
   return { card: t.getBoundingClientRect().toJSON(), box: r(".stoast-duck"), words: r(".stoast-b"), title: r(".stoast-t"), x: r(".stoast-x"), src: img ? img.getAttribute("src") : null,
     titleH: t.querySelector(".stoast-t").getBoundingClientRect().height, row: t.classList.contains("stoast-v7"), one: t.classList.contains("stoast-1l"), text: t.querySelector(".stoast-t").textContent };
 });
-const shown = p => p.waitForFunction(() => { const t = document.querySelector(".stoast.on"); return t && !t.getAnimations({ subtree: true }).length && t.dataset.done === "1"; }, null, { timeout: 9000 });
+const shown = p => p.waitForFunction(() => { const t = document.querySelector(".stoast.on"); return t && !t.getAnimations({ subtree: true }).filter(a => a.animationName !== "stoast-drain").length && t.dataset.done === "1"; }, null, { timeout: 9000 });
 /* one beat: show it through the one toast API (the same call the engine makes), wait for it to land, check the geometry */
 async function beat(p, o, w, mood, opts = {}) {
   await p.evaluate(() => window.stemToast && window.stemToast.clear());

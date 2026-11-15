@@ -61,14 +61,14 @@ html.ui-v7 .stoast.stoast-v7 {
 html.ui-v7 .stoast.stoast-v7.on { animation: stoast-in .2s var(--ease-sheet, cubic-bezier(.32, .72, 0, 1)) backwards; }
 html.ui-v7 .stoast.stoast-v7.out { animation: stoast-out .15s var(--ease-sheet, cubic-bezier(.32, .72, 0, 1)) forwards; }
 /* TOAST-DYN (owner approved): box + padding + gap scale with the message line count (toast.js fit() sets .stoast-1l after layout, 1 line only):
-   1 line = 44 box, 10 padding (duck inset = vertical padding), gap 12; 2-3 lines = 64 box, 16 padding, gap 16. Right padding keeps the 44 close clear. */
+   1 line = 44 box, 14 padding (duck inset = vertical padding, r2), gap 12; 2-3 lines = 64 box, 16 padding, gap 16. Right padding keeps the 44 close clear. */
 html.ui-v7 .stoast.stoast-v7 { --td: 64px; grid-template-columns: var(--td) minmax(0, 1fr); column-gap: 16px; padding: 16px 40px 16px 16px; }
-html.ui-v7 .stoast.stoast-v7.stoast-1l { --td: 44px; column-gap: 12px; padding: 10px 40px 10px 10px; }
+html.ui-v7 .stoast.stoast-v7.stoast-1l { --td: 44px; column-gap: 12px; padding: 14px 40px 14px 14px; }
 html.ui-v7 .stoast-v7 .stoast-duck { display: block; width: var(--td); height: var(--td); }
-html.ui-v7 .stoast-v7 .stoast-duck img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+html.ui-v7 .stoast-v7 .stoast-duck img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 html.ui-v7 .stoast-v7 .stoast-b { display: block; min-width: 0; }
-html.ui-v7 .stoast-v7 .stoast-t { margin: 0; font: 700 18px/24px var(--font, system-ui, sans-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-html.ui-v7 .stoast-v7 .stoast-s { margin: 0; font: 400 15px/20px var(--font, system-ui, sans-serif); color: var(--muted); }
+html.ui-v7 .stoast-v7 .stoast-t { margin: 0; font: 600 18px/24px var(--font, system-ui, sans-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.ui-v7 .stoast-v7 .stoast-s { margin: 0; font: 400 15px/20px var(--font, system-ui, sans-serif); color: color-mix(in srgb, var(--help) 40%, var(--ink)); }   /* same-hue lighter tint, not grey */
 html.ui-v7 .stoast-v7 .stoast-s[hidden] { display: none; }
 html.ui-v7 .stoast-v7 .stoast-bar { display: flex; gap: 4px; height: 8px; margin: 16px 0 0; border-radius: 0; background: none; }
 html.ui-v7 .stoast-v7 .stoast-bar::after { display: none; }
@@ -80,5 +80,11 @@ html.ui-v7 .stoast-v7 .stoast-bar i::after {   /* 5 capsules: each fills as --p 
   content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--help); transform-origin: left center;
   transform: scaleX(clamp(0, calc(var(--p, 0) * 5 - var(--k, 0)), 1));
 }
+html.ui-v7 .stoast-v7 .stoast-h { font-weight: 600; }
+html.ui-v7 .stoast-v7 .stoast-bar { transform-origin: left center; }
+html.ui-v7 .stoast-v7.stoast-drain .stoast-bar { animation: stoast-drain calc(var(--life, 4000ms) - .7s) linear .7s forwards; }
+html.ui-v7 .stoast-v7.stoast-hold .stoast-bar { animation-play-state: paused; }
+@keyframes stoast-drain { to { transform: scaleX(0); opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .stoast-v7.stoast-drain .stoast-bar { animation: none; } }
 html.ui-v7 .stoast-v7 .stoast-x { position: absolute; top: 8px; right: 0; width: 44px; height: 44px; display: grid; place-items: center; }
 html.ui-v7 .stoast-v7 .stoast-x svg { width: 16px; height: 16px; }   /* 16 px glyph = ~11 px ink */

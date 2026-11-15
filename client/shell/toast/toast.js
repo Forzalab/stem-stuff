@@ -98,12 +98,14 @@
     }
     return false;
   }
-  function hold() { if (left) { clearTimeout(timer); left = Math.max(800, left - (Date.now() - since)); } }
-  function go() { if (left && cur) arm(left); }
+  function hold() { if (el) el.classList.add('stoast-hold'); if (left) { clearTimeout(timer); left = Math.max(800, left - (Date.now() - since)); } }
+  function go() { if (el) el.classList.remove('stoast-hold'); if (left && cur) arm(left); }
   /* its own exit waits for the reward FX too (one blink: never two things moving at once, tests/blink-fx.pw.mjs) */
   var late = 0;
   function expire() { if (busy() && late++ < 32) { timer = setTimeout(expire, 250); return; } late = 0; hide(false, 'expired'); }   // at most 8 s more: a stuck fx-busy never pins it
-  function arm(ms) { clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(expire, ms); }
+  /* TOAST-DYN r2: the row's capsules fill in (count) then drain away over the toast's real life = this timer (CSS --life, .stoast-drain; hover/focus holds it) */
+  function arm(ms) { if (el) { el.style.setProperty('--life', ms + 'ms'); el.classList.remove('stoast-drain'); void el.offsetWidth; el.classList.add('stoast-drain'); }
+    clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(expire, ms); }
   /* the words into `t` with the number v: "Bold line\nsecond line" = a bold head, a break, the rest (BUG-COACHBOLD: count()'s put() used to rewrite it flat) */
   function render(t, o, v) {
     t.textContent = '';
