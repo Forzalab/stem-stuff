@@ -17,7 +17,13 @@
    While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
    was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
    Curated brainrots (Tony, Oct 5): CATS = his 8 playlists (3 on Oct 5, 5 on Oct 26; tools/client_generators/brainrot_list.py writes it, a hand-curated fallback for a failing Oct 26 feed). Each page load picks 5 random categories, one video each (Tony, Oct 29: "add 3 more brainrot vid for desktop"; Oct 31: "5 total"): docked
-   shows the 5 in one sideways-scrolling row (4-5 load once a tenth of them is in the box: the half-peeking 4th at once, the 5th when scrolled to), the corner 2. */
+   shows the 5 in one sideways-scrolling row (4-5 load once a tenth of them is in the box: the half-peeking 4th at once, the 5th when scrolled to), the corner 2.
+   Tony, Nov 14 (variant B, "go with bento style, the O one with the expand-jut-out button on mobile as video bkg"; html.ui-v7 ONLY, flag off = everything above):
+   the 3.5-visible row is gone: docked is NO box, a bento mosaic, all 5 in view (the playing one large, span 6, + four span 3 on a 12-col grid; tapping
+   a small one swaps it into the large slot, CSS order only, no iframe moves, no reload). The floating corner is two 9:16 players side by side, with – / ✕ above
+   them (never over the picture, always shown). And phones SHOW it (the Oct 17 "phones get none" rule is lifted under ui-v7): a phone starts stashed as a 44x96 tab
+   jutting from the screen edge whose background is a clipped slice of the playing first video (the live iframe itself, shown through the tab: nothing moves, so no
+   reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32. */
 (() => {
   /* list:start (tools/client_generators/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
   const CATS = [
@@ -67,7 +73,8 @@
   /* phones get none of it (Tony, Oct 17): no corner, no players, no request to YouTube, so nothing buffers. "Phone" is the repo's phone
      width, max-width 700px (app.js dockMQ, the same break NAV D75 "bottom bar, phones only" uses); a tablet and a desktop keep it. */
   const PHONE = matchMedia("(max-width: 700px)");
-  const off = () => !!sess("stem-rot-off") || PHONE.matches || slow();   // ✕ for this session, a phone, or a slow link
+  const v7 = () => root.classList.contains("ui-v7");                     // Tony, Nov 14: the variant B look + phones showing it live behind html.ui-v7 (fx.js sets it in <head>)
+  const off = () => !!sess("stem-rot-off") || (PHONE.matches && !v7()) || slow();   // ✕ for this session, a phone (flag off only: v7 phones get the jut-out tab), or a slow link
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
   /* a video YouTube won't play here (Tony, Oct 27: "Video unavailable. Playback on other websites has been disabled by the video owner")
@@ -107,19 +114,21 @@
     if (m.event === "onError" && DEAD.includes(m.info)) swap(s);
   });
 
-  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700 || (PHONE.matches && v7()), corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
   /* shown by default, muted, playing; only you fold it (Tony, Oct 6: "must mute autoplay and shown by default, u can hide later").
      Gone: the fold while Cluck's sheet is open (Oct 5) and the fold under reduced motion, which made "Show" a dead click */
-  const width = () => (desk() ? 320 : 176);
+  const width = () => (desk() && !v7() ? 320 : 176);   // v7: the corner is two 84px 9:16 players + 8 gap, whatever the screen
   function build() {
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe ${i > 2 ? "data-src" : "src"}="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}"><span class="now" aria-hidden="true"><span class="eq"><b></b><b></b><b></b></span>Playing</span><iframe ${i > 2 ? "data-src" : "src"}="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.insertAdjacentHTML("beforeend", `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`);   // a child of the duo, not of the first player: v7 floats it above the picture, flag off still lays it on the first player's corner
     duo.querySelectorAll("iframe").forEach(listen);
+    duo.querySelector(".vid").classList.add("hero");                    // the large one when docked on v7 (the playing one); a tap on a small one moves it
     /* 4-5 (docked only: the corner keeps 2) wait until the row is scrolled to them: loading="lazy" alone still loads a frame a few
        screens off (Chromium's lazy-load margin), so their src goes in when the frame first shows inside the box (Tony, Oct 29) */
     const later = [...duo.querySelectorAll("iframe[data-src]")];
@@ -143,10 +152,16 @@
     home();
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-act]");
+      const t = !b && v7() && docked() && e.target.closest(".vid");
+      if (t) { bigger(t); return; }
       if (!b) { el.classList.add("show"); clearTimeout(showT); showT = setTimeout(() => el.classList.remove("show"), 3000); return; }
       if (b.dataset.act === "min") { stashed = userMin = true; place(); }
       else if (b.dataset.act === "open") { stashed = userMin = false; if (!docked()) picked = true; place(true); }   // asked for: shown even if every corner is busy
       else if (b.dataset.act === "x") { sess("stem-rot-off", "1"); sync(); }
+    });
+    el.addEventListener("keydown", e => {
+      const t = (e.key === "Enter" || e.key === " ") && e.target.matches?.(".vid[role=button]") && e.target;
+      if (t) { e.preventDefault(); bigger(t); }
     });
     el.addEventListener("pointerdown", e => {
       if (e.button > 0 || stashed || docked() || e.target.closest("button")) return;
@@ -169,6 +184,20 @@
     };
     el.addEventListener("pointerup", end);
     el.addEventListener("pointercancel", end);
+  }
+  /* v7 docked mosaic: the tapped small player takes the large slot (the .hero class + CSS order; the iframes never move, so nothing reloads) */
+  function bigger(v) {
+    if (v.classList.contains("hero")) return;
+    duo.querySelector(".hero")?.classList.remove("hero"); v.classList.add("hero"); tiles();
+  }
+  /* the small ones are buttons ("show this one big") only in the docked v7 mosaic; everywhere else they are plain frames */
+  function tiles() {
+    const on = v7() && !!el && el.classList.contains("docked") && !el.classList.contains("stashed");
+    duo.querySelectorAll(".vid").forEach(v => {
+      const small = on && !v.classList.contains("hero");
+      if (small) { v.setAttribute("role", "button"); v.tabIndex = 0; v.setAttribute("aria-label", "Show big: " + v.querySelector("iframe").title); }
+      else for (const a of ["role", "tabindex", "aria-label"]) v.removeAttribute(a);
+    });
   }
   /* the band it may use: under the top of the page, above the bottom bar. lift = the gap kept under it (from the window's bottom) */
   function band(h) {
@@ -201,7 +230,7 @@
     const was = el.classList.contains("docked");
     el.classList.toggle("docked", dock);
     if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin; }
-    else if (was) stashed = userMin || innerHeight < 700;   // back to the floating corner's own rule (a short window: it would cover the page)
+    else if (was) stashed = userMin || innerHeight < 700 || (PHONE.matches && v7());   // back to the floating corner's own rule (a short window: it would cover the page)
   }
   function place(animate) {
     if (!el) return;
@@ -210,13 +239,15 @@
       el.classList.toggle("stashed", stashed);
       link.dataset.act = stashed ? "open" : "min"; link.setAttribute("aria-expanded", String(!stashed));
       link.textContent = (stashed ? "Show" : "Hide") + " curated brainrot";
+      tiles();
       window.stemLayout?.();                                 // the notes under it re-fill now, before paint: the column keeps its height (W129 L4: no re-centred page)
       return;
     }
-    el.classList.toggle("stashed", stashed);
+    el.classList.toggle("stashed", stashed); tiles();
     const b = band(96);
     if (stashed) {
       const right = corner[1] === "r";
+      el.classList.toggle("r", right);                       // v7: the tab's slice of video mirrors to the right edge
       tab.classList.toggle("r", right); tab.innerHTML = ico(right ? "i-prev" : "i-next");
       pin("b" + corner[1], 0, b.top, b.lift, animate);
       return;

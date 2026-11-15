@@ -203,6 +203,7 @@ weight() {
     repair-twin) echo 3 ;;   # W117 keyless answer step takes the shown item's type, local run ~2 s (estimate until CI timing)
     login) echo 5 ;;   # local run ~7 s
     proof) echo 8 ;;   # W107 proof box, local run (estimate until CI timing)
+    brainrot-b) echo 15 ;;   # BRAINROT-B (Nov 14): v7 phone jut-out tab + bento dock smoke, own serve.py; estimate until CI timing
     brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
     copy-math) echo 14 ;;   # W108 copy math as plain text, local run ~13 s (estimate until CI timing)
     fcard-clip) echo 20 ;;   # W115 formula card math not cut off, 4 sizes x chromium/firefox/webkit, own server, local run ~20 s (CI has chromium only)
@@ -268,6 +269,7 @@ tags() {
     proof-timeout) echo "@logic @fast-time" ;;   # todo 109 item 1: fake page clock, own server
     proof-ladder) echo "@logic @real-time" ;;   # generated proof ladder: stub grader, STEM_PROOF_LADDER=1
     proof-kb) echo "@logic @real-time" ;;   # proof item keyboard-up layout, own server
+    brainrot-b) echo "@layout @real-time" ;;   # BRAINROT-B: phone tab + bento geometry at 390 / 1366, own serve.py
     brainrot) echo "@logic @real-time" ;;   # W105 stub YouTube players report onError over postMessage
     copy-math) echo "@logic @real-time" ;;   # W108 real clipboard (granted), stub OpenRouter
     toast-note) echo "@layout @real-time" ;;   # W112 note placement + the cover rule across screen sizes
@@ -433,7 +435,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|mc-bento|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|mc-bento|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3|brainrot-b) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
