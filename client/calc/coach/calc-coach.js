@@ -16,6 +16,7 @@
   var COPY = {
     exam: { title: 'Stuck? Click here for TI/Casio tricks.',
       body: 'Type the whole equation and hit SOLVE. Store a number once and reuse it. Pick your calculator and I will show you the keys. QUACK.' },
+    v7: 'Calculator moves: solve in one go, store a number.',
     plain: { title: 'Calculator moves', body: 'Two moves worth knowing: solve an equation in one go, and store a number instead of retyping it. Pick your calculator to see the keys.' }
   };
   var DATA = null, loading = null, ov = null, CRAM = null;
@@ -407,8 +408,20 @@
     })();
   }
   function openBtn(text, cls, from) { var b = h('button', cls, text); b.type = 'button'; b.setAttribute('data-calc-from', from); b.onclick = function () { open({ from: from }); }; return b; }
+  /* ui-v7: "compact this box into a toast that leads directly to the calculator tip" (Tony, Nov 14). Same trigger as the card (a welcome mount);
+     the card had no memory, a toast must: once a day (KEY_TOAST + 'v7-' + day, written on show, so the X, a tap and an expiry all count). The
+     whole toast opens CalcCoach.open: the picker when no calculator is picked yet, else its keys (no "Show me the keys" step). It rides the
+     toast queue: one at a time, `until` drops it rather than let it hold the line behind another toast. */
+  function v7Toast() {
+    var key = KEY_TOAST + 'v7-' + day();
+    if (!g.stemToast || ls(key) === '1' || diet() || (g.stemCram && g.stemCram.on && g.stemCram.on())) return;
+    ls(key, '1');
+    g.stemToast.show({ text: COPY.v7, label: COPY.v7 + ' Opens the keys.', cls: 'calc', bar: false, ms: 9000, until: Date.now() + 20000,
+      at: function () { return d.querySelector('#q .cc-row') || d.getElementById('problem'); }, tap: function () { open({ from: 'toast-v7' }); } });
+  }
   function welcomeCard(host) {
     if (!host || host.querySelector('.cc-welcome')) return;
+    if (d.documentElement.classList.contains('ui-v7')) { v7Toast(); return; }   // ui-v7 (Tony Nov 14): the card is ONE compact toast that opens the keys directly
     var p = promo(), c = h('aside', 'cc-welcome'); c.setAttribute('aria-label', 'Calc Coach');
     var wt = h('h3', 'cc-wt', p.title); if (p.exam) { wt.style.cursor = 'pointer'; wt.onclick = function () { open({ from: 'welcome' }); }; }
     c.append(wt, h('p', 'cc-wb', p.body), openBtn('Show me the keys', 'cc-btn cc-go', 'welcome'));

@@ -171,11 +171,26 @@
   /* the short toast's parts (W133): no bar, and at most one action button under the words */
   function actionPut(o) {
     el.classList.toggle('stoast-short', o.bar === false);
+    tapPut(o);
     var old = el.querySelector('.stoast-a'); if (old) old.remove();
     if (!o.action || !o.action.label) return;
     var b = d.createElement('button'); b.type = 'button'; b.className = 'btn stoast-a'; b.textContent = o.action.label;
     b.addEventListener('click', function () { var run = o.action.run; hide(true); if (run) run(); });
     el.querySelector('.stoast-b').appendChild(b);
+  }
+  /* o.tap (calc toast, ui-v7): the words are one 44px+ focusable button (role=button, Enter / Space / click) that closes the toast and runs o.tap;
+     o.cls adds a scoped class (reset each toast). The X stays its own button. */
+  function tapPut(o) {
+    var b = el.querySelector('.stoast-b'), t = o.tap;
+    el.className = el.className.replace(/\s*stoast-c-\S+/g, '') + (o.cls ? ' stoast-c-' + o.cls : '');
+    el.classList.toggle('stoast-tap', !!t);
+    if (b.__tap) { b.removeEventListener('click', b.__tap); b.removeEventListener('keydown', b.__key); b.__tap = b.__key = null; }
+    ['role', 'tabindex', 'aria-label'].forEach(function (a) { b.removeAttribute(a); });
+    if (!t) return;
+    b.setAttribute('role', 'button'); b.tabIndex = 0; b.setAttribute('aria-label', String(o.label || o.text));
+    b.__tap = function (e) { e.preventDefault(); hide(true); try { t(); } catch (x) { /* the caller's */ } };
+    b.__key = function (e) { if (e.key === 'Enter' || e.key === ' ') b.__tap(e); };
+    b.addEventListener('click', b.__tap); b.addEventListener('keydown', b.__key);
   }
   function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
   function hide(quiet, why) {

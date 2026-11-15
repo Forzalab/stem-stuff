@@ -169,3 +169,9 @@
    Undo = delete these 2 lines. Tests turn it back on with html.cc-calc-on (calc.pw / cram-off.pw init script). */
 html:not(.cc-calc-on) .cc-cta-calc { display: none; }
 html:not(.cc-calc-on) .cc-row:has(> .cc-cta-calc:only-child) { display: none; }
+
+/* ui-v7 (Tony Nov 14): the "Calculator moves" card is ONE compact toast (calc-coach.js v7Toast, toast.js `tap` + `cls`). Matches PR #556's toast look
+   with tokens: --float face, no border, radius 16, --shadow-3. The words are one 44px+ tap target; the X stays toast.css's. */
+html.ui-v7 .stoast.stoast-c-calc { background: var(--float); border: 0; border-radius: 16px; box-shadow: var(--shadow-3); }
+html.ui-v7 .stoast.stoast-c-calc .stoast-b { min-height: 44px; align-content: center; cursor: pointer; border-radius: 8px; color: var(--ink); }
+html.ui-v7 .stoast.stoast-c-calc .stoast-b:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
