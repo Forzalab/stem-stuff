@@ -64,6 +64,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="client/shell/welcome/welcome-first.js"></script><script src="client/calc/model_picker/calc-pick.js" defer></script><script>addEventListener("DOMContentLoaded", function () { window.stemCalcPick && window.stemCalcPick.auto(); });</script><!-- the calculator model picker (calc-pick.js, Tony Nov 6): a fresh device sees it once, after the splash -->
 <script src="client/cluck/jev_nudges/peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (docs/design/IDLE-PEEK.md) -->
 <script src="client/answer/answer_strip/strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
+<script src="client/answer/answer_strip/bento.js" defer></script><!-- MC answers as a bento2 mosaic: inert unless html.ui-v7 (bento.css; PROTO-3WAY pick F) -->
 <!-- sugar rewards (docs/design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
 <script src="client/rewards/icons.js" defer></script>
 <script src="client/vendor/confetti.browser.js" defer></script>
@@ -109,6 +110,8 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="client/answer/explain_box/explain-box.css">
 <link rel="stylesheet" href="client/answer/drill_core/app.css">
 <link rel="stylesheet" href="client/answer/answer_strip/strip.css"><!-- the answer strip: the verdict drawer under a typed answer (strip.js; B3 PR-B1). After app.css: it layers on .ff / .wchip -->
+<link rel="stylesheet" href="client/answer/answer_strip/bento.css"><!-- the MC mosaic + state by fill, all under html.ui-v7: after strip.css, app.css -->
+<link rel="stylesheet" href="client/answer/answer_strip/verdict-v7.css"><!-- the verdict drawer as a float + the bleeding duck, html.ui-v7 only: after strip.css -->
 <link rel="stylesheet" href="client/answer/navigation/nav.css">
 <link rel="stylesheet" href="client/answer/progbar/progbar.css"><!-- the v9d bar, all under html.ui-v7: after nav.css (same specificity ladder, later wins) -->
 <link rel="stylesheet" href="client/vendor/fonts/press-start-2p.css">
@@ -118,6 +121,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="client/shell/repair/repair.css">
 <link rel="stylesheet" href="client/shell/welcome/welcome.css">
 <link rel="stylesheet" href="client/calc/coach/calc-coach.css"><!-- Calc Coach panel (docs/design/CALC-COACH.md): app chrome, not a reply format -->
+<link rel="stylesheet" href="client/shell/repair/ladder-v7.css"><!-- ladder card + Calculator moves card, state by fill, html.ui-v7 only: after repair, welcome, calc-coach css -->
 <link rel="stylesheet" href="client/calc/model_picker/calc-pick.css"><!-- the calculator model picker (calc-pick.js) -->
 <link rel="stylesheet" href="client/cluck/openui_views/views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
 <link rel="modulepreload" href="client/cluck/openui_views/views.js">

@@ -14,7 +14,9 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / progbar-wave / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc / tap-targets, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / wide-content / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -161,7 +163,7 @@ weight() {
     flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave) echo 28 ;; done) echo 26 ;;
     choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; ios-back) echo 14 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
     bar) echo 15 ;; polish) echo 14 ;; choose-all-spam) echo 13 ;; bank|cluck-more) echo 12 ;; splash) echo 11 ;; livefig) echo 10 ;; figstream) echo 8 ;; figgap|caret) echo 8 ;; seen) echo 9 ;; cluck-telemetry) echo 9 ;;
-    fcard-reveal) echo 8 ;; codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip|repair-gap) echo 5 ;; blind|katex-wrap|measure-slots|net-retry|views-oui|views-static) echo 4 ;;
+    fcard-reveal) echo 8 ;; codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip|repair-gap|wide-content) echo 5 ;; blind|katex-wrap|measure-slots|net-retry|views-oui|views-static) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font) echo 1 ;;
     retry-wait) echo 49 ;;   # local estimate: 49.0 s, STEM_TODAY=2026-10-23, shared server (not CI-measured)
     tab-countdown) echo 20 ;;   # local estimate, shares the retry-wait clock setup (not CI-measured)
@@ -182,6 +184,7 @@ weight() {
     proof-ladder) echo 8 ;;   # generated proof ladder (client), own server, flag on
     proof-kb) echo 8 ;;   # proof item, phone keyboard up: the question tile hugs (Nov 8), own server, local ~6 s
     welcome) echo 5 ;;   # local run ~4 s
+    tap-targets) echo 20 ;;   # TAP-TARGETS (sabotage findings): 44 px hit areas + the level star digit, own serve.py, fixture banks; estimate until CI timing
     ladder-ui) echo 30 ;;   # LADDER-UI (Nov 3): the welcome ladder at 393 / 1280 / 721 x sugar / diet, own server; local ~25 s (estimate until CI timing)
     window-surface) echo 15 ;;   # W152 window names after the split: 4 runs (2 sizes x sugar/diet), own serve.py; estimate until CI timing
     cluck-history) echo 20 ;;   # W2 Cluck history status lines + folds at 390 / 1280, own serve.py, stub OpenRouter; estimate until CI timing
@@ -211,9 +214,12 @@ weight() {
     desk-layout) echo 236 ;; desk-layout@1) echo 70 ;; desk-layout@2) echo 72 ;; desk-layout@3) echo 94 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
     progbar-baseline) echo 25 ;;   # PROGBAR P1 characterization of the HUD / record / finish / settle / stage toasts, own server, local run ~25 s (estimate until CI timing)
     progbar-bar) echo 30 ;;
+    progbar-wave) echo 30 ;;
     depth) echo 25 ;;   # DEPTH 1 ui-v7 light-from-above: lit tops, well + gate, own server (estimate until CI timing)   # PROGBAR P5 v9d bar DOM/CSS behind html.ui-v7: flag off untouched, flag on geometry + states, own server (estimate until CI timing)
+    mc-bento) echo 25 ;;   # MC-BENTO ui-v7 mosaic layout + state by fill, no borders; flag off unchanged, own server (estimate until CI timing)
     toast-calc) echo 35 ;;   # BUG-TOAST-CALC: toast rect vs #q cards at 1280 + 390, own server (estimate until CI timing)
     fport-hint-toast) echo 20 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
+    fport-ladder-verdict) echo 30 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     desk-notes-off) echo 14 ;;   # W97 desktop notes box kept: diet shows, sugar hides (static html.sugar), phone keeps it, own server, local run ~14 s (estimate until CI timing)
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
     twist) echo 22 ;;   # W133 Twist chip + one-time toast + popover, 3 screens + blocked storage, own server; local run ~20 s (estimate until CI timing)
@@ -256,6 +262,7 @@ tags() {
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
     repair-gap) echo "@layout @real-time" ;;
+    tap-targets) echo "@layout @real-time" ;;   # TAP-TARGETS: own serve.py, fixture banks, no real-time waits
     ladder-ui) echo "@layout @real-time" ;;   # LADDER-UI: own serve.py, fixture bank
     window-surface) echo "@logic @real-time" ;;   # W152: own serve.py, names only, no real-time waits
     reveal-tray) echo "@layout @real-time" ;;   # REVEAL-TRAY: own serve.py + a stub OpenRouter; waits out the real 2 s spam gate
@@ -277,9 +284,13 @@ tags() {
     expr) echo "@logic @real-time" ;;   # W137 expression answers: own 2 serve.py (EXPR_MODE on / off) + a fake Claude, 390 / 1440 / 1366
     progbar-baseline) echo "@logic @real-time" ;;   # PROGBAR P1 HUD baseline, own server
     progbar-bar) echo "@layout @real-time" ;;
+    progbar-wave) echo "@layout @real-time" ;;
     depth) echo "@layout @real-time" ;;   # DEPTH 1 depth shadows + 3:1 field gate, own server   # PROGBAR P5 bar geometry at 360 / 390 / 1280, own server
+    mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 5 widths, own server
     toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
     fport-hint-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
+    wide-content) echo "@layout @real-time" ;;   # WIDE-CONTENT, own server
+    fport-ladder-verdict) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     desk-notes-off) echo "@layout @real-time" ;;   # W97 desktop notes: diet kept, sugar hidden from first paint, phone kept
     units) echo "@layout @real-time" ;;   # W132 the answer line's unit: colour, weight, gap, same line; real clipboard
     twist) echo "@layout @real-time" ;;   # W133 the Twist chip, its popover, the one-time toast and its cover rule (#q, Next) at 390 / 1366 / 1440
@@ -435,7 +446,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|brainrot-b|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3|fport-hint-toast) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|brainrot-b|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3|fport-hint-toast|progbar-wave|tap-targets|wide-content|mc-bento|fport-ladder-verdict) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

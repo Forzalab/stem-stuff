@@ -375,6 +375,14 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .mx { white-space: nowrap; }                                        /* math + the punctuation touching it: one unit (app.js md) */
 .md .katex-display { margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .tbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }   /* y hidden: a 1–2 px KaTeX overflow made it a wheel trap */
+/* G4.3 edge fade: a soft shade on the side that still has content (local cover hides it at each end); no border */
+.md :is(.tbl, .katex-display) {
+  background:
+    linear-gradient(var(--qbox), var(--qbox)) left center / 24px 100% no-repeat local,
+    linear-gradient(var(--qbox), var(--qbox)) right center / 24px 100% no-repeat local,
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 14%, transparent), transparent) left center / 24px 100% no-repeat scroll,
+    linear-gradient(270deg, color-mix(in srgb, var(--ink) 14%, transparent), transparent) right center / 24px 100% no-repeat scroll;
+}
 .md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .md th, .md td { padding: var(--s1) var(--s4); border-bottom: 1px solid var(--line); }
 .md th { color: var(--muted); font-weight: var(--w-em); border-bottom: var(--bw) solid var(--edge); }
@@ -989,7 +997,7 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 /* the "?" is small and quiet (Tony, Oct 23: "too big"): a 16px muted ring, blue on hover/focus/open; the 44px tap area is its ::after */
 .fq { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 1px solid currentColor; border-radius: 50%;
   background: transparent; color: var(--muted); font: inherit; font-size: 0.6875rem; font-weight: var(--w-em); line-height: 1; cursor: pointer; }
-.fq::after { content: ""; position: absolute; inset: -14px; }                      /* the 44px tap target round a 16px mark */
+.fq::after { content: ""; position: absolute; inset: -15px; }                      /* the 44px tap target round a 16px mark (inset is from the padding box: the 1px ring is outside it, so -15 = 44) */
 .fq:is(:hover, :focus-visible) { color: var(--action); }
 .fq[aria-expanded="true"] { border-color: var(--action); background: var(--action); color: var(--paper); }
 .fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
@@ -1635,7 +1643,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 #ver { position: fixed; z-index: 1; right: max(var(--s2), env(safe-area-inset-right)); bottom: max(var(--s1), env(safe-area-inset-bottom));
   color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
 #ver::after { content: attr(data-v); }
-@media (hover: hover) and (pointer: fine) { html.side #privacy { min-height: 24px; } }   /* desktop + mouse: the link's box fits the 24px foot, off the notes pad's and Cluck's corner (Tony, Oct 19) */
+@media (hover: hover) and (pointer: fine) { html.side #privacy { min-height: 24px; } }   /* desktop + mouse: the link's box fits the 24px foot, off the notes pad's and Cluck's corner (Tony, Oct 19); mouse only, so 24px meets WCAG 2.5.8 — no wider hit area (it stole Cluck send clicks, flight spec) */
 .dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
 
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
