@@ -2,7 +2,7 @@
    (Tony Nov 14: "dip a bit into bottom right"; ref refs/proto3way-nov14/duo-widget-owl-bleed.jpg). Under html.ui-v7 only: flag off = strip.css, untouched.
    The drawer is a float (--float navy-700, --shadow-3), no edge; the big duck is a tone-on-tone silhouette (--chip) in the bottom-right corner, 28% of it cut by the drawer's bottom edge.
    Behaviour is unchanged (it still hangs from the bar and covers what is under it; strip.js place() sizes it). The Ask chip keeps --help-ink on --help (dark ink on orange, CONTRAST-PORT);
-   the close button is a navy chip. Duck art: verdict-duck.png (alpha mask only, the proto3way verdict silhouette). */
+   the close button is a navy chip. Duck art: the app duck (app.js DUCK: ellipse body, round head, beak) as an inline svg mask. */
 html.ui-v7 .vdrawer {
   --vd-duck: 112px;                                                    /* the silhouette's box; 28% of it hangs below the bottom edge */
   min-height: calc(var(--vd-duck) - 16px); padding: calc(var(--vd-tuck, 2px) + var(--s3)) calc(var(--vd-duck) - var(--s2)) var(--s3) var(--s3);
@@ -10,7 +10,7 @@ html.ui-v7 .vdrawer {
 }
 html.ui-v7 .vdrawer::after {
   content: ""; position: absolute; right: var(--s2); bottom: calc(var(--vd-duck) * -0.28); width: var(--vd-duck); height: var(--vd-duck); pointer-events: none;
-  background: var(--chip); -webkit-mask: url(verdict-duck.png) center / contain no-repeat; mask: url(verdict-duck.png) center / contain no-repeat;
+  background: var(--chip); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 2 24 20.5'%3E%3Cellipse cx='10' cy='16' rx='9' ry='6'/%3E%3Ccircle cx='15' cy='8' r='5'/%3E%3Cpath d='M19.5 7.5l4 1.5-4 1.6z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 2 24 20.5'%3E%3Cellipse cx='10' cy='16' rx='9' ry='6'/%3E%3Ccircle cx='15' cy='8' r='5'/%3E%3Cpath d='M19.5 7.5l4 1.5-4 1.6z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 html.ui-v7 .vdrawer > .wchip { border: 0; border-radius: 12px; z-index: 1; }
 html.ui-v7 .vdrawer > .wchip:hover { border: 0; }

@@ -133,7 +133,7 @@ try {
         assert.equal(d.bw, ZERO, "drawer border: " + JSON.stringify(d));
         assert.ok(d.duck >= 96, "a big duck: " + d.duck);
         assert.ok(d.cut > 0.2 && d.cut < 0.36, "~28% of the duck hangs below the drawer edge: " + d.cut);
-        assert.match(d.mask, /verdict-duck\.png/, "the duck mask");
+        assert.match(d.mask, /svg\+xml/, "the duck mask");
         assert.equal(d.overflow, "hidden", "the card's bottom edge cuts the duck");
         for (const b of d.btns) assert.ok(b.bw === "0px" && b.h >= 44 && b.w >= 44, "drawer button: " + JSON.stringify(b));
         assert.deepEqual(page.errs, [], "page errors");
