@@ -2,7 +2,7 @@
    Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered), top to bottom on ONE card background:
    - GHOST: the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
    - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
-     kept bold); the block scrolls inside past a max height (no Show all), then the small meta row: exam . q#, the Twist chip (app.js twistChip), the answer hint (#how).
+     kept bold); the block scrolls inside past a max height (no Show all), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
    Source: brain ui-polish/hintbox/v71/longq (DESIGN.md), ui-v7-decisions QCARD-SWISS v3 (owner picked V3). Looks: qcard.css. */
 (function (g) {
   "use strict";
@@ -76,14 +76,19 @@
   }
 
   function exam() { var n = D.getElementById("qlistName"); return n ? n.textContent.trim() : ""; }
-  function hint() { var h = D.querySelector("#q #how"); return h ? h.textContent.trim() : ""; }
   function span(cls, txt) { var e = D.createElement("span"); e.className = cls; e.textContent = txt; return e; }
   function meta(m) {
-    var a = m.querySelector(".qexam"), h = m.querySelector(".qhint"), e = exam(), t = (e ? e.toLowerCase() + " \u00b7 " : "") + "q" + number(), x = hint();
+    var a = m.querySelector(".qexam"), e = exam(), t = (e ? e.toLowerCase() + " \u00b7 " : "") + "q" + number();
     if (!a) { a = span("qexam", ""); m.insertBefore(a, m.firstChild); }
     if (a.textContent !== t) a.textContent = t;
-    if (x && !h) { h = span("qhint qdot", ""); m.appendChild(h); }
-    if (h) { if (h.textContent !== x) h.textContent = x; h.hidden = !x; }
+  }
+  /* a number and its unit never wrap apart: plain text nodes only (KaTeX is left alone) */
+  var UNIT = /(\d)[ \t\n]+(?=(?:(?:[kcmµμnMG]?(?:m|g|s|N|J|W|Pa|Hz|V|L)|mol|rad|deg|eV|atm|min|°C|%)(?![A-Za-z])))/g;
+  function nbsp(root) {
+    var w = D.createTreeWalker(root, 4, { acceptNode: function (n) { return n.parentNode.closest && n.parentNode.closest(".katex") ? 2 : 1; } }), n, list = [];
+    while ((n = w.nextNode())) { UNIT.lastIndex = 0; if (UNIT.test(n.nodeValue)) list.push(n); }
+    UNIT.lastIndex = 0;
+    list.forEach(function (x) { x.nodeValue = x.nodeValue.replace(UNIT, "$1\u00a0"); });
   }
   /* the text block scrolls inside past its max height: focusable then, so the keyboard can scroll it */
   function scrollable(t) {
@@ -126,7 +131,7 @@
         figs.forEach(function (c) { blocks.appendChild(c); });
         if (head) blocks.appendChild(head);
         if (chg) blocks.appendChild(chg);
-        blocks.appendChild(tx); blocks.appendChild(m);
+        nbsp(tx); blocks.appendChild(tx); blocks.appendChild(m);
         rest.forEach(function (c) { blocks.appendChild(c); });
         if (pt) pt.remove();
       }

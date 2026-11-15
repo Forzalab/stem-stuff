@@ -17,9 +17,9 @@ const PORT = /^\d+$/.test(process.argv[2] || "") ? +process.argv[2] : 8898, BASE
 const TMP = mkdtempSync(join(tmpdir(), "qcard-")), BANKS = join(TMP, "banks");
 const short = { code: "PHYS_QS1", title: "Roll", type: "num", answer: "1.38", tol: 0.01, unit: "m/s", how: "Number only.", twist: true,
   wrong: [{ value: "1.6", error: "spin", hint: "QUACK. Spin." }], body: [{ type: "text", md: "How fast is a rolling ball at the bottom?" }], saccharine: { title: "Roll", key: "Answer: 1.38" } };
-const long = { code: "PHYS_QL2", title: "Lift", type: "num", answer: "4", tol: 0.01, unit: "", how: "Whole number.", wrong: [{ value: "3", error: "off", hint: "QUACK. Count." }],
-  body: [{ type: "text", md: "A $80\\ \\text{kg}$ student on the small piston balances a $1800\\ \\text{kg}$ elephant on a hydraulic lift piston of diameter $2.2\\ \\text{m}$; the lift holds oil of density $860\\ \\text{kg/m}^3$. At first the two pistons are at the same height. More students climb on. What is the smallest TOTAL number of students on the small piston?" }],
-  saccharine: { title: "Lift", key: "Answer: 4" } };
+const long = { code: "PHYS_QL2", title: "Hydraulic lift", type: "num", answer: "4", tol: 0.01, unit: "", how: "Whole number.", wrong: [{ value: "3", error: "off", hint: "QUACK. Count." }],
+  body: [{ type: "text", md: "A $80\\ \\text{kg}$ student on the small piston balances a $1800\\ \\text{kg}$ elephant on a hydraulic lift piston of diameter $2.2\\ \\text{m}$; the lift holds oil of density $860\\ \\text{kg/m}^3$. The lift rises 2.55 m at most. At first the two pistons are at the same height. More students climb on. What is the smallest TOTAL number of students on the small piston?" }],
+  saccharine: { title: "Hydraulic lift", key: "Answer: 4" } };
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_QCS.json"), JSON.stringify({ v: 1, problems: [short, long] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_QCS", STEM_FRONT_TITLE: "Exam 3",
@@ -43,7 +43,7 @@ const geo = page => page.evaluate(() => {
   const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn"), tx = document.querySelector("#blocks .qtext");
   const cs = btn && getComputedStyle(btn), alpha = c => { const m = c.match(/rgba?\(([^)]+)\)/); const v = m[1].split(/[ ,\/]+/).filter(Boolean); return v.length > 3 ? +v[3] : 1; };
   return { lead: lead && lead.textContent.trim(), l: r(".qlead"), s: set && r(".qsetup"), p: r("#problem"), b: btn && btn.getBoundingClientRect(), front: r(".qghost i:nth-child(1)"), head: r(".qhead"), meta: r(".qmeta"),
-    headTx: (document.querySelector(".qhead") || {}).textContent, metaTx: (document.querySelector(".qmeta") || {}).textContent,
+    headTx: (document.querySelector(".qhead") || {}).textContent, gbox: r(".qghostbox"), qtx: (document.querySelector(".qtext") || {}).textContent, gap: document.querySelector(".qhead").getBoundingClientRect().top - document.querySelector(".qghostbox").getBoundingClientRect().bottom, metaTx: (document.querySelector(".qmeta") || {}).textContent,
     ghosts: document.querySelectorAll(".qghost i").length, ghostHidden: document.querySelector(".qghostbox").getAttribute("aria-hidden"), twist: !!document.querySelector(".qmeta #twistChip"),
     chipAlpha: alpha(cs.backgroundColor), chipBorder: cs.borderTopWidth, chipShadow: cs.boxShadow, txOv: tx && getComputedStyle(tx).overflowY, txMax: tx && getComputedStyle(tx).maxHeight, txH: tx && tx.clientHeight,
     show: document.querySelectorAll(".qshow").length, sw: document.documentElement.scrollWidth, vw: innerWidth };
@@ -51,17 +51,18 @@ const geo = page => page.evaluate(() => {
 const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 try {
   for (const w of [390, 1366]) {
-    await step(`${w}: short question: ghost 6 copies, headline + one text block + meta row (exam . q#, Twist chip, hint), Ask Cluck solid top right clear of the numeral`, async () => {
+    await step(`${w}: short question: ghost 6 copies, headline + one text block + meta row (exam . q#, Twist chip), Ask Cluck solid top right clear of the numeral`, async () => {
       const page = await open(w, "v7", "PHYS_QS1");
       try {
         const g = await geo(page);
         assert.equal(g.lead, "How fast is a rolling ball at the bottom?"); assert.equal(g.ghosts, 6); assert.equal(g.ghostHidden, "true"); assert.ok(g.twist, "Twist chip in the meta row");
-        assert.equal(g.headTx, "Roll"); assert.match(g.metaTx, /exam 3 · q1/); assert.match(g.metaTx, /Number only\./);
-        assert.ok(g.front.bottom <= g.head.top, "numeral above the headline"); assert.ok(g.l.bottom <= g.meta.top + 0.5, "meta under the text");
+        assert.equal(g.headTx, "Roll"); assert.match(g.metaTx, /exam 3 · q1/); assert.doesNotMatch(g.metaTx, /Number only/, "hint stays below the card, not in the meta row");
+        assert.ok(g.gbox.bottom <= g.head.top + 0.5, "numeral block above the headline"); assert.ok(g.l.bottom <= g.meta.top + 0.5, "meta under the text");
         assert.ok(g.b && g.b.right > g.p.right - 40 && g.b.top < g.p.top + 40, "Ask Cluck top right");
-        assert.equal(g.chipAlpha, 1, "chip fill opaque"); assert.equal(g.chipBorder, "0px", "chip: no border"); assert.match(g.chipShadow, /0px 0px 0px 6px/, "halo plate");
+        assert.equal(g.chipAlpha, 1, "chip fill opaque"); assert.equal(g.chipBorder, "0px", "chip: no border"); assert.match(g.chipShadow, /0px 1px 2px/, "tight under-shadow"); assert.doesNotMatch(g.chipShadow, /0px 0px 0px 6px/, "no halo ring");
         assert.ok(!hit(g.b, g.front), "chip box does not touch the front numeral");
         assert.equal(g.show, 0, "no Show all"); assert.equal(g.sw, g.vw, "no horizontal scroll");
+        assert.ok(!/Schibsted/.test(await page.evaluate(() => getComputedStyle(document.querySelector("#ans, #q input, #q textarea")).fontFamily)), "inputs keep Atkinson");
       } finally { await page.context().close(); }
     });
     await step(`${w}: long question: setup then the question in ONE text block on one left edge, scroll container with a max height, no Show all`, async () => {
@@ -71,6 +72,8 @@ try {
         assert.match(g.lead, /^What is the smallest TOTAL number/); assert.ok(g.s, "setup kept");
         assert.ok(Math.abs(g.l.left - g.s.left) < 0.5 && Math.abs(g.head.left - g.s.left) < 0.5 && Math.abs(g.meta.left - g.s.left) < 0.5, "one left edge: headline, text, meta");
         assert.ok(g.s.top < g.l.top, "setup above the question");
+        assert.equal(g.headTx, "Hydraulic lift", "whole topic word"); assert.ok(g.gap <= 17, "no empty band under the numeral: " + g.gap);
+        assert.ok(g.qtx.includes("2.55\u00a0m"), "number + unit joined by a no-break space"); assert.ok(!/\s[.,;:?]/.test(g.qtx), "no stray space before punctuation: " + g.qtx.match(/.{8}\s[.,;:?].{3}/));
         assert.equal(g.txOv, "auto"); assert.equal(g.txMax, w < 900 ? "170px" : "190px"); assert.ok(g.txH <= (w < 900 ? 170 : 190) + 1, "text block capped");
         assert.equal(g.show, 0, "no Show all"); assert.ok(!hit(g.b, g.front), "chip clear of the numeral");
       } finally { await page.context().close(); }
@@ -90,12 +93,13 @@ try {
       try {
         if (rm) await page.emulateMedia({ reducedMotion: "reduce" });
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "idle: no will-change");
+        await page.evaluate(() => { window.__ea = []; document.addEventListener("animationstart", e => { if (e.animationName !== "qecho") return; const an = e.target.getAnimations().find(x => x.animationName === "qecho"); window.__ea.push({ k: an ? Object.keys(an.effect.getKeyframes()[0]).filter(k => !["offset", "computedOffset", "easing", "composite"].includes(k)).sort().join() : "?", wc: getComputedStyle(e.target).willChange }); }, true); });
         await page.click("#qnext");
         await page.waitForFunction(() => document.querySelector(".qghost").getAttribute("data-n") === "2", null, { timeout: 5000 });
-        await page.waitForTimeout(60);
-        const a = await page.evaluate(() => ({ anims: document.getAnimations().filter(x => x.animationName === "qecho").map(x => Object.keys(x.effect.getKeyframes()[0]).filter(k => !["offset", "computedOffset", "easing", "composite"].includes(k)).sort().join()), wc: getComputedStyle(document.querySelector(".qghost i")).willChange }));
-        if (rm) assert.equal(a.anims.length, 0, "reduced motion: no animation");
-        else { assert.equal(a.anims.length, 6, "6 trail copies animate"); assert.ok(a.anims.every(k => k === "opacity,transform"), a.anims.join("|")); assert.match(a.wc, /transform/, "will-change while running"); }
+        await page.waitForTimeout(150);
+        const a = await page.evaluate(() => window.__ea);
+        if (rm) assert.equal(a.length, 0, "reduced motion: no animation");
+        else { assert.equal(a.length, 6, "6 trail copies animate"); assert.ok(a.every(x => x.k === "opacity,transform"), JSON.stringify(a)); assert.ok(a.every(x => /transform/.test(x.wc)), "will-change while running"); }
         await page.waitForTimeout(900);
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "will-change dropped after");
       } finally { await page.context().close(); }
