@@ -416,9 +416,11 @@
     var key = KEY_TOAST + 'v7-' + day();
     if (!g.stemToast || ls(key) === '1' || diet() || (g.stemCram && g.stemCram.on && g.stemCram.on())) return;
     ls(key, '1');
-    var pick = !model();                                                     // no calculator yet: the button says so (open() then opens the picker)
-    g.stemToast.show({ text: COPY.v7, cls: 'calc', bar: false, ms: 9000, until: Date.now() + 20000,
-      at: function () { return d.querySelector('#q .cc-row') || d.getElementById('problem'); }, action: { label: pick ? 'Pick calculator' : 'Show keys', run: function () { open({ from: 'toast-v7' }); } } });
+    setTimeout(function () {                                                 // after the first layout settles (the side column / ladder move once at load: a toast placed in the old layout would be hidden by its own follow check)
+      var pick = !model();                                                   // no calculator yet: the button says so (open() then opens the picker)
+      g.stemToast.show({ text: COPY.v7, cls: 'calc', dock: true, clear: '#problem, #q .wl-stem, #q .wl-ladder', bar: false, ms: 9000, until: Date.now() + 20000,
+        at: function () { return d.querySelector('#q .cc-row') || d.getElementById('problem'); }, action: { label: pick ? 'Pick calculator' : 'Show keys', run: function () { open({ from: 'toast-v7' }); } } });
+    }, g.__ccV7Ms == null ? 1500 : g.__ccV7Ms);
   }
   function welcomeCard(host) {
     if (!host || host.querySelector('.cc-welcome')) return;

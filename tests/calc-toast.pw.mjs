@@ -82,6 +82,18 @@ try {
     assert.equal(await b.page.$(".stoast.on"), null); await b.page.reload(); await anyUp(b.page); await b.page.waitForTimeout(1500);
     assert.equal(await b.page.$(".stoast-c-calc.on"), null, "dismissed stays dismissed"); await b.ctx.close();
   });
+  for (const [w, h] of [[390, 844], [360, 640], [1366, 768]]) await step(`toast never covers the question card, ladder or answer controls (${w}x${h})`, async () => {
+    const { ctx, page } = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER, { viewport: { width: w, height: h } });
+    await page.goto(BASE + "/"); await anyUp(page);
+    await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 }); await page.waitForTimeout(2500);
+    const hit = await page.evaluate(() => {
+      const t = document.querySelector(".stoast-c-calc").getBoundingClientRect();
+      return [...document.querySelectorAll("#problem, #q .wl-stem, #q .wl-ladder, #q button, #q input, #q .opt, #fb")].filter(e => e.getClientRects().length && (e.id !== "fb" || e.textContent.trim()))
+        .filter(e => { const r = e.getBoundingClientRect(); return r.width && r.height && r.right > t.left && r.left < t.right && r.bottom > t.top && r.top < t.bottom; }).map(e => e.tagName + "." + e.className + "#" + e.id);
+    });
+    assert.deepEqual(hit, [], "toast overlaps question content");
+    await page.screenshot({ path: join(SHOTS, `calc-toast-btn-${w}x${h}.png`) }); await ctx.close();
+  });
   await step("desktop 1366 shot", async () => {
     const { ctx, page } = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER, { viewport: { width: 1366, height: 768 } });
     await page.goto(BASE + "/"); await anyUp(page);
