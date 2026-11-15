@@ -5,7 +5,7 @@
 //   reopen     mc / pick-all: tap the row's mark (a .vkb button over it; the rows' own buttons are disabled once closed); multi keeps each part's .vk;
 //              the first close by ^ shows a one-time toast ("tap the badge") and never again
 // For every case: the drawer is open after the verdict (not a child of its host), nothing is painted over it, closing it moves nothing (0 reflow), focus returns to the
-// reopen target. Every check runs after SETTLE (> the 380 ms slide). Own serve.py; the bank and /check are routed.   node tests/strip-layers-mc.pw.mjs [port] [shotDir]
+// reopen target. Every check runs once the drawer's slide has finished (drawerSettled / drawerGone / drawerAt, no fixed sleeps). Own serve.py; the bank and /check are routed.   node tests/strip-layers-mc.pw.mjs [port] [shotDir]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -65,13 +65,14 @@ async function pageFor(browser, W, H, o = {}) {
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "STM_MCQ", null, { timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector("#qnav").hidden, null, { timeout: 6000 });
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(400);   // UNKNOWN-kept: not sure what this waits for (first paint / intro?), no signal identified
   return page;
 }
 async function goTo(page, code) {
   for (let i = 0; i < 6 && (await page.textContent("#pcode")) !== code; i++) {
+    const before = await page.textContent("#pcode");
     await page.evaluate(() => document.querySelector("#qnext").click());
-    await page.waitForTimeout(500);
+    await page.waitForFunction(p => document.querySelector("#pcode")?.textContent !== p, before, { timeout: 4000 }).catch(() => {});   // the next question is up
   }
   assert.equal(await page.textContent("#pcode"), code);
   await page.waitForSelector("#q .opt, #q .ans");
@@ -96,9 +97,15 @@ async function reach(page, kind, state) {
   else if (state === "wrong") { await part(page, 0, "9"); await verdictCount(page, 1); }
   else { await page.fill('#q .part[data-i="0"] .ans', "8"); await page.click("#go0"); await verdictCount(page, 2); }
   if (state !== "wrong") await page.waitForSelector("#q.closed");
-  await page.waitForTimeout(SETTLE + 300);
+  if (!(kind === "multi" && state === "wrong")) await drawerSettled(page);   // the drawer slides in after the verdict (a part miss with a try left has none)
 }
 const drawerOpen = page => page.evaluate(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none"; });
+/* the drawer is shown and its open slide (vd-out, 380 ms) has finished; the wait behind every old SETTLE after a verdict or a mark tap. A missing wait is caught by the assert after it. */
+const drawerSettled = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && !d.classList.contains("vd-shut") && d.getAnimations().every(a => a.playState === "finished"); }, null, { timeout: 4000 }).catch(() => {});
+/* the drawer is gone (hidden after its 240 ms slide shut, or never built) */
+const drawerGone = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !d || d.hidden; }, null, { timeout: 4000 }).catch(() => {});
+/* the drawer is settled under part i (multi: it hangs under the newest verdict's part, or moved there by its icon) */
+const drawerAt = (page, i) => page.waitForFunction(i => { const d = document.querySelector("#q .vdrawer"); if (!d || d.hidden || d.classList.contains("vd-shut") || !d.getAnimations().every(a => a.playState === "finished")) return false; const prev = d.previousElementSibling; const host = prev && prev.closest(".part"); const hp = prev && prev.classList.contains("pips") && prev.previousElementSibling && prev.previousElementSibling.closest(".part"); return document.querySelectorAll("#q .vdrawer").length === 1 && (host?.dataset.i === i || hp?.dataset.i === i); }, i, { timeout: 4000 }).catch(() => {});
 /* where the reopen target lives per kind */
 const ICON = { mc: "#q .ch:has(.opt.wrong, .opt.right) .vkb", inl: "#q .ch:has(.opt.wrong, .opt.right) .vkb", all: "#q .ch:has(.opt.wrong, .opt.right) .vkb", multi: "#q .part .ff .vk[role=button]" };
 const move = page => page.evaluate(() => {
@@ -151,7 +158,7 @@ for (const [kind, widths, states] of CASES) {
       });
       await step(`${T}: reflow 0: closing the drawer moves nothing; focus returns to the reopen target`, async () => {
         const a = await move(pg);
-        await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(SETTLE);
+        await pg.click("#q .vdrawer .vd-x"); await drawerGone(pg);
         const b = await move(pg);
         assert.deepEqual(b, a, "something moved when the drawer closed");
         assert.equal(await drawerOpen(pg), false, "still showing after close");
@@ -161,15 +168,15 @@ for (const [kind, widths, states] of CASES) {
         const ic = pg.locator(ICON[kind]).last();
         assert.equal(await ic.getAttribute("aria-expanded"), "false");
         const box = await ic.boundingBox(); assert.ok(box.width >= 44 - 0.5 && box.height >= 44 - 0.5, "reopen target under 44px: " + JSON.stringify(box));
-        await ic.click(); await pg.waitForTimeout(SETTLE);
+        await ic.click(); await drawerSettled(pg);
         assert.ok(await drawerOpen(pg), "the mark did not reopen it"); assert.equal(await ic.getAttribute("aria-expanded"), "true");
-        await pg.keyboard.press("Escape"); await pg.waitForTimeout(SETTLE);
+        await pg.keyboard.press("Escape"); await drawerGone(pg);
         assert.equal(await drawerOpen(pg), false, "Esc did not close");
-        await ic.click(); await pg.waitForTimeout(SETTLE);
-        await pg.mouse.click(5, 5); await pg.waitForTimeout(SETTLE);
+        await ic.click(); await drawerSettled(pg);
+        await pg.mouse.click(5, 5); await drawerGone(pg);
         assert.equal(await drawerOpen(pg), false, "an outside tap did not close");
       });
-      if (SHOTS) { await pg.locator(ICON[kind]).last().click(); await pg.waitForTimeout(SETTLE); await pg.screenshot({ path: `${SHOTS}/${kind}-${state}-${W}.png` }); }
+      if (SHOTS) { await pg.locator(ICON[kind]).last().click(); await drawerSettled(pg); await pg.screenshot({ path: `${SHOTS}/${kind}-${state}-${W}.png` }); }
       assert.deepEqual(pg.errs, [], "page errors");
     }
     if (pg) await pg.ctx.close();
@@ -190,7 +197,7 @@ for (const W of [360, 390]) await step(`${W}: inline pills: the badge never cove
 await step("inline pills: the drawer follows the whole group (a sibling after .choices), not a row", async () => {
   const pg = await pageFor(browser, 390, 844);
   await goTo(pg, "STM_INL"); const inl = await pg.evaluate(() => document.querySelector("#q .choices").classList.contains("inline"));
-  await pickMC(pg, "b"); await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE + 300);
+  await pickMC(pg, "b"); await verdictCount(pg, 1); await drawerSettled(pg);
   const r = await pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"), g = document.querySelector("#q .choices"); return { after: d && d.previousElementSibling === g || (d && d.previousElementSibling && d.previousElementSibling.classList.contains("pips") && d.previousElementSibling.previousElementSibling === g), open: !!d && !d.hidden }; });
   assert.ok(r.open && r.after, JSON.stringify({ inl, ...r })); await pg.ctx.close();
 });
@@ -199,28 +206,28 @@ await step("multi: one drawer + one chip (Cluck comes when the item closes); it 
   const pg = await pageFor(browser, 390, 844);
   await goTo(pg, "STM_MUL");
   await part(pg, 0, "9"); await verdictCount(pg, 1); await pg.fill('#q .part[data-i="0"] .ans', "8"); await pg.click("#go0"); await verdictCount(pg, 2);   // part a: out of tries (locked)
-  await pg.waitForTimeout(SETTLE);
-  await part(pg, 1, "4"); await pg.waitForSelector("#q.closed"); await pg.waitForTimeout(SETTLE + 300);   // part b right: the item closes, Cluck's chip comes
+  await drawerSettled(pg);
+  await part(pg, 1, "4"); await pg.waitForSelector("#q.closed"); await drawerSettled(pg);   // part b right: the item closes, Cluck's chip comes
   const under = () => pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"); const prev = d && d.previousElementSibling; return { n: document.querySelectorAll("#q .vdrawer").length, chips: document.querySelectorAll(".wchip").length, open: !!d && !d.hidden, host: prev && prev.closest(".part") && prev.closest(".part").dataset.i, hostPips: prev && prev.classList.contains("pips") && prev.previousElementSibling.closest(".part").dataset.i }; });
   const at = (u, i) => u.open && u.n === 1 && u.chips === 1 && (u.host === i || u.hostPips === i);
   let u = await under(); assert.ok(at(u, "1"), "part b (newest): " + JSON.stringify(u));
-  await pg.click('#q .part[data-i="0"] .ff .vk[role=button]'); await pg.waitForTimeout(SETTLE + 300);
+  await pg.click('#q .part[data-i="0"] .ff .vk[role=button]'); await drawerAt(pg, "0");
   u = await under(); assert.ok(at(u, "0"), "moved to part a: " + JSON.stringify(u));
-  await pg.click('#q .part[data-i="1"] .ff .vk[role=button]'); await pg.waitForTimeout(SETTLE + 300);
+  await pg.click('#q .part[data-i="1"] .ff .vk[role=button]'); await drawerAt(pg, "1");
   u = await under(); assert.ok(at(u, "1"), "back to part b: " + JSON.stringify(u));
   assert.deepEqual(pg.errs, []); await pg.ctx.close();
 });
 
 await step("the first close by ^ on a row teaches the badge once (toast), never twice; storage is per user", async () => {
   const pg = await pageFor(browser, 390, 844, { tip: true });
-  await goTo(pg, "STM_MCQ"); await pickMC(pg, "a"); await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE + 300);
+  await goTo(pg, "STM_MCQ"); await pickMC(pg, "a"); await verdictCount(pg, 1); await drawerSettled(pg);
   const shown = () => pg.evaluate(() => { const n = document.querySelector(".stoast.on, .stoast-note.on, [class*=stoast].on"); return !!n && /badge/i.test(n.textContent); });
   await pg.click("#q .vdrawer .vd-x");
   await pg.waitForFunction(() => /badge/i.test(document.body.innerText), null, { timeout: 3000 });
   assert.equal(await pg.evaluate(() => localStorage.getItem("stem-strip-badge")), "1");
-  await pg.waitForTimeout(6000);
-  await pg.locator(ICON.mc).last().click(); await pg.waitForTimeout(SETTLE);
-  await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(700);
+  await pg.waitForTimeout(6000);   // UNKNOWN-kept: not sure what the 6 s waits for (toast timer / cooldown?), no signal identified
+  await pg.locator(ICON.mc).last().click(); await drawerSettled(pg);
+  await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(700);   // UNKNOWN-kept: a negative check (no toast came), no positive signal to wait on
   assert.equal(await pg.evaluate(() => /badge/i.test(document.body.innerText)), false, "the toast came a second time");
   await pg.ctx.close();
 });
@@ -230,7 +237,7 @@ await step("a question without Cluck's key has no drawer on mc / pick-all / mult
     const pg = await pageFor(browser, 390, 844);
     await goTo(pg, code); await pg.evaluate(() => { window.__drill.state.prob.wish = false; });
     if (code === "STM_MCQ") await pickMC(pg, "a"); else await pickAll(pg, ["a", "b"]);
-    await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE + 300);
+    await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE + 300);   // negative check follows (no drawer): no positive signal to wait on
     assert.equal(await drawerOpen(pg), false, code); assert.equal(await pg.evaluate(() => document.querySelectorAll("#q .vkb").length), 0, code + " stray badge buttons");
     await pg.ctx.close();
   }
@@ -242,16 +249,16 @@ await step("phone: a tap inside Cluck's sheet is not a tap outside the drawer (u
   const pg = await pageFor(browser, 390, 844);
   await pg.route("**/explain", r => r.fulfill({ status: 500, body: "" }));
   await goTo(pg, "STM_MCQ"); await pickMC(pg, "a");
-  await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE);
+  await verdictCount(pg, 1); await drawerSettled(pg);
   const opened = () => pg.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 4000 });
   await pg.click("#q .vdrawer .wchip"); await opened();
   await pg.waitForSelector("#cluck .wtext .wretry", { timeout: 6000 });
-  await pg.waitForTimeout(SETTLE);
+  await pg.waitForTimeout(SETTLE);   // UNKNOWN-kept: not sure what this waits for (the sheet's own slide?), no signal identified
   await pg.click("#cluck .wtext .wretry");                                    // a tap in the sheet (the sheet floats over the drawer at phone width: #wish stays shown)
-  await pg.waitForTimeout(SETTLE);
+  await pg.waitForTimeout(SETTLE);   // UNKNOWN-kept: not sure what this waits for (the retry's own state change?), no signal identified
   await pg.keyboard.press("Escape");
   await pg.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
-  await pg.waitForTimeout(SETTLE);
+  await drawerSettled(pg);
   assert.equal(await drawerOpen(pg), true, "the sheet tap closed the drawer for good (it counted as a tap outside)");
   assert.equal(await pg.evaluate(() => { const c = document.querySelector("#q .vdrawer .wchip"), r = c.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!e && c.contains(e); }), true, "the chip is tappable");
   await pg.click("#q .vdrawer .wchip");
@@ -265,10 +272,11 @@ await step("multi: Ask Cluck asks about the part that was missed (part a out of 
   const asked = []; await pg.route("**/explain", r => { asked.push(r.request().postDataJSON().part); r.fulfill({ status: 200, contentType: "text/plain", body: "1. Step one" }); });
   await goTo(pg, "STM_MUL");
   await part(pg, 0, "9"); await verdictCount(pg, 1); await pg.fill('#q .part[data-i="0"] .ans', "8"); await pg.click("#go0"); await verdictCount(pg, 2);   // part a: out of tries (locked)
-  await pg.waitForTimeout(SETTLE);
-  await part(pg, 1, "4"); await pg.waitForSelector("#q.closed"); await pg.waitForTimeout(SETTLE + 300);   // part b right: the item closes, Cluck's chip comes
+  await drawerSettled(pg);
+  await part(pg, 1, "4"); await pg.waitForSelector("#q.closed"); await drawerSettled(pg);   // part b right: the item closes, Cluck's chip comes
+  const asking = pg.waitForResponse("**/explain", { timeout: 4000 }).catch(() => {});   // Ask Cluck's request has answered (the route pushed asked[] before it)
   await pg.click("#q .vdrawer .wchip"); await pg.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 4000 });
-  await pg.waitForTimeout(300);
+  await asking;
   assert.deepEqual(asked, [0], "Ask Cluck asked about part " + JSON.stringify(asked) + " (part a = 0 was the miss)");
   await pg.ctx.close();
 });
