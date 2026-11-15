@@ -93,18 +93,9 @@
     d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
     d.style.setProperty("--vd-tuck", b.tuck + "px");
   }
-  /* html.ui-v7 only (Tony Nov 14, #563: "remove the overflow tray altogether, make that the cluck button"): there is no visible tray. The .vdrawer stays in the DOM (display none, verdict-v7.css) only as the
-     chip's home, so app.js's `.rbox .wchip` lookups still find it; the verdict slot (the typed row's .vk, mc's .vkb) is the Cluck button and clicks that chip: right = See steps, wrong = Ask Cluck. */
+  /* html.ui-v7 only (Tony Nov 14, CLUCK-BTN): no tray, no drawer, no Cluck button in the verdict slot. The one Ask Cluck button on the question card (cluck_btn/cluckbtn.js) is the only entry,
+     so under the flag this file draws nothing and tears down what it marked; the verdict slot is back to a plain tick / X. */
   function V7() { return D.documentElement.classList.contains("ui-v7"); }
-  function chipOf() { return drawer && drawer.querySelector(".wchip"); }
-  function slot(h, on) {                                      // the verdict slot's face under ui-v7: a duck (typed row), the chip's name as its label
-    var vk = h.ic; if (!vk || !on) return;
-    var c = chipOf(), lab = h.v === "ok" ? "See steps" : "Ask Cluck";
-    if (c) { var t = c.querySelector(":scope > span:last-child"); if (t && /\S/.test(t.textContent) && !c.hidden) lab = t.textContent.trim(); }
-    vk.setAttribute("aria-label", lab); vk.removeAttribute("aria-expanded");
-    (h.more || []).forEach(function (b) { b.setAttribute("aria-label", lab); b.removeAttribute("aria-expanded"); });
-    if (h.kind === "ff" && !vk.querySelector(".vk-duck")) vk.insertAdjacentHTML("beforeend", '<svg class="ico vk-duck" aria-hidden="true"><use href="#i-duck"/></svg>');
-  }
   function show(d, still) {
     clearTimeout(shutT);
     d.classList.remove("vd-shut"); d.classList.toggle("vd-still", !!still || fxPlaying());
@@ -155,7 +146,7 @@
   function sync() {
     queued = false;
     var q = $("#q"), S = state();
-    if (!q || !S || !S.prob || S.wl) { drop(); return; }
+    if (!q || !S || !S.prob || S.wl || V7()) { drop(); return; }
     var hs = hostsOf(q, S);
     if (!hs.length) { drop(); return; }
     var fresh = [], cur = null;
@@ -192,7 +183,7 @@
     }
     chip = drawer.querySelector(".wchip");
     var hid = !!(wish && wish.hidden);                        // desktop with Cluck's sheet open: #wish is hidden and so is its chip (wishPaint)
-    if (chip.hidden !== hid) chip.hidden = hid;
+    if (chip && chip.hidden !== hid) chip.hidden = hid;
     hs.forEach(function (x) { if (x.v && !x.el.classList.contains("strip")) x.el.classList.add("strip"); else if (!x.v && x.el.classList.contains("strip")) x.el.classList.remove("strip"); });   // guarded: a no-op classList.add still queues a mutation record, which would loop
     if (h.at !== h.el && !h.at.classList.contains("strip")) h.at.classList.add("strip");
     if (!drawer.hidden && !drawer.classList.contains("vd-shut")) {   // the owner of the open drawer is the one lifted above it
@@ -211,9 +202,7 @@
     else if (!want && !drawer.hidden) hide(drawer);
     place(h, drawer);
     hs.forEach(function (x) { if (x.v && x.ic) icon(x, true, want && x === h); });
-    if (V7()) hs.forEach(function (x) { if (x.v && x.ic) slot(x, true); });
     (h.more || []).forEach(function (b) { b.setAttribute("aria-label", want ? "Hide Cluck's help" : "Show Cluck's help"); b.setAttribute("aria-expanded", want ? "true" : "false"); b.removeAttribute("aria-hidden"); });
-    if (V7()) { hs.forEach(function (x) { if (x.v && x.ic) slot(x, true); }); }
     drawer._h = h;
   }
   function later() { if (!queued) { queued = true; queueMicrotask(sync); } }
@@ -236,7 +225,6 @@
     var ff = ic.closest(".ff"), ch = ic.closest(".ch");
     var h = hostsOf(q, S).filter(function (x) { return ff ? x.el === ff : x.kind === "list" ? !!ch && !!ch.closest(".choices.all") : x.row === ch; })[0];
     if (!h) return;
-    if (V7()) { var c = chipOf(); if (c && !c.hidden) c.click(); return; }
     var st = seen.get(h.el);
     if (owner === h.el && st.open && drawer && !drawer.hidden) { close(false); return; }
     if (owner && owner !== h.el) { var o = seen.get(owner); if (o) o.open = false; if (drawer) hide(drawer, true); }

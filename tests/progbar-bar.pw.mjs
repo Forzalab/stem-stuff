@@ -74,7 +74,7 @@ try {
     await c.close();
   });
 
-  await step("flag ON @390: three tiles in order, 52 high, notch tile 7 empty notches (first ringed) at 16x24, gap 5, no h-scroll, hits >= 44", async () => {
+  await step("flag ON @390: three tiles in order, 52 high, notch tile 7 empty notches (first ringed) 24 high, 8-16 wide, gap 4 (QLIST-FIT phone), no h-scroll, hits >= 44", async () => {
     const [c, p] = await fresh(browser, "on");
     await p.waitForSelector("#pbTile .pb-n");
     const g = await geo(p);
@@ -82,8 +82,8 @@ try {
     for (const t of [g.list, g.tile, g.nav]) assert.equal(Math.round(t.h), 52, "tile height 52");
     assert.ok(g.list.r <= g.tile.x + 0.5 && g.tile.x + g.tile.w <= g.nav.x + 0.5, "list | notches | nav, left to right, no overlap");
     assert.ok(g.list.x >= 11.5 && g.nav.r <= g.vw - 11.5, "phone margin 12");
-    assert.ok(g.ns.every(n => Math.abs(n.h - 24) < 0.6 && n.w >= 11.9 && n.w <= 16.1), JSON.stringify(g.ns));
-    assert.ok(Math.abs(g.ns[1].x - g.ns[0].x - g.ns[0].w - 5) < 0.6, "gap 5");
+    assert.ok(g.ns.every(n => Math.abs(n.h - 24) < 0.6 && n.w >= 7.9 && n.w <= 16.1), JSON.stringify(g.ns));
+    assert.ok(Math.abs(g.ns[1].x - g.ns[0].x - g.ns[0].w - 4) < 0.6, "gap 4 (phone)");
     assert.ok(g.sw <= g.vw, "no h-scroll");
     assert.ok(g.prev.w >= 44 && g.next.w >= 44 && g.prev.h >= 44 && g.btn.h >= 44, "hit targets >= 44");
     assert.match(g.aria, /^This set: 0 of 7 answered, 0 right, 0 partly right, 0 wrong$/);
@@ -134,11 +134,11 @@ try {
     await c.close();
   });
 
-  await step("flag ON: a long bank title gives way first (ellipsis), notches stay 7 and >= 12 wide at 360; iOS back replaces the list icon", async () => {
+  await step("flag ON: a long bank title grows to its 45% cap then ellipsizes, notches give way first but stay 7 and >= 8 wide at 360 (QLIST-FIT, #564); iOS back replaces the list icon", async () => {
     const [c, p] = await fresh(browser, "on", 360, 740);
     await p.evaluate(() => { document.documentElement.classList.add("ios"); document.querySelector("#qlistName").textContent = "Thermodynamics Practice Exam Three"; document.querySelector("#qback").hidden = false; });
     const g = await geo(p);
-    assert.equal(g.ns.length, 7); assert.ok(g.ns.every(n => n.w >= 11.9), "notch min 12: " + JSON.stringify(g.ns.map(n => n.w)));
+    assert.equal(g.ns.length, 7); assert.ok(g.ns.every(n => n.w >= 7.9), "notch min 8: " + JSON.stringify(g.ns.map(n => n.w)));
     assert.ok(g.sw <= g.vw, "no h-scroll"); assert.ok(g.back && g.back.w >= 44 && g.back.h >= 44, "back is a 44 target");
     const d = await p.evaluate(() => ({ icon: getComputedStyle(document.querySelector("#qlistBtn .ico")).display, inList: !!document.querySelector(".pb-list #qback"), ell: (e => e.scrollWidth > e.clientWidth)(document.querySelector("#qlistName")),
       backFirst: document.querySelector(".pb-list").firstElementChild.id }));

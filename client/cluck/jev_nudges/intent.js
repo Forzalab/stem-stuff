@@ -558,16 +558,18 @@
       function go() {
         try {
           if (jev.state().code !== code || document.hidden) return;
-          var chip = !!(document.querySelector && document.querySelector(":is(#wish, .rbox) .wchip"));
+          var chip = !!(document.querySelector && document.querySelector(":is(#wish, .rbox) .wchip, #cluckBtn:not([aria-disabled=\"true\"])"));
           if (info.delay && !chip && Date.now() - t0 < 3000) { setTimeout(go, 150); return; }
           if (W.stemLockHelp) W.stemLockHelp.show(info);
         } catch (e) { /* never break the app */ }
       }
       info.delay ? setTimeout(go, info.delay) : go();
     },
-    say: function (line) {
+    say: function (line, state) {
       var d = W.stemDuck;
-      return !!(d && d.say && d.say(line, { onTap: function () { jev.nudgeEnd(true); }, onAway: function () { jev.nudgeEnd(false); } }));
+      var ok = !!(d && d.say && d.say(line, { onTap: function () { jev.nudgeEnd(true); }, onAway: function () { jev.nudgeEnd(false); } }));
+      if (ok && state === "S6" && W.stemCluckBtn) { try { W.stemCluckBtn.sheen("jev-s6"); } catch (e) { /* */ } }   // S6 help avoidance ("Ask anytime"): Cluck's one button sheens (v7)
+      return ok;
     }
   });
   /* J6: the green row has settled; show it after r.delay, unless the page moved on (another item, or switched off meanwhile) */

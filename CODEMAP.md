@@ -31,6 +31,8 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/answer_strip/bento.js` | MC + pick-all options as a bento3 mosaic behind `html.ui-v7`: probes each option at every column span, exact-cover search in option order (no holes), writes grid spans on `.ch`. Inert with the flag off. | MC / pick-all tile layout |
 | `client/answer/answer_strip/bento.css` | MC / pick-all option look under `html.ui-v7`: state by fill (no borders), mosaic geometry (--bc columns, unit 96). | MC option colours, tile look |
 | `client/answer/answer_strip/verdict-v7.css` | Verdict under `html.ui-v7`: no visible tray, the verdict slot is the Cluck button, row + Next one pill, the verdict line visually hidden. | verdict slot, joined row + Next |
+| `client/cluck/cluck_btn/cluckbtn.js` | The one Ask Cluck button at the top right of every question card, behind `html.ui-v7`: states (first / off / ready, aria-disabled + note), sheen, `html.cluck-ready`. Reads cluck.js through `window.stemCluckAsk`. | the Ask Cluck button, its toast, its sheen triggers |
+| `client/cluck/cluck_btn/cluckbtn.css` | Styles of the Ask Cluck button: chip look, disabled option A, left-to-right fill sweep, sheen. | button look, motion |
 | `client/shell/repair/repair.js` | Repair ladder UI after a miss. | repair steps |
 | `client/shell/repair/repair.css` | Styles of the repair ladder. | repair look |
 | `client/shell/repair/ladder-v7.css` | Ladder card, its chips and input, under `html.ui-v7`: state by fill, no edges. | ladder card colours |
