@@ -99,10 +99,12 @@
      (developers.google.com/youtube/iframe_api_reference#onError): 2 bad id, 5 HTML5 player, 100 removed / private, 101 + 150 embedding
      off. Not 153 (no Referer): every video would fail the same. tools/client_generators/brainrot_list.py drops non-embeddable ids before they ship. */
   const YT = "https://www.youtube-nocookie.com", DEAD = [2, 5, 100, 101, 150], shown = new Set(VIDS.map(v => v[0]));
-  const slots = [];
+  const slots = [], tl = [], byFrame = new WeakMap();   // tl[i]: tile i (its category, swap budget); its copies in the torus share it
   function listen(f, i) {
     const say = m => { try { f.contentWindow.postMessage(JSON.stringify({ ...m, id: i, channel: "widget" }), YT); } catch { /* not there */ } };
-    const s = slots[i] = { f, say, c: PICK[i], left: 3, t: 0, heard: false, gone: false };
+    const T = tl[i] ??= { c: PICK[i], left: 3, slots: [] };
+    const s = { f, say, T, t: 0, heard: false, gone: false, want: true, paused: false };   // want: the tile shows in the dock window (watch)
+    T.slots.push(s); slots.push(s); byFrame.set(f, s);
     f.addEventListener("load", () => {
       clearInterval(s.t); s.heard = s.gone = false;
       let n = 0;
@@ -110,45 +112,69 @@
     });
   }
   function swap(s) {
-    const free = k => CATS[k][1].filter(v => !shown.has(v[0]));
-    const ks = free(s.c).length ? [s.c] : CATS.map((_, k) => k).filter(k => free(k).length);
-    if (!ks.length || s.left < 1) return;
-    s.left--;
+    const T = s.T, free = k => CATS[k][1].filter(v => !shown.has(v[0]));
+    const ks = free(T.c).length ? [T.c] : CATS.map((_, k) => k).filter(k => free(k).length);
+    if (!ks.length || T.left < 1) return;
+    T.left--;
     const c = any(ks), [id, t, short] = any(free(c));
-    shown.add(id); s.c = c; s.gone = true;
-    s.f.title = `${t}, muted`; s.f.parentElement.classList.toggle("short", !!short); s.f.src = src(id);
+    shown.add(id); T.c = c;
+    for (const o of T.slots) { o.gone = true; o.f.title = `${t}, muted`; o.f.parentElement.classList.toggle("short", !!short); setSrc(o.f, src(id)); }   // every copy of the tile takes the new video at once
   }
+  function setSrc(f, url) { if (f.hasAttribute("src")) f.src = url; else f.dataset.src = url; }   // a copy not loaded yet takes it when it shows
   addEventListener("message", e => {
     const s = e.origin === YT && slots.find(x => x.f.contentWindow === e.source);
     if (!s || s.gone) return;
     let m; try { m = JSON.parse(e.data); } catch { return; }
     if (m.event === "readyToListen") return s.say({ event: "listening" });   // www-widgetapi.js answers it the same way
-    if (!s.heard) { s.heard = true; s.say({ event: "command", func: "addEventListener", args: ["onError"] }); }
+    if (!s.heard) { s.heard = true; s.say({ event: "command", func: "addEventListener", args: ["onError"] }); if (!s.want) playing(s, false); }
     if (m.event === "onError" && DEAD.includes(m.info)) swap(s);
   });
+  /* the torus (html.ui-v7, docked): a tile plays only while it shows in the dock's window; the rest are paused over the YouTube postMessage commands */
+  function playing(s, on) { if (!s.heard || s.paused === !on) return; s.paused = !on; s.say({ event: "command", func: on ? "playVideo" : "pauseVideo", args: [] }); }
+  let watching = false;
+  function torus() { return !!el && el.classList.contains("docked") && v7(); }
+  function watchPlay() {
+    const on = torus();
+    if (on === watching || !watch) return; watching = on;
+    if (on) el.querySelectorAll(".vid").forEach(v => watch.observe(v));
+    else { watch.disconnect(); for (const s of slots) { s.want = true; playing(s, true); } }
+  }
 
-  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700 || (PHONE.matches && v7()), corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, world = null, shelf = null, watch = null, order = [], tab = null, link = null, stashed = innerHeight < 700 || (PHONE.matches && v7()), corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
   /* shown by default, muted, playing; only you fold it (Tony, Oct 6: "must mute autoplay and shown by default, u can hide later").
      Gone: the fold while Cluck's sheet is open (Oct 5) and the fold under reduced motion, which made "Show" a dead click */
   const width = () => (desk() && !v7() ? 320 : 176);   // v7: the corner is two 84px 9:16 players + 8 gap, whatever the screen
+  /* one tile: its card, the Playing chip and its iframe (data-src = loads when the tile shows in the dock's window, see watch) */
+  const vidHTML = ([id, t, short], i, lazy) => `<div class="vid${short ? " short" : ""}" data-k="${i}"><span class="now" aria-hidden="true"><span class="eq"><b></b><b></b><b></b></span>Playing</span><iframe ${lazy ? "data-src" : "src"}="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`;
   function build() {
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
+    shelf = document.createElement("div"); shelf.className = "shelf";   // the dock's window (docked v7: a fixed height, the torus wraps inside it)
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}"><span class="now" aria-hidden="true"><span class="eq"><b></b><b></b><b></b></span>Playing</span><iframe ${i > 2 ? "data-src" : "src"}="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map((v, i) => vidHTML(v, i, i > 2)).join("");
     duo.insertAdjacentHTML("beforeend", `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`);   // a child of the duo, not of the first player: v7 floats it above the picture, flag off still lays it on the first player's corner
-    duo.querySelectorAll("iframe").forEach(listen);
+    /* the torus (html.ui-v7 only): three more copies of the mosaic make a 2 x 2 world, so the window wraps on both axes. A copy's iframe loads only when its
+       tile shows in the window (watch); the copies are hidden outside the docked dock (app.css .dupe) */
     const lay = LAYOUT[VIDS.length] || LAYOUT[5];
-    duo.style.setProperty("--rows", lay[0]);
-    duo.querySelectorAll(".vid").forEach((v, i) => { const a = lay[1][i]; if (a) v.style.setProperty("--a", area(...a)); });
-    duo.querySelector(".vid").classList.add("hero");                    // the large one when docked on v7 (the playing one); a tap on a small one moves it
+    const dupes = v7() ? [1, 2, 3].map(() => { const d = document.createElement("div"); d.className = "duo dupe"; d.setAttribute("aria-hidden", "true");
+      d.innerHTML = VIDS.map((v, i) => vidHTML(v, i, true)).join(""); return d; }) : [];
+    duo.querySelectorAll("iframe").forEach(listen);
+    for (const d of dupes) d.querySelectorAll("iframe").forEach(listen);
+    for (const d of [duo, ...dupes]) d.style.setProperty("--rows", lay[0]);
+    world = document.createElement("div"); world.className = "world"; world.append(duo, ...dupes);
+    watch = new IntersectionObserver(es => es.forEach(e => {
+      const f = e.target.querySelector("iframe"), s = byFrame.get(f); if (!s) return;
+      s.want = e.isIntersecting;
+      if (s.want && !f.hasAttribute("src") && f.dataset.src) { f.src = f.dataset.src; f.removeAttribute("data-src"); }
+      playing(s, s.want);
+    }), { root: shelf, threshold: [0] });
     /* 4-5 (docked only: the corner keeps 2) wait until the row is scrolled to them: loading="lazy" alone still loads a frame a few
        screens off (Chromium's lazy-load margin), so their src goes in when the frame first shows inside the box (Tony, Oct 29) */
     const later = [...duo.querySelectorAll("iframe[data-src]")];
-    if (later.length) {
+    if (later.length && !v7()) {   // docked v7: the torus loads them (watch)
       const io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting || e.intersectionRatio < 0.1) return; io.unobserve(e.target); const f = e.target.querySelector("iframe"); f.src = f.dataset.src; f.removeAttribute("data-src"); }), { threshold: [0.1] });
       later.forEach(f => io.observe(f.parentElement));   // a tenth in view: the few px of the 4th that peek past the 3rd are not a scroll
     }
@@ -158,13 +184,13 @@
     hd.innerHTML = `<span class="xb-label" aria-hidden="true">${ico("i-chat")}<span>Explain</span></span><button type="button" class="rot-link"></button>`;
     link = hd.lastElementChild;
     /* the scroll cue (docked only, app.css .shelf): a fade over the edge that has more row behind it, the box's own colour; off at that end */
-    const shelf = document.createElement("div"); shelf.className = "shelf";
     shelf.innerHTML = '<span class="fade l" aria-hidden="true"></span><span class="fade r" aria-hidden="true"></span>';
-    shelf.prepend(duo);
+    shelf.prepend(world);
     const ends = () => { const x = duo.scrollLeft, max = duo.scrollWidth - duo.clientWidth; shelf.classList.toggle("at-start", x <= 1); shelf.classList.toggle("at-end", x >= max - 1); };
     duo.addEventListener("scroll", ends, { passive: true }); addEventListener("resize", ends); new ResizeObserver(ends).observe(duo);
     ends();
     el.append(hd, shelf, tab);                               // all stay put: moving an iframe reloads it, so stashing only hides the duo
+    order = VIDS.map((_, i) => i); cells(); torusInput();
     home();
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-act]");
@@ -203,10 +229,61 @@
   }
   /* v7 docked mosaic: the tapped small player takes the large slot (the .hero class + CSS order; the iframes never move, so nothing reloads) */
   function bigger(v) {
-    if (v.classList.contains("hero")) return;
-    const h = duo.querySelector(".hero"), a = h.style.getPropertyValue("--a");
-    h.style.setProperty("--a", v.style.getPropertyValue("--a")); v.style.setProperty("--a", a);   // the two trade cells
-    h.classList.remove("hero"); v.classList.add("hero"); tiles();
+    const slot = order.indexOf(+v.dataset.k);
+    if (slot < 1) return;
+    [order[0], order[slot]] = [order[slot], order[0]];   // the two trade cells; every copy follows, no iframe moves
+    cells(); tiles();
+  }
+  /* order[slot] = the tile in that cell (slot 0 = the large one); every copy of a tile reads the same order */
+  function cells() {
+    const lay = LAYOUT[VIDS.length] || LAYOUT[5];
+    el.querySelectorAll(".vid[data-k]").forEach(v => {
+      const slot = order.indexOf(+v.dataset.k), a = lay[1][slot];
+      if (a) v.style.setProperty("--a", area(...a));
+      v.classList.toggle("hero", slot === 0);
+    });
+  }
+  /* the torus input (docked v7): the window is a 2 x 2 world of the mosaic (duo + three copies), moved by the offset mv.x / mv.y, wrapped to one block
+     (W x H), so going past an edge shows the opposite one. Wheel and touch / pointer drag move it (rAF, transform only); a fling coasts unless reduced motion.
+     The wheel is the one non-passive listener: it is the dock's own, and only while the pointer is over the dock (no page scroll there). */
+  const mv = { x: 0, y: 0, vx: 0, vy: 0, raf: 0, coast: 0, drag: null, suppress: false };
+  const wrap = (v, m) => m > 0 ? ((v % m) + m) % m : 0;
+  function paint() {
+    mv.raf = 0; const r = duo.getBoundingClientRect();
+    world.style.transform = `translate3d(${-wrap(mv.x, r.width)}px, ${-wrap(mv.y, r.height)}px, 0)`;
+  }
+  function nudge(dx, dy) { mv.x += dx; mv.y += dy; if (!mv.raf) mv.raf = requestAnimationFrame(paint); }
+  function stopCoast() { cancelAnimationFrame(mv.coast); mv.coast = 0; mv.vx = mv.vy = 0; }
+  function coast() { mv.vx *= .92; mv.vy *= .92; nudge(mv.vx, mv.vy); mv.coast = Math.abs(mv.vx) + Math.abs(mv.vy) > .3 ? requestAnimationFrame(coast) : 0; }
+  function torusInput() {
+    shelf.addEventListener("wheel", e => {
+      if (!torus()) return;
+      e.preventDefault(); stopCoast();
+      const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      nudge(e.deltaX * k, e.deltaY * k);
+    }, { passive: false });
+    shelf.addEventListener("pointerdown", e => {
+      mv.suppress = false;
+      if (!torus() || e.button > 0) return;
+      stopCoast(); mv.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, moved: false };
+      try { shelf.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
+    }, { passive: true });
+    shelf.addEventListener("pointermove", e => {
+      const d = mv.drag; if (!d || e.pointerId !== d.id) return;
+      if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
+      d.moved = true;
+      const ex = e.clientX - d.lx, ey = e.clientY - d.ly; d.lx = e.clientX; d.ly = e.clientY;
+      nudge(-ex, -ey); mv.vx = .6 * mv.vx - .4 * ex; mv.vy = .6 * mv.vy - .4 * ey;
+    }, { passive: true });
+    const release = e => {
+      const d = mv.drag; if (!d || (e && e.pointerId !== d.id)) return;
+      mv.drag = null;
+      if (!d.moved) return;
+      mv.suppress = true;   // the tap that ends a drag is not a tap on a tile
+      if (!RM.matches && Math.abs(mv.vx) + Math.abs(mv.vy) > 1) mv.coast = requestAnimationFrame(coast); else mv.vx = mv.vy = 0;
+    };
+    shelf.addEventListener("pointerup", release, { passive: true }); shelf.addEventListener("pointercancel", release, { passive: true });
+    shelf.addEventListener("click", e => { if (mv.suppress) { mv.suppress = false; e.stopPropagation(); e.preventDefault(); } }, true);
   }
   /* the small ones are buttons ("show this one big") only in the docked v7 mosaic; everywhere else they are plain frames */
   function tiles() {
@@ -249,6 +326,7 @@
     el.classList.toggle("docked", dock);
     if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin; }
     else if (was) stashed = userMin || innerHeight < 700 || (PHONE.matches && v7());   // back to the floating corner's own rule (a short window: it would cover the page)
+    watchPlay();
   }
   function place(animate) {
     if (!el) return;

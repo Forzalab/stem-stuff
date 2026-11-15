@@ -858,6 +858,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .rot[hidden] { display: none; }
 .rot.snap { transition: transform .3s ease-out; }
 .rot .duo { position: relative; display: grid; gap: var(--s2); width: var(--w, 176px); }
+.rot .world { display: contents; }   /* the docked v7 torus's 2 x 2 world (below); otherwise the duo is laid out as it always was */
 .rot.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }   /* still playing, out of sight */
 .rot .vid { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: var(--field); box-shadow: var(--shadow-3); }
 .rot.drag .vid { box-shadow: var(--shadow-4); }
@@ -924,12 +925,20 @@ html.ui-v7 .rot .rtab { position: relative; z-index: 1; border-radius: 0 12px 12
 html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradient(to left, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
 /* desktop dock (BRAINROT-B2, Tony Nov 14: "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): no box, the mosaic fills the whole notes column.
    8 tiles on a 12-col grid, gap 8: --rows rows of --R px; each tile's cells come from brainrot.js LAYOUT (--a = its grid-area), 1x1 / 2x1 / 1x2 / 2x2 interlocked, no holes. No 9:16 on any tile: every video is
-   centre-cropped to its tile (cover, from the container units below). R = a unit's width x .8 (whole px, on 4) but never more than the height budget leaves (--hmax). */
-html.ui-v7 .rot.docked { --hmax: min(60dvh, 100dvh - 28rem); }   /* the sheet is open from load: its header, a few lines and the ask field keep 28rem; the old budget was min(40dvh, 100dvh - 32rem) */
+   centre-cropped to its tile (cover, from the container units below). R = a unit's width x .8 (whole px, on 4); the block is taller than the window and scrolls in it (the torus). */
+/* the dock is a window onto the mosaic, 40% of the notes column (about: column top + foot = 206px; 180px at least, 360px at most). The Cluck sheet takes the rest */
+html.ui-v7 .rot.docked { --rot-dock-h: clamp(180px, calc((100dvh - 206px) * .4), 360px); }
+/* the torus (BRAINROT torus, Tony Nov 15): the window is fixed-height, the mosaic inside it is a 2 x 2 world of the same block (duo + three copies), moved by a transform.
+   The mask is a subtle fade at its top and bottom edge */
+html.ui-v7 .rot.docked .shelf { height: var(--rot-dock-h); overflow: hidden; overflow: clip; position: relative;   /* clip: nothing may scroll the window (scrollIntoView) */ touch-action: none; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent); }
+html.ui-v7 .rot.docked.stashed .shelf { display: none; }   /* folded: nothing shows, so nothing plays (the watch pauses it) */
+html.ui-v7 .rot.docked .world { position: absolute; left: 0; top: 0; width: 200%; display: grid; grid-template-columns: 1fr 1fr; will-change: transform; }
+html.ui-v7 .rot:not(.docked) .dupe { display: none; }   /* the copies are for the docked window only */
 html.ui-v7.side #work.cl-on .rot.docked .vid { height: auto; }
 html.ui-v7 .rot.docked .shelf { container-type: inline-size; }
 html.ui-v7 .rot.docked .shelf .fade { display: none; }
-html.ui-v7 .rot.docked .duo { --R: max(48px, round(down, min((var(--hmax) - (var(--rows, 4) - 1) * var(--s2)) / var(--rows, 4), (100cqw - var(--s5)) / 4 * .8), 4px));
+html.ui-v7 .rot.docked .duo { --R: max(48px, round(down, (100cqw - var(--s5)) / 4 * .8, 4px));
   container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: var(--s2);
   width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; scroll-snap-type: none; }
 html.ui-v7 .rot.docked.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; display: block; }   /* folded: still playing, out of sight (as flag off) */
