@@ -84,13 +84,24 @@
 html.ui-v7 {
   --page: #02040d; --card: #0a1020; --sheet: #0d142a; --float: #141d36; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
+  /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the lit top edge of a raised control (6% ink, the progbar tile's
+     5% idea), --lit-warm = the same on Cluck's warm rim, --shadow-raise = the small contact shadow under it, --press = pressed in (no outer shadow),
+     --well = a recessed field (dark top inset, lit bottom lip). Raised = a lit top + a small shadow; never a border. */
+  --lit-top: inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+  --lit-warm: inset 0 1px 0 rgb(255 190 120 / 0.12);
+  --lit-send: inset 0 1px 0 rgb(255 225 190 / 0.35);
+  --lit-action: inset 0 1px 0 color-mix(in srgb, var(--action) 70%, #fff);   /* hand-picked lighter top, not a white overlay */
+  --shadow-raise: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-soft: 0 6px 14px -6px rgb(0 0 0 / 0.35);   /* the card's second, soft shadow */
+  --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
+  --well: inset 0 2px 3px rgb(0 0 0 / 0.5), inset 0 -1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
 }
 /* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
    fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
    box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
 .p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
 /* NO-BORDER 1 (Tony Nov 14, option A; ui-v7 only): the question card is a bg step (--card on --page), no inset edge; shadow-1 only, its colour differs from the page */
-html.ui-v7 .p, html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }
+html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }   /* DEPTH 1: the question card .p is lifted in the DEPTH block at the end of this file */
 @supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
   :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
 }
@@ -1750,3 +1761,27 @@ html.fx-busy :is(.ch .send, #fb > .cluck) { animation: none; }   /* one group at
 :is(.btn, .opt, .nx, .vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go) { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) { .opt:active:not(:disabled), :is(.vdrawer > .wchip, .vdrawer > .vd-x, .stoast-x, .cl-x, .cl-starter, .mini-chip, .mini-go):active { transform: none; } }
 @media (prefers-contrast: more) { :root { --line: var(--muted); --hint: var(--muted); } .cl-dim { opacity: .96; } .glass { backdrop-filter: none; background-color: var(--paper); } }
+/* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only; brain ui-polish/depth/PROPOSALS.txt). Last in the file so it wins the equal-specificity rules above
+   (html.side .cl, .ask:focus-within, .ff:focus-within). Light from above: raised = a lit top + a small shadow below, pressed = inset, never a border.
+   Nav tiles (.pb, progbar.css) stay flat. */
+/* D1 buttons + option rows: the primary (Check / Go) and each option row are raised; pressed = inset, no outer shadow */
+html.ui-v7 .opt { box-shadow: var(--lit-top), var(--shadow-raise); }
+html.ui-v7 .opt:active:not(:disabled) { box-shadow: var(--press); }
+html.ui-v7 .btn-go:not(.waiting) { box-shadow: var(--lit-action), var(--shadow-raise); }
+html.ui-v7 .btn-go:not(.waiting):active { box-shadow: var(--press); }
+/* D2 question card: the lowest raised layer, a lit top and a soft second shadow (~.35); .boxed .q stays flat */
+html.ui-v7 .p { box-shadow: var(--lit-top), var(--shadow-1), var(--shadow-soft); }
+/* D3/4 Cluck: the warm rim stays (phone sheet); the lit top is added. The desk box keeps its shadow-3 and gains the same lit top */
+html.ui-v7:not(.side) .cl { box-shadow: var(--lit-warm); }
+html.ui-v7.side .cl { box-shadow: var(--lit-warm), var(--shadow-3); }
+html.ui-v7 .ask { box-shadow: var(--well); }   /* the recessed well; the rotating rim (::before/::after) paints over it while Cluck types */
+html.ui-v7 .ask:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--help); }
+html.ui-v7 .ask .send { box-shadow: var(--lit-send), var(--shadow-raise); }
+/* D5/6 proof box + short answer: recessed wells. The fill is --field (page navy) on the --card box: 1.08:1 against WCAG 1.4.11's 3:1, so the
+   1px --edge stays on both fields (the gate is measured in tests/depth.pw.mjs). Focus keeps its one ring. */
+html.ui-v7 .xb textarea { box-shadow: var(--well); }
+html.ui-v7 .xb textarea:focus { box-shadow: var(--well), inset 0 0 0 1px var(--focus); }
+html.ui-v7 #q .ff { box-shadow: var(--well); }
+html.ui-v7 #q .ff:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--focus); }
+/* owner rule (ui-v7, DEPTH 1): no circles except the Cluck profile avatar. The option letter badge is a rounded square (8px), never 50% */
+html.ui-v7 .opt .badge { border-radius: 8px; }
