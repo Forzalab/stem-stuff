@@ -49,14 +49,19 @@ html.ui-v7 .code-box, html.ui-v7 .code-box:hover, html.ui-v7 .code-box:focus-wit
 html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box {
   background: #060b1b;
 }
-html.ui-v7 #q .ff:focus-within, html.ui-v7 .code-box:focus-within {
-  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 #2a3a66, 0 0 0 2px var(--focus);
-}
-html.ui-v7 .ff .fl { border: 0; outline: 0; }
+/* focus (Tony Nov 15, round 3): no glow. Keyboard focus = the offset outline (focus-visible); a mouse or tap focus (strip.js sets [data-ptr] on pointerdown) shows no ring, only the well */
+html.ui-v7 #q .ff input:focus-visible, html.ui-v7 .code-box input:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 2px; }
+html.ui-v7 #q .ff input:focus:not(:focus-visible), html.ui-v7 .code-box input:focus:not(:focus-visible) { outline: none; }
+html.ui-v7 #q .ff[data-ptr] input:focus-visible, html.ui-v7 .code-box[data-ptr] input:focus-visible { outline: none; }
+html.ui-v7 #q .ff input:focus::placeholder { color: var(--hint); }   /* the placeholder shows while the field is empty, focus or not */
+html.ui-v7 #q > .how { display: block !important; }   /* the hint line stays (the caption's :has rule hid it on focus) */
+html.ui-v7 .ff > .fl { display: none; }   /* Tony Nov 15 (round 3): no floating caption; the placeholder is the only label, and it hides when typing */
 html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.ok, html.ui-v7 #q .ff.rbox.ok { box-shadow: var(--shadow-raise); }
 
 /* the typed field's tick / cross (Tony Nov 15): no button. No raised tile, no fill, no shadow, no hover; just the glyph in the field. It stays a click target only for the
    toast "Tap Ask Cluck for help" (strip.js); aria-hidden, not in the tab order (strip.js icon()). The judged row's Check slot loses its raised fill too (the retry bar stays). */
-html.ui-v7 #q .ff .vk { pointer-events: auto; cursor: default; background: none; box-shadow: none; border-radius: 0; width: 24px; height: 24px; }
+html.ui-v7 #q .ff .vk { pointer-events: auto; cursor: default; background: none; box-shadow: none; border-radius: 0; width: 24px; height: 24px; top: 50%; right: 14px; transform: translateY(-50%); }   /* centred vertically, the same box and inset for the tick and the cross */
 html.ui-v7 #q .ff .vk:hover, html.ui-v7 #q .ff .vk:focus-visible { background: none; outline: 0; }
 html.ui-v7 #q .ff.bad .btn-go, html.ui-v7 #q .ff.rbox.ok .btn-go { background: none; box-shadow: none; }
+/* the retry-wait bar (app.css .btn-go.waiting::before, red 3px) drew a dot under the cross: hidden under ui-v7 (the wait itself is unchanged) */
+html.ui-v7 #q .ff .btn-go.waiting::before { display: none; }

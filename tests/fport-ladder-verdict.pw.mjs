@@ -138,7 +138,7 @@ try {
         assert.ok(slot.dotR !== "50%" && slot.dotOutline === "0px", "the Cluck dot is no circle / no ring: " + slot.dotR + " " + slot.dotOutline);
         const wait = await page.evaluate(() => { const b = document.querySelector("#q .ff.bad .btn-go"), cs = b && getComputedStyle(b, "::before"); return b && b.classList.contains("waiting") ? { bgi: cs.backgroundImage, h: cs.height, name: cs.animationName } : null; });
         if (SHOTS && wait) await page.screenshot({ path: join(SHOTS, `waiting-${w}.png`) });
-        assert.ok(!wait || (wait.bgi === "none" && wait.h === "3px" && wait.name === "vd-wait"), "the retry wait = a thin bar, not the conic wedge: " + JSON.stringify(wait));
+        assert.ok(!wait || (wait.bgi === "none" && wait.name === "vd-wait"), "the retry wait keeps its keyframes (under ui-v7 the bar is not painted): " + JSON.stringify(wait));
         const ln = await page.evaluate(() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer:not([hidden])"); if (!l || !d || !l.getClientRects().length) return null; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { a: a.toJSON(), b: b.toJSON(), hit: !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top + 0.5 || a.top >= b.bottom) }; });
         assert.ok(!ln || !ln.hit, "the verdict line is covered by the tray: " + JSON.stringify(ln));
         assert.notEqual(slot.shadow, "none", "the row casts a shadow onto the tray");
@@ -186,7 +186,7 @@ try {
       await page.locator("#ff :is(input, textarea)").first().focus(); await page.waitForTimeout(250);
       const focus = await read();
       assert.equal(focus.bw, ZERO, "focus: no border " + JSON.stringify(focus));
-      assert.ok(/rgb\(90, 169, 255\) 0px 0px 0px 2px/.test(focus.shadow), "focus: soft accent glow in the inset stack: " + focus.shadow);
+      assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring, the well only: " + focus.shadow);
       await page.locator("#ff :is(input, textarea)").first().fill("1.5"); await page.waitForTimeout(250);
       const typed = await read();
       assert.equal(typed.bw, ZERO, "typed: no border " + JSON.stringify(typed));
@@ -206,6 +206,40 @@ try {
         .then(ok => assert.ok(ok, "the tap shows the toast 'Tap Ask Cluck for help'"));
       const drawer = await page.evaluate(() => { const d = document.querySelector("#q .vdrawer:not([hidden])"); return !!d && d.getClientRects().length > 0; });
       assert.equal(drawer, false, "nothing else opens (no verdict drawer)");
+      assert.deepEqual(page.errs, [], "page errors");
+    } finally { await page.context().close(); }
+  });
+  for (const w of W) await step(`${w}: flag on (round 3): the cross and tick sit vertically centred, no dot or bar under them; no caption; focus by mouse = no ring, by Tab = outline`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
+    try {
+      await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.636"); await f.press("Enter");
+      await page.waitForSelector("#q .ff.bad .vk", { timeout: 8000 }); await page.waitForTimeout(500);
+      const geo = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), v = ff.querySelector(".vk"), r = ff.getBoundingClientRect(), vr = v.getBoundingClientRect();
+        const painted = [...ff.querySelectorAll("*")].filter(e => !e.closest(".vk") && e.getClientRects().length && e.getBoundingClientRect().right > r.right - 60 && getComputedStyle(e).backgroundColor !== "rgba(0, 0, 0, 0)" && e.className !== "send").map(e => String(e.className || e.tagName).slice(0, 30));
+        const wb = ff.querySelector(".btn-go"), wd = wb && getComputedStyle(wb, "::before").display;
+        return { dy: Math.abs((vr.top + vr.height / 2) - (r.top + r.height / 2)), right: Math.round(r.right - vr.right), painted, wd }; });
+      const wrong = await geo();
+      assert.ok(wrong.dy <= 1, "wrong: the cross is vertically centred: " + JSON.stringify(wrong));
+      assert.equal(wrong.wd, "none", "wrong: no red bar / dot under the cross");
+      assert.deepEqual(wrong.painted, [], "wrong: nothing painted in the field's right 60px except the mark");
+      await page.locator("#ff :is(input, textarea)").first().focus();
+            // caption gone, mouse focus: no ring
+      await page.locator("#q #ff.ff input").first().click({ force: true }); await page.waitForTimeout(250);
+      const mouse = await page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), i = ff.querySelector("input"), cs = getComputedStyle(i), fl = ff.querySelector(".fl");
+        return { ol: cs.outlineStyle, sh: getComputedStyle(ff).boxShadow, fl: fl ? getComputedStyle(fl).display : "none", ptr: ff.hasAttribute("data-ptr") }; });
+      assert.equal(mouse.fl, "none", "no caption"); assert.ok(!mouse.ol || mouse.ol === "none", "mouse focus: no outline: " + JSON.stringify(mouse));
+      assert.ok(!/0px 0px 0px 2px/.test(mouse.sh), "mouse focus: no glow ring: " + mouse.sh);
+      // keyboard: blur then Tab into the field
+      await page.evaluate(() => document.activeElement && document.activeElement.blur());
+      await page.evaluate(() => { document.querySelector("#q #ff.ff").closest("body").focus(); });
+      let hit = false; for (let k = 0; k < 40 && !hit; k++) { await page.keyboard.press("Tab"); hit = await page.evaluate(() => document.activeElement && document.activeElement.tagName === "INPUT" && !!document.activeElement.closest("#q #ff.ff")); }
+      assert.ok(hit, "Tab reaches the field");
+      const kb = await page.evaluate(() => { const i = document.activeElement, cs = getComputedStyle(i); return { ol: cs.outlineStyle, w: cs.outlineWidth, off: cs.outlineOffset }; });
+      assert.deepEqual(kb, { ol: "solid", w: "2px", off: "4px" }, "keyboard focus: the offset outline: " + JSON.stringify(kb));
+      await page.waitForTimeout(200);
+      const sh = await page.evaluate(() => getComputedStyle(document.querySelector("#q #ff.ff")).boxShadow);
+      assert.ok(!/0px 0px 0px 2px/.test(sh), "keyboard focus: no glow ring behind the outline");
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });

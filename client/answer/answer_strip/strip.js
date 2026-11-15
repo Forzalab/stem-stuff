@@ -244,6 +244,9 @@
     var vk = e.target.closest && e.target.closest(BTN);
     if (vk) { e.preventDefault(); toggle(vk); }
   });
+  /* ui-v7 focus (round 3): a mouse or tap on the typed field marks it [data-ptr] (no focus ring); the keyboard clears it, so Tab focus shows the outline */
+  D.addEventListener("pointerdown", function (e) { var f = e.target.closest && e.target.closest("#q .ff, .code-box"); if (f) f.setAttribute("data-ptr", ""); }, true);
+  D.addEventListener("keydown", function () { D.querySelectorAll("[data-ptr]").forEach(function (f) { f.removeAttribute("data-ptr"); }); }, true);
   D.addEventListener("keydown", function (e) {
     var vk = e.target.closest && e.target.closest("#q .ff .vk[role=button]");
     if (vk && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(vk); return; }
