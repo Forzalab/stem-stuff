@@ -92,6 +92,15 @@
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
     d.style.width = dw + "px"; d.style.left = (b.side === "left" ? b.left : b.left + w - dw) + "px"; d.style.top = b.bottom - b.tuck + "px";
     d.style.setProperty("--vd-tuck", b.tuck + "px");
+    /* html.ui-v7 only (Tony: the tray must not hide the verdict line): a revealed-answer / verdict line right under the box ("That's it!", "Not it. The answer is ...") keeps its room;
+       the tray then hangs from the line's bottom edge instead of tucking under the box */
+    if (D.documentElement.classList.contains("ui-v7")) {
+      var ln = D.querySelector("#q .ansl"), cb = ln && containing(d);
+      if (ln && ln.getClientRects().length && cb) {
+        var c = cb.getBoundingClientRect(), lb = ln.getBoundingClientRect(), y = lb.bottom - c.top - cb.clientTop + cb.scrollTop + 8;
+        if (y > b.bottom) { d.style.top = y + "px"; d.style.setProperty("--vd-tuck", "0px"); }
+      }
+    }
   }
   function show(d, still) {
     clearTimeout(shutT);
