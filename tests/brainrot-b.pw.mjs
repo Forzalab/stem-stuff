@@ -1,6 +1,6 @@
 // BRAINROT-B smoke (Tony, Nov 14: "go with bento style, the O one with the expand-jut-out button on mobile as video bkg"; phones SHOW it):
 // html.ui-v7 only. Phone 390x844: a stashed 44x96 tab on the edge whose background is the live first player (clipped), tap = two 84x148 players with - / x
-// ABOVE them; desktop 1366x768: no box, 5 players in view (one large + four small), a tap on a small one swaps it large; no borders on any of it.
+// ABOVE them; desktop: BRAINROT-B2 full-width bento of 8 varied tiles (hero 2x2 + tall + wide + small), a tap swaps a tile into the hero; no borders on any of it.
 // Flag off: a phone still gets none (the Oct 17 rule). Own serve.py + a one-problem sugar bank; YouTube is a blank stub (no request leaves).
 // usage: node tests/brainrot-b.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -49,20 +49,38 @@ try {
     assert.equal(await page.$eval("#rot .vid", e => getComputedStyle(e).borderTopWidth), "0px", "no border");
     await c.close();
   });
-  await step("v7 desktop 1366x768: no box, 5 players all in view, the playing one large; a tap on a small one swaps it large; zero borders", async () => {
-    const { c, page } = await open({ width: 1366, height: 768 }, true);
+  for (const [W, H] of [[1366, 768], [1024, 768], [1920, 1080]]) await step(`v7 desktop ${W}x${H} (BRAINROT-B2): full-width bento of 8 (1 hero 2x2, tall, wide, small), no holes, rows on 4, zero borders; Cluck sheet still shows header + ask without page scroll; a tap swaps a tile into the hero`, async () => {
+    const { c, page } = await open({ width: W, height: H }, true);
     await page.waitForSelector("#rot.docked .vid");
+    const duo = (await rect(page, "#rot .duo"))[0], col = (await rect(page, "#work"))[0];
     const vs = await rect(page, "#rot .vid");
-    assert.equal(vs.length, 5);
-    assert.ok(vs.every(v => v.x >= 0 && v.r <= 1366 && v.y >= 0 && v.b <= 768), "all 5 in the window");
-    const big = i => page.$$eval("#rot .vid", es => es.findIndex(e => e.classList.contains("hero")));
+    assert.equal(vs.length, 8, "8 tiles (one per category)");
+    assert.ok(Math.abs(duo.w - col.w) <= 1 && Math.abs(duo.x - col.x) <= 1, `the mosaic fills the notes column: ${JSON.stringify([duo.x, duo.w, col.x, col.w])}`);
+    /* no holes, no overlaps: every 4px sample point of the grid lies in a tile (a tile grown by half the 8px gap), and no two tiles overlap */
+    const hit = (x, y) => vs.filter(v => x >= v.x - 4.5 && x <= v.r + 4.5 && y >= v.y - 4.5 && y <= v.b + 4.5).length;
+    for (let y = duo.y + 2; y < duo.b; y += 4) for (let x = duo.x + 2; x < duo.r; x += 4) assert.ok(hit(x, y) >= 1, `a hole at ${Math.round(x)},${Math.round(y)}`);
+    for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) { const a = vs[i], b = vs[j]; assert.ok(Math.min(a.r, b.r) - Math.max(a.x, b.x) <= 1 || Math.min(a.b, b.b) - Math.max(a.y, b.y) <= 1, `tiles ${i} and ${j} overlap`); }
+    assert.ok(Math.abs(Math.max(...vs.map(v => v.b)) - duo.b) <= 1 && Math.abs(Math.min(...vs.map(v => v.y)) - duo.y) <= 1 && Math.abs(Math.max(...vs.map(v => v.r)) - duo.r) <= 1, "the tiles' union reaches every edge of the grid");
+    assert.ok(vs.every(v => Math.abs(((v.y - duo.y) % 4 + 4) % 4) < 0.01 || Math.abs(((v.y - duo.y) % 4 + 4) % 4 - 4) < 0.01), "every tile's top is on 4 from the grid's top: " + JSON.stringify(vs.map(v => v.y - duo.y)));
+    assert.ok(vs.every(v => v.h % 4 === 0 || Math.abs(v.h % 4 - 4) < 0.01 || Math.abs(v.h % 4) < 0.01) || vs.every(v => (v.h + 8) % 4 === 0), "heights: whole rows");
+    const shapes = new Set(vs.map(v => Math.round(v.w / 10) + "x" + Math.round(v.h / 10)));
+    assert.ok(shapes.size >= 4, "a real mix of sizes: " + [...shapes]);
+    const big = () => page.$$eval("#rot .vid", es => es.findIndex(e => e.classList.contains("hero")));
     assert.equal(await big(), 0);
-    const [h, s] = [vs[0], vs[1]]; assert.ok(h.w > s.w * 1.9 && h.h > s.h * 1.9, `one large, four small: ${JSON.stringify([h, s])}`);
+    assert.ok(vs[0].w > vs[1].w * 1.9 && vs[0].h > vs[2].h * 1.9, "the hero is the 2x2");
     assert.equal(await page.$eval("#rot .duo", e => { const s = getComputedStyle(e); return [s.boxShadow, s.backgroundColor, s.borderTopWidth].join("|"); }), "none|rgba(0, 0, 0, 0)|0px", "no box");
     assert.equal(await page.$$eval("#rot .vid", es => es.every(e => getComputedStyle(e).borderTopWidth === "0px")), true);
-    await page.click("#rot .vid:nth-child(3)"); await page.waitForTimeout(200);
-    assert.equal(await big(), 2, "the tapped one is large now");
-    const after = await rect(page, "#rot .vid"); assert.ok(after[2].w > after[0].w * 1.9, "and the old one is small");
+    assert.equal(await page.$$eval("#rot iframe", es => es.filter(f => f.getAttribute("src") || f.src).length), 8, "all in view: all loaded");
+    /* the sheet (open from load) keeps its header and the ask field in the window; the page does not scroll */
+    const sh = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight, cl: document.querySelector("#work .cl").getBoundingClientRect().top, ask: document.querySelector("#work .cl-ft .ask").getBoundingClientRect().bottom }));
+    assert.ok(sh.sh <= sh.ih && sh.ask <= sh.ih && sh.cl < sh.ask - 100, "Cluck's sheet fits: " + JSON.stringify(sh));
+    const frames = await page.$$eval("#rot iframe", es => es.map(e => e.src)), before = vs[3];
+    await page.click("#rot .vid:nth-child(4)"); await page.waitForTimeout(200);
+    assert.equal(await big(), 3, "the tapped one is the hero now");
+    const after = await rect(page, "#rot .vid");
+    assert.ok(Math.abs(after[3].w - vs[0].w) <= 1 && Math.abs(after[3].h - vs[0].h) <= 1 && Math.abs(after[3].x - vs[0].x) <= 1, "it took the hero's cells");
+    assert.ok(Math.abs(after[0].w - before.w) <= 1 && Math.abs(after[0].h - before.h) <= 1 && Math.abs(after[0].x - before.x) <= 1, "and the old hero took its cells");
+    assert.deepEqual(await page.$$eval("#rot iframe", es => es.map(e => e.src)), frames, "no iframe reloaded");
     await c.close();
   });
   await step("flag off, phone 390: still no brainrot at all (the Oct 17 rule stays)", async () => {

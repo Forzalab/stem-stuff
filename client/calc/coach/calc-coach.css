@@ -178,3 +178,5 @@ html.ui-v7 .stoast.stoast-c-calc .stoast-b { display: contents; }
 html.ui-v7 .stoast.stoast-c-calc .stoast-a { grid-column: 2; grid-row: 1; justify-self: end; min-height: 44px; padding: 0 var(--s3); border: 0; border-radius: 10px; background: var(--chip); color: var(--ink); font-weight: 600; white-space: nowrap; cursor: pointer; }
 html.ui-v7 .stoast.stoast-c-calc .stoast-a:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
 html.ui-v7 .stoast.stoast-c-calc .stoast-x { grid-column: 3; grid-row: 1; }
+/* CRAM-CTA-OFF (Tony Nov 14): under ui-v7 the item card's TI/Casio + Hail Mary buttons are cut; the calc tip lives in the toast (CALC-TOAST). Flag off unchanged. */
+html.ui-v7 #problem > .cc-row, html.ui-v7 .cc-row { display: none !important; }
