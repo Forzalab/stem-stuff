@@ -912,8 +912,8 @@ html.ui-v7 .rot.stashed:not(.docked) .duo { position: absolute; left: 0; top: 0;
 html.ui-v7 .rot.stashed.r:not(.docked) .duo { border-radius: 12px 0 0 12px; }
 html.ui-v7 .rot.stashed:not(.docked) .vid { width: 44px; height: 96px; border-radius: 0; box-shadow: none; }
 html.ui-v7 .rot.stashed:not(.docked) .vid:nth-child(n + 2), html.ui-v7 .rot.stashed:not(.docked) .ctl { display: none; }
-html.ui-v7 .rot .rtab { position: relative; z-index: 1; border-radius: 0 12px 12px 0; background: linear-gradient(to right, rgb(2 4 13 / .15), rgb(2 4 13 / .55)); }
-html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradient(to left, rgb(2 4 13 / .15), rgb(2 4 13 / .55)); }
+html.ui-v7 .rot .rtab { position: relative; z-index: 1; border-radius: 0 12px 12px 0; background: linear-gradient(to right, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
+html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradient(to left, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
 /* desktop dock: no box (white space), 5 players in a bento on the 12-col grid: the playing one large (span 6 x 2 rows) + four span 3, all in view (this replaces the Oct 31
    "3.5 visible + fade" row). Rows = whole px on 4: R = the room the column leaves (--hmax, the old cap) or what the column's width gives 9:16 tiles; the mosaic is as wide as 4 tiles + 24 */
 html.ui-v7 .rot.docked { --hmax: min(40dvh, 100dvh - 22rem); }
@@ -927,9 +927,9 @@ html.ui-v7 .rot.docked.stashed .duo { position: absolute; width: 1px; height: 1p
 html.ui-v7 .rot.docked .vid, html.ui-v7.side #work.cl-on .rot.docked .vid { grid-column: span 3; width: auto; height: auto; aspect-ratio: auto; border: 0; border-radius: 12px; background: var(--sheet); cursor: pointer; scroll-snap-align: none; }
 html.ui-v7 .rot.docked .vid.hero, html.ui-v7.side #work.cl-on .rot.docked .vid.hero { grid-column: 1 / span 6; grid-row: 1 / span 2; order: -1; border-radius: 16px; cursor: auto; }
 html.ui-v7 .rot.docked .vid:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-html.ui-v7 .rot.docked .vid.hero .now { position: absolute; z-index: 1; right: var(--s3); top: var(--s3); display: flex; align-items: center; gap: var(--s1); height: 24px; padding: 0 var(--s2); border-radius: 8px; background: rgb(2 4 13 / .55); color: var(--ink); font-size: 12px; font-weight: 600; line-height: 16px; pointer-events: none; }
+html.ui-v7 .rot.docked .vid.hero .now { position: absolute; z-index: 1; right: var(--s3); top: var(--s3); display: flex; align-items: center; gap: var(--s1); height: 24px; padding: 0 var(--s2); border-radius: 8px; background: color-mix(in srgb, var(--scrim) 55%, transparent); color: var(--ink); font-size: 12px; font-weight: 600; line-height: 16px; pointer-events: none; }
 html.ui-v7 .rot .now .eq { display: flex; align-items: flex-end; gap: var(--s1); height: 16px; margin-right: var(--s1); }
-html.ui-v7 .rot .now b { display: block; width: 4px; height: 8px; border-radius: 1px; background: var(--ink); }
+html.ui-v7 .rot .now b { display: block; width: 4px; height: 8px; border-radius: 2px; background: var(--ink); }
 html.ui-v7 .rot .now b + b { height: 4px; }
 html.ui-v7 .rot .now b + b + b { height: 12px; }
 html.ui-v7 .rot.docked .rot-hd { margin-bottom: var(--s3); }
