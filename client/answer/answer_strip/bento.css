@@ -3,7 +3,7 @@
        idle = navy-800 (--sheet #0d142a), hover = --float (#141d36), picked = --action-fill #102542, right = green-900 #0c2c22, wrong = red-900 #3e141e,
        revealed (the missed right one) = navy-600 (--chip #283352), dimmed = same fill with text grey-400 #7a8aae (no opacity). The only edges left are the 2px focus ring (unchanged)
        and the notch .next ring (progbar.css). Resting tiles carry NO lit top (Tony: it reads as a border) and no shadow.
-   (B) the mosaic: bento.js writes grid-column / grid-row on each .ch; .choices.bento is the 12-column grid (row unit 96, gap 8, radius 16). The letter is a 12px corner label (no badge),
+   (B) the mosaic: bento.js writes grid-column / grid-row on each .ch; .choices.bento is the 12-column grid (row unit 100, gap 8, radius 16). The letter is a 12px corner label (no badge),
        the value is centred (28px math / 22px text). Pick-all (.all) and the stacked-list fallback keep their row layout and get (A) only. */
 
 /* ---- (A) state by fill: every option, list or mosaic ---- */
@@ -24,23 +24,33 @@ html.ui-v7 .choices .ch > .opt.opt:active:not(:disabled) { box-shadow: none; }
 html.ui-v7 .q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: 1; }
 html.ui-v7 .q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) > .opt { color: var(--mc-dim); }
 
-/* ---- (B) the mosaic ---- */
-html.ui-v7 .choices.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 96px; gap: 8px; }
+/* ---- (B) the mosaic (bento3): --bc columns (3..6, bento.js), row unit 100, gap 8, radius 16; kinds on .opt[data-k]: p = math only (24px), s = short text (22px bold), t = wrapping text (18px) ---- */
+html.ui-v7 .choices.bento { display: grid; grid-template-columns: repeat(var(--bc, 3), minmax(0, 1fr)); grid-auto-rows: 100px; gap: 8px; }
 html.ui-v7 .choices.bento .ch { display: grid; min-width: 0; }
 html.ui-v7 .choices.bento .ch > .opt.opt {
-  position: relative; display: grid; place-items: center; min-height: 0; height: 100%; box-sizing: border-box; min-width: 0;
-  padding: 28px 20px 20px; border-radius: 16px; text-align: center; line-height: 1.2; color: var(--ink);
+  position: relative; display: grid; place-items: center; min-height: 0; height: 100%; box-sizing: border-box; min-width: 0; overflow: hidden;
+  padding: 28px 16px 20px; border-radius: 16px; text-align: center; line-height: 1.2; color: var(--ink);
   transition: background-color .2s ease-out, color .2s ease-out;
 }
 html.ui-v7 .choices.bento .ch > .opt.opt:active:not(:disabled) { transform: scale(.98); }
-html.ui-v7 .choices.bento .opt .txt, html.ui-v7 .mc-probe .opt .txt { white-space: nowrap; overflow-wrap: normal; text-align: center; font-size: 1.375rem; line-height: 28px; font-weight: var(--w-em); letter-spacing: -.01em; }
-html.ui-v7 .choices.bento .opt[data-pure="1"] .txt, html.ui-v7 .mc-probe .opt[data-pure="1"] .txt { font-size: 1.75rem; font-weight: var(--w); letter-spacing: 0; }
+html.ui-v7 .choices.bento .opt .txt, html.ui-v7 .mc-probe .opt .txt { display: block; min-width: 0; white-space: normal; overflow-wrap: normal; word-break: normal; text-align: center; font-size: 1.125rem; line-height: 24px; font-weight: var(--w); letter-spacing: 0; }
+html.ui-v7 .choices.bento .opt[data-brk] .txt { overflow-wrap: anywhere; }
+html.ui-v7 .choices.bento .opt[data-k="s"] .txt, html.ui-v7 .mc-probe .opt[data-k="s"] .txt { font-size: 1.375rem; line-height: 28px; font-weight: var(--w-em); letter-spacing: -.01em; }
+html.ui-v7 .choices.bento .opt[data-k="p"] .txt, html.ui-v7 .mc-probe .opt[data-k="p"] .txt { font-size: 1.5rem; line-height: 28px; }
+html.ui-v7 .choices.bento .opt .txt > p, html.ui-v7 .mc-probe .opt .txt > p { margin: 0; }
 html.ui-v7 .choices.bento .opt .txt .katex { font-size: 1em; }
 html.ui-v7 .choices.bento .opt .txt .kx-scroll { max-width: none; overflow: visible; }
 html.ui-v7 .mc-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; contain: layout; display: grid; justify-items: start; }
-html.ui-v7 .mc-probe .opt { display: block; width: max-content; padding: 0; border: 0; background: none; font: inherit; color: inherit; }
-html.ui-v7 .mc-probe .opt .txt { display: inline-block; }
+html.ui-v7 .mc-probe .opt { display: block; box-sizing: content-box; padding: 0; border: 0; background: none; font: inherit; color: inherit; }
 html.ui-v7 .mc-probe .katex { font-size: 1em; }
+/* pick-all: letter = corner label (left), the square check = corner mark (right) */
+html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 14px; top: 12px; margin: 0; height: 16px; font-size: 12px; line-height: 16px; letter-spacing: .02em; color: var(--mc-letter); }
+html.ui-v7 .choices.bento.all .ch > .opt.opt .badge { position: absolute; right: 10px; top: 10px; width: 20px; height: 20px; margin: 0; }
+html.ui-v7 .choices.bento.all .ch > .opt.opt .badge .ico { width: 14px; height: 14px; }
+html.ui-v7 .choices.bento.all .ch > .opt.opt.kept { background: var(--mc-right); color: var(--correct-on); border-width: 0; }
+html.ui-v7 .choices.bento.all .ch > .opt.opt[aria-checked="true"] .lt { color: var(--action-on); }
+html.ui-v7 .choices.bento.all .ch > .opt.opt:is(.right, .kept):not(.reveal) .lt { color: var(--correct-on); }
+html.ui-v7 .choices.bento.all .ch > .opt.opt.wrong:not(.reveal) .lt { color: var(--wrong-on); }
 /* the letter: a 12px corner label, no badge, no fill */
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.opt .badge.badge {
   position: absolute; left: 14px; top: 12px; width: auto; height: 16px; padding: 0; border: 0; border-radius: 0; background: none;
@@ -54,6 +64,6 @@ html.ui-v7 .q:not(.closed) .choices.bento:not(.all):has(.opt[aria-checked="true"
 html.ui-v7 .choices.bento .ch > .send { right: 4px; top: 4px; margin: 0; width: 44px; height: 44px; }
 html.ui-v7 .choices.bento .ch > .nx { right: 6px; top: auto; bottom: 6px; margin: 0; width: 88px; height: 44px; }
 html.ui-v7 .choices.bento .ch:has(> .send:not([hidden])) > .opt.opt { padding-top: 52px; padding-bottom: 12px; }
-html.ui-v7 .choices.bento .ch.cue > .opt.opt { padding: 18px 20px 58px; }
+html.ui-v7 .choices.bento .ch.cue > .opt.opt { padding: 18px 16px 58px; }
 html.ui-v7 .choices.bento .ch .vg { right: 10px; top: 10px; margin: 0; display: block; }
 html.ui-v7 .choices.bento .ch.cue .vg { right: 10px; display: block; }

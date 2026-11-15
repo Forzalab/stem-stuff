@@ -28,8 +28,8 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/cluck/openui_views/views.css` | Styles of the views. | view look |
 | `client/answer/answer_strip/strip.js` | Answer strip: typed, multiple choice, pick-all, multi-part. | the answer strip |
 | `client/answer/answer_strip/strip.css` | Styles of the answer strip. | strip look |
-| `client/answer/answer_strip/bento.js` | MC options as a bento2 mosaic behind `html.ui-v7`: measures one-line values, writes grid spans on `.ch`. Inert with the flag off. | MC tile layout |
-| `client/answer/answer_strip/bento.css` | MC option look under `html.ui-v7`: state by fill (no borders), mosaic geometry. | MC option colours, tile look |
+| `client/answer/answer_strip/bento.js` | MC + pick-all options as a bento3 mosaic behind `html.ui-v7`: probes each option at every column span, exact-cover search in option order (no holes), writes grid spans on `.ch`. Inert with the flag off. | MC / pick-all tile layout |
+| `client/answer/answer_strip/bento.css` | MC / pick-all option look under `html.ui-v7`: state by fill (no borders), mosaic geometry (--bc columns, unit 96). | MC option colours, tile look |
 | `client/answer/answer_strip/verdict-v7.css` | Verdict under `html.ui-v7`: no visible tray, the verdict slot is the Cluck button, row + Next one pill, the verdict line visually hidden. | verdict slot, joined row + Next |
 | `client/shell/repair/repair.js` | Repair ladder UI after a miss. | repair steps |
 | `client/shell/repair/repair.css` | Styles of the repair ladder. | repair look |
@@ -103,7 +103,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `tools/bank_tools/` | Bank checks + edits (slips.py, schema-check.mjs, tol.py, fig_png.mjs). | banks, problems |
 | `tools/client_generators/` | Write app files (gen_views.py, rw_icons.py, split-app.mjs). | generate, views |
 | `tools/benchmarks/` | Bench + replay scripts, jev-model.mjs. | bench, perf |
-| `tools/audits/` | UI screenshots + measures (button_audit, dogfood, splash_shots). | audit, UI |
+| `tools/audits/` | UI screenshots + measures (button_audit, dogfood, splash_shots, bento3_gallery). | audit, UI |
 | `tools/author/` | Problem authoring loop (gen-loop.mjs). | authoring |
 | `tools/repo_checks/` | Repo checks (move_inventory, codemap, mutants). | checks, refactor |
 | `tools/repo_checks/client_paths.py` | Static path checker: dangling import/src/href/url in client files. | dangling path, checks |
