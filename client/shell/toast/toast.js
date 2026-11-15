@@ -121,7 +121,7 @@
     var put = function (v) { render(t, o, v); };   // the same renderer as next(): a stale tween never flattens the bold head
     i.style.transition = 'none'; setP(o.from || 0); void i.offsetWidth; i.style.transition = '';
     el.dataset.done = '0';
-    var fin = function () { put(n[1]); setP(o.to || 0); el.dataset.done = '1'; };
+    var fin = function () { put(n[1]); fit(); setP(o.to || 0); el.dataset.done = '1'; };
     if (reduced()) { fin(); return; }
     put(n[0]);
     cancelAnimationFrame(raf);
@@ -150,6 +150,7 @@
     rowPut(o);
     actionPut(o);
     render(el.querySelector('.stoast-t'), o, o.num ? o.num[1] : '');
+    fit();
     if (!place()) { cur = null; actionPut({}); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
     q.shift();
     el.querySelector('.sr-only').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
@@ -184,10 +185,16 @@
       if (el.dataset.kind === 'row') { if (duck) duck.remove(); b.innerHTML = PLAIN_B; el.dataset.kind = 'plain'; }
       return;
     }
-    if (!duck) { duck = d.createElement('span'); duck.className = 'stoast-duck'; duck.setAttribute('aria-hidden', 'true'); duck.innerHTML = '<img alt="" width="80" height="80">'; el.insertBefore(duck, el.firstChild); }
+    if (!duck) { duck = d.createElement('span'); duck.className = 'stoast-duck'; duck.setAttribute('aria-hidden', 'true'); duck.innerHTML = '<img alt="" width="64" height="64">'; el.insertBefore(duck, el.firstChild); }
     duck.querySelector('img').src = 'client/rewards/icons/duck8-' + (o.duck || 'start') + '.webp';
     if (el.dataset.kind !== 'row') { b.innerHTML = ROW_B; el.dataset.kind = 'row'; }
     var sub = el.querySelector('.stoast-s'); sub.textContent = o.sub || ''; sub.hidden = !o.sub;
+  }
+  /* TOAST-DYN: one line of words (title + sub together <= 28 px tall) = the small duck row; else the roomy one. Measured once per show / landing, no loop. */
+  function fit() {
+    if (!el || !el.classList.contains('stoast-v7')) { if (el) el.classList.remove('stoast-1l'); return; }
+    var t = el.querySelector('.stoast-t'), s = el.querySelector('.stoast-s');
+    el.classList.toggle('stoast-1l', t.offsetHeight + (s.hidden ? 0 : s.offsetHeight) <= 28);
   }
   /* the short toast's parts (W133): no bar, and at most one action button under the words */
   function actionPut(o) {
