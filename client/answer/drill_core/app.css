@@ -1834,3 +1834,8 @@ html.ui-v7 #q .ff { box-shadow: var(--well); }
 html.ui-v7 #q .ff:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--focus); }
 /* owner rule (ui-v7, DEPTH 1): no circles except the Cluck profile avatar. The option letter badge is a rounded square (8px), never 50% */
 html.ui-v7 .opt .badge { border-radius: 8px; }
+
+/* GAP-BATCH1 (ui-v7 only). B: the old star "1" level badge is retired (Q2: star level leaves the bar). */
+html.ui-v7 #rwHud .rw-lvl { display: none; }
+/* D: the miss hint is the float family (the stage toast's fill, radius 16, shadow-3, no edge), not the old filled duck card */
+html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }
