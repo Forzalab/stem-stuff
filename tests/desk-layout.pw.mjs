@@ -20,6 +20,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { launchBrowser } from "./pw-browser.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -212,7 +213,7 @@ async function column(page, tag, size) {
 
 try {
   for (const engine of ENGINES) {
-    const browser = await pw[engine].launch(engine === "chromium" ? { args: ["--no-sandbox"] } : {});
+    const browser = await launchBrowser(pw, { args: ["--no-sandbox"] }, engine);
     const dctx = await browser.newContext(); differ = await dctx.newPage(); await differ.goto(BASE + "/privacy.html");
     for (const sz of SIZES) {
       const size = { ...sz, engine }, tag = `${engine} ${sz.name}`;

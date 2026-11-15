@@ -10,6 +10,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { launchBrowser } from "./pw-browser.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -60,7 +61,7 @@ const toastNow = p => p.waitForFunction(() => { const t = document.querySelector
 const conquer = (p, tpl) => p.evaluate(t => { const R = window.Rewards; R.mastery({ type: "miss", tpl: t, b: false }); R.mastery({ type: "repair_done", tpl: t });
   return R.mastery({ type: "twin_a", tpl: t, ok: true }).newly; }, tpl);
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   await step("HUD DOM: one #rwHud strip before #qlist, with its parts, aria and the popover host; zeros at rest", async () => {
     const [c, p] = await fresh(browser);

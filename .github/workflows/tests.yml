@@ -177,6 +177,48 @@ jobs:
         run: tests/run-all.sh --fast 2>&1 | tee fast.log
       - if: always()
         run: grep 'fast total' fast.log >>"$GITHUB_STEP_SUMMARY" || true
+  webkit:   # WEBKIT-CI (G6.1): ~60% of users are on iPhone, CI is Chromium. PRs that touch client CSS/JS also run a few iPhone-risk specs on WebKit.
+    # Not in `all` yet (report-only until it has a green history); PR events only. No grid probe exists in tests/ yet: add it to WK_SPECS when it lands.
+    needs: decide
+    if: github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      WK_SPECS: proof-kb nav-stable toast-calc progbar-baseline desk-layout@1   # keyboard/inputs, nav, toast, progbar-baseline, layout
+      WK_FALLBACK_SPECS: proof-kb desk-layout@1                                 # inputs + layout with no text-box-trim / field-sizing
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          n="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD | grep -cE '^(client/|index\.html$|sw\.js$|tests/pw-browser\.mjs$)' || true)"
+          echo "client files changed: $n"
+          echo "run=$([ "$n" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - if: steps.scope.outputs.run == 'true'
+        run: pip install sympy networkx
+      - if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - if: steps.scope.outputs.run == 'true'
+        run: |
+          cd tests && npm ci
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --with-deps webkit
+      - name: webkit specs
+        if: steps.scope.outputs.run == 'true'
+        shell: bash
+        env: { PW_BROWSER: webkit, ENGINES: webkit }   # ENGINES: desk-layout's own engine list
+        run: SPECS="$WK_SPECS" tests/run-all.sh 2>&1 | tee wk.log
+      - name: webkit specs, text-box-trim / field-sizing forced off
+        if: steps.scope.outputs.run == 'true' && !cancelled()
+        shell: bash
+        env: { PW_BROWSER: webkit, ENGINES: webkit, PW_FORCE_FALLBACK: "1" }
+        run: SPECS="$WK_FALLBACK_SPECS" tests/run-all.sh 2>&1 | tee wk-fallback.log
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   all:
     needs: [decide, plan, unit, block]
