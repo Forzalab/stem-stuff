@@ -34,6 +34,8 @@
 .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--help) 20%, var(--help-sheet)); }
 .rp .rp-line em { font-style: italic; }   /* Cluck's leading *action* ("*waddles over*"): app.css .md em sets font-style normal (emphasis = weight); an action aside stays italic */
 .rp-chip:disabled { color: var(--muted); cursor: default; }
+.rp-chip { position: relative; }
+.rp-chip::before { content: ""; position: absolute; inset: -1px -6px; }   /* the 44px tap area: a narrow chip is 34px wide; the box stays as it is */
 .rp-x { margin-left: var(--s2); color: var(--wrong); }
 .rp-num { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .rp-in { box-sizing: border-box; width: 8rem; max-width: 100%; min-height: 44px; padding: 0 var(--s3); border: var(--bw) solid var(--edge); border-radius: 8px;
