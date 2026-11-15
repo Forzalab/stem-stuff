@@ -30,7 +30,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/answer_strip/strip.css` | Styles of the answer strip. | strip look |
 | `client/answer/answer_strip/bento.js` | MC options as a bento2 mosaic behind `html.ui-v7`: measures one-line values, writes grid spans on `.ch`. Inert with the flag off. | MC tile layout |
 | `client/answer/answer_strip/bento.css` | MC option look under `html.ui-v7`: state by fill (no borders), mosaic geometry. | MC option colours, tile look |
-| `client/answer/answer_strip/verdict-v7.css` | Verdict CARD (the tray) under `html.ui-v7`: the verdict line moved in, fill = the judged row step, r16, no edge, row-to-group width. | tray / verdict card look |
+| `client/answer/answer_strip/verdict-v7.css` | Verdict under `html.ui-v7`: no visible tray, the verdict slot is the Cluck button, row + Next one pill, the verdict line visually hidden. | verdict slot, joined row + Next |
 | `client/shell/repair/repair.js` | Repair ladder UI after a miss. | repair steps |
 | `client/shell/repair/repair.css` | Styles of the repair ladder. | repair look |
 | `client/shell/repair/ladder-v7.css` | Ladder card, its chips and input, under `html.ui-v7`: state by fill, no edges. | ladder card colours |
