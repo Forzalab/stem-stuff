@@ -1,0 +1,34 @@
+/* ladder-v7.css: the repair / welcome ladder card PROTO-3WAY pick F (port f-port-ladder-verdict).
+   Everything is under html.ui-v7: flag off = no rule here applies. Loads after repair.css, welcome.css, calc-coach.css.
+   STATE BY FILL (brain ui-polish/color-tokens/fable-review/REVIEW2.txt section 3, SPEC R5): no 1px edge on the card, its chips or its input, in any state.
+   card = --sheet (navy-800); chip = --chip (navy-600); picked chip = --action-fill; ghost (not yet answerable) = the chip step blended into the card; locked others = the card fill, dim text;
+   the input is a well (--page + --well). The only outline left is the 2px focus ring. Warm (--help) stays only as the small accents it always was (the pill, the step numbers,
+   the Check button): CONTRAST-PORT = dark ink on orange, never light text, and no warm-brown chip on the navy card. No circles (the auto-filled step number is a rounded square). */
+html.ui-v7 .rp { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); }
+html.ui-v7 section.wl { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); padding-top: calc(var(--s5) + 10px); }
+html.ui-v7 section.wl .rp { background: none; padding: 0; border-radius: 0; }
+html.ui-v7 section.wl .rp-line { left: var(--s5); }
+html.ui-v7 .rp-step, html.ui-v7 section.wl .rp-step { border-top: 0; padding: var(--s3) 0; }          /* the divider rules go: more room between steps instead */
+html.ui-v7 .rp-n[data-auto] { border-radius: 8px; }
+
+/* chips: a fill step on the card, no edge */
+html.ui-v7 .rp .rp-chip, html.ui-v7 section.wl .rp .rp-chip { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); }
+html.ui-v7 .rp .rp-chip:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--chip) 82%, var(--ink)); }
+html.ui-v7 .rp .rp-skip { border: 0; background: none; color: var(--muted); }
+/* not answerable yet: the chip blended into the card (the fill says "not yet", the dash goes), words stay readable */
+html.ui-v7 section.wl .rp .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border: 0; background: color-mix(in srgb, var(--chip) 40%, var(--sheet)); color: var(--muted); }
+/* done step: the pick keeps a lit fill, the rest sink into the card with dim text (5.3:1 on navy-800) */
+html.ui-v7 section.wl .rp .rp-locked .rp-chip { border: 0; background: var(--sheet); color: var(--dim); }
+html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-picked { border: 0; background: var(--action-fill); color: var(--action-on); }
+html.ui-v7 section.wl .rp .rp-locked .rp-in { border: 0; color: var(--ink); }
+
+/* the Final answer input: a recessed well, no edge; the 2px focus ring is the only outline */
+html.ui-v7 .rp .rp-in, html.ui-v7 section.wl .rp .rp-in { border: 0; border-radius: 12px; background: var(--page); box-shadow: var(--well); color: var(--ink); }
+html.ui-v7 .rp .rp-in:focus { border: 0; box-shadow: var(--well); outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+
+/* Check / Next: no edge; on the warm welcome sheet they stay --help-ink on --help (7.67:1, welcome.css), elsewhere --action */
+html.ui-v7 .rp :is(.rp-check, .rp-next), html.ui-v7 section.wl :is(.rp-check, .rp-next), html.ui-v7 section.wl > .nx .nf { border: 0; border-radius: 12px; }
+
+
+/* a catch-all: no line of any kind inside the ladder card at rest (divider, pill, chip, dashed ghost input / Check). KaTeX draws its fraction bar / rules with borders: left alone. */
+html.ui-v7 section.wl :is(.rp-line, .rp-step, .rp-head, .rp-val-ui, .rp-why, .rp-ghost, .rp-ghost *, .rp-locked *, .rp-in, .rp-check, .rp-next, .rp-chip, .rp-skip, .nx, .nx *):not(.katex, .katex *) { border: 0; }
