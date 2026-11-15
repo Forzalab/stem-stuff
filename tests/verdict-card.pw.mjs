@@ -1,4 +1,4 @@
-// VERDICT-CARD smoke (Tony Nov 14, #563): under html.ui-v7 there is NO visible verdict tray; the verdict slot (tick / X square) is the Cluck button (duck, See steps / Ask Cluck, >= 44px),
+// VERDICT-CARD smoke (Tony Nov 14, #563; CLUCK-BTN): under html.ui-v7 there is NO verdict tray and NO Cluck entry in the verdict: the slot (tick / X square) is a plain status icon (no duck, no button role),
 // the judged row + Next are one borderless pill (zero gap, same top / bottom, outer radius 16), and the "That's it!" / "Not it." line stays in the DOM, visually hidden (live region).
 // Flag off: the loose line, the tray and the gap before Next as before.
 // Own serve.py, throwaway bank, a stub OpenRouter.   node tests/verdict-card.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
@@ -68,10 +68,11 @@ async function judge(w, flag, right, tries = 1) {
   if (right) { await typeAnswer("1.38"); await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); }
   else {
     await typeAnswer("1.636");
-    await page.waitForSelector("#q .ff.bad .vk[role=button], #q .ff.rbox.cue .vk[role=button]", { state: "attached", timeout: 8000 });
+    await page.waitForSelector("#q .ff.bad .vk, #q .ff.rbox.cue .vk", { state: "attached", timeout: 8000 });
     for (let i = 1; i < tries; i++) { await page.waitForTimeout(2300); await typeAnswer(["0.650", "2.2", "3.3"][i - 1]); }
   }
-  await page.waitForSelector("#q .vdrawer .wchip", { state: "attached", timeout: 8000 });
+  if (flag === "v7") await page.waitForFunction(() => { const b = document.querySelector("#cluckBtn"); return !!b && !b.hasAttribute("aria-disabled"); }, null, { timeout: 8000 });
+  else await page.waitForSelector("#q .vdrawer .wchip", { state: "attached", timeout: 8000 });
   await page.waitForTimeout(900);
   return page;
 }
@@ -79,7 +80,7 @@ async function judge(w, flag, right, tries = 1) {
 const geo = page => page.evaluate(() => {
   const R = e => { if (!e) return null; const r = e.getBoundingClientRect(); return { l: +r.left.toFixed(1), r: +r.right.toFixed(1), t: +r.top.toFixed(1), b: +r.bottom.toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
   const B = e => e && ["Top", "Right", "Bottom", "Left"].map(x => getComputedStyle(e)["border" + x + "Width"]).join(" ");
-  const d = document.querySelector("#q .vdrawer"), ff = document.querySelector("#q .ff.rbox.ok, #q .ff.bad, #q #ff"), nx = document.querySelector("#q .nx"), q = document.querySelector("#q"), vk = ff.querySelector(".vk");
+  const d = document.querySelector("#q .vdrawer, #q .vk[role=button], #q .vkb, #wish .wchip"), ff = document.querySelector("#q .ff.rbox.ok, #q .ff.bad, #q #ff"), nx = document.querySelector("#q .nx"), q = document.querySelector("#q"), vk = ff.querySelector(".vk");
   const lines = [...document.querySelectorAll("#q .ansl")].map(l => ({ inDrawer: !!l.closest(".vdrawer"), shown: l.getBoundingClientRect().width > 2 && l.getBoundingClientRect().height > 2, text: l.textContent.replace(/\s+/g, " ").trim() }));
   const cs = getComputedStyle(ff);
   return { d: R(d), dShown: !!d && d.getClientRects().length > 0, ff: R(ff), nx: R(nx), nf: R(nx && nx.querySelector(".nf")), q: R(q), vk: R(vk), lines, bg: cs.backgroundColor, radius: cs.borderRadius, ffBw: B(ff), nxBw: B(nx), nfBw: nx && B(nx.querySelector(".nf")),
@@ -93,8 +94,7 @@ try {
     const page = await judge(w, "v7", right);
     try {
       const g = await geo(page);
-      assert.ok(!g.dShown, "no tray is shown under the row: " + JSON.stringify(g.d));
-      assert.equal(await page.locator("#q .vdrawer").evaluate(e => getComputedStyle(e).display), "none");
+      assert.ok(!g.d, "no tray, no chip, no slot button exists under the row: " + JSON.stringify(g.d));
       if (right) {
         assert.equal(g.lines.length, 1, JSON.stringify(g.lines)); assert.ok(!g.lines[0].inDrawer && !g.lines[0].shown && /That's it! The answer is 1\.38/.test(g.lines[0].text), "the verdict line stays in the DOM (live region), visually hidden: " + JSON.stringify(g.lines));
         // one pill: row + Next touch, same top / bottom, no borders, the group's right edge is Next's
@@ -104,22 +104,20 @@ try {
         assert.equal(g.radius, "16px 0px 0px 16px", "the row's outer corners r16, the join flat");
         assert.equal(g.bg, "rgb(12, 44, 34)", "the row = the verdict fill"); assert.equal(g.vkBg, "rgb(11, 42, 31)", "slot tint");
         assert.ok(g.nf.w > 0 && g.nfBg === "rgb(78, 230, 175)", "Next keeps its own fill: " + g.nfBg);
-        assert.equal(g.vkLabel, "See steps");
       } else {
-        assert.equal(g.bg, "rgb(62, 20, 30)"); assert.equal(g.ffBw, "0px 0px 0px 0px"); assert.equal(g.vkLabel, "Ask Cluck");
+        assert.equal(g.bg, "rgb(62, 20, 30)"); assert.equal(g.ffBw, "0px 0px 0px 0px");
         near(g.vk.r, g.ff.r, "the slot ends the row");
       }
-      assert.ok(g.vkDuck && g.vk.w >= 44 && g.vk.h >= 44, "the slot is a duck button, >= 44px: " + JSON.stringify(g.vk));
+      assert.ok(!g.vkDuck && g.vkLabel === null && g.vk.w >= 44 && g.vk.h >= 44, "the slot is a plain tick / X, no duck, no button label: " + JSON.stringify(g.vk));
       assert.ok(g.ff.r <= g.vw - 8 || right, "right gutter kept"); assert.ok(g.nx ? g.nx.r <= g.vw - 8 : true, "right gutter kept"); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS && (w === 390 || (w === 1366 && right))) { await page.locator("#q").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `vcard-${right ? "right" : "wrong"}-${w}.png`) }); }
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
-  for (const right of [true, false]) await step(`1366: flag on: pressing the slot does what ${right ? "See steps" : "Ask Cluck"} did (Cluck opens)`, async () => {
+  for (const right of [true, false]) await step(`1366: flag on: ${right ? "right" : "wrong"}: the one Ask Cluck button on the card opens Cluck`, async () => {
     const page = await judge(1366, "v7", right);
     try {
-      assert.equal(await page.evaluate(() => { const v = document.querySelector("#q .ff .vk"), r = v.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!hit && !!hit.closest(".vk"); }), true, "the slot is what a tap hits");
-      await page.locator("#q .ff .vk").click();
+      await page.locator("#cluckBtn").click();
       await page.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden && c.getClientRects().length > 0; }, null, { timeout: 8000 });
     } finally { await page.context().close(); }
   });
@@ -133,7 +131,7 @@ try {
       await page.waitForSelector("#q .ansl", { state: "attached", timeout: 8000 }); await page.waitForTimeout(700);
       const g = await geo(page);
       assert.ok(g.lines.length === 1 && !g.lines[0].shown && /^Not it\. The answer is/.test(g.lines[0].text), JSON.stringify(g.lines));
-      assert.equal(g.bg, "rgb(62, 20, 30)"); assert.ok(!g.dShown);
+      assert.equal(g.bg, "rgb(62, 20, 30)"); assert.ok(!g.d);
       if (SHOTS) { await page.locator("#q").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, "vcard-notit-390.png") }); }
     } finally { await page.context().close(); }
   });
