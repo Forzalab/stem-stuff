@@ -153,7 +153,7 @@ try {
     assert.ok(g.ns.every(n => Math.abs(n.w - 16) < 0.6 && Math.abs(n.h - 24) < 0.6), JSON.stringify(g.ns));
     assert.ok(g.list.r < g.tile.x && g.tile.x + g.tile.w < g.nav.x, "left to right"); assert.ok(Math.abs(g.list.y - g.tile.y) < 1 && Math.abs(g.nav.y - g.tile.y) < 1, "one row");
     assert.ok(Math.abs((g.tile.x + g.tile.w / 2) - g.vw / 2) < 140, "notch tile near the centre");
-    const hud = await p.evaluate(() => { const h = document.querySelector("#rwHud")?.getBoundingClientRect(), t = document.querySelector("#pbTile").getBoundingClientRect(); return h ? h.top >= t.bottom - 0.5 : true; });
+    const hud = await p.evaluate(() => { const h = document.querySelector("#rwHud")?.getBoundingClientRect(), t = document.querySelector("#pbTile").getBoundingClientRect(); return h && h.height > 0 ? h.top >= t.bottom - 0.5 : true; /* TOP-GAP (#570): idle empty HUD collapses to 0 height; only a visible HUD must sit under the bar */ });
     assert.ok(hud, "the HUD (until P6) is under the bar, not on it"); assert.ok(g.sw <= g.vw, "no h-scroll");
     await c.close();
   });
