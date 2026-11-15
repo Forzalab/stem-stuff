@@ -28,7 +28,7 @@ async function probe(flag, w, h, shot) {
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); if (f === "on") localStorage.setItem("stem-ui", "v7"); } catch { /* */ } }, flag);
   const p = await c.newPage();
   await p.goto(BASE + "/#BANK_FHT");   // the start line "Ready when you are." shows by itself on a fresh bank
-  await p.waitForSelector("#q .cc-welcome", { timeout: 12000 });
+  await p.waitForSelector("#q .wl-ladder", { timeout: 12000 });   // was "#q .cc-welcome": under ui-v7 that card is the calc toast (Tony Nov 14), so wait for the welcome ladder
   // read the style in the same tick the toast is seen: on a loaded runner it can expire between a wait and a separate evaluate (null element)
   const r = await (await p.waitForFunction(() => { const e = document.querySelector(".stoast.on"); if (!e) return null; const s = getComputedStyle(e); return { bw: s.borderTopWidth, bg: s.backgroundColor, sh: s.boxShadow, fl: getComputedStyle(document.documentElement).getPropertyValue("--float").trim() }; }, null, { timeout: 15000 })).jsonValue();
   if (shot) await p.screenshot({ path: shot });

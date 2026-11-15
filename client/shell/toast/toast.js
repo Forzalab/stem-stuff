@@ -59,7 +59,7 @@
   }
   var covers = function (x, y, w, h) {
     if (hits(x, y, w, h).length) return true;
-    var cs = cur && cur.clear ? d.querySelectorAll(cur.clear) : [];
+    var cs = cur && cur.clear && !(cur.dock && desk()) ? d.querySelectorAll(cur.clear) : [];   // a docked toast on the desktop foot lies below the column: no clear needed
     for (var i = 0; i < cs.length; i++) {                                // `clear`: never on these boxes, tap or no tap (W133)
       var r = cs[i].getBoundingClientRect();
       if (r.width < 1 || r.height < 1 || r.right <= x || r.left >= x + w || r.bottom <= y || r.top >= y + h) continue;
@@ -88,9 +88,9 @@
     if (bar && getComputedStyle(bar).position === 'sticky') barB = bar.getBoundingClientRect().bottom;
     var vv = g.visualViewport, foot = vv ? vv.offsetTop + vv.height : innerHeight, bottom = foot - 12;
     var x = Math.round(Math.min(Math.max(gut, b.left), vw - gut - w));
-    var sides = desk() ? ['foot', 'under'] : ['under'];
+    var sides = cur.dock ? ['foot', 'lift'] : desk() ? ['foot', 'under'] : ['under'];   // dock (calc toast, ui-v7): the viewport's foot on a phone too, never under the anchor (it would lie on the question); no room there = it waits and `until` drops it
     for (var i = 0; i < sides.length; i++) {
-      var y = Math.round(sides[i] === 'foot' ? foot - gut - h : b.bottom + 12);
+      var y = Math.round(sides[i] === 'foot' ? foot - gut - h : sides[i] === 'lift' ? foot - gut - 48 - h : b.bottom + 12);   // lift: above the corner links (privacy, 44px) at the foot
       if (y < barB + 8 || y + h > bottom || covers(x, y, w, h)) continue;
       el.style.left = x + 'px'; el.style.top = y + 'px';               // whole px: the words stay on the pixel grid
       el.dataset.side = sides[i];
@@ -171,12 +171,15 @@
   /* the short toast's parts (W133): no bar, and at most one action button under the words */
   function actionPut(o) {
     el.classList.toggle('stoast-short', o.bar === false);
+    clsPut(o);
     var old = el.querySelector('.stoast-a'); if (old) old.remove();
     if (!o.action || !o.action.label) return;
     var b = d.createElement('button'); b.type = 'button'; b.className = 'btn stoast-a'; b.textContent = o.action.label;
     b.addEventListener('click', function () { var run = o.action.run; hide(true); if (run) run(); });
     el.querySelector('.stoast-b').appendChild(b);
   }
+  /* o.cls (calc toast, ui-v7): adds a scoped class stoast-c-<cls> (reset each toast) so a feature can style its own toast without editing toast.css. */
+  function clsPut(o) { el.className = el.className.replace(/\s*stoast-c-\S+/g, '') + (o.cls ? ' stoast-c-' + o.cls : ''); }
   function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
   function hide(quiet, why) {
     clearTimeout(timer); left = 0;
