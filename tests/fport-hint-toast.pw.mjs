@@ -29,8 +29,8 @@ async function probe(flag, w, h, shot) {
   const p = await c.newPage();
   await p.goto(BASE + "/#BANK_FHT");   // the start line "Ready when you are." shows by itself on a fresh bank
   await p.waitForSelector("#q .cc-welcome", { timeout: 12000 });
-  await p.waitForSelector(".stoast.on", { timeout: 15000 });
-  const r = await p.evaluate(() => { const s = getComputedStyle(document.querySelector(".stoast.on")); return { bw: s.borderTopWidth, bg: s.backgroundColor, sh: s.boxShadow, fl: getComputedStyle(document.documentElement).getPropertyValue("--float").trim() }; });
+  // read the style in the same tick the toast is seen: on a loaded runner it can expire between a wait and a separate evaluate (null element)
+  const r = await (await p.waitForFunction(() => { const e = document.querySelector(".stoast.on"); if (!e) return null; const s = getComputedStyle(e); return { bw: s.borderTopWidth, bg: s.backgroundColor, sh: s.boxShadow, fl: getComputedStyle(document.documentElement).getPropertyValue("--float").trim() }; }, null, { timeout: 15000 })).jsonValue();
   if (shot) await p.screenshot({ path: shot });
   await c.close();
   return r;
