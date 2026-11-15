@@ -115,6 +115,25 @@ try {
     await c.close();
   });
 
+  // BANKTILE-FIT (Nov 14): after an answer the HUD row shows and the bank tile keeps its list icon and its padding (MEASURE.md: label never on the tile edge).
+  await step("BANKTILE-FIT: flag ON @390 after one answer: list icon visible, label left >= tile left + 12 padding", async () => {
+    const [c, p] = await fresh(browser, "on");
+    await go(p, "CALC1_P01"); await pick(p, "a");
+    await p.waitForFunction(() => document.querySelector("#pbTile .pb-n")?.classList.contains("right"));
+    await go(p, "CALC1_P02"); await pick(p, "a");
+    await p.waitForFunction(() => document.querySelectorAll("#pbTile .pb-n.right").length === 2);
+    const d = await p.evaluate(() => {
+      const tile = document.querySelector(".pb-list").getBoundingClientRect(), lab = document.querySelector("#qlistName").getBoundingClientRect();
+      return { icon: getComputedStyle(document.querySelector("#qlistBtn .ico")).display, backHidden: document.querySelector("#qback").hidden,
+        tileX: tile.x, labX: lab.x, sw: document.documentElement.scrollWidth, vw: innerWidth };
+    });
+    assert.notEqual(d.icon, "none", "list icon hidden after an answer (backHidden=" + d.backHidden + ")");
+    assert.ok(d.labX >= d.tileX + 12 - 0.5, `label at ${d.labX}, tile at ${d.tileX}`);
+    assert.ok(d.sw <= d.vw, "no h-scroll");
+    assert.deepEqual(p.__errs, []);
+    await c.close();
+  });
+
   await step("flag ON: a long bank title gives way first (ellipsis), notches stay 7 and >= 12 wide at 360; iOS back replaces the list icon", async () => {
     const [c, p] = await fresh(browser, "on", 360, 740);
     await p.evaluate(() => { document.documentElement.classList.add("ios"); document.querySelector("#qlistName").textContent = "Thermodynamics Practice Exam Three"; document.querySelector("#qback").hidden = false; });
