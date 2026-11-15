@@ -780,6 +780,7 @@ function render() {
       f._block = b; blocks.append(f);
     }
   }
+  wideBoxes(blocks);
   drawFigures();
   proofHome();
   renderQuestion();
@@ -1177,6 +1178,18 @@ function fitMath(root) {
     k.style.fontSize = (px * f).toFixed(2) + "px";
     if (span() > avail + 0.5) u.classList.add("kx-scroll");
   }
+}
+/* G4.3: a table / display equation wider than the card scrolls inside its own box; the box takes keyboard focus (tabindex 0 + a label) only
+   while it overflows. The edge fade is CSS (.md .tbl / .katex-display). Re-checked on resize and once fonts are in. */
+function wideBoxes(root) {
+  const run = () => root.querySelectorAll(".md .tbl, .md .katex-display").forEach(b => {
+    const wide = b.scrollWidth > b.clientWidth + 1;
+    if (wide) { b.tabIndex = 0; b.setAttribute("role", "region"); b.setAttribute("aria-label", b.classList.contains("tbl") ? "Table, scrolls sideways" : "Equation, scrolls sideways"); }
+    else { b.removeAttribute("tabindex"); b.removeAttribute("role"); b.removeAttribute("aria-label"); }
+  });
+  run();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
+  if (!root._wb) { root._wb = true; addEventListener("resize", run); }
 }
 function opts() { return [...document.querySelectorAll("#q .opt")]; }
 /* a fix box's placeholder is the problem's fix.how. When it is wider than the box (it clipped: "Type increases or decr…" at 390px),

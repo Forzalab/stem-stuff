@@ -45,3 +45,7 @@
    sized to its words (the popover's .pop-act precedent), never .btn-go (STYLE.md §4: the filled one is the page's submit) */
 .stoast-short .stoast-bar { display: none; }
 .stoast-a { justify-self: start; width: auto; padding: 0 var(--s3); font: inherit; white-space: nowrap; }
+/* F-PORT hint bar + toast (Tony Nov 14, PROTO-3WAY pick "all A" = proto column F, REVIEW2 s3; ui-v7 ONLY, flag off = every rule above, untouched).
+   The float family: no edge (the 1px --line goes), the --float fill (navy-700 on the navy-950 page) + --shadow-3 separate it from the page; radius 16 (surface).
+   Text --ink on --float 14:1, the close glyph --muted 8:1. The bar track keeps --sheet (decoration; the --reward fill carries the value). */
+html.ui-v7 .stoast { border-width: 0; border-radius: 16px; background: var(--float); box-shadow: var(--shadow-3); }
