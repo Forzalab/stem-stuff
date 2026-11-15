@@ -22,7 +22,7 @@ html.ui-v7 .pb-list .btn, html.ui-v7 .pb-nav .btn {
 html.ui-v7 .pb-list .btn:hover, html.ui-v7 .pb-nav .btn:hover { background: var(--float); }
 html.ui-v7 .pb-list .btn:active, html.ui-v7 .pb-nav .btn:active { transform: none; background: var(--float); }
 html.ui-v7 .pb-list .btn:focus-visible, html.ui-v7 .pb-nav .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-html.ui-v7 #qlistBtn { flex: 1 1 auto; min-width: 0; padding: 0 14px 0 12px; gap: 8px; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; }
+html.ui-v7 #qlistBtn { flex: 1 1 auto; min-width: 0; padding: 0 10px 0 12px; gap: 8px; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; }
 html.ui-v7 #qlistBtn .ico { width: 20px; height: 20px; flex: none; }
 html.ui-v7 #qlistName { min-width: 0; max-width: none; }
 html.ui-v7 #qlistBtn[aria-expanded="true"] { background: var(--float); }
@@ -70,3 +70,11 @@ html.ui-v7.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):
 html.ui-v7.qnav-on:not(.dock-bottom):not(.start) .top > #rwHud { grid-row: 2; grid-column: 1 / -1; justify-self: stretch; width: auto; margin-top: 8px; }
 
 @media (prefers-reduced-motion: reduce) { html.ui-v7 .pb-list .btn, html.ui-v7 .pb-nav .btn { transition: none; } }
+
+/* saboteur: the auto top margin (app.css side rule) soaked up a half pixel of body slack and put the bar, and every tile in it, 0.5px off the 4px grid */
+html.ui-v7.side:not(.start):not(.dock-bottom) body > .top, html.ui-v7 body > .top { margin-top: 0; }
+
+/* question-menu button fits its label (flex-style): on the phone bar the list tile does not shrink (basis = label), capped at 45% of the bar, and the notch tile gives way first
+   (notches 12 -> 8, gap 5 -> 4, pad 10 -> 8; min tile 7*8+6*4+2*8 = 96). Ellipsis only past the cap. Desktop: grid column, cap 320px (--pb-list-max above). */
+html.ui-v7.dock-bottom .qnav { --pb-n-min: 8px; --pb-n-gap: 4px; --pb-pad: 8px; }
+html.ui-v7.dock-bottom .pb-list { flex: 0 0 auto; max-width: 45%; }
