@@ -23,7 +23,7 @@
    a small one swaps it into the large slot, CSS order only, no iframe moves, no reload). The floating corner is two 9:16 players side by side, with – / ✕ above
    them (never over the picture, always shown). And phones SHOW it (the Oct 17 "phones get none" rule is lifted under ui-v7): a phone starts stashed as a 44x96 tab
    jutting from the screen edge whose background is a clipped slice of the playing first video (the live iframe itself, shown through the tab: nothing moves, so no
-   reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32. */
+   reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32.
    BRAINROT-B2 (Tony, Nov 14, "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): docked v7 is now 8 videos (all 8 categories, one each) in a
    full-width interlocked bento (LAYOUT below: hero 2x2 + tall + wide + small, 12-col grid, gap 8, every video cover-cropped to its tile; app.css BRAINROT-B2 block). Lazy rule unchanged: the first 3 iframes load at once,
    the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768. */
