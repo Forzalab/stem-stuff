@@ -19,7 +19,11 @@ html.ui-v7 .ff { --mc-right: #0c2c22; --wrong-deep: #33141f; --correct-deep: #0b
 html.ui-v7 .ff.rbox.ok { background: var(--mc-right); }
 html.ui-v7 #q .ff.bad .btn-go { background: var(--wrong-deep); box-shadow: var(--shadow-raise); border: 0; border-radius: 12px; }
 html.ui-v7 .ff.rbox.ok .vk { width: 40px; height: 40px; align-self: center; border-radius: 12px; background: var(--correct-deep); box-shadow: var(--shadow-raise); }
-/* the little pointer wedge above the X (app.css "Cluck is here" ::after): the tray now reads as sliding out from under the row, no pointer needed */
-html.ui-v7 :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after { content: none !important; }
-/* the light wedge above the X is the retry-wait sweep (app.css .btn-go.waiting::before, a conic countdown): under ui-v7 the X slot stays a calm solid fill (the .waiting state itself is unchanged) */
-html.ui-v7 .btn-go.waiting::before { display: none; }
+/* the orange corner dot on the judged row (app.css "Cluck has help here": the Ask Cluck attention dot) stays; under ui-v7 it is a small rounded square (no circles) with no outline ring */
+html.ui-v7 :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after { border-radius: 3px !important; outline: 0 !important; }
+/* the retry-wait countdown (app.css .btn-go.waiting::before, a conic sweep that read as a wedge): kept as a cue, calmer. The X slot is a solid --wrong-deep; the countdown is a thin
+   bottom bar inside the slot that fills left to right over the same 10 s wait, no border, token colours; the X glyph dims while it runs. */
+@keyframes vd-wait { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+html.ui-v7 .btn-go.waiting::before { inset: auto 8px 6px 8px; height: 3px; border-radius: 2px; z-index: 0; background: var(--wrong); transform-origin: left center; transform: scaleX(0); animation: vd-wait 10s linear var(--wd, 0s) forwards; }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .btn-go.waiting::before { animation: none; transform: scaleX(1); } }
+html.ui-v7 .ff.ok, html.ui-v7 .ff.rbox.ok, html.ui-v7 .q .ff.rbox.cue.ok:focus-within { border: 0; }   /* the right row: fill only, no green rim */

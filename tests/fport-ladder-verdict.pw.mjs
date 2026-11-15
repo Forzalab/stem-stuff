@@ -139,11 +139,15 @@ try {
         const kids = await page.evaluate(() => [...document.querySelectorAll("#q .ff.bad *, #q .ff.rbox.cue:not(.ok) *")].filter(e => e.getClientRects().length).map(e => { const cs = getComputedStyle(e); return { c: String(e.className.baseVal ?? e.className).slice(0, 24) || e.tagName, bw: cs.borderTopWidth + cs.borderRightWidth + cs.borderBottomWidth + cs.borderLeftWidth }; }).filter(x => x.bw !== "0px0px0px0px"));
         assert.deepEqual(kids, [], "a border inside the wrong box (its X button): " + JSON.stringify(kids));
         const slot = await page.evaluate(() => { const ff = document.querySelector("#q .ff.bad"), b = ff.querySelector(".btn-go"), cs = getComputedStyle(b), r = ff.getBoundingClientRect(), hit = document.elementFromPoint(r.right - 2, r.bottom - 2);
-          return { bg: cs.backgroundColor, bw: cs.borderTopWidth, after: getComputedStyle(ff, "::after").content, hit: !!hit && !!hit.closest(".ff"), hitDrawer: !!hit && !!hit.closest(".vdrawer"), shadow: getComputedStyle(ff).boxShadow }; });
+          return { bg: cs.backgroundColor, bw: cs.borderTopWidth, dotR: getComputedStyle(ff, "::after").borderTopLeftRadius, dotOutline: getComputedStyle(ff, "::after").outlineWidth, hit: !!hit && !!hit.closest(".ff"), hitDrawer: !!hit && !!hit.closest(".vdrawer"), shadow: getComputedStyle(ff).boxShadow }; });
         assert.equal(slot.bg, "rgb(51, 20, 31)", "the X slot = --wrong-deep #33141f"); assert.equal(slot.bw, "0px");
         assert.ok(!slot.hitDrawer, "the tray must not show in the row's rounded bottom-right corner: " + JSON.stringify(slot));
-        assert.ok(slot.after === "none" || slot.after === "normal", "no pointer wedge: " + slot.after);
-        assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector("#q .ff.bad .btn-go"), "::before").display === "none"), "no sweep wedge in the X slot");
+        assert.ok(slot.dotR !== "50%" && slot.dotOutline === "0px", "the Cluck dot is no circle / no ring: " + slot.dotR + " " + slot.dotOutline);
+        const wait = await page.evaluate(() => { const b = document.querySelector("#q .ff.bad .btn-go"), cs = b && getComputedStyle(b, "::before"); return b && b.classList.contains("waiting") ? { bgi: cs.backgroundImage, h: cs.height, name: cs.animationName } : null; });
+        if (SHOTS && wait) await page.screenshot({ path: join(SHOTS, `waiting-${w}.png`) });
+        assert.ok(!wait || (wait.bgi === "none" && wait.h === "3px" && wait.name === "vd-wait"), "the retry wait = a thin bar, not the conic wedge: " + JSON.stringify(wait));
+        const ln = await page.evaluate(() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer:not([hidden])"); if (!l || !l.getClientRects().length) return null; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { a: a.toJSON(), b: b.toJSON(), hit: !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top + 0.5 || a.top >= b.bottom) }; });
+        assert.ok(!ln || !ln.hit, "the verdict line is covered by the tray: " + JSON.stringify(ln));
         assert.notEqual(slot.shadow, "none", "the row casts a shadow onto the tray");
         if (SHOTS) { const bb = await page.locator("#q .ff.bad").boundingBox(); await page.screenshot({ path: join(SHOTS, `corner-${w}.png`), clip: { x: Math.max(0, bb.x + bb.width - 120), y: bb.y + bb.height - 40, width: 120 + 8, height: 100 } }); }
         assert.ok(bad, "a judged-wrong typed box");
@@ -162,16 +166,18 @@ try {
       } finally { await page.context().close(); }
     });
   }
-  await step("390: flag on: right answer = green row, tick slot --correct-deep, no border", async () => {
-    const page = await open(390, "v7", "#PHYS_FP2");
+  for (const w of W) await step(`${w}: flag on: right answer = green row (no border), tick slot --correct-deep, verdict line not covered`, async () => {
+    const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
-      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await page.waitForTimeout(700);
+      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await page.waitForTimeout(900);
       const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
-        return { row: fs.backgroundColor, rbw: fs.borderTopWidth, slot: cs.backgroundColor, h: v.getBoundingClientRect().height }; });
+        return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer:not([hidden])"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top + 0.5 || a.top >= b.bottom) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height }; });
       assert.equal(m.slot, "rgb(11, 42, 31)", "tick slot = --correct-deep #0b2a1f"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
-      if (SHOTS) await page.screenshot({ path: join(SHOTS, "right-390.png") });
+      assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
+      assert.ok(m.ln && !m.ln.hit, "the verdict line is covered by the tray: " + JSON.stringify(m.ln));
+      if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });
   await step("flag off: ladder keeps its 1px edges", async () => {
