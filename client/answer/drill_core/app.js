@@ -1932,6 +1932,7 @@ function pbFeed() {
     const at = bank.codes.indexOf(S.code), left = at < 0 ? undefined : bank.codes.slice(at + 1).filter(c => !st.notches.some(x => x.q === c)).length;
     pbSubmit(st, { q: S.code, f, retry }, left);
     localStorage.setItem(k, JSON.stringify(st));
+    dispatchEvent(new CustomEvent("drill:pb"));   // P5: progbar.js re-reads the saved state (no payload; the storage is the truth)
   } catch { /* storage blocked: the bar state is optional */ }
 }
 function finish() {

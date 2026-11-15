@@ -56,6 +56,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script type="module" src="client/answer/drill_core/app.js"></script>
 <script type="module" src="client/cluck/cluck.js"></script><script type="module" src="client/shell/shell.js"></script><!-- W152: app.js split in 3 (tools/client_generators/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->
 <script type="module" src="client/answer/navigation/nav.js"></script>
+<script type="module" src="client/answer/progbar/progbar.js"></script><!-- the v9d top bar (PROGBAR P5): inert unless html.ui-v7; after nav.js (it re-parents the nav buttons) -->
 <!-- offline hook: offline.js (service worker registration, cache) is written separately; do not implement here -->
 <script src="client/shell/offline.js" defer></script>
 <script src="client/cluck/brainrot.js" defer></script>
@@ -109,6 +110,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="client/answer/drill_core/app.css">
 <link rel="stylesheet" href="client/answer/answer_strip/strip.css"><!-- the answer strip: the verdict drawer under a typed answer (strip.js; B3 PR-B1). After app.css: it layers on .ff / .wchip -->
 <link rel="stylesheet" href="client/answer/navigation/nav.css">
+<link rel="stylesheet" href="client/answer/progbar/progbar.css"><!-- the v9d bar, all under html.ui-v7: after nav.css (same specificity ladder, later wins) -->
 <link rel="stylesheet" href="client/vendor/fonts/press-start-2p.css">
 <link rel="stylesheet" href="client/rewards/rewards.css">
 <link rel="stylesheet" href="client/shell/toast/toast.css">

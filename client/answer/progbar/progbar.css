@@ -1,0 +1,71 @@
+/* progbar.css: the v9d top bar (PROGBAR P5; progbar.js owns the DOM). Everything is under html.ui-v7: flag off = zero rules apply.
+   Geometry = brain ui-polish/topbar-v9/fit06/MEASURE.md "v9d re-derived" + V9D-POLISH (measured against image 06, locked Nov 14):
+   phone: bar 68, tile 52, margin 12, tile gap 6, notch 16x32 (flex, min 12), notch gap 5, tile side pad 10, notch r 8, streak notch 40;
+   desktop: tile 52, notch 16x32, gap 5, side pad 12, notch tile 166. List tile max 132 (320 desktop), nav tile = 2 x 44.
+   Hues are tokens (INTEG T1): --correct / --wrong; streak fill = --correct-soft (new token, app.css, the mock's --n-streak); empty edge = --line (no --edge-dim token yet). Notch 24 high, streak 32 (mock topbar.css lines 9-45); tile stays 52 (V9D-POLISH pins it). The radius / space tokens of the v7 token PR are not in yet, so the
+   v9d numbers sit as --pb-* custom properties on .qnav (one place to swap when they land). Squircles via superellipse(1.52) where supported. */
+html.ui-v7 .qnav { --pb-tile: 52px; --pb-r: 16px; --pb-hit: 44px; --pb-gap: 6px; --pb-n-w: 16px; --pb-n-h: 24px; --pb-n-gap: 5px; --pb-n-min: 12px;
+  --pb-n-r: 8px; --pb-streak-h: 32px; --pb-pad: 10px; --pb-list-max: 132px; }
+
+/* ---------- tiles: solid, matte, one moulded top edge ---------- */
+html.ui-v7 .pb-list, html.ui-v7 .pb-nav, html.ui-v7 .pb {
+  box-sizing: border-box; flex: none; display: flex; align-items: center; min-width: 0; height: var(--pb-tile);
+  border-radius: var(--pb-r); background: var(--sheet); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 5%, transparent); overflow: hidden;
+}
+html.ui-v7 .pb[hidden] { display: none; }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(.pb-list, .pb-nav, .pb, .pb-n) { corner-shape: superellipse(1.52); } }
+html.ui-v7 .pb-list { flex: 0 1 auto; max-width: var(--pb-list-max); }
+html.ui-v7 .pb-list .btn, html.ui-v7 .pb-nav .btn {
+  width: auto; height: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink);
+  transition: background-color .18s ease-out;
+}
+html.ui-v7 .pb-list .btn:hover, html.ui-v7 .pb-nav .btn:hover { background: var(--float); }
+html.ui-v7 .pb-list .btn:active, html.ui-v7 .pb-nav .btn:active { transform: none; background: var(--float); }
+html.ui-v7 .pb-list .btn:focus-visible, html.ui-v7 .pb-nav .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+html.ui-v7 #qlistBtn { flex: 1 1 auto; min-width: 0; padding: 0 14px 0 12px; gap: 8px; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; }
+html.ui-v7 #qlistBtn .ico { width: 20px; height: 20px; flex: none; }
+html.ui-v7 #qlistName { min-width: 0; max-width: none; }
+html.ui-v7 #qlistBtn[aria-expanded="true"] { background: var(--float); }
+/* iOS back replaces the list ICON (INTEG B1 default a): the back button leads the tile, the title stays and gives way first */
+html.ui-v7 #qback { flex: none; width: var(--pb-hit); }
+html.ui-v7 .pb-list:has(#qback:not([hidden])) #qlistBtn { padding-left: 0; }
+html.ui-v7 .pb-list:has(#qback:not([hidden])) #qlistBtn .ico { display: none; }
+html.ui-v7 .pb-nav .btn { width: var(--pb-hit); display: inline-grid; place-items: center; }
+html.ui-v7 .qnav .pb-nav .btn:disabled { opacity: 1; color: var(--muted); }
+html.ui-v7 .qnav .pb-nav .btn:disabled .ico { opacity: .4; }
+html.ui-v7 .qnav .pb-nav .btn:disabled:hover { background: transparent; }
+
+/* ---------- the notch tile ---------- */
+html.ui-v7 .pb { --pb-min: calc(7 * var(--pb-n-min) + 6 * var(--pb-n-gap) + 2 * var(--pb-pad)); flex: 1 1 var(--pb-min); min-width: var(--pb-min); justify-content: center; padding: 0 var(--pb-pad); }   /* never under 7 notches at 12: the title gives way first */
+html.ui-v7 .pb-ns { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--pb-n-gap); height: 100%; min-width: 0; }
+html.ui-v7 .pb-n { position: relative; flex: 1 1 0; min-width: var(--pb-n-min); max-width: var(--pb-n-w); height: var(--pb-n-h); border-radius: var(--pb-n-r); overflow: hidden;
+  background: var(--page); box-shadow: inset 0 0 0 1px var(--line); }   /* empty: hollow (mock --n-empty) */
+html.ui-v7 .pb-n.next { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 55%, transparent); }              /* the slot the next answer fills */
+html.ui-v7 .pb-n.right, html.ui-v7 .pb-n.wrong, html.ui-v7 .pb-n.partial { box-shadow: none; }
+html.ui-v7 .pb-n.right { background: var(--correct); }
+html.ui-v7 .pb-n.wrong, html.ui-v7 .pb-n.partial { background: var(--wrong); }                                       /* colour only, no mark */
+html.ui-v7 .pb-n u { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--f, 1) * 100%); background: var(--correct); }   /* partial: right hue bottom-up */
+html.ui-v7 .pb-n.streak { height: var(--pb-streak-h); }
+html.ui-v7 .pb-n.streak u { background: var(--correct-soft); }   /* right hue base, a step lighter fill (mock --n-streak) */
+
+/* ---------- phone / touch (entry dock at the bottom): the nav row is the bar ---------- */
+html.ui-v7.dock-bottom .qnav { display: flex; align-items: center; gap: var(--pb-gap); box-sizing: border-box; padding: 8px 12px; }
+html.ui-v7.dock-bottom .pb { max-width: 166px; margin-inline: auto; }   /* wide touch screens (landscape, tablets): the tile stops at the desktop 166 and floats between list and nav */
+html.ui-v7.dock-bottom .pb-nav { margin-left: 0; }
+
+/* ---------- desktop: list left, notches centred, nav right (one row; the HUD and the code box wait in rows under it until P6 / B3) ---------- */
+html.ui-v7.qnav-on:not(.dock-bottom):not(.start) .top {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 8px; align-items: center;
+  padding: calc(env(safe-area-inset-top) + 12px) var(--gut) 12px;
+}
+html.ui-v7:not(.dock-bottom) .pb-list { --pb-list-max: 320px; grid-row: 1; grid-column: 1; justify-self: start; }
+html.ui-v7:not(.dock-bottom) .pb { flex: none; min-width: 0; grid-row: 1; grid-column: 2; padding: 0 12px; }
+html.ui-v7:not(.dock-bottom) .pb-n { flex: none; width: var(--pb-n-w); min-width: 0; }
+html.ui-v7:not(.dock-bottom) .pb-nav { grid-row: 1; grid-column: 3; justify-self: end; }
+html.ui-v7.qnav-on:not(.dock-bottom):not(.start) .top .entry { grid-row: 3; grid-column: 1 / -1; width: 21rem; }
+html.ui-v7.qnav-on:not(.dock-bottom):not(.start) .top .entry-msg { grid-row: 4; grid-column: 1 / -1; }
+/* the HUD (still on until P6): its own row under the bar. The id lifts it over nav.css / rewards.css's long :not() placement rules */
+html.ui-v7.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .top > #rwHud,
+html.ui-v7.qnav-on:not(.dock-bottom):not(.start) .top > #rwHud { grid-row: 2; grid-column: 1 / -1; justify-self: stretch; width: auto; margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .pb-list .btn, html.ui-v7 .pb-nav .btn { transition: none; } }

@@ -121,3 +121,4 @@ welcome-app
 welcome-first
 welcome
 why-chip
+progbar-bar
