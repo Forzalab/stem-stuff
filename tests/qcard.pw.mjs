@@ -40,22 +40,22 @@ async function open(w, flag, code) {
 }
 const geo = page => page.evaluate(() => {
   const r = s => { const e = document.querySelector(s); return e && e.getBoundingClientRect(); };
-  const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn"), tx = document.querySelector("#blocks .qtext");
+  const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn"), tx = document.querySelector("#blocks .qscroll");
   const cs = btn && getComputedStyle(btn), alpha = c => { const m = c.match(/rgba?\(([^)]+)\)/); const v = m[1].split(/[ ,\/]+/).filter(Boolean); return v.length > 3 ? +v[3] : 1; };
   return { lead: lead && lead.textContent.trim(), l: r(".qlead"), s: set && r(".qsetup"), p: r("#problem"), b: btn && btn.getBoundingClientRect(), front: r(".qghost i:nth-child(1)"), head: r(".qhead"), meta: r(".qmeta"),
     headTx: (document.querySelector(".qhead") || {}).textContent, gbox: r(".qghostbox"), qtx: (document.querySelector(".qtext") || {}).textContent, gap: document.querySelector(".qhead").getBoundingClientRect().top - document.querySelector(".qghostbox").getBoundingClientRect().bottom, metaTx: (document.querySelector(".qmeta") || {}).textContent,
     ghosts: document.querySelectorAll(".qghost i").length, ghostHidden: document.querySelector(".qghostbox").getAttribute("aria-hidden"), twist: !!document.querySelector(".qmeta #twistChip"),
-    chipAlpha: alpha(cs.backgroundColor), chipBorder: cs.borderTopWidth, chipShadow: cs.boxShadow, txOv: tx && getComputedStyle(tx).overflowY, txMax: tx && getComputedStyle(tx).maxHeight, txH: tx && tx.clientHeight,
+    chipAlpha: alpha(cs.backgroundColor), chipBorder: cs.borderTopWidth, chipShadow: cs.boxShadow, qOut: !document.querySelector(".qscroll .qlead"), scrollTop: tx ? tx.scrollTop : -1, txOv: tx && getComputedStyle(tx).overflowY, txMax: tx && getComputedStyle(tx).maxHeight, txH: tx && tx.clientHeight,
     show: document.querySelectorAll(".qshow").length, sw: document.documentElement.scrollWidth, vw: innerWidth };
 });
 const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 try {
   for (const w of [390, 1366]) {
-    await step(`${w}: short question: ghost 6 copies, headline + one text block + meta row (exam . q#, Twist chip), Ask Cluck solid top right clear of the numeral`, async () => {
+    await step(`${w}: short question: ghost 6 copies, headline + one text block + meta row (exam . q#), Ask Cluck solid top right clear of the numeral`, async () => {
       const page = await open(w, "v7", "PHYS_QS1");
       try {
         const g = await geo(page);
-        assert.equal(g.lead, "How fast is a rolling ball at the bottom?"); assert.equal(g.ghosts, 6); assert.equal(g.ghostHidden, "true"); assert.ok(g.twist, "Twist chip in the meta row");
+        assert.equal(g.lead, "How fast is a rolling ball at the bottom?"); assert.equal(g.ghosts, 6); assert.equal(g.ghostHidden, "true"); assert.ok(!g.twist, "no Twist chip under ui-v7 (the row toast announces it)"); assert.ok(!(await page.evaluate(() => !!document.querySelector("#twistChip"))), "no #twistChip");
         assert.equal(g.headTx, "Roll"); assert.match(g.metaTx, /exam 3 · q1/); assert.doesNotMatch(g.metaTx, /Number only/, "hint stays below the card, not in the meta row");
         assert.ok(g.gbox.bottom <= g.head.top + 0.5, "numeral block above the headline"); assert.ok(g.l.bottom <= g.meta.top + 0.5, "meta under the text");
         assert.ok(g.b && g.b.right > g.p.right - 40 && g.b.top < g.p.top + 40, "Ask Cluck top right");
@@ -74,7 +74,7 @@ try {
         assert.ok(g.s.top < g.l.top, "setup above the question");
         assert.equal(g.headTx, "Hydraulic lift", "whole topic word"); assert.ok(g.gap <= 17, "no empty band under the numeral: " + g.gap);
         assert.ok(g.qtx.includes("2.55\u00a0m"), "number + unit joined by a no-break space"); assert.ok(!/\s[.,;:?]/.test(g.qtx), "no stray space before punctuation: " + g.qtx.match(/.{8}\s[.,;:?].{3}/));
-        assert.equal(g.txOv, "auto"); assert.equal(g.txMax, w < 900 ? "170px" : "190px"); assert.ok(g.txH <= (w < 900 ? 170 : 190) + 1, "text block capped");
+        assert.equal(g.txOv, "auto"); assert.equal(g.txMax, w < 900 ? "170px" : "190px"); assert.ok(g.txH <= (w < 900 ? 170 : 190) + 1, "setup scroll box capped"); assert.ok(g.qOut, "question sits outside the scroll box"); assert.equal(g.scrollTop, 0, "scroll box starts at its first line");
         assert.equal(g.show, 0, "no Show all"); assert.ok(!hit(g.b, g.front), "chip clear of the numeral");
       } finally { await page.context().close(); }
     });
@@ -82,9 +82,9 @@ try {
   await step("text block scrolls inside when over the max height (long setup)", async () => {
     const page = await open(390, "v7", "PHYS_QL2");
     try {
-      await page.evaluate(() => { const t = document.querySelector(".qtext"); const d = document.createElement("div"); d.className = "md qsetup"; d.innerHTML = "<p>" + "More setup text that goes on and on. ".repeat(40) + "</p>"; t.insertBefore(d, t.firstChild); });
-      const o = await page.evaluate(() => { const t = document.querySelector(".qtext"); t.scrollTop = 9999; return { h: t.clientHeight, sh: t.scrollHeight, st: t.scrollTop }; });
-      assert.ok(o.sh > o.h && o.st > 0 && o.h <= 171, JSON.stringify(o));
+      await page.evaluate(() => { const t = document.querySelector(".qscroll"); const d = document.createElement("div"); d.className = "md qsetup"; d.innerHTML = "<p>" + "More setup text that goes on and on. ".repeat(40) + "</p>"; t.insertBefore(d, t.firstChild); });
+      const o = await page.evaluate(() => { const t = document.querySelector(".qscroll"); t.scrollTop = 9999; t.dispatchEvent(new Event("scroll")); const l = document.querySelector(".qlead").getBoundingClientRect(), c = document.querySelector("#problem").getBoundingClientRect(); return { h: t.clientHeight, sh: t.scrollHeight, st: t.scrollTop, qft: t.classList.contains("qft"), qfb: t.classList.contains("qfb"), leadIn: l.top >= c.top && l.bottom <= c.bottom }; });
+      assert.ok(o.sh > o.h && o.st > 0 && o.h <= 171 && o.qft && !o.qfb && o.leadIn, JSON.stringify(o));
     } finally { await page.context().close(); }
   });
   await step("echo animation: prev/next slides the trail in (transform + opacity only, will-change only while it runs); reduced motion: none", async () => {

@@ -12,14 +12,14 @@ html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden])
 /* GHOST: in the flow at the top of the card (nothing is laid over it), full card width, clipped by its own box; the horizontal mask fades the trail before the chip column */
 html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height: calc(var(--qnum) * .74 + var(--qpad)); margin: calc(-1 * var(--qpad)) calc(-1 * var(--qpad)) 0; border-radius: inherit; pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, #000 52%, transparent 76%); mask-image: linear-gradient(90deg, #000 52%, transparent 76%); }
-html.ui-v7 .qghost { position: absolute; left: 48px; top: calc(var(--qpad) - var(--qnum) * .15); font: 900 var(--qnum)/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.05em; white-space: nowrap; color: #c9d4ff; font-variant-numeric: tabular-nums; user-select: none; }
+html.ui-v7 .qghost { position: absolute; left: 48px; top: calc(var(--qpad) - var(--qnum) * .15); font: 900 var(--qnum)/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.05em; white-space: nowrap; color: #5b6a9a; font-variant-numeric: tabular-nums; user-select: none; }
 html.ui-v7 .qghost i { font-style: normal; position: absolute; left: 0; top: 0; z-index: calc(10 - var(--k)); transform: translate(calc(var(--k) * -12px), 0); opacity: var(--o); }
-html.ui-v7 .qghost i:nth-child(1) { position: relative; --o: .34; }
-html.ui-v7 .qghost i:nth-child(2) { --o: .19; }
-html.ui-v7 .qghost i:nth-child(3) { --o: .13; }
-html.ui-v7 .qghost i:nth-child(4) { --o: .09; }
-html.ui-v7 .qghost i:nth-child(5) { --o: .06; }
-html.ui-v7 .qghost i:nth-child(6) { --o: .04; }
+html.ui-v7 .qghost i:nth-child(1) { position: relative; --o: .28; }
+html.ui-v7 .qghost i:nth-child(2) { --o: .15; }
+html.ui-v7 .qghost i:nth-child(3) { --o: .10; }
+html.ui-v7 .qghost i:nth-child(4) { --o: .07; }
+html.ui-v7 .qghost i:nth-child(5) { --o: .045; }
+html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
 /* prev/next: the trail slides in from its offsets and fades to rest. Compositor only (transform, opacity); will-change lives only while it runs (qcard.js adds / removes .qanim) */
 @keyframes qecho { from { opacity: 0; transform: translate(calc(var(--k) * -12px + 32px), 0); } }
 html.ui-v7 .qghostbox.qanim .qghost i { will-change: transform, opacity; animation: qecho 360ms cubic-bezier(.2, .7, .2, 1) calc(var(--k) * 18ms) backwards; }
@@ -35,9 +35,15 @@ html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-sha
 html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; }
 html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
-html.ui-v7 #problem.qc7 .qtext { max-height: var(--qmax); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; font: 400 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
+html.ui-v7 #problem.qc7 .qtext { font: 400 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: 17px; line-height: 24px; } }
-html.ui-v7 #problem.qc7 .qtext:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
+html.ui-v7 #problem.qc7 .qscroll { max-height: var(--qmax); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 0; }
+html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 16px); mask-image: linear-gradient(transparent 0, #000 16px); }
+html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 16px), transparent); mask-image: linear-gradient(#000 calc(100% - 16px), transparent); }
+html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 16px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(transparent 0, #000 16px, #000 calc(100% - 16px), transparent); }
+html.ui-v7 #problem.qc7 .qscroll > * { margin: 0 0 8px; max-width: 64ch; }
+html.ui-v7 #problem.qc7 .qscroll > :last-child, html.ui-v7 #problem.qc7 .qscroll > :last-child > :last-child { margin-bottom: 0; }
+html.ui-v7 #problem.qc7 .qscroll:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
 html.ui-v7 #problem.qc7 .qtext > * { margin: 0 0 8px; max-width: 64ch; }
 html.ui-v7 #problem.qc7 .qtext > :last-child { margin-bottom: 0; }
 html.ui-v7 #problem.qc7 .qtext p, html.ui-v7 #problem.qc7 .qtext ul, html.ui-v7 #problem.qc7 .qtext ol { margin: 0 0 8px; max-width: none; }

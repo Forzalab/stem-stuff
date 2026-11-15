@@ -2,7 +2,7 @@
    Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered), top to bottom on ONE card background:
    - GHOST: the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
    - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
-     kept bold); the block scrolls inside past a max height (no Show all), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
+     kept bold); only the setup scrolls inside past a max height (the question stays fully visible, no Show all), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
    Source: brain ui-polish/hintbox/v71/longq (DESIGN.md), ui-v7-decisions QCARD-SWISS v3 (owner picked V3). Looks: qcard.css. */
 (function (g) {
   "use strict";
@@ -90,10 +90,17 @@
     UNIT.lastIndex = 0;
     list.forEach(function (x) { x.nodeValue = x.nodeValue.replace(UNIT, "$1\u00a0"); });
   }
-  /* the text block scrolls inside past its max height: focusable then, so the keyboard can scroll it */
+  /* ONLY the setup scrolls (div.qscroll, max height in qcard.css); the question sentence sits below it, always fully visible. Focusable when it overflows;
+     a 16px fade at the top / bottom edge shows only where content is hidden (.qft / .qfb) */
+  function fades(t) {
+    t.classList.toggle("qft", t.scrollTop > 1);
+    t.classList.toggle("qfb", t.scrollTop + t.clientHeight < t.scrollHeight - 1);
+  }
   function scrollable(t) {
     var over = t.scrollHeight > t.clientHeight + 1;
-    if (over) { t.tabIndex = 0; t.setAttribute("role", "region"); t.setAttribute("aria-label", "Question text"); } else { t.removeAttribute("tabindex"); t.removeAttribute("role"); t.removeAttribute("aria-label"); }
+    if (over) { t.tabIndex = 0; t.setAttribute("role", "region"); t.setAttribute("aria-label", "Question setup"); } else { t.removeAttribute("tabindex"); t.removeAttribute("role"); t.removeAttribute("aria-label"); }
+    if (!t.hasAttribute("data-f")) { t.setAttribute("data-f", "1"); t.addEventListener("scroll", function () { fades(t); }, { passive: true }); }
+    fades(t);
   }
 
   function build() {
@@ -126,7 +133,8 @@
           if (title) { head = D.createElement("h2"); head.className = "qhead"; head.textContent = title; }
         }
         var tx = D.createElement("div"); tx.className = "qtext";
-        texts.forEach(function (c) { tx.appendChild(c); }); tx.appendChild(lead);
+        if (texts.length) { var sc = D.createElement("div"); sc.className = "qscroll"; texts.forEach(function (c) { sc.appendChild(c); }); tx.appendChild(sc); }
+        tx.appendChild(lead);
         if (tw) m.appendChild(tw);
         figs.forEach(function (c) { blocks.appendChild(c); });
         if (head) blocks.appendChild(head);
@@ -138,7 +146,7 @@
     }
     var mm = blocks.querySelector(":scope > .qmeta"), tt = blocks.querySelector(":scope > .qtext");
     if (mm) meta(mm);
-    if (tt) { scrollable(tt); if (tt.tabIndex === 0 && !tt.hasAttribute("data-s")) { tt.setAttribute("data-s", "1"); tt.scrollTop = tt.scrollHeight; } }   // overflowing: open at the question (the end), the setup scrolls up
+    var sc2 = tt && tt.querySelector(":scope > .qscroll"); if (sc2) scrollable(sc2);
   }
   function later() { if (!raf) raf = requestAnimationFrame(build); }
 

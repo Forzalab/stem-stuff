@@ -766,7 +766,7 @@ function render() {
      the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
   const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
   if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.textContent = lead; blocks.append(t); }
-  if (prob.twist === true) twistChip(blocks);                             // W133: a twist item's "Twist" chip, left of the title (none: nothing at all)
+  if (prob.twist === true && !root.classList.contains("ui-v7")) twistChip(blocks);   // ui-v7: no chip, the row toast announces it (twistToast)                             // W133: a twist item's "Twist" chip, left of the title (none: nothing at all)
   const C = snackChg();
   if (C?.pairs.length) {
     const c = document.createElement("p"); c.className = "chg-chip";
@@ -812,7 +812,7 @@ function proofHome() {
    on this device also gets the short toast (toast.js: no bar, one action): TWIST_TOAST + "What is that?", which opens the chip's popover.
    Once per device: localStorage TWIST_KEY, set when the toast is on screen (blocked storage: no toast, never a toast every time).
    The toast keeps off the answer area (#q: the box, the ladder, the choices) and Next, tap or no tap. No twist: no chip, no row, no toast. */
-const TWIST_TOAST = "You found a twist.", TWIST_ACT = "What is that?";
+const TWIST_TOAST = "You found a twist.", TWIST_ACT = "What is that?", TWIST_SUB = "One detail differs from the exam question.";
 const TWIST_POP = "You’ll see twists often. These twists change one detail from real exam questions, which will improve retention.";
 const TWIST_KEY = "stem-twist-seen";
 let twistAsked = false;                                                    // queued once per page load (a re-load of the same code never queues a second)
@@ -839,6 +839,11 @@ function twistPop(b, toggle) {
 }
 function twistToast() {
   const T = window.stemToast, code = S && S.code;
+  if (T && S && S.prob.twist === true && root.classList.contains("ui-v7")) {   // ui-v7: no chip; the duck "twist" row toast announces every twist question, once per show (open, never a re-render)
+    T.show({ row: true, duck: "twist", text: TWIST_TOAST, sub: TWIST_SUB, bar: false, ms: 6000, until: Date.now() + 15000, clear: "#q, .nx",
+      at: () => S && S.code === code ? ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) : null });
+    return;
+  }
   if (!T || !S || S.prob.twist !== true || twistAsked) return;
   try { if (localStorage.getItem(TWIST_KEY)) return; } catch { return; }
   twistAsked = true;
