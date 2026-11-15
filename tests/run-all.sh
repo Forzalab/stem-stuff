@@ -14,6 +14,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / progbar-wave / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc, which take a port and start their own server.
 # The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc / tap-targets, which take a port and start their own server.
 # The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / wide-content / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc, which take a port and start their own server.
 set -uo pipefail
@@ -213,10 +214,14 @@ weight() {
     desk-layout) echo 236 ;; desk-layout@1) echo 70 ;; desk-layout@2) echo 72 ;; desk-layout@3) echo 94 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
     progbar-baseline) echo 25 ;;   # PROGBAR P1 characterization of the HUD / record / finish / settle / stage toasts, own server, local run ~25 s (estimate until CI timing)
     progbar-bar) echo 30 ;;
+    progbar-wave) echo 30 ;;
     depth) echo 25 ;;   # DEPTH 1 ui-v7 light-from-above: lit tops, well + gate, own server (estimate until CI timing)   # PROGBAR P5 v9d bar DOM/CSS behind html.ui-v7: flag off untouched, flag on geometry + states, own server (estimate until CI timing)
     mc-bento) echo 25 ;;   # MC-BENTO ui-v7 mosaic layout + state by fill, no borders; flag off unchanged, own server (estimate until CI timing)
     toast-calc) echo 35 ;;   # BUG-TOAST-CALC: toast rect vs #q cards at 1280 + 390, own server (estimate until CI timing)
     verdict-card) echo 40 ;;   # VERDICT-CARD (ui-v7) smoke, own server (estimate until CI timing)
+    calc-toast) echo 30 ;;   # CALC-TOAST: calc card -> toast (ui-v7), own server (estimate until CI timing)
+    cram-cta-off) echo 15 ;;   # CRAM-CTA-OFF, own server
+    fport-hint-toast) echo 20 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     fport-ladder-verdict) echo 30 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     desk-notes-off) echo 14 ;;   # W97 desktop notes box kept: diet shows, sugar hides (static html.sugar), phone keeps it, own server, local run ~14 s (estimate until CI timing)
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
@@ -282,9 +287,13 @@ tags() {
     expr) echo "@logic @real-time" ;;   # W137 expression answers: own 2 serve.py (EXPR_MODE on / off) + a fake Claude, 390 / 1440 / 1366
     progbar-baseline) echo "@logic @real-time" ;;   # PROGBAR P1 HUD baseline, own server
     progbar-bar) echo "@layout @real-time" ;;
+    progbar-wave) echo "@layout @real-time" ;;
     depth) echo "@layout @real-time" ;;   # DEPTH 1 depth shadows + 3:1 field gate, own server   # PROGBAR P5 bar geometry at 360 / 390 / 1280, own server
     mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 5 widths, own server
     toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
+    calc-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
+    cram-cta-off) echo "@layout @real-time" ;;   # CRAM-CTA-OFF, own server
+    fport-hint-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     wide-content) echo "@layout @real-time" ;;   # WIDE-CONTENT, own server
     verdict-card) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     fport-ladder-verdict) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
@@ -443,7 +452,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|brainrot-b|fport-ladder-verdict|verdict-card) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|brainrot-b|fport-ladder-verdict|verdict-card|calc-toast|fport-hint-toast|progbar-wave|cram-cta-off) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

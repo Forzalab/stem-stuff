@@ -913,7 +913,7 @@ html.ui-v7 .rot:not(.docked):not(.stashed) .duo { grid-template-columns: repeat(
 html.ui-v7 .rot:not(.docked):not(.stashed) .ctl { position: static; grid-column: 1 / -1; grid-row: 1; justify-self: end; opacity: 1; pointer-events: auto; transition: none; gap: var(--s2); }
 html.ui-v7 .rot .ctl button { width: 44px; height: 44px; border-radius: 12px; background: var(--float); box-shadow: var(--shadow-3); }
 html.ui-v7 .rot:not(.docked) .vid { width: 84px; height: 148px; aspect-ratio: auto; border-radius: 16px; background: var(--sheet); }
-html.ui-v7 .rot:not(.docked) .vid:not(.short) iframe, html.ui-v7 .rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }   /* a landscape video is centre-cropped to the 9:16 frame (a Short fills), as docked always was */
+html.ui-v7 .rot:not(.docked) .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }   /* a landscape video is centre-cropped to the 9:16 frame (a Short fills), as docked always was */
 /* phone stash: a 44x96 tab jutting from the screen edge; its background is a clipped slice of the playing first video (the live iframe, shown through the tab, never moved:
    a poster would be a still from ytimg, the iframe moving would reload it). The button above it carries the scrim + glyph and takes the tap. */
 html.ui-v7 .rot.stashed:not(.docked) .duo { position: absolute; left: 0; top: 0; width: 44px; height: 96px; opacity: 1; display: block; overflow: hidden; border-radius: 0 12px 12px 0; pointer-events: none; }
@@ -922,18 +922,22 @@ html.ui-v7 .rot.stashed:not(.docked) .vid { width: 44px; height: 96px; border-ra
 html.ui-v7 .rot.stashed:not(.docked) .vid:nth-child(n + 2), html.ui-v7 .rot.stashed:not(.docked) .ctl { display: none; }
 html.ui-v7 .rot .rtab { position: relative; z-index: 1; border-radius: 0 12px 12px 0; background: linear-gradient(to right, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
 html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradient(to left, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
-/* desktop dock: no box (white space), 5 players in a bento on the 12-col grid: the playing one large (span 6 x 2 rows) + four span 3, all in view (this replaces the Oct 31
-   "3.5 visible + fade" row). Rows = whole px on 4: R = the room the column leaves (--hmax, the old cap) or what the column's width gives 9:16 tiles; the mosaic is as wide as 4 tiles + 24 */
-html.ui-v7 .rot.docked { --hmax: min(40dvh, 100dvh - 22rem); }
-html.ui-v7.side #work.cl-on .rot.docked { --hmax: min(40dvh, 100dvh - 32rem); }   /* Cluck's sheet open: the same trade as above */
+/* desktop dock (BRAINROT-B2, Tony Nov 14: "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): no box, the mosaic fills the whole notes column.
+   8 tiles on a 12-col grid, gap 8: --rows rows of --R px; each tile's cells come from brainrot.js LAYOUT (--a = its grid-area), 1x1 / 2x1 / 1x2 / 2x2 interlocked, no holes. No 9:16 on any tile: every video is
+   centre-cropped to its tile (cover, from the container units below). R = a unit's width x .8 (whole px, on 4) but never more than the height budget leaves (--hmax). */
+html.ui-v7 .rot.docked { --hmax: min(60dvh, 100dvh - 28rem); }   /* the sheet is open from load: its header, a few lines and the ask field keep 28rem; the old budget was min(40dvh, 100dvh - 32rem) */
+html.ui-v7.side #work.cl-on .rot.docked .vid { height: auto; }
 html.ui-v7 .rot.docked .shelf { container-type: inline-size; }
 html.ui-v7 .rot.docked .shelf .fade { display: none; }
-html.ui-v7 .rot.docked .duo { --R: max(48px, round(down, min((var(--hmax) - var(--s2)) / 2, (100cqw - var(--s5)) * 4 / 9), 4px));
-  container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(2, var(--R)); gap: var(--s2);
-  width: round(down, var(--R) * 9 / 4 + var(--s5), 1px); max-width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; scroll-snap-type: none; }
+html.ui-v7 .rot.docked .duo { --R: max(48px, round(down, min((var(--hmax) - (var(--rows, 4) - 1) * var(--s2)) / var(--rows, 4), (100cqw - var(--s5)) / 4 * .8), 4px));
+  container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: var(--s2);
+  width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; scroll-snap-type: none; }
 html.ui-v7 .rot.docked.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; display: block; }   /* folded: still playing, out of sight (as flag off) */
-html.ui-v7 .rot.docked .vid, html.ui-v7.side #work.cl-on .rot.docked .vid { grid-column: span 3; width: auto; height: auto; aspect-ratio: auto; border: 0; border-radius: 12px; background: var(--sheet); cursor: pointer; scroll-snap-align: none; }
-html.ui-v7 .rot.docked .vid.hero, html.ui-v7.side #work.cl-on .rot.docked .vid.hero { grid-column: 1 / span 6; grid-row: 1 / span 2; order: -1; border-radius: 16px; cursor: auto; }
+html.ui-v7 .rot.docked .vid { grid-area: var(--a); container-type: size; width: auto; height: auto; aspect-ratio: auto; border: 0; border-radius: 12px; background: var(--sheet); cursor: pointer; scroll-snap-align: none; }
+html.ui-v7 .rot.docked .vid.hero { border-radius: 16px; cursor: auto; }
+/* cover-crop: the iframe is 16:9 (a Short: 9:16), 136% of what covers the tile (the title strip and logo fall outside), centred */
+html.ui-v7 .rot.docked .vid iframe { --iw: max(136cqw, 136cqh * 16 / 9); width: var(--iw); height: calc(var(--iw) * 9 / 16); left: calc((100cqw - var(--iw)) / 2); top: calc((100cqh - var(--iw) * 9 / 16) / 2); }
+html.ui-v7 .rot.docked .vid.short iframe { --iw: max(136cqw, 136cqh * 9 / 16); width: var(--iw); height: calc(var(--iw) * 16 / 9); top: calc((100cqh - var(--iw) * 16 / 9) / 2); }
 html.ui-v7 .rot.docked .vid:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 html.ui-v7 .rot.docked .vid.hero .now { position: absolute; z-index: 1; right: var(--s3); top: var(--s3); display: flex; align-items: center; gap: var(--s1); height: 24px; padding: 0 var(--s2); border-radius: 8px; background: color-mix(in srgb, var(--scrim) 55%, transparent); color: var(--ink); font-size: 12px; font-weight: 600; line-height: 16px; pointer-events: none; }
 html.ui-v7 .rot .now .eq { display: flex; align-items: flex-end; gap: var(--s1); height: 16px; margin-right: var(--s1); }
