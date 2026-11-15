@@ -14,7 +14,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / ios-back / easy / rewards / progbar-baseline / progbar-bar / toast-calc / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / figstream / caret / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-kb / proof-timeout / stages /copy-math / why-chip / repair-gap / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip / guard / strip-layers / strip-layers-mc / dot1 / cluck-permanent / cluck-v2 / ladder-ui / reveal-tray / reveal-duck / fcard-reveal / ladderwire / tray-matrix / cluck-lost / cluck-telemetry / lockhelp / calc-pick / welcome-first / net-retry / calc / tap-targets, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -182,6 +182,7 @@ weight() {
     proof-ladder) echo 8 ;;   # generated proof ladder (client), own server, flag on
     proof-kb) echo 8 ;;   # proof item, phone keyboard up: the question tile hugs (Nov 8), own server, local ~6 s
     welcome) echo 5 ;;   # local run ~4 s
+    tap-targets) echo 20 ;;   # TAP-TARGETS (sabotage findings): 44 px hit areas + the level star digit, own serve.py, fixture banks; estimate until CI timing
     ladder-ui) echo 30 ;;   # LADDER-UI (Nov 3): the welcome ladder at 393 / 1280 / 721 x sugar / diet, own server; local ~25 s (estimate until CI timing)
     window-surface) echo 15 ;;   # W152 window names after the split: 4 runs (2 sizes x sugar/diet), own serve.py; estimate until CI timing
     cluck-history) echo 20 ;;   # W2 Cluck history status lines + folds at 390 / 1280, own serve.py, stub OpenRouter; estimate until CI timing
@@ -254,6 +255,7 @@ tags() {
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
     repair-gap) echo "@layout @real-time" ;;
+    tap-targets) echo "@layout @real-time" ;;   # TAP-TARGETS: own serve.py, fixture banks, no real-time waits
     ladder-ui) echo "@layout @real-time" ;;   # LADDER-UI: own serve.py, fixture bank
     window-surface) echo "@logic @real-time" ;;   # W152: own serve.py, names only, no real-time waits
     reveal-tray) echo "@layout @real-time" ;;   # REVEAL-TRAY: own serve.py + a stub OpenRouter; waits out the real 2 s spam gate
@@ -431,7 +433,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|w3) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
