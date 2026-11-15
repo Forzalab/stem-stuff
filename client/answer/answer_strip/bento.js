@@ -60,6 +60,7 @@
     });
     var tailMin = [0]; for (var i = n - 1; i >= 0; i--) tailMin[n - i] = tailMin[n - i - 1] + minCells[i];
     var tailMax = [0]; for (i = n - 1; i >= 0; i--) tailMax[n - i] = tailMax[n - i - 1] + Math.max.apply(null, cand[i].map(function (x) { return x.cs * x.rs; }));
+    var tiny = n >= 6 && n <= 8 && minCells.every(function (m) { return m <= 2; });   // 6-8 all-short options: near-uniform tiles, never one hero
     function cost(sel, Hh) {
       var c = 25 * Hh, shapes = {}, ns = 0;
       sel.forEach(function (x, ix) {
@@ -67,10 +68,11 @@
         shapes[x.cs + "x" + x.rs] = 1;
         var ar = tileW(x.cs, R, C) / unitsH(x.rs); c += 4 * Math.abs(Math.log(ar));
         if (x.cs === 1 && ms[ix].kind === "t") c += 6 + 6 * Math.max(0, Math.round(ms[ix].by[0].h / 24) - 3);   // a 1-col text tile: narrow, hard to read when it wraps a lot
+        if (tiny) c += 10 * (x.rs - 1) + 5 * (cells - 1) * (cells - 1);
         c += hash(ms[ix].text + x.cs + "x" + x.rs);
       });
       for (var k in shapes) ns++;
-      if (n >= 3) c -= 14 * Math.min(ns, 4);
+      if (tiny) c += 8 * ns; else if (n >= 3) c -= 14 * Math.min(ns, 4);
       return c;
     }
     var best = null, nodes = 0;

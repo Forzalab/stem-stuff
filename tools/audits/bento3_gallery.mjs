@@ -29,6 +29,7 @@ const SC = {
   short: pick(s => mx(s) <= 8, .5), math: pick(s => s.every(pureMath) && s.some(x => /frac|sqrt/.test(x)), .5), medium: pick(s => len(s) > 15 && len(s) < 28, .5),
   long: pick(s => mn(s) > 40, .5), mixed: pick(s => mx(s) > 5 * mn(s) && mx(s) > 40, .5), mixed2: pick(s => mx(s) > 4 * mn(s) && mx(s) > 25 && mn(s) < 10, .8),
   vlong: [words(65, vl), "None", words(30, vl.slice(1)), "$x^2$", words(75, vl.slice(2))], vlongall: [words(62, vl), words(64, vl.slice(1)), words(61, vl.slice(2)), words(66, vl.slice(3)), words(63, vl.slice(4))],
+  tiny: ["$5.20$", "$4.12$", "$1.42$", "$3.20$", "$7.32$", "$7$", "$9$", "$0.5$"],
   words1: ["increases", "decreases", "stays constant", "oscillates", "None of these"],
 };
 const TAIL = ["$7$", "A fairly long extra option that explains the case in a sentence or two", "$\\dfrac{3}{4}$"];
@@ -37,7 +38,7 @@ const ch = m => m.map((md, i) => ({ id: ids[i], md }));
 const probs = [], names = [], CODE = {};
 const codeOf = key => CODE[key] || (CODE[key] = "CALC1_B" + String(Object.keys(CODE).length + 1).padStart(3, "0"));
 for (const [k, t] of Object.entries(SC)) {
-  const eight = [...t, ...TAIL, ...t.slice(0, 3)].slice(0, 8);
+  const eight = k === "tiny" ? t : [...t, ...TAIL, ...t.slice(0, 3)].slice(0, 8);
   for (const kind of ["mc", "all"]) for (const n of [2, 3, 4, 5]) {
     const code = codeOf(`${k}|${kind}|${n}`);
     const choices = ch(eight.slice(0, n));
@@ -74,7 +75,7 @@ const CHECK = () => {
   return out;
 };
 async function open(W) {
-  const c = await browser.newContext({ viewport: { width: W, height: 1100 }, deviceScaleFactor: 2, serviceWorkers: "block" });
+  const c = await browser.newContext({ viewport: { width: W, height: 1100 }, deviceScaleFactor: +(process.env.DSF || 2), serviceWorkers: "block" });
   await c.addInitScript(FLAGOFF => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off"); if (!FLAGOFF) localStorage.setItem("stem-ui", "v7");
     for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } }, !!process.env.FLAGOFF);
   const p = await c.newPage(); p.errs = []; p.on("pageerror", e => p.errs.push(String(e.message) + " @ " + String(e.stack).split("\n").slice(1, 3).join(" | ")));
