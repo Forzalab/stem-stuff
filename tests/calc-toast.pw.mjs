@@ -58,12 +58,12 @@ try {
     await page.goto(BASE + "/"); await anyUp(page);
     await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 });
     assert.equal(await page.$("#q .cc-welcome"), null, "no card");
-    const t = await page.evaluate(() => { const e = document.querySelector(".stoast-c-calc"), b = e.querySelector(".stoast-b"), cs = getComputedStyle(e);
-      return { text: e.querySelector(".stoast-t").textContent, border: cs.borderTopWidth, radius: cs.borderTopLeftRadius, h: b.getBoundingClientRect().height, x: e.querySelector(".stoast-x").getBoundingClientRect().width, role: b.getAttribute("role"), tab: b.tabIndex }; });
+    const t = await page.evaluate(() => { const e = document.querySelector(".stoast-c-calc"), b = e.querySelector(".stoast-a"), cs = getComputedStyle(e);
+      return { text: e.querySelector(".stoast-t").textContent, border: cs.borderTopWidth, radius: cs.borderTopLeftRadius, h: b.getBoundingClientRect().height, x: e.querySelector(".stoast-x").getBoundingClientRect().width, role: e.querySelector(".stoast-b").getAttribute("role"), bw: getComputedStyle(b).borderTopWidth, label: b.textContent }; });
     assert.equal(t.text, "Calculator moves: solve in one go, store a number."); assert.equal(t.border, "0px"); assert.equal(t.radius, "16px");
-    assert.ok(t.h >= 44 && t.x >= 44 && t.role === "button" && t.tab === 0, JSON.stringify(t));
-    await page.waitForTimeout(2500); await page.screenshot({ path: join(SHOTS, "calc-toast-390.png") });
-    await page.focus(".stoast-c-calc .stoast-b"); await page.keyboard.press("Enter");
+    assert.ok(t.h >= 44 && t.x >= 44 && t.role === null && t.bw === "0px" && t.label === "Show keys", JSON.stringify(t));
+    await page.waitForTimeout(2500); await page.screenshot({ path: join(SHOTS, "calc-toast-btn-390.png") });
+    await page.focus(".stoast-c-calc .stoast-a"); await page.keyboard.press("Enter");
     await page.waitForSelector(".cc-ov .cc-deck"); assert.equal(await page.$(".cpick[role=dialog]"), null, "keys, not the picker");
     await page.keyboard.press("Escape");
     await page.reload(); await anyUp(page); await page.waitForTimeout(1500);
@@ -74,7 +74,7 @@ try {
     const { ctx, page } = await fresh({ ...V7 }, AFTER);
     await page.goto(BASE + "/"); await anyUp(page);
     await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 });
-    await page.click(".stoast-c-calc .stoast-b"); await page.waitForSelector(".cpick[role=dialog]"); assert.equal(await page.$(".cc-ov"), null);
+    await page.click(".stoast-c-calc .stoast-a"); await page.waitForSelector(".cpick[role=dialog]"); assert.equal(await page.$(".cc-ov"), null);
     await ctx.close();
     const b = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER);
     await b.page.goto(BASE + "/"); await anyUp(b.page); await b.page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 });
@@ -86,7 +86,7 @@ try {
     const { ctx, page } = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER, { viewport: { width: 1366, height: 768 } });
     await page.goto(BASE + "/"); await anyUp(page);
     await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 }); await page.waitForTimeout(400);
-    await page.screenshot({ path: join(SHOTS, "calc-toast-1366.png") }); await ctx.close();
+    await page.screenshot({ path: join(SHOTS, "calc-toast-btn-1366.png") }); await ctx.close();
   });
   await step("flag off: the card is unchanged, no toast", async () => {
     const { ctx, page } = await fresh({ "stem-calc-model": "ti-36x-pro" }, AFTER);

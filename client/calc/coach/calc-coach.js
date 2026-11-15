@@ -410,14 +410,15 @@
   function openBtn(text, cls, from) { var b = h('button', cls, text); b.type = 'button'; b.setAttribute('data-calc-from', from); b.onclick = function () { open({ from: from }); }; return b; }
   /* ui-v7: "compact this box into a toast that leads directly to the calculator tip" (Tony, Nov 14). Same trigger as the card (a welcome mount);
      the card had no memory, a toast must: once a day (KEY_TOAST + 'v7-' + day, written on show, so the X, a tap and an expiry all count). The
-     whole toast opens CalcCoach.open: the picker when no calculator is picked yet, else its keys (no "Show me the keys" step). It rides the
+     toast's visible button opens CalcCoach.open: the picker when no calculator is picked yet, else its keys (no "Show me the keys" step). It rides the
      toast queue: one at a time, `until` drops it rather than let it hold the line behind another toast. */
   function v7Toast() {
     var key = KEY_TOAST + 'v7-' + day();
     if (!g.stemToast || ls(key) === '1' || diet() || (g.stemCram && g.stemCram.on && g.stemCram.on())) return;
     ls(key, '1');
-    g.stemToast.show({ text: COPY.v7, label: COPY.v7 + ' Opens the keys.', cls: 'calc', bar: false, ms: 9000, until: Date.now() + 20000,
-      at: function () { return d.querySelector('#q .cc-row') || d.getElementById('problem'); }, tap: function () { open({ from: 'toast-v7' }); } });
+    var pick = !model();                                                     // no calculator yet: the button says so (open() then opens the picker)
+    g.stemToast.show({ text: COPY.v7, cls: 'calc', bar: false, ms: 9000, until: Date.now() + 20000,
+      at: function () { return d.querySelector('#q .cc-row') || d.getElementById('problem'); }, action: { label: pick ? 'Pick calculator' : 'Show keys', run: function () { open({ from: 'toast-v7' }); } } });
   }
   function welcomeCard(host) {
     if (!host || host.querySelector('.cc-welcome')) return;
