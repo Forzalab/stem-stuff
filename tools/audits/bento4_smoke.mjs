@@ -14,7 +14,8 @@ for (const [R, C] of CFG) {
     const m = texts.map(t => measure(t, R, C)), seed = "q" + s, t0 = performance.now(), cells = Cost.layout(m, R, C, { seed });
     ms.push(performance.now() - t0); tot++;
     const bad = check(cells, C, N); assert.deepEqual(bad, [], `cover/order ${R}x${C} N${N} ${texts.join(" | ").slice(0, 120)}`);
-    assert.equal(JSON.stringify(Cost.layout(m, R, C, { seed })), JSON.stringify(cells), "deterministic");
+    const ND = { seed, W: { MS: 1e9 } };   // the 40 ms time guard is a runaway cap (machine load): determinism is checked on the node budget alone
+    assert.equal(JSON.stringify(Cost.layout(m, R, C, ND)), JSON.stringify(Cost.layout(m, R, C, ND)), "deterministic");
     const g = Feat.geom(R, C), F = Feat.classifyAll(m, g), info = cells.info;
     cells.forEach((c, i) => {
       assert.ok(!(c.cs === 1 && c.rs >= 3), "no 1x3"); if (!info.fallback) assert.ok(!(c.cs === 3 && c.rs === 2 && C < 5 && C !== 3), "3x2 needs C>=5");

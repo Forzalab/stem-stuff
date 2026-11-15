@@ -6,7 +6,7 @@
 (function () {
   "use strict";
   var root = typeof window !== "undefined" ? window : globalThis;
-  var GAP = 8, PADX = 16, NEEDV = 52, SAFE = 2, RMAX = 5;
+  var GAP = 8, PADX = 16, NEEDV = 52, SAFE = 2, RMAX = 9;
 
   /* geometry for a grid of width R and C columns (phone = narrow: unit row 88, else 100) */
   function geom(R, C) {

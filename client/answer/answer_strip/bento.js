@@ -53,7 +53,7 @@
     g.classList.remove("bento");
     g.style.removeProperty("--bc");
     [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); } });
-    g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento");
+    g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento"); g.removeAttribute("data-fb");
   }
   function apply() {
     queued = false;
@@ -79,7 +79,7 @@
       el.style.gridColumn = c.col + " / span " + c.cs; el.style.gridRow = c.row + " / span " + c.rs;
       o.dataset.k = c.kind; if (c.brk) o.dataset.brk = "1"; else o.removeAttribute("data-brk");
     });
-    u.cells = cells; g.classList.add("bento"); g.dataset.bento = "grid";
+    u.cells = cells; g.classList.add("bento"); g.dataset.bento = "grid"; if (cells.info && cells.info.fallback) g.dataset.fb = "1"; else g.removeAttribute("data-fb");
     var bar = D.querySelector("#q .chk"), cs = bar && getComputedStyle(bar);
     g.style.setProperty("--bar-pad", cs && (cs.position === "fixed" || cs.position === "sticky") ? bar.offsetHeight + 12 + "px" : "0px");
     requestAnimationFrame(guard);
