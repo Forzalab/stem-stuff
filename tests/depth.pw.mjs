@@ -83,6 +83,12 @@ await step("flag on: an unchosen .opt row is raised (lit top + tiny shadow), no 
   assert.match(o.shadow, LIT, "the lit top edge: " + o.shadow);
   assert.match(o.shadow, /0px 1px 2px/, "the tiny shadow: " + o.shadow);
   assert.equal(o.bw, "0px", "rest edge stays gone (NO-BORDER 1)");
+  const card = await css(p, "#q .p, .p");
+  assert.equal(o.bg, card.bg, "NAVY-MIN: option rest fill = card fill (one surface, navy-800)");
+  assert.equal(o.bg, "rgb(13, 20, 42)", "navy-800");
+  await p.click('#q .opt[data-id="a"]');
+  const k = await css(p, "#q .opt[aria-checked='true']");
+  assert.doesNotMatch(k.shadow, /0px 1px 0px 0px inset(?!.*0px 1px 2px 0px inset)/, "checked: no lit top");
   await c.close();
 });
 await step("flag on: the option letter badge is a rounded square, not a circle (owner rule: circles only on the Cluck avatar)", async () => {
@@ -100,12 +106,12 @@ await step("flag on: the primary .btn-go is raised (lit top + small shadow)", as
   assert.match(b.shadow, LIT, "the lit top edge: " + b.shadow);
   await c.close();
 });
-await step("flag on: the question card .p has its lit top and a soft second shadow", async () => {
+await step("flag on: the question card .p has its lit top only (NAVY-MIN: no second shadow)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP01");
   const card = await css(p, "#q .p, .p");
   assert.ok(card, "a question card is shown");
   assert.match(card.shadow, LIT, "the lit top edge: " + card.shadow);
-  assert.match(card.shadow, /0px 6px 14px/, "the soft second shadow: " + card.shadow);
+  assert.doesNotMatch(card.shadow, /0px 6px 14px|0px 1px 2px/, "NAVY-MIN: lit top only, no second shadow: " + card.shadow);
   await c.close();
 });
 await step("flag on: the short-answer .ff is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {
@@ -128,7 +134,7 @@ await step("flag on: the proof box .xb is a recessed well, its edge gated on 3:1
   assert.equal(g.bw, r >= 3 ? "0px" : "1px", "no edge only when the field reaches 3:1; else the 1px edge is kept");
   await c.close();
 });
-await step("flag on: Cluck keeps its warm rim, gains the lit top; the input is a recessed well with a raised send", async () => {
+await step("flag on: Cluck keeps its warm rim, gains the lit top; the input is a recessed well with a flat send", async () => {
   const [c, p] = await open("on", "BANK_DP1", 1280, 800, 1, "CALC1_DP01");   // desk sugar: the Cluck box is a permanent column box (cluck-permanent.pw.mjs)
   const cl = await css(p, "#cluck.cl, .cl");
   assert.ok(cl, "the Cluck box is shown");
@@ -137,7 +143,7 @@ await step("flag on: Cluck keeps its warm rim, gains the lit top; the input is a
   assert.ok(ask, "the Cluck input is shown");
   assert.match(ask.shadow, WELL, "the recessed well: " + ask.shadow);
   const send = await css(p, "#cluck .ask .send, .cl .ask .send");
-  assert.match(send.shadow, LIT, "the raised send: " + send.shadow);
+  assert.ok(send.shadow === "none" || !/0px 1px 2px/.test(send.shadow), "NAVY-MIN: the send is flat, no raise shadow: " + send.shadow);
   await c.close();
 });
 await step("flag off: no depth shadow on any of these surfaces (byte-identical to main)", async () => {

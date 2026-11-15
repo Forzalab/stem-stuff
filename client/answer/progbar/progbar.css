@@ -40,7 +40,7 @@ html.ui-v7 .qnav .pb-nav .btn:disabled:hover { background: transparent; }
 html.ui-v7 .pb { --pb-min: calc(7 * var(--pb-n-min) + 6 * var(--pb-n-gap) + 2 * var(--pb-pad)); flex: 1 1 var(--pb-min); min-width: var(--pb-min); justify-content: center; padding: 0 var(--pb-pad); }   /* never under 7 notches at 12: the title gives way first */
 html.ui-v7 .pb-ns { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--pb-n-gap); height: 100%; min-width: 0; }
 html.ui-v7 .pb-n { position: relative; flex: 1 1 0; min-width: var(--pb-n-min); max-width: var(--pb-n-w); height: var(--pb-n-h); border-radius: var(--pb-n-r); overflow: hidden;
-  background: color-mix(in srgb, var(--ink) 12%, transparent); }   /* empty: a dim ink tint, no edge (NO-BORDER 1: unfilled = tint, Apple watch blue face) */
+  background: var(--chip); }   /* empty (NAVY-MIN: navy-600): a dim ink tint, no edge (NO-BORDER 1: unfilled = tint, Apple watch blue face) */
 html.ui-v7 .pb-n.next { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 55%, transparent); }              /* the slot the next answer fills */
 html.ui-v7 .pb-n.right, html.ui-v7 .pb-n.wrong, html.ui-v7 .pb-n.partial { box-shadow: none; }
 html.ui-v7 .pb-n.right { background: var(--correct); }

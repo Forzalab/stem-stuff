@@ -82,17 +82,15 @@
    navy mock (brain ui-polish/hintbox/v71/palette.css). Flag off = the :root values above, untouched. Sits right after the :root block: same
    specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
 html.ui-v7 {
-  --page: #02040d; --card: #0a1020; --sheet: #0d142a; --float: #141d36; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
+  --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
   /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the lit top edge of a raised control (6% ink, the progbar tile's
      5% idea), --lit-warm = the same on Cluck's warm rim, --shadow-raise = the small contact shadow under it, --press = pressed in (no outer shadow),
      --well = a recessed field (dark top inset, lit bottom lip). Raised = a lit top + a small shadow; never a border. */
-  --lit-top: inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+  --lit-top: inset 0 1px 0 hsl(222 60% 85% / .07);   /* NAVY-MIN: --card = --sheet = navy-800 (the one resting surface), --chip = navy-600 (badge slot, empty notch), --float = navy-700 (above the page only) */
   --lit-warm: inset 0 1px 0 rgb(255 190 120 / 0.12);
-  --lit-send: inset 0 1px 0 rgb(255 225 190 / 0.35);
   --lit-action: inset 0 1px 0 color-mix(in srgb, var(--action) 70%, #fff);   /* hand-picked lighter top, not a white overlay */
-  --shadow-raise: 0 1px 2px rgb(0 0 0 / 0.45);
-  --shadow-soft: 0 6px 14px -6px rgb(0 0 0 / 0.35);   /* the card's second, soft shadow */
+  --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5), inset 0 -1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
 }
@@ -489,11 +487,11 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 /* NO-BORDER 1 (ui-v7 only): an unchosen row has no 1px edge; rest = a bg step (--float on the --card page), hover = one step more. The chosen row keeps its
    edge (selected state); pending (dashed) and the missed-right reveal keep theirs. Verdict rows (right / wrong) take a tint fill, the glyph says it. */
-html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal) { border-width: 0; background: var(--float); }
-html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal):hover:not(:disabled) { background: color-mix(in srgb, var(--float) 85%, var(--ink)); }
+html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal) { border-width: 0; background: var(--sheet); }   /* NAVY-MIN: options rest on the one surface (navy-800), depth is the lit top + shadow below */
+html.ui-v7 .opt:not([aria-checked="true"]):not(.pend):not(.reveal):hover:not(:disabled) { background: var(--float); }   /* hover = navy-700, a tiny lift */
 html.ui-v7 .opt.right:not(.reveal):not([aria-checked="true"]) { background: var(--correct-fill); }
 html.ui-v7 .opt.wrong:not(.reveal):not([aria-checked="true"]) { background: var(--wrong-fill); }
-html.ui-v7 .opt:not([aria-checked="true"]) .badge { border-width: 0; background: color-mix(in srgb, var(--ink) 12%, transparent); }   /* the glyph slot: a filled dot, no ring */
+html.ui-v7 .opt:not([aria-checked="true"]) .badge { border-width: 0; background: var(--chip); }   /* the glyph slot: a filled dot, no ring */
 .opt .badge {
   flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
   border: var(--bw) solid var(--line); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-md); line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* TR12: never changes with state */
@@ -1769,18 +1767,19 @@ html.fx-busy :is(.ch .send, #fb > .cluck) { animation: none; }   /* one group at
    (html.side .cl, .ask:focus-within, .ff:focus-within). Light from above: raised = a lit top + a small shadow below, pressed = inset, never a border.
    Nav tiles (.pb, progbar.css) stay flat. */
 /* D1 buttons + option rows: the primary (Check / Go) and each option row are raised; pressed = inset, no outer shadow */
-html.ui-v7 .opt { box-shadow: var(--lit-top), var(--shadow-raise); }
+html.ui-v7 .opt:not([aria-checked="true"]) { box-shadow: var(--lit-top), var(--shadow-raise); }
+html.ui-v7 .opt[aria-checked="true"] { box-shadow: var(--press); }   /* checked = no lit top, inset feel */
 html.ui-v7 .opt:active:not(:disabled) { box-shadow: var(--press); }
 html.ui-v7 .btn-go:not(.waiting) { box-shadow: var(--lit-action), var(--shadow-raise); }
 html.ui-v7 .btn-go:not(.waiting):active { box-shadow: var(--press); }
-/* D2 question card: the lowest raised layer, a lit top and a soft second shadow (~.35); .boxed .q stays flat */
-html.ui-v7 .p { box-shadow: var(--lit-top), var(--shadow-1), var(--shadow-soft); }
+/* D2 question card: a lit top only; .boxed .q stays flat */
+html.ui-v7 .p { box-shadow: var(--lit-top); }   /* NAVY-MIN: resting card = lit top only, no second shadow */
 /* D3/4 Cluck: the warm rim stays (phone sheet); the lit top is added. The desk box keeps its shadow-3 and gains the same lit top */
 html.ui-v7:not(.side) .cl { box-shadow: var(--lit-warm); }
 html.ui-v7.side .cl { box-shadow: var(--lit-warm), var(--shadow-3); }
 html.ui-v7 .ask { box-shadow: var(--well); }   /* the recessed well; the rotating rim (::before/::after) paints over it while Cluck types */
 html.ui-v7 .ask:focus-within { box-shadow: var(--well), inset 0 0 0 1px var(--help); }
-html.ui-v7 .ask .send { box-shadow: var(--lit-send), var(--shadow-raise); }
+html.ui-v7 .ask .send { box-shadow: none; }   /* NAVY-MIN: flat, a button sitting in the field, not a key */
 /* D5/6 proof box + short answer: recessed wells. The fill is --field (page navy) on the --card box: 1.08:1 against WCAG 1.4.11's 3:1, so the
    1px --edge stays on both fields (the gate is measured in tests/depth.pw.mjs). Focus keeps its one ring. */
 html.ui-v7 .xb textarea { box-shadow: var(--well); }
