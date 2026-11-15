@@ -375,6 +375,14 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .mx { white-space: nowrap; }                                        /* math + the punctuation touching it: one unit (app.js md) */
 .md .katex-display { margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .tbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }   /* y hidden: a 1–2 px KaTeX overflow made it a wheel trap */
+/* G4.3 edge fade: a soft shade on the side that still has content (local cover hides it at each end); no border */
+.md :is(.tbl, .katex-display) {
+  background:
+    linear-gradient(var(--qbox), var(--qbox)) left center / 24px 100% no-repeat local,
+    linear-gradient(var(--qbox), var(--qbox)) right center / 24px 100% no-repeat local,
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 14%, transparent), transparent) left center / 24px 100% no-repeat scroll,
+    linear-gradient(270deg, color-mix(in srgb, var(--ink) 14%, transparent), transparent) right center / 24px 100% no-repeat scroll;
+}
 .md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .md th, .md td { padding: var(--s1) var(--s4); border-bottom: 1px solid var(--line); }
 .md th { color: var(--muted); font-weight: var(--w-em); border-bottom: var(--bw) solid var(--edge); }
