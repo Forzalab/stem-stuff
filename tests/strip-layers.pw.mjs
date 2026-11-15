@@ -46,6 +46,10 @@ async function pageFor(browser, W, H, o = {}) {
   const wide = W >= 1000;
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, hasTouch: !wide, isMobile: !wide, serviceWorkers: "block", reducedMotion: o.reduced ? "reduce" : "no-preference" });
   await ctx.addInitScript(spent => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); if (spent) localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))); } catch { /* blocked */ } }, o.stream ? false : true);   // spent = this hour's 5 auto asks used: a wrong answer shows the Ask Cluck chip, not a streaming reply
+  /* o.hold = a question code: its 10 s second-try wait (app.js startWait) is picked up from sessionStorage with a far-off end, so the miss keeps its
+     x icon (the Check going live after the wait hides it: app.css "editing after a miss") however long a loaded runner takes over the steps. This spec is
+     about the drawer, not the wait (retry-wait.pw.mjs is); reach(.., "out") releases it. Nothing is loosened: every assert after it is the same. */
+  if (o.hold) await ctx.addInitScript(c => { try { sessionStorage.setItem("stem-wait", JSON.stringify({ code: c, until: Date.now() + 1e8, t0: Date.now() })); } catch { /* blocked */ } }, o.hold);
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
   const page = await ctx.newPage(); page.ctx = ctx; page.setDefaultTimeout(8000);
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
@@ -84,11 +88,15 @@ async function submit(page, v) {
 /* drive one question to a state: wrong (1 try left), then out (the second miss, same page), or right (a page of its own) */
 async function reach(page, code, state) {
   if (state !== "out") await goTo(page, code);
-  if (state === "out") { await skipRetryWait(page); await page.fill(fieldSel, WRONGV[code] + "0"); await page.evaluate(() => document.querySelector("#ansGo").click()); await page.waitForSelector("#q.closed"); }
+  if (state === "out") { await page.evaluate(() => { window.__drill.state.wait = null; }); await skipRetryWait(page); await page.fill(fieldSel, WRONGV[code] + "0"); await page.evaluate(() => document.querySelector("#ansGo").click()); await page.waitForSelector("#q.closed"); }
   else if (state === "wrong") { await submit(page, WRONGV[code]); await page.waitForFunction(() => window.__drill.state.tries.length >= 1); }
   else { await submit(page, RIGHT[code]); await page.waitForSelector("#q.closed"); }
   await page.waitForTimeout(SETTLE + 300);
 }
+/* wait for the drawer to be really open / really gone, then the SETTLE: the close is a 240 ms animation + a 260 ms timer in strip.js hide(); a fixed
+   sleep alone loses that race on a loaded CI runner (CPU x8: the timer fires after SETTLE and the drawer still shows). The asserts after it are unchanged. */
+const drawerShown = () => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none"; };
+const settleDrawer = async (page, open) => { await page.waitForFunction(([f, o]) => (new Function("return (" + f + ")()")()) === o, [drawerShown.toString(), open], { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(SETTLE); };
 const geo = page => page.evaluate(() => {
   const R = e => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
   const bar = document.querySelector("#ff"), d = document.querySelector("#q .vdrawer");
@@ -105,7 +113,7 @@ for (const [W, H] of VPS) {
    for (const state of ["wrong", "out", "right"]) {
     const T = `${W} ${kind} ${state}`;
     // wrong then out share a page (the second miss closes it); right needs a fresh question
-    if (state !== "out") { if (pg) await pg.ctx.close(); pg = await pageFor(browser, W, H); }
+    if (state !== "out") { if (pg) await pg.ctx.close(); pg = await pageFor(browser, W, H, { hold: code }); }
     await reach(pg, code, state);
     if (kind === "proof" && state === "wrong") {   // a proof wrong with a try left has no verdict mark on its bar (the rubric chips carry it): no drawer to hang from
       await step(`${T}: no verdict mark on the bar, so no drawer (the rubric chips and Cluck's chip stay as they are)`, async () => {
@@ -179,7 +187,7 @@ for (const [W, H] of VPS) {
       const m = () => pg.evaluate(() => { const t = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : null; };
         return { ff: t("#ff"), pv: t("#preview"), q: Math.round(document.querySelector("#q").getBoundingClientRect().height), nx: t("#q .nx"), fb: t("#fb"), wish: t("#wish") }; });
       const a = await m();
-      await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(SETTLE);
+      await pg.click("#q .vdrawer .vd-x"); await settleDrawer(pg, false);
       const b = await m();
       assert.deepEqual(b, a, "something moved when the drawer closed");
       assert.equal((await geo(pg)).d, null, "the drawer is still showing after close");
@@ -188,12 +196,12 @@ for (const [W, H] of VPS) {
     await step(`${T}: the verdict icon reopens it (aria-expanded), Esc closes it, a tap outside closes it, focus returns to the icon`, async () => {
       const vk = "#ff .vk";
       assert.equal(await pg.getAttribute(vk, "aria-expanded"), "false");
-      await pg.click(vk); await pg.waitForTimeout(SETTLE);
+      await pg.click(vk); await settleDrawer(pg, true);
       assert.ok((await geo(pg)).d, "icon did not reopen"); assert.equal(await pg.getAttribute(vk, "aria-expanded"), "true");
-      await pg.keyboard.press("Escape"); await pg.waitForTimeout(SETTLE);
+      await pg.keyboard.press("Escape"); await settleDrawer(pg, false);
       assert.equal((await geo(pg)).d, null, "Esc did not close");
-      await pg.click(vk); await pg.waitForTimeout(SETTLE);
-      await pg.mouse.click(5, 5); await pg.waitForTimeout(SETTLE);
+      await pg.click(vk); await settleDrawer(pg, true);
+      await pg.mouse.click(5, 5); await settleDrawer(pg, false);
       assert.equal((await geo(pg)).d, null, "an outside tap did not close");
     });
     if (SHOTS && state !== "right") { await pg.click("#ff .vk"); await pg.waitForTimeout(SETTLE); await pg.screenshot({ path: `${SHOTS}/${kind}-${state}-${W}.png` }); }
