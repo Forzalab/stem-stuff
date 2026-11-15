@@ -205,7 +205,7 @@ try {
     assert.equal(on.next.bw, "0px", "next slot: no border width");
     assert.notEqual(on.next.shadow, "none", "the next slot keeps its ring");
     assert.equal(on.rest.bw, "0px", "unchosen option row: no edge");
-    assert.equal(on.chosen.bw, "1px", "chosen option row keeps its edge (selected state)");
+    assert.equal(on.chosen.bw, "0px", "chosen option row: no edge either (MC-BENTO: picked = a fill step, REVIEW2 item 2)");
     assert.ok(on.card, "a question card (.p) is on the page");
     assert.equal(on.card.bw, "0px", "question card: no edge");
     // precise (NAVY-MIN): an EDGE = an all-around inset ring (inset 0 0 Npx, zero y offset) or a border; a LIT TOP = inset 0 Ypx 0 <alpha <= .12>, no blur/spread, top only (allowed)
