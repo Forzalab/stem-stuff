@@ -985,7 +985,7 @@ function fabPlace({ avoid } = {}) {
   fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
-  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip, .rbox .wchip, .cl-cta")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip, .rbox .wchip, .cl-cta, #cluckBtn")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
   /* the question text (the body above the choices): stepping up never takes the button above its bottom edge (it climbed over every choice onto the text) */
   const textBottom = document.querySelector("#blocks")?.getBoundingClientRect().bottom ?? 0;
   for (let n = 0; avoid && n < 6; n++) {

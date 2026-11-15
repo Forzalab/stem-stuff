@@ -627,7 +627,7 @@ html.ui-v7 .choices:not(.all) .opt.wrong:not(.reveal):not([aria-checked="true"])
 :root { --dot-t: .18s; }
 @media (prefers-reduced-motion: reduce) { :root { --dot-t: 0s; } }
 .mparts .part { position: relative; }
-html:has(:is(#wish, .rbox) .wchip, .cl-peek) .q:not(:has(.opt.right:not(.reveal, .kept))) :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after {
+html:is(.cluck-ready, :has(:is(#wish, .rbox) .wchip, .cl-peek)) .q:not(:has(.opt.right:not(.reveal, .kept))) :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after {
   content: ""; position: absolute; grid-area: bx; z-index: 3; top: calc(var(--ring) * -1); right: calc(var(--ring) * -1); width: 10px; height: 10px; border-radius: 50%;
   background: var(--help); outline: var(--ring) solid var(--card); pointer-events: none; transition: opacity var(--dot-t) ease-out, visibility var(--dot-t);
 }

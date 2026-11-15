@@ -53,7 +53,7 @@
     var o = cur;
     tel(kind, o); clear(); close();
     try { g.stemJev && g.stemJev.helpEnd && g.stemJev.helpEnd(kind); } catch (e) { /* */ }   // Jev: No thanks doubles the gap, Open help panel resets it
-    if (kind === "open_help" && typeof g.stemClOpen === "function") g.stemClOpen("explain", ":is(#wish, .rbox) .wchip");
+    if (kind === "open_help" && typeof g.stemClOpen === "function") { g.stemClOpen("explain", "#cluckBtn, :is(#wish, .rbox) .wchip"); try { g.stemCluckBtn && g.stemCluckBtn.sheen("jev-open-help"); } catch (e) { /* */ } }   // Jev opened the panel: the one Ask Cluck button sheens (v7)
   }
   function build(o, phase) {
     if (el) return false;

@@ -49,6 +49,8 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
 const WISH_AUTO = 5;
 const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
 function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
+const V7 = () => document.documentElement.classList.contains("ui-v7");   // html.ui-v7 (?ui=v7): the one Ask Cluck button (cluck_btn/cluckbtn.js) is the only entry; the old chips / drawer / verdict slot are not drawn
+const ENTRY = "#cluckBtn, :is(#wish, .rbox) .wchip";                     // where focus returns when Cluck's sheet closes: the v7 button, else the chip
 let wish = null;   // { code, text, started, done, open, failed, ctl, off }
 /* a plain 503 from /explain (no X-Incident) = no AI key on this server (a preview deploy, Oct 26): Cluck is off for this page load. No more
    Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
@@ -101,6 +103,7 @@ function wishReset() {
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; el.classList.remove("gone"); }
   document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
   clReset();
+  window.stemCluckBtn?.sync();
 }
 function wishNew(ex) {                                                       // a real wish; the idle one it replaces hands over its spent questions (the server counts per question)
   const spent = wish && wish.idle && wish.code === S.code ? wish.chat.filter(t => t.role === "user").length + (wish.spent || 0) : 0;
@@ -116,14 +119,15 @@ function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
   /* a later miss redrew the hint card: Cluck's peek goes back in. A NEW miss (another try than the one the text explains, e.g. a 2nd wrong
      number) restarts the stream with the latest try, so the box never keeps explaining the first one (C4a, "stream every miss") */
-  if (wish && wish.code === S.code && !wish.idle && !(wish.started && wish.key && wish.key !== ckKey(wish.code, askTry()))) { wishPaint(); return; }
+  if (wish && wish.code === S.code && !wish.idle && !(wish.started && wish.key && wish.key !== ckKey(wish.code, askTry()))) { wishPaint(); window.stemCluckBtn?.sheen("wrong"); return; }
   const w = wishNew();
   /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
-  const auto = () => { if (bridge.sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ":is(#wish, .rbox) .wchip", true); };
-  if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
-  if (!shouldPrefetch(w.code)) w.started = false;                         // no prefetch: the "Explain my mistake" chip asks (no auto call)
+  const auto = () => { if (bridge.sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ENTRY, true); };
+  if (wishFromCache(w)) { wishPaint(); window.stemCluckBtn?.sheen("wrong"); auto(); return; }   // a reply we already have: no call
+  if (!shouldPrefetch(w.code)) w.started = false;                         // no prefetch: the Ask Cluck button asks (no auto call)
   wishPaint();
+  window.stemCluckBtn?.sheen("wrong");                                    // a wrong try unlocked Cluck: the one button sheens (v7)
   if (w.started) { wishStart(true); auto(); }                             // the reply streams now, in the background: one request, reused on open
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
@@ -180,6 +184,7 @@ async function wishStart(auto) {
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
   wishPaint();
+  if (!w.failed && w.text && !w.open) window.stemCluckBtn?.sheen("reply");   // the reply is ready and the sheet is closed: the button sheens (v7)
   if (w.open) wishDraw();                                                  // an open sheet shows the failure, not a caret forever (G2c row 23)
 }
 /* the subject pass (serve.py subject_pass, Tony Nov 3 19:26 "stream first, then FLASH the correct text back"): the streamed reply is
@@ -518,13 +523,18 @@ function wishPaint() {
   if (!w || w.idle || [404, 503].includes(w.failed)) {                    // (the idle wish is the box's own opener: nothing on the page yet)
     el.hidden = true;
     if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (bridge.origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
-    clBackSync(); return;
+    clBackSync(); window.stemCluckBtn?.sync(); return;
   }
   const perm = clPerm();                                                   // V2: the permanent box is never "the way back": the chip stays (the strip tray's Ask Cluck, the verdict's See steps)
   const off = perm ? false : bridge.sideMQ.matches ? w.open                       // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
     : !!bridge.origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Compare with a similar solution" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
   el.hidden = off;
   el.toggleAttribute("data-box", perm && !!w.open);                          // V2: what hiding #wish did to the spent preview (app.css), for the permanent box
+  if (V7()) {                                                              // CLUCK-BTN (Tony Nov 14): no chip, no drawer, no verdict slot: the one button at the card's top right (cluckbtn.js) is the entry
+    el.hidden = true; el.innerHTML = ""; el.classList.remove("cue");
+    clBackSync(); bridge.layoutFreeze(); window.stemBrainrot?.sync(); window.stemCluckBtn?.sync();
+    return;
+  }
   const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
   if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
   el.classList.toggle("cue", cue);
@@ -544,10 +554,10 @@ function wishPaint() {
     w.tapped = true;                                                       // the ad shine stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
-    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ":is(#wish, .rbox) .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
+    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ENTRY); clCompare(w); return; }   // right after a miss: the text explains the miss
     else if (perm && w.open) { clAskFocus(); return; }                      // the box is always open: the chip goes to its ask field
     else if (w.open) { clClose(); return; }
-    clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : ":is(#wish, .rbox) .wchip");
+    clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : ENTRY);
   });
   clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "okay, but how?" up = no "Show him" row
   bridge.layoutFreeze();
@@ -721,6 +731,7 @@ function clOpen(tab, from, auto) {                                        // aut
 const clPerm = () => modeOf() === "sugar" && bridge.sideMQ.matches && !!S;           // BIG PLAN V1 (Tony Nov 2, 22:49): desktop sugar keeps Cluck's box open from the first paint, no X, no Escape, no dismiss. Phones and diet: unchanged
 /* the first close of Cluck's sheet on this device (flag stem-ob-cluck, set only when the note was placed): a note on the way back in */
 function cluckToast() {
+  if (V7()) return;                                                         // v7: no "Cluck lives in Ask Cluck" line; the one button is always at the card's top right
   try { if (localStorage.getItem("stem-ob-cluck")) return; } catch { return; }
   setTimeout(() => {
     const at = document.querySelector(":is(#wish, .rbox) .wchip");
@@ -816,6 +827,28 @@ function clBack() {
 /* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
+/* CLUCK-BTN (Tony Nov 14): the one Ask Cluck button (cluck_btn/cluckbtn.js) asks this file two things. state(): "first" = before the first try, "off" = no key / diet / out of asks /
+   not a Cluck question, "ready". enter(): what a press on the old chip did (ask, reopen, Compare, close, or the permanent box's ask field) */
+function clAvail() {
+  if (!S || S.wl || mockHold() || modeOf() !== "sugar" || !S.prob.wish || cluckOff) return "off";
+  if (wish && wish.code === S.code && (wish.out || [404, 503].includes(wish.failed))) return "off";
+  return !S.finished && !S.tries.length ? "first" : "ready";
+}
+function clEnter() {
+  if (clAvail() !== "ready") return false;
+  if (!wish || wish.code !== S.code || wish.idle) { wishNew({ started: false }); wishFromCache(wish); wishPaint(); }
+  const w = wish;
+  w.tapped = true;
+  const cueOk = S.finished && w.code === S.code && cueRight();
+  if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
+  else if (!w.started || w.failed) wishRetry(w);
+  else if (cueOk && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ENTRY); clCompare(w); return true; }
+  else if (clPerm() && w.open) { clAskFocus(); return true; }
+  else if (w.open) { clClose(); return true; }
+  clOpen("explain", ENTRY);
+  return true;
+}
+window.stemCluckAsk = { state: clAvail, enter: clEnter };
 window.stemCluckOpen = () => !!cl && cl.open;
 window.stemCluckClose = () => clUserClose(false);                               // nav.js: the iOS Back button closes the sheet
 window.stemClOpen = (tab, from, auto) => clOpen(tab, from, auto);   // lockhelp.js: "Open help panel"
@@ -830,7 +863,7 @@ window.stemIdleTap = () => {
   }
   const said = !!wish && wish.started && !wish.failed;
   if (said || bridge.origEl) { clOpen(said ? "explain" : "steps", null); return; }
-  const b = [...document.querySelectorAll(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
+  const b = [...document.querySelectorAll(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, #origHd, #cluckBtn:not([aria-disabled=\"true\"])")].find(x => x.getClientRects().length);
   if (b) { b.scrollIntoView({ block: "nearest", behavior: bridge.reduceMQ.matches ? "auto" : "smooth" }); b.focus({ preventScroll: true }); }
 };
 /* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
