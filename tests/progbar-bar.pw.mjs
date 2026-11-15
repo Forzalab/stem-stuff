@@ -154,6 +154,20 @@ try {
     assert.equal(await q.evaluate(() => [document.documentElement.classList.contains("ui-v7"), !!document.querySelector("#pbTile")]).then(a => a.join()), "false,false");
     await c2.close();
   });
+  // COLOR-TOKENS 1 (Tony Nov 14): under html.ui-v7 the base surface tokens take the navy mock; flag off keeps the old values.
+  const TOK = { "--page": "#02040d", "--card": "#060b1b", "--sheet": "#0d142a", "--float": "#141d36", "--line": "#556791", "--wrong": "#f0667a", "--wrong-on": "#ffc4c9", "--correct-on": "#b9efd8", "--help": "#ffa63e", "--help-sheet": "#16110d" };
+  const OLD = { "--page": "#02060c", "--card": "#0b1422", "--sheet": "#14233a", "--float": "#1b2b40", "--line": "#5e7899", "--wrong": "#eb596e", "--wrong-on": "#ffd1d3", "--correct-on": "#bdead5", "--help": "#ff9a3e", "--help-sheet": "#17130f" };
+  const tokens = p => p.evaluate(names => names.map(n => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase()), Object.keys(TOK));
+  await step("COLOR-TOKENS 1: ?ui=v7 base surfaces take the navy mock; flag off keeps the old values", async () => {
+    const [c, p] = await fresh(browser, "on");
+    const on = await tokens(p);
+    assert.deepEqual(on, Object.keys(TOK).map(n => TOK[n]), "flag on = mock");
+    await c.close();
+    const [c2, q] = await fresh(browser, "off");
+    assert.deepEqual(await tokens(q), Object.keys(OLD).map(n => OLD[n]), "flag off = old");
+    await c2.close();
+  });
+
 } finally {
   await browser.close(); srv.kill();
 }

@@ -78,6 +78,13 @@
   --shadow-4: 0 16px 36px -8px rgb(0 0 0 / 0.6), 0 3px 6px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
+/* COLOR-TOKENS 1 (Tony Nov 14, "move navy behind flag, i love mock better than live"): under html.ui-v7 ONLY the base surface tokens take the locked
+   navy mock (brain ui-polish/hintbox/v71/palette.css). Flag off = the :root values above, untouched. Sits right after the :root block: same
+   specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
+html.ui-v7 {
+  --page: #02040d; --card: #060b1b; --sheet: #0d142a; --float: #141d36; --line: #556791;
+  --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
+}
 /* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
    fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
    box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
