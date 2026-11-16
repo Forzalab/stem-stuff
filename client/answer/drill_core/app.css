@@ -132,6 +132,7 @@ body {
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; cursor: pointer; }
 button:disabled { cursor: default; }
+:focus:not(:focus-visible) { outline: none; }   /* mouse / touch focus draws no ring; keyboard focus does (next line) */
 :focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ico { width: 1.5rem; height: 1.5rem; flex: none; display: block; }
 
