@@ -91,7 +91,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
     margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
   /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
   html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 72px;
-    margin: -72px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 calc(var(--qpad, 24px) + 10px); border: 0; cursor: pointer; color: #a7b5d2;
+    margin: -72px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
     background: linear-gradient(transparent, #0d142a 58%); -webkit-tap-highlight-color: transparent; }
   html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
   html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
@@ -107,7 +107,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
 html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .22em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
 html.ui-v7 #problem .blocks :is(p, li):has(> code) { line-height: 1.75; }   /* room so two wrapped chip lines never touch */
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
-html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 64px; }
+html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 74px; }   /* 2 + 48 button + 24 air (BREATHE) */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
 /* GHOST-CLIP (Tony Nov 16 "text too close / gap at the bottom"): the echo trail bleeds past the card's bottom-right; with overflow visible it grew the card's SCROLL area,
    so a phone card (Q-HALF scroller) scrolled into empty space and every card measured as overflowing. Clip at the ghost box (= the card box): same picture, no phantom scroll */
@@ -118,3 +118,4 @@ html.ui-v7 #problem.qc7 .blocks > :last-child, html.ui-v7 #problem.qc7 .blocks >
 html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex; margin-bottom: var(--s2); }
 /* STACK-NORMAL (Tony Nov 16): a title on its own row (option A: desktop, cramped, > 3 lines) is a normal title, not a hero: 20/26, flush with the text's left edge */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: 1.25rem; line-height: 26px; letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }
+html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-child { margin-bottom: 24px; }   /* BREATHE: the shared title/button row ends on the button's bottom; 24 px air before the text */
