@@ -76,3 +76,7 @@ html.ui-v7 #q .ff.rbox .vk { position: absolute; order: 0; margin: 0; right: 14p
 html.ui-v7 #q .ff, html.ui-v7 .code-box { border-radius: 16px; }
 html.ui-v7 #q .ff.rbox.ok { border-radius: 16px 0 0 16px; }   /* NEXT-LINK (Tony Nov 15 "link the Next button and the input box together"): the #q .ff radius above out-ranked the pill's flat join (.ff.rbox.ok, top of file) */
 html.ui-v7 #q .ff .send, html.ui-v7 .code-box .btn-go { border-radius: 16px; }
+/* PROOF-BOX (Tony Nov 16): the proof box container has ZERO border; the how line + the textarea text sit on one 12px inner margin (placeholder no longer on the edge) */
+html.ui-v7 #q.q:has(.ff.proof), html.ui-v7 #work > #q.q:has(.ff.proof) { border: 0; }   /* 2 ids: beats html.proof-split #work > #q (app.css) */
+html.ui-v7 #q .ff.proof > textarea { padding: 12px 56px 12px 12px; }
+html.ui-v7 #q:has(.ff.proof) .how { padding-inline: 12px; }
