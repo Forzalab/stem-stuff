@@ -122,7 +122,7 @@ for (const [tag, vp] of VPS) {
     assert.ok(dim.pe === "none" && dim.op > 0 && dim.h > 0.3 && dim.h < 0.37 && dim.hit, "the bottom-third dim shows while risen, never blocks taps: " + JSON.stringify(dim));
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
     const probe = await page.evaluate(() => { const b = document.querySelector(".ck-peek").getBoundingClientRect(), e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-      window.__rises = []; const r = window.stemDuck.rise; window.stemDuck.rise = function (o) { window.__rises.push(o && o.trigger); return r.apply(this, arguments); };
+      window.__rises = []; const bx = document.querySelector(".ck-rise"), t0 = performance.now(); new MutationObserver(() => window.__rises.push([Math.round(performance.now() - t0), bx.hidden, bx.className, bx.querySelector(".ck-say").textContent.slice(0, 20)])).observe(bx, { attributes: true, attributeFilter: ["class", "hidden"] });
       return { hitTag: e && (e.className || e.tagName), hitInPeek: !!e && !!e.closest(".ck-peek") }; });   // DBG-PROBE (remove before merge)
     await page.click(".ck-peek");                                     // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
