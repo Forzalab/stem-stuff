@@ -345,6 +345,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: { issues: write, contents: read }
+    continue-on-error: true   # never gating: a ticket job failure must not change the run conclusion the ship gate reads
     concurrency: { group: flake-tickets, cancel-in-progress: false }   # one writer at a time (the issue body is read-modify-write)
     steps:
       - uses: actions/checkout@v7
@@ -352,7 +353,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TICKETS: ${{ needs.all.outputs.tickets }},${{ needs.postdeploy.outputs.tickets }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: node tools/operations/ci-flake-ticket.mjs "$(tr ',' '\n' <<<"$TICKETS" | grep . | sort -u | paste -sd, -)" "$RUN_URL"
+        # CI-ARCH bug (Nov 16): Issues are disabled on this repo, so the gh call fails; a ticket write must never red a run (it gates ship).
+        # Fallback = the ticket lands in the job summary + a ::warning:: (the flaky-block-* artifacts keep the names too).
+        run: |
+          T="$(tr ',' '\n' <<<"$TICKETS" | grep . | sort -u | paste -sd, -)"
+          node tools/operations/ci-flake-ticket.mjs "$T" "$RUN_URL" || {
+            echo "::warning::flake ticket not filed (issues off or API error): $T"
+            { echo "### flake tickets (not filed: issues off)"; tr ',' '\n' <<<"$T" | sed "s|^|- [ ] |; s|\$| ($RUN_URL)|"; } >>"$GITHUB_STEP_SUMMARY"
+          }
   # P5: the post-deploy verdict. The main push run IS the post-deploy full run. Confirmed red (a spec failed twice) -> dispatch ship.yml
   # mode=rollback to the last-known-good and, when the red covers more than one merge, the culprit matrix. An unjailed flaky spec only files a ticket
   # (the red run keeps the gate strict). A jailed flake or an infra failure (retry.yml reruns it) does nothing.
