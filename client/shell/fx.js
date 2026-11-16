@@ -64,12 +64,15 @@
     st.fx = g.fx; st.tier = g.tier; st.why = g.why;
   }
   try { H.classList.toggle("ios", isIOS(ua, N.maxTouchPoints)); } catch (e) { /* no class: no iOS-only chrome */ }
-  /* html.ui-v7 = the v7 redesign flag (brain ui-polish/PORT-ARCH.md §D2), default OFF until the flip. ?ui=v7 turns it on and remembers it (localStorage stem-ui), ?ui=off clears it. */
+  /* html.ui-v7 = the v7 redesign flag (brain ui-polish/PORT-ARCH.md §D2). V7-FLIP (Tony Nov 16, PR13): default ON on the live host only;
+     local / CI pages keep the old default (the flag-off specs pin it until PR14 deletes the old CSS). ?ui=v7 / ?ui=off pick and remember (localStorage stem-ui). */
+  var live = /^stem-stuff\.vercel\.app$/.test(location.hostname);
   try {
     var uiQ = new URLSearchParams(location.search).get("ui");
-    if (uiQ === "v7") localStorage.setItem("stem-ui", "v7"); else if (uiQ === "off") { localStorage.removeItem("stem-ui"); H.classList.remove("ui-v7"); }
-    if (localStorage.getItem("stem-ui") === "v7") H.classList.add("ui-v7");   // add only: a page (or a test) that set the class itself keeps it
-  } catch (e) { /* blocked storage: the flag stays off */ }
+    if (uiQ === "v7") localStorage.setItem("stem-ui", "v7"); else if (uiQ === "off") { localStorage.setItem("stem-ui", "off"); H.classList.remove("ui-v7"); }
+    var pref = localStorage.getItem("stem-ui");
+    if (pref === "v7" || (live && pref !== "off")) H.classList.add("ui-v7");   // add only: a page (or a test) that set the class itself keeps it
+  } catch (e) { if (live) H.classList.add("ui-v7"); }   // blocked storage: the host default
   var st = { info: info, fps: null };
   W.stemFx = st;
   try { apply(latched); } catch (e) { H.classList.add("fx-dim"); }
