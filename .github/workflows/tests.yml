@@ -141,7 +141,7 @@ jobs:
       - if: inputs.mutant   # bench only: seed the fault this run must catch
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
@@ -166,7 +166,7 @@ jobs:
       - if: inputs.mutant   # bench only: seed the fault this run must catch
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
@@ -217,7 +217,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
@@ -250,7 +250,7 @@ jobs:
           echo "client files changed: $n"
           echo "run=$([ "$n" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - if: steps.scope.outputs.run == 'true'
         run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
