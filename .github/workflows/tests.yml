@@ -37,6 +37,9 @@ env:
   LANES: 3    # run-all.sh processes per runner (Tony's pick, CI plan PR 10): bench B 4x3 vs 5x2 = wall -23 s, runner-min -26%. The 3-lane flow.pw flakes were view transitions eating raw input (todo 55, #302)
 jobs:
   decide:   # M5: fast pipe only when a full run for this same PR is already queued/in_progress; never fast for push/schedule/dispatch
+    # TODO 20: only a pull_request has anything to decide, so this job is skipped on push/schedule/workflow_dispatch (~15 s off each).
+    # Its result is then `skipped`: every job below that needs it accepts skipped, and `all` counts it as ok (ci-all-verdict.sh).
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: { contents: read, actions: read }
@@ -71,7 +74,9 @@ jobs:
           echo "pipe=$(cat pipe.txt)" >> "$GITHUB_OUTPUT"
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
     needs: decide
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
+    # TODO 20: decide is skipped on push/schedule/dispatch, so its result may be `skipped`; !cancelled() (a status
+    # function) also stops GitHub adding the implicit success(), which would skip this job when decide was skipped.
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
     runs-on: ubuntu-24.04
     permissions: { contents: read, actions: read }   # stamp-find reads artifacts + runs (SHIP_MODE pr-green)
     outputs:
@@ -101,6 +106,7 @@ jobs:
           read -r kind reason <<<"$selection"
           echo "selection: $kind ($reason)"
           specs=""; skip=false
+          if [ "$kind" = bank ]; then skip=true; fi   # CI-LOOSEN 17: bank JSON only -> unit (bankcheck) runs, block skipped
           if [ "$kind" = "affected" ]; then   # consume run-all.sh --affected (06); split logic units from .pw names
             mapfile -t units < <(tests/run-all.sh --affected "${files[@]}" | grep -v '^unmapped:' || true)
             specs="$(printf '%s\n' "${units[@]}" | grep -vxE 'unittest|npm' | paste -sd' ' - || true)"
@@ -127,7 +133,7 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
     needs: [decide, plan]
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # docs-only PR: skipped; stamped push (P4): the PR run already ran this tree
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && needs.plan.result == 'success' && !cancelled() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # docs-only PR: skipped; stamped push (P4): the PR run already ran this tree
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -146,7 +152,7 @@ jobs:
       - run: node tools/operations/sleep-ratchet.mjs   # AC2.5: no spec may gain a waitForTimeout( above tests/sleep-baseline.json
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: [decide, plan]
-    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # stamped push (P4) skips too; zero-.pw affected PR: no block work (unit still runs)
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && needs.plan.result == 'success' && !cancelled() && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # zero-.pw affected PR: no block work (unit still runs); stamped push (P4): the PR run already ran this tree
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
     # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
     runs-on: ubuntu-24.04
@@ -206,7 +212,7 @@ jobs:
           retention-days: 7
   fast:   # ticket 07 timing: dispatch with pipe=fast, or a PR push while its full run is in flight (M5), runs only run-all.sh --fast
     needs: decide
-    if: inputs.pipe == 'fast' || needs.decide.outputs.pipe == 'fast'
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && (inputs.pipe == 'fast' || needs.decide.outputs.pipe == 'fast')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -227,7 +233,7 @@ jobs:
   webkit:   # WEBKIT-CI (G6.1): ~60% of users are on iPhone, CI is Chromium. PRs that touch client CSS/JS also run a few iPhone-risk specs on WebKit.
     # Not in `all` yet (report-only until it has a green history); PR events only. No grid probe exists in tests/ yet: add it to WK_SPECS when it lands.
     needs: decide
-    if: github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -266,6 +272,66 @@ jobs:
         shell: bash
         env: { PW_BROWSER: webkit, ENGINES: webkit, PW_FORCE_FALLBACK: "1" }
         run: SPECS="$WK_FALLBACK_SPECS" tests/run-all.sh 2>&1 | tee wk-fallback.log
+  # CI-LOOSEN 21 (AC9.1-9.5): the tandem box (titodori-1) hunts flakes in the specs the hosted blocks keep losing, while the
+  # hosted blocks run. Never gating: continue-on-error, no entry in `all.needs`, no green stamp, and no `flaky-block-*`
+  # artifact (ci-flaky.mjs reads only flaky-block-*), so the box being offline or the job being cancelled cannot change a
+  # ship verdict. Result = a per-spec `pass k/5` line in the flake-hunt.txt artifact, nothing else.
+  flake-hunt:
+    runs-on: [self-hosted, titodori]   # titodori-1: user pwuser (uid 1001), node 22 + python 3.12, no docker.sock
+    continue-on-error: true
+    timeout-minutes: 20
+    # AC9.4: the fork guard is written in this `if` itself (not only implied by the event list): on a pull_request the head
+    # repo must be this repo, so fork code never reaches a self-hosted runner that keeps its own credentials.
+    if: ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    env:
+      LANES: 2   # the box has 2 CPUs (the lane count tests/run-all.sh --plan takes; one SPECS lane runs its names in order)
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
+      - run: cd tests && npm ci
+      # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
+      # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
+      - run: |
+          cd tests
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --only-shell chromium
+      - name: hunt
+        shell: bash
+        run: |
+          set -uo pipefail
+          # the specs in the flaky jail (tests/quarantine.json); an empty jail = the 5 worst from the brain sleep-sweep list
+          specs="$(node -e 'const j = require("./tests/quarantine.json"); process.stdout.write((Array.isArray(j) ? j : []).map((e) => e.spec).filter(Boolean).join(" "))')"
+          [ -n "$specs" ] || specs="easy flow expr mc-bento bar"
+          echo "hunting: $specs"
+          : > flake-hunt.txt
+          bad=0
+          for spec in $specs; do
+            pass=0; failed=()
+            for k in 1 2 3 4 5; do
+              # FLAKY_FILE per run: never the block job's flaky.txt (a spec that flakes here is counted as a miss, which is the point)
+              if SPECS="$spec" FLAKY_FILE="hunt-$spec-$k.flaky" tests/run-all.sh > "hunt-$spec-$k.log" 2>&1; then
+                pass=$((pass + 1))
+              else
+                failed+=("$k")
+              fi
+            done
+            echo "$spec pass $pass/5" | tee -a flake-hunt.txt
+            [ "$pass" -eq 5 ] && continue
+            bad=1
+            for k in "${failed[@]}"; do
+              echo "  $spec run $k: $(grep -E '^(FAIL|FLAKY|NOT COVERED)' "hunt-$spec-$k.log" | head -5 | paste -sd'; ' -)" >> flake-hunt.txt
+            done
+          done
+          echo; cat flake-hunt.txt
+          exit "$bad"
+      - name: upload flake-hunt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-hunt   # never named flaky-block-*: the `all` job downloads only that pattern (AC9.5)
+          path: flake-hunt.txt
+          if-no-files-found: ignore
+          retention-days: 7
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   # AC0.2: never skipped (`if: always()`, every pipe). Fast pipe = red "fast pipe only"; skips only for docs-only / zero-.pw (tools/operations/ci-all-verdict.sh)
   all:

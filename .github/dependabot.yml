@@ -1,0 +1,12 @@
+# Tony Nov 15: Actions only, weekly, one grouped PR (minor+patch); majors separate. npm/pip NOT bumped here
+# (Playwright is pinned to the preinstalled browser; requirements.txt = ship + tests deps, change by hand).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "05:31", timezone: America/Los_Angeles }
+    open-pull-requests-limit: 3
+    commit-message: { prefix: "ci(deps)" }
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]

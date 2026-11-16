@@ -21,6 +21,11 @@ const CA = { code: "CSCI26_FB1", type: "mc", pick: "all", shuffle: false, body: 
   choices: ["a", "b", "c", "d", "e", "f"].map(id => ({ id, md: `Option ${id}: raising the angle changes the force on the block by some amount` })).concat([{ id: "g", md: "None of these", lock: true }]) };
 
 const URL_BAR = 56;
+/* nothing moved between two frames: the scroll offset, the window and the button's place (its own rAF re-place included) */
+const settleFor = p => () => p.waitForFunction(() => new Promise(res => {
+  const key = () => `${Math.round(scrollY)}|${innerWidth}|${innerHeight}|${Math.round((document.querySelector("#padFab")?.getBoundingClientRect().top ?? 0) * 10)}`;
+  const a = key(); requestAnimationFrame(() => requestAnimationFrame(() => res(key() === a)));
+}), null, { timeout: 5000 });
 /* the button is diet's on phones: phone sugar has no pad at all (Tony, Oct 14; the last block below) */
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -37,13 +42,14 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const fabTop = () => page.evaluate(() => Math.round(document.querySelector("#padFab").getBoundingClientRect().top * 10) / 10);
   const geo = () => page.evaluate(() => { const f = document.querySelector("#padFab").getBoundingClientRect(), d = document.querySelector("#dock").getBoundingClientRect();
     return { top: f.top, bottom: f.bottom, left: f.left, dockTop: d.top, vh: innerHeight, sy: Math.round(scrollY) }; });
-  const settle = () => page.waitForTimeout(160);
-  const shot = async name => { if (SHOTS && W === 390) { await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/fab-${name}-390.png` }); } };
+  const settle = settleFor(page);
+  const shot = async name => { if (SHOTS && W === 390) { await settle(); await page.screenshot({ path: `${SHOTS}/fab-${name}-390.png` }); } };
   const range = () => page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
 
   await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, CA.code, { timeout: 8000 });
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => document.fonts.status === "loaded" && !!document.querySelector("#padFab") && document.querySelector("#padFab").style.bottom !== "", null, { timeout: 5000 });   // text metrics final, the button placed
+  await settle();
   await page.evaluate(() => scrollTo(0, 0)); await settle();
   const start = await fabTop();
 
@@ -78,7 +84,9 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
       assert.ok(Math.abs(await fabTop() - start) <= 1, `scrollTo ${Math.round(y)}: top ${await fabTop()} vs ${start}`);
     }
     await page.mouse.move(W / 2, H / 3);
-    for (let i = 0; i < 12; i++) { await page.mouse.wheel(0, 90); await page.waitForTimeout(30); assert.ok(Math.abs(await fabTop() - start) <= 1, `wheel step ${i}: ${await fabTop()}`); }
+    for (let i = 0; i < 12; i++) { const y0 = await page.evaluate(() => scrollY); await page.mouse.wheel(0, 90);
+      await page.waitForFunction(y => scrollY > y || scrollY >= document.documentElement.scrollHeight - innerHeight - 1, y0, { timeout: 5000 });   // the wheel landed on the page
+      assert.ok(Math.abs(await fabTop() - start) <= 1, `wheel step ${i}: ${await fabTop()}`); }
   });
   await page.evaluate(() => scrollTo(0, 0)); await settle();
   await shot("top");
@@ -88,7 +96,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     for (const y of [0, 140, 260, 380, max * 0.5, max * 0.7, max * 0.9, max]) {
       await page.evaluate(y => scrollTo(0, y), y); await settle();
       const before = await fabTop();
-      await page.setViewportSize({ width: W, height: H - URL_BAR }); await page.waitForTimeout(40);
+      await page.setViewportSize({ width: W, height: H - URL_BAR }); await settle();   // the new height, and the button re-placed for it
       const g = await geo();
       assert.ok(g.top >= 0 && g.bottom <= g.dockTop + 0.5, `scroll ${g.sy}: out of bounds with the bar shown: ${g.top}..${g.bottom} dock ${g.dockTop}`);
       await page.setViewportSize({ width: W, height: H }); await settle();
@@ -122,14 +130,16 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     const x0 = f.x + f.width / 2, y0 = f.y + f.height / 2, ty = H * 0.45;
     await touch("touchStart", x0, y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", x0 - i * (W * 0.6) / 8, y0 + i * (ty - y0) / 8);
-    await touch("touchEnd"); await page.waitForTimeout(400);
+    await touch("touchEnd"); await page.waitForFunction(() => { let m = {}; try { m = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { /* */ }
+      return !!m.fab && m.fab.side === "l" && !document.querySelector("#padFab").classList.contains("dragging"); }, null, { timeout: 5000 });   // the drop is saved, snapped left: the drag ended
     assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "a drag opened the pad page");
     const g = await geo(), placed = g.top;
     assert.ok(g.left <= 24, `not on the left edge: ${g.left}`);
     for (const y of [200, 500, 0]) { await page.evaluate(y => scrollTo(0, y), y); await settle(); assert.ok(Math.abs(await fabTop() - placed) <= 1, `scroll ${y}: ${await fabTop()} vs ${placed}`); }
     await page.setViewportSize({ width: W, height: H - URL_BAR }); await settle(); await page.setViewportSize({ width: W, height: H }); await settle();
     assert.ok(Math.abs(await fabTop() - placed) <= 1, `after the URL bar: ${await fabTop()} vs ${placed}`);
-    await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(700);
+    await page.reload({ waitUntil: "networkidle" }); await page.waitForFunction(c => { const f = document.querySelector("#padFab");
+      return document.querySelector("#pcode")?.textContent === c && !!f && !f.hidden && f.classList.contains("left") && f.style.bottom !== ""; }, CA.code, { timeout: 5000 });   // back from the reload, the button at its saved side and place
     const g2 = await geo();
     assert.ok(g2.left <= 24, "side not kept after reload");
     assert.ok(Math.abs(g2.top - placed) <= 24, `height not kept after reload: ${g2.top} vs ${placed}`);
@@ -147,7 +157,8 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     const x0 = f.x + f.width / 2, y0 = f.y + f.height / 2, ty = (c.top + c.bottom) / 2, tx = W * 0.75;
     await touch("touchStart", x0, y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", x0 + i * (tx - x0) / 8, y0 + i * (ty - y0) / 8);
-    await touch("touchEnd"); await page.waitForTimeout(400);
+    await touch("touchEnd"); await page.waitForFunction(() => { let m = {}; try { m = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { /* */ }
+      return !!m.fab && m.fab.side === "r" && !document.querySelector("#padFab").classList.contains("dragging"); }, null, { timeout: 5000 });   // the drop is saved, snapped right: the drag ended
     assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "a drag opened the pad page");
     const want = f.y + (ty - y0), g = await geo();
     const over = await page.evaluate(() => { const f = document.querySelector("#padFab").getBoundingClientRect();
@@ -177,6 +188,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   page.setDefaultTimeout(6000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
   await page.route(`**/p/${FQ.code}.json`, r => r.fulfill({ json: FQ }));
+  const settle = settleFor(page);
   const rectsOf = () => page.evaluate(() => { const r = e => { const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; };
     return { fab: r(document.querySelector("#padFab")), text: [...document.querySelectorAll("#blocks .md")].filter(e => e.offsetParent).map(r),
       opts: [...document.querySelectorAll("#q .opt")].filter(e => e.offsetParent).map(r) }; });
@@ -184,7 +196,8 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await page.goto(`${BASE}/#${FQ.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, FQ.code, { timeout: 8000 });
   await page.waitForFunction(() => !document.querySelector("#padFab").hidden, null, { timeout: 8000 });
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => document.fonts.status === "loaded" && document.querySelector("#padFab").style.bottom !== "", null, { timeout: 5000 });   // text metrics final, the button placed
+  await settle();
 
   await step(`${W}x${H} 5 choices + figure: the button (re)appears clear of the question text and of every choice`, async () => {
     const g = await rectsOf();
@@ -201,11 +214,13 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     /* the drop target: a free strip of the bottom half, left side (checked below, not assumed) */
     await touch("touchStart", x0, y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", x0 + i * (tx - x0) / 8, y0);
-    await touch("touchEnd"); await page.waitForTimeout(400);
+    await touch("touchEnd"); await page.waitForFunction(() => { let m = {}; try { m = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { /* */ }
+      return !!m.fab && m.fab.side === "l" && !document.querySelector("#padFab").classList.contains("dragging"); }, null, { timeout: 5000 });   // the drop is saved, snapped left: the drag ended
     const before = await page.evaluate(() => document.querySelector("#padFab").getBoundingClientRect().top);
     const g1 = await rectsOf();
     assert.ok(g1.fab.left <= 24, `not snapped to the left edge: ${g1.fab.left}`);
-    await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(700);
+    await page.reload({ waitUntil: "networkidle" }); await page.waitForFunction(c => { const f = document.querySelector("#padFab");
+      return document.querySelector("#pcode")?.textContent === c && !!f && !f.hidden && f.classList.contains("left") && f.style.bottom !== ""; }, FQ.code, { timeout: 5000 });   // back from the reload, the button at its saved side and place
     const after = await page.evaluate(() => document.querySelector("#padFab").getBoundingClientRect().top);
     const g2 = await rectsOf();
     assert.ok(g2.fab.left <= 24, "side not kept after reload");
@@ -225,7 +240,10 @@ for (const [W, H, phone] of [[360, 740, true], [1280, 800, false]]) {
   await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
   await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, CA.code, { timeout: 8000 });
-  await page.waitForTimeout(700);
+  const settle = settleFor(page);
+  await page.waitForFunction(p => { const r = document.documentElement;   // rendered, and the pad decision (sugar, side or phone) applied
+    return r.classList.contains("sugar") && r.classList.contains("side") === !p && [...document.querySelectorAll("#blocks .md")].some(e => e.offsetParent); }, phone, { timeout: 5000 });
+  await settle();
   const g = () => page.evaluate(() => { const shown = s => { const e = document.querySelector(s); return !!e && !e.hidden && e.getClientRects().length > 0; };
     return { fab: shown("#padFab"), work: shown("#work"), peek: shown("#padPeek"), scratch: shown("#scratch"), fabOn: document.documentElement.classList.contains("fab-on"),
       sideways: document.documentElement.scrollWidth - innerWidth }; });
@@ -237,7 +255,7 @@ for (const [W, H, phone] of [[360, 740, true], [1280, 800, false]]) {
     });
     await step(`${W}x${H} sugar: the pad page cannot be opened, and the keyboard-up problem pane has no pad peek`, async () => {
       await page.evaluate(() => document.querySelector("#padFab").click());
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(200);   // sleep-keep: the click must open nothing, and a "nothing happened" has no condition to wait on (the handler is synchronous; the assert below is the check)
       assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "the pad page opened");
       await page.evaluate(() => { const root = document.documentElement; root.classList.add("swap", "swap-problem"); });   // the keyboard-up PROBLEM pane, as CSS sees it
       assert.equal((await g()).peek, false, "pad peek shown");
