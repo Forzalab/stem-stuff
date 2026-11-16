@@ -218,3 +218,8 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { animation: none !important; }
    bigger than the mixed-case link. Caps drop to 13.5px (about the link's x-height + ascenders), one font file for both (--qfont). Measured baselines stay equal at top alignment (393: 63/63, 1280: 168.5/168.5). */
 html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: 13.5px; letter-spacing: .07em; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { font-family: var(--qfont); }
+/* GHOST-LIQUID (Tony Nov 16 "a liquid blur on top of the ghost number, mind CPU"): ONE static filter on the echo layer (not backdrop-filter, which re-runs every scroll
+   frame, and not one filter per copy: 5 passes). The blurred layer is drawn once and moved as a texture; saturate keeps the blur from going grey. contain: paint keeps
+   its repaint area to the ghost box. The front numeral (desktop card) stays sharp. */
+html.ui-v7 #problem.qc7.qbr .qghost { filter: blur(3.5px) saturate(1.2); contain: paint; }
+@media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7.qbr .qghost { filter: none; } }
