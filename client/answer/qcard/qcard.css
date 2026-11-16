@@ -75,3 +75,6 @@ html.ui-v7 #problem.qc7 .md :is(.tbl, .katex-display):not([tabindex]) { backgrou
 html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { -webkit-mask-image: none; mask-image: none; }
 /* one smooth fade for the whole trail, centred on the bottom-right corner (no per-copy edges, so no cuts); keeps 2-3 digit numerals quiet behind the text */
 html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(120% 120% at 100% 100%, #000 15%, rgb(0 0 0 / .55) 45%, transparent 85%); mask-image: radial-gradient(120% 120% at 100% 100%, #000 15%, rgb(0 0 0 / .55) 45%, transparent 85%); }
+/* LEAD-MATH-BOLD (Tony Nov 15): math in the question sentence (.qlead) reads bold like its words, display lines (lim, integrals) included.
+   KaTeX fonts ship no bold weight for CSS, so a thin same-colour stroke = faux bold; it scales with the font size (em). */
+html.ui-v7 #problem.qc7 .qlead .katex { color: #e8ebf5; -webkit-text-stroke: .028em currentColor; paint-order: stroke fill; }
