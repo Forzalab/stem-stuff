@@ -1,6 +1,8 @@
 # R4 (ticket 09, PR 4): auto-rerun a tests.yml run that failed on its FIRST attempt, once. A pass that
 # only happens on attempt >= 2 is YELLOW: tools/operations/batch.sh renders it yellow and the ship gate refuses it
 # (tools/operations/ci-retry.mjs attemptColor, imported by tools/operations/ci-gate.mjs pickGreen). Never retry a run twice.
+# W4: test failures are retried inside the job (tests/run-all.sh run(), FLAKY <spec>); this reruns INFRA failures only (runner died,
+# npm ci / browser install failed): a failed job whose log holds a `FAIL <spec>` line is NOT rerun.
 # The decision is the pure, tested shouldRetry; this workflow only wires the GitHub events to it.
 name: retry
 on:
@@ -9,7 +11,7 @@ on:
     types: [completed]
 permissions:
   contents: read    # actions/checkout reads this repo for the pure decision module
-  actions: write    # POST /rerun-failed-jobs on the failed run
+  actions: write    # reads the failed jobs' logs + POST /rerun-failed-jobs on the failed run
 jobs:
   retry:
     # R4 guards: never retry a dispatch (bench/mutant or fast pipe), a fork PR, or a non-first attempt.
@@ -27,13 +29,20 @@ jobs:
         env:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
+          : >failed.log   # the logs of the failed jobs: a `FAIL <spec>` line in them = a test failure (retried in-job already)
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id'); do
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" >>failed.log || true
+          done
           CONCLUSION="$CONCLUSION" RUN_ATTEMPT="$RUN_ATTEMPT" node --input-type=module -e '
             import { shouldRetry, attemptColor } from "./tools/operations/ci-retry.mjs";
             const run = { conclusion: process.env.CONCLUSION, run_attempt: Number(process.env.RUN_ATTEMPT) };
-            console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; shouldRetry=${shouldRetry(run)}`);
-            process.stdout.write(shouldRetry(run) ? "true" : "false");
+            const log = (await import("node:fs")).readFileSync("failed.log", "utf8");
+            console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; shouldRetry=${shouldRetry(run, log)}`);
+            process.stdout.write(shouldRetry(run, log) ? "true" : "false");
           ' > retry.txt
           echo "retry=$(cat retry.txt)" >> "$GITHUB_OUTPUT"
       - if: steps.d.outputs.retry == 'true'

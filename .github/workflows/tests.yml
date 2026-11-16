@@ -154,14 +154,24 @@ jobs:
           DIFF_DIR: ${{ github.workspace }}/jank-diff   # specs that diff screenshots (desk-layout) keep shots + *-DIFF.png here
         run: |
           IFS='|' read -ra lane <<<"$LANE_SPECS"
-          for i in "${!lane[@]}"; do SPECS="${lane[$i]}" tests/run-all.sh >"lane-$((i + 1)).log" 2>&1 & pid[$i]=$!; done
+          : >flaky.txt   # W4: always exists in a block that ran; each lane appends the specs that failed once and passed on retry
+          for i in "${!lane[@]}"; do SPECS="${lane[$i]}" FLAKY_FILE="flaky-$((i + 1)).txt" tests/run-all.sh >"lane-$((i + 1)).log" 2>&1 & pid[$i]=$!; done
           rc=0
           for i in "${!lane[@]}"; do
             wait "${pid[$i]}" || rc=1
+            cat "flaky-$((i + 1)).txt" >>flaky.txt 2>/dev/null || true
             echo "::group::lane $((i + 1)): ${lane[$i]}"; cat "lane-$((i + 1)).log"; echo "::endgroup::"
             grep -E '^(FAIL|NOT COVERED)|FAILED' "lane-$((i + 1)).log" | sed "s/^/lane $((i + 1)): /" || true
           done
           exit "$rc"
+      - name: upload flaky list   # W4: the `all` job reads it (FLAKY <spec> lines, one spec per line)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-block-${{ matrix.block }}
+          path: flaky.txt
+          if-no-files-found: ignore
+          retention-days: 7
       - name: upload jank diffs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -250,6 +260,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: tools/operations/ci-all-verdict.sh
+      # W4 (minimal addition): every block that ran must hand in flaky.txt, and each flaky spec must be in the unexpired jail
+      - if: needs.block.result == 'success'
+        uses: actions/download-artifact@v4
+        with: { pattern: flaky-block-*, path: flaky }
+      - if: needs.block.result == 'success'
+        env: { MATRIX: "${{ needs.plan.outputs.matrix }}" }
+        run: node tools/operations/ci-flaky.mjs all tests/quarantine.json flaky "$(jq '.include | length' <<<"$MATRIX")"
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]

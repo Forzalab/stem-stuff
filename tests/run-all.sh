@@ -416,7 +416,7 @@ SRV=""
 killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; [ "$1" = "$$" ] || kill "$1" 2>/dev/null; return 0; }
 trap 'trap - EXIT; killtree $$' EXIT
 trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP
-fails=0
+fails=0; lane_retries=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 
 # a failed check line: "FAIL ...", "3 FAIL" (a count), or a ux-flows row "43 offline-sw  1280 FAIL t_ms=..." (CI showed no reason for that row before, tests/run-all.test.mjs)
@@ -437,15 +437,27 @@ unit_fails() {
   ' "$1"
 }
 run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0). The result line ends with the spec's seconds (CI bench: bench job reads them)
-  local name="$1" t0="$EPOCHREALTIME" s; shift
+  # W4: a failed spec is retried ONCE in this lane (cap 2 retries per process; never unittest|npm|batch|codemap). Pass on retry = `FLAKY <name>`
+  # + a line in $FLAKY_FILE (default flaky.txt); the lane stays green only if the spec is in the unexpired jail (tests/quarantine.json).
+  local name="$1" t0="$EPOCHREALTIME" s ok=0 flaky=0; shift
   "$@" >"$TMP/$name.log" 2>&1 & wait $!   # background + wait: bash runs a TERM/INT trap at once during wait, not after a foreground child
-  if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then
-    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
+  if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then ok=1
+  elif [[ ! "$name" =~ ^(unittest|npm|batch|codemap)$ ]] && [ "${lane_retries:-0}" -lt 2 ]; then
+    lane_retries=$(( ${lane_retries:-0} + 1 ))
+    "$@" >"$TMP/$name.log" 2>&1 & wait $!
+    if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then ok=1; flaky=1; fi
+  fi
+  s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"
+  if [ "$flaky" -eq 1 ]; then
+    echo "FLAKY $name"; echo "$name" >>"${FLAKY_FILE:-flaky.txt}"
+    node tools/operations/ci-flaky.mjs jailed "$name" || ok=0
+  fi
+  if [ "$ok" -eq 1 ]; then echo "ok   $name $s s"
   else
-    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"
     echo "FAIL $name $s s"
     local uf=""; [ "$name" = unittest ] && uf="$(unit_fails "$TMP/$name.log" | head -200)"
-    if [ -n "$uf" ] && grep -qE '^(FAIL|ERROR): ' <<<"$uf"; then sed 's/^/     /' <<<"$uf"   # the failing tests, not the log's head
+    if [ "$flaky" -eq 1 ]; then echo "     flaky: failed once, passed on retry, and not in the unexpired jail (tests/quarantine.json)"
+    elif [ -n "$uf" ] && grep -qE '^(FAIL|ERROR): ' <<<"$uf"; then sed 's/^/     /' <<<"$uf"   # the failing tests, not the log's head
     else grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'; fi
     fails=$((fails + 1))
   fi
