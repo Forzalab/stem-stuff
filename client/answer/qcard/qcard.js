@@ -168,7 +168,19 @@
     var p = D.getElementById("problem"), b = p && p.querySelector(":scope > .cluckbtn"), t = p && p.querySelector(":scope > .blocks > :is(.ptitle, .qhead):first-child");
     if (!p) return;
     if (b) b.style.marginTop = ""; if (t) t.style.paddingTop = ""; p.classList.remove("qstack"); p.style.removeProperty("--cbw");
-    var c = D.getElementById("pcode"); p.dataset.code = c ? c.textContent.trim() : "";
+    var c = D.getElementById("pcode"), code = c ? c.textContent.trim() : ""; p.dataset.code = code;
+    if (!on() || !p.classList.contains("qbr")) return;
+    var k = p.querySelector(":scope > .qkicker");
+    if (!k) { k = D.createElement("span"); k.className = "qkicker"; k.setAttribute("aria-hidden", "true"); p.insertBefore(k, p.firstChild); }
+    if (k.textContent !== code) k.textContent = code;
+    /* KICKER-BASELINE (Tony Nov 16): the Ask Cluck LABEL's baseline = the code's baseline (flex 'baseline' picked the duck icon) */
+    k.style.marginTop = "";
+    if (!b) return;
+    var lab = [].slice.call(b.querySelectorAll("*")).filter(function (e) { return !e.children.length && /\S/.test(e.textContent) && e.getClientRects().length; })[0];
+    if (!lab) return;
+    var base = function (host) { var s = D.createElement("span"); s.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline"; host.appendChild(s); var y = s.getBoundingClientRect().top; host.removeChild(s); return y; };
+    var d = base(lab) - base(k);
+    if (Math.abs(d) > 0.25) k.style.marginTop = d + "px";
   }
   /* Q-FOLD (Tony Nov 16): the chevron is a real button: tap = expand the card to full height; at the foot a reversed chevron collapses it (scrolls the card top back into view) */
   function foldBtn(p) {

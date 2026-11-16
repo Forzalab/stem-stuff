@@ -134,3 +134,11 @@ html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 20px; }
 html.ui-v7 #problem.qc7.qbr > .qfold, html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
 html.ui-v7 #problem.qc7.qbr > .qghostbox, html.ui-v7 #problem.qc7.qbr > .pcode { flex: none; }
 html.ui-v7 #problem.qc7.qbr > .qfold { flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); }   /* the fade strip stays full-bleed inside the flex kicker layout (flex 100% cut its right edge: text showed through) */
+/* KICKER-C v2 (Tony Nov 16): button a touch bigger; its label's BASELINE sits on the code kicker's baseline (flex baseline alignment, not centre) */
+html.ui-v7 #problem.qc7.qbr { align-items: baseline; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { padding: 14px 24px 14px 20px !important; }
+/* the kicker is a real element now (qcard.js span.qkicker, baseline-matched to the button label); the ::before kicker is off */
+html.ui-v7 #problem.qc7.qbr::before { content: none; display: none; }
+html.ui-v7 #problem.qc7.qbr { align-items: flex-start; }
+html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; align-self: flex-start; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qkicker { display: none; } html.ui-v7 #problem.qc7.qbr > .qkicker { display: block; }
