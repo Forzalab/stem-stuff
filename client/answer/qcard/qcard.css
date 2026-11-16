@@ -227,3 +227,11 @@ html.ui-v7 #problem.qc7.qbr .qghost { filter: blur(3.5px) saturate(1.2); contain
 /* PHONE-TOP-AIR (Tony Nov 16 "on phone, top margin add more, it looks too cramped"): the kicker row sat 24 px under the card's top edge, the same as the side insets;
    the top gets 32 px (desktop's --qpad), sides and bottom stay 24. The ghost and the fold read --qpad, so they keep their own geometry. */
 @media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { padding-top: 32px; } }
+/* FONT-SPLIT (see app.css): the card's text face follows --font (Atkinson Hyperlegible Next); only the headline keeps the grotesk (G Schibsted) */
+html.ui-v7 #problem.qc7 { --qfont: var(--font); }
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.ui-v7 #problem.qc7 :is(.qhead, .ptitle) { font-family: "G Schibsted", var(--font-title) !important; }
+/* ANCHOR-BOTTOM (Tony Nov 16 "anchor the title + question text to the bottom, then extend the height a teensy bit; all cards like that"): a short card gets a floor
+   (240 px phone, 280 px desktop) and its rows spread: the kicker / Ask Cluck row stays on top, the headline + text sit on the card's bottom pad (Swiss poster).
+   A card taller than the floor is unchanged (nothing to spread). Not in the Q-HALF open/scroll states, where the height is the scroller's. */
+html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 240px; align-content: space-between; }
+@media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 280px; } }
