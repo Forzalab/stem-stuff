@@ -15,12 +15,12 @@ const NOW = Date.parse("2026-11-15T12:00:00Z");
 const entry = (spec) => ({ spec, test: "*", owner: "t", reason: "#1", added: "2026-11-14", expires: "2026-11-20" });
 
 // fake spec: fails its first `failN` runs (counter file), then passes. calls = [[name, failN], ...] run in one lane process.
-function lane(calls, jailed = []) {
+function lane(calls, jailed = [], extra = {}) {
   const dir = mkdtempSync(join(tmpdir(), "flaky-"));
   const jail = join(dir, "jail.json"); writeFileSync(jail, JSON.stringify(jailed.map(entry)));
   const body = calls.map(([n, k]) => `run ${n} bash -c 'c=${dir}/${n}.n; i=$(cat $c 2>/dev/null || echo 0); echo $((i+1)) >$c; [ $i -ge ${k} ] || { echo "FAIL inner"; exit 1; }'`).join("\n");
-  const r = spawnSync("bash", ["-c", `set -uo pipefail; export EPOCHREALTIME; TMP="$(mktemp -d)"; fails=0\n${region}\n${body}\nexit $fails`],
-    { cwd: root, encoding: "utf8", env: { ...process.env, FLAKY_FILE: join(dir, "flaky.txt"), FLAKY_JAIL: jail } });
+  const r = spawnSync("bash", ["-c", `set -uo pipefail; export EPOCHREALTIME; TMP="$(mktemp -d)"; fails=0; free_port() { echo 54321; }\n${region}\n${body}\nexit $fails`],
+    { cwd: root, encoding: "utf8", env: { ...process.env, FLAKY_FILE: join(dir, "flaky.txt"), FLAKY_JAIL: jail, ...extra } });
   const f = join(dir, "flaky.txt");
   return { out: r.stdout, status: r.status, flaky: existsSync(f) ? readFileSync(f, "utf8") : "" };
 }
@@ -37,10 +37,20 @@ test("AC4.2 fails twice: FAIL, exit 1, not flaky", () => {
   const r = lane([["alpha", 2]], ["alpha"]);
   assert.match(r.out, /^FAIL alpha [0-9.]+ s$/m); assert.doesNotMatch(r.out, /FLAKY/); assert.equal(r.status, 1); assert.equal(r.flaky, "");
 });
-test("AC4.3 cap 2 retries per lane: the third failing spec is not retried", () => {
+test("CI-ARCH PR 1: no lane cap, every failing spec gets its one retry", () => {
   const r = lane([["a", 1], ["b", 1], ["c", 1]], ["a", "b", "c"]);
-  assert.match(r.out, /^FLAKY a$/m); assert.match(r.out, /^FLAKY b$/m);
-  assert.match(r.out, /^FAIL c [0-9.]+ s$/m); assert.doesNotMatch(r.out, /FLAKY c/); assert.equal(r.status, 1);
+  for (const x of ["a", "b", "c"]) assert.match(r.out, new RegExp(`^FLAKY ${x}$`, "m"));
+  assert.equal(r.status, 0);
+});
+test("CI-ARCH PR 1: FLAKY_PASS=1 (main push) = unjailed retry-pass is green, name kept in flaky.txt", () => {
+  const r = lane([["alpha", 1]], [], { FLAKY_PASS: "1" });
+  assert.match(r.out, /^FLAKY alpha$/m); assert.match(r.out, /^ok   alpha /m); assert.equal(r.status, 0, r.out); assert.equal(r.flaky, "alpha\n");
+});
+test("CI-ARCH PR 1: own-server retry gets a fresh port (bare port arg re-picked)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "port-"));
+  const s2 = spawnSync("bash", ["-c", `set -uo pipefail; TMP="$(mktemp -d)"; fails=0; free_port() { echo 54321; }\n${region}\nrun p bash -c 'echo $1 >>${dir}/ports; [ -e ${dir}/two ] || { : >${dir}/two; echo "FAIL x"; exit 1; }' _ 11111\nexit $fails`],
+    { cwd: root, encoding: "utf8", env: { ...process.env, FLAKY_FILE: join(dir, "f.txt"), FLAKY_PASS: "1" } });
+  assert.equal(s2.status, 0, s2.stdout + s2.stderr); assert.equal(readFileSync(join(dir, "ports"), "utf8"), "11111\n54321\n");
 });
 test("flakyVerdict: an expired jail entry does not save a flaky spec", () => {
   assert.equal(flakyVerdict("x", [entry("x")], NOW).ok, true);

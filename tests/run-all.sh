@@ -416,7 +416,7 @@ SRV=""
 killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; [ "$1" = "$$" ] || kill "$1" 2>/dev/null; return 0; }
 trap 'trap - EXIT; killtree $$' EXIT
 trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP
-fails=0; lane_retries=0
+fails=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 
 # a failed check line: "FAIL ...", "3 FAIL" (a count), or a ux-flows row "43 offline-sw  1280 FAIL t_ms=..." (CI showed no reason for that row before, tests/run-all.test.mjs)
@@ -437,20 +437,22 @@ unit_fails() {
   ' "$1"
 }
 run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0). The result line ends with the spec's seconds (CI bench: bench job reads them)
-  # W4: a failed spec is retried ONCE in this lane (cap 2 retries per process; never unittest|npm|batch|codemap). Pass on retry = `FLAKY <name>`
+  # W4: a failed spec is retried ONCE (no lane cap since CI-ARCH PR 1; never unittest|npm|batch|codemap). Pass on retry = `FLAKY <name>`
   # + a line in $FLAKY_FILE (default flaky.txt); the lane stays green only if the spec is in the unexpired jail (tests/quarantine.json).
   local name="$1" t0="$EPOCHREALTIME" s ok=0 flaky=0; shift
   "$@" >"$TMP/$name.log" 2>&1 & wait $!   # background + wait: bash runs a TERM/INT trap at once during wait, not after a foreground child
   if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then ok=1
-  elif [[ ! "$name" =~ ^(unittest|npm|batch|codemap)$ ]] && [ "${lane_retries:-0}" -lt 2 ]; then
-    lane_retries=$(( ${lane_retries:-0} + 1 ))
-    "$@" >"$TMP/$name.log" 2>&1 & wait $!
+  elif [[ ! "$name" =~ ^(unittest|npm|batch|codemap)$ ]]; then
+    # CI-ARCH PR 1: every spec gets ONE retry (no per-lane cap). An own-server spec's bare port arg gets a fresh free_port, so a
+    # port still held by attempt 1's dying server cannot fail the retry. Shared-server specs pass a URL (no bare number): unchanged.
+    local a=() x; for x in "$@"; do [[ "$x" =~ ^[0-9]{4,5}$ ]] && x="$(free_port)"; a+=("$x"); done
+    "${a[@]}" >"$TMP/$name.log" 2>&1 & wait $!
     if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then ok=1; flaky=1; fi
   fi
   s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"
   if [ "$flaky" -eq 1 ]; then
     echo "FLAKY $name"; echo "$name" >>"${FLAKY_FILE:-flaky.txt}"
-    # FLAKY_PASS=1 (tests.yml: pull_request + SHIP_MODE pr-green only): an unjailed flake passes yellow; the `all` job files the ticket
+    # FLAKY_PASS=1 (tests.yml: push to main always, PR only with SHIP_MODE pr-green): an unjailed flake passes; the `all` job files the ticket
     if [ -z "${FLAKY_PASS:-}" ]; then node tools/operations/ci-flaky.mjs jailed "$name" || ok=0; fi
   fi
   if [ "$ok" -eq 1 ]; then echo "ok   $name $s s"
@@ -474,9 +476,23 @@ elif [ "$base" -eq 1 ]; then
   run codemap python3 tools/repo_checks/codemap.py map   # CM3: every CODEMAP row exists, every code file has a row, big files have a header
 fi
 if [ "${#specs[@]}" -gt 0 ]; then
-  PORT="$(free_port)"
-  python3 server/http_server/serve.py "$PORT" >"$TMP/serve.log" 2>&1 & SRV=$!
-  for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && break; sleep 0.2; done
+  # CI-ARCH PR 1: the shared server is checked before every spec that uses it. Dead = say so LOUD (serve.log tail), re-pick the port
+  # and restart ONCE per lane; dead again = each such spec FAILs with "shared server dead" (never a silent spec timeout).
+  srv_up() { kill -0 "$SRV" 2>/dev/null && (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; }
+  srv_start() {
+    PORT="$(free_port)"
+    python3 server/http_server/serve.py "$PORT" >>"$TMP/serve.log" 2>&1 & SRV=$!
+    for _ in $(seq 50); do srv_up && return 0; sleep 0.2; done; return 1
+  }
+  srv_repick=0
+  srv_gate() {
+    srv_up && return 0
+    echo "SERVER DEAD: shared serve.py (pid $SRV, port $PORT) is down before $1; serve.log tail:"; tail -n 8 "$TMP/serve.log" | sed 's/^/     /'
+    [ "$srv_repick" -eq 0 ] || return 1
+    srv_repick=1; kill "$SRV" 2>/dev/null; srv_start && { echo "SERVER RESTARTED on port $PORT"; return 0; }
+    echo "SERVER DEAD: restart on port $PORT failed too"; return 1
+  }
+  srv_start || true   # a failed first start is caught (loud) by srv_gate at the first shared-server spec
   for name in "${specs[@]}"; do
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
@@ -484,7 +500,8 @@ if [ "${#specs[@]}" -gt 0 ]; then
       bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|brainrot-b|brainrot-torus|fport-ladder-verdict|verdict-card|cluck-btn|qcard|calc-toast|fport-hint-toast|gap-batch1|progbar-wave|cram-cta-off) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       toast-gap) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" "$TMP/shots" ;;   # TOAST-GAP: own server, shots into the run TMP
-      *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
+      *) if srv_gate "$name"; then run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots"
+         else echo "FAIL $name 0.0 s"; echo "     shared server dead (see SERVER DEAD above)"; fails=$((fails + 1)); fi ;;
     esac
   done
 fi
