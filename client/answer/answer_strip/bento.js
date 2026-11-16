@@ -1,4 +1,4 @@
-/* bento.js: the MC and pick-all answers as a bento3 mosaic (Tony Nov 15: "more aggressive", mixed 1x1 / 2x1 / 1x2 / 2x2 tiles, no holes; brain ui-polish/bento3/RESEARCH.md).
+/* bento.js (bento4 DOM half; the search is bento_cost.js, the features bento_feat.js): the MC and pick-all answers as a bento mosaic (Tony Nov 15: "more aggressive", mixed 1x1 / 2x1 / 1x2 / 2x2 tiles, no holes; brain ui-polish/bento3/RESEARCH.md).
    BEHIND html.ui-v7 (fx.js, ?ui=v7). Flag off = this file touches nothing. Flag on = for a choices group of 2..8 options (single choice and pick-all) it
    (1) probes every option at every column span (hidden copy, same CSS) -> wrapped height + overflow -> the shapes (cs x rs) that fit its content,
    (2) searches an exact cover of a C-column grid (C = 3..6 from the width; unit row 100px, gap 8): options are placed IN ORDER at the first empty cell
@@ -6,17 +6,18 @@
        many distinct shapes, mild aspect penalty; deterministic (content + width, ties by a hash of the option text),
    (3) writes grid-column / grid-row on each .ch and class .bento (+ --bc) on .choices (bento.css does the look).
    Content only: never reads the key, the picked state or a verdict. Pick-all with fix boxes (prove mode) keeps its list. Stacked full-width rows is the fallback.
+   bento4: content-driven tile shapes (hero = most content, ~60% of tiles bigger than 1x1), seeded per question (#pcode + width), render guard (a clipped tile forbids its shape,
+   one re-layout, then stacked), phone unit row 88, grid padding-bottom when a fixed Check bar exists.
    Reads the DOM only (like strip.js); re-runs when #q gets a new question, when the width changes, and when fonts arrive. */
 (function () {
   "use strict";
   var D = document, H = D.documentElement;
-  var UNIT = 100, GAP = 8, PADX = 16, NEEDV = 52, SAFE = 2, RMAX = 6, MINW = 96, NODES = 60000;   // NEEDV: content height + 52 <= tile: two 24px lines fit one row; the Check arrow / Next may brush the text by a few px in the picked / verdict state
-  var key = "", probe = null, queued = false;
+  var GAP = 8, PADX = 16, SAFE = 2, MINW = 96;   // NEEDV: content height + 52 <= tile: two 24px lines fit one row; the Check arrow / Next may brush the text by a few px in the picked / verdict state
+  var Feat = window.stemBentoFeat, Cost = window.stemBentoCost, key = "", probe = null, queued = false, cur = null;
+  if (!Feat || !Cost) return;
   var on = function () { return H.classList.contains("ui-v7"); };
-  var unitsH = function (u) { return u * UNIT + (u - 1) * GAP; };
-  function colsFor(R) { return Math.max(3, Math.min(6, Math.floor((R + GAP) / (MINW + GAP)))); }
+  function colsFor(R, tiny) { var c = Math.max(3, Math.min(6, Math.floor((R + GAP) / (MINW + GAP)))); return tiny && R < 520 ? 4 : c; }   // phone: 4 columns when every option is a token
   function tileW(s, R, C) { return ((R - (C - 1) * GAP) / C) * s + (s - 1) * GAP; }
-  function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 1000 / 1000; }
 
   /* kind of an option's look: p = only math (display size), s = short text (big), t = text / mixed / long (small, wraps) */
   function kindOf(t) {
@@ -26,14 +27,16 @@
     if (!rest) return "p";
     return t.textContent.trim().length <= 14 ? "s" : "t";
   }
+  function restLen(t) { if (!t) return 0; var c = t.cloneNode(true); c.querySelectorAll(".katex, .mx, .kx-scroll").forEach(function (k) { k.remove(); }); return c.textContent.trim().length; }
   /* probe: for every option and every span 1..C one hidden copy at the tile's inner width -> {h, over} */
   function measure(chs, R, C) {
+    var g = Feat.geom(R, C);
     if (!probe) { probe = D.createElement("div"); probe.className = "mc-probe"; probe.setAttribute("aria-hidden", "true"); }
     if (!probe.isConnected) D.body.appendChild(probe);
     var html = "", kinds = [];
     chs.forEach(function (c) {
       var t = c.querySelector(".opt .txt"), k = kindOf(t); kinds.push(k);
-      for (var s = 1; s <= C; s++) html += '<div class="opt" data-k="' + k + '" style="width:' + Math.max(20, tileW(s, R, C) - 2 * PADX - SAFE) + 'px"><span class="txt">' + (t ? t.innerHTML : "") + "</span></div>";
+      for (var s = 1; s <= C; s++) html += '<div class="opt" data-k="' + k + '" style="width:' + Math.max(20, g.tileW(s) - 2 * PADX - SAFE) + 'px"><span class="txt">' + (t ? t.innerHTML : "") + "</span></div>";
     });
     probe.innerHTML = html;
     probe.querySelectorAll(".katex").forEach(function (k) { k.style.fontSize = ""; });   // app.js fitMath may have shrunk it: measure the natural size
@@ -41,75 +44,16 @@
     return chs.map(function (c, i) {
       var row = [];
       for (var s = 1; s <= C; s++) { var b = kids[i * C + s - 1], t = b.firstChild; row.push({ h: t.getBoundingClientRect().height, over: t.scrollWidth > b.clientWidth + 0.5 }); }
-      return { kind: kinds[i], by: row, text: (c.querySelector(".txt") || {}).textContent || "" };
+      var rl = restLen(c.querySelector(".opt .txt")), mw = 0;
+      [].forEach.call(kids[i * C + C - 1].querySelectorAll(".katex"), function (k) { mw += k.getBoundingClientRect().width; });
+      return { kind: kinds[i], by: row, text: (c.querySelector(".txt") || {}).textContent || "", mathOnly: !rl && mw > 0, mathW: mw, chars: rl + Math.round(mw / 9) };
     });
   }
-  /* pure: measured options [{kind,text,by:[{h,over}]}] + R + C -> [{i,col,cs,row,rs}] in option order, no holes */
-  function layout(ms, R, C) {
-    var n = ms.length, cand = [], minCells = [];
-    ms.forEach(function (m, i) {
-      var list = [], best = 1e9;
-      for (var s = 1; s <= C; s++) {
-        var b = m.by[s - 1]; if (b.over && s < C) continue;
-        var r0 = 0; for (var r = 1; r <= RMAX; r++) if (b.h + NEEDV <= unitsH(r)) { r0 = r; break; }
-        if (!r0) { if (s < C) continue; r0 = RMAX; }
-        best = Math.min(best, s * r0);
-        for (var g = 0; g <= 2 && r0 + g <= RMAX + 2; g++) list.push({ cs: s, rs: r0 + g, grow: g, brk: !!b.over });
-      }
-      cand.push(list); minCells.push(best);
-    });
-    var tailMin = [0]; for (var i = n - 1; i >= 0; i--) tailMin[n - i] = tailMin[n - i - 1] + minCells[i];
-    var tailMax = [0]; for (i = n - 1; i >= 0; i--) tailMax[n - i] = tailMax[n - i - 1] + Math.max.apply(null, cand[i].map(function (x) { return x.cs * x.rs; }));
-    var tiny = n >= 6 && n <= 8 && minCells.every(function (m) { return m <= 2; });   // 6-8 all-short options: near-uniform tiles, never one hero
-    function cost(sel, Hh) {
-      var c = 25 * Hh, shapes = {}, ns = 0;
-      sel.forEach(function (x, ix) {
-        var cells = x.cs * x.rs; c += 8 * (cells - minCells[ix]);
-        shapes[x.cs + "x" + x.rs] = 1;
-        var ar = tileW(x.cs, R, C) / unitsH(x.rs); c += 4 * Math.abs(Math.log(ar));
-        if (x.cs === 1 && ms[ix].kind === "t") c += 6 + 6 * Math.max(0, Math.round(ms[ix].by[0].h / 24) - 3);   // a 1-col text tile: narrow, hard to read when it wraps a lot
-        if (tiny) c += 10 * (x.rs - 1) + 5 * (cells - 1) * (cells - 1);
-        c += hash(ms[ix].text + x.cs + "x" + x.rs);
-      });
-      for (var k in shapes) ns++;
-      if (tiny) c += 8 * ns; else if (n >= 3) c -= 14 * Math.min(ns, 4);
-      return c;
-    }
-    var best = null, nodes = 0;
-    var Hmin = Math.max(1, Math.ceil(tailMin[n] / C));
-    for (var Hh = Hmin; Hh <= Hmin + 3; Hh++) {
-      var occ = new Uint8Array(C * Hh), sel = [], pos = [];
-      (function rec(i, free, from) {
-        if (nodes > NODES) return;
-        if (i === n) { if (free === 0) { var cc = cost(sel, Hh); if (!best || cc < best.cost) best = { cost: cc, sel: sel.slice(), pos: pos.slice() }; } return; }
-        if (free < tailMin[n - i] || free > tailMax[n - i]) return;
-        var p = from; while (p < occ.length && occ[p]) p++;
-        if (p >= occ.length) return;
-        var r = Math.floor(p / C), c0 = p % C;
-        cand[i].forEach(function (x) {
-          if (c0 + x.cs > C || r + x.rs > Hh) return;
-          for (var dy = 0; dy < x.rs; dy++) for (var dx = 0; dx < x.cs; dx++) if (occ[(r + dy) * C + c0 + dx]) return;
-          nodes++;
-          for (dy = 0; dy < x.rs; dy++) for (dx = 0; dx < x.cs; dx++) occ[(r + dy) * C + c0 + dx] = 1;
-          sel.push(x); pos.push({ row: r + 1, col: c0 + 1 });
-          rec(i + 1, free - x.cs * x.rs, p + x.cs);
-          sel.pop(); pos.pop();
-          for (dy = 0; dy < x.rs; dy++) for (dx = 0; dx < x.cs; dx++) occ[(r + dy) * C + c0 + dx] = 0;
-        });
-      })(0, C * Hh, 0);
-    }
-    if (!best) {                                   // always valid: stacked full-width rows
-      var row = 1; best = { sel: [], pos: [] };
-      cand.forEach(function (l) { var x = l.filter(function (y) { return y.cs === C; })[0] || l[l.length - 1]; best.sel.push({ cs: C, rs: x.rs, brk: true }); best.pos.push({ row: row, col: 1 }); row += x.rs; });
-    }
-    return best.sel.map(function (x, i) { return { i: i, col: best.pos[i].col, cs: x.cs, row: best.pos[i].row, rs: x.rs, brk: !!x.brk, kind: ms[i].kind }; });
-  }
-
   function clear(g) {
     g.classList.remove("bento");
     g.style.removeProperty("--bc");
     [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); } });
-    g.removeAttribute("data-bento");
+    g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento"); g.removeAttribute("data-fb");
   }
   function apply() {
     queued = false;
@@ -122,17 +66,40 @@
     var k = R + "|" + chs.map(function (c) { return c.dataset.id + (c.querySelector(".txt") || {}).innerHTML; }).join("|");
     if (k === key && g.dataset.bento) return;
     key = k;
-    var C = colsFor(R), cells = layout(measure(chs, R, C), R, C);
-    g.style.setProperty("--bc", C);
+    var tiny = R < 520 && chs.every(function (c) { var t = c.querySelector(".opt .txt"), w = 0; if (t) [].forEach.call(t.querySelectorAll(".katex"), function (k) { w += k.getBoundingClientRect().width; }); return restLen(t) <= 8 && w <= 44; }), C = colsFor(R, tiny), qid = (D.getElementById("pcode") || {}).textContent || "";
+    cur = { g: g, chs: chs, ms: measure(chs, R, C), R: R, C: C, seed: qid + "|" + R + "|" + chs.map(function (c) { return (c.querySelector(".txt") || {}).textContent; }).join("|"), forbid: {}, tries: 0, stacked: false };
+    place();
+  }
+  /* write the placement; the guard (next frame) forbids a shape whose text is clipped and lays out once more, the 2nd failure = stacked rows */
+  function place() {
+    var u = cur, g = u.g, cells = Cost.layout(u.ms, u.R, u.C, { seed: u.seed, forbid: u.forbid, stacked: u.stacked });
+    g.style.setProperty("--bc", u.C); g.style.setProperty("--bu", Feat.geom(u.R, u.C).unit + "px");
     cells.forEach(function (c) {
-      var el = chs[c.i], o = el.querySelector(".opt");
+      var el = u.chs[c.i], o = el.querySelector(".opt");
       el.style.gridColumn = c.col + " / span " + c.cs; el.style.gridRow = c.row + " / span " + c.rs;
       o.dataset.k = c.kind; if (c.brk) o.dataset.brk = "1"; else o.removeAttribute("data-brk");
     });
-    g.classList.add("bento"); g.dataset.bento = "grid";
+    u.cells = cells; g.classList.add("bento"); g.dataset.bento = "grid"; if (cells.info && cells.info.fallback) g.dataset.fb = "1"; else g.removeAttribute("data-fb");
+    var bar = D.querySelector("#q .chk"), cs = bar && getComputedStyle(bar);
+    g.style.setProperty("--bar-pad", cs && (cs.position === "fixed" || cs.position === "sticky") ? bar.offsetHeight + 12 + "px" : "0px");
+    requestAnimationFrame(guard);
+  }
+  function clipped(el) {
+    var o = el.querySelector(".opt"), t = o && o.querySelector(".txt"); if (!t) return false;
+    var r = o.getBoundingClientRect(), tr = t.getBoundingClientRect();
+    return o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1 || t.scrollWidth > t.clientWidth + 1 ||
+      tr.bottom > r.bottom - 3.5 || tr.top < r.top + 3.5 || tr.right > r.right - 3.5 || tr.left < r.left + 3.5;
+  }
+  function guard() {
+    var u = cur; if (!u || !u.g.isConnected || u.g.dataset.bento !== "grid" || u.g.getBoundingClientRect().width < 200) return;
+    var bad = u.cells.filter(function (c) { return clipped(u.chs[c.i]); });
+    if (!bad.length) return;
+    if (++u.tries >= 2) u.stacked = true;
+    else bad.forEach(function (c) { (u.forbid[c.i] = u.forbid[c.i] || {})[c.cs + "x" + c.rs] = 1; });
+    place();
   }
   function soon() { if (!queued) { queued = true; requestAnimationFrame(apply); } }
-  window.stemBento = { layout: layout, colsFor: colsFor };
+  window.stemBento = { layout: Cost.layout, colsFor: colsFor, guard: guard };
 
   var q = D.getElementById("q");
   if (!q) return;
