@@ -87,7 +87,10 @@ async function drawerH(w, flag) {
     const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
     await typeAnswer("1.636");
     if (!await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 4000 }).then(() => true, () => false)) {
-      await page.waitForSelector("#q .ff.bad .vk", { state: "visible", timeout: 5000 }); await typeAnswer("0.650");
+      /* the miss is recorded (S.tries pushed, then startWait sets S.wait in the same tick): only then can skipRetryWait see the 10 s wait; the .vk mark alone paints before that on a loaded runner */
+      await page.waitForSelector("#q .ff.bad .vk", { state: "visible", timeout: 5000 });
+      await page.waitForFunction(() => window.__drill && window.__drill.state && window.__drill.state.tries.length === 1, null, { timeout: 6000 });
+      await typeAnswer("0.650");
       await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
     }
     /* the drawer's slide-out (vd-out 380ms) must be done before its height is read */
