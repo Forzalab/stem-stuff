@@ -47,7 +47,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 const VP = { width: 390, height: 844 };
 
 /* a wrong pick streams Cluck's reply; the idle duck's tap opens the phone sheet on it (as cluck-more) */

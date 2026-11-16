@@ -57,7 +57,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 const DESK = { width: 1280, height: 900 };
 const VPS = [["390", { width: 390, height: 844 }]];   // BIG PLAN V1 (Tony Nov 2): desktop sugar has Cluck open from load and no close, so there is no "closed, then the duck" flow there: phones only (cluck-permanent.pw.mjs covers desktop)
 

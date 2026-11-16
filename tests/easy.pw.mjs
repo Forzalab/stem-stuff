@@ -130,7 +130,7 @@ const roomSet = p => p.waitForFunction(() => { const pv = document.getElementByI
 /* the page's scroll has stopped (a wheel lands on the next frame; nothing animates it) */
 const scrollSet = p => p.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => r(Math.abs(scrollY - y) <= 1)); }), null, { timeout: 5000 });
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => {

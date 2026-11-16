@@ -34,7 +34,7 @@ const FIX = {
 
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of SIZES) {
-  const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+  const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // onboarding: flow.pw checks it

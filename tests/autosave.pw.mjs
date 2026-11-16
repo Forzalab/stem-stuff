@@ -19,7 +19,7 @@ const pad = async page => { if (await page.isVisible("#padFab")) { await page.cl
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // phone sugar has no pad (Tony, Oct 14): the pad is diet's there
 const status = page => page.$eval("#xbSave", e => ({ t: e.textContent, c: e.className, anim: getComputedStyle(e).animationName }));
 
-const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 for (const [w, h] of [[390, 844], [1920, 1080]]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h } });
   await ctx.addCookies(DIET);
