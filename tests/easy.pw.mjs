@@ -107,6 +107,22 @@ async function typeCode(page, code) {
 }
 const listCodes = async page => { if (await page.isHidden("#qlist")) await page.click("#qlistBtn"); const r = await page.$$eval("#qlist a", as => as.map(a => a.getAttribute("href").slice(1)).sort()); await page.click("#qlistBtn"); return r; };
 const rows = page => page.$$eval("#q .opt .txt", xs => xs.map(x => x.textContent.trim()));
+/* The two conditions a sleep used to stand in for (no clock anywhere below):
+   frames = two painted frames: the app's own event handlers have run (brainrot.js focusin/resize -> setTimeout 0 -> rAF place; the same
+   wait tests/ux-flows.pw.mjs uses). still = every box under sel holds the same rect on two painted frames in a row: a panel, a strip or a
+   transition has settled. settled = both, in that order. */
+const frames = p => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+const still = (p, sel) => p.waitForFunction(s => new Promise(done => {
+  const k = [...document.querySelectorAll(s)].map(e => { const r = e.getBoundingClientRect(); return [r.top, r.left, r.width, r.height].join(); }).join("|");
+  if (window.__still === k) return done(true);
+  window.__still = k; requestAnimationFrame(() => done(false));
+}), sel, { timeout: 5000 });
+const settled = async (p, sel) => { await frames(p); await still(p, sel); };
+/* app.js pvFit(): the preview's room is set as style.height and the CSS animates the 150 ms walk to it: the room has arrived */
+const roomSet = p => p.waitForFunction(() => { const pv = document.getElementById("preview"); if (!pv) return false;
+  const to = parseFloat(pv.style.height); return !(to > 0) || Math.abs(pv.getBoundingClientRect().height - to) <= 0.5; }, null, { timeout: 5000 });
+/* the page's scroll has stopped (a wheel lands on the next frame; nothing animates it) */
+const scrollSet = p => p.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => r(Math.abs(scrollY - y) <= 1)); }), null, { timeout: 5000 });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
@@ -201,17 +217,17 @@ try {
     await page.evaluate(() => window.stemBrainrot.sync());
     await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body && !document.getElementById("rot").hidden, null, { timeout: 4000 })
       .catch(async () => { await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body, null, { timeout: 3000 }); });
-    await page.waitForTimeout(300);
+    await still(page, "#rot");                                           // sync() -> rAF place(): the corner sits where it put itself
     const box = await page.$eval("#rot .duo", e => e.getBoundingClientRect().toJSON());
     const vw = await page.evaluate(() => [innerWidth, innerHeight]);
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
     await page.mouse.move(60, vw[1] - 60, { steps: 8 }); await page.mouse.up();
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => { const e = document.getElementById("rot"); return e && !e.classList.contains("drag") && getComputedStyle(e).transform === "none"; }, null, { timeout: 4000 });   // the drop landed: pin()'s .snap transition (.3 s) ran the FLIP offset out, so the rect below is the settled one
     const st = await page.$eval("#rot", e => ({ b: e.style.bottom, l: e.style.left, t: e.style.top, rect: e.getBoundingClientRect().toJSON() }));
     assert.ok(st.b.endsWith("px") && st.t === "auto" && st.l.endsWith("px"), JSON.stringify(st));
     assert.ok(st.rect.bottom > vw[1] / 2 && st.rect.left < vw[0] / 2, "not in the bottom left: " + JSON.stringify(st.rect));
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-rot")), "bl");
-    await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForTimeout(100);
+    await page.evaluate(() => window.stemBrainrot.sync()); await frames(page);   // sync() places on its own rAF
     assert.equal(await page.$eval("#rot", e => e.style.bottom !== "auto" && e.style.left !== "auto"), true, "a re-sync moved the drop");
     const code = await page.textContent("#pcode");                    // back to desktop + the step-off default for the steps below
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -425,7 +441,7 @@ try {
     assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
     await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
-    await page.waitForTimeout(400);
+    await settled(page, "#cluck .wtext");                                    // the miss is drawn and the wish decision (shouldPrefetch: the cap) was made with it
     assert.equal(asked, 0, "fired on its own past the cap");
     await page.evaluate(() => { window.__said = []; });
     await page.click(":is(#wish, .rbox) .wchip");
@@ -435,7 +451,7 @@ try {
     assert.equal(asked, 1);
     const t = await page.textContent("#cluck .wtext");
     assert.match(t, /POOF! A wish is a wish\./); assert.ok(await page.$("#cluck .wtext .katex"), "math rendered"); assert.ok(!/\*\*/.test(t));
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 4000 });   // the reply is drawn whole: the voice (if any) would have spoken by now
     assert.equal(await page.evaluate(() => window.__said.length), 0, "no voice (Tony, Oct 5)");
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
   });
@@ -556,6 +572,11 @@ try {
   async function noRot(url, init, vp = { width: 1280, height: 900 }) {
     const c = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
     await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await c.addInitScript(() => {                                          // brainrot.js waits for the page's load-idle slot (requestIdleCallback, 3 s at most) to warm the players: mark that slot
+      const ric = window.requestIdleCallback ? window.requestIdleCallback.bind(window) : null;
+      window.requestIdleCallback = ric ? (f, o) => ric(t => { if (f && f.name === "warmUp") window.__warmUpRan = true; f(t); }, o)
+        : (f => setTimeout(() => { if (f && f.name === "warmUp") window.__warmUpRan = true; f(); }, 1200));
+    });
     if (init) await c.addInitScript(init);
     const yt = [];
     c.on("request", r => { if (/youtube|ytimg/.test(r.url())) yt.push(r.url()); });
@@ -564,7 +585,7 @@ try {
     await typeCode(p, "BANK_EZ12");
     await p.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     await p.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(p, "CALC1_E01");
-    await p.waitForTimeout(3500);                                          // past warmUp's idle (3 s at most)
+    await p.waitForFunction(() => window.__warmUpRan === true, null, { timeout: 5000 });   // the idle slot that would have built the corner has run: past it, nothing may come
     await p.evaluate(() => window.stemBrainrot.sync());
     assert.equal(await p.$("#rot"), null, "no corner");
     assert.equal(await p.$$eval('link[rel="preconnect"]', ls => ls.filter(l => /youtube|ytimg/.test(l.href)).length), 0, "no preconnect");
@@ -601,7 +622,7 @@ try {
     assert.deepEqual(pop, { q: before, pos: "absolute", shadow: true }, "the list floats over the page: the question does not move (Tony, Oct 6)");
     const hit = await page.evaluate(() => ["#qlistBtn", "#qprev", "#qnext"].map(s => { const e = document.querySelector(s), r = e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }));
     assert.deepEqual(hit, [true, true, true], "the open list never covers its own bar (List, Prev, Next stay clickable)");
-    await page.mouse.click(5, 880); await page.waitForTimeout(150);
+    await page.mouse.click(5, 880); await page.waitForSelector("#qlist", { state: "hidden", timeout: 4000 });   // an outside tap closes the list
     assert.equal(await page.isHidden("#qlist"), true, "an outside tap closes the list");
     await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
     assert.ok(l.lis.length === 3 && l.lis.every(x => x.join() === "1,1,1"), `every row = a link with one number + one label, no header rows (owner, Oct 6): ${JSON.stringify(l.lis)}`);
@@ -627,13 +648,13 @@ try {
     const q = await zp.$eval("#q", e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: Math.min(r.top + 20, innerHeight - 20) }; });
     await zp.mouse.move(q.x, Math.max(q.y, 200));
     for (let i = 0; i < 20; i++) await zp.mouse.wheel(0, 200);
-    await zp.waitForTimeout(300);
+    await zp.waitForFunction(() => scrollY > 0, null, { timeout: 5000 }); await scrollSet(zp);   // the wheel run landed (scrollY > 0, the assert below) and stopped
     const down = await zp.evaluate(() => ({ y: scrollY, card: document.querySelector("#fcard").getBoundingClientRect().bottom, inner: document.querySelector("#freezeIn").scrollTop }));
     assert.ok(down.y > 0, `the page scrolled: scrollY ${down.y}`);
     assert.equal(down.inner, 0, "the question box itself never scrolls");
     assert.ok(down.card <= 720 + 1, `the formula card bottom ${down.card} reaches the window`);
     for (let i = 0; i < 20; i++) await zp.mouse.wheel(0, -200);
-    await zp.waitForTimeout(300);
+    await zp.waitForFunction(() => scrollY === 0, null, { timeout: 5000 });   // wheel back: the top returns (the assert below reads exactly this)
     assert.equal(await zp.evaluate(() => scrollY), 0, "wheel back: the top returns");
     await z.close();
   });
@@ -720,11 +741,11 @@ try {
     const { c, p } = await w91({ width: w, height: h });
     try {
       await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && r.classList.contains("docked") && !r.classList.contains("parked"); }, null, { timeout: 6000 });
-      await p.waitForTimeout(300);
+      await still(p, "#rot");
       const a = await rotSnap(p);
-      await p.focus("#ans"); await p.waitForTimeout(200);
+      await p.focus("#ans"); await settled(p, "#rot, #scratch, #ans");     // the focusin handlers (barOpen, brainrot sync -> rAF place) have run
       const f = await rotSnap(p);
-      await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(200);
+      await p.evaluate(() => document.activeElement.blur()); await settled(p, "#rot, #scratch, #ans");
       const b = await rotSnap(p);
       assert.equal(f.parked, false, "focus parked the docked corner");
       assert.ok(Math.abs(f.notes - a.notes) <= 1 && Math.abs(f.ans - a.ans) <= 1, `focus moved: notes ${a.notes} -> ${f.notes}, answer ${a.ans} -> ${f.ans}`);
@@ -736,7 +757,7 @@ try {
     try {
       await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && !r.classList.contains("parked"); }, null, { timeout: 6000 });
       assert.equal(await p.evaluate(() => document.documentElement.classList.contains("dock-bottom")), true, "dock-bottom");
-      await p.focus("#ans"); await p.waitForTimeout(200);
+      await p.focus("#ans"); await settled(p, "#rot");                    // the keyboard's focusin -> sync -> place has run
       assert.equal((await rotSnap(p)).parked, true, "the keyboard can come up: parked");
     } finally { await c.close(); }
   });
@@ -746,12 +767,12 @@ try {
     const { c, p } = await w91({ width: w, height: h });
     try {
       await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && r.classList.contains("docked") && !r.classList.contains("parked"); }, null, { timeout: 6000 });
-      await p.waitForTimeout(300);
+      await still(p, "#rot");
       const a = await rotSnap(p);
-      await p.click("#codeChip"); await p.waitForTimeout(200);
+      await p.click("#codeChip"); await settled(p, "#rot, #scratch");      // the label's click focuses the box; barOpen / brainrot sync have run
       assert.equal(await p.evaluate(() => document.activeElement.id), "code", "the label focuses the code box");
       const f = await rotSnap(p);
-      await p.mouse.click(5, h - 5); await p.waitForTimeout(300);
+      await p.mouse.click(5, h - 5); await p.waitForFunction(() => !document.documentElement.classList.contains("entry-open"), null, { timeout: 4000 }); await settled(p, "#rot, #scratch");   // the box folded back on its focusout
       const b = await rotSnap(p);
       const cls = await p.evaluate(() => document.documentElement.classList.contains("bar-open"));
       assert.equal(f.parked, false, "the code box focus parked the docked corner");
@@ -766,15 +787,15 @@ try {
     const st = () => p.evaluate(() => ({ open: document.documentElement.classList.contains("bar-open"), act: document.activeElement.id }));
     try {
       await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && r.classList.contains("docked") && !r.classList.contains("parked"); }, null, { timeout: 6000 });
-      await p.waitForTimeout(300);
+      await still(p, "#rot");
       const a = await rotSnap(p);
-      await p.click("#codeChip"); await p.waitForTimeout(150);
-      await p.setViewportSize({ width: 700, height: 800 }); await p.waitForTimeout(300);
+      await p.click("#codeChip"); await p.waitForFunction(() => document.activeElement.id === "code", null, { timeout: 3000 }); await settled(p, "#entry");
+      await p.setViewportSize({ width: 700, height: 800 }); await settled(p, "#entry");   // the strip's open/shut transition has finished
       const m = await st();
       assert.ok(m.open && m.act === "code", `at 700 (the strip): ${JSON.stringify(m)}`);
-      await p.setViewportSize({ width: 1280, height: 800 }); await p.waitForTimeout(400);
+      await p.setViewportSize({ width: 1280, height: 800 }); await settled(p, "#entry");
       assert.equal((await st()).open, false, "back on desktop: bar-open stayed");
-      await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(300);
+      await p.evaluate(() => document.activeElement.blur()); await settled(p, "#rot");
       const z = await rotSnap(p);
       assert.ok(!z.parked && Math.abs(z.notes - a.notes) <= 1, `the corner did not come back: parked ${z.parked}, notes ${a.notes} -> ${z.notes}`);
     } finally { await c.close(); }
@@ -786,13 +807,13 @@ try {
     try {
       assert.equal(await p.evaluate(() => document.documentElement.classList.contains("dock-bottom") && document.documentElement.classList.contains("bar-mini")), true, "dock-bottom strip");
       assert.equal((await st()).open, false, "the strip rests");
-      await p.tap("#barTab"); await p.waitForTimeout(150);
-      await p.tap("#code"); await p.waitForTimeout(150);
+      await p.tap("#barTab"); await settled(p, "#entry");                  // the strip is open (its .3 s slide done)
+      await p.tap("#code"); await p.waitForFunction(() => document.activeElement.id === "code", null, { timeout: 3000 }); await settled(p, "#entry");
       assert.equal(await p.evaluate(() => document.activeElement.id), "code", "the code box has focus");
       const f = await st();
       assert.ok(f.open && f.exp === "true", `the strip is open: ${JSON.stringify(f)}`);
       assert.equal(f.parked || !(await p.$("#rot")), true, "the open strip parks the corner");
-      await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(150);
+      await p.evaluate(() => document.activeElement.blur()); await settled(p, "#entry");
       assert.equal((await st()).open, true, "blur: the strip stays open (closed by its tab)");
     } finally { await c.close(); }
   });
@@ -801,8 +822,8 @@ try {
     const { c, p } = await w91({ width: w, height: h }, w < 700 ? { hasTouch: true, isMobile: true } : {});
     try {
       const m = () => p.$eval("#preview", e => { const r = e.getBoundingClientRect(), q = document.getElementById("q").getBoundingClientRect(); return { top: r.top, h: r.height, below: q.bottom }; });
-      const type = async v => { await p.fill("#ans", v); await p.waitForTimeout(260); return m(); };
-      await p.focus("#ans"); await p.waitForTimeout(150);
+      const type = async v => { await p.fill("#ans", v); await roomSet(p); return m(); };
+      await p.focus("#ans"); await settled(p, "#preview");
       const z = await m();
       assert.ok(z.h > 10, `no room reserved before the first key: ${z.h}px`);
       for (const v of ["4", "9/2", "sqrt(3)", "2.02", "-1/3", "x^("]) {
@@ -817,7 +838,7 @@ try {
           return new Promise(res => requestAnimationFrame(() => setTimeout(() => res({ was, now: pv.getBoundingClientRect().height, to: parseFloat(pv.style.height) || 0 }), 40))); }, v);
         if (mid.to > mid.was + 1) steps++;
         if (mid.to > mid.was + 1) assert.ok(mid.now < mid.to - 0.5, `"${v}": jumped to ${mid.now} at once (no animation to ${mid.to})`);
-        await p.waitForTimeout(260); hs.push((await m()).h);
+        await roomSet(p); hs.push((await m()).h);
       }
       assert.ok(hs.every((x, i) => !i || x >= hs[i - 1] - 0.5), "the room shrank on the ladder: " + hs);
       assert.ok(steps >= 2, `the ladder took ${steps} ratchet steps (want >= 2, each animated)`);
@@ -829,7 +850,7 @@ try {
       assert.ok(big.h <= cap, `past the cap: ${big.h}px > ${cap}`);
       assert.ok(await p.$eval("#preview .katex", k => { const r = k.getBoundingClientRect(), b = document.getElementById("preview").getBoundingClientRect(); return r.bottom <= b.bottom + 1; }), "the math overflows its room");
       const pre = await type("4");
-      await p.click("#ansGo"); await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(200);
+      await p.click("#ansGo"); await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await still(p, "#preview");
       const post = await m();
       assert.ok(Math.abs(post.top - pre.top) <= 1 && Math.abs(post.h - pre.h) <= 1, `Check moved the preview room: ${JSON.stringify([pre, post])}`);
     } finally { await c.close(); }
@@ -843,16 +864,17 @@ try {
       await p.waitForSelector("#fcard", { timeout: 6000 });
       const a = await g();
       await p.fill("#ans", "5"); await p.press("#ans", "Enter");
-      await p.waitForFunction(() => document.getElementById("ff").classList.contains("bad") || window.__drill?.state?.tries?.length >= 1, null, { timeout: 6000 }); await p.waitForTimeout(1500);
+      await p.waitForFunction(() => document.getElementById("ff").classList.contains("bad") || window.__drill?.state?.tries?.length >= 1, null, { timeout: 6000 });
+      await p.waitForFunction(() => !!window.__drill?.state?.wait, null, { timeout: 5000 });   // the 10 s second-try wait is running (nothing else may start it)
       await skipRetryWait(p);   // the second try waits 10 s (retry-wait.pw.mjs)
-      await p.fill("#ans", "4"); await p.waitForTimeout(300);
+      await p.fill("#ans", "4"); await roomSet(p);
       const pre = await g();
       await p.press("#ans", "Enter");
-      await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(400);
+      await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await still(p, "#ff, #fcard");
       const post = await g();
       assert.ok(Math.abs(post.ff - pre.ff) <= 1, `Check moved the answer box: ${pre.ff} -> ${post.ff}`);
       const cmp = p.locator(":is(#wish, .rbox) .cue-ok");   // B3 PR-B1: on a typed question the chip lives in the verdict drawer (class rbox)
-      if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await p.waitForTimeout(400); }
+      if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await still(p, "#ff, #fcard, #cluck"); }
       const z = await g();
       assert.equal(z.wish, true, "V2: the permanent box keeps #wish unhidden (its chip is the tray / bar segment); the data-box rule folds the spent room instead (W90)");
       assert.ok(z.pv === 0 && z.fc - z.ff <= a.fc - a.ff + 1, `a blank band: #ff -> #fcard ${z.fc - z.ff} px (before any answer ${a.fc - a.ff}), the spent room ${z.pv} px`);
