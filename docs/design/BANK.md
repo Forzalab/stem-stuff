@@ -11,8 +11,8 @@ they used last. Questions-list icon becomes a checklist; the list button's text 
 
 | thing | decision |
 |---|---|
-| Folder | `banks/` next to serve.py (`$STEM_BANKS` overrides). Ships empty (`banks/.gitkeep`). |
-| File | `banks/BANK_XXX.json`. File name = bank code. Format = problems.json (`{ v: 1, problems: [...] }`, SCHEMA.md). A problems.json dropped in and renamed just works. |
+| Folder | `server/data/banks/` (`$STEM_BANKS` overrides). Ships with the shipped banks. |
+| File | `server/data/banks/BANK_XXX.json`. File name = bank code. Format = problems.json (`{ v: 20261022, problems: [...] }`, the newest SCHEMA.md Version-table row). Check it with `tools/bank_tools/bankcheck.py` (docs/design/BANKCHECK.md). |
 | Code | `BANK_` + 3–6 of `A-Z0-9` (same shape as problem codes). Other file names: ignored + one stderr line. |
 | Flag | Optional top-level `"bank": "BANK_XXX"` (SCHEMA.md). Hosted: the id is the file name, no flag needed (serve.py never reads it). Upload: the id is the `bank` field, the file name is ignored. Needed exactly when the file has a custom code prefix, which must equal the flag minus `BANK_`. |
 | Reload | Same as problems.json: mtime per file, re-read on the next request, last good copy kept on a broken file. |

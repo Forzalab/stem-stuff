@@ -1,1 +1,1 @@
-Read/write server/data/problems.json and server/data/banks/: slips.py, slip_coverage.py, schema-check.mjs, fig_png.mjs (ship.sh gate), tol.py, bank_notes.py, ce3_traps.py, ce3_mock50.py; owner: bank authors.
+Read/write server/data/problems.json and server/data/banks/: bankcheck.py (will a bank load and follow SCHEMA.md; docs/design/BANKCHECK.md), slips.py, slip_coverage.py, schema-check.mjs, fig_png.mjs (ship.sh gate), tol.py, bank_notes.py, ce3_traps.py, ce3_mock50.py; owner: bank authors.

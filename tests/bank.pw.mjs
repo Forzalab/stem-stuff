@@ -9,6 +9,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bankReady, watchBank } from "./lib/bankguard.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -19,6 +20,8 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8819), BASE = `http://localhost:${PORT}`;
+const PORT2 = PORT + 1, BASE2 = `http://localhost:${PORT2}`;   // a second server, its clock past SUNSET (the dropped step)
+const PIN_DAY = "2026-11-04", PAST_SUNSET = "2026-11-06";   // BANK_AB12 (v 1) loads with its banner on PIN_DAY
 const SHOTS = process.argv[3] || "";
 const TMP = mkdtempSync(join(tmpdir(), "bank-")), BANKS = join(TMP, "banks");
 const num = (code, answer, md) => ({ code, type: "num", answer, body: [{ type: "text", md }] });
@@ -35,8 +38,13 @@ const { qFresh } = await import("../client/pure_logic_modules/shuffle.mjs");
 const same = (a, s) => qFresh(a, s).every((c, i) => c === a[i]);
 const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => same(BANK.problems.map(p => p.code), s) && same(FILE.problems.map(p => p.code), s));
 const PIN = s => { try { for (const k of ["stem-q-BANK_AB12", "stem-q-upload"]) if (!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } };
-const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+const SERVE = join(ROOT, "server", "http_server", "serve.py");
+const srv = spawn("python3", [SERVE, String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), STEM_TODAY: PIN_DAY }, stdio: "ignore" });
+const srv2 = spawn("python3", [SERVE, String(PORT2)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries2.json"), STEM_TODAY: PAST_SUNSET }, stdio: "ignore" });
+for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok && (await fetch(BASE2 + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+// the harness guard first: both servers alive, the healthy banks load (a stale port or a dropped bank fails here, with the server's text)
+await bankReady({ child: srv, port: PORT, bank: "BANK_AB12" });
+await bankReady({ child: srv, port: PORT, bank: "BANK_NW12" });
 
 let failures = 0;
 async function step(name, fn) {
@@ -58,6 +66,7 @@ try {
     const ctx = await browser.newContext({ viewport, serviceWorkers: "block", hasTouch: vname === "phone", isMobile: vname === "phone" });
     await ctx.addInitScript(PIN, SEED);
     const page = await ctx.newPage();
+    const watch = watchBank(page);   // every bank incident line and page error of this viewport
 
     await step(`${vname}: new browser = blank page, no list`, async () => {
       await page.goto(BASE + "/"); await page.waitForTimeout(600);
@@ -69,6 +78,9 @@ try {
       await typeCode(page, "BANK_NOPE");
       await page.waitForFunction(() => document.querySelector("#entryMsg").textContent === "QUACKK, code not found.", null, { timeout: 4000 });
       assert.ok(await page.isHidden("#qnav"));
+      assert.deepEqual(watch.lines.map(j => [j.where, j.reason]), [["bank", "not_found"]], "want one incident line: " + JSON.stringify(watch.lines));
+      assert.equal(watch.errors.length, 0);
+      watch.clear();   // a typo is the one bank line this viewport expects
     });
 
     await step(`${vname}: type "bank ab12" -> first question, list button says the bank code (Tony, Oct 5), checklist icon`, async () => {
@@ -140,10 +152,22 @@ try {
       assert.equal(await page.$("#qlist .bank-banner"), null);
       await page.click("#qlistBtn");
     });
+    await step(`${vname}: healthy banks gave no bank incident line or page error`, () => watch.assertClean());
     await ctx.close();
   }
+  await step("v 1 bank past SUNSET: incident reason dropped, the server's message on screen", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, serviceWorkers: "block" });
+    const page = await ctx.newPage();
+    const watch = watchBank(page);
+    await page.goto(BASE2 + "/"); await page.waitForTimeout(600);
+    await typeCode(page, "bank ab12");
+    await page.waitForFunction(() => /must be updated by/.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 4000 });
+    assert.deepEqual(watch.lines.map(j => [j.where, j.reason, j.status]), [["bank", "dropped", 200]], "want one dropped line: " + JSON.stringify(watch.lines));
+    await ctx.close();
+  });
 } finally {
   await browser.close();
   srv.kill();
+  srv2.kill();
 }
 process.exit(failures ? 1 : 0);

@@ -187,6 +187,7 @@ gate() {
   [ "${#GATE[@]}" -gt 0 ] || return "$rc"
   out="$(python3 "$ROOT/tools/bank_tools/slips.py" --strict "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: slips.py --strict failed (above), nothing deployed"; rc=1; }
   out="$(node "$ROOT/tools/bank_tools/schema-check.mjs" "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: schema failed (above), nothing deployed"; rc=1; }
+  out="$(python3 "$ROOT/tools/bank_tools/bankcheck.py" "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: bankcheck failed (above; docs/design/BANKCHECK.md), nothing deployed"; rc=1; }
   # v < slips.CUTOFF: still ships, with a warning (the sunset date is the Version-table row's, SCHEMA.md)
   python3 - "$ROOT" "${GATE[@]}" <<'PY' >&2 || rc=1
 import json, re, sys

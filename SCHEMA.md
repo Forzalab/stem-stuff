@@ -464,6 +464,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 1. `cd tests && npm test` passes. It checks the schema, unique codes and suffixes, that answers and `match` values evaluate, that TeX renders, that graph math compiles, the label count, MC distractor coverage, and that no hint states the answer.
 2. Open `/#<CODE>` locally. The figure reads correctly, no labels overlap, and the width is fine on a phone.
 3. The answer is nowhere in the body, `alt` or a hint.
+4. A bank: `python3 tools/bank_tools/bankcheck.py <bank.json>` has no FAIL (it loads on the server and follows this schema; docs/design/BANKCHECK.md).
 
 ## Examples (all in `problems.json`)
 - `CALC1_T6B`: markdown table + limit, with known wrong answers and a nudge

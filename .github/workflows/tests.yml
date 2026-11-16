@@ -111,7 +111,7 @@ jobs:
         run: git apply "tests/bench/mutants/$MUTANT.patch"
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
-      - run: pip install sympy networkx
+      - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: cd tests && npm ci
@@ -135,7 +135,7 @@ jobs:
         run: git apply "tests/bench/mutants/$MUTANT.patch"
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
-      - run: pip install sympy networkx
+      - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       # the .pw scripts require("playwright"); tests/package.json pins only playwright-core, so add the same version here
@@ -175,7 +175,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
-      - run: pip install sympy networkx
+      - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: |
@@ -209,7 +209,7 @@ jobs:
         uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
       - if: steps.scope.outputs.run == 'true'
-        run: pip install sympy networkx
+        run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - if: steps.scope.outputs.run == 'true'
         uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
