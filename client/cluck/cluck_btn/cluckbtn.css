@@ -8,7 +8,7 @@ html.ui-v7 #problem { display: flow-root; }
 html.ui-v7 .cluckbtn {
   --cb-fill: var(--chip, #283352); --cb-off: var(--float, #141d36); --cb-off-ink: #7a8aae;
   position: relative; isolation: isolate; overflow: hidden; float: right; display: inline-flex; align-items: center; gap: 10px;
-  min-width: 44px; min-height: 44px; margin: 2px 0 12px 16px; padding: 10px 20px 10px 16px; border: 0; border-radius: 12px;
+  min-width: 44px; min-height: 44px; margin: 2px 0 12px 16px; padding: 12px 22px 12px 18px; border: 0; border-radius: 12px;
   background: var(--cb-off); color: var(--cb-off-ink); font-family: inherit; font-weight: 600; font-size: var(--t-sm, .9375rem); line-height: 1.15; text-align: left; white-space: nowrap;
   cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: none;
   transition: color 240ms ease-out, box-shadow 240ms ease-out, transform 90ms ease-out;

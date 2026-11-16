@@ -161,12 +161,32 @@
     if (mm) meta(mm);
     var sc2 = tt && tt.querySelector(":scope > .qscroll"); if (sc2) scrollable(sc2);
   }
-  function later() { if (!raf) raf = requestAnimationFrame(build); }
+  /* ROW-ALIGN (Tony Nov 16, option B, every bank): a title-first card shares one row with the Ask Cluck float. The title reserves the button's MEASURED width
+     (--cbw) + a gap; the button keeps its own size and drops so its BOTTOM sits on the title's last line (1, 2, 3+ lines alike). No title first / flag off = reset. */
+  var ro = null;
+  function rowAlign() {
+    var p = D.getElementById("problem"), b = p && p.querySelector(":scope > .cluckbtn"), t = p && p.querySelector(":scope > .blocks > :is(.ptitle, .qhead):first-child");
+    if (!b) return;
+    if (t) t.style.paddingTop = "";
+    if (!on() || !t || !p.classList.contains("qbr")) { b.style.marginTop = ""; if (p) p.classList.remove("qstack"); if (p) p.style.removeProperty("--cbw"); return; }
+    p.style.setProperty("--cbw", Math.ceil(b.getBoundingClientRect().width) + "px");
+    b.style.marginTop = ""; p.classList.remove("qstack");
+    /* STACK fallback: beside the button the lead needs >= 120 px and <= 3 lines; else it takes its own full-width row under the button (option A) */
+    var cs = getComputedStyle(t), lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.15, side = t.clientWidth - (parseFloat(cs.paddingRight) || 0);
+    if (side < 120 || t.getBoundingClientRect().height > lh * 3 + 2) { p.classList.add("qstack"); return; }
+    var d = t.getBoundingClientRect().bottom - b.getBoundingClientRect().bottom;
+    if (d > 0.5) b.style.marginTop = (parseFloat(getComputedStyle(b).marginTop) || 0) + d + "px";   // a taller title: the button drops to its last line
+    else if (d < -0.5) t.style.paddingTop = -d + "px";                                              // a one-line title shorter than the button: the title drops
+    if (g.ResizeObserver && !ro) { ro = new ResizeObserver(function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; rowAlign(); }); }); }
+    if (ro) { ro.disconnect(); ro.observe(t); ro.observe(b); }
+  }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
     if (!blocks) return;
     new MutationObserver(later).observe(blocks, { childList: true });
+    var pr = D.getElementById("problem"); if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
     later();
