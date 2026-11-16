@@ -29,7 +29,9 @@ on:
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-  queue: max
+  # queue: max cannot be combined with cancel-in-progress: true (every PR run died at startup, 0 jobs, since #589).
+  # PRs: newest wins (default queue). main/schedule/dispatch: no cancel, queue every run in order.
+  queue: ${{ github.event_name == 'pull_request' && 'single' || 'max' }}
 env:
   BLOCKS: 4   # runners for the .pw specs (GitHub Free: 20 jobs at once)
   LANES: 3    # run-all.sh processes per runner (Tony's pick, CI plan PR 10): bench B 4x3 vs 5x2 = wall -23 s, runner-min -26%. The 3-lane flow.pw flakes were view transitions eating raw input (todo 55, #302)
