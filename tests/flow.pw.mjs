@@ -6,6 +6,7 @@
 // after Back = the field loses focus and the viewport grows back. With a shotDir it saves flow-{1..N}-390.png and flow-desktop-1440.png.
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { vtHook } from "./lib/wait.mjs";   // CI-ARCH B2: the shared view-transition counter (was defined here)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -22,11 +23,6 @@ async function step(name, fn) {
    so the next raw input must wait until it is over (locator actions wait on their own). Under CPU load it outlives a fixed sleep
    (todo 55: the #mtExp tap / the drag never landed; the 1440 drag after the dblclick, CI plan item 1). vtN() before the input, vtDone(n) after:
    the handler can run after the input is acked, so wait for its transition to start, then to end. */
-async function vtHook(page) {
-  await page.evaluate(() => { const st = document.startViewTransition.bind(document); window.__vt = 0; window.__vtN = 0;
-    document.startViewTransition = cb => { const t = st(cb); window.__vt++; window.__vtN++; t.finished.finally(() => window.__vt--); return t; }; });
-  return { vtN: () => page.evaluate(() => window.__vtN), vtDone: n => page.waitForFunction(n => window.__vtN > n && !window.__vt, n, { timeout: 5000 }) };
-}
 const lorem = n => Array.from({ length: n }, (_, i) => `Claim ${i + 1}: a block of ${i + 2} kg slides along a rough track, and the friction force on it changes as the angle of the track is changed.`);
 /* choose-all, prove mode, with the long fix.how that clipped at 390px (BANK_P2X) */
 const CA = { code: "CSCI26_FW1", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: lorem(5).join("\n\n") }],
