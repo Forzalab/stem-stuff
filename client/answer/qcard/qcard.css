@@ -4,7 +4,7 @@
    Ask Cluck (cluckbtn.css) stays top right: opaque, no border, a soft dark halo plate + drop shadow lift it off the trail. Echo animates on prev/next (transform + opacity only). */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
-html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 24px; --qc-pad: 40px; --qnum: 108px; --qmax: 170px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 24px; --qc-pad: 24px; --qnum: 108px; --qmax: 170px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
 html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 16px; --qc-pad: 24px; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 32px; --qc-pad: 48px; --qnum: 156px; --qmax: 190px; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
@@ -14,12 +14,22 @@ html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height
   -webkit-mask-image: linear-gradient(90deg, #000 52%, transparent 76%); mask-image: linear-gradient(90deg, #000 52%, transparent 76%); }
 html.ui-v7 .qghost { position: absolute; left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); font: 900 var(--qnum)/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.05em; white-space: nowrap; color: #5b6a9a; user-select: none; }
 html.ui-v7 .qghost i { font-style: normal; position: absolute; left: 0; top: 0; z-index: calc(10 - var(--k)); transform: translate(calc(var(--k) * -12px), 0); opacity: var(--o); }
-html.ui-v7 .qghost i:nth-child(1) { position: relative; --o: .28; }
+html.ui-v7 .qghost i:nth-child(1) { position: relative; --o: 1; color: #e8ebf5; }   /* MAIN numeral: SOLID Swiss bold (headline ink, opaque), the echo copies behind it stay ghosted */
+/* the echo copies (not the front) dissolve top and bottom: a vertical fade so the trail has no flat top or base edge (their shared base bar sat at the baseline) */
+html.ui-v7 .qghost i:not(:first-child) { -webkit-mask-image: linear-gradient(transparent 6%, #000 30%, #000 40%, transparent 78%); mask-image: linear-gradient(transparent 6%, #000 30%, #000 40%, transparent 78%); }
 html.ui-v7 .qghost i:nth-child(2) { --o: .15; }
 html.ui-v7 .qghost i:nth-child(3) { --o: .10; }
 html.ui-v7 .qghost i:nth-child(4) { --o: .07; }
 html.ui-v7 .qghost i:nth-child(5) { --o: .045; }
 html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
+/* PROTOTYPE ?qcecho=br (qcard.js sets .qbr on the card): the echo trail moves to the card's BOTTOM-RIGHT, big and dim, bleeding off the corner (the card clips it to its radius);
+   the solid main numeral stays top-left. The in-flow box keeps its height (layout unchanged); the trail is positioned against the whole card. */
+html.ui-v7 #problem.qc7.qbr { overflow: hidden; }
+html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: calc(var(--qnum) * .74); }
+html.ui-v7 #problem.qc7.qbr .qghostbox { position: absolute; inset: 0; height: auto; margin: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+html.ui-v7 #problem.qc7.qbr .qghost { inset: 0; }
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); }
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { top: auto; left: auto; right: calc(var(--qnum) * -.5); bottom: calc(var(--qnum) * -.7); font-size: calc(var(--qnum) * 2.6); }
 /* prev/next: the trail slides in from its offsets and fades to rest. Compositor only (transform, opacity); will-change lives only while it runs (qcard.js adds / removes .qanim) */
 @keyframes qecho { from { opacity: 0; transform: translate(calc(var(--k) * -12px + 32px), 0); } }
 html.ui-v7 .qghostbox.qanim .qghost i { will-change: transform, opacity; animation: qecho 360ms cubic-bezier(.2, .7, .2, 1) calc(var(--k) * 18ms) backwards; }
@@ -27,7 +37,10 @@ html.ui-v7 .qghostbox.qanim .qghost i { will-change: transform, opacity; animati
 
 /* Ask Cluck: top right, out of the flow. SOLID: opaque fill, no border, a soft dark halo plate + drop shadow lift it off the trail (owner: v1 style button) */
 html.ui-v7 #problem.qc7 > .cluckbtn { position: absolute; top: var(--qpad); right: var(--qpad); float: none; margin: 0; z-index: 3; border: 0;
-  box-shadow: inset 0 1px 0 #2c3b66, 0 1px 2px rgba(2, 4, 12, .3), 0 4px 10px rgba(2, 4, 12, .12); }   /* raised, Refactoring UI: a lit top edge (hand-picked lighter navy) + a tight dark shadow + a faint soft one */
+  box-shadow: inset 0 1px 0 #2c3b66, 0 1px 2px rgba(2, 4, 12, .3), 0 4px 10px rgba(2, 4, 12, .12); }
+html.ui-v7 #problem.qc7 > .cluckbtn .cb-duck { position: relative; top: -1px; }   /* optical, phone: the duck sat ~1.2px low of the label's cap-height centre at 390 (Pillow); desktop is already centred (see the @media below) */
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 > .cluckbtn .cb-duck { top: 0; } }
+/* raised, Refactoring UI: a lit top edge (hand-picked lighter navy) + a tight dark shadow + a faint soft one */
 html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]) { box-shadow: inset 0 1px 0 #3d4d82, 0 1px 2px rgba(2, 4, 12, .3), 0 4px 10px rgba(2, 4, 12, .12); }
 html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-shadow: inset 0 1px 0 #3d4d82, 0 1px 1px rgba(2, 4, 12, .3); }   /* pressed = lower elevation */
 
