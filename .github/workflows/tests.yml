@@ -37,6 +37,9 @@ env:
   LANES: 3    # run-all.sh processes per runner (Tony's pick, CI plan PR 10): bench B 4x3 vs 5x2 = wall -23 s, runner-min -26%. The 3-lane flow.pw flakes were view transitions eating raw input (todo 55, #302)
 jobs:
   decide:   # M5: fast pipe only when a full run for this same PR is already queued/in_progress; never fast for push/schedule/dispatch
+    # TODO 20: only a pull_request has anything to decide, so this job is skipped on push/schedule/workflow_dispatch (~15 s off each).
+    # Its result is then `skipped`: every job below that needs it accepts skipped, and `all` counts it as ok (ci-all-verdict.sh).
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: { contents: read, actions: read }
@@ -71,7 +74,9 @@ jobs:
           echo "pipe=$(cat pipe.txt)" >> "$GITHUB_OUTPUT"
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
     needs: decide
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
+    # TODO 20: decide is skipped on push/schedule/dispatch, so its result may be `skipped`; !cancelled() (a status
+    # function) also stops GitHub adding the implicit success(), which would skip this job when decide was skipped.
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
@@ -107,7 +112,7 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
     needs: [decide, plan]
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true'   # docs-only PR: skipped
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && needs.plan.result == 'success' && !cancelled() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true'   # docs-only PR: skipped
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -126,7 +131,7 @@ jobs:
       - run: node tools/operations/sleep-ratchet.mjs   # AC2.5: no spec may gain a waitForTimeout( above tests/sleep-baseline.json
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: [decide, plan]
-    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true'   # zero-.pw affected PR: no block work (unit still runs)
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && needs.plan.result == 'success' && !cancelled() && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true'   # zero-.pw affected PR: no block work (unit still runs)
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
     # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
     runs-on: ubuntu-24.04
@@ -185,7 +190,7 @@ jobs:
           retention-days: 7
   fast:   # ticket 07 timing: dispatch with pipe=fast, or a PR push while its full run is in flight (M5), runs only run-all.sh --fast
     needs: decide
-    if: inputs.pipe == 'fast' || needs.decide.outputs.pipe == 'fast'
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && (inputs.pipe == 'fast' || needs.decide.outputs.pipe == 'fast')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -206,7 +211,7 @@ jobs:
   webkit:   # WEBKIT-CI (G6.1): ~60% of users are on iPhone, CI is Chromium. PRs that touch client CSS/JS also run a few iPhone-risk specs on WebKit.
     # Not in `all` yet (report-only until it has a green history); PR events only. No grid probe exists in tests/ yet: add it to WK_SPECS when it lands.
     needs: decide
-    if: github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
