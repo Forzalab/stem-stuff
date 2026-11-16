@@ -44,21 +44,63 @@ for (const [W, H] of SIZES) {
   for (const [code, json] of Object.entries(FIX)) await page.route(`**/p/${code}.json`, r => r.fulfill({ json }));
 
   const T = `${W}x${H}`;
-  const shot = async (name) => { if (SHOTS) { await page.waitForTimeout(120); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };
+  const frames = () => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // two painted frames: the last change is on screen
+  const shot = async (name) => { if (SHOTS) { await page.waitForTimeout(120); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };   // sleep-keep: a screenshot has no condition to wait on (it is the record, not an assert); the 120ms lets the last transition land
   const open = async code => {
     await page.setViewportSize({ width: W, height: H });
     await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; docs/design/DONE.md)
     await page.context().addCookies(DIET);
     await page.goto("about:blank");
     await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
-    await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
-    await page.waitForTimeout(250);
+    /* rendered, not just titled: render() sets #pcode first, then the body, the answer surface, the box and the layout (one task, then fonts) */
+    await page.waitForFunction(c => {
+      const el = document.querySelector("#pcode");
+      return !!el && el.textContent === c && !!document.querySelector("#blocks > *") && !!document.querySelector("#q .ans, #q .opt");
+    }, code, { timeout: 8000 });
+    /* the splash is the app's own "ready" (index.html): gone when fonts, the bank restore and the problem are done and it has painted; once it
+       wears .out it takes no pointer, so the audit below hit-tests the page itself */
+    await page.waitForFunction(() => { const s = document.querySelector("#splash"); return (!s || s.classList.contains("out")) && !document.body.hasAttribute("aria-busy"); }, null, { timeout: 8000 });
+    await page.evaluate(() => document.fonts && document.fonts.ready);   // KaTeX's fonts land after the first paint and shell.js re-fits the choice row then
+    await frames();
   };
-  const kbUp = async () => { await page.setViewportSize({ width: W, height: Math.round(H * KB) }); await page.waitForTimeout(450); };
-  const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(450); };
+  /* keyboard up/down: layoutDock runs on a rAF off the viewport resize; it sets html.kbup, html.swap + --vv-h, and scrolls a short-answer
+     field above the keyboard in a second rAF. Wait for the state the next assert reads instead of a fixed 450ms. */
+  const kbUp = async () => {
+    await page.setViewportSize({ width: W, height: Math.round(H * KB) });
+    await page.waitForFunction(() => {
+      const r = document.documentElement, vv = window.visualViewport, h = Math.round(vv ? vv.height : innerHeight);
+      if (!r.classList.contains("kbup")) return false;                          // layoutDock saw the keyboard up
+      if (r.classList.contains("scrolled") !== (scrollY > 0)) return false;     // the page's own scroll has landed (app.js edge(): html.scrolled), so the class set is at rest
+      if (r.classList.contains("swap")) {                                       // the stage covers exactly the visible area (layoutSwap)
+        const vh = parseFloat(getComputedStyle(r).getPropertyValue("--vv-h")) || 0;
+        return Math.abs(vh - h) <= 1;
+      }
+      const a = document.activeElement;                                         // no Swap (a short-answer item): the field is scrolled above the keyboard
+      if (!a) return true;
+      const b = a.getBoundingClientRect(), top = vv ? vv.offsetTop : 0, bot = top + (vv ? vv.height : innerHeight);
+      return b.top >= top - 0.6 && b.bottom <= bot + 0.6;
+    }, null, { timeout: 5000 });
+  };
+  const kbDown = async () => {
+    await page.setViewportSize({ width: W, height: H });
+    await page.waitForFunction(() => {
+      const r = document.documentElement;
+      return !r.classList.contains("kbup") && !r.classList.contains("swap") && r.classList.contains("scrolled") === (scrollY > 0);   // the keyboard is gone: the page is a page again, its scroll back where it was
+    }, null, { timeout: 5000 });
+  };
   const cls = () => page.evaluate(() => document.documentElement.className);
   const paneNow = () => page.evaluate(() => { const c = document.documentElement.classList; return !c.contains("swap") ? "off" : c.contains("swap-problem") ? "problem" : "scratch"; });
-  const settle = () => page.waitForTimeout(400);                     // the crossfade is ~220ms and blocks pointer events while it runs
+  /* the pad page is laid out: layoutMT put its sizes on :root and the box measured the pad (its crossfade blocks pointer events while it runs) */
+  const settle = () => page.waitForFunction(() => {
+    const r = document.documentElement, vv = window.visualViewport, h = Math.round(vv ? vv.height : innerHeight), cs = getComputedStyle(r);
+    const vh = parseFloat(cs.getPropertyValue("--vv-h")) || 0, pad = parseFloat(cs.getPropertyValue("--pad-max")) || 0;
+    return r.classList.contains("mt") && Math.abs(vh - h) <= 1 && pad > 0;
+  }, null, { timeout: 5000 });
+  /* a verdict's own style transitions (border / background / colour, 180ms) have landed: what the computed-style asserts below read */
+  const lookSettled = sel => page.waitForFunction(s => {
+    const el = document.querySelector(s);
+    return !!el && el.getAnimations({ subtree: true }).every(a => !("transitionProperty" in a) || a.playState !== "running");
+  }, sel, { timeout: 5000 });
 
   /* ---- in-page audit: visible interactive elements, overlaps, tap targets ---- */
   const audit = () => page.evaluate(() => {
@@ -125,7 +167,7 @@ for (const [W, H] of SIZES) {
   /* Nov 8 (Tony): a short-answer item (text / num / expr) is never restyled by the keyboard: no Swap pane. The page stays a page: the
      field is scrolled into the area above the keyboard, the question stays reachable by scrolling up. Multi still swaps (below). */
   const qReachable = async () => {
-    await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(150);
+    await page.evaluate(() => scrollTo(0, 0)); await page.waitForFunction(() => !scrollY, null, { timeout: 5000 });   // the page is back at its top: the card's start
     const r = await page.evaluate(() => { const f = document.querySelector("#blocks > *").getBoundingClientRect(), vv = window.visualViewport; return { top: f.top, vh: vv.height + vv.offsetTop }; });
     assert.ok(r.top >= -0.5 && r.top < r.vh, `${T} the question's start is not reachable by scroll: ${JSON.stringify(r)}`);
   };
@@ -137,7 +179,7 @@ for (const [W, H] of SIZES) {
     assert.equal(await paneNow(), "off", `a short-answer item got the Swap restyle (${await cls()})`);
     assert.equal(await page.evaluate(() => document.activeElement.id), "ans");
     await mustBeInside("#ans");
-    await page.locator("#ans").fill("12"); await page.waitForTimeout(150);
+    await page.locator("#ans").fill("12"); await page.waitForFunction(() => { const go = document.querySelector("#ansGo"); return !!go && !go.disabled; }, null, { timeout: 5000 });   // the arrow is live once there is text
     await mustBeInside("#ansGo");
     await shot("kb-num-freeform");
     await clean("short answer, keyboard up");
@@ -149,7 +191,7 @@ for (const [W, H] of SIZES) {
     await open("CALC1_T6B");
     await ansUp("#ans");
     const seen = new Set();
-    for (let i = 0; i < 10; i++) { seen.add(await cls()); await page.waitForTimeout(100); }
+    for (let i = 0; i < 10; i++) { seen.add(await cls()); await page.waitForTimeout(100); }   // sleep-keep: the assert IS "nothing changes over 1s"; no event or condition can replace the observation window
     assert.equal(seen.size, 1, `classes changed by themselves: ${[...seen].join(" | ")}`);
     await kbDown();
   });
@@ -240,7 +282,8 @@ for (const [W, H] of SIZES) {
         // whichever pill is selected, its text stays on one line and clear of the arrow, and the arrow is flush inside the pill
         const n = r.txt.length;
         for (let i = 0; i < n; i++) {
-          await page.locator(".opt").nth(i).click(); await page.waitForTimeout(220);
+          await page.locator(".opt").nth(i).click();
+          await page.waitForFunction(j => { const c = document.querySelectorAll(".ch")[j]; return c.querySelector(".opt").getAttribute("aria-checked") === "true" && !c.querySelector(".send").hidden; }, i, { timeout: 5000 });   // selected: the pill took the arrow's slot
           const g = await page.evaluate(i => {
             const c = document.querySelectorAll(".ch")[i], o = c.querySelector(".opt").getBoundingClientRect(), s = c.querySelector(".send").getBoundingClientRect(), t = c.querySelector(".txt").getBoundingClientRect(), row = document.querySelector(".choices").getBoundingClientRect();
             const lh = parseFloat(getComputedStyle(c.querySelector(".txt")).lineHeight);
@@ -254,7 +297,7 @@ for (const [W, H] of SIZES) {
         }
         assert.equal((await rowInfo()).inline, true);
         await page.locator(".opt").nth(n - 1).click();                   // tap the selected one again: deselect
-        await page.waitForTimeout(220);
+        await page.waitForFunction(() => [...document.querySelectorAll(".ch .send")].every(s => s.hidden), null, { timeout: 5000 });   // every arrow gone: nothing is selected
         assert.equal(await page.locator(".ch .send:visible").count(), 0, "second tap did not deselect");
       }
       await shot(`mc-row-${code.replace("CSCI26_", "").replace("CALC1_", "").toLowerCase()}-idle`);
@@ -265,11 +308,12 @@ for (const [W, H] of SIZES) {
     const ids = () => page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.dataset.id));   // choices are shuffled: read the order
     const foc = () => page.evaluate(() => document.activeElement.dataset.id);
     await open("CSCI26_TF3");
-    await page.locator('.opt[data-id="f"]').click(); await page.waitForTimeout(250);
+    await page.locator('.opt[data-id="f"]').click();
+    await page.waitForFunction(() => { const o = document.querySelector('.opt[data-id="f"]'), s = o && o.parentElement.querySelector(".send"); return o.getAttribute("aria-checked") === "true" && !!s && !s.hidden; }, null, { timeout: 5000 });   // the picked pill shows its arrow
     await shot("mc-row-tf-selected");
     await clean("TF selected");
     await page.locator('.ch[data-id="f"] .send').click();
-    await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
+    await page.waitForSelector(".opt.wrong"); await lookSettled(".opt.wrong");   // the verdict's border / strike / colour transition has landed
     const w = await page.evaluate(() => { const o = document.querySelector(".opt.wrong"), c = getComputedStyle(o), t = getComputedStyle(o.querySelector(".txt")); return { dis: o.disabled, bs: c.borderStyle, td: t.textDecorationLine, col: c.borderColor, aria: o.getAttribute("aria-disabled") }; });
     assert.ok(w.dis && w.bs === "solid" && /line-through/.test(w.td) && w.col === "rgb(235, 89, 110)", JSON.stringify(w));
     assert.equal(await page.locator(".opt:not([disabled])").count(), 0, "2-choice mc: one wrong answer must lock every choice");
@@ -288,11 +332,11 @@ for (const [W, H] of SIZES) {
     const pick = async id => { const l = page.locator(`.opt[data-id="${id}"]`); await l.click(); if (await l.getAttribute("aria-checked") !== "true") await l.click(); };   // a tap on the selected one deselects
     await pick("t");                                                     // 3 choices: a wrong answer leaves a second try
     await page.locator('.ch[data-id="t"] .send').click();
-    await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
+    await page.waitForSelector(".opt.wrong"); await lookSettled(".opt.wrong");
     assert.notEqual(await foc(), "t", "focus did not move to a live choice");
     await pick("m");
     await page.locator('.ch[data-id="m"] .send').click();
-    await page.waitForSelector(".opt.right"); await page.waitForTimeout(250);
+    await page.waitForSelector(".opt.right"); await lookSettled(".opt.right");
     const r = await page.evaluate(() => { const o = document.querySelector(".opt.right"), b = o.querySelector(".vg").getBoundingClientRect(), r = o.getBoundingClientRect(), t = o.querySelector(".txt").getBoundingClientRect(); return { br: b.right, or: r.right, bl: b.left, tr: t.right, col: getComputedStyle(o).borderColor, bd: getComputedStyle(o.querySelector(".vg")).display }; });
     assert.ok(r.bd !== "none" && r.br <= r.or && r.bl >= r.tr - 0.5 && r.col === "rgb(78, 230, 175)", JSON.stringify(r));   // V1: the check trails the pill's text, the ring is --correct
     await shot("mc-row-tf-right");
@@ -300,12 +344,16 @@ for (const [W, H] of SIZES) {
   await step(`${T} mc row: falls back when the width shrinks, returns when it grows (measured, not guessed)`, async () => {
     await open("CSCI26_TFM");
     assert.equal((await rowInfo()).inline, true);
-    await page.setViewportSize({ width: 240, height: H }); await page.waitForTimeout(400);
+    await page.setViewportSize({ width: 240, height: H });
+    await page.waitForFunction(() => !document.querySelector("#q .choices").classList.contains("inline"), null, { timeout: 5000 });   // fitChoices re-measured the row at 240px
+    await frames();
     const narrow = await rowInfo();
     assert.equal(narrow.inline, false, "MAYBE row still one line at 240px");
     assert.ok(narrow.wraps.every(x => !x) || true);
     await shot("mc-row-fallback-narrow");
-    await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(400);
+    await page.setViewportSize({ width: W, height: H });
+    await page.waitForFunction(() => document.querySelector("#q .choices").classList.contains("inline"), null, { timeout: 5000 });
+    await frames();
     assert.equal((await rowInfo()).inline, true, "did not come back");
   });
 
