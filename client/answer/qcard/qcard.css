@@ -90,9 +90,9 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7, html.ui-v7 #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
     margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
   /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
-  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 72px;
-    margin: -72px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
-    background: linear-gradient(transparent, #0d142a 58%); -webkit-tap-highlight-color: transparent; }
+  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 104px;
+    margin: -104px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
+    background: linear-gradient(transparent, color-mix(in srgb, #0d142a 70%, transparent) 45%, #0d142a 78%); -webkit-tap-highlight-color: transparent; }
   html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
   html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
   html.ui-v7 #problem.qc7 > .qfold:focus-visible { outline: none; } html.ui-v7 #problem.qc7 > .qfold:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
