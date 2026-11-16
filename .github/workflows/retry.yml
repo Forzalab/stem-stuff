@@ -33,20 +33,26 @@ jobs:
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          : >failed.log   # the logs of the failed jobs: a `FAIL <spec>` line in them = a test failure (retried in-job already)
+          : >failed.log; FAILED_JOBS=0   # the logs of the failed jobs: a `FAIL <spec>` line in them = a test failure (retried in-job already)
           for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id'); do
+            FAILED_JOBS=$((FAILED_JOBS + 1))
             curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" >>failed.log || true
           done
-          CONCLUSION="$CONCLUSION" RUN_ATTEMPT="$RUN_ATTEMPT" node --input-type=module -e '
+          FAILED_JOBS="$FAILED_JOBS" CONCLUSION="$CONCLUSION" RUN_ATTEMPT="$RUN_ATTEMPT" node --input-type=module -e '
             import { shouldRetry, attemptColor } from "./tools/operations/ci-retry.mjs";
             const run = { conclusion: process.env.CONCLUSION, run_attempt: Number(process.env.RUN_ATTEMPT) };
             const log = (await import("node:fs")).readFileSync("failed.log", "utf8");
-            console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; shouldRetry=${shouldRetry(run, log)}`);
-            process.stdout.write(shouldRetry(run, log) ? "true" : "false");
+            console.error(`retry: attempt ${process.env.RUN_ATTEMPT} ${process.env.CONCLUSION} -> ${attemptColor(run)}; failedJobs=${process.env.FAILED_JOBS}; shouldRetry=${shouldRetry(run, log, Number(process.env.FAILED_JOBS))}`);
+            process.stdout.write(shouldRetry(run, log, Number(process.env.FAILED_JOBS)) ? "true" : "false");
           ' > retry.txt
           echo "retry=$(cat retry.txt)" >> "$GITHUB_OUTPUT"
       - if: steps.d.outputs.retry == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
-        run: gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/rerun-failed-jobs"
+        run: |
+          # a 403 "cannot be retried" (0-job / workflow-file-error run, already-retried run) is a clean no-op, not a red retry run
+          if ! out=$(gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/rerun-failed-jobs" 2>&1); then
+            if grep -q "cannot be retried" <<<"$out"; then echo "retry: run $RUN_ID cannot be retried (HTTP 403), no-op"; exit 0; fi
+            echo "$out"; exit 1
+          fi
