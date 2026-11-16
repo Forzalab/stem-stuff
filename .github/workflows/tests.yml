@@ -302,7 +302,7 @@ jobs:
       - run: tools/operations/ci-all-verdict.sh
       # W4 (minimal addition): every block that ran must hand in flaky.txt, and each flaky spec must be in the unexpired jail
       - if: needs.block.result == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with: { pattern: flaky-block-*, path: flaky }
       - id: fl
         if: needs.block.result == 'success'
@@ -363,7 +363,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0, fetch-tags: true }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { pattern: flaky-block-*, path: flaky }
       - id: d
