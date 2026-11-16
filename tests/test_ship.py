@@ -440,12 +440,12 @@ class FigPng(unittest.TestCase):
 
 class Workflow(unittest.TestCase):
     """.github/workflows/ship.yml installs what the gate needs before tools/build_and_ship/ship.sh runs (run 54 on 2026-10-25 stopped at the gate:
-    "needs node and tests/node_modules", nothing deployed). The figure PNGs (tools/bank_tools/fig_png.mjs) need Chromium and ImageMagick too."""
+    "needs node and tests/node_modules", nothing deployed). The figure PNGs (tools/bank_tools/fig_png.mjs) need Chromium and ImageMagick too. The pip line is requirements.txt (sympy + jsonschema): ship 65b26bd died at BANKCHECK B-DEPS with sympy alone (#590)."""
     def test_gate_deps_before_ship(self):
         with open(os.path.join(ROOT, ".github", "workflows", "ship.yml")) as f:
             y = f.read()
         ship = y.index('tools/build_and_ship/ship.sh "$MODE"')
-        for need in ("pip install sympy", "cd tests && npm ci", "install --only-shell chromium", "imagemagick"):   # + the figure PNG gate
+        for need in ("pip install -r requirements.txt", "cd tests && npm ci", "install --only-shell chromium", "imagemagick"):   # + the figure PNG gate
             self.assertIn(need, y)
             self.assertLess(y.index(need), ship, need)
 
