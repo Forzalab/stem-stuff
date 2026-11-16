@@ -144,7 +144,7 @@ jobs:
       - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: cd tests && npm ci
       - run: tests/run-all.sh --quick
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       # the .pw scripts require("playwright"); tests/package.json pins only playwright-core, so add the same version here
       - run: |
@@ -220,7 +220,7 @@ jobs:
       - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: |
           cd tests && npm ci
@@ -255,7 +255,7 @@ jobs:
       - if: steps.scope.outputs.run == 'true'
         run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - if: steps.scope.outputs.run == 'true'
         run: |
