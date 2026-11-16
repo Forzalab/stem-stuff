@@ -66,7 +66,7 @@
   try { H.classList.toggle("ios", isIOS(ua, N.maxTouchPoints)); } catch (e) { /* no class: no iOS-only chrome */ }
   /* html.ui-v7 = the v7 redesign flag (brain ui-polish/PORT-ARCH.md §D2). V7-FLIP (Tony Nov 16, PR13): default ON on the live host only;
      local / CI pages keep the old default (the flag-off specs pin it until PR14 deletes the old CSS). ?ui=v7 / ?ui=off pick and remember (localStorage stem-ui). */
-  var live = /^stem-stuff\.vercel\.app$/.test(location.hostname);
+  var live = false; try { live = /^stem-stuff\.vercel\.app$/.test(W.location.hostname); } catch (e) { /* no location (node sandbox): not the live host */ }
   try {
     var uiQ = new URLSearchParams(location.search).get("ui");
     if (uiQ === "v7") localStorage.setItem("stem-ui", "v7"); else if (uiQ === "off") { localStorage.setItem("stem-ui", "off"); H.classList.remove("ui-v7"); }
