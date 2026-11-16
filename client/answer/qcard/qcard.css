@@ -26,7 +26,8 @@ html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
    the solid main numeral stays top-left. The in-flow box keeps its height (layout unchanged); the trail is positioned against the whole card. */
 html.ui-v7 #problem.qc7.qbr { overflow: hidden; }
 html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: 72px; }   /* QC-NOFRONT (Tony Nov 15): no top-left numeral; headline starts below the Ask Cluck row (44 + 28 air) */
-html.ui-v7 #problem.qc7.qbr > .blocks:has(> .ptitle:first-child) { padding-top: 12px; }   /* QC-TITLE-ROW (Tony Nov 16, ghost gap): a title first rides the Ask Cluck row (wraps left of the float, centred on its 44 px); a figure first keeps the band */
+html.ui-v7 #problem.qc7.qbr > .blocks:has(> .ptitle:first-child) { padding-top: 16px; }
+html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.375rem; line-height: 28px; letter-spacing: -.01em; }   /* TITLE-BIG (Tony Nov 16): bigger title, its bottom on the Ask Cluck button's bottom (16 + 28 = the button's 44) */   /* QC-TITLE-ROW (Tony Nov 16, ghost gap): a title first rides the Ask Cluck row (wraps left of the float, centred on its 44 px); a figure first keeps the band */
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { display: none; }
 html.ui-v7 #problem.qc7.qbr .blocks > :first-child { margin-top: 0; }
 html.ui-v7 #problem.qc7.qbr .qghostbox { position: absolute; inset: 0; height: auto; margin: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; }
