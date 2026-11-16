@@ -236,7 +236,8 @@ try {
       assert.deepEqual(wrong.painted, [], "wrong: nothing painted in the field's right 60px except the mark");
       await page.locator("#ff :is(input, textarea)").first().focus();
             // caption gone, mouse focus: no ring
-      await page.locator("#q #ff.ff input").first().click({ force: true });
+      /* no force: a real tap waits until the field is the hit target. On a phone the fixed "Ready when you are" toast can sit over a field that CI fonts push down; a forced click then lands on the toast, focus never moves, and the next wait ran to 30 s */
+      await page.locator("#q #ff.ff input").first().click();
       await page.waitForFunction(() => !!document.activeElement && !!document.activeElement.closest("#q #ff.ff"));
       const mouse = await page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), i = ff.querySelector("input"), cs = getComputedStyle(i), fl = ff.querySelector(".fl");
         return { ol: cs.outlineStyle, sh: getComputedStyle(ff).boxShadow, fl: fl ? getComputedStyle(fl).display : "none", ptr: ff.hasAttribute("data-ptr") }; });
@@ -256,7 +257,7 @@ try {
       assert.deepEqual([kb.input, kb.ol, kb.w, kb.off], ["none", "solid", "2px", "4px"], "keyboard focus: the outline wraps the field: " + JSON.stringify(kb));
       assert.ok(!/0px 0px 0px 2px/.test(kb.sh), "no glow ring: " + kb.sh);
       await page.evaluate(() => document.activeElement.blur());
-      await page.locator("#q #ff.ff input").first().click({ force: true });
+      await page.locator("#q #ff.ff input").first().click();
       await page.waitForFunction(() => !!document.activeElement && !!document.activeElement.closest("#q #ff.ff"));
       const ms = await page.evaluate(() => getComputedStyle(document.querySelector("#q #ff.ff")).outlineStyle);
       assert.ok(ms === "none", "mouse focus: no ring: " + ms);
