@@ -1,0 +1,5 @@
+##[group]lane 1: a b c@x
+ok   a 30.0 s
+ok   b 6.0 s
+ok   c@x 2.4 s
+QUAR z 99.0 s

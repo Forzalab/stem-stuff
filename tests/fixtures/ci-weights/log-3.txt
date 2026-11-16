@@ -1,0 +1,3 @@
+##[group]lane 1: a b
+ok   a 20.0 s
+PASS b 5.0 s
