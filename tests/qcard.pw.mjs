@@ -60,7 +60,7 @@ try {
         const g = await geo(page);
         assert.equal(g.lead, "How fast is a rolling ball at the bottom?"); assert.equal(g.ghosts, 6); assert.equal(g.ghostHidden, "true"); assert.ok(!g.twist, "no Twist chip under ui-v7 (the row toast announces it)"); assert.ok(!(await page.evaluate(() => !!document.querySelector("#twistChip"))), "no #twistChip");
         assert.equal(g.headTx, "Roll"); assert.match(g.metaTx, /exam 3 · q1/); assert.doesNotMatch(g.metaTx, /Number only/, "hint stays below the card, not in the meta row");
-        assert.ok(g.gbox.bottom <= g.head.top + 0.5, "numeral block above the headline"); assert.ok(g.l.bottom <= g.meta.top + 0.5, "meta under the text");
+        assert.ok(g.gbox.bottom <= g.head.top + 0.5, "numeral block above the headline"); assert.ok(!g.meta.height || g.l.bottom <= g.meta.top + 0.5, "meta under the text (NO-EXAM, Tony Nov 16: the row is hidden when it only held the exam line)");
         assert.ok(g.b && g.b.right > g.p.right - 40 && g.b.top < g.p.top + 40, "Ask Cluck top right");
         assert.equal(g.chipAlpha, 1, "chip fill opaque"); assert.equal(g.chipBorder, "0px", "chip: no border"); assert.match(g.chipShadow, /0px 1px 2px/, "tight under-shadow"); assert.doesNotMatch(g.chipShadow, /0px 0px 0px 6px/, "no halo ring");
         assert.ok(!hit(g.b, g.front), "chip box does not touch the front numeral");
@@ -73,7 +73,7 @@ try {
       try {
         const g = await geo(page);
         assert.match(g.lead, /^What is the smallest TOTAL number/); assert.ok(g.s, "setup kept");
-        assert.ok(Math.abs(g.l.left - g.s.left) < 0.5 && Math.abs(g.head.left - g.s.left) < 0.5 && Math.abs(g.meta.left - g.s.left) < 0.5, "one left edge: headline, text, meta");
+        assert.ok(Math.abs(g.l.left - g.s.left) < 0.5 && Math.abs(g.head.left - g.s.left) < 0.5 && (!g.meta.height || Math.abs(g.meta.left - g.s.left) < 0.5), "one left edge: headline, text, meta (when shown)");
         assert.ok(g.s.top < g.l.top, "setup above the question");
         assert.equal(g.headTx, "Hydraulic lift", "whole topic word"); assert.ok(g.gap <= 17, "no empty band under the numeral: " + g.gap);
         assert.ok(g.qtx.includes("2.55\u00a0m"), "number + unit joined by a no-break space"); assert.ok(!/\s[.,;:?]/.test(g.qtx), "no stray space before punctuation: " + g.qtx.match(/.{8}\s[.,;:?].{3}/));
@@ -118,7 +118,7 @@ try {
           const e = await page.evaluate(() => { const gh = document.querySelector(".qghost"), f = gh.firstChild, cs = getComputedStyle(gh), c = document.createElement("canvas").getContext("2d");
             c.font = "900 " + parseFloat(cs.fontSize) + "px \"G Archivo\""; c.fontStretch = "semi-expanded"; c.letterSpacing = "0px";
             const ink = f.getBoundingClientRect().left - c.measureText(f.textContent.charAt(0)).actualBoundingBoxLeft, card = document.querySelector("#problem").getBoundingClientRect(), r = s => document.querySelector(s).getBoundingClientRect(), b = document.querySelector("#cluckBtn").getBoundingClientRect(), fr = f.getBoundingClientRect();
-            return { n: gh.dataset.n, ink, text: r(".qhead").left - card.left, textR: card.right - r(".qmeta").right, inkRel: ink - card.left, qlead: r(".qlead").left - card.left, hit: b.left < fr.right && fr.left < b.right && b.top < fr.bottom && fr.top < b.bottom }; });
+            return { n: gh.dataset.n, ink, text: r(".qhead").left - card.left, textR: card.right - r(".qtext").right, inkRel: ink - card.left, qlead: r(".qlead").left - card.left, hit: b.left < fr.right && fr.left < b.right && b.top < fr.bottom && fr.top < b.bottom }; });
           edges.push(e);
         }
         const t0 = edges[0].text;

@@ -233,8 +233,8 @@ html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.u
 /* ANCHOR-BOTTOM (Tony Nov 16 "anchor the title + question text to the bottom, then extend the height a teensy bit; all cards like that"): a short card gets a floor
    (240 px phone, 280 px desktop) and its rows spread: the kicker / Ask Cluck row stays on top, the headline + text sit on the card's bottom pad (Swiss poster).
    A card taller than the floor is unchanged (nothing to spread). Not in the Q-HALF open/scroll states, where the height is the scroller's. */
-html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 240px; align-content: space-between; }
-@media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 280px; } }
+html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 216px; align-content: space-between; }   /* BALANCE (Tony Nov 16 "shrink that space"): 240 -> 216, 256 desk */
+@media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 256px; } }
 /* LEAD-LIGHTER (Tony Nov 16 "de-emphasise the question's thickness / boldness"): the question sentence drops 600 -> 400 (STYLE 2.2: weights are 400 / 600 only) and
    its math stroke .028em -> .012em to match; it keeps the one-step-brighter ink, so it still reads as THE question under the grotesk headline. */
 html.ui-v7 #problem.qc7 .qlead { font-weight: 400; }
