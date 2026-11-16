@@ -230,7 +230,7 @@ test("CLI: a docs-only diff since the last green sha ships", () => {
 // Unit names are the ones run-all.sh prints (`flow`, `desk-layout@3`), never `flow.pw.mjs`.
 import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { yellowCleared, yellowVerdict, expiredJail, expiryOf, jailViolations, parseFailedSpecs, JAIL_MAX } from "../tools/operations/ci-gate.mjs";
 const NOW = Date.parse("2026-11-16T00:00:00Z");
 const J = (spec, added = "2026-11-15", expires = "2026-11-22") => ({ spec, test: "*", owner: "tony", reason: "#601", added, expires });
@@ -370,13 +370,15 @@ test("AC3.14 parseFailedSpecs: exactly the failed unit names from a timestamped 
 });
 
 // --- CI-LOOSEN 21 (AC9.1-9.5): the box flake-hunt job is never a required job ----------------
-// SOURCE of every fact below: .github/workflows/tests.yml `flake-hunt:` (AC9.1) and `all:` (the one required check).
+// SOURCE of every box fact below: .github/workflows/box.yml `flake-hunt:` (CI-ARCH PR 3 moved it out of tests.yml);
+// `/all:` (the one required check) stays in tests.yml.
 // Text-only parse, like tests/test_ci_all_job.py: no YAML dep, and a job block ends at the next job-level key/comment.
-const WF = fileURLToPath(new URL("../.github/workflows/tests.yml", import.meta.url));
-function jobBlock(name) {
-  const lines = readFileSync(WF, "utf8").split("\n");
+const TESTS = fileURLToPath(new URL("../.github/workflows/tests.yml", import.meta.url));
+const BOX = fileURLToPath(new URL("../.github/workflows/box.yml", import.meta.url));
+function jobBlock(name, file = TESTS) {
+  const lines = readFileSync(file, "utf8").split("\n");
   const start = lines.findIndex((l) => l === `  ${name}:`);
-  assert.notEqual(start, -1, `tests.yml must carry a top-level \`  ${name}:\` job`);
+  assert.notEqual(start, -1, `${basename(file)} must carry a top-level \`  ${name}:\` job`);
   const body = [];
   for (const l of lines.slice(start + 1)) {
     if (/^ {2}\S/.test(l)) break;   // the next job, or a job-level comment
@@ -386,7 +388,7 @@ function jobBlock(name) {
 }
 
 test("AC9.1 flake-hunt: self-hosted box, continue-on-error, <= 20 min, hunt step present", () => {
-  const j = jobBlock("flake-hunt");
+  const j = jobBlock("flake-hunt", BOX);
   assert.match(j, /^ {4}runs-on: \[self-hosted, titodori\]/m, "runs-on [self-hosted, titodori]");
   assert.match(j, /^ {4}continue-on-error: true$/m, "the box job may fail without failing the run");
   const t = /^ {4}timeout-minutes: (\d+)$/m.exec(j);
@@ -394,17 +396,17 @@ test("AC9.1 flake-hunt: self-hosted box, continue-on-error, <= 20 min, hunt step
   assert.ok(Number(t[1]) <= 20, `timeout-minutes ${t[1]} must be <= 20`);
   assert.match(j, /SPECS="\$spec"/, "the hunt runs each spec through tests/run-all.sh with SPECS=");
   assert.match(j, /pass \$pass\/5/, "a per-spec `pass k/5` line is the result");
-  assert.doesNotMatch(j, /^ {4}needs:/m, "the box job waits on nothing (it runs beside the hosted blocks)");
+  assert.doesNotMatch(j, /^ {4}needs:/m, "the box job waits on nothing (it runs after the tests workflow, with no needs)");
 });
 
-test("AC9.4 flake-hunt: the fork guard is written in the job `if` itself, and the events are push-main + schedule", () => {
-  const j = jobBlock("flake-hunt");
+test("AC9.4 flake-hunt: the fork guard is written in the job `if` itself, and the events are dispatch + a tests run on main", () => {
+  const j = jobBlock("flake-hunt", BOX);
   const cond = /^ {4}if: (.*)$/m.exec(j)[1];
-  assert.match(cond, /github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/, "push to main only");
-  assert.match(cond, /github\.event_name == 'schedule'/, "the nightly run");
+  assert.match(cond, /^github\.event_name == 'workflow_dispatch' \|\| \(/, "a manual hunt is ORed (a dispatch has no workflow_run payload)");
+  assert.match(cond, /github\.event\.workflow_run\.event == 'push' && github\.event\.workflow_run\.head_branch == 'main'/, "a tests run for a push to main only");
   // AC9.4: not only implied by the event list — the guard itself is in this `if`
-  assert.match(cond, /github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.head\.repo\.full_name == github\.repository/,
-    "fork guard in the job `if` itself");
+  assert.match(cond, /github\.event\.workflow_run\.head_repository\.full_name == github\.repository/,
+    "fork guard in the job `if` itself: fork code must never reach the self-hosted box");
 });
 
 test("AC9.2/9.5 flake-hunt is NOT a required job: never in all.needs, no green stamp, no flaky-block artifact", () => {
@@ -412,9 +414,31 @@ test("AC9.2/9.5 flake-hunt is NOT a required job: never in all.needs, no green s
   const needs = /^ {4}needs:\s*\[(.*)\]$/m.exec(all)[1].split(",").map((s) => s.trim()).sort();
   assert.deepEqual(needs, ["block", "decide", "plan", "unit"], "the required check needs exactly the four gating jobs");
   assert.doesNotMatch(all, /flake-hunt/, "the `all` verdict must not read the box job (a cancelled box can never refuse a ship)");
-  const j = jobBlock("flake-hunt");
+  const j = jobBlock("flake-hunt", BOX);
   assert.match(j, /^ {10}name: flake-hunt\b/m, "the artifact is named flake-hunt");
   assert.doesNotMatch(j, /^ {10}name: flaky-block-/m, "never a flaky-block-* artifact: ci-flaky.mjs reads only that pattern");
+  // CI-ARCH PR 3: the job lives in box.yml only, never back in the required check's workflow
+  assert.doesNotMatch(readFileSync(TESTS, "utf8"), /^ {2}flake-hunt:/m, "tests.yml must not carry the box job");
   // ci-gate.mjs has no job allow-list, so the only "required jobs" list is all.needs: prove the gate never names it
   assert.doesNotMatch(readFileSync(here("../tools/operations/ci-gate.mjs"), "utf8"), /flake-hunt/, "the ship gate never sees the box job");
+});
+
+// --- CI-ARCH PR 3: the box is its own workflow, never a tests run --------------------------------
+test("CI-ARCH PR 3 box.yml: name box, tests workflow_run + dispatch (no schedule), own group, read-only", () => {
+  const y = readFileSync(BOX, "utf8");
+  assert.match(y, /^name: box$/m, "workflow name is box");
+  assert.match(y, /^ {2}workflow_run:\n {4}workflows: \[tests\]\n {4}types: \[completed\]$/m, "after a tests run completes");
+  assert.match(y, /^ {2}workflow_dispatch:/m, "a manual hunt, no inputs");
+  assert.doesNotMatch(y, /^ {2}schedule:/m, "the nightly schedule stays in tests.yml; box.yml has none");
+  assert.match(y, /^concurrency: \{ group: box, cancel-in-progress: false \}$/m, "own group, never the tests group");
+  assert.match(y, /^permissions: \{ contents: read \}$/m, "read-only: the hunt never writes");
+  assert.match(y, /^ {10}ref: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}$/m, "checkout the tested commit, not the branch head");
+});
+
+test("CI-ARCH PR 3 tests.yml concurrency: push groups per sha, PR rule unchanged (5169fb9 trap)", () => {
+  const y = readFileSync(TESTS, "utf8");
+  assert.match(y, /^ {2}group: tests-\$\{\{ github\.event_name == 'push' && github\.sha \|\| github\.ref \}\}$/m,
+    "push runs get a per-sha group (main runs in parallel); PR runs keep github.ref");
+  assert.match(y, /^ {2}cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m, "PR cancellation is unchanged");
+  assert.match(y, /^ {2}queue: \$\{\{ github\.event_name == 'pull_request' && 'single' \|\| 'max' \}\}$/m, "the PR queue branch is unchanged");
 });

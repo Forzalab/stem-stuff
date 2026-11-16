@@ -414,7 +414,10 @@ TMP="$(mktemp -d)"; export STEM_TRIES="$TMP/tries.json"      # never the real tr
 # On EXIT/TERM/INT/HUP, kill everything below this script, deepest first (so no parent is gone before its child is found).
 SRV=""
 killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; [ "$1" = "$$" ] || kill "$1" 2>/dev/null; return 0; }
-trap 'trap - EXIT; killtree $$' EXIT
+# CI-FLAKE-LOGS: LOG_DIR=<dir> keeps this lane's logs (every spec log, each *.try1.log, serve.log) after the mktemp TMP is gone.
+# Guarded: a missing dir, a full disk or no .log at all must never change the run's verdict (the trap never exits, so $? survives anyway).
+keep_logs() { [ -n "${LOG_DIR:-}" ] || return 0; mkdir -p "$LOG_DIR" && cp "$TMP"/*.log "$LOG_DIR/" || true; }
+trap 'trap - EXIT; keep_logs || true; killtree $$' EXIT
 trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP
 fails=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
@@ -446,6 +449,7 @@ run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older script
     # CI-ARCH PR 1: every spec gets ONE retry (no per-lane cap). An own-server spec's bare port arg gets a fresh free_port, so a
     # port still held by attempt 1's dying server cannot fail the retry. Shared-server specs pass a URL (no bare number): unchanged.
     local a=() x; for x in "$@"; do [[ "$x" =~ ^[0-9]{4,5}$ ]] && x="$(free_port)"; a+=("$x"); done
+    cp "$TMP/$name.log" "$TMP/$name.try1.log" 2>/dev/null || true   # CI-FLAKE-LOGS: keep attempt 1 before the retry overwrites its log
     "${a[@]}" >"$TMP/$name.log" 2>&1 & wait $!
     if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then ok=1; flaky=1; fi
   fi

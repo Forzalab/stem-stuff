@@ -79,10 +79,12 @@ class CiImage(unittest.TestCase):
         for hosted in ("ubuntu-24.04", "ubuntu-latest", "ubuntu-22.04"):
             self.assertFalse(is_self_hosted(hosted), hosted)
         self.assertTrue(is_self_hosted("[self-hosted, titodori]"))
-        # and the box job (CI-LOOSEN 21) is the only playwright job that relies on it
+        # and the box job (CI-LOOSEN 21, moved to box.yml by CI-ARCH PR 3) is the only playwright job that relies on it
         found = jobs(os.path.join(WF, "tests.yml"))
-        self.assertIn("self-hosted", found["flake-hunt"][0])
-        self.assertIn("playwright install", found["flake-hunt"][1])
+        box = jobs(os.path.join(WF, "box.yml"))
+        self.assertIn("self-hosted", box["flake-hunt"][0])
+        self.assertIn("playwright install", box["flake-hunt"][1])
+        self.assertNotIn("flake-hunt", found, "the box job moved out of tests.yml (CI-ARCH PR 3)")
         hosted_pw = [n for n, (runs_on, t) in found.items() if "playwright install" in t and not is_self_hosted(runs_on)]
         self.assertIn("block", hosted_pw, "the hosted block job must still install Playwright on a pinned image")
 
