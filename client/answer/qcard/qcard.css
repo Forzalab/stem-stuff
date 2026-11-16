@@ -71,3 +71,7 @@ html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
 /* KATEX-COVER (Nov 15): the G4.3 edge-fade "local covers" (app.css .md :is(.tbl,.katex-display)) paint solid --qbox squares that hid the echo numeral behind
    a display equation / table. Only a box that scrolls needs the fade (wideBoxes() sets tabindex then); a box that fits draws no background. */
 html.ui-v7 #problem.qc7 .md :is(.tbl, .katex-display):not([tabindex]) { background: none; }
+/* QBR-MASK (Nov 15): the per-copy top/bottom fade above is tuned for the old top-left trail; at the bottom-right 2.6x size it shows as flat horizontal cuts. qbr = no per-copy mask (the card clips the corner). */
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { -webkit-mask-image: none; mask-image: none; }
+/* one smooth fade for the whole trail, centred on the bottom-right corner (no per-copy edges, so no cuts); keeps 2-3 digit numerals quiet behind the text */
+html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(120% 120% at 100% 100%, #000 15%, rgb(0 0 0 / .55) 45%, transparent 85%); mask-image: radial-gradient(120% 120% at 100% 100%, #000 15%, rgb(0 0 0 / .55) 45%, transparent 85%); }
