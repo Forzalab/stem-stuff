@@ -445,7 +445,7 @@ class Workflow(unittest.TestCase):
         with open(os.path.join(ROOT, ".github", "workflows", "ship.yml")) as f:
             y = f.read()
         ship = y.index('tools/build_and_ship/ship.sh "$MODE"')
-        for need in ("pip install sympy", "cd tests && npm ci", "install --only-shell chromium", "imagemagick"):   # + the figure PNG gate
+        for need in ("pip install -r requirements.txt", "cd tests && npm ci", "install --only-shell chromium", "imagemagick"):   # + the figure PNG gate
             self.assertIn(need, y)
             self.assertLess(y.index(need), ship, need)
 
