@@ -1,0 +1,100 @@
+# P7 / AC5.11: the targeted culprit finder. A confirmed red on main covering k > 1 merges (tests.yml `postdeploy` dispatches this):
+# one matrix leg per merge between the last-known-good and the red commit, each runs ONLY the specs that failed; the oldest failing merge is the
+# culprit and the summary names its PR. Only reachable with repo variable SHIP_MODE=pr-green (the dispatcher is gated on it).
+name: culprit
+run-name: culprit ${{ inputs.from }}..${{ inputs.to }}
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "last-known-good sha (exclusive)"
+        type: string
+        required: true
+      to:
+        description: "the red sha (inclusive)"
+        type: string
+        required: true
+      specs:
+        description: "comma-separated specs that failed twice (empty = tests/run-all.sh --quick)"
+        type: string
+        default: ""
+        required: false
+permissions: { contents: read }
+jobs:
+  list:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.l.outputs.matrix }}
+      legs: ${{ steps.l.outputs.legs }}
+      count: ${{ steps.l.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.to }}", fetch-depth: 0 }
+      - id: l
+        run: node tools/operations/ci-ship.mjs shas-between "${{ inputs.from }}" "${{ inputs.to }}"
+  leg:
+    needs: list
+    if: needs.list.outputs.count != '0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    name: leg ${{ matrix.sha }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.list.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ matrix.sha }}" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install sympy networkx jsonschema
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - run: |
+          cd tests && npm ci
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --only-shell chromium
+      - id: run
+        shell: bash
+        env:
+          INPUT_SPECS: ${{ inputs.specs }}
+        continue-on-error: true
+        run: |
+          # unit-type names are not .pw specs: they cannot go in SPECS, so they select the quick (unit) pipe instead
+          specs="$(tr ',' '\n' <<<"$INPUT_SPECS" | grep -vxE 'unittest|npm|batch|codemap|' | paste -sd' ' - || true)"
+          if [ -n "$specs" ]; then SPECS="$specs" tests/run-all.sh; else tests/run-all.sh --quick; fi
+      - if: always()
+        run: |
+          mkdir -p res; echo "${{ steps.run.outcome == 'success' && 'pass' || 'fail' }}" > res/result
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: leg-${{ matrix.sha }}
+          path: res/result
+          retention-days: 7
+  report:
+    needs: [list, leg]
+    if: always() && needs.list.outputs.count != '0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.to }}", fetch-depth: 0 }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { pattern: leg-*, path: res }
+      - env:
+          LEGS: ${{ needs.list.outputs.legs }}
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, existsSync, writeFileSync } from "node:fs";
+            const legs = JSON.parse(process.env.LEGS).map((l) => {
+              const f = `res/leg-${l.sha}/result`;
+              return { ...l, failed: existsSync(f) && readFileSync(f, "utf8").trim() === "fail" };
+            });
+            writeFileSync("results.json", JSON.stringify(legs));
+          '
+          msg="$(node tools/operations/ci-ship.mjs culprit results.json)" && rc=0 || rc=$?
+          echo "$msg"
+          { echo "### culprit"; echo "$msg"; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"

@@ -128,7 +128,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `docs/MC.md` | Multiple choice (A–E) and hints. | MC answers, hints |
 | `archive/` | Old mockups, shots and prototype pages (`archive/design/`, `archive/try/`). Not shipped; kept for reference. | an old mockup or prototype |
 | `client/labs/views_demo/` | The views demo only (views-demo*). Old prototype pages moved to `archive/try/`. | views demo |
-| `.github/workflows/` | CI: tests.yml, stress.yml (dispatch: one spec x n under CPU load), ship.yml, prune.yml, spend.yml. | CI |
+| `.github/workflows/` | CI: tests.yml, stress.yml (dispatch: one spec x n under CPU load), ship.yml (+ SHIP_MODE: auto-ship.yml, culprit.yml), prune.yml, spend.yml. | CI |
 | `client/answer/explain_box/explain-box.css` | Styles of the explain box. | explain box look |
 | `client/answer/explain_box/explain-box.js` | Explain box: auto-growing textarea + edit-history snapshots (docs/design/EXPLAIN-BOX.md). | the explain box |
 | `client/labs/` | Design labs: standalone `*-lab.html` pages (login, mini, popover, repair, welcome). | a lab page |

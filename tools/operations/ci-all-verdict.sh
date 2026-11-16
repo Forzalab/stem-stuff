@@ -5,6 +5,7 @@
 # succeeded, and a job was skipped only for a documented reason:
 #   unit  skipped  -> only on a docs-only diff (plan.docs_only = true)
 #   block skipped  -> only on a docs-only diff, or a zero-.pw affected PR (plan.skip_block = true)
+#   both skipped   -> also when plan.stamped = true: a main push whose tree already has a FULL green stamp from a same-repo PR run (SHIP_MODE pr-green, P4)
 # The fast pipe (dispatch pipe=fast, or a PR push while its full run is in flight) never gives a full verdict: exit 1.
 # Inputs (env): INPUT_PIPE, PIPE, DECIDE, PLAN, UNIT, BLOCK = the job results and pipe values; DOCS_ONLY, SKIP_BLOCK = plan outputs.
 set -uo pipefail
@@ -26,13 +27,13 @@ esac
 
 case "${UNIT:-}" in
   success) ;;
-  skipped) [ "${DOCS_ONLY:-}" = true ] || fail "unit skipped without a docs-only diff" ;;
+  skipped) [ "${DOCS_ONLY:-}" = true ] || [ "${STAMPED:-}" = true ] || fail "unit skipped without a docs-only diff or a green stamp" ;;
   *) fail "unit: ${UNIT:-missing}" ;;
 esac
 
 case "${BLOCK:-}" in
   success) ;;
-  skipped) [ "${DOCS_ONLY:-}" = true ] || [ "${SKIP_BLOCK:-}" = true ] || fail "block skipped without a docs-only diff or a zero-.pw selection" ;;
+  skipped) [ "${DOCS_ONLY:-}" = true ] || [ "${SKIP_BLOCK:-}" = true ] || [ "${STAMPED:-}" = true ] || fail "block skipped without a docs-only diff or a zero-.pw selection" ;;
   *) fail "block: ${BLOCK:-missing}" ;;
 esac
 

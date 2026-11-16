@@ -2,14 +2,21 @@
 # Phone: GitHub app → Actions → ship → Run workflow, or the curl in docs/design/DEPLOY.md ("Power button"). Runs ship.sh unchanged:
 # origin/main + the brain banks (bank hatch) → Vercel → smoke. Banks live only in ship.sh's temp dirs on this throwaway runner:
 # no artifacts, no caches (banks never land on GitHub).
+#
+# SHIP_MODE (repo variable, strict|pr-green; default strict = everything below behaves as before; tools/operations/ci-ship.mjs):
+#   pr-green: the gate also accepts a verified green stamp for origin/main's tree (a tests.yml PR/push run that passed on that exact tree).
+#   mode=rollback (P5): put the last-known-good back. Vercel Hobby = `vercel rollback` reaches only the immediately previous production
+#   deployment, so: LKG == previous prod deploy -> `vercel rollback`; else redeploy the LKG sha (SHIP_SHA). It is a mode of THIS workflow, so it
+#   queues in the same `ship` group as every ship. Same VERCEL_TOKEN / BRAIN_TOKEN secrets, no new ones.
 name: ship
+run-name: ship ${{ inputs.mode || 'demo' }}   # auto-ship.yml looks for a queued "ship rollback" run so it never displaces one
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "demo = private preview URL, live = stem-stuff.vercel.app"
+        description: "demo = private preview URL, live = stem-stuff.vercel.app, rollback = put the last-known-good (tag lkg, or `target`) back on live"
         type: choice
-        options: [demo, live]
+        options: [demo, live, rollback]
         default: demo
         required: true
       pins:
@@ -22,14 +29,35 @@ on:
         type: string
         default: "main"
         required: false
+      target:
+        description: "rollback only: the commit to put back. Empty = the last-known-good (git tag lkg)"
+        type: string
+        default: ""
+        required: false
+      dry_run:
+        description: "rollback only: print the plan (target + vercel rollback or redeploy) and stop"
+        type: boolean
+        default: false
+        required: false
+      auto:
+        description: "set by auto-ship.yml (SHIP_MODE pr-green): a refusing gate ends quietly (the main run is not done yet) instead of failing"
+        type: boolean
+        default: false
+        required: false
 permissions:
   contents: read
   actions: read   # the ship gate reads tests.yml run conclusions (no secret of its own)
 concurrency: { group: ship, cancel-in-progress: false }
 jobs:
   ship:
+    if: inputs.mode != 'rollback'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+      needs_postdeploy: ${{ steps.gate.outputs.needs_postdeploy }}
+      sha: ${{ steps.sha.outputs.sha }}
+      smoke_red: ${{ steps.post.outputs.smoke_red }}
     defaults:
       run: { shell: bash }   # -eo pipefail (the default shell has no pipefail)
     steps:
@@ -85,11 +113,42 @@ jobs:
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?branch=main&event=schedule&per_page=100" \
               --jq '[.workflow_runs[] | {head_sha, conclusion, id, event, status, created_at, head_branch, run_attempt}]'
           } | jq -s 'add' > runs.json
+      - id: sha
+        run: echo "sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+      - name: auto-ship already live
+        id: live
+        if: inputs.auto
+        run: |
+          live="$(curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://stem-stuff.vercel.app/version.json?t=$(date +%s)" | jq -r '.sha // empty' || true)"
+          tip="$(git rev-parse origin/main)"
+          if [ -n "$live" ] && [[ "$tip" == "$live"* ]]; then echo "::notice::auto-ship: $live is already live"; echo "already=true" >> "$GITHUB_OUTPUT"; fi
+      # SHIP_MODE pr-green only: the green stamps of origin/main's tree (artifacts green-<tree>-full|affected from tests.yml PR/push runs), verified
+      # in ci-ship.mjs (workflow path, event, head repo == this repo, conclusion, no unjailed flaky). The newest completed full run on main, if
+      # failed, is marked test_failure when its failed jobs hold a `FAIL <spec>` line (a confirmed red; infra failures are retried, not red).
+      - name: fetch green stamps
+        if: inputs.ref == 'main' && vars.SHIP_MODE == 'pr-green' && steps.live.outputs.already != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/operations/ci-ship.mjs stamp-find "$(git rev-parse 'origin/main^{tree}')" stamps.json
+          RED="$(jq -r '[.[] | select(.status == "completed" and (.conclusion == "success" or .conclusion == "failure" or .conclusion == "timed_out"))] | sort_by(.created_at) | last | select(.conclusion != "success") | .id // empty' runs.json)"
+          if [ -n "$RED" ]; then
+            tf=false
+            for J in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RED/jobs?per_page=100" --jq '.jobs[] | select(.conclusion == "failure") | .id'); do
+              gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | grep -qE '(^|[: ])FAIL [^ ]+ +[0-9.]+ s' && tf=true || true
+            done
+            jq --argjson id "$RED" --argjson tf "$tf" 'map(if .id == $id then . + {test_failure: $tf} else . end)' runs.json > runs2.json && mv runs2.json runs.json
+            echo "ship gate: newest main run $RED is red (test failure: $tf)"
+          fi
       - name: ship gate (full green on origin/main)
-        if: inputs.ref == 'main'
+        id: gate
+        if: inputs.ref == 'main' && steps.live.outputs.already != 'true'
+        env:
+          SHIP_MODE: ${{ vars.SHIP_MODE }}
+          AUTO: ${{ inputs.auto }}
         run: |
           CANDIDATE="$(git rev-parse origin/main)"
-          echo "ship gate: candidate $CANDIDATE"
+          echo "ship gate: candidate $CANDIDATE (SHIP_MODE=${SHIP_MODE:-strict})"
           # Yellow rule: if the candidate's tests.yml run passed only on attempt >= 2, find the specs that failed on attempt 1
           # (run-all.sh prints "FAIL <spec> <n> s" in the job log) and hand them to the gate with --failed-specs; the gate
           # clears the yellow only if every one is in the unexpired tests/quarantine.json. No list found = gate refuses.
@@ -102,8 +161,19 @@ jobs:
             FAILED="$(echo $FAILED | tr ' ' '\n' | sort -u | paste -sd, -)"
             echo "ship gate: attempt-1 failed specs: ${FAILED:-unknown}"
           fi
-          node tools/operations/ci-gate.mjs --candidate "$CANDIDATE" --runs runs.json ${FAILED:+--failed-specs "$FAILED"}
+          MODEARGS=()
+          [ "${SHIP_MODE:-strict}" != pr-green ] || MODEARGS=(--mode pr-green --tree "$(git rev-parse 'origin/main^{tree}')" --stamps stamps.json --repo "$GITHUB_REPOSITORY")
+          rc=0
+          node tools/operations/ci-gate.mjs --candidate "$CANDIDATE" --runs runs.json ${FAILED:+--failed-specs "$FAILED"} "${MODEARGS[@]}" || rc=$?
+          if [ "$rc" -eq 1 ] && [ "$AUTO" = true ]; then
+            echo "::notice::auto-ship: gate refused for now, the main run ships it when it is green"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$rc"
       - name: tools/build_and_ship/ship.sh
+        id: sh
+        if: steps.gate.outputs.skip != 'true' && steps.live.outputs.already != 'true'
         env:
           MODE: ${{ inputs.mode }}
           SHIP_PINS: ${{ inputs.pins || vars.SHIP_PINS }}
@@ -112,4 +182,111 @@ jobs:
           BRAIN_TOKEN: ${{ secrets.BRAIN_TOKEN }}
         run: |
           case "$MODE" in demo|live) ;; *) echo "::error::mode must be demo or live"; exit 2 ;; esac
-          tools/build_and_ship/ship.sh "$MODE"
+          tools/build_and_ship/ship.sh "$MODE" 2>&1 | tee ship.log
+      # pr-green + live: the PUBLIC domain must now serve this commit (ship.sh smoked the deployment URL). A rollback (`vercel rollback`) turns
+      # auto-assign off, so a later deploy may not be live: promote it once. Still red = smoke_red -> the smoke-rollback job puts the LKG back.
+      - name: prod smoke
+        id: post
+        if: always() && inputs.mode == 'live' && vars.SHIP_MODE == 'pr-green' && steps.sh.conclusion != 'skipped'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SHA: ${{ steps.sha.outputs.sha }}
+          SH_OUTCOME: ${{ steps.sh.outcome }}
+        run: |
+          set +e
+          if [ "$SH_OUTCOME" != success ]; then
+            grep -q 'SMOKE RED' ship.log && echo "smoke_red=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node tools/operations/prod-smoke.mjs https://stem-stuff.vercel.app --expect-sha "$SHA" && exit 0
+          URL="$(grep -oE 'live (ready|building[^:]*): https://[a-z0-9.-]+\.vercel\.app' ship.log | grep -oE 'https://.*' | tail -1)"
+          if [ -n "$URL" ]; then
+            echo "prod does not serve $SHA yet: promoting $URL (auto-assign may be off after a rollback)"
+            npx -y vercel@latest promote "$URL" --scope forzalabs-projects --token "$VERCEL_TOKEN" --yes
+            node tools/operations/prod-smoke.mjs https://stem-stuff.vercel.app --expect-sha "$SHA" && exit 0
+          fi
+          echo "smoke_red=true" >> "$GITHUB_OUTPUT"
+  # P5: a red smoke on a live ship -> roll back to the last-known-good. Dispatches ship.yml mode=rollback (queues in the `ship` group behind this run).
+  smoke-rollback:
+    needs: ship
+    if: always() && needs.ship.outputs.smoke_red == 'true' && vars.SHIP_MODE == 'pr-green'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { actions: write, contents: read }
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ship.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=rollback   # target = the lkg tag, resolved by the rollback job
+  # P5: the last-known-good moves to a commit that was live AND has a full green. This is the ship half (tests.yml `lkg` is the other half).
+  lkg-after-ship:
+    needs: ship
+    if: needs.ship.result == 'success' && inputs.mode == 'live' && vars.SHIP_MODE == 'pr-green' && needs.ship.outputs.skip != 'true' && needs.ship.outputs.needs_postdeploy == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          SHA: ${{ needs.ship.outputs.sha }}
+        run: |
+          git tag -f lkg "$SHA"
+          git push -f origin refs/tags/lkg
+  # P5: mode=rollback. Same secrets as ship. Plan = ci-ship.mjs planRollback over the production deploys' meta.shipSha (stamped by ship.sh).
+  rollback:
+    if: inputs.mode == 'rollback'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run: { shell: bash }
+    steps:
+      - name: Check secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: '[ -n "$VERCEL_TOKEN" ] || { echo "::error::missing repo secret VERCEL_TOKEN"; exit 1; }'
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0, fetch-tags: true }
+      - name: plan
+        id: plan
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          [ -n "$TARGET" ] || TARGET="$(git rev-parse 'refs/tags/lkg^{commit}' 2>/dev/null || true)"
+          [ -n "$TARGET" ] || { echo "::error::no rollback target: pass target, or tag a last-known-good (git tag lkg <sha>)"; exit 1; }
+          echo "rollback target: $TARGET"
+          echo "lkg=$TARGET" >> "$GITHUB_OUTPUT"
+          curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/deployments?app=stem-stuff&target=production&state=READY&limit=10&slug=forzalabs-projects" \
+            | jq '[.deployments[] | {id: .uid, url: ("https://" + .url), sha: (.meta.shipSha // null)}]' > deploys.json
+          node tools/operations/ci-ship.mjs rollback-plan --lkg "$TARGET" --deploys deploys.json
+      - name: dry run
+        if: inputs.dry_run
+        run: |
+          echo "dry run: rollback target ${{ steps.plan.outputs.lkg }}, action ${{ steps.plan.outputs.action }}, previous-deploy ${{ steps.plan.outputs.deploy_url }}"
+      - name: vercel rollback (lkg is the previous production deploy)
+        if: "!inputs.dry_run && steps.plan.outputs.action == 'rollback'"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOY: ${{ steps.plan.outputs.deploy_url }}
+        run: npx -y vercel@latest rollback "$DEPLOY" --scope forzalabs-projects --token "$VERCEL_TOKEN"
+      - uses: actions/setup-python@v5
+        if: "!inputs.dry_run && steps.plan.outputs.action == 'redeploy'"
+        with: { python-version: "3.12" }
+      - if: "!inputs.dry_run && steps.plan.outputs.action == 'redeploy'"
+        run: pip install -r requirements.txt
+      - uses: actions/setup-node@v4
+        if: "!inputs.dry_run && steps.plan.outputs.action == 'redeploy'"
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - if: "!inputs.dry_run && steps.plan.outputs.action == 'redeploy'"
+        run: |
+          cd tests && npm ci && npx playwright-core install --only-shell chromium
+          command -v convert >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }
+      - name: redeploy the last-known-good sha
+        if: "!inputs.dry_run && steps.plan.outputs.action == 'redeploy'"
+        env:
+          SHIP_SHA: ${{ steps.plan.outputs.lkg }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          BRAIN_TOKEN: ${{ secrets.BRAIN_TOKEN }}
+        run: tools/build_and_ship/ship.sh live
+      - name: prod smoke
+        if: "!inputs.dry_run && steps.plan.outputs.action != 'none'"
+        run: node tools/operations/prod-smoke.mjs https://stem-stuff.vercel.app --expect-sha "${{ steps.plan.outputs.lkg }}"
