@@ -68,3 +68,6 @@ html.ui-v7 #problem.qc7 .qlead { color: #e8ebf5; font-weight: 600; }   /* the qu
 html.ui-v7 #problem.qc7 .qlead .katex, html.ui-v7 #problem.qc7 .qsetup .katex { font-size: 1em; }
 html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: 400 13px/18px var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
 html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
+/* KATEX-COVER (Nov 15): the G4.3 edge-fade "local covers" (app.css .md :is(.tbl,.katex-display)) paint solid --qbox squares that hid the echo numeral behind
+   a display equation / table. Only a box that scrolls needs the fade (wideBoxes() sets tabindex then); a box that fits draws no background. */
+html.ui-v7 #problem.qc7 .md :is(.tbl, .katex-display):not([tabindex]) { background: none; }
