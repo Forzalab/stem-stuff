@@ -217,7 +217,7 @@ weight() {
     progbar-bar) echo 30 ;;
     progbar-wave) echo 30 ;;
     depth) echo 25 ;;   # DEPTH 1 ui-v7 light-from-above: lit tops, well + gate, own server (estimate until CI timing)   # PROGBAR P5 v9d bar DOM/CSS behind html.ui-v7: flag off untouched, flag on geometry + states, own server (estimate until CI timing)
-    mc-bento) echo 25 ;;   # MC-BENTO ui-v7 mosaic layout + state by fill, no borders; flag off unchanged, own server (estimate until CI timing)
+    mc-bento) echo 35 ;;   # MC-BENTO ui-v7 mosaic layout + state by fill, no borders; flag off unchanged, own server (estimate until CI timing)
     toast-calc) echo 35 ;;   # BUG-TOAST-CALC: toast rect vs #q cards at 1280 + 390, own server (estimate until CI timing)
     cluck-btn) echo 45 ;;   # CLUCK-BTN (ui-v7) smoke, own server (estimate until CI timing)
     verdict-card) echo 40 ;;   # VERDICT-CARD (ui-v7) smoke, own server (estimate until CI timing)
@@ -294,7 +294,7 @@ tags() {
     progbar-bar) echo "@layout @real-time" ;;
     progbar-wave) echo "@layout @real-time" ;;
     depth) echo "@layout @real-time" ;;   # DEPTH 1 depth shadows + 3:1 field gate, own server   # PROGBAR P5 bar geometry at 360 / 390 / 1280, own server
-    mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 5 widths, own server
+    mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 768+ widths + PHONE-FILL justified rows at 390 / 360, own server
     toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
     calc-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     cram-cta-off) echo "@layout @real-time" ;;   # CRAM-CTA-OFF, own server
