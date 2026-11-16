@@ -287,7 +287,14 @@ jobs:
       LANES: 2   # the box has 2 CPUs (the lane count tests/run-all.sh --plan takes; one SPECS lane runs its names in order)
     steps:
       - uses: actions/checkout@v4
-      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
+      # PEP 668: the box's python 3.12 is externally managed, so `pip --user` is refused. Use a venv in the workspace
+      # and put it first on PATH for later steps; fall back to a user install past the PEP 668 guard if venv is missing.
+      - run: |
+          if python3 -m venv .venv; then
+            .venv/bin/pip install -r requirements.txt && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          else
+            pip install -r requirements.txt --user --break-system-packages
+          fi
       - run: cd tests && npm ci
       # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
       # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
