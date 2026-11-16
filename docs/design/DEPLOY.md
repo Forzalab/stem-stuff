@@ -78,3 +78,14 @@ Decided Oct 3, 2026 (PR #34). How to deploy: README, "Deploy on Vercel".
 - sympy cold start: the first check after idle is ~1–2 s slower.
 - Tries reset by hand: edit `stem:tries` in the Upstash console.
 - Last write wins on the tries blob (fine for one user).
+
+
+## SHIP_MODE: ship on PR-green (repo variable, default `strict`)
+
+`strict` (or unset) = everything above, unchanged. `pr-green` turns on, together (P4 never ships without P5): green stamps keyed by git tree hash
+(`all` uploads `green-<tree>-full|affected` from a PR/push run; the ship gate accepts a stamp whose run is tests.yml, event PR/push, same repo, success,
+no unjailed flake), auto-ship (`auto-ship.yml`), the post-deploy verdict + rollback (`tests.yml` jobs `postdeploy`, `lkg`; `ship.yml` mode=rollback,
+`prod-smoke.mjs`), the culprit matrix (`culprit.yml`), and the flake ticket (an unjailed flake on a PR passes yellow; issue "flake tickets" gets a
+`- [ ] <spec> — <run url> — <date>` line). Logic: `tools/operations/ci-ship.mjs` (units: `tests/ci-ship.test.mjs`).
+Rollback on Vercel Hobby: LKG (git tag `lkg`) == the previous production deploy -> `vercel rollback`; otherwise redeploy the LKG sha
+(`SHIP_SHA`). Dry run: dispatch ship with mode=rollback, dry_run=true. Bootstrap: `git tag lkg <sha of a commit that is live and green>` once.

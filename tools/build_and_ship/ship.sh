@@ -71,7 +71,13 @@ done
 SHIP_REF="${SHIP_REF:-main}"
 case "$SHIP_REF" in *[!A-Za-z0-9._/-]*) echo "ship: bad SHIP_REF=$SHIP_REF (letters, digits, . _ / - only)" >&2; exit 2 ;; esac
 if [ "$MODE" = live ] && [ "$SHIP_REF" != main ]; then echo "ship: live deploys origin/main only (SHIP_REF=$SHIP_REF)" >&2; exit 1; fi
-DEPLOY_REF="origin/$SHIP_REF"
+# SHIP_SHA=<sha> (live only; ship.yml mode=rollback, P5): redeploy that exact commit instead of origin/main (the last-known-good).
+SHIP_SHA="${SHIP_SHA:-}"
+if [ -n "$SHIP_SHA" ]; then
+  [[ "$SHIP_SHA" =~ ^[0-9a-f]{7,40}$ ]] || { echo "ship: bad SHIP_SHA=$SHIP_SHA" >&2; exit 2; }
+  [ "$MODE" = live ] || { echo "ship: SHIP_SHA is for live (rollback) only" >&2; exit 1; }
+fi
+DEPLOY_REF="${SHIP_SHA:-origin/$SHIP_REF}"
 # --- remote: Termux (or --remote) queues the GitHub run instead of deploying here. SHIP_PRESS = test hook (a stub press.sh) ---
 if [ -z "$WHERE" ]; then
   case "${PREFIX:-}" in *com.termux*) WHERE=remote ;; esac
@@ -227,7 +233,7 @@ if [ -d "$ROOT/.vercel" ]; then cp -r "$ROOT/.vercel" "$W/"; else (cd "$W" && np
 
 # The CLI prints the URL on stdout when the build is done. Behind a proxy its log stream can drop ("fetch failed") after the
 # deployment exists; the build keeps going on Vercel, so take the URL from the log instead.
-if URL="$(cd "$W" && NODE_USE_ENV_PROXY=1 npx -y vercel@latest deploy ${PROD[@]+"${PROD[@]}"} "${ARGS[@]}" 2>"$LOG")" && [[ "$URL" == https://* ]]; then
+if URL="$(cd "$W" && NODE_USE_ENV_PROXY=1 npx -y vercel@latest deploy ${PROD[@]+"${PROD[@]}"} -m "shipSha=$(git -C "$W" rev-parse HEAD)" "${ARGS[@]}" 2>"$LOG")" && [[ "$URL" == https://* ]]; then
   echo "$MODE ready: $URL"
 else
   URL="$(grep -oE 'https://[a-z0-9.-]+\.vercel\.app' "$LOG" | tail -1 || true)"

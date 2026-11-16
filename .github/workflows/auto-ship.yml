@@ -1,0 +1,31 @@
+# SHIP_MODE pr-green only (repo variable; strict/unset = this workflow does nothing): ship to live when main moves.
+# Two triggers, both dispatch ship.yml mode=live auto=true, and the ship gate (tools/operations/ci-gate.mjs) is the only judge:
+#   push to main            -> ships at once if the tree has a verified green stamp (P4); otherwise the gate refuses quietly (auto=true)
+#   tests finished on main  -> ships the commit whose full run just went green (the strict path, e.g. a moved base had no stamp)
+# Never displaces a queued rollback: ship's concurrency group keeps ONE pending run, so a pending `ship rollback` run is left alone
+# (run-name "ship rollback"); the gate refuses PR-green ships while main is red anyway.
+name: auto-ship
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+permissions:
+  actions: write   # gh workflow run ship.yml (a GITHUB_TOKEN dispatch is allowed); nothing else
+  contents: read
+jobs:
+  dispatch:
+    if: >-
+      vars.SHIP_MODE == 'pr-green' &&
+      (github.event_name == 'push' ||
+       (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pending="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ship.yml --json status,displayTitle --jq '[.[] | select((.status == "queued" or .status == "pending" or .status == "in_progress" or .status == "waiting") and .displayTitle == "ship rollback")] | length')"
+          if [ "$pending" -gt 0 ]; then echo "::notice::a rollback is queued or running: not queueing a ship behind it"; exit 0; fi
+          gh workflow run ship.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=live -f auto=true

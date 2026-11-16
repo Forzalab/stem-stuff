@@ -73,6 +73,13 @@ async function send(page, v) {
   return (await r).json();
 }
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: join(SHOTS, name + ".png") }); };
+/* the floating label fades in / out over 150 ms (app.css .ff > .fl): its opacity IS the state, so wait on it, never a sleep */
+const labelUp = (page, want) => page.waitForFunction(want => {
+  const el = document.querySelector("#ff .fl");
+  return !!el && (parseFloat(getComputedStyle(el).opacity) > 0.5) === want;
+}, want, { timeout: 5000 });
+/* the grey hint line steps aside while the label floats (app.css #q:has(.ff input...) > .how), no transition: wait on its display */
+const hintBack = page => page.waitForFunction(() => getComputedStyle(document.querySelector("#q .how")).display !== "none", null, { timeout: 5000 });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
@@ -128,7 +135,7 @@ try {
       assert.ok(await page.$("#preview .xoff"), "no underline on the off span");
       assert.match(await page.textContent("#preview .xoff"), /7/);
       assert.ok(!txt.includes("144") && !txt.includes("452") && !txt.includes("3.0"), "a key number leaked");
-      await page.waitForTimeout(300);
+      await page.waitForFunction(() => { const x = document.querySelector("#cluck .wtext"); return !!x && !x.classList.contains("wrun") && !x.querySelector(".wcaret"); }, null, { timeout: 5000 });   // the reply finished typing (cluck.js wishFrame: .wrun off, no caret)
       await shot(page, `expr-${w}-cluck`);
     });
     await step(`${w}: no page errors, no sideways scroll`, async () => {
@@ -185,13 +192,13 @@ try {
     assert.ok(rest.fl, "a floating label: " + JSON.stringify(rest));
     assert.equal(rest.fl, rest.ph, "the border label is the placeholder text (Tony, Nov 4)");
     assert.equal(rest.shown, false, "the label shows at rest: " + JSON.stringify(rest));
-    await page.focus("#ans"); await page.waitForTimeout(250);
+    await page.focus("#ans"); await labelUp(page, true);
     const foc = await read();
     assert.ok(foc.shown && foc.onBorder, "focus: the label is not on the border " + JSON.stringify(foc));
     assert.match(foc.phColor, /rgba\(.*, 0\)|transparent/, "focus: the placeholder still shows inside " + JSON.stringify(foc));
-    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    await page.evaluate(() => document.activeElement.blur()); await labelUp(page, false);
     assert.equal((await read()).shown, false, "blur, empty: the label stays up");
-    await page.fill("#ans", "12"); await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    await page.fill("#ans", "12"); await page.evaluate(() => document.activeElement.blur()); await labelUp(page, true);
     const kept = await read();
     assert.ok(kept.shown && kept.onBorder, "blur with text: the label left the border " + JSON.stringify(kept));
     await ctx.close();
@@ -209,15 +216,15 @@ try {
     assert.equal((await read()).howShown, true, "idle: the hint shows");
     const sh = n => (SHOTS && code === "PHYS_XH1") ? page.screenshot({ path: join(SHOTS, `fl-${n}-390.png`) }) : null;
     await sh("idle");
-    await page.focus("#ans"); await page.waitForTimeout(250); await sh("focus");
+    await page.focus("#ans"); await labelUp(page, true); await sh("focus");
     const f = await read();
     assert.equal(f.fl, f.ph, "label text is the placeholder: " + JSON.stringify(f));
     assert.equal(f.howShown, false, "focus: the hint is hidden");
     assert.ok(f.right <= f.goLeft, "label right edge clear of Check: " + JSON.stringify(f));
     assert.equal(f.ell, "ellipsis"); assert.ok(f.h < 24, "one line: " + JSON.stringify(f));
-    await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
-    await page.fill("#ans", "12"); await page.waitForTimeout(250); await sh("typed"); await page.fill("#ans", "");
-    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    await page.fill("#ans", "12"); await labelUp(page, true); await sh("typed"); await page.fill("#ans", "");
+    await page.fill("#ans", "12"); await labelUp(page, true); await sh("typed"); await page.fill("#ans", "");
+    await page.evaluate(() => document.activeElement.blur()); await hintBack(page);
     assert.equal((await read()).howShown, true, "blur, empty: the hint is back");
     await ctx.close();
   });
@@ -233,23 +240,23 @@ try {
     const shot = n => SHOTS ? page.screenshot({ path: join(SHOTS, `fl-${n}-390.png`) }) : null;
     const hidden = o => o.fl === 0 && /rgba\(.*, 0\)|transparent/.test(o.ph);
     await page.fill("#ans", "1"); await page.click("#ansGo");
-    await page.waitForFunction(() => document.querySelector("#ff .vk")); await page.waitForTimeout(300);
+    await page.waitForFunction(() => document.querySelector("#ff .vk")); await labelUp(page, false);
     let o = await st(); assert.ok(hidden(o) && o.arrow && o.vkShown && o.glyph === "hidden" && o.marks === 1, "wrong: label+placeholder gone; the 10 s wait keeps the Check up as the sweep, the x shown, the arrow glyph hidden (Tony Nov 7, A) " + JSON.stringify(o)); await shot("wrong");
-    await page.fill("#ans", "12"); await page.waitForTimeout(300);
+    await page.fill("#ans", "12"); await labelUp(page, true);
     o = await st(); assert.ok(o.fl > 0.5 && !o.bad && !o.cue && o.arrow && o.marks === 1 && o.vkShown && o.glyph === "hidden", "edit during the wait: label back, neutral, the sweep, x shown, arrow glyph hidden " + JSON.stringify(o)); await shot("edit");
-    await page.fill("#ans", ""); await page.waitForTimeout(300);
+    await page.fill("#ans", ""); await page.waitForFunction(() => { const vk = document.querySelector("#ff .vk"); return !!vk && getComputedStyle(vk).display !== "none"; }, null, { timeout: 5000 });
     o = await st(); assert.ok(o.vkShown, "cleared: the x shows again " + JSON.stringify(o));
     await skipRetryWait(page);
     await page.fill("#ans", "2"); await page.click("#ansGo");
-    await page.waitForFunction(() => document.querySelectorAll("#ff .vk").length >= 1); await page.waitForTimeout(300);
+    await page.waitForFunction(() => document.querySelectorAll("#ff .vk").length >= 1); await page.waitForFunction(() => { const vb = document.querySelector("#ff"); return !!vb && vb.classList.contains("lock") && vb.querySelectorAll(".vk").length === 1; }, null, { timeout: 5000 });   // out of tries: the lock + ONE mark
     o = await st(); assert.equal(o.marks, 1, "check again: one mark " + JSON.stringify(o));
     await ctx.close();
     const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", hasTouch: true, isMobile: true, reducedMotion: "reduce" });
     await c2.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
     page = await c2.newPage();
     await page.goto(`http://localhost:${OFFP}/#PHYS_XH1`); await opened(page, "PHYS_XH1");
-    await page.fill("#ans", "9"); await page.waitForTimeout(100);
-    await page.click("#ansGo"); await page.waitForSelector("#ff.ok", { timeout: 8000 }); await page.waitForTimeout(400);
+    await page.fill("#ans", "9"); await page.waitForFunction(() => !document.querySelector("#ansGo").disabled, null, { timeout: 5000 });
+    await page.click("#ansGo"); await page.waitForSelector("#ff.ok", { timeout: 8000 }); await labelUp(page, false);
     o = await st(); assert.ok(hidden(o), "right: label+placeholder gone " + JSON.stringify(o)); await shot("right");
     await c2.close();
   });

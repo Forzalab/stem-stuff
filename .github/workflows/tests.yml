@@ -29,12 +29,17 @@ on:
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-  queue: max
+  # queue: max cannot be combined with cancel-in-progress: true (every PR run died at startup, 0 jobs, since #589).
+  # PRs: newest wins (default queue). main/schedule/dispatch: no cancel, queue every run in order.
+  queue: ${{ github.event_name == 'pull_request' && 'single' || 'max' }}
 env:
   BLOCKS: 4   # runners for the .pw specs (GitHub Free: 20 jobs at once)
   LANES: 3    # run-all.sh processes per runner (Tony's pick, CI plan PR 10): bench B 4x3 vs 5x2 = wall -23 s, runner-min -26%. The 3-lane flow.pw flakes were view transitions eating raw input (todo 55, #302)
 jobs:
   decide:   # M5: fast pipe only when a full run for this same PR is already queued/in_progress; never fast for push/schedule/dispatch
+    # TODO 20: only a pull_request has anything to decide, so this job is skipped on push/schedule/workflow_dispatch (~15 s off each).
+    # Its result is then `skipped`: every job below that needs it accepts skipped, and `all` counts it as ok (ci-all-verdict.sh).
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: { contents: read, actions: read }
@@ -69,17 +74,25 @@ jobs:
           echo "pipe=$(cat pipe.txt)" >> "$GITHUB_OUTPUT"
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
     needs: decide
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
+    # TODO 20: decide is skipped on push/schedule/dispatch, so its result may be `skipped`; !cancelled() (a status
+    # function) also stops GitHub adding the implicit success(), which would skip this job when decide was skipped.
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
     runs-on: ubuntu-24.04
+    permissions: { contents: read, actions: read }   # stamp-find reads artifacts + runs (SHIP_MODE pr-green)
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
       skip_block: ${{ steps.p.outputs.skip_block }}
       docs_only: ${{ steps.p.outputs.docs_only }}
+      kind: ${{ steps.p.outputs.kind }}
+      stamped: ${{ steps.p.outputs.stamped }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # the PR base sha must be in history for the selection diff
       - id: p
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHIP_MODE: ${{ vars.SHIP_MODE }}
         run: |
           set -euo pipefail
           total="$(tests/run-all.sh --list | wc -l)"
@@ -93,18 +106,34 @@ jobs:
           read -r kind reason <<<"$selection"
           echo "selection: $kind ($reason)"
           specs=""; skip=false
+          if [ "$kind" = bank ]; then skip=true; fi   # CI-LOOSEN 17: bank JSON only -> unit (bankcheck) runs, block skipped
           if [ "$kind" = "affected" ]; then   # consume run-all.sh --affected (06); split logic units from .pw names
             mapfile -t units < <(tests/run-all.sh --affected "${files[@]}" | grep -v '^unmapped:' || true)
             specs="$(printf '%s\n' "${units[@]}" | grep -vxE 'unittest|npm' | paste -sd' ' - || true)"
             [ -n "$specs" ] || skip=true   # zero .pw: an empty SPECS would plan ALL, so skip block instead (§5)
           fi
           matrix="$(SPECS="$specs" tests/run-all.sh --plan "$BLOCKS" "$LANES")"
+          # SHIP_MODE pr-green (P4): a push to main whose tree already has a FULL green stamp from a same-repo PR run needs no duplicate full run
+          stamped=false
+          if [ "${{ github.event_name }}" = push ] && [ "${SHIP_MODE:-strict}" = pr-green ]; then
+            node tools/operations/ci-ship.mjs stamp-find "$(git rev-parse 'HEAD^{tree}')" stamps.json
+            stamped="$(TREE="$(git rev-parse 'HEAD^{tree}')" node --input-type=module -e '
+              import { decideStamp } from "./tools/operations/ci-ship.mjs";
+              import { readFileSync } from "node:fs";
+              const jail = (() => { try { return JSON.parse(readFileSync("tests/quarantine.json", "utf8")); } catch { return []; } })();
+              const d = decideStamp({ tree: process.env.TREE, entries: JSON.parse(readFileSync("stamps.json", "utf8")), repo: process.env.GITHUB_REPOSITORY, jail });
+              console.error(`stamp: ${d.reason}`);
+              process.stdout.write(d.ok && d.kind === "full" && d.source === "pull_request" ? "true" : "false");
+            ')"
+          fi
+          echo "stamped=$stamped" >> "$GITHUB_OUTPUT"
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
           echo "skip_block=$skip" >> "$GITHUB_OUTPUT"
           echo "docs_only=$([ "$kind" = docs ] && echo true || echo false)" >> "$GITHUB_OUTPUT"   # docs-only PR: unit + block skip
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
     needs: [decide, plan]
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true'   # docs-only PR: skipped
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && needs.plan.result == 'success' && !cancelled() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # docs-only PR: skipped; stamped push (P4): the PR run already ran this tree
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -112,7 +141,7 @@ jobs:
       - if: inputs.mutant   # bench only: seed the fault this run must catch
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
@@ -123,7 +152,7 @@ jobs:
       - run: node tools/operations/sleep-ratchet.mjs   # AC2.5: no spec may gain a waitForTimeout( above tests/sleep-baseline.json
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: [decide, plan]
-    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true'   # zero-.pw affected PR: no block work (unit still runs)
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && needs.plan.result == 'success' && !cancelled() && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # zero-.pw affected PR: no block work (unit still runs); stamped push (P4): the PR run already ran this tree
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
     # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
     runs-on: ubuntu-24.04
@@ -137,7 +166,7 @@ jobs:
       - if: inputs.mutant   # bench only: seed the fault this run must catch
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
@@ -152,6 +181,7 @@ jobs:
         env:
           LANE_SPECS: ${{ matrix.lanes }}
           DIFF_DIR: ${{ github.workspace }}/jank-diff   # specs that diff screenshots (desk-layout) keep shots + *-DIFF.png here
+          FLAKY_PASS: ${{ github.event_name == 'pull_request' && vars.SHIP_MODE == 'pr-green' && '1' || '' }}   # Tony Nov 15: unjailed flake on a PR = yellow + ticket (`all`), never a block
         run: |
           IFS='|' read -ra lane <<<"$LANE_SPECS"
           : >flaky.txt   # W4: always exists in a block that ran; each lane appends the specs that failed once and passed on retry
@@ -182,12 +212,12 @@ jobs:
           retention-days: 7
   fast:   # ticket 07 timing: dispatch with pipe=fast, or a PR push while its full run is in flight (M5), runs only run-all.sh --fast
     needs: decide
-    if: inputs.pipe == 'fast' || needs.decide.outputs.pipe == 'fast'
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && (inputs.pipe == 'fast' || needs.decide.outputs.pipe == 'fast')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
       - uses: actions/setup-node@v4
@@ -203,7 +233,7 @@ jobs:
   webkit:   # WEBKIT-CI (G6.1): ~60% of users are on iPhone, CI is Chromium. PRs that touch client CSS/JS also run a few iPhone-risk specs on WebKit.
     # Not in `all` yet (report-only until it has a green history); PR events only. No grid probe exists in tests/ yet: add it to WK_SPECS when it lands.
     needs: decide
-    if: github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
+    if: (needs.decide.result == 'success' || needs.decide.result == 'skipped') && !cancelled() && github.event_name == 'pull_request' && needs.decide.outputs.pipe != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -220,7 +250,7 @@ jobs:
           echo "client files changed: $n"
           echo "run=$([ "$n" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - if: steps.scope.outputs.run == 'true'
         run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
@@ -242,13 +272,79 @@ jobs:
         shell: bash
         env: { PW_BROWSER: webkit, ENGINES: webkit, PW_FORCE_FALLBACK: "1" }
         run: SPECS="$WK_FALLBACK_SPECS" tests/run-all.sh 2>&1 | tee wk-fallback.log
+  # CI-LOOSEN 21 (AC9.1-9.5): the tandem box (titodori-1) hunts flakes in the specs the hosted blocks keep losing, while the
+  # hosted blocks run. Never gating: continue-on-error, no entry in `all.needs`, no green stamp, and no `flaky-block-*`
+  # artifact (ci-flaky.mjs reads only flaky-block-*), so the box being offline or the job being cancelled cannot change a
+  # ship verdict. Result = a per-spec `pass k/5` line in the flake-hunt.txt artifact, nothing else.
+  flake-hunt:
+    runs-on: [self-hosted, titodori]   # titodori-1: user pwuser (uid 1001), node 22 + python 3.12, no docker.sock
+    continue-on-error: true
+    timeout-minutes: 20
+    # AC9.4: the fork guard is written in this `if` itself (not only implied by the event list): on a pull_request the head
+    # repo must be this repo, so fork code never reaches a self-hosted runner that keeps its own credentials.
+    if: ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    env:
+      LANES: 2   # the box has 2 CPUs (the lane count tests/run-all.sh --plan takes; one SPECS lane runs its names in order)
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
+      - run: cd tests && npm ci
+      # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
+      # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
+      - run: |
+          cd tests
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --only-shell chromium
+      - name: hunt
+        shell: bash
+        run: |
+          set -uo pipefail
+          # the specs in the flaky jail (tests/quarantine.json); an empty jail = the 5 worst from the brain sleep-sweep list
+          specs="$(node -e 'const j = require("./tests/quarantine.json"); process.stdout.write((Array.isArray(j) ? j : []).map((e) => e.spec).filter(Boolean).join(" "))')"
+          [ -n "$specs" ] || specs="easy flow expr mc-bento bar"
+          echo "hunting: $specs"
+          : > flake-hunt.txt
+          bad=0
+          for spec in $specs; do
+            pass=0; failed=()
+            for k in 1 2 3 4 5; do
+              # FLAKY_FILE per run: never the block job's flaky.txt (a spec that flakes here is counted as a miss, which is the point)
+              if SPECS="$spec" FLAKY_FILE="hunt-$spec-$k.flaky" tests/run-all.sh > "hunt-$spec-$k.log" 2>&1; then
+                pass=$((pass + 1))
+              else
+                failed+=("$k")
+              fi
+            done
+            echo "$spec pass $pass/5" | tee -a flake-hunt.txt
+            [ "$pass" -eq 5 ] && continue
+            bad=1
+            for k in "${failed[@]}"; do
+              echo "  $spec run $k: $(grep -E '^(FAIL|FLAKY|NOT COVERED)' "hunt-$spec-$k.log" | head -5 | paste -sd'; ' -)" >> flake-hunt.txt
+            done
+          done
+          echo; cat flake-hunt.txt
+          exit "$bad"
+      - name: upload flake-hunt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-hunt   # never named flaky-block-*: the `all` job downloads only that pattern (AC9.5)
+          path: flake-hunt.txt
+          if-no-files-found: ignore
+          retention-days: 7
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   # AC0.2: never skipped (`if: always()`, every pipe). Fast pipe = red "fast pipe only"; skips only for docs-only / zero-.pw (tools/operations/ci-all-verdict.sh)
   all:
     needs: [decide, plan, unit, block]
     if: always()
     runs-on: ubuntu-24.04
+    outputs:
+      tickets: ${{ steps.fl.outputs.tickets }}
     env:
+      EVENT: ${{ github.event_name }}
+      SHIP_MODE: ${{ vars.SHIP_MODE }}
+      KIND: ${{ needs.plan.outputs.kind }}
+      STAMPED: ${{ needs.plan.outputs.stamped }}
       INPUT_PIPE: ${{ inputs.pipe }}
       PIPE: ${{ needs.decide.outputs.pipe }}
       DECIDE: ${{ needs.decide.result }}
@@ -264,9 +360,106 @@ jobs:
       - if: needs.block.result == 'success'
         uses: actions/download-artifact@v4
         with: { pattern: flaky-block-*, path: flaky }
-      - if: needs.block.result == 'success'
+      - id: fl
+        if: needs.block.result == 'success'
         env: { MATRIX: "${{ needs.plan.outputs.matrix }}" }
-        run: node tools/operations/ci-flaky.mjs all tests/quarantine.json flaky "$(jq '.include | length' <<<"$MATRIX")"
+        run: |
+          PR=; [ "$EVENT" = pull_request ] && [ "${SHIP_MODE:-strict}" = pr-green ] && PR=--pr   # unjailed flake: yellow + ticket (flake-ticket job)
+          node tools/operations/ci-flaky.mjs all tests/quarantine.json flaky "$(jq '.include | length' <<<"$MATRIX")" $PR
+      # P4: the green stamp, keyed by this checkout's git tree hash. Only a PR/push run, only pr-green, only when everything passed (an unjailed
+      # flaky spec = no stamp, AC3.11), never for a docs-only run, and not when the push run was itself skipped by a stamp.
+      - id: st
+        if: success() && vars.SHIP_MODE == 'pr-green' && (github.event_name == 'pull_request' || github.event_name == 'push') && needs.plan.outputs.stamped != 'true' && (needs.plan.outputs.kind == 'full' || needs.plan.outputs.kind == 'affected')
+        run: node tools/operations/ci-ship.mjs stamp-write --kind "${{ needs.plan.outputs.kind }}" --flaky-dir flaky
+      - if: steps.st.outputs.stamp == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.st.outputs.name }}
+          path: stamp.json
+          overwrite: true
+          retention-days: 30
+  # ---- SHIP_MODE pr-green only (everything below is skipped while the repo variable is strict/unset) ----
+  # Tony Nov 15: an unjailed FLAKY spec on a PR = merge (yellow) + a ticket. One issue "flake tickets", a `- [ ]` line per flake, deduped.
+  # issues: write lives in this job only.
+  flake-ticket:
+    needs: [all, postdeploy]
+    if: always() && vars.SHIP_MODE == 'pr-green' && (needs.all.outputs.tickets != '' || needs.postdeploy.outputs.tickets != '') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { issues: write, contents: read }
+    concurrency: { group: flake-tickets, cancel-in-progress: false }   # one writer at a time (the issue body is read-modify-write)
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TICKETS: ${{ needs.all.outputs.tickets }},${{ needs.postdeploy.outputs.tickets }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node tools/operations/ci-flake-ticket.mjs "$(tr ',' '\n' <<<"$TICKETS" | grep . | sort -u | paste -sd, -)" "$RUN_URL"
+  # P5: the post-deploy verdict. The main push run IS the post-deploy full run. Confirmed red (a spec failed twice) -> dispatch ship.yml
+  # mode=rollback to the last-known-good and, when the red covers more than one merge, the culprit matrix. An unjailed flaky spec only files a ticket
+  # (the red run keeps the gate strict). A jailed flake or an infra failure (retry.yml reruns it) does nothing.
+  postdeploy:
+    needs: [plan, unit, block, all]
+    if: always() && github.event_name == 'push' && vars.SHIP_MODE == 'pr-green' && needs.all.result == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: { contents: read, actions: write }
+    outputs:
+      tickets: ${{ steps.d.outputs.tickets }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, fetch-tags: true }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { pattern: flaky-block-*, path: flaky }
+      - id: d
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          : >failed.log
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" --jq '.jobs[] | select((.conclusion == "failure" or .conclusion == "timed_out") and .name != "all" and .name != "postdeploy") | .id'); do
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" >>failed.log || true
+          done
+          read -r FAILED INFRA < <(node --input-type=module -e '
+            import { parseFailedSpecs } from "./tools/operations/ci-gate.mjs";
+            import { shouldRetry } from "./tools/operations/ci-retry.mjs";
+            import { readFileSync } from "node:fs";
+            const log = readFileSync("failed.log", "utf8");
+            console.log((parseFailedSpecs(log).join(",") || "-") + " " + (shouldRetry({ conclusion: "failure", run_attempt: 1 }, log) ? "infra" : "test"));
+          ')
+          [ "$FAILED" != - ] || FAILED=
+          FLAKY="$(cat flaky/*/flaky.txt 2>/dev/null | sort -u | paste -sd, - || true)"
+          LKG="$(git rev-parse 'refs/tags/lkg^{commit}' 2>/dev/null || true)"
+          echo "postdeploy: failed=[$FAILED] flaky=[$FLAKY] lkg=${LKG:-none} ($INFRA)"
+          node tools/operations/ci-ship.mjs postdeploy --failed "$FAILED" --flaky "$FLAKY" --lkg "$LKG" $([ "$INFRA" = infra ] && echo --infra)
+          ROLLBACK="$(grep '^rollback=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
+          HARD="$(grep '^hard=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
+          if [ -n "$ROLLBACK" ]; then
+            gh workflow run ship.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=rollback -f target="$ROLLBACK"
+            K="$(git rev-list --first-parent --count "$ROLLBACK..$GITHUB_SHA")"
+            echo "confirmed red covers $K merge(s) since $ROLLBACK"
+            if [ "$K" -gt 1 ]; then gh workflow run culprit.yml --repo "$GITHUB_REPOSITORY" --ref main -f from="$ROLLBACK" -f to="$GITHUB_SHA" -f specs="$HARD"; fi
+          elif [ -n "$HARD" ]; then
+            echo "::error::$HARD failed twice and there is no last-known-good tag (git tag lkg <sha>): no rollback was dispatched"
+          fi
+  # P5: the last-known-good = a commit that was live AND has a full green. This is the tests half (ship.yml `lkg-after-ship` is the other):
+  # the full run is green, and production already serves this commit -> move the lkg tag (never backwards).
+  lkg:
+    needs: [all]
+    if: always() && github.event_name == 'push' && vars.SHIP_MODE == 'pr-green' && needs.all.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, fetch-tags: true }
+      - run: |
+          live="$(curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://stem-stuff.vercel.app/version.json?t=$(date +%s)" | jq -r '.sha // empty' || true)"
+          if [ -z "$live" ] || [[ "$GITHUB_SHA" != "$live"* ]]; then echo "lkg: prod serves ${live:-nothing}, not $GITHUB_SHA: the ship run moves the tag"; exit 0; fi
+          if git rev-parse -q --verify refs/tags/lkg >/dev/null && git merge-base --is-ancestor "$GITHUB_SHA" refs/tags/lkg; then echo "lkg: tag is already at or past $GITHUB_SHA"; exit 0; fi
+          git tag -f lkg "$GITHUB_SHA"
+          git push -f origin refs/tags/lkg
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]

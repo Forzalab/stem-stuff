@@ -450,7 +450,8 @@ run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older script
   s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"
   if [ "$flaky" -eq 1 ]; then
     echo "FLAKY $name"; echo "$name" >>"${FLAKY_FILE:-flaky.txt}"
-    node tools/operations/ci-flaky.mjs jailed "$name" || ok=0
+    # FLAKY_PASS=1 (tests.yml: pull_request + SHIP_MODE pr-green only): an unjailed flake passes yellow; the `all` job files the ticket
+    if [ -z "${FLAKY_PASS:-}" ]; then node tools/operations/ci-flaky.mjs jailed "$name" || ok=0; fi
   fi
   if [ "$ok" -eq 1 ]; then echo "ok   $name $s s"
   else
