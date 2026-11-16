@@ -89,9 +89,16 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
 @media (max-width: 480px) {
   html.ui-v7 #problem.qc7, html.ui-v7 #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
     margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
-  /* Q-MORE (qcard.js qmore): more below -> a sticky foot strip: card colour fading up + a thin chevron (2 px stroke, the corner-letter grey, like the dock's) */
-  html.ui-v7 #problem.qc7.qmore::after { content: ""; position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: block; height: 48px; margin: -48px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); pointer-events: none;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'%3E%3Cpath d='M2 2l8 8 8-8' fill='none' stroke='%23a7b5d2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center bottom 10px / 20px 12px no-repeat, linear-gradient(transparent, #0d142a 72%); }
+  /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
+  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 72px;
+    margin: -72px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 calc(var(--qpad, 24px) + 10px); border: 0; cursor: pointer; color: #a7b5d2;
+    background: linear-gradient(transparent, #0d142a 58%); -webkit-tap-highlight-color: transparent; }
+  html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
+  html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
+  html.ui-v7 #problem.qc7 > .qfold:focus-visible { outline: none; } html.ui-v7 #problem.qc7 > .qfold:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
+  html.ui-v7 #problem.qc7.qopen { max-height: none; overflow-y: visible; }
+  html.ui-v7 #problem.qc7.qopen > .qfold { position: static; height: 44px; margin: 8px auto calc(-1 * var(--qpad, 24px) + 4px); padding: 0; place-items: center; background: none; width: 100%; }
+  html.ui-v7 #problem.qc7.qopen > .qfold svg { transform: rotate(180deg); }
   html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */
   html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.5rem; line-height: 28px; }
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
@@ -106,3 +113,8 @@ html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child 
    so a phone card (Q-HALF scroller) scrolled into empty space and every card measured as overflowing. Clip at the ghost box (= the card box): same picture, no phantom scroll */
 html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }
 html.ui-v7 #problem.qc7 .blocks > :last-child, html.ui-v7 #problem.qc7 .blocks > :last-child > :last-child { margin-bottom: 0; }   /* Q-FOOT: the card's own padding is the bottom air (top = bottom); no extra block margin */
+/* EXPLAIN-TAG (Tony Nov 16): the Cluck column gets the same label as "Question", level with it; off where brainrot's own "Explain" row (.rot-hd) already heads the column, and off outside v7 side-by-side */
+.x-label { display: none; }
+html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex; margin-bottom: var(--s2); }
+/* STACK-NORMAL (Tony Nov 16): a title on its own row (option A: desktop, cramped, > 3 lines) is a normal title, not a hero: 20/26, flush with the text's left edge */
+html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: 1.25rem; line-height: 26px; letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }

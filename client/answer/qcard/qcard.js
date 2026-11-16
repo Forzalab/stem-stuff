@@ -173,7 +173,7 @@
     b.style.marginTop = ""; p.classList.remove("qstack");
     /* STACK fallback: beside the button the lead needs >= 120 px and <= 3 lines; else it takes its own full-width row under the button (option A) */
     var cs = getComputedStyle(t), lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.15, side = t.clientWidth - (parseFloat(cs.paddingRight) || 0);
-    if (side < 120 || t.getBoundingClientRect().height > lh * 3 + 2) { p.classList.add("qstack"); return; }
+    if (side < 120 || t.getBoundingClientRect().height > lh * 3 + 2 || g.matchMedia("(min-width: 900px)").matches) { p.classList.add("qstack"); return; }   // DESK-A (Tony Nov 16): desktop = option A (title on its own row under the button)
     var d = t.getBoundingClientRect().bottom - b.getBoundingClientRect().bottom;
     if (d > 0.5) b.style.marginTop = (parseFloat(getComputedStyle(b).marginTop) || 0) + d + "px";   // a taller title: the button drops to its last line
     else if (d < -0.5) t.style.paddingTop = -d + "px";                                              // a one-line title shorter than the button: the title drops
@@ -181,12 +181,32 @@
     if (ro) { ro.disconnect(); ro.observe(t); ro.observe(b); }
   }
   /* Q-MORE (Tony Nov 16): a question card that scrolls inside (phone Q-HALF) shows a gradient + chevron at its foot while there is more below */
+  /* Q-FOLD (Tony Nov 16): the chevron is a real button: tap = expand the card to full height; at the foot a reversed chevron collapses it (scrolls the card top back into view) */
+  function foldBtn(p) {
+    var b = p.querySelector(":scope > .qfold");
+    if (!b) {
+      b = D.createElement("button"); b.type = "button"; b.className = "qfold"; b.setAttribute("aria-label", "Show the whole question"); b.setAttribute("aria-expanded", "false");
+      b.innerHTML = '<svg viewBox="0 0 20 12" width="20" height="12" aria-hidden="true"><path d="M2 2l8 8 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = !p.classList.contains("qopen"); p.classList.toggle("qopen", open);
+        b.setAttribute("aria-expanded", String(open)); b.setAttribute("aria-label", open ? "Fold the question" : "Show the whole question");
+        if (!open) { p.scrollTop = 0; var r = p.getBoundingClientRect(); if (r.top < 0) g.scrollBy({ top: r.top - 16, behavior: "smooth" }); }
+        requestAnimationFrame(qmore);
+      });
+      p.appendChild(b);
+    }
+    return b;
+  }
   function qmore() {
     var p = D.getElementById("problem"); if (!p) return;
-    var more = on() && p.scrollHeight - p.clientHeight > 4 && p.scrollHeight - p.scrollTop - p.clientHeight > 4;
+    if (!on()) { p.classList.remove("qmore", "qopen"); return; }
+    var open = p.classList.contains("qopen");
+    var over = p.scrollHeight - p.clientHeight > 4, more = !open && over && p.scrollHeight - p.scrollTop - p.clientHeight > 4;
     p.classList.toggle("qmore", more);
+    if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); qmore(); }); }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; var pp = D.getElementById("problem"); if (pp && pp.dataset.qfor !== location.hash) { pp.dataset.qfor = location.hash; pp.classList.remove("qopen"); } build(); rowAlign(); qmore(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
