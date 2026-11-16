@@ -78,3 +78,6 @@ html.ui-v7.side:not(.start):not(.dock-bottom) body > .top, html.ui-v7 body > .to
    (notches 12 -> 8, gap 5 -> 4, pad 10 -> 8; min tile 7*8+6*4+2*8 = 96). Ellipsis only past the cap. Desktop: grid column, cap 320px (--pb-list-max above). */
 html.ui-v7.dock-bottom .qnav { --pb-n-min: 8px; --pb-n-gap: 4px; --pb-pad: 8px; }
 html.ui-v7.dock-bottom .pb-list { flex: 0 0 auto; max-width: 45%; }
+/* BAR-GLASS (Tony Nov 16): under ui-v7 the pinned top bar is see-through + blurred (frosted), not a solid bar with a --paper fade under it */
+html.ui-v7:not(.start) .top { background: color-mix(in srgb, var(--paper, #050a18) 45%, transparent) !important; -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%); }
+html.ui-v7 .top::before { content: none !important; }
