@@ -66,7 +66,8 @@ const geo = page => page.evaluate(() => {
   return { n: document.querySelectorAll("#cluckBtn").length, br: { l: br.left, r: br.right, t: br.top, b: br.bottom, w: br.width, h: br.height }, pr: { l: pr.left, r: pr.right, t: pr.top }, aria: b.getAttribute("aria-disabled"), dis: b.hasAttribute("disabled"),
     pe: cs.pointerEvents, bg: cs.backgroundColor, color: cs.color, bw: cs.borderTopWidth, shadow: cs.boxShadow, label: b.textContent.replace(/\s+/g, " ").trim(), st: b.dataset.st,
     overlap: txt.some(x => !(x.right <= br.left || x.left >= br.right || x.bottom <= br.top || x.top >= br.bottom)), vw: innerWidth, sw: document.documentElement.scrollWidth,
-    ladder: [...document.querySelectorAll(".wchip, .vdrawer, .cl-cta, .vk[role=button], .vkb, .vk-duck")].length };
+    ladder: [...document.querySelectorAll(".wchip, .vdrawer, .cl-cta, .vk[role=button], .vkb, .vk-duck")].length,
+    tb: (() => { const t = document.querySelector("#problem > .blocks > :is(.ptitle, .qhead):first-child"); if (!t) return null; const g = document.createRange(); g.selectNodeContents(t); const rs = [...g.getClientRects()]; return rs.length ? t.getBoundingClientRect().bottom : null; })() };
 });
 const open2 = async (w, code, flag = "v7") => { const p = await open(w, flag, "#" + code); await p.waitForSelector("#q", { timeout: 10000 }); await p.waitForTimeout(500); return p; };
 const typeAnswer = async (page, v) => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
@@ -80,7 +81,8 @@ try {
       assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck" + "Cluck unlocks after your first try.");
       assert.equal(g.aria, "true", "aria-disabled"); assert.equal(g.dis, false, "no disabled attribute"); assert.notEqual(g.pe, "none", "no pointer-events:none");
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
-      assert.ok(Math.abs(g.br.r - g.pr.r) < 40 && g.br.t - g.pr.t < 40, "top right of the card: " + JSON.stringify({ b: g.br, p: g.pr }));
+      // ROW-ALIGN B (Tony Nov 16): the button sits at the card's right; its top is near the card top OR (a taller title beside it) its bottom meets the title's last line
+      assert.ok(Math.abs(g.br.r - g.pr.r) < 40 && (g.br.t - g.pr.t < 40 || (g.tb != null && Math.abs(g.br.b - g.tb) < 2)), "right of the card, top or title-bottom aligned: " + JSON.stringify({ b: g.br, p: g.pr, tb: g.tb }));
       assert.equal(g.overlap, false, "the question text does not run under the button"); assert.equal(g.bw, "0px", "no border");
       assert.equal(g.bg, "rgb(20, 29, 54)", "option A fill #141d36"); assert.equal(g.color, "rgb(122, 138, 174)", "option A label #7a8aae"); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");

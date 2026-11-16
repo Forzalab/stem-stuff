@@ -87,7 +87,7 @@ html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--
 html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }
 /* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
 @media (max-width: 480px) {
-  html.ui-v7 #problem.qc7, html.ui-v7 #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
     margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
   /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
   html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 104px;
