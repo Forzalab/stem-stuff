@@ -575,7 +575,7 @@ try {
     await typeCode(page, "CALC1_E01"); await opened(page, "CALC1_E01");
     assert.equal(await page.evaluate(() => getComputedStyle(document.body).paddingTop), "0px", "C13: no top offset over a question");
     const ff = await page.evaluate(() => getComputedStyle(document.querySelector("#scratch"), "::placeholder").fontFamily);
-    assert.match(ff, /^"?Atkinson Hyperlegible"?,/, `C9: placeholder font ${ff}`);
+    assert.match(ff, /^"?Schibsted Grotesk"?,/, `C9: placeholder font ${ff}`);
     assert.equal(await page.getAttribute("#scratch", "placeholder"), "Paste GPT answer here, but me be sad...", "C9: the joke stays");
     assert.equal(await page.locator("#cut").count(), 0, "C10: no Cut all");
     assert.ok(await page.locator("#copy").isHidden(), "C10: Copy on an empty pad");
