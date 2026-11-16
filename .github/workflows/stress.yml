@@ -43,7 +43,7 @@ jobs:
               if SPECS="$SPEC" FLAKY_FILE="flaky-$l.txt" tests/run-all.sh >"run-$l-$r.log" 2>&1 && ! grep -q '^FLAKY ' "run-$l-$r.log"; then
                 echo "ok $l/$r"
               else
-                echo "BAD $l/$r"; cat "run-$l-$r.log"; d=$(grep -o "logs: /tmp/[^)]*" "run-$l-$r.log" | head -1 | cut -c7-); [ -n "$d" ] && tail -n 60 "$d"/* 2>/dev/null
+                echo "BAD $l/$r"; cat "run-$l-$r.log"
               fi
             done
           }
