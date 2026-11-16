@@ -3,7 +3,9 @@
    PR 5 / M5): pure, no git, no network. The workflow computes `inFlight` (a queued/in_progress
    full tests.yml run for the same ref) and passes it in.
    Only (pull_request, inFlight=true) degrades to the fast pipe. A main push, a schedule run or a
-   dispatch NEVER does: those are the full backstop the ship gate depends on (SPEC-PR3.md §6). */
+   dispatch NEVER does: those are the full backstop the ship gate depends on (SPEC-PR3.md §6).
+   TODO 20: the workflow now runs the deciding job only on pull_request (push/schedule/dispatch skip
+   it, ~15 s saved), so the non-PR branch is a guard for any other/future caller, not a live CI path. */
 
 export function decidePipe({ event, inFlight } = {}) {
   if (event === "pull_request" && inFlight === true) {

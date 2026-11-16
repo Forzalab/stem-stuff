@@ -27,9 +27,12 @@ export function attemptColor(run) {
 // W4: test failures are retried in-job (run-all.sh run()), so this reruns INFRA failures only: when the failed jobs' log
 // (failedLog) holds a `FAIL <spec>` line it was a test failure -> false. No FAIL line (runner died, npm ci, browser install) -> true.
 // failedLog omitted = unknown, old behaviour.
-export function shouldRetry(run, failedLog) {
+// failedJobs (optional): how many jobs of the run failed. 0 = the run never started a job (workflow-file error, startup_failure):
+// GitHub answers rerun-failed-jobs with HTTP 403 "cannot be retried" -> false. Omitted = unknown, old behaviour.
+export function shouldRetry(run, failedLog, failedJobs) {
   const r = run || {};
   if (r.conclusion !== "failure" && r.conclusion !== "timed_out") return false;
+  if (failedJobs != null && !(Number(failedJobs) >= 1)) return false;
   if (failedLog != null && parseFailedSpecs(failedLog).length) return false;
   return attemptOf(r) === 1;
 }

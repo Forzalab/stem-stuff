@@ -37,6 +37,16 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); }
 }
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+/* the answer's geometry is final: the bento / phone-fill write is in and unchanged across two frames (the guard may re-place once).
+   This is the condition the old fixed pause in open() stood in for. */
+const settled = p => p.waitForFunction(() => new Promise(done => {
+  const g = document.querySelector("#q .choices");
+  const snap = () => !g ? "" : (g.style.gridTemplateRows || "") + "|" + [...g.children].map(c => c.style.gridColumn + c.style.gridRow).join("|");
+  const a = snap();
+  requestAnimationFrame(() => requestAnimationFrame(() => done(snap() === a)));
+}), null, { timeout: 5000 });
+/* the option's look reached a state: its computed fill equals the expected one (the .18s transition has landed) */
+const bgIs = (p, sel, color) => p.waitForFunction(([s, c]) => { const e = document.querySelector(s); return !!e && getComputedStyle(e).backgroundColor === c; }, [sel, color], { timeout: 5000 });
 async function open(flag, code, w = 390, h = 844) {
   const c = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off");
@@ -49,7 +59,9 @@ async function open(flag, code, w = 390, h = 844) {
   await p.evaluate(h => { location.hash = h; }, code);
   await p.waitForFunction(h => document.querySelector("#pcode")?.textContent === h, code, { timeout: 8000 });
   await p.waitForSelector("#qnav:not([hidden])", { timeout: 10000 });
-  await p.waitForTimeout(500);
+  await p.evaluate(() => (document.fonts && document.fonts.ready) || true);   // text is only measure-honest once the fonts are in (bento re-keys on fonts.ready)
+  await p.waitForFunction(() => !document.documentElement.classList.contains("ui-v7") || !!document.querySelector("#q .choices")?.dataset.bento, null, { timeout: 5000 });
+  await settled(p);
   return [c, p];
 }
 const shot = async (p, name) => { if (process.env.SHOTS) { mkdirSync(process.env.SHOTS, { recursive: true }); await p.screenshot({ path: join(process.env.SHOTS, name + ".png") }); } };
@@ -88,11 +100,11 @@ await step("flag on: idle / hover / picked have no border, no outline, no lit to
   assert.equal(idle.bw, "0px 0px 0px 0px", "idle border: " + idle.bw);
   assert.equal(idle.shadow, "none", "resting tile has no shadow / lit top: " + idle.shadow);
   assert.equal(idle.bg, rgb("#0d142a"), "idle = navy-800");
-  await p.hover(A); await p.waitForTimeout(350);
+  await p.hover(A); await bgIs(p, A, rgb("#141d36"));
   const hov = await look(p, A);
   assert.equal(hov.bw, "0px 0px 0px 0px"); assert.equal(hov.bg, rgb("#141d36"), "hover = navy-700 float");
   await p.mouse.move(0, 0);
-  await p.click(B); await p.waitForTimeout(400);
+  await p.click(B); await bgIs(p, B, rgb("#102542"));
   const pick = await look(p, B);
   assert.equal(pick.bw, "0px 0px 0px 0px", "picked loses its 1px outline: " + pick.bw);
   assert.equal(pick.outline, "none");
@@ -103,16 +115,20 @@ await step("flag on: idle / hover / picked have no border, no outline, no lit to
 });
 await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (text contrast >= 4.5)", async () => {
   const [c, p] = await open("on", "CALC1_MB01");
-  await p.click("#q .opt[data-id='a']"); await p.waitForTimeout(250);
-  await p.click("#q .ch:has(.opt[data-id='a']) .send"); await p.waitForTimeout(700);
+  await p.click("#q .opt[data-id='a']");
+  await p.waitForFunction(() => document.querySelector("#q .opt[data-id='a']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
+  await p.click("#q .ch:has(.opt[data-id='a']) .send");
+  await bgIs(p, "#q .opt[data-id='a']", rgb("#3e141e"));
   const w = await look(p, "#q .opt[data-id='a']");
   assert.equal(w.bw, "0px 0px 0px 0px"); assert.equal(w.bg, rgb("#3e141e"), "wrong = red-900");
   await shot(p, "on-390-wrong");
   const lum = s => { const m = s.match(/[\d.]+/g).map(Number).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; };
   const [x, y] = [lum(w.color), lum(w.bg)].sort((a, b) => b - a);
   assert.ok((x + 0.05) / (y + 0.05) >= 4.5, "wrong text contrast " + (x + 0.05) / (y + 0.05));
-  await p.click("#q .opt[data-id='b']"); await p.waitForTimeout(250);
-  await p.click("#q .ch:has(.opt[data-id='b']) .send"); await p.waitForTimeout(700);
+  await p.click("#q .opt[data-id='b']");
+  await p.waitForFunction(() => document.querySelector("#q .opt[data-id='b']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
+  await p.click("#q .ch:has(.opt[data-id='b']) .send");
+  await bgIs(p, "#q .opt[data-id='b']", rgb("#0c2c22"));
   const r = await look(p, "#q .opt[data-id='b']");
   assert.equal(r.bw, "0px 0px 0px 0px"); assert.equal(r.bg, rgb("#0c2c22"), "right = green-900");
   await shot(p, "on-390-right");
@@ -139,7 +155,7 @@ await step("flag on: pick-all (choose-all) is a bento too: grid, no holes, ticka
       for (const e of g.children) { const m = e.style.gridColumn.match(/(\d+) \/ span (\d+)/), q = e.style.gridRow.match(/(\d+) \/ span (\d+)/); for (let y = +q[1]; y < +q[1] + +q[2]; y++) for (let x = +m[1]; x < +m[1] + +m[2]; x++) occ.add(x + "," + y); }
       return { all: g.classList.contains("all"), bento: g.dataset.bento, C, rows, filled: occ.size, ovf: [...g.querySelectorAll(".opt")].filter(o => o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1).length }; });
     assert.ok(r.all && r.bento === "grid", JSON.stringify(r)); assert.equal(r.filled, r.C * r.rows, "no holes " + JSON.stringify(r)); assert.equal(r.ovf, 0);
-    await p.click("#q .opt[data-id='a']"); await p.waitForTimeout(300);
+    await p.click("#q .opt[data-id='a']"); await bgIs(p, "#q .opt[data-id='a']", rgb("#102542"));
     assert.equal(await p.getAttribute("#q .opt[data-id='a']", "aria-checked"), "true");
     assert.equal((await look(p, "#q .opt[data-id='a']")).bg, rgb("#102542"), "ticked = picked fill");
     await shot(p, `on-${W}-pickall`);
@@ -152,7 +168,8 @@ await step("flag off: no mosaic, today's 1px --line edge, no change", async () =
   assert.equal(await p.evaluate(() => document.querySelector("#q .choices").hasAttribute("data-bento")), false);
   assert.equal(await p.evaluate(() => !!document.querySelector("#q .ch[style*='grid']")), false);
   assert.equal((await look(p, "#q .opt[data-id='a']")).bw, "1px 1px 1px 1px");
-  await p.click("#q .opt[data-id='b']"); await p.waitForTimeout(300);
+  await p.click("#q .opt[data-id='b']");
+  await p.waitForFunction(() => document.querySelector("#q .opt[data-id='b']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
   assert.equal((await look(p, "#q .opt[data-id='b']")).bw, "1px 1px 1px 1px", "flag off picked keeps its edge");
   await c.close();
 });
@@ -180,7 +197,9 @@ await step("phone fill: justified rows fill the area (no empty band), no overflo
 });
 await step("phone fill: a picked tile keeps its text clear of the Check arrow; scrolling it into view clears the top bar", async () => {
   const [c, p] = await open("on", "CALC1_MB02", 360, 740);
-  await p.click("#q .opt[data-id='c']"); await p.waitForTimeout(400);
+  await p.click("#q .opt[data-id='c']");
+  await p.waitForSelector("#q .ch:has(.opt[data-id='c']) .send", { state: "visible", timeout: 5000 });   // the Check arrow is the picked state's signal
+  await settled(p);
   assert.equal(await p.getAttribute("#q .opt[data-id='c']", "aria-checked"), "true");
   const m = await fillMeasure(p); assert.equal(m.ovf, 0, "no overflow with the arrow shown");
   const hit = await p.evaluate(() => {

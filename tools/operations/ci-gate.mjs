@@ -5,10 +5,11 @@
      node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]...
    The pure path (isDocsOnly/classify/runKind/pickGreen/decideShip) takes its facts as arguments: no git, no network.
    Only the CLI adds the two real-world reads (runs.json from `gh api`, and `git diff --name-only` when --file is absent). */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, appendFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { attemptColor } from "./ci-retry.mjs";
+import { decidePolicy, shipModeOf } from "./ci-ship.mjs";   // SHIP_MODE (P4/P5): cycle is fine, only called at run time
 
 // A docs-only diff is the only diff safe to ship without a fresh full run. Source of truth: SPEC 09 §docs-only.
 // Loopable on purpose: adding a member later is one line here plus one test row.
@@ -147,14 +148,18 @@ export function decideShip({ candidate, green, changedFiles, yellowWhy } = {}) {
 }
 
 function parseArgs(argv) {
-  const out = { candidate: "", runs: "", files: [], failedSpecs: null, jail: "tests/quarantine.json", help: false };
+  const out = { candidate: "", runs: "", files: [], failedSpecs: null, jail: "tests/quarantine.json", mode: "strict", tree: "", stamps: "", repo: process.env.GITHUB_REPOSITORY || "", help: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], v = argv[i + 1];
-    if ((a === "--candidate" || a === "--runs" || a === "--file" || a === "--jail" || a === "--failed-specs") && v == null) throw new Error(`${a} needs a value`);
+    if ((a === "--candidate" || a === "--runs" || a === "--file" || a === "--jail" || a === "--failed-specs" || a === "--mode" || a === "--tree" || a === "--stamps" || a === "--repo") && v == null) throw new Error(`${a} needs a value`);
     if (a === "--candidate") { out.candidate = v; i++; }
     else if (a === "--runs") { out.runs = v; i++; }
     else if (a === "--failed-specs") { out.failedSpecs = v.split(",").map((x) => x.trim()).filter(Boolean); i++; }
     else if (a === "--jail") { out.jail = v; i++; }
+    else if (a === "--mode") { out.mode = shipModeOf(v); i++; }   // SHIP_MODE: strict (default) | pr-green
+    else if (a === "--tree") { out.tree = v; i++; }
+    else if (a === "--stamps") { out.stamps = v; i++; }
+    else if (a === "--repo") { out.repo = v; i++; }
     else if (a === "--file") { out.files.push(v); i++; }
     else if (a === "-h" || a === "--help") out.help = true;
     else throw new Error(`unknown argument: ${a}`);
@@ -165,7 +170,7 @@ function parseArgs(argv) {
 function main(argv) {
   let opts;
   try { opts = parseArgs(argv); } catch (e) { console.error(`ci-gate: ${e.message}`); return 2; }
-  if (opts.help) { console.log("usage: node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]... [--jail <quarantine.json>] [--failed-specs a.mjs,b.mjs]"); return 0; }
+  if (opts.help) { console.log("usage: node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]... [--jail <quarantine.json>] [--failed-specs a.mjs,b.mjs] [--mode strict|pr-green --tree <tree> --stamps <entries.json> --repo owner/name]"); return 0; }
   if (!opts.candidate || !opts.runs) { console.error("ci-gate: --candidate and --runs are required"); return 2; }
 
   let runs;
@@ -189,7 +194,14 @@ function main(argv) {
     catch (e) { console.error(`ci-gate: git diff ${green.sha}..${opts.candidate} failed: ${e.message}`); return 2; }
   }
 
-  const d = decideShip({ candidate: opts.candidate, green, changedFiles, yellowWhy });
+  let d = decideShip({ candidate: opts.candidate, green, changedFiles, yellowWhy });
+  if (opts.mode === "pr-green") {   // P4/P5: a verified green stamp for the candidate's tree may ship it; strict mode never reaches this
+    let entries = [];
+    try { entries = opts.stamps ? JSON.parse(readFileSync(opts.stamps, "utf8")) : []; } catch (e) { console.error(`ci-gate: cannot read ${opts.stamps}: ${e.message}`); }
+    d = decidePolicy({ mode: opts.mode, strict: d, tree: opts.tree, entries, repo: opts.repo, jail, runs });
+    if (process.env.GITHUB_OUTPUT && d.ok) appendFileSync(process.env.GITHUB_OUTPUT, `needs_postdeploy=${!!d.needs_postdeploy}\n`);
+    console.log(`needs_postdeploy=${!!d.needs_postdeploy}`);
+  }
   if (d.ok) { console.log(`ok: ${d.reason}`); return 0; }
   console.error(`refused: ${d.reason}`);
   return 1;

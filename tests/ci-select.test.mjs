@@ -19,7 +19,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   BIG_CODE_FILES, BIG_AREAS, HUB_FRACTION, DOCS_EXTS,
-  isCodeFile, areaOf, areasOf, isBig, isHub, pwSpecs, decideSelection,
+  isCodeFile, areaOf, areasOf, isBig, isHub, pwSpecs, decideSelection, isBankFile,
 } from "../tools/operations/ci-select.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -239,4 +239,14 @@ test("docs-only diff -> docs; .md + code -> not docs", () => {
   assert.equal(decideSelection({ files: ["CLAUDE.md", "a/b.md"], affectedCounts: { "CLAUDE.md": 120 }, totalUnits: 122 }).kind, "docs");
   assert.notEqual(decideSelection({ files: ["CLAUDE.md", "x.js"], affectedCounts: {}, totalUnits: 122 }).kind, "docs");
   assert.equal(decideSelection({ files: [], affectedCounts: {}, totalUnits: 122 }).kind, "full");
+});
+
+// CI-LOOSEN TODO 17: bank tier. A server/data/banks/*.json-only diff is kind "bank" (plan: skip_block=true, docs_only=false).
+test("bank tier: bank-only -> bank; client/x.css -> not bank; bank+code -> not bank; bank+docs -> bank", () => {
+  const bank = (files) => decideSelection({ files, affectedCounts: {}, totalUnits: 122 }).kind;
+  assert.ok(isBankFile("server/data/banks/BANK_PSY6.json"));
+  assert.equal(bank(["server/data/banks/BANK_PSY6.json"]), "bank");
+  assert.notEqual(bank(["client/x.css"]), "bank");
+  assert.notEqual(bank(["server/data/banks/BANK_PSY6.json", "client/x.css"]), "bank");
+  assert.equal(bank(["server/data/banks/BANK_PSY6.json", "CLAUDE.md"]), "bank");
 });
