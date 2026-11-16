@@ -216,10 +216,13 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { animation: none !important; } }
 /* SIZE-MATCH (Tony Nov 16 "make ask cluck and the code text look similar in size"): both were 15px 600, but the kicker is tracked CAPS (cap height on every letter), so it read
    bigger than the mixed-case link. Caps drop to 13.5px (about the link's x-height + ascenders), one font file for both (--qfont). Measured baselines stay equal at top alignment (393: 63/63, 1280: 168.5/168.5). */
-html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: 13.5px; letter-spacing: .07em; }
+html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: calc(var(--t-sm, .9375rem) * .9); letter-spacing: .07em; }   /* 0.9 x the link size: 13.5 on phone, scales with --t-sm (up to 19px) on big screens */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { font-family: var(--qfont); }
 /* GHOST-LIQUID (Tony Nov 16 "a liquid blur on top of the ghost number, mind CPU"): ONE static filter on the echo layer (not backdrop-filter, which re-runs every scroll
    frame, and not one filter per copy: 5 passes). The blurred layer is drawn once and moved as a texture; saturate keeps the blur from going grey. contain: paint keeps
    its repaint area to the ghost box. The front numeral (desktop card) stays sharp. */
 html.ui-v7 #problem.qc7.qbr .qghost { filter: blur(3.5px) saturate(1.2); contain: paint; }
 @media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7.qbr .qghost { filter: none; } }
+/* PHONE-TOP-AIR (Tony Nov 16 "on phone, top margin add more, it looks too cramped"): the kicker row sat 24 px under the card's top edge, the same as the side insets;
+   the top gets 32 px (desktop's --qpad), sides and bottom stay 24. The ghost and the fold read --qpad, so they keep their own geometry. */
+@media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { padding-top: 32px; } }
