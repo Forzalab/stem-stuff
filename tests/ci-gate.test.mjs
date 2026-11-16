@@ -226,3 +226,76 @@ test("CLI: a docs-only diff since the last green sha ships", () => {
   const r = cli(["--candidate", "green7777", "--runs", fix("code-diff"), "--file", "README.md"]);
   assert.equal(r.status, 0, "docs-only later diff is shippable (M1)");
 });
+
+// --- flaky jail + yellow rule (Nov 15), AC3.1-3.9 ------------------------------------
+import { readFileSync } from "node:fs";
+import { yellowCleared, yellowVerdict, expiredJail } from "../tools/operations/ci-gate.mjs";
+const NOW = Date.parse("2026-11-16T00:00:00Z");
+const J = (spec, added = "2026-11-15", expires = "2026-11-22") => ({ spec, test: "*", owner: "tony", reason: "t-1", added, expires });
+const run = (attempt, failed) => ({ conclusion: "success", event: "push", head_branch: "main", head_sha: "y1", run_attempt: attempt, created_at: "2026-11-15T00:00:00Z", failed_specs: failed });
+const yellow = (failed) => run(2, failed);
+
+test("AC3.1 tests/quarantine.json parses, entries have the fields, expiry <= added + 7d", () => {
+  const jail = JSON.parse(readFileSync(new URL("./quarantine.json", import.meta.url), "utf8"));
+  assert.ok(Array.isArray(jail));
+  for (const e of jail) {
+    for (const k of ["spec", "test", "owner", "reason", "added", "expires"]) assert.ok(e[k], `entry ${e.spec} lacks ${k}`);
+    assert.ok(Date.parse(e.expires) - Date.parse(e.added) <= 7 * 864e5, `${e.spec}: expires more than 7d after added`);
+  }
+});
+
+test("AC3.2 attempt 1 green anchors with no jail", () => {
+  assert.equal(pickGreen([run(1, undefined)], "y1", { jail: [], now: NOW })?.sha, "y1");
+});
+
+test("AC3.3 attempt 2 green, failed=[X], X jailed and live -> ok", () => {
+  assert.equal(yellowCleared(yellow(["x.mjs"]), [J("x.mjs")], NOW), true);
+  assert.equal(pickGreen([yellow(["x.mjs"])], "y1", { jail: [J("x.mjs")], now: NOW })?.sha, "y1");
+});
+
+test("AC3.4 X not jailed -> refused, names X", () => {
+  const v = yellowVerdict(yellow(["x.mjs"]), [], NOW);
+  assert.equal(v.ok, false);
+  assert.match(v.reason, /x\.mjs/);
+  assert.equal(pickGreen([yellow(["x.mjs"])], "y1", { jail: [], now: NOW }), null);
+  assert.equal(pickGreen([yellow(["x.mjs"])], "y1"), null, "no jail option = yellow refused as before");
+});
+
+test("AC3.5 X jailed but expired -> refused, says expired", () => {
+  const v = yellowVerdict(yellow(["x.mjs"]), [J("x.mjs", "2026-11-01", "2026-11-08")], NOW);
+  assert.equal(v.ok, false);
+  assert.match(v.reason, /expired/);
+  assert.match(v.reason, /x\.mjs/);
+});
+
+test("AC3.6 failed=[X,Y], only X jailed -> refused naming Y", () => {
+  const v = yellowVerdict(yellow(["x.mjs", "y.mjs"]), [J("x.mjs")], NOW);
+  assert.equal(v.ok, false);
+  assert.match(v.reason, /y\.mjs/);
+  assert.doesNotMatch(v.reason, /x\.mjs/);
+});
+
+test("AC3.7 yellow with failed specs unknown or empty -> refused (fail closed)", () => {
+  for (const f of [undefined, null, []]) assert.equal(yellowVerdict(yellow(f), [J("x.mjs")], NOW).ok, false);
+});
+
+test("expiredJail lists only expired entries; missing expires = added + 7d", () => {
+  const e = expiredJail([J("a"), J("b", "2026-11-01", "2026-11-08"), { spec: "c", added: "2026-11-15" }, { spec: "d", added: "2026-11-01" }], NOW);
+  assert.deepEqual(e.map((x) => x.spec), ["b", "d"]);
+});
+
+test("AC3.9 CLI usage mentions --failed-specs; CLI refuses a yellow whose failed spec is not jailed", () => {
+  assert.match(cli(["--help"]).stdout, /--failed-specs/);
+  const dir = mkdtempSync(join(tmpdir(), "gate-"));
+  const runs = join(dir, "runs.json"), jail = join(dir, "q.json");
+  writeFileSync(runs, JSON.stringify([yellow(undefined)]));
+  writeFileSync(jail, "[]");
+  const r = cli(["--candidate", "y1", "--runs", runs, "--jail", jail, "--failed-specs", "flaky.mjs"]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /flaky\.mjs/);
+  writeFileSync(jail, JSON.stringify([{ ...J("flaky.mjs"), added: new Date().toISOString().slice(0, 10), expires: new Date(Date.now() + 6 * 864e5).toISOString().slice(0, 10) }]));
+  assert.equal(cli(["--candidate", "y1", "--runs", runs, "--jail", jail, "--failed-specs", "flaky.mjs"]).status, 0);
+});
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
