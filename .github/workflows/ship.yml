@@ -97,7 +97,7 @@ jobs:
           RUN="$(jq -r --arg s "$CANDIDATE" '[.[] | select(.head_sha == $s and .conclusion == "success" and (.run_attempt // 1) >= 2)][0].id // empty' runs.json)"
           if [ -n "$RUN" ]; then
             for J in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/attempts/1/jobs" --jq '.jobs[] | select(.conclusion == "failure") | .id'); do
-              FAILED="$FAILED $(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | sed -nE 's/^[0-9TZ:.-]* *FAIL ([^ ]+) +[0-9.]+ s.*/\1/p' | tr '\n' ' ')" || true
+              FAILED="$FAILED $(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | sed -nE 's/^[0-9TZ:.-]* *(lane [0-9]+: *)?FAIL ([^ ]+) +[0-9.]+ s$/\2/p' | tr '\n' ' ')" || true
             done
             FAILED="$(echo $FAILED | tr ' ' '\n' | sort -u | paste -sd, -)"
             echo "ship gate: attempt-1 failed specs: ${FAILED:-unknown}"
