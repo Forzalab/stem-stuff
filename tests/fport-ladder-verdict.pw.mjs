@@ -182,7 +182,7 @@ try {
         return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor }; });
       const idle = await read();
       assert.equal(idle.bw, ZERO, "idle: no border " + JSON.stringify(idle));
-      assert.ok(/rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/.test(idle.shadow) && /rgb\(42, 58, 102\) 0px -1px 0px 0px inset/.test(idle.shadow), "idle: inset top shadow + lighter bottom lip: " + idle.shadow);
+      assert.ok(/rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/.test(idle.shadow) && /rgb\(85, 103, 145\) 0px -1px 0px 0px inset/.test(idle.shadow), "idle: inset top shadow + 3:1 bottom lip = --line navy-500 (FIELD-LIP-3:1, Tony Nov 15): " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus(); await page.waitForTimeout(250);
       const focus = await read();
       assert.equal(focus.bw, ZERO, "focus: no border " + JSON.stringify(focus));
