@@ -7,6 +7,7 @@
 //   - a figure graph.js can't fix (fable audit 2026-10-29 U7: two boxes in each other after Graph.fix) never draws: its alt text in a
 //     plain box, no svg; one fig_check telemetry event with the finding codes and counts only (never a label, the alt, any text).
 // Starts its own serve.py and fake Claude:   node tests/views-static.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -71,7 +72,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const has = async (page, sel) => !!(await page.$(sel));
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* fig_check spy: once every script has set window.stemT (telemetry.js, intent.js and flight.js wrap it while loading; no key here, so
    nothing leaves the page), wrap it once more and log what the app hands the sender */
 const init = () => { window.__figT = [];

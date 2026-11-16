@@ -3,6 +3,7 @@
 // append-only paint (a painted statement keeps its node while later ones stream in), Steps' Back/Next bounds, the Doodle fallback,
 // and the P11 answer is nowhere in the DOM, localStorage or sessionStorage before Check (F4/F5); after Check the Reveal opens.
 // usage: python3 serve.py 8815 &   node tests/views.pw.mjs http://localhost:8815 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
@@ -19,7 +20,7 @@ async function step(name, fn) {
 }
 const ANSWER = ["χ(P) = 3", "Three classes cover"];   // the Reveal body: only the fake server has it before the stage changes
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const W of [390, 1280]) {
   const phone = W < 700;
   const ctx = await b.newContext({ viewport: { width: W, height: phone ? 844 : 900 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });

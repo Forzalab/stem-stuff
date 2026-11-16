@@ -9,6 +9,7 @@
 //   duck     the sunrise duck is a status nudge: a tap only dismisses it (no Cluck, no callback); the drawer's Ask Cluck is the action
 // The mock waits 500 ms (> the 380 ms slide; clip-path hides the drawer mid-slide). So does this spec: every check runs after SETTLE.
 // Starts its own serve.py (static files); the bank and /check are routed.   node tests/strip-layers.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -104,7 +105,7 @@ const geo = page => page.evaluate(() => {
   return { bar: R(bar), d: d && !d.hidden && getComputedStyle(d).display !== "none" ? R(d) : null };
 });
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const TYPES = [["STP_NUM", "num"], ["STP_EXP", "expr"], ["STP_GRA", "graph"], ["STP_PRF", "proof"]];
 const VPS = [[360, 740], [390, 844], [1280, 800]].filter(v => !process.env.SL_W || v[0] === +process.env.SL_W);   // SL_W=390: one width (quick mutation runs)
 for (const [W, H] of VPS) {

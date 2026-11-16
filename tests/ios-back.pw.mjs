@@ -1,6 +1,7 @@
 // iOS-only Back button (docs/design/NAV.md "iOS exception"): left of the question-bank button, pops the topmost thing
 // (Cluck sheet, question list, popover, notes split), else the in-app previous question; never leaves the site.
 // Starts its own serve.py with a throwaway banks/ folder:   node tests/ios-back.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -50,7 +51,7 @@ const pcode = page => page.textContent("#pcode");
 /* Next plays the hidden queue, and a browser Back is a showing like any other: read where Next went, never assume file order */
 const nextOf = async page => { const from = await pcode(page); await page.click("#qnext"); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, from, { timeout: 8000 }); const to = await pcode(page); await opened(page, to); return to; };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function phone({ ua = IOS, w = 390, h = 844, dnt = false, dpr = 1 } = {}) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, userAgent: ua, serviceWorkers: "block", hasTouch: true, isMobile: true, deviceScaleFactor: dpr });
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // the phone pad (notes split) is diet's

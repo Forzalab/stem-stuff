@@ -1,6 +1,7 @@
 // Disabled answer UI after the tries lock and after a correct answer. Needs a running server and Playwright:
 //   python3 serve.py 8813 &   then   node tests/disabled.pw.mjs http://localhost:8813 [shotDir] [shotPrefix]
 // /check is answered by the test (route), so no answers are needed. Runs at 390x844 and 1920x1080.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -61,7 +62,7 @@ async function assertDead(page, keep, op = "1") {
 }
 
 async function run(w, h) {
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const page = await b.newPage({ viewport: { width: w, height: h } });
   const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }).catch(() => {}); await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${w}.png` }); } };
   /* wait for option i to be live: a reopened problem paints its cached record first and the /state reconcile re-enables it a

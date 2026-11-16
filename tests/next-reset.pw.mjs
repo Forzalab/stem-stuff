@@ -4,6 +4,7 @@
 // graded in its own round): Prev back to it and Next forward to it again must not wipe it (stemRedo.set dropped its record).
 // Real serve.py grading, its own banks folder. Never the student's real tries.json.
 //   node tests/next-reset.pw.mjs <port>      (starts its own serve.py on that port)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -80,7 +81,7 @@ const pressNext = async page => { const c = await cur(page); await page.$eval("#
 const arrow = async (page, sel) => { const c = await cur(page); await page.click(sel); await moved(page, c); };
 const same = async (page, want, how) => assert.deepEqual(await look(page), want, `${want.code} after ${how}`);
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const mode of ["sugar", "diet"]) {
     const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });

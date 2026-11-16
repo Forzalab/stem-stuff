@@ -4,6 +4,7 @@
 // (www-widgetapi.js: the page sends {"event":"listening"} until it hears back, then a "command" addEventListener onError; the player answers
 // with {"event":"onError","info":<code>} posted to the embed URL's origin parameter, so a missing / wrong origin = no message = red).
 // usage: node tests/brainrot.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -30,7 +31,7 @@ let fails = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 
 /* one page on the sugar start page (the players warm up parked, all built: one per category, up to 6): cats = the fixture CATS, verdict(id, seen) = the code the
    stub reports for that id (0 = plays); seen = the ids requested so far, in order. -> { page, seen, told, ids() } */

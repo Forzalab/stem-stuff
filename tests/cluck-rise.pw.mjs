@@ -4,6 +4,7 @@
 // No prefetch (budget spent, Q3+) = no request, the duck still rises, and its tap asks once (Tony, Oct 19, pick b). A right answer and diet
 // ask nothing. No control overlaps another (360 / 390 / 393x852 / 393x659 / 1280). On a fake clock (as idle-peek); own serve.py + a stub OpenRouter.
 //   node tests/cluck-rise.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -56,7 +57,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const DESK = { width: 1280, height: 900 };
 const VPS = [["390", { width: 390, height: 844 }]];   // BIG PLAN V1 (Tony Nov 2): desktop sugar has Cluck open from load and no close, so there is no "closed, then the duck" flow there: phones only (cluck-permanent.pw.mjs covers desktop)
 

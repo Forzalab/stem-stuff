@@ -4,6 +4,7 @@
 // Contact (fable audit 2026-10-29 U1, I-INC-1): the physics-b figure (livefig.json valid[0]) and the planted sunk / floating ramps at
 // 1440 and 390 on chromium, firefox and webkit: the drawn block never cuts into the drawn ramp and touches it (SAT on getScreenCTM
 // points, <= 1 px). Chromium is required; a missing firefox / webkit prints NOT COVERED (run-all lists it).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -24,7 +25,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); }
 }
 
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 for (const width of [360, 1280]) for (const scheme of ["light", "dark"]) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: scheme });
   const errs = []; page.on("pageerror", e => errs.push(e.message)); page.on("console", m => m.type() === "warning" && errs.push(m.text()));

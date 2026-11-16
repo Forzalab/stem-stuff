@@ -3,6 +3,7 @@
 // the reply is an OpenUI Lang program drawn by views.js, the model's raw HTML stays text; X / Esc close it (mini_dismiss), focus back on the step;
 // inside a 360 viewport, no sideways scroll.
 //   python3 serve.py 8830 & node tests/minicluck.pw.mjs http://localhost:8830
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -16,7 +17,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const page = await browser.newPage({ viewport: { width: 360, height: 800 } });
   const errs = []; page.on("pageerror", e => errs.push(e.message));

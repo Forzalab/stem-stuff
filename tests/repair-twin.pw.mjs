@@ -5,6 +5,7 @@
 // num: 2% relative; a value that is not a number = 400, a rejected promise).
 //   node tests/repair-twin.pw.mjs                          (the repair lab page from disk)
 //   node tests/repair-twin.pw.mjs http://localhost:8823    (the lab through serve.py)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -31,7 +32,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const page = await browser.newPage({ viewport: { width: 360, height: 800 } });
   const errs = []; page.on("pageerror", e => errs.push(e.message));

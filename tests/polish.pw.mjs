@@ -2,6 +2,7 @@
 // (c) one type scale across normal and Swap, (d) Swap scratchpad grows up to a small gap under the question.
 // Needs a running server and Playwright:   python3 serve.py 8815 &   then   node tests/polish.pw.mjs http://localhost:8815 [shotDir] [prefix]
 // The keyboard is simulated as in swap.pw.mjs: the viewport shrinks to 55% of its height.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -25,7 +26,7 @@ const fontOf = (page, sel) => page.$eval(sel, e => { const s = getComputedStyle(
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   const phone = W < 1000;
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   await ctx.addCookies(DIET);   // sugar-hides-notes: desktop sugar has no notes box; the 1920 steps focus #scratch (phones were already diet)
   const page = await ctx.newPage();

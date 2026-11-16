@@ -11,6 +11,7 @@
 //   - out of tries: every untried mc row still dimmed (.5), no reveal of the right answer, no out-of-tries text line
 // Every problem, the bank and every verdict come from page.route: deterministic, no answers needed, no server state touched.
 // usage: python3 serve.py 8812 &   then   node tests/next-cue.pw.mjs http://localhost:8812 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -168,7 +169,7 @@ async function close(page, type, outcome, { code } = {}) {
   return { check, before };
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const CASES = [["num", "PHYS_TNM"], ["text", "PHYS_TTX"], ["expr", "PHYS_TEX"], ["mc", "PHYS_TMC"], ["mc-pill", "PHYS_TTF"], ["multi", "PHYS_TMU"], ["pick-all", "PHYS_TPA"]];
 const field = "rgb(2, 6, 12)";   // --field = --page (Deep navy, Nov 2)
 for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {

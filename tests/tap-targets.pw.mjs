@@ -9,6 +9,7 @@
 // Points outside the window are skipped (a tap cannot land there); at least 5 of the 9 must be inside.
 // Own serve.py + throwaway banks (a formula card bank and the welcome ladder bank), 390 phone (touch) and 1366 desktop.
 //   node tests/tap-targets.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -102,7 +103,7 @@ async function badgeContrast(page) {
 
 const VIEWS = [["390x844 phone", { width: 390, height: 844 }, true], ["1366x768 desktop", { width: 1366, height: 768 }, false]];
 for (const [label, vp, phone] of VIEWS) {
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   // the onboarding is done, so the rewards HUD (#rwHud) shows on a question (as blink-fx.pw.mjs sets it)
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const x of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + x, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });

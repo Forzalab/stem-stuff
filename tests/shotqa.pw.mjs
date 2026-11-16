@@ -8,6 +8,7 @@
 //     proof-b's rows alternate prose / one centred display line; mc-a's θ sits at A and every label keeps 8 px (390) / 10 px (1440) off
 //     every stroke; the stepper's figure changes with the step.
 // Starts its own serve.py and fake Claude:   node tests/shotqa.pw.mjs [port] [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -74,7 +75,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const init = () => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
 async function open(which, w, h) {
   card = which;

@@ -3,6 +3,7 @@
 //   ladder     an item WITH a ladder is unchanged: a wrong try reveals nothing, stemLadder.step() pops its mid pieces then arrows as before
 // FR_W=1280,393 (desk, phone); default both. Own serve.py (no AI key: Cluck is off, nothing here needs it).
 //   node tests/fcard-reveal.pw.mjs <port>
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -31,7 +32,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, code) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });

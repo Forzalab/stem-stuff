@@ -6,6 +6,7 @@
 // revealed answer, with the toast), and the paste-back: the copied revealed answer typed into the box grades correct on /check.
 // The clipboard is read for real: clipboard-read/write granted, Ctrl+C (or the button), navigator.clipboard.readText() (stable on Chromium 141 headless).
 // Own serve.py with a throwaway bank + formula sheet.   node tests/copy-math.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -58,7 +59,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, code, touch = false, diet = false) {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: touch, isMobile: touch, serviceWorkers: "block" });
   if (diet) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch / Copy my work

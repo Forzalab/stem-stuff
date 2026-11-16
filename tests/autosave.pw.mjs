@@ -1,5 +1,6 @@
 // Scratchpad autosave: status timing, per-code draft restore, reduced motion. Needs a running server and Playwright:
 //   python3 serve.py 8814 &   then   node tests/autosave.pw.mjs http://localhost:8814 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -18,7 +19,7 @@ const pad = async page => { if (await page.isVisible("#padFab")) { await page.cl
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // phone sugar has no pad (Tony, Oct 14): the pad is diet's there
 const status = page => page.$eval("#xbSave", e => ({ t: e.textContent, c: e.className, anim: getComputedStyle(e).animationName }));
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const [w, h] of [[390, 844], [1920, 1080]]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h } });
   await ctx.addCookies(DIET);

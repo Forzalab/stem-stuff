@@ -1,6 +1,7 @@
 // The generated proof ladder (client half; server = serve.py proof_grade / proof_step_check, STEM_PROOF_LADDER=1): a wrong proof's /check reply
 // carries repair {gen:true, att, steps} (no answers); repair.js draws the steps empty and grades each one through POST /repair/<code>/check.
 // Starts its own serve.py (flag on) with a throwaway banks/ folder and a stub grader:   node tests/proof-ladder.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -51,7 +52,7 @@ async function step(name, fn) {
 const opened = page => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), CODE, { timeout: 8000 });
 const GOOD = "Base case: n = 1, both sides are 2.\nAssume it for k.\nAdd 3k+2 and factor: (k+1)(3k+4)/2.";
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(viewport = { width: 1280, height: 860 }, touch = false) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block", ...(touch ? { isMobile: true, hasTouch: true } : {}) });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });

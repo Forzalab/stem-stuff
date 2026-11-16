@@ -2,6 +2,7 @@
 // the choice's VALUE, never its letter); once a later turn exists, an earlier WRONG reply folds under its line (the line toggles it);
 // the latest reply and every right one stay open. Also: the busy ring's rim follows the field's radius (--ask-r) at 390 and 1280.
 // Own serve.py + a stub OpenRouter (as cluck-more.pw.mjs).   node tests/cluck-history.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -49,7 +50,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const pick = async (page, id) => {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);

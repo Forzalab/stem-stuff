@@ -7,6 +7,7 @@
 //   guard   phone sugar (393): no box on load, the X shows once opened, Escape and the X close it; desktop diet: no box
 // CP_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-permanent@desk, cluck-permanent@phone. Own serve.py + a stub OpenRouter.
 //   node tests/cluck-permanent.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -51,7 +52,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, { diet = false } = {}) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });

@@ -1,5 +1,6 @@
 // Smoke: under html.ui-v7 the "Calculator moves" card is ONE compact toast that opens the keys directly (Tony, Nov 14); flag off = the card unchanged.
 // Own serve.py with a fixture BANK_P3X:  node tests/calc-toast.pw.mjs [port] [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -52,7 +53,7 @@ async function fresh(init = {}, at = "2026-11-06T18:00:00Z", opts = {}) {
 const SHOTS = process.argv[3] || join(ROOT, "tests", "out"); mkdirSync(SHOTS, { recursive: true });
 const anyUp = page => page.waitForFunction(() => document.querySelector("#pcode")?.textContent && !document.querySelector("#freeze").hidden, null, { timeout: 8000 });
 const AFTER = "2026-11-10T09:00:00Z", V7 = { "stem-ui": "v7" };
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   await step("flag on, model picked: no card; one toast; click opens the keys directly (no Show me the keys step); once per day", async () => {
     const { ctx, page, errs } = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER);

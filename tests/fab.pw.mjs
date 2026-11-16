@@ -3,6 +3,7 @@
 // Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/fab.pw.mjs http://localhost:8812 [shotDir]
 // With a shotDir it saves fab-{top,mid,end}-390.png (the button at three scroll positions).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -28,7 +29,7 @@ const settleFor = p => () => p.waitForFunction(() => new Promise(res => {
 }), null, { timeout: 5000 });
 /* the button is diet's on phones: phone sugar has no pad at all (Tony, Oct 14; the last block below) */
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });

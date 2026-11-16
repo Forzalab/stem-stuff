@@ -2,6 +2,7 @@
 // tabular figures (TYPE-DECISION v3.1: mono only in the scratchpad and pre-formatted tables).
 // Also lists which common phone-typed math symbols fall back to another font.
 // usage: node tests/font.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -11,7 +12,7 @@ const BASE = process.argv[2] || "http://localhost:8812";
 const GRID = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-*/ ";
 const MATH = "=<>()[]{}^_|&!~.,:;'\"%$#@?\\→←↔⇒⇔∧∨¬⊕≠≤≥±×÷·√∞πθλμσΔΣ∫∂°²³½∈∉⊂∪∩∀∃ℝ";
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const page = await (await b.newContext()).newPage();
 await page.context().addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch
 await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });

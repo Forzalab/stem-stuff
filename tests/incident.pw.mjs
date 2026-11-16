@@ -3,6 +3,7 @@
 // beacon. Cases: /explain 502 + X-Incident, a plain 500, headers then a dropped connection (phase stream), and an OpenRouter out of
 // credit end to end (serve.py fails fast: 503 budget_cap). Own serve.py + a stub OpenRouter.
 //   node tests/incident.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -66,7 +67,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const CODE = /[ES]-[2-9A-HJ-NP-Z]{5}/;
 const REASONS = /upstream|http|network|budget|credit|stream|timeout|empty|cap|exception/i;
 

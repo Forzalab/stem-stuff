@@ -1,6 +1,7 @@
 // PROGBAR P7 wave smoke (brain ui-polish/wave/P7-SPEC.md): the streak notches spring-wave on land, behind html.ui-v7. Flag ON: transform dips below 0.75,
 // never above 1, clears after the wave; reduced motion and flag OFF: never a transform. Smoke size, feature-local. Own serve.py, throwaway bank.
 //   node tests/progbar-wave.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -63,7 +64,7 @@ const geo = p => p.evaluate(() => {
 });
 const states = p => p.evaluate(() => [...document.querySelectorAll("#pbTile .pb-n")].map(e => e.className.replace("pb-n ", "")));
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* three rights in a row; a per-frame sampler (started before the 3rd) records every streak notch's inline transform. Returns the samples after 3 s. */
 async function run(flag, extra = {}) {
   const [c, p] = await fresh(browser, flag, 390, 844, extra);

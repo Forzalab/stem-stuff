@@ -1,6 +1,7 @@
 // Sugar rewards in the real page (docs/design/REWARDS-WIRING.md): the HUD row, XP + the bells on every correct, a quiet +1 on a wrong try,
 // 6 XP on try 2, a drop (flow C: a banner, no overlay, never with #toast), a level up + drop (one overlay, the reels inside, keys), state across a reload, snacks right before their real, the fading original,
 // and nothing at all in diet. Starts its own serve.py with a throwaway banks/ folder and tries.json:   node tests/rewards.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -67,7 +68,7 @@ const watchFx = async page => { await page.waitForFunction(() => !document.query
 const rects = (page, sels) => page.evaluate(ss => ss.map(q => { const e = document.querySelector(q); return e && e.getClientRects().length ? e.getBoundingClientRect().toJSON() : null; }), sels);
 const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   /* stem-jev=0 in every context here: Jev (on for all) and its duck lines stay out of the toasts under test (seen.pw.mjs covers them) */

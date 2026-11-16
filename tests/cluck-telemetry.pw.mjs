@@ -1,5 +1,6 @@
 // cluck_ask / cluck_reply / cluck_rise / dead_tap (travel rule) reach telemetry. Own serve.py + a stub OpenRouter + a stub PostHog (index.html gets a fake key).
 //   node tests/cluck-telemetry.pw.mjs <port>
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -34,7 +35,7 @@ await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); } }
 const STUB = `window.posthog = { init(k, o) { window.__ph = { ev: [] }; this.__loaded = true; o.loaded && o.loaded(this); }, capture(n, p) { window.__ph.ev.push({ n, p }); }, register() {} };`;
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
 await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
 await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());

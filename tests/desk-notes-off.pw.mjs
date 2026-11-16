@@ -3,6 +3,7 @@
 // should be hidden" = it leaked before a layer opened; "explain Cluck clicked, then note cannot be reopened" = the layer toggle hid it with
 // no way back. Hidden = visibility (the box height stays the column floor, W129 L4). Phones keep the notes in both modes.
 //   node tests/desk-notes-off.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -41,7 +42,7 @@ async function open(browser, w, h, mode) {
   await page.waitForTimeout(800);
   return { ctx, page };
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const box = page => page.evaluate(() => { const e = document.querySelector("#xb"), r = e.getBoundingClientRect(); return { h: Math.round(r.height), vis: getComputedStyle(e).visibility, shown: r.height > 0 && getComputedStyle(e).visibility !== "hidden" }; });
   for (const w of [720, 721, 1280]) for (const mode of ["diet", "sugar"]) {

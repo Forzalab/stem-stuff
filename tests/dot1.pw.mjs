@@ -6,6 +6,7 @@
 //   clip     the dot and its ring are fully inside the viewport and painted (elementFromPoint is the row, no ancestor clips them)
 //   dim      a dot is never inside a dimmed box (opacity of every ancestor up to #q is 1)
 // Own serve.py; the bank and /check are routed.   WIDTH=393|700 (default both; run-all splits them: dot1@phone, dot1@desk)   node tests/dot1.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -131,7 +132,7 @@ const chipOpen = async page => {
   await page.waitForFunction(() => !document.querySelector("#cluck").hidden);
 };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const WANT = process.env.WIDTH || process.env.DOT_W;
 const SIZE = { 393: 852, 700: 900 };   // BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) has Cluck open from load, so the dot (it hides while the sheet is open) never shows there; the wide pass runs at 700, just under the breakpoint
 const CASES = [   // kind, then the dots expected in each state

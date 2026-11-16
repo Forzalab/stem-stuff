@@ -1,6 +1,7 @@
 // Done questions (docs/design/DONE.md): list marks, read-only reopen, state across reloads, server restarts and hand resets.
 // Starts its own serve.py (it restarts it), with a throwaway tries.json:
 //   node tests/done.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -82,7 +83,7 @@ async function upload(page) {
 }
 
 await start();
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   /* ---------------- upload mode ---------------- */
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });

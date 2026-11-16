@@ -5,6 +5,7 @@
 // (scrollHeight <= clientHeight + 1) and the KaTeX ink (every painted box under .katex-html) sits inside it (1 px slack). Kept: a wide formula
 // still scrolls inside .fm (never the page), and the "?" and the copy keep their 44px tap areas. Chromium is required; a missing firefox /
 // webkit prints NOT COVERED (run-all lists it). Own serve.py with a throwaway bank + formula sheet.   node tests/fcard-clip.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -111,7 +112,7 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
 /* todo 115 step 5 (Tony, Oct 29) made the card's copy hover-only; Tony, Nov 3 18:14: "hide the copy buttons on the key formula box".
    Desktop and touch: no copy button on the card (a drag still copies, copy-math.pw). Chromium. */
 {
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const open = async (opts, motion) => {
     const ctx = await b.newContext({ serviceWorkers: "block", reducedMotion: motion, ...opts });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });

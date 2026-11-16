@@ -6,6 +6,7 @@
 //              the first close by ^ shows a one-time toast ("tap the badge") and never again
 // For every case: the drawer is open after the verdict (not a child of its host), nothing is painted over it, closing it moves nothing (0 reflow), focus returns to the
 // reopen target. Every check runs once the drawer's slide has finished (drawerSettled / drawerGone / drawerAt, no fixed sleeps). Own serve.py; the bank and /check are routed.   node tests/strip-layers-mc.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -114,7 +115,7 @@ const move = page => page.evaluate(() => {
   return { q: Math.round(document.querySelector("#q").getBoundingClientRect().height), ch: t("#q .ch"), chk: t("#q .chk"), part: t("#q .part"), ff: t("#q .part .ff"), nx: t("#q .nx"), fb: t("#fb"), wish: t("#wish"), choices: t("#q .choices") };
 });
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const CASES = [["mc", [360, 390, 393, 1280], ["wrong", "out", "right"]], ["inl", [390], ["wrong", "right"]], ["all", [390], ["wrong", "right"]], ["multi", [390], ["wrong", "right"]]];
 const SIZE = { 360: 740, 390: 844, 393: 852, 1280: 800 };
 for (const [kind, widths, states] of CASES) {

@@ -6,6 +6,7 @@
 // BIG PLAN V1 (Tony Nov 2, 22:49): desktop sugar keeps Cluck open for good (no X, no Escape, no sash dismiss, so no #clBack row);
 // the desktop steps that dismissed it are gone (tests/cluck-permanent.pw.mjs asserts the new rule); the phone / ask-box steps stay. V3 deletes the dead code.
 //   node tests/dismiss.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -49,7 +50,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const DESK = { width: 1280, height: 800 }, PHONE = { width: 393, height: 852 };
 const KINDS = {   // app.js HK, first lines (the default, deadpan, when there is no telemetry id)
   sassy: "Even ducks need a rest frame.", deadpan: "Cluck's still here, quack!", duck: "Cluck knows ducks don't cluck", nerd: "Cluck's resting with energy" };

@@ -1,6 +1,7 @@
 // Smoke: the calculator model picker (calc-pick.js, Tony Nov 6). A fresh device sees it once after the splash; a chip pick is saved per sid on the
 // server (GET / POST /calc) and survives a reload and a wiped cache; Skip is kept. Automated browsers skip the auto-show, so this spec turns it on
 // with window.__calcPickAuto.   node tests/calc-pick.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -25,7 +26,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const DLG = '[role="dialog"].cpick';
 const settled = async page => { await page.waitForFunction(() => !document.getElementById("splash")); await page.waitForTimeout(800); };
 async function ctxPage(state) {

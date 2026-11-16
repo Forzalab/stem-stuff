@@ -3,6 +3,7 @@
 // with its caret on the tag. Once per device (app.js rwTip beat "redo", stem-ob-rw-redo): the second Redeem says nothing. Sugar only
 // (rewardOn), and it logs "ob redo 1" for intent.js (Jev). Own serve.py on a temp bank, real clock (a pick needs the 2 s dwell).
 //   node tests/redo-note.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -68,7 +69,7 @@ async function toRedeem(page) {
   throw new Error("no Redeem showing within 14 Nexts");
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 390, height: 844 }]]) {
   await step(`${w}: the first Redeem says "${NOTE}" once, on the retry tag; the second Redeem does not`, async () => {
     const phone = vp.width < 500;

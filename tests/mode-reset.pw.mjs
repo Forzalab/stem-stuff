@@ -1,6 +1,7 @@
 // D6 (Oct 7): a browser still carrying the old stem-mode=diet|hard cookie (no stem-mode-v=2 flag) opens in sugar, once, with no
 // message; its progress (localStorage) stays. After that, DIET_<code> opts into diet and sticks across reloads (mode.mjs, serve.py mode_of).
 //   node tests/mode-reset.pw.mjs [base]      (a running serve.py)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -10,7 +11,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 const BASE = (process.argv[2] || "http://localhost:8812").replace(/\/$/, "") + "/";
 let fails = 0;
 const step = async (name, fn) => { try { await fn(); console.log("ok   " + name); } catch (e) { fails++; console.log("FAIL " + name + ": " + e.message); } };
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 async function showCode(page) {
   for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) return; if (await page.isVisible(s)) await page.click(s); }
 }

@@ -2,6 +2,7 @@
 // Tokyo Night token classes, a number per real line, a long line wraps hanging under its indent, the header shows the language,
 // Copy (>= 44px) copies the raw code and shows i-ok for ~2 s, no KaTeX inside code. Starts its own serve.py with a throwaway bank.
 //   node tests/codeblock.pw.mjs [port] [shots dir: also saves 360 / 390 / 1280 screenshots there]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
@@ -62,7 +63,7 @@ function measure() {
   };
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const width of [360, 390, 1280]) {
     const phone = width < 700;

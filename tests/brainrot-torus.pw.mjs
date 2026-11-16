@@ -3,6 +3,7 @@
 // header + ask field are on screen; a wheel of one block height + 60px wraps (a tile's screen y lands where the wrap says, and the page does not
 // scroll); flag off keeps the old scroller. Own serve.py + a one-problem sugar bank; YouTube is a blank stub (no request leaves).
 // usage: node tests/brainrot-torus.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -24,7 +25,7 @@ await serverUp(BASE);
 
 let fails = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, flag) {
   const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "no-preference" });
   await c.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));

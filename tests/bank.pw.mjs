@@ -2,6 +2,7 @@
 // (this browser's pointer, else the server's), upload vs bank, unknown bank, the old-bank banner (SCHEMA.md Version table).
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/bank.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -61,7 +62,7 @@ async function typeCode(page, code) {
 const label = page => page.getAttribute("#qlistBtn", "title");   // which bank or file is live (the button says the bank code, or "Questions" for a file)
 const rowTexts = async page => { if (await page.isHidden("#qlist")) await page.click("#qlistBtn"); return page.$$eval("#qlist a", as => as.map(a => a.textContent.trim())); };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const [vname, viewport] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1920, height: 1080 }]]) {
     const ctx = await browser.newContext({ viewport, serviceWorkers: "block", hasTouch: vname === "phone", isMobile: vname === "phone" });

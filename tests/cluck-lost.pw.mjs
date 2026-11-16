@@ -3,6 +3,7 @@
 // line and the empty gap a dropped figure left, and ends on ONE line "Cluck lost signal. Tap to retry." whose tap asks /explain again.
 // 1280 (the box is open from load) + 393 (the tray's Ask Cluck opens it). Own serve.py, /explain mocked by page.route (no model call).
 //   node tests/cluck-lost.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -34,7 +35,7 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const w of [1280, 393]) {
   await step(`@${w}: a reply that dies mid-way ends on one clean "Cluck lost signal. Tap to retry." line; the tap asks again`, async () => {
     const phone = w < 500;

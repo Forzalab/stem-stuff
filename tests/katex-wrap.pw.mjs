@@ -3,6 +3,7 @@
 // wider than its row, no word split mid-word.
 // Starts its own serve.py with a throwaway bank of nasty rows:   node tests/katex-wrap.pw.mjs [port]
 // Survey real banks instead (counts only, no verdict):           KW_BANKS=<dir with BANK_*.json> node tests/katex-wrap.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
@@ -71,7 +72,7 @@ function measure() {
   return out;
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let bad = 0;
 try {
   for (const width of [320, 390, 768, 1440]) {

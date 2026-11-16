@@ -2,6 +2,7 @@
 // aria-label, title, placeholder) outside the content (question, answers, figure, math, hints, Cluck's text, the original's body),
 // and the question text is byte-identical to the English page. ?blind=off brings English back. Without the flag nothing loads.
 // Starts its own serve.py with a throwaway banks/ folder:   node tests/blind.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -52,7 +53,7 @@ const leaks = page => page.evaluate(() => {
 });
 const pick = async (page, id) => { await page.click(`#q .opt[data-id="${id}"]`); await page.click(`#q .ch[data-id="${id}"] .send`); };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
