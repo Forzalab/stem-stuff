@@ -29,7 +29,7 @@ jobs:
       legs: ${{ steps.l.outputs.legs }}
       count: ${{ steps.l.outputs.count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "${{ inputs.to }}", fetch-depth: 0 }
       - id: l
         run: node tools/operations/ci-ship.mjs shas-between "${{ inputs.from }}" "${{ inputs.to }}"
@@ -43,7 +43,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.list.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "${{ matrix.sha }}" }
       - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "${{ inputs.to }}", fetch-depth: 0 }
       - uses: actions/download-artifact@v4
         continue-on-error: true

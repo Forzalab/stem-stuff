@@ -47,7 +47,7 @@ jobs:
     outputs:
       pipe: ${{ steps.d.outputs.pipe }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: d
         shell: bash
         env:
@@ -87,7 +87,7 @@ jobs:
       kind: ${{ steps.p.outputs.kind }}
       stamped: ${{ steps.p.outputs.stamped }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }   # the PR base sha must be in history for the selection diff
       - id: p
         shell: bash
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: inputs.mutant   # bench only: seed the fault this run must catch
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
@@ -163,7 +163,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: inputs.mutant   # bench only: seed the fault this run must catch
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
@@ -232,7 +232,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx jsonschema   # = requirements.txt (bankcheck.py needs jsonschema: B-DEPS)
@@ -256,7 +256,7 @@ jobs:
       WK_SPECS: proof-kb nav-stable toast-calc progbar-baseline desk-layout@1   # keyboard/inputs, nav, toast, progbar-baseline, layout
       WK_FALLBACK_SPECS: proof-kb desk-layout@1                                 # inputs + layout with no text-box-trim / field-sizing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - id: scope
         shell: bash
@@ -310,7 +310,7 @@ jobs:
       DOCS_ONLY: ${{ needs.plan.outputs.docs_only }}
       SKIP_BLOCK: ${{ needs.plan.outputs.skip_block }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: tools/operations/ci-all-verdict.sh
       # W4 (minimal addition): every block that ran must hand in flaky.txt, and each flaky spec must be in the unexpired jail
       - if: needs.block.result == 'success'
@@ -347,7 +347,7 @@ jobs:
     permissions: { issues: write, contents: read }
     concurrency: { group: flake-tickets, cancel-in-progress: false }   # one writer at a time (the issue body is read-modify-write)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - env:
           GH_TOKEN: ${{ github.token }}
           TICKETS: ${{ needs.all.outputs.tickets }},${{ needs.postdeploy.outputs.tickets }}
@@ -365,7 +365,7 @@ jobs:
     outputs:
       tickets: ${{ steps.d.outputs.tickets }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0, fetch-tags: true }
       - uses: actions/download-artifact@v4
         continue-on-error: true
@@ -410,7 +410,7 @@ jobs:
     timeout-minutes: 5
     permissions: { contents: write }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0, fetch-tags: true }
       - run: |
           live="$(curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://stem-stuff.vercel.app/version.json?t=$(date +%s)" | jq -r '.sha // empty' || true)"

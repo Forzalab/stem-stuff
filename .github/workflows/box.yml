@@ -22,7 +22,7 @@ jobs:
     env:
       LANES: 2   # box = 4 vCPU, runner capped at 3 CPUs; never size from nproc (prints 4)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # the tested commit, never the default branch head
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
