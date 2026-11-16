@@ -87,7 +87,7 @@ try {
       // KICKER-C (Tony Nov 16): the button sits in the kicker row, flush with the card's CONTENT box (top-right corner of the padding box)
       assert.ok(Math.abs(g.br.r - (g.pr.r - g.padR)) < 2 && Math.abs(g.br.t - (g.pr.t + g.padT - 12)) < 2, "top right (CLUCK-LINK: the 44px tap box reaches 12px above the label line) of the card's content box: " + JSON.stringify({ b: g.br, p: g.pr, padR: g.padR, padT: g.padT }));
       assert.equal(g.overlap, false, "the question text does not run under the button"); assert.equal(g.bw, "0px", "no border");
-      assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.ok(/^(rgba|color)\(/.test(g.color) && g.color !== "rgb(122, 138, 174)", "CLUCK-LINK: disabled = dimmed orange, not the old grey: " + g.color); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
+      assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.equal(g.color, "rgb(169, 184, 204)", "CLUCK-GREY: disabled = the --muted token"); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");
@@ -143,14 +143,14 @@ try {
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), false, "ends by itself");
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await page.waitForTimeout(350);
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), true, "Jev S6 sheen");
-      assert.match(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage), /gradient/, "a band");
-      assert.equal(await page.evaluate(() => /(?:90, 169, 255|0\.35|#5aa9ff)/i.test(getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage)), true, "tinted site blue --action, not white");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName), "cb-sweep", "CLUCK-SWEEP: the underline sweep, not a band");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).backgroundImage.includes("255, 166, 62"), true, "CLUCK-SWEEP: the line is the link's orange tone");
       await page.waitForTimeout(1200);
       await page.evaluate(() => window.stemCluckBtn.sheen("reply")); await page.waitForTimeout(400);
-      assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-duck")).animationName; }), "cb-shake", "reply = duck head shake, chip still");
+      assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-t")).animationName; }), "cb-sweep", "reply = the underline sweep (CLUCK-SWEEP), duck still");
       await page.waitForTimeout(1200);
       await page.evaluate(() => window.stemCluckBtn.sheen("right")); await page.waitForTimeout(400);
-      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-duck")).animationName), "cb-nod", "right = duck nod");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName), "cb-sweep", "right = the underline sweep (CLUCK-SWEEP)");
       await page.waitForTimeout(1200);
       await page.emulateMedia({ reducedMotion: "reduce" }); await page.waitForTimeout(1200);
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await page.waitForTimeout(400);

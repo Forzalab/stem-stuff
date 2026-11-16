@@ -162,7 +162,8 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--help, #ffa63e); paddi
   background: none; box-shadow: none !important; color: var(--cb-tone); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--cb-tone) 40%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::before { display: none; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { width: 18px; height: 18px; top: 2px; align-self: flex-start; }
-html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: color-mix(in srgb, var(--cb-tone) 55%, transparent); text-decoration-color: transparent; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: var(--muted, #a9b8cc); text-decoration-color: transparent; }   /* CLUCK-GREY (Tony Nov 16): disabled = the --muted token grey, duck too */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-duck { color: var(--muted, #a9b8cc); --c2: var(--muted, #a9b8cc); opacity: .7; }
 @media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover { text-decoration-color: var(--cb-tone); } }
 /* CLUCK-LINK states: the chip's box effects are off on the link (the sheen streak is a box-shaped band, the press shrink is a button feel). JS still toggles .cb-sheen on its timers (no transitionend/animationend dependency), it just draws nothing here. */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
@@ -198,3 +199,22 @@ html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(t
   html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qmore:not(.qopen) { --fb: 12px; }
   html.ui-v7 #problem.qc7 > .qfold svg { width: 16px; height: 10px; }
 }
+/* CLUCK-SWEEP (Tony Nov 16 "underline sweep as emphasis, replacing any existing emphasis"): every emphasis class cluckbtn.js sets (.cb-sheen / .cb-shake / .cb-nod / .cb-hop)
+   now plays ONE thing: a full-tone underline sweeps left -> right under the label (scaleX 0 -> 1, holds, fades), over the 40% resting underline. The duck stays still.
+   ::after = the sweep line (the old sheen layer, free on the link). Label starts at 12 pad + 18 duck + 6 gap = 36 px; the line sits on the text underline (offset 4). */
+/* both lines are backgrounds of the label (.cb-t), layer 1 = sweep, layer 2 = 40% resting line, same box: they can never sit at different heights (a ::after line drifted 6 px on phones) */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { text-decoration: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { padding-bottom: 3px; background-repeat: no-repeat; background-position: 0 100%, 0 100%;
+  background-image: linear-gradient(var(--cb-tone), var(--cb-tone)), linear-gradient(color-mix(in srgb, var(--cb-tone) 40%, transparent), color-mix(in srgb, var(--cb-tone) 40%, transparent));
+  background-size: 0% 1.5px, 100% 1.5px; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-t { background-image: none; }
+@media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover .cb-t { background-size: 100% 1.5px, 100% 1.5px; } }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn:is(.cb-sheen, .cb-shake, .cb-nod, .cb-hop) .cb-t { animation: cb-sweep 1s cubic-bezier(.2, .7, .2, 1) 1 forwards; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { animation: none !important; }
+@keyframes cb-sweep { 0% { background-size: 0% 1.5px, 100% 1.5px; } 45%, 75% { background-size: 100% 1.5px, 100% 1.5px; } 100% { background-size: 0% 1.5px, 100% 1.5px; } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { animation: none !important; } }
+/* SIZE-MATCH (Tony Nov 16 "make ask cluck and the code text look similar in size"): both were 15px 600, but the kicker is tracked CAPS (cap height on every letter), so it read
+   bigger than the mixed-case link. Caps drop to 13.5px (about the link's x-height + ascenders), one font file for both (--qfont). Measured baselines stay equal at top alignment (393: 63/63, 1280: 168.5/168.5). */
+html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: 13.5px; letter-spacing: .07em; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { font-family: var(--qfont); }
