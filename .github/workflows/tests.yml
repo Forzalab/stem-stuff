@@ -23,9 +23,12 @@ on:
 # below sends it down the fast pipe instead. A PR run therefore gets its own per-run concurrency group (no cancellation,
 # no pending-run replacement); main/schedule/dispatch queue every run in order (max), so 3 quick merges left the middle
 # one untested before and must not again.
+# orc14 (decision 13a + all-never-skipped): a PR push now CANCELS the run for its old head and runs the full pipe on the
+# new head (newest wins). The old M5 fast pipe left the new head without a full run, so with `all` red on fast-only heads
+# a PR with a mid-CI push could never merge. main/schedule/dispatch still queue every run in order (max).
 concurrency:
-  group: tests-${{ github.ref }}${{ github.event_name == 'pull_request' && format('-{0}', github.run_id) || '' }}
-  cancel-in-progress: false
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
   queue: max
 env:
   BLOCKS: 4   # runners for the .pw specs (GitHub Free: 20 jobs at once)
@@ -50,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           in_flight=false
-          if [ "$EVENT" = pull_request ]; then
+          if false && [ "$EVENT" = pull_request ]; then   # orc14: PR runs are newest-wins (concurrency above), never fast
             n="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?event=pull_request&per_page=100" \
               | jq --arg ref "$HEAD_REF" --arg sha "$HEAD_SHA" --argjson rid "$RUN_ID" \
               '[.workflow_runs[] | select(.head_branch == $ref) | select(.head_sha != $sha) | select(.id < $rid)
