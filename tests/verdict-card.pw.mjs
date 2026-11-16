@@ -102,13 +102,13 @@ try {
         near(g.ff.l, g.q.l, "the pill starts at the row's left edge");
         assert.equal(g.ffBw, "0px 0px 0px 0px"); assert.equal(g.nxBw, "0px 0px 0px 0px"); assert.equal(g.nfBw, "0px 0px 0px 0px", "no seam line");
         assert.equal(g.radius, "16px 0px 0px 16px", "the row's outer corners r16, the join flat");
-        assert.equal(g.bg, "rgb(12, 44, 34)", "the row = the verdict fill"); assert.equal(g.vkBg, "rgb(11, 42, 31)", "slot tint");
+        assert.equal(g.bg, "rgb(12, 44, 34)", "the row = the verdict fill"); assert.equal(g.vkBg, "rgba(0, 0, 0, 0)", "the mark is a plain glyph, no slot tile (VERDICT-MARK-INERT, Tony Nov 15)");
         assert.ok(g.nf.w > 0 && g.nfBg === "rgb(78, 230, 175)", "Next keeps its own fill: " + g.nfBg);
       } else {
         assert.equal(g.bg, "rgb(62, 20, 30)"); assert.equal(g.ffBw, "0px 0px 0px 0px");
-        near(g.vk.r, g.ff.r, "the slot ends the row");
+        near(g.vk.r, g.ff.r - 14, "the mark sits 14px in from the row end (round 3 centred mark, Tony Nov 15)");
       }
-      assert.ok(!g.vkDuck && g.vkLabel === null && g.vk.w >= 44 && g.vk.h >= 44, "the slot is a plain tick / X, no duck, no button label: " + JSON.stringify(g.vk));
+      assert.ok(!g.vkDuck && g.vkLabel === null && g.vk.w > 0 && g.vk.h > 0, "the slot is a plain tick / X, no duck, no button label (inert glyph, no 44px target: VERDICT-MARK-INERT, Tony Nov 15): " + JSON.stringify(g.vk));
       assert.ok(g.ff.r <= g.vw - 8 || right, "right gutter kept"); assert.ok(g.nx ? g.nx.r <= g.vw - 8 : true, "right gutter kept"); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS && (w === 390 || (w === 1366 && right))) { await page.locator("#q").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `vcard-${right ? "right" : "wrong"}-${w}.png`) }); }
       assert.deepEqual(page.errs, [], "page errors");

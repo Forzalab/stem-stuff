@@ -119,7 +119,11 @@ await step("flag on: the short-answer .ff is a recessed well, its edge gated on 
   assert.match(g.shadow, WELL, "the recessed well: " + g.shadow);
   const r = ratio(g.fill, g.surround);
   console.log(`     .ff field ${g.fill} vs ${g.surround} (${g.via}): ${r.toFixed(2)}:1, border ${g.bw}`);
-  assert.equal(g.bw, r >= 3 ? "0px" : "1px", "no edge only when the field reaches 3:1; else the 1px edge is kept");
+  // FIELD-LIP-3:1 (Tony Nov 15: INPUT-NO-BORDER + "read refactoring ui"): a 3:1 lighter bottom lip (RUI p.156-157 inset input) is the field's edge, in place of the 1px border
+  const lip = (g.shadow.match(/(rgba?\([^)]*\)) 0px -1px 0px 0px inset/) || [])[1];
+  const lr = lip ? ratio(lip, g.surround) : 0;
+  console.log(`     .ff lip ${lip} vs ${g.surround}: ${lr.toFixed(2)}:1`);
+  assert.ok(r >= 3 || g.bw === "1px" || lr >= 3, "an edge reaches 3:1: the fill, a 1px border, or the bottom lip (" + lr.toFixed(2) + ":1)");
   await c.close();
 });
 await step("flag on: the proof box .xb is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {
