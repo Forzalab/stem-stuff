@@ -87,7 +87,7 @@ html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--
 html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }
 /* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
 @media (max-width: 480px) {
-  html.ui-v7 #problem.qc7 { max-height: 50svh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  html.ui-v7 #problem.qc7, html.ui-v7 #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
     margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
   /* Q-MORE (qcard.js qmore): more below -> a sticky foot strip: card colour fading up + a thin chevron (2 px stroke, the corner-letter grey, like the dock's) */
   html.ui-v7 #problem.qc7.qmore::after { content: ""; position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: block; height: 48px; margin: -48px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); pointer-events: none;
@@ -102,3 +102,7 @@ html.ui-v7 #problem .blocks :is(p, li):has(> code) { line-height: 1.75; }   /* r
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 64px; }
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
+/* GHOST-CLIP (Tony Nov 16 "text too close / gap at the bottom"): the echo trail bleeds past the card's bottom-right; with overflow visible it grew the card's SCROLL area,
+   so a phone card (Q-HALF scroller) scrolled into empty space and every card measured as overflowing. Clip at the ghost box (= the card box): same picture, no phantom scroll */
+html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }
+html.ui-v7 #problem.qc7 .blocks > :last-child, html.ui-v7 #problem.qc7 .blocks > :last-child > :last-child { margin-bottom: 0; }   /* Q-FOOT: the card's own padding is the bottom air (top = bottom); no extra block margin */
