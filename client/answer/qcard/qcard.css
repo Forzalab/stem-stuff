@@ -92,3 +92,5 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.125rem; line-height: 24px; }
   html.ui-v7 #problem.qc7.qbr > .blocks:has(> .ptitle:first-child) { padding-top: 20px; }   /* 20 + 24 = the button's 44: one-line title bottom on the button bottom */
 }
+/* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
+html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; }
