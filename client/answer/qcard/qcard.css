@@ -142,3 +142,6 @@ html.ui-v7 #problem.qc7.qbr::before { content: none; display: none; }
 html.ui-v7 #problem.qc7.qbr { align-items: flex-start; }
 html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; align-self: flex-start; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qkicker { display: none; } html.ui-v7 #problem.qc7.qbr > .qkicker { display: block; }
+/* EXPLAIN-TAG fix (CI polish '(d) pad page gap 33px'): html.mt .xb-label { display: contents } (app.css) un-hid the label in the pad split; hidden everywhere unless the v7 side case */
+#work > .x-label { display: none !important; }
+html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }

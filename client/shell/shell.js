@@ -907,7 +907,7 @@ function proofSync() {
   if (!bridge.mtOpen) { if (scrollY !== swapY) scrollTo(0, swapY); requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); }); }
 }
 /* PROOF-AIR (Tony Nov 16, balanced gap): the split's question pane keeps its big bottom air (app.css html.mt .p, --s6) only when it scrolls; a question that fits gets top = bottom */
-function proofAir() { const fi = $("#freezeIn"); if (!fi) return; const fits = !!bridge.mtOpen && fi.scrollHeight <= fi.clientHeight + 1 && problemEl.scrollHeight <= problemEl.clientHeight + 1; problemEl.classList.toggle("p-fit", fits); }   // the pane OR the card itself (Q-HALF) may be the scroller
+function proofAir() { const fi = $("#freezeIn"); if (!fi) return; const fits = !!bridge.mtOpen && isProof() && fi.scrollHeight <= fi.clientHeight + 1 && problemEl.scrollHeight <= problemEl.clientHeight + 1; problemEl.classList.toggle("p-fit", fits); }   // the pane OR the card itself (Q-HALF) may be the scroller
 if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(proofAir)).observe(problemEl);
 addEventListener("resize", () => requestAnimationFrame(proofAir));
 document.addEventListener("focusin", () => proofSync());
