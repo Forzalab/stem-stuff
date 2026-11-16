@@ -93,3 +93,10 @@ test("pickGreen: a first-attempt success is still green (run_attempt 1 is not ex
   assert.deepEqual(pickGreen(runs, "green1"), { sha: "green1", kind: "full", created_at: "2026-11-09T00:00:00Z" },
     "attempt 1 stays a green anchor");
 });
+
+test("shouldRetry: a failure run with 0 failed jobs (workflow-file error) is not retried; >=1 failed job still is", () => {
+  assert.equal(shouldRetry({ conclusion: "failure", run_attempt: 1 }, "", 0), false);
+  assert.equal(shouldRetry({ conclusion: "failure", run_attempt: 1 }, "", 1), true);
+  assert.equal(shouldRetry({ conclusion: "startup_failure", run_attempt: 1 }, "", 0), false);
+  assert.equal(shouldRetry({ conclusion: "cancelled", run_attempt: 1 }, "", 2), false);
+});
