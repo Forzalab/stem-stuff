@@ -243,10 +243,10 @@ weight() {
   esac
 }
 
-# Tags per schedulable unit (CI plan PR 3, CEO-arch-2026-10-25 bullet 8): one engine tag and one time tag, optional @quarantine.
+# Tags per schedulable unit (CI plan PR 3, CEO-arch-2026-10-25 bullet 8): one engine tag and one time tag.
 #   engine: @engine = hits a measured engine divergence (engines-report.md S1-S10: scroll height, focus scroll, fonts, resize, keyboard),
 #           @layout = UI / visual geometry, @logic = state and wiring.   time: @fast-time = installs page.clock, else @real-time.
-#   @quarantine:<#issue or URL>:<YYYY-MM-DD> = runs but does not block; at most 14 days out, red past the date.
+#   No per-unit quarantine tag: the one flaky jail is tests/quarantine.json (<= 5 entries, 7 days, read by tools/operations/ci-gate.mjs).
 # Checked by tests/lint-tags.mjs (in npm test): every unit (a spec, or each of its PART_ENV parts) has a line, closed vocab, no lies.
 # Nothing reads these yet: the fast-time fixture (PR 3) and engine rotation (PR 7) will.
 tags() {
@@ -443,16 +443,11 @@ run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older script
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
   else
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"
-    local qd today; today="$(date -u +%F)"; qd="$(tags "$name" | grep -oE '@quarantine:[^ ]+' | sed 's/.*://' | head -1)"
-    if [ -n "$qd" ] && [[ "$today" < "$qd" || "$today" = "$qd" ]]; then   # in-window: run, don't block; past the date = red
-      printf '\033[33mQUAR %s %s s\033[0m\n' "$name" "$s"
-    else
-      echo "FAIL $name $s s"
-      local uf=""; [ "$name" = unittest ] && uf="$(unit_fails "$TMP/$name.log" | head -200)"
-      if [ -n "$uf" ] && grep -qE '^(FAIL|ERROR): ' <<<"$uf"; then sed 's/^/     /' <<<"$uf"   # the failing tests, not the log's head
-      else grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'; fi
-      fails=$((fails + 1))
-    fi
+    echo "FAIL $name $s s"
+    local uf=""; [ "$name" = unittest ] && uf="$(unit_fails "$TMP/$name.log" | head -200)"
+    if [ -n "$uf" ] && grep -qE '^(FAIL|ERROR): ' <<<"$uf"; then sed 's/^/     /' <<<"$uf"   # the failing tests, not the log's head
+    else grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'; fi
+    fails=$((fails + 1))
   fi
 }
 

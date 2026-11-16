@@ -1,5 +1,4 @@
 // RED (PR 1, ticket 09): the ship-gate decision + the green-run facts. Fails today because
-// tools/operations/ci-gate.mjs does not exist yet — every import below errors until the coder writes the
 // module with this exact surface:
 //   export const DOCS_EXTS                          // loopable docs-only extension set
 //   export function isDocsOnly(path)
@@ -227,56 +226,76 @@ test("CLI: a docs-only diff since the last green sha ships", () => {
   assert.equal(r.status, 0, "docs-only later diff is shippable (M1)");
 });
 
-// --- flaky jail + yellow rule (Nov 15), AC3.1-3.9 ------------------------------------
-import { readFileSync } from "node:fs";
-import { yellowCleared, yellowVerdict, expiredJail } from "../tools/operations/ci-gate.mjs";
+// --- flaky jail + yellow rule (Nov 15), AC3.1-3.14 -----------------------------------
+// Unit names are the ones run-all.sh prints (`flow`, `desk-layout@3`), never `flow.pw.mjs`.
+import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { yellowCleared, yellowVerdict, expiredJail, expiryOf, jailViolations, parseFailedSpecs, JAIL_MAX } from "../tools/operations/ci-gate.mjs";
 const NOW = Date.parse("2026-11-16T00:00:00Z");
-const J = (spec, added = "2026-11-15", expires = "2026-11-22") => ({ spec, test: "*", owner: "tony", reason: "t-1", added, expires });
-const run = (attempt, failed) => ({ conclusion: "success", event: "push", head_branch: "main", head_sha: "y1", run_attempt: attempt, created_at: "2026-11-15T00:00:00Z", failed_specs: failed });
-const yellow = (failed) => run(2, failed);
+const J = (spec, added = "2026-11-15", expires = "2026-11-22") => ({ spec, test: "*", owner: "tony", reason: "#601", added, expires });
+const run = (attempt, failed, created_at = "2026-11-16T00:00:00Z") => ({ conclusion: "success", event: "push", head_branch: "main", head_sha: "y1", run_attempt: attempt, created_at, failed_specs: failed });
+const yellow = (failed, created_at) => run(2, failed, created_at);
+const here = (p) => fileURLToPath(new URL(p, import.meta.url));
+const UNITS = spawnSync("bash", [here("./run-all.sh"), "--list"], { encoding: "utf8" }).stdout.split("\n").filter(Boolean);
 
-test("AC3.1 tests/quarantine.json parses, entries have the fields, expiry <= added + 7d", () => {
-  const jail = JSON.parse(readFileSync(new URL("./quarantine.json", import.meta.url), "utf8"));
-  assert.ok(Array.isArray(jail));
-  for (const e of jail) {
-    for (const k of ["spec", "test", "owner", "reason", "added", "expires"]) assert.ok(e[k], `entry ${e.spec} lacks ${k}`);
-    assert.ok(Date.parse(e.expires) - Date.parse(e.added) <= 7 * 864e5, `${e.spec}: expires more than 7d after added`);
-  }
+test("AC3.1 run-all.sh --list gives real unit names", () => {
+  assert.ok(UNITS.includes("flow") && UNITS.includes("unittest") && UNITS.includes("npm"), UNITS.slice(0, 5).join(","));
+});
+
+test("AC3.1 tests/quarantine.json: fields, real unit, not unittest/npm, issue ref, <= 7d, <= 5 entries", () => {
+  const jail = JSON.parse(readFileSync(here("./quarantine.json"), "utf8"));
+  assert.deepEqual(jailViolations(jail, { units: UNITS }), []);
+});
+
+test("AC3.1 jailViolations refuses each bad shape", () => {
+  const bad = (jail, re) => assert.match(jailViolations(jail, { units: UNITS }).join("\n"), re);
+  bad([J("flow.pw.mjs")], /not a unit name/);
+  bad([J("nope")], /not a unit name/);
+  for (const u of ["unittest", "npm", "batch", "codemap"]) bad([J(u)], /may not be jailed/);
+  bad([{ ...J("flow"), reason: "flaky, see later" }], /issue ref/);
+  assert.deepEqual(jailViolations([{ ...J("flow"), reason: "https://github.com/Forzalab/stem-stuff/issues/9" }], { units: UNITS }), []);
+  bad([J("flow", "2026-11-15", "2026-11-23")], /more than 7d/);
+  bad([{ ...J("flow"), owner: "" }], /lacks owner/);
+  const six = UNITS.filter((u) => !/^(unittest|npm|batch|codemap)$/.test(u)).slice(0, JAIL_MAX + 1).map((u) => J(u));
+  assert.equal(six.length, 6);
+  bad(six, /cap is 5/);
+  assert.deepEqual(jailViolations(six.slice(0, 5), { units: UNITS }), []);
 });
 
 test("AC3.2 attempt 1 green anchors with no jail", () => {
-  assert.equal(pickGreen([run(1, undefined)], "y1", { jail: [], now: NOW })?.sha, "y1");
+  assert.equal(pickGreen([run(1)], "y1")?.sha, "y1");
 });
 
-test("AC3.3 attempt 2 green, failed=[X], X jailed and live -> ok", () => {
-  assert.equal(yellowCleared(yellow(["x.mjs"]), [J("x.mjs")], NOW), true);
-  assert.equal(pickGreen([yellow(["x.mjs"])], "y1", { jail: [J("x.mjs")], now: NOW })?.sha, "y1");
+test("AC3.3 attempt 2 green, failed=[flow], flow jailed and live -> ok", () => {
+  assert.equal(yellowCleared(yellow(["flow"]), [J("flow")], NOW), true);
+  assert.equal(pickGreen([yellow(["flow"])], "y1", { jail: [J("flow")], now: NOW })?.sha, "y1");
 });
 
-test("AC3.4 X not jailed -> refused, names X", () => {
-  const v = yellowVerdict(yellow(["x.mjs"]), [], NOW);
+test("AC3.4 flow not jailed -> refused, names flow", () => {
+  const v = yellowVerdict(yellow(["flow"]), [], NOW);
   assert.equal(v.ok, false);
-  assert.match(v.reason, /x\.mjs/);
-  assert.equal(pickGreen([yellow(["x.mjs"])], "y1", { jail: [], now: NOW }), null);
-  assert.equal(pickGreen([yellow(["x.mjs"])], "y1"), null, "no jail option = yellow refused as before");
+  assert.match(v.reason, /flow/);
+  assert.equal(pickGreen([yellow(["flow"])], "y1", { jail: [], now: NOW }), null);
+  assert.equal(pickGreen([yellow(["flow"])], "y1"), null, "no jail option = yellow refused as before");
 });
 
-test("AC3.5 X jailed but expired -> refused, says expired", () => {
-  const v = yellowVerdict(yellow(["x.mjs"]), [J("x.mjs", "2026-11-01", "2026-11-08")], NOW);
+test("AC3.5 flow jailed but expired -> refused, says expired", () => {
+  const v = yellowVerdict(yellow(["flow"]), [J("flow", "2026-11-01", "2026-11-08")], NOW);
   assert.equal(v.ok, false);
   assert.match(v.reason, /expired/);
-  assert.match(v.reason, /x\.mjs/);
+  assert.match(v.reason, /flow/);
 });
 
-test("AC3.6 failed=[X,Y], only X jailed -> refused naming Y", () => {
-  const v = yellowVerdict(yellow(["x.mjs", "y.mjs"]), [J("x.mjs")], NOW);
+test("AC3.6 failed=[flow,desk-layout@3], only flow jailed -> refused naming desk-layout@3 only", () => {
+  const v = yellowVerdict(yellow(["flow", "desk-layout@3"]), [J("flow")], NOW);
   assert.equal(v.ok, false);
-  assert.match(v.reason, /y\.mjs/);
-  assert.doesNotMatch(v.reason, /x\.mjs/);
+  assert.match(v.reason, /desk-layout@3/);
+  assert.doesNotMatch(v.reason, /flow/);
 });
 
 test("AC3.7 yellow with failed specs unknown or empty -> refused (fail closed)", () => {
-  for (const f of [undefined, null, []]) assert.equal(yellowVerdict(yellow(f), [J("x.mjs")], NOW).ok, false);
+  for (const f of [undefined, null, []]) assert.equal(yellowVerdict(yellow(f), [J("flow")], NOW).ok, false);
 });
 
 test("expiredJail lists only expired entries; missing expires = added + 7d", () => {
@@ -288,14 +307,64 @@ test("AC3.9 CLI usage mentions --failed-specs; CLI refuses a yellow whose failed
   assert.match(cli(["--help"]).stdout, /--failed-specs/);
   const dir = mkdtempSync(join(tmpdir(), "gate-"));
   const runs = join(dir, "runs.json"), jail = join(dir, "q.json");
-  writeFileSync(runs, JSON.stringify([yellow(undefined)]));
+  writeFileSync(runs, JSON.stringify([yellow(undefined, "2026-11-16T00:00:00Z")]));
   writeFileSync(jail, "[]");
-  const r = cli(["--candidate", "y1", "--runs", runs, "--jail", jail, "--failed-specs", "flaky.mjs"]);
+  const r = cli(["--candidate", "y1", "--runs", runs, "--jail", jail, "--failed-specs", "flow"]);
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /flaky\.mjs/);
-  writeFileSync(jail, JSON.stringify([{ ...J("flaky.mjs"), added: new Date().toISOString().slice(0, 10), expires: new Date(Date.now() + 6 * 864e5).toISOString().slice(0, 10) }]));
-  assert.equal(cli(["--candidate", "y1", "--runs", runs, "--jail", jail, "--failed-specs", "flaky.mjs"]).status, 0);
+  assert.match(r.stderr, /flow/);
+  writeFileSync(jail, JSON.stringify([J("flow")]));
+  assert.equal(cli(["--candidate", "y1", "--runs", runs, "--jail", jail, "--failed-specs", "flow"]).status, 0);
 });
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
+test("AC3.10 no renewal: expires may not move later; an expired spec may not be re-added within 21 days", () => {
+  const prev = [J("flow", "2026-11-01", "2026-11-08")];
+  const v = (jail, now) => jailViolations(jail, { units: UNITS, prev, now });
+  assert.deepEqual(v([J("flow", "2026-11-01", "2026-11-08")], NOW), [], "an unchanged entry is not a renewal");
+  assert.deepEqual(v([], NOW), []);
+  assert.match(v([J("flow", "2026-11-05", "2026-11-12")], NOW).join(), /moved later/);
+  assert.match(v([J("flow", "2026-11-16", "2026-11-23")], NOW).join(), /moved later/);
+  // expired 2026-11-08, now 2026-11-16 (8 days ago): re-added even with an earlier expiry is still a re-add
+  assert.match(v([J("flow", "2026-11-01", "2026-11-07")], NOW).join(), /no re-adding/);
+  // 21+ days after expiry an earlier-dated entry is no longer blocked
+  assert.deepEqual(v([J("flow", "2026-11-01", "2026-11-07")], Date.parse("2026-12-10T00:00:00Z")), []);
+});
+
+test("AC3.12 expiryOf boundary: live through D 23:59:59Z, dead at D+1 00:00Z", () => {
+  const e = J("flow", "2026-11-15", "2026-11-22");
+  assert.equal(expiryOf(e), Date.parse("2026-11-23T00:00:00Z"));
+  assert.equal(yellowCleared(yellow(["flow"]), [e], Date.parse("2026-11-22T23:59:59Z")), true);
+  assert.equal(yellowCleared(yellow(["flow"]), [e], Date.parse("2026-11-23T00:00:00Z")), false);
+});
+
+test("AC3.12 now = run.created_at, not wall clock: a run keeps its colour while it waits for a ship", () => {
+  const e = J("flow", "2026-11-15", "2026-11-22");
+  assert.equal(pickGreen([yellow(["flow"], "2026-11-20T12:00:00Z")], "y1", { jail: [e] })?.sha, "y1");
+  assert.equal(pickGreen([yellow(["flow"], "2026-11-23T00:00:00Z")], "y1", { jail: [e] }), null);
+  const dir = mkdtempSync(join(tmpdir(), "gate-"));
+  const runs = join(dir, "runs.json"), jail = join(dir, "q.json");
+  writeFileSync(runs, JSON.stringify([yellow(["flow"], "2026-11-20T12:00:00Z")]));
+  writeFileSync(jail, JSON.stringify([e]));
+  assert.equal(cli(["--candidate", "y1", "--runs", runs, "--jail", jail]).status, 0);
+});
+
+test("AC3.13 one jail: no @quarantine tag path left in run-all.sh or lint-tags.mjs", () => {
+  for (const f of ["./run-all.sh", "./lint-tags.mjs"]) assert.doesNotMatch(readFileSync(here(f), "utf8"), /@quarantine|QUAR /, f);
+});
+
+// AC3.14: the shape of a real CI job log: ISO timestamp prefix, `lane N:` prefix, result line `FAIL <unit> <s> s`.
+const LOG = [
+  "2026-11-14T10:22:07.4811122Z lane 2: ok   anim 12.3 s",
+  "2026-11-14T10:22:31.1234567Z lane 2: FAIL flow 39.6 s",
+  "2026-11-14T10:22:31.1240001Z      Error: locator.click: Timeout 30000ms exceeded",
+  "2026-11-14T10:22:40.0000000Z lane 2: ok   easy 3.1 s",
+  "2026-11-14T10:22:41.0000000Z lane 1: FAIL desk-layout@3 20.5 s",
+  "2026-11-14T10:22:41.5000000Z lane 1: FAIL flow 40.2 s",
+  "2026-11-14T10:22:42.0000000Z FAIL easy 2.0 s",
+  "2026-11-14T10:22:43.0000000Z some FAIL line that is not a result",
+].join("\n");
+test("AC3.14 parseFailedSpecs: exactly the failed unit names from a timestamped lane log", () => {
+  assert.deepEqual(parseFailedSpecs(LOG), ["flow", "desk-layout@3", "easy"]);
+  assert.deepEqual(parseFailedSpecs("2026-11-14T10:22:31Z lane 2: ok   flow 39.6 s\n"), []);
+  assert.deepEqual(parseFailedSpecs(LOG.replace(/\n/g, "\r\n")), ["flow", "desk-layout@3", "easy"]);
+  assert.ok(readFileSync(here("../.github/workflows/ship.yml"), "utf8").includes("(lane [0-9]+: *)?FAIL ([^ ]+) +[0-9.]+ s$"), "ship.yml sed must match FAIL_LINE");
+});
