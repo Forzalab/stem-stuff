@@ -1,7 +1,7 @@
 /* rewards/rewards.css: the sugar reward skin, Quiz Pop dark (Tony, Oct 4; port of archive/design/rewards/themes/quizpop.css over the shared
    hud.css + fx.css). Scoped (docs/design/REWARDS-WIRING.md §7): it styles only the HUD row (.rw-*) and the FX layers (.fx-*), every token
    lives on .rw-skin (never :root) and is named --rw-*, so the question UI keeps STYLE.md. tests/style.test.mjs checks the scope.
-   Fonts: the app's text face (var(--font), app.css: Atkinson, SF on WebKit) at 400 / 600 on app.css's size ladder; Press Start 2P (vendor/fonts, OFL) for the burst title only. No CDN.
+   Fonts: the app's text face (var(--font), app.css: Schibsted Grotesk) at 400 / 600 on app.css's size ladder; Press Start 2P (vendor/fonts, OFL) for the burst title only. No CDN.
    z ladder (app.css): stage 15 · dock 20 · brainrot 30 · Scratchpad button 40 · #toast 50 · drop banner 55 · update bar 60 ·
    splash 100 · FX overlays 140 · FX particles 150. */
 /* impeccable-disable radial-halo: the burst's speed lines live only inside the 1.2-2 s overlay, never on the resting page */
@@ -11,7 +11,7 @@
   --rw-sh4: 0 12px 24px -6px rgb(0 0 0 / .6), 0 2px 4px rgb(0 0 0 / .4);
   --rw-sh5: 0 20px 40px -8px rgb(0 0 0 / .7), 0 4px 8px rgb(0 0 0 / .4);
   --rw-r-s: 12px; --rw-r-m: 20px; --rw-r-l: 28px; --rw-pill: 999px;
-  --rw-font: var(--font, "Atkinson Hyperlegible", system-ui, sans-serif);
+  --rw-font: var(--font, "Schibsted Grotesk", system-ui, sans-serif);
   --rw-pixel: "Press Start 2P", "Atkinson Hyperlegible Mono", monospace;
 }
 

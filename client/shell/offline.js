@@ -240,7 +240,7 @@
   const CSS = `
 .so{--so-ink:var(--ink,#e8edf5);--so-muted:var(--muted,#a7b7cd);--so-sheet:var(--card,#101c2c);--so-edge:var(--line,#394a61);--so-focus:var(--focus,#92c0ff);--so-bad:var(--wrong,#eb596e);--so-ok:var(--correct,#4ee6af);
  position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgb(10 15 24/.72);
- font:400 1.0625rem/1.5 "Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;color:var(--so-ink)}
+ font:400 1.0625rem/1.5 "Schibsted Grotesk",system-ui,sans-serif;color:var(--so-ink)}
 .so[hidden]{display:none}
 .so-card{position:relative;box-sizing:border-box;width:100%;max-width:26rem;padding:1.5rem 1.25rem 1.25rem;background:var(--so-sheet);border:1px solid var(--line,#394a61);border-radius:12px;box-shadow:0 12px 40px rgb(0 0 0/.45)}
 .so-card.drag{border-color:var(--so-focus);outline:2px dashed var(--so-focus);outline-offset:-8px}
