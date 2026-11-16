@@ -81,3 +81,4 @@ html.ui-v7.dock-bottom .pb-list { flex: 0 0 auto; max-width: 45%; }
 /* BAR-GLASS (Tony Nov 16): under ui-v7 the pinned top bar is see-through + blurred (frosted), not a solid bar with a --paper fade under it */
 html.ui-v7:not(.start) .top { background: color-mix(in srgb, var(--paper, #050a18) 45%, transparent) !important; -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%); }
 html.ui-v7 .top::before { content: none !important; }
+html.ui-v7:not(.start) .top { border-image: none; }   /* the base bar paints an OPAQUE full-bleed --paper through border-image (app.css .top); it hid the glass */

@@ -94,7 +94,8 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
 }
 /* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
-html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; }
+html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .22em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
+html.ui-v7 #problem .blocks :is(p, li):has(> code) { line-height: 1.75; }   /* room so two wrapped chip lines never touch */
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 64px; }
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
