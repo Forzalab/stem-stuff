@@ -25,7 +25,7 @@ async function step(name, fn) {
 async function vtHook(page) {
   await page.evaluate(() => { const st = document.startViewTransition.bind(document); window.__vt = 0; window.__vtN = 0;
     document.startViewTransition = cb => { const t = st(cb); window.__vt++; window.__vtN++; t.finished.finally(() => window.__vt--); return t; }; });
-  return { vtN: () => page.evaluate(() => window.__vtN), vtDone: n => page.waitForFunction(n => window.__vtN > n && !window.__vt, n) };
+  return { vtN: () => page.evaluate(() => window.__vtN), vtDone: n => page.waitForFunction(n => window.__vtN > n && !window.__vt, n, { timeout: 5000 }) };
 }
 const lorem = n => Array.from({ length: n }, (_, i) => `Claim ${i + 1}: a block of ${i + 2} kg slides along a rough track, and the friction force on it changes as the angle of the track is changed.`);
 /* choose-all, prove mode, with the long fix.how that clipped at 390px (BANK_P2X) */
@@ -48,7 +48,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   page.on("pageerror", e => errors.push(String(e)));
   await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
   const T = `${W}x${H}`;
-  const openPad = async () => { await page.locator("#padFab").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await page.waitForTimeout(350); };
+  const openPad = async () => { await page.locator("#padFab").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt"), null, { timeout: 5000 }); await page.waitForTimeout(350); };
   const shot = async () => { if (SHOTS && W === 390) { n++; await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/flow-${n}-390.png` }); } };
   const kbUp = async () => { await page.setViewportSize({ width: W, height: Math.round(H * KB) }); await page.waitForTimeout(450); };
   const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(500); };
