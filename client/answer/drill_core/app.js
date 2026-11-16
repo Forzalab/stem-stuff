@@ -36,7 +36,7 @@ import { quack, withQuack } from "../../pure_logic_modules/quack.mjs";
 import { changes } from "../../pure_logic_modules/chg.mjs";
 /* ./steps.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 /* ./tug.mjs: used by cluck.js / shell.js only (split-app.mjs) */
-import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "../../pure_logic_modules/incident.mjs";
+import { incident, reason, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "../../pure_logic_modules/incident.mjs";
 /* ./sheet.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 /* split-app.mjs (W152): part 1 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 export const bridge = {};   // the bridge to cluck.js + shell.js (split-app.mjs)
@@ -670,9 +670,13 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
     }
     return false;
   }
-  const nb = codes.bankNotice(b);
-  if (nb.dropped) { if (!quiet) entryMsg(nb.dropped, "warn"); return false; }   // past its sunset (SCHEMA.md Version table): the message, not "not found"
-  if (!b || !b.problems.length) { if (!quiet) entryMsg("QUACKK, code not found."); return false; }
+  const nb = codes.bankNotice(b), at = { status: r && r.status, path };   // the three bank outcomes that said nothing (docs/design/BANKCHECK.md)
+  if (nb.dropped) { incident("bank", "dropped", at); if (!quiet) entryMsg(nb.dropped, "warn"); return false; }   // past its sunset (SCHEMA.md Version table): the message, not "not found"
+  if (!b) {   // 404: a typo is not a failure (app.js:297): one console line, no beacon. A 200 null (no last bank) is a normal answer
+    if (at.status === 404) console.warn("incident " + JSON.stringify(reason("bank", "not_found", at)));
+    if (!quiet) entryMsg("QUACKK, code not found."); return false;
+  }
+  if (!b.problems.length) { incident("bank", "empty", at); if (!quiet) entryMsg("QUACKK, code not found."); return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s, banner: nb.banner, front: b.front || "" };
   src(b.code);
   remembered(b.code);
