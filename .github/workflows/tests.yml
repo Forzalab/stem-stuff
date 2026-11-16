@@ -181,7 +181,8 @@ jobs:
         env:
           LANE_SPECS: ${{ matrix.lanes }}
           DIFF_DIR: ${{ github.workspace }}/jank-diff   # specs that diff screenshots (desk-layout) keep shots + *-DIFF.png here
-          FLAKY_PASS: ${{ github.event_name == 'pull_request' && vars.SHIP_MODE == 'pr-green' && '1' || '' }}   # Tony Nov 15: unjailed flake on a PR = yellow + ticket (`all`), never a block
+          # CI-ARCH PR 1 (Tony L1): a retry-pass on a main push = GREEN + ticket; on a PR only with SHIP_MODE pr-green (Nov 15)
+          FLAKY_PASS: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && vars.SHIP_MODE == 'pr-green')) && '1' || '' }}
         run: |
           IFS='|' read -ra lane <<<"$LANE_SPECS"
           : >flaky.txt   # W4: always exists in a block that ran; each lane appends the specs that failed once and passed on retry
@@ -364,7 +365,8 @@ jobs:
         if: needs.block.result == 'success'
         env: { MATRIX: "${{ needs.plan.outputs.matrix }}" }
         run: |
-          PR=; [ "$EVENT" = pull_request ] && [ "${SHIP_MODE:-strict}" = pr-green ] && PR=--pr   # unjailed flake: yellow + ticket (flake-ticket job)
+          # unjailed flake = pass + ticket (flake-ticket job): main push always (CI-ARCH PR 1), PR only with pr-green
+          PR=; { [ "$EVENT" = push ] && [ "$GITHUB_REF" = refs/heads/main ]; } || { [ "$EVENT" = pull_request ] && [ "${SHIP_MODE:-strict}" = pr-green ]; } && PR=--pr
           node tools/operations/ci-flaky.mjs all tests/quarantine.json flaky "$(jq '.include | length' <<<"$MATRIX")" $PR
       # P4: the green stamp, keyed by this checkout's git tree hash. Only a PR/push run, only pr-green, only when everything passed (an unjailed
       # flaky spec = no stamp, AC3.11), never for a docs-only run, and not when the push run was itself skipped by a stamp.
@@ -378,12 +380,13 @@ jobs:
           path: stamp.json
           overwrite: true
           retention-days: 30
-  # ---- SHIP_MODE pr-green only (everything below is skipped while the repo variable is strict/unset) ----
+  # ---- SHIP_MODE pr-green only (skipped while strict/unset), except flake-ticket also runs on main push (CI-ARCH PR 1) ----
   # Tony Nov 15: an unjailed FLAKY spec on a PR = merge (yellow) + a ticket. One issue "flake tickets", a `- [ ]` line per flake, deduped.
   # issues: write lives in this job only.
   flake-ticket:
     needs: [all, postdeploy]
-    if: always() && vars.SHIP_MODE == 'pr-green' && (needs.all.outputs.tickets != '' || needs.postdeploy.outputs.tickets != '') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    # CI-ARCH PR 1: also on every main push (strict mode too), so a main retry-pass always leaves a ticket
+    if: always() && (vars.SHIP_MODE == 'pr-green' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && (needs.all.outputs.tickets != '' || needs.postdeploy.outputs.tickets != '') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: { issues: write, contents: read }
