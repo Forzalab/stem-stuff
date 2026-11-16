@@ -144,7 +144,7 @@ try {
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await page.waitForTimeout(350);
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), true, "Jev S6 sheen");
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName), "cb-sweep", "CLUCK-SWEEP: the underline sweep, not a band");
-      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).backgroundImage.includes("255, 166, 62"), true, "CLUCK-SWEEP: the line is the link's orange tone");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).backgroundImage.includes("255, 166, 62")), true, "CLUCK-SWEEP: the line is the link's orange tone");
       await page.waitForTimeout(1200);
       await page.evaluate(() => window.stemCluckBtn.sheen("reply")); await page.waitForTimeout(400);
       assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-t")).animationName; }), "cb-sweep", "reply = the underline sweep (CLUCK-SWEEP), duck still");
