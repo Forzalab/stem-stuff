@@ -8,6 +8,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -20,7 +21,7 @@ const welcome = { code: "PHYS_TC1", type: "num", answer: "4", form: "8/2", tol: 
   repair: { steps: [{ id: "answer", label: "Final answer", kind: "num" }] } };
 writeFileSync(join(BANKS, "BANK_FHT.json"), JSON.stringify({ v: 1, problems: [welcome, ...Array.from({ length: 12 }, (_, i) => num("PHYS_TC" + (i + 2), i + 1))] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_FHT", STEM_FRONT_TITLE: "Exam 3", STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 500)); } }

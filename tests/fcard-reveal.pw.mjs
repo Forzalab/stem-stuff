@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -24,7 +25,7 @@ writeFileSync(join(banks, "formula-sheet.json"), JSON.stringify({ v: 3, groups: 
 const item = (code, extra) => ({ code, title: code, type: "num", body: [{ type: "text", md: "Reveal " + code }], answer: "42", saccharine: { title: code, part: ["FA", "FB", "FC"], ...extra } });
 writeFileSync(join(banks, "BANK_FRV.json"), JSON.stringify({ v: 1, problems: [item("CALC1_FR1"), item("CALC1_FR2", { ladder: { mid: [{ of: "FA", tex: "F = m a" }], arrows: [{ from: "FA", to: "FB" }] } })] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }

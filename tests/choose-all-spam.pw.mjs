@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -17,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8823), BASE = `http://localhost:${PORT}`;
 const TRIES = join(mkdtempSync(join(tmpdir(), "spam-")), "tries.json");
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 let fails = 0;
 async function step(name, fn) {

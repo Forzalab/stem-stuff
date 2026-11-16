@@ -11,6 +11,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -30,7 +31,7 @@ writeFileSync(join(BANKS, "BANK_UN1.json"), JSON.stringify({ v: 1, problems: [
     parts: [{ type: "num", answer: "4", unit: "kg·m^2/s" }, { type: "num", answer: "5", unit: "" }] },
   num("PHYS_U05", "1.5", "10^4 kg·m^2/s")] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) {

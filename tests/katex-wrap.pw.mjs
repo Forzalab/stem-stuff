@@ -9,6 +9,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -36,7 +37,7 @@ if (!SURVEY) {
 const codes = readdirSync(BANKS).filter(f => /^BANK_[A-Z0-9]{3,6}\.json$/.test(f))
   .flatMap(f => JSON.parse(readFileSync(join(BANKS, f), "utf8")).problems.filter(p => p.type === "mc").map(p => p.code));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 /* runs in the page: one count per kind of bad wrap, plus where */
 function measure() {

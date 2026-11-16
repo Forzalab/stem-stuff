@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -54,7 +55,7 @@ const env = on => ({ ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", 
   EXPR_MODE: on ? "1" : "", CLAUDE_API: "fake", CLAUDE_BASE: `http://localhost:${FAKE}`, OPENROUTER_API_KEY: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "" });
 const srvs = [spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: env(true), stdio: "ignore" }),
   spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(OFFP)], { env: env(false), stdio: "ignore" })];
-for (const p of [PORT, OFFP]) for (let i = 0; i < 80; i++) { try { if ((await fetch(`http://localhost:${p}/`)).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+for (const p of [PORT, OFFP]) await serverUp(`http://localhost:${p}`);
 
 let fails = 0;
 async function step(name, fn) {
