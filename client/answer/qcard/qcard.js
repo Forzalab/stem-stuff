@@ -203,8 +203,9 @@
     var p = D.getElementById("problem"); if (!p) return;
     if (!on()) { p.classList.remove("qmore", "qopen"); return; }
     var open = p.classList.contains("qopen");
+    p.style.setProperty("--qover", Math.max(0, p.scrollHeight - p.clientHeight) + "px"); p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-BLEED: the ghost box spans the whole scroll height, the trail stays put
     var over = p.scrollHeight - p.clientHeight > 4, more = !open && over && p.scrollHeight - p.scrollTop - p.clientHeight > 4;
-    p.classList.toggle("qmore", more);
+    p.classList.toggle("qmore", more); p.classList.toggle("qscrolled", !open && p.scrollTop > 4);   // EDGE-FADE: top fade only once scrolled
     if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }
   }
   function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; var pp = D.getElementById("problem"); if (pp && pp.dataset.qfor !== location.hash) { pp.dataset.qfor = location.hash; pp.classList.remove("qopen"); } build(); rowAlign(); qmore(); }); }

@@ -87,7 +87,7 @@ try {
       // KICKER-C (Tony Nov 16): the button sits in the kicker row, flush with the card's CONTENT box (top-right corner of the padding box)
       assert.ok(Math.abs(g.br.r - (g.pr.r - g.padR)) < 2 && Math.abs(g.br.t - (g.pr.t + g.padT - 12)) < 2, "top right (CLUCK-LINK: the 44px tap box reaches 12px above the label line) of the card's content box: " + JSON.stringify({ b: g.br, p: g.pr, padR: g.padR, padT: g.padT }));
       assert.equal(g.overlap, false, "the question text does not run under the button"); assert.equal(g.bw, "0px", "no border");
-      assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.equal(g.color, "rgb(122, 138, 174)", "option A label #7a8aae"); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
+      assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.ok(/^(rgba|color)\(/.test(g.color) && g.color !== "rgb(122, 138, 174)", "CLUCK-LINK: disabled = dimmed orange, not the old grey: " + g.color); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");

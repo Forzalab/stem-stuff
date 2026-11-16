@@ -157,16 +157,44 @@ html.side.proof-split #work > #wish { order: 3; }
 html.side.proof-split #work > #cluck { order: 4; }
 /* CLUCK-LINK (Tony Nov 16: "remove the button frame, make that link-like, try some color scheme from our swatch, baseline align with the CEH text"):
    no fill, no raise, no radius plate; label + duck read as a link in a palette tone. The 44 px tap target stays (12 px pad, cancelled by -12 px margin), so the label's
-   line box (20 px, --t-sm 600, same as .qkicker) starts at the kicker's top: equal font + line-height = shared baseline. Tone trial: html[data-cb-tone] = help (default) | action | amber | sky. */
+   line box (20 px, --t-sm 600, same as .qkicker) starts at the kicker's top: equal font + line-height = shared baseline. Tone = --help orange (Tony Nov 16 pick); disabled = the same orange, dimmed. */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--help, #ffa63e); padding: 12px 0 12px 12px !important; margin: -12px 0 !important; line-height: 20px; min-height: 0; gap: 6px; border-radius: 6px;
   background: none; box-shadow: none !important; color: var(--cb-tone); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--cb-tone) 40%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::before { display: none; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { width: 18px; height: 18px; top: 2px; align-self: flex-start; }
-html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: var(--dim, #7a8aae); text-decoration-color: transparent; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: color-mix(in srgb, var(--cb-tone) 55%, transparent); text-decoration-color: transparent; }
 @media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover { text-decoration-color: var(--cb-tone); } }
-html[data-cb-tone="action"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--action-on, #8cc2ff); }
-html[data-cb-tone="amber"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--fig-amber-1, #ffd23f); }
-html[data-cb-tone="sky"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--fig-sky-1, #5eb8ff); }
 /* CLUCK-LINK states: the chip's box effects are off on the link (the sheen streak is a box-shaped band, the press shrink is a button feel). JS still toggles .cb-sheen on its timers (no transitionend/animationend dependency), it just draws nothing here. */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):active { transform: none; }
+/* GHOST-BLEED (Tony Nov 16 "the ghost number got cut off, it is allowed to bleed down"): in a Q-HALF scroller the ghost box was the card's CLIENT box, so scrolling showed its
+   hard bottom edge. The box now reaches the end of the scroll content (--qover, qcard.js qmore); the trail keeps its spot (bottom + --qover) and the mask keeps its centre and
+   size (--qch), so it fades on down instead of stopping. No growth past the content: no phantom scroll (GHOST-CLIP holds). */
+html.ui-v7 #problem.qc7.qbr .qghostbox { bottom: calc(-1 * var(--qover, 0px));
+  -webkit-mask-image: radial-gradient(130% calc(var(--qch, 100%) * 1.3) at 100% calc(100% - var(--qover, 0px)), #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%);
+  mask-image: radial-gradient(130% calc(var(--qch, 100%) * 1.3) at 100% calc(100% - var(--qover, 0px)), #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); }
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { bottom: calc(var(--qnum) * -.7 + var(--qover, 0px)); }
+/* FOLD-CENTER (Tony Nov 16 "collapse chevron is uneven"): open, the fold kept the folded strip's flex basis (100% + 2 pads) with width 100%, so it overflowed right and the chevron sat one pad right of centre */
+@media (max-width: 480px) { html.ui-v7 #problem.qc7.qbr.qopen > .qfold { flex-basis: 100%; margin-inline: 0; } }
+/* NO-EXAM (Tony Nov 16): the "questions · q1" source line under the question is gone; the meta row only shows when it still holds something (the Twist chip) */
+html.ui-v7 #problem.qc7 .qmeta .qexam { display: none; }
+html.ui-v7 #problem.qc7 .qmeta:not(:has(> :not(.qexam))) { display: none; }
+/* EDGE-FADE (Tony Nov 16 "add fade gradient to make edge transition less abrupt"): the Q-HALF scroller cut lines hard at its top / bottom edge. The mask sits on the scroller's own
+   box (it does not scroll). Top fades only once scrolled (.qscrolled, qcard.js qmore: the kicker row never dims at rest); bottom fades only when the fold strip is not there
+   (.qmore has its own gradient + chevron, which a mask would dim). Open (no scroll) = no mask. */
+@media (max-width: 480px) {
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qopen) { --ft: 0px; --fb: 32px; -webkit-mask-image: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent);
+    mask-image: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qscrolled:not(.qopen) { --ft: 40px; }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qmore:not(.qopen) { --fb: 0px; }
+}
+/* SETUP-FADE wider (Tony Nov 16 "fade slightly earlier and wider"): the setup scroller's edge fades go 16 -> 44 px, so the cut line dissolves over ~2 lines, not one */
+html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 44px); mask-image: linear-gradient(transparent 0, #000 44px); }
+html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent); mask-image: linear-gradient(#000 calc(100% - 44px), transparent); }
+html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); }
+/* FOLD-JUT (Tony Nov 16, Firefox phone: code peeked below the fold strip by a few px): the sticky strip's bottom is not guaranteed flush in every engine, so the scroller's own
+   mask also clears its last 12 px (the chevron sits 14+ px up, untouched). Smaller chevron: 20x12 -> 16x10. */
+@media (max-width: 480px) {
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qmore:not(.qopen) { --fb: 12px; }
+  html.ui-v7 #problem.qc7 > .qfold svg { width: 16px; height: 10px; }
+}
