@@ -121,11 +121,15 @@ for (const [tag, vp] of VPS) {
       return { pe: s.pointerEvents, op: +s.opacity, h: parseFloat(s.height) / innerHeight, hit: !!t && !r.contains(t) }; });
     assert.ok(dim.pe === "none" && dim.op > 0 && dim.h > 0.3 && dim.h < 0.37 && dim.hit, "the bottom-third dim shows while risen, never blocks taps: " + JSON.stringify(dim));
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
+    const probe = await page.evaluate(() => { const b = document.querySelector(".ck-peek").getBoundingClientRect(), e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      window.__rises = []; const r = window.stemDuck.rise; window.stemDuck.rise = function (o) { window.__rises.push(o && o.trigger); return r.apply(this, arguments); };
+      return { hitTag: e && (e.className || e.tagName), hitInPeek: !!e && !!e.closest(".ck-peek") }; });   // DBG-PROBE (remove before merge)
     await page.click(".ck-peek");                                     // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
     await page.clock.runFor(400);
-    assert.equal(await page.evaluate(() => document.querySelector(".ck-rise").hidden), true, "the dim is gone with the rise (the box is hidden)");
+    { const st = await page.evaluate(() => { const r = document.querySelector(".ck-rise"); return { hidden: r.hidden, cls: r.className, up: window.stemDuck.up, rises: window.__rises }; });
+      assert.equal(st.hidden, true, "the dim is gone with the rise (the box is hidden) DBG " + JSON.stringify({ probe, st })); }
     await reopen(page); await page.click(".vdrawer .wchip");                                // the way in is the tray's Ask Cluck (GENMISS, Tony Nov 3: no "okay, but how?" peek)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the hint card CTA opens Cluck");
