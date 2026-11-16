@@ -52,20 +52,49 @@ const runAt = (run) => {
   return Number.isNaN(t) ? 0 : t;
 };
 
+// Flaky jail (Tony, Nov 15): tests/quarantine.json = [{spec, test ("*" or title), owner, reason, added (ISO date), expires (added+7d)}].
+// An entry past `expires` is ignored (that spec gates again). A stopgap: race/async flakes get fixed, not jailed.
+export const JAIL_DAYS = 7;
+const expiryOf = (e) => {
+  const t = Date.parse((e && e.expires) || "");
+  if (!Number.isNaN(t)) return t;
+  const a = Date.parse((e && e.added) || "");
+  return Number.isNaN(a) ? 0 : a + JAIL_DAYS * 864e5;   // no expires: added + 7d; unparseable = already expired
+};
+export const isJailed = (e, now) => expiryOf(e) > now;
+export const expiredJail = (jail, now) => (jail || []).filter((e) => !isJailed(e, now));
+export const jailedSpecs = (jail, now) => new Set((jail || []).filter((e) => isJailed(e, now)).map((e) => e.spec));
+// The log only names the failed SPEC (run-all.sh "FAIL <spec>"), so a jail entry matches by spec whatever its `test` field.
+
+// Yellow rule (Tony, Nov 15): a success on attempt >= 2 may clear the gate only if run.failed_specs (the specs that failed
+// on attempt 1) is non-empty and every one is in the unexpired jail. Unknown/empty list = refused (fail closed).
+export function yellowVerdict(run, jail, now = Date.now()) {
+  const f = run && run.failed_specs;
+  if (!Array.isArray(f) || !f.length) return { ok: false, reason: "yellow run (passed only on a rerun): attempt-1 failed specs unknown, refused" };
+  const live = jailedSpecs(jail, now), bad = [];
+  for (const spec of f) {
+    if (live.has(spec)) continue;
+    const old = (jail || []).find((e) => e.spec === spec);
+    bad.push(old ? `${spec} (jail entry expired ${old.expires || "?"})` : `${spec} (not in flaky jail)`);
+  }
+  return bad.length ? { ok: false, reason: `yellow run refused: ${bad.join(", ")}` } : { ok: true, reason: "yellow ok: all attempt-1 failures are jailed" };
+}
+export const yellowCleared = (run, jail, now) => yellowVerdict(run, jail, now).ok;
+
 // The newest successful FULL run on main. A newer FAILED run never masks an older green (STALE-STATE, M3);
 // other branches and fast/bench/unknown kinds never qualify. A yellow (success only on a rerun, attempt
 // >= 2) is never a green anchor: the ship gate refuses yellow (R4, SPEC-PR3.md §6). null = nothing to ship from.
-export function pickGreen(runs, candidate) {
+export function pickGreen(runs, candidate, { jail = [], now = Date.now() } = {}) {
   const green = (runs || [])
     .filter((r) => r && r.conclusion === "success" && r.head_branch === "main" && runKind(r) === "full"
-      && attemptColor(r) === "green")
+      && (attemptColor(r) === "green" || (attemptColor(r) === "yellow" && yellowCleared(r, jail, now))))
     .sort((a, b) => runAt(b) - runAt(a) || (a.head_sha === candidate ? -1 : b.head_sha === candidate ? 1 : 0))[0];
   return green ? { sha: green.head_sha, kind: "full", created_at: green.created_at } : null;
 }
 
 // M1/M2/M3: the exact green SHA ships whatever its diff; otherwise the diff since that SHA must be docs-only/empty.
-export function decideShip({ candidate, green, changedFiles } = {}) {
-  if (!green) return { ok: false, reason: "no successful full tests.yml run on main" };
+export function decideShip({ candidate, green, changedFiles, yellowWhy } = {}) {
+  if (!green) return { ok: false, reason: yellowWhy || "no successful full tests.yml run on main" };
   if (green.kind !== "full") return { ok: false, reason: `last green run is kind ${green.kind}, not a full run` };
   if (green.sha === candidate) return { ok: true, reason: `full green run on ${candidate}` };
   const { docs, code } = classify(changedFiles || []);
@@ -77,12 +106,14 @@ export function decideShip({ candidate, green, changedFiles } = {}) {
 }
 
 function parseArgs(argv) {
-  const out = { candidate: "", runs: "", files: [], help: false };
+  const out = { candidate: "", runs: "", files: [], failedSpecs: null, jail: "tests/quarantine.json", help: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], v = argv[i + 1];
-    if ((a === "--candidate" || a === "--runs" || a === "--file") && v == null) throw new Error(`${a} needs a value`);
+    if ((a === "--candidate" || a === "--runs" || a === "--file" || a === "--jail" || a === "--failed-specs") && v == null) throw new Error(`${a} needs a value`);
     if (a === "--candidate") { out.candidate = v; i++; }
     else if (a === "--runs") { out.runs = v; i++; }
+    else if (a === "--failed-specs") { out.failedSpecs = v.split(",").map((x) => x.trim()).filter(Boolean); i++; }
+    else if (a === "--jail") { out.jail = v; i++; }
     else if (a === "--file") { out.files.push(v); i++; }
     else if (a === "-h" || a === "--help") out.help = true;
     else throw new Error(`unknown argument: ${a}`);
@@ -93,13 +124,23 @@ function parseArgs(argv) {
 function main(argv) {
   let opts;
   try { opts = parseArgs(argv); } catch (e) { console.error(`ci-gate: ${e.message}`); return 2; }
-  if (opts.help) { console.log("usage: node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]..."); return 0; }
+  if (opts.help) { console.log("usage: node tools/operations/ci-gate.mjs --candidate <sha> --runs <runs.json> [--file <path>]... [--jail <quarantine.json>] [--failed-specs a.mjs,b.mjs]"); return 0; }
   if (!opts.candidate || !opts.runs) { console.error("ci-gate: --candidate and --runs are required"); return 2; }
 
   let runs;
   const runsPath = opts.runs;
   try { runs = JSON.parse(readFileSync(runsPath, "utf8")); } catch (e) { console.error(`ci-gate: cannot read ${runsPath}: ${e.message}`); return 2; }
-  const green = pickGreen(runs, opts.candidate);
+  let jail = [];
+  if (existsSync(opts.jail)) {
+    try { jail = JSON.parse(readFileSync(opts.jail, "utf8")); } catch (e) { console.error(`ci-gate: cannot read ${opts.jail}: ${e.message}`); return 2; }
+  }
+  const now = Date.now();
+  for (const e of expiredJail(jail, now)) console.error(`EXPIRED JAIL ENTRY (gating again, fix it or remove it): ${e.spec} [${e.test || "*"}] owner=${e.owner} added=${e.added} expires=${e.expires}`);
+  // --failed-specs = the specs that failed on attempt 1 of the candidate's yellow run (ship.yml reads them from the attempt-1 logs)
+  if (opts.failedSpecs) for (const r of runs) if (r && r.head_sha === opts.candidate && r.failed_specs == null) r.failed_specs = opts.failedSpecs;
+  const green = pickGreen(runs, opts.candidate, { jail, now });
+  const y = green ? null : runs.find((r) => r && r.head_sha === opts.candidate && r.head_branch === "main" && runKind(r) === "full" && r.conclusion === "success" && attemptColor(r) === "yellow");
+  const yellowWhy = y ? yellowVerdict(y, jail, now).reason : "";
 
   let changedFiles = opts.files;
   if (!changedFiles.length && green && green.sha !== opts.candidate) {   // the exact green sha needs no diff
@@ -107,7 +148,7 @@ function main(argv) {
     catch (e) { console.error(`ci-gate: git diff ${green.sha}..${opts.candidate} failed: ${e.message}`); return 2; }
   }
 
-  const d = decideShip({ candidate: opts.candidate, green, changedFiles });
+  const d = decideShip({ candidate: opts.candidate, green, changedFiles, yellowWhy });
   if (d.ok) { console.log(`ok: ${d.reason}`); return 0; }
   console.error(`refused: ${d.reason}`);
   return 1;
