@@ -15,7 +15,7 @@ jobs:
   # Job B: second opinion on the specs the hosted blocks flagged (or the flaky jail on a manual dispatch).
   # Job B "second opinion" (id flake-hunt kept: ci-gate.test.mjs AC9 + test_ci_image pin it); order B then A
   flake-hunt:
-    permissions: { contents: read, actions: read }   # gh run download of the tests run's flaky-block-* artifacts
+    permissions: { contents: read, actions: read }   # download-artifact of the tests run's flaky-block-* artifacts
     runs-on: [self-hosted, titodori]   # titodori-1: user pwuser (uid 1001), node 22 + python 3.12, no docker.sock
     continue-on-error: true
     timeout-minutes: 20
@@ -33,19 +33,26 @@ jobs:
       # no --with-deps (that needs root): the box's Chromium system libs are expected to be there already
       - name: playwright install (chromium)
         run: tools/operations/ci-install.sh
+      # the box has no gh CLI (main run 43898297911: "gh: command not found"): fetch the tests run's flaky blocks with the action
+      - name: download flaky-block-*
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: flaky-block-*
+          path: flaky
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
       - name: hunt
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}   # gh run download of this run's flaky-block-* artifacts
           RUN_ID: ${{ github.event.workflow_run.id }}
-          REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
           specs=""
           if [ -n "${RUN_ID:-}" ]; then
             # the finished tests run's flaky blocks (one flaky-block-* artifact per block/lane shard)
-            rm -rf flaky
-            gh run download "$RUN_ID" -R "$REPO" -p 'flaky-block-*' -D flaky || true
+            mkdir -p flaky   # no artifact = empty dir, never a find error under pipefail
             specs="$(find flaky -type f -name flaky.txt -exec cat {} + 2>/dev/null | sed '/^[[:space:]]*$/d' | LC_ALL=C sort -u | paste -sd' ' -)"
             if [ -z "$specs" ]; then
               echo "no flakes in run $RUN_ID" > flake-hunt.txt
