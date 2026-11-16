@@ -155,3 +155,15 @@ html.side.proof-split #work > #q { order: 1; flex: 0 0 auto; min-height: 200px; 
 html.side.proof-split #work > #fb { order: 2; }
 html.side.proof-split #work > #wish { order: 3; }
 html.side.proof-split #work > #cluck { order: 4; }
+/* CLUCK-LINK (Tony Nov 16: "remove the button frame, make that link-like, try some color scheme from our swatch, baseline align with the CEH text"):
+   no fill, no raise, no radius plate; label + duck read as a link in a palette tone. The 44 px tap target stays (12 px pad, cancelled by -12 px margin), so the label's
+   line box (20 px, --t-sm 600, same as .qkicker) starts at the kicker's top: equal font + line-height = shared baseline. Tone trial: html[data-cb-tone] = help (default) | action | amber | sky. */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--help, #ffa63e); padding: 12px 0 12px 12px !important; margin: -12px 0 !important; line-height: 20px; min-height: 0; gap: 6px; border-radius: 6px;
+  background: none; box-shadow: none !important; color: var(--cb-tone); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--cb-tone) 40%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn::before { display: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { width: 18px; height: 18px; top: 2px; align-self: flex-start; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: var(--dim, #7a8aae); text-decoration-color: transparent; }
+@media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover { text-decoration-color: var(--cb-tone); } }
+html[data-cb-tone="action"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--action-on, #8cc2ff); }
+html[data-cb-tone="amber"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--fig-amber-1, #ffd23f); }
+html[data-cb-tone="sky"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--fig-sky-1, #5eb8ff); }
