@@ -235,3 +235,7 @@ html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.u
    A card taller than the floor is unchanged (nothing to spread). Not in the Q-HALF open/scroll states, where the height is the scroller's. */
 html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 240px; align-content: space-between; }
 @media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 280px; } }
+/* LEAD-LIGHTER (Tony Nov 16 "de-emphasise the question's thickness / boldness"): the question sentence drops 600 -> 400 (STYLE 2.2: weights are 400 / 600 only) and
+   its math stroke .028em -> .012em to match; it keeps the one-step-brighter ink, so it still reads as THE question under the grotesk headline. */
+html.ui-v7 #problem.qc7 .qlead { font-weight: 400; }
+html.ui-v7 #problem.qc7 .qlead .katex { -webkit-text-stroke-width: .012em; }
