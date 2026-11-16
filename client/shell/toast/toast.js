@@ -88,10 +88,11 @@
     if (bar && getComputedStyle(bar).position === 'sticky') barB = bar.getBoundingClientRect().bottom;
     var vv = g.visualViewport, foot = vv ? vv.offsetTop + vv.height : innerHeight, bottom = foot - 12;
     var x = Math.round(Math.min(Math.max(gut, b.left), vw - gut - w));
-    var sides = cur.dock ? ['foot', 'lift'] : desk() ? ['foot', 'under'] : ['under'];   // dock (calc toast, ui-v7): the viewport's foot on a phone too, never under the anchor (it would lie on the question); no room there = it waits and `until` drops it
+    var sides = cur.dock ? ['foot', 'lift'] : desk() ? ['foot', 'under'] : cur.row && d.documentElement.classList.contains('ui-v7') ? ['under', 'float'] : ['under'];   // PHONE-TOAST-FLOAT (Tony, Nov 15): the phone's justified bento fills to the foot, no room under #q: the row toast floats over the bottom tile row   // dock (calc toast, ui-v7): the viewport's foot on a phone too, never under the anchor (it would lie on the question); no room there = it waits and `until` drops it
     for (var i = 0; i < sides.length; i++) {
       var y = Math.round(sides[i] === 'foot' ? foot - gut - h : sides[i] === 'lift' ? foot - gut - 48 - h : b.bottom + 12);   // lift: above the corner links (privacy, 44px) at the foot
-      if (y < barB + 8 || y + h > bottom || covers(x, y, w, h)) continue;
+      if (sides[i] === 'float') y = Math.round(foot - 12 - h);          // fixed over the answer tiles (z 50, its X works), under the top bar; no live-control rule: it is the one exception
+      if (y < barB + 8 || (sides[i] !== 'float' && (y + h > bottom || covers(x, y, w, h)))) continue;
       el.style.left = x + 'px'; el.style.top = y + 'px';               // whole px: the words stay on the pixel grid
       el.dataset.side = sides[i];
       return true;
@@ -170,7 +171,7 @@
       var mo = new MutationObserver(function () { if (cur !== o) { mo.disconnect(); return; } if (!place() || yields()) hide(true); });
       d.querySelectorAll(o.clear).forEach(function (c) { mo.observe(c, { childList: true, subtree: true, characterData: true }); });
     }
-    arm(o.ms || 4000);
+    arm(o.row && el.classList.contains('stoast-v7') ? Math.max(100, 100 * (el.querySelector('.stoast-t').textContent + (el.querySelector('.stoast-s').hidden ? '' : el.querySelector('.stoast-s').textContent)).length) : (o.ms || 4000));   // PHONE-TOAST-FLOAT: a ui-v7 row toast lives 100 ms per character of its words (title + sub); the drain bar reads the same --life
     if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
   }
   /* the row toast (html.ui-v7 only, DUCK-V8-TOAST / TOAST-GAP): o.row + o.duck (a mood: start, landmark, twist, cram, miss, late) = the duck

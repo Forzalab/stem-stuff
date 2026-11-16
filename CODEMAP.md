@@ -16,7 +16,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/drill_core/app.css` | Styles of the drill page and tokens. Has a CODEMAP header. | colours, sizes, layout of the drill page |
 | `client/answer/navigation/nav.js` | Prev / Next, question list, TeX to plain text. Has a CODEMAP header. | question order, list, titles |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
-| `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. | top bar tiles, notch render |
+| `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. <= 480px: PHONE-FILL DOM half (`fillLayout`, `fitAll` font 15 -> 10px). | top bar tiles, notch render |
 | `client/answer/progbar/progbar.css` | Styles of the v9d bar, all under `html.ui-v7` (geometry from topbar-v9 fit06/MEASURE.md). | bar look, tile sizes |
 | `client/cluck/figures/graph.js` | SVG renderer of graph blocks (cartesian, scene, circuit, network). Has a CODEMAP header. | a figure looks wrong |
 | `client/cluck/figures/figcheck.js` | Figure invariants: checks a drawn figure and picks auto hues. | figure rules, auto colours |
@@ -32,7 +32,8 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/answer_strip/bento.js` | MC + pick-all options as a bento mosaic (DOM half: probe, guard, writes) behind `html.ui-v7`: probes each option at every column span, exact-cover search in option order (no holes), writes grid spans on `.ch`. Inert with the flag off. | MC / pick-all tile layout |
 | `client/answer/answer_strip/bento_feat.js` | bento4 pure: classify each option (TOKEN/SHORT/WIDE/TALL/LONG) from probe measures -> shape prefs + hero weight. No DOM. | bento content class |
 | `client/answer/answer_strip/bento_cost.js` | bento4 pure: ordered exact-cover top-K search + variety cost (W weights) + seeded pick; node cap + time guard; stacked fallback. No DOM. | bento layout search |
-| `client/answer/answer_strip/bento.css` | MC / pick-all option look under `html.ui-v7`: state by fill (no borders), mosaic geometry (--bc columns, unit 96). | MC option colours, tile look |
+| `client/answer/answer_strip/bento_fill.js` | PHONE-FILL pure (no DOM), <= 480px: tile weight from text length, linear-partition rows (in order), 60-column spans, row-count choice, row-height stretch. Smoke: `tests/mc-bento.pw.mjs` (phone-fill steps). | phone MC / pick-all justified rows |
+| `client/answer/answer_strip/bento.css` | MC / pick-all option look under `html.ui-v7`: state by fill (no borders), mosaic geometry (--bc columns, unit 96); `.fill` = phone justified rows (60 columns, section C). | MC option colours, tile look |
 | `client/answer/answer_strip/verdict-v7.css` | Verdict under `html.ui-v7`: no visible tray, the verdict slot is the Cluck button, row + Next one pill, the verdict line visually hidden. | verdict slot, joined row + Next |
 | `client/cluck/cluck_btn/cluckbtn.js` | The one Ask Cluck button at the top right of every question card, behind `html.ui-v7`: states (first / off / ready, aria-disabled + note), sheen, `html.cluck-ready`. Reads cluck.js through `window.stemCluckAsk`. | the Ask Cluck button, its toast, its sheen triggers |
 | `client/cluck/cluck_btn/cluckbtn.css` | Styles of the Ask Cluck button: chip look, disabled option A, left-to-right fill sweep, sheen. | button look, motion |
