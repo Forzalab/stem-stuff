@@ -112,11 +112,15 @@ const rows = page => page.$$eval("#q .opt .txt", xs => xs.map(x => x.textContent
    wait tests/ux-flows.pw.mjs uses). still = every box under sel holds the same rect on two painted frames in a row: a panel, a strip or a
    transition has settled. settled = both, in that order. */
 const frames = p => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
-const still = (p, sel) => p.waitForFunction(s => new Promise(done => {
-  const k = [...document.querySelectorAll(s)].map(e => { const r = e.getBoundingClientRect(); return [r.top, r.left, r.width, r.height].join(); }).join("|");
-  if (window.__still === k) return done(true);
-  window.__still = k; requestAnimationFrame(() => done(false));
-}), sel, { timeout: 5000 });
+/* CI-ARCH B1 (easy W91 ghost gap): the key starts fresh per call (a stale key from the last call matched before the right answer's
+   525 ms reward pop moved #ff: rect sampled mid-pop, 336.31 -> 337.82), and a box with a finite animation still running is not still */
+const still = async (p, sel) => { await p.evaluate(() => { window.__still = null; }); return p.waitForFunction(s => new Promise(done => {
+  const els = [...document.querySelectorAll(s)];
+  const k = els.map(e => { const r = e.getBoundingClientRect(); return [r.top, r.left, r.width, r.height].join(); }).join("|");
+  const busy = els.some(e => e.getAnimations().some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime)));
+  if (!busy && window.__still === k) return done(true);
+  window.__still = busy ? null : k; requestAnimationFrame(() => done(false));
+}), sel, { timeout: 5000 }); };
 const settled = async (p, sel) => { await frames(p); await still(p, sel); };
 /* app.js pvFit(): the preview's room is set as style.height and the CSS animates the 150 ms walk to it: the room has arrived */
 const roomSet = p => p.waitForFunction(() => { const pv = document.getElementById("preview"); if (!pv) return false;
@@ -859,7 +863,9 @@ try {
   await step("W91 ghost gap at 1280x800: wrong, right, Compare: no blank spent-preview band between the answer box and the formula card; Check itself moves nothing", async () => {
     const { c, p } = await w91({ width: 1280, height: 800 });
     try {
-      const g = () => p.evaluate(() => { const ff = document.getElementById("ff").getBoundingClientRect(), fc = document.getElementById("fcard").getBoundingClientRect(), pv = document.getElementById("preview"), cs = getComputedStyle(pv);
+      // #ff's LAYOUT bottom: the right answer's reward pop (rewards/fx.js pop(), scale 1.12 about the centre, 525 ms) may start after any wait,
+      // and a scale keeps the centre, so centre + half the layout height reads the box where layout put it (CI-ARCH B1, stale-settle-key)
+      const g = () => p.evaluate(() => { const fe = document.getElementById("ff"), fr = fe.getBoundingClientRect(), ff = { bottom: (fr.top + fr.bottom) / 2 + fe.offsetHeight / 2 }, fc = document.getElementById("fcard").getBoundingClientRect(), pv = document.getElementById("preview"), cs = getComputedStyle(pv);
         return { ff: ff.bottom, fc: fc.top, pv: pv.getClientRects().length ? pv.getBoundingClientRect().height + parseFloat(cs.marginTop) : 0, wish: !!document.getElementById("wish") && !document.getElementById("wish").hidden }; });
       await p.waitForSelector("#fcard", { timeout: 6000 });
       const a = await g();
