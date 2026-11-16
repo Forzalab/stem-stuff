@@ -35,7 +35,7 @@ async function open(w, flag, code) {
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 1, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-twist-seen", "1"); } catch { /* blocked */ } });
   const page = await ctx.newPage();
-  await page.goto(`${BASE}/?ui=${flag}#${code}`);
+  await page.goto(`${BASE}/?ui=${flag}&qcecho=tl#${code}`);   // tl = the old top-left numeral layout these geometry checks pin; default is qbr (QC-NOFRONT)
   await page.waitForSelector("#blocks .md", { timeout: 10000 });
   await page.evaluate(() => document.fonts && document.fonts.ready); await page.waitForTimeout(500);
   return page;

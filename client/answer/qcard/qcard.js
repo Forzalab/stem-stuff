@@ -73,7 +73,7 @@
       for (var k = 0; k < 6; k++) { var i = D.createElement("i"); i.style.setProperty("--k", k); gh.appendChild(i); }
       box.appendChild(gh); p.insertBefore(box, p.firstChild);
     }
-    p.classList.toggle("qbr", /(^|[?&])qcecho=br(&|$)/.test(g.location.search));   // prototype: the echo trail at the bottom-right (qcard.css)
+    p.classList.toggle("qbr", !/(^|[?&])qcecho=tl(&|$)/.test(g.location.search));   // prototype: the echo trail at the bottom-right (qcard.css)
     var num = number(), cur = box.firstChild, was = cur.getAttribute("data-n");
     inkLeft(cur, num);
     if (was !== num) {

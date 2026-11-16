@@ -25,7 +25,9 @@ html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
 /* PROTOTYPE ?qcecho=br (qcard.js sets .qbr on the card): the echo trail moves to the card's BOTTOM-RIGHT, big and dim, bleeding off the corner (the card clips it to its radius);
    the solid main numeral stays top-left. The in-flow box keeps its height (layout unchanged); the trail is positioned against the whole card. */
 html.ui-v7 #problem.qc7.qbr { overflow: hidden; }
-html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: calc(var(--qnum) * .74); }
+html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: 72px; }   /* QC-NOFRONT (Tony Nov 15): no top-left numeral; headline starts below the Ask Cluck row (44 + 28 air) */
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { display: none; }
+html.ui-v7 #problem.qc7.qbr .blocks > :first-child { margin-top: 0; }
 html.ui-v7 #problem.qc7.qbr .qghostbox { position: absolute; inset: 0; height: auto; margin: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; }
 html.ui-v7 #problem.qc7.qbr .qghost { inset: 0; }
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); }
@@ -37,12 +39,12 @@ html.ui-v7 .qghostbox.qanim .qghost i { will-change: transform, opacity; animati
 
 /* Ask Cluck: top right, out of the flow. SOLID: opaque fill, no border, a soft dark halo plate + drop shadow lift it off the trail (owner: v1 style button) */
 html.ui-v7 #problem.qc7 > .cluckbtn { position: absolute; top: var(--qpad); right: var(--qpad); float: none; margin: 0; z-index: 3; border: 0;
-  box-shadow: inset 0 1px 0 #2c3b66, 0 1px 2px rgba(2, 4, 12, .3), 0 4px 10px rgba(2, 4, 12, .12); }
+  box-shadow: inset 0 1px 0 rgb(44 59 102 / .5), 0 1px 2px rgba(2, 4, 12, .15), 0 4px 10px rgba(2, 4, 12, .06); }
 html.ui-v7 #problem.qc7 > .cluckbtn .cb-duck { position: relative; top: -1px; }   /* optical, phone: the duck sat ~1.2px low of the label's cap-height centre at 390 (Pillow); desktop is already centred (see the @media below) */
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 > .cluckbtn .cb-duck { top: 0; } }
 /* raised, Refactoring UI: a lit top edge (hand-picked lighter navy) + a tight dark shadow + a faint soft one */
-html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]) { box-shadow: inset 0 1px 0 #3d4d82, 0 1px 2px rgba(2, 4, 12, .3), 0 4px 10px rgba(2, 4, 12, .12); }
-html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-shadow: inset 0 1px 0 #3d4d82, 0 1px 1px rgba(2, 4, 12, .3); }   /* pressed = lower elevation */
+html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]) { box-shadow: inset 0 1px 0 rgb(61 77 130 / .5), 0 1px 2px rgba(2, 4, 12, .15), 0 4px 10px rgba(2, 4, 12, .06); }
+html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-shadow: inset 0 1px 0 rgb(61 77 130 / .5), 0 1px 1px rgba(2, 4, 12, .15); }   /* pressed = lower elevation */
 
 /* figure, headline, text, meta: one grid edge */
 html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; }
