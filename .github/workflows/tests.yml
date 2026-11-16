@@ -93,6 +93,7 @@ jobs:
           read -r kind reason <<<"$selection"
           echo "selection: $kind ($reason)"
           specs=""; skip=false
+          if [ "$kind" = bank ]; then skip=true; fi   # CI-LOOSEN 17: bank JSON only -> unit (bankcheck) runs, block skipped
           if [ "$kind" = "affected" ]; then   # consume run-all.sh --affected (06); split logic units from .pw names
             mapfile -t units < <(tests/run-all.sh --affected "${files[@]}" | grep -v '^unmapped:' || true)
             specs="$(printf '%s\n' "${units[@]}" | grep -vxE 'unittest|npm' | paste -sd' ' - || true)"

@@ -2,7 +2,7 @@
 /* Affected-only selection for a pull_request run (ticket 09, PR 2): pure decision + CLI.
    The pure part takes every fact as an argument (no git, no network, no subprocess):
      node tools/operations/ci-select.mjs --total <N> [--file <path>]...
-   prints "<kind> <reason>" (kind = full | affected | docs) and exits 0. The workflow computes the diff. */
+   prints "<kind> <reason>" (kind = full | affected | docs | bank) and exits 0. The workflow computes the diff. */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -45,6 +45,11 @@ export function isHub(affectedCount, totalUnits) {
   return Number(totalUnits) > 0 && Number(affectedCount) / Number(totalUnits) >= HUB_FRACTION;
 }
 
+// Bank tier (CI-LOOSEN TODO 17): a bank JSON changes no client/server code path a .pw spec exercises, so the
+// block job is skipped while unit (bankcheck, slips) still runs. Docs .md files may ride along.
+export const BANK_RE = /^server\/data\/banks\/[^/]+\.json$/;
+export const isBankFile = (path) => BANK_RE.test(str(path));
+
 export function pwSpecs(unitList) {
   return (unitList || []).filter((u) => u !== "unittest" && u !== "npm");
 }
@@ -54,6 +59,9 @@ export function decideSelection({ files, affectedCounts, totalUnits } = {}) {
   const counts = affectedCounts || {};
   if (list.length === 0) return { kind: "full", reason: "no changed files (never fewer)" };
   if (list.every((f) => !isCodeFile(f))) return { kind: "docs", reason: `docs-only: ${list.length} .md files` };
+  if (list.every((f) => isBankFile(f) || !isCodeFile(f)) && list.some(isBankFile)) {
+    return { kind: "bank", reason: `bank-only: ${list.filter(isBankFile).length} bank JSON file(s)` };
+  }
   if (isBig(list)) {
     const codeFiles = list.filter(isCodeFile).length;
     return { kind: "full", reason: `BIG: ${codeFiles} code files / ${areasOf(list).length} areas` };
