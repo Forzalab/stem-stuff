@@ -167,3 +167,6 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: var(--dim
 html[data-cb-tone="action"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--action-on, #8cc2ff); }
 html[data-cb-tone="amber"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--fig-amber-1, #ffd23f); }
 html[data-cb-tone="sky"].ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--fig-sky-1, #5eb8ff); }
+/* CLUCK-LINK states: the chip's box effects are off on the link (the sheen streak is a box-shaped band, the press shrink is a button feel). JS still toggles .cb-sheen on its timers (no transitionend/animationend dependency), it just draws nothing here. */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):active { transform: none; }
