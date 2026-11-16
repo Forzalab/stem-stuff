@@ -142,8 +142,8 @@
         var head = null, m = D.createElement("div"); m.className = "qmeta";
         if (pt) {
           tw = pt.querySelector(".twist-chip");
-          var title = Array.prototype.filter.call(pt.childNodes, function (n) { return n.nodeType === 3; }).map(function (n) { return n.nodeValue; }).join("").trim();
-          if (title) { head = D.createElement("h2"); head.className = "qhead"; head.textContent = title; }
+          var kids = Array.prototype.filter.call(pt.childNodes, function (n) { return !(n.nodeType === 1 && n.classList.contains("twist-chip")); });   // TITLE-MATH: keep rendered math nodes, not only raw text
+          if (kids.some(function (n) { return (n.textContent || "").trim(); })) { head = D.createElement("h2"); head.className = "qhead"; kids.forEach(function (n) { head.appendChild(n.cloneNode(true)); }); }
         }
         var tx = D.createElement("div"); tx.className = "qtext";
         if (texts.length) { var sc = D.createElement("div"); sc.className = "qscroll"; texts.forEach(function (c) { sc.appendChild(c); }); tx.appendChild(sc); }

@@ -771,7 +771,7 @@ function render() {
   /* the card's bold lead is the question's title, the one the list shows ("Practice Exam 2, Question 13"), not the tip (owner, Oct 6:
      the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
   const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
-  if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.textContent = lead; blocks.append(t); }
+  if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.innerHTML = md(lead, true); blocks.append(t); }   // TITLE-MATH (Tony Nov 16): $..$ in a title renders (was raw text)
   if (prob.twist === true && !root.classList.contains("ui-v7")) twistChip(blocks);   // ui-v7: no chip, the row toast announces it (twistToast)                             // W133: a twist item's "Twist" chip, left of the title (none: nothing at all)
   const C = snackChg();
   if (C?.pairs.length) {

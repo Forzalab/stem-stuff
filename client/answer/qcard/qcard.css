@@ -145,3 +145,13 @@ html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; al
 /* EXPLAIN-TAG fix (CI polish '(d) pad page gap 33px'): html.mt .xb-label { display: contents } (app.css) un-hid the label in the pad split; hidden everywhere unless the v7 side case */
 #work > .x-label { display: none !important; }
 html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }
+/* KICKER-SIZE (Tony Nov 16): the code kicker matches the Ask Cluck label size (--t-sm, 600); caps tracking eased to .06em at this size */
+html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: var(--t-sm, .9375rem); line-height: 20px; letter-spacing: .06em; }
+/* PROOF-ORDER (Tony Nov 16 live desk R2S): in the side layout a proof item's box lives in #work (Nov 4 lock: it takes the pad's place). Brainrot, the box and Cluck were
+   appended in arrival order, so Cluck could land ABOVE the box and push it under the fold. Fixed order: brainrot (with its Explain row) -> the proof box -> verdict -> Cluck; the box never shrinks below 200 px */
+html.side.proof-split #work > #rot { order: 0; }
+html.side.proof-split #work > .x-label { order: 0; }
+html.side.proof-split #work > #q { order: 1; flex: 0 0 auto; min-height: 200px; }
+html.side.proof-split #work > #fb { order: 2; }
+html.side.proof-split #work > #wish { order: 3; }
+html.side.proof-split #work > #cluck { order: 4; }
