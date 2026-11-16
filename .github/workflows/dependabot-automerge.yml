@@ -1,0 +1,18 @@
+# Dependabot Actions bumps ride the normal train: full CI, then auto-merge once the required `all` check is green.
+# Majors are left for Tony. Plain pull_request (not pull_request_target): dependabot PRs get these two write scopes only.
+name: dependabot-automerge
+on: pull_request
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  automerge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'Forzalab/stem-stuff'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v2
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        env: { GH_TOKEN: "${{ github.token }}", PR: "${{ github.event.pull_request.html_url }}" }
+        run: gh pr merge --auto --merge "$PR"
