@@ -103,9 +103,9 @@ test("§2.6 keyboard ring: one width (--ring)", () => {
   assert.deepEqual(bad.map(fmt), [], "outline: var(--ring) solid var(--focus) (STYLE.md §2.6)");
 });
 
-test("§2.2 type: the text stack (Schibsted; Atkinson for inputs), mono or KaTeX only", () => {
+test("§2.2 type: the text stack (ui-v7 FONT-SPLIT, Tony Nov 16: Atkinson Hyperlegible Next for text + inputs, Schibsted = titles; flag off: Schibsted + Atkinson inputs), mono or KaTeX only", () => {
   const first = v => v.split(",")[0].trim().replace(/["']/g, "");
-  const OK = v => ["inherit", "var(--font)", "var(--font-input)", "var(--mono)", "Schibsted Grotesk", "Atkinson Hyperlegible", "Atkinson Hyperlegible Mono"].includes(first(v)) || /^KaTeX_/.test(first(v));
+  const OK = v => ["inherit", "var(--font)", "var(--font-input)", "var(--mono)", "Schibsted Grotesk", "Atkinson Hyperlegible", "Atkinson Hyperlegible Mono", "Atkinson Hyperlegible Next", "var(--font-title)"].includes(first(v)) || /^KaTeX_/.test(first(v));
   const bad = ALL.filter(d => d.prop === "font-family" && !OK(d.value));
   assert.deepEqual(bad.map(fmt), [], "no third family (STYLE.md §2.2)");
 });
