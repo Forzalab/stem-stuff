@@ -395,6 +395,18 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 /* emphasis = weight only (TD2): 600 in the running ink, never colour, never italic; headings in markdown stay on the ladder */
 .md :is(b, strong, em) { font-weight: var(--w-em); font-style: normal; color: inherit; }
 .md :is(h1, h2, h3) { margin: 0 0 var(--s3); font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
+/* LATEX-BOOKTABS (ui-v7 question card only). Table rules after the booktabs package (manual, texdoc.org/serve/booktabs/0): \toprule + \bottomrule heavy (.08em),
+   \midrule light (.05em) under the header row, no vertical rules, no cell borders, centred columns; \aboverulesep .4ex, \belowrulesep .65ex. The "rules only" idea
+   follows vincentdoerig/latex-css (MIT, github.com/vincentdoerig/latex-css); no other code taken. Rules are background strips (borders snap to whole px, .05em would not).
+   Colour = --ink (existing token). .tbl-tex (app.js texTables: any KaTeX cell, or all cells numeric) sets every cell in KaTeX_Main. */
+html.ui-v7 .p .md table { border-collapse: separate; border-spacing: 0; margin-inline: auto; }
+html.ui-v7 .p .md :is(th, td) { border: 0; text-align: center !important; padding: .3em var(--s4); font-weight: 400; color: inherit; }
+html.ui-v7 .p .md th { color: var(--ink); }
+html.ui-v7 .p .md thead th { padding-top: .65ex; padding-bottom: .4ex; background: linear-gradient(var(--ink), var(--ink)) top / 100% .08em no-repeat, linear-gradient(var(--ink), var(--ink)) bottom / 100% .05em no-repeat; }
+html.ui-v7 .p .md tbody tr:first-child td { padding-top: .65ex; }
+html.ui-v7 .p .md tbody tr:last-child td { padding-bottom: .4ex; background: linear-gradient(var(--ink), var(--ink)) bottom / 100% .08em no-repeat; }
+html.ui-v7 .p .md .tbl-tex :is(th, td) { font-family: KaTeX_Main, "Times New Roman", serif; font-size: var(--kx); }
+html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
 .md blockquote { margin: 0 0 var(--s3); padding-left: var(--s3); border-left: 1px solid var(--line); }
 /* the codeblock (T43, app.js codeblock; STYLE.md "Codeblock"; Tony, Oct 18: mock A's well + syntax colour). A --page well with the
    card's margin around it, 8px radius. Header: language left, the T44 slot, then Copy. --mono 16px, 400 only (no bold keywords).
