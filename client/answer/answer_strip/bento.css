@@ -43,9 +43,11 @@ html.ui-v7 .choices.bento .opt .txt .kx-scroll { max-width: none; overflow: visi
 html.ui-v7 .mc-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; contain: layout; display: grid; justify-items: start; }
 html.ui-v7 .mc-probe .opt { display: block; box-sizing: content-box; padding: 0; border: 0; background: none; font: inherit; color: inherit; }
 html.ui-v7 .mc-probe .katex { font-size: 1em; }
-/* pick-all: letter = corner label (left), the square check = corner mark (right) */
-html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 40px; top: 12px; margin: 0; height: 16px; font-size: 12px; line-height: 16px; letter-spacing: .02em; color: var(--mc-letter); }
-html.ui-v7 .choices.bento.all .ch > .opt.opt .badge { position: absolute; left: 12px; top: 10px; width: 20px; height: 20px; margin: 0; }
+/* pick-all (Tony, BENTO-CHECK-TR): letter = top-left at the MC inset (14/12), the square check = top-right at the same 14px side inset (check 20px, top 10 = centred on the letter's line).
+   The words keep a symmetric 36px reserve so they stay centred and clear of both corners. */
+html.ui-v7 .choices.bento.all .ch > .opt.opt { padding-left: 36px; padding-right: 36px; }
+html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 14px; top: 12px; margin: 0; height: 16px; font-size: 12px; line-height: 16px; letter-spacing: .02em; color: var(--mc-letter); text-transform: lowercase; }   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only, DOM text unchanged */
+html.ui-v7 .choices.bento.all .ch > .opt.opt .badge { position: absolute; left: auto; right: 14px; top: 10px; width: 20px; height: 20px; margin: 0; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt .badge .ico { width: 14px; height: 14px; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt.kept { background: var(--mc-right); color: var(--correct-on); border-width: 0; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt[aria-checked="true"] .lt { color: var(--action-on); }
@@ -54,7 +56,7 @@ html.ui-v7 .choices.bento.all .ch > .opt.opt.wrong:not(.reveal) .lt { color: var
 /* the letter: a 12px corner label, no badge, no fill */
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.opt .badge.badge {
   position: absolute; left: 14px; top: 12px; width: auto; height: 16px; padding: 0; border: 0; border-radius: 0; background: none;
-  color: var(--mc-letter); font-size: 12px; line-height: 16px; letter-spacing: .02em; font-weight: var(--w-em); display: block;
+  color: var(--mc-letter); font-size: 12px; line-height: 16px; letter-spacing: .02em; font-weight: var(--w-em); display: block; text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony) */
 }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt[aria-checked="true"] .badge.badge { color: var(--action-on); }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.right:not(.reveal) .badge.badge { color: var(--correct-on); }
@@ -73,16 +75,18 @@ html.ui-v7 .choices.bento .ch.cue .vg { right: 10px; display: block; }
 html.ui-v7 .choices.bento.fill { grid-template-columns: repeat(60, minmax(0, 1fr)); grid-auto-rows: auto; gap: 6px 0; margin: 0 -3px; padding-bottom: 0; }
 html.ui-v7 .choices.bento.fill .ch { padding: 0 3px; scroll-margin-top: 84px; }
 html.ui-v7 .choices.bento.fill .ch > .opt.opt {
-  display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 6px 8px 6px var(--lp, 24px); position: relative; border-radius: 10px; line-height: 1.25;
+  display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 6px var(--rp, 8px) 6px var(--lp, 24px); position: relative; border-radius: 10px; line-height: 1.25;
 }
 html.ui-v7 .choices.bento.fill .opt .txt, html.ui-v7 .choices.bento.fill .opt[data-k] .txt { flex: 1 1 auto; font-size: var(--fs, 15px); line-height: 1.25; font-weight: var(--w); letter-spacing: 0; }
 html.ui-v7 .choices.bento.fill .opt[data-brk] .txt { overflow-wrap: anywhere; }
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt {
-  position: absolute; left: 8px; top: 6px; width: auto; height: 11px; margin: 0; font-size: 11px; line-height: 11px; letter-spacing: .02em;   /* Tony: letter (+ check) pinned top-left, the words stay centred */
+  position: absolute; left: 8px; top: 6px; width: auto; height: 11px; margin: 0; font-size: 11px; line-height: 11px; letter-spacing: .02em;   /* Tony: letter pinned top-left, the words stay centred */
+  text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only */
 }
-html.ui-v7 .choices.bento.fill.all { --lp: 45px; }   /* the corner letter (+ check) keeps its own strip, so the words get the same room as before it was pinned */
-html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { left: 28px; }
-html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge { position: absolute; left: 8px; top: 5px; width: 16px; height: 16px; margin: 0; }
+/* pick-all (BENTO-CHECK-TR): the letter keeps the MC top-left inset, the check moves to the top-right; the words reserve both corners symmetrically (--lp left, --rp right) so they stay centred */
+html.ui-v7 .choices.bento.fill.all { --lp: 28px; --rp: 28px; }
+html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { left: 8px; }
+html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge { position: absolute; left: auto; right: 8px; top: 5px; width: 16px; height: 16px; margin: 0; }
 html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge .ico { width: 12px; height: 12px; }
 /* Check / Next / verdict mark: vertically centred at the tile's right edge; the text steps out of their way (bento.js re-fits that tile) */
 html.ui-v7 .choices.bento.fill .ch > .send { right: 5px; top: 50%; margin-top: -22px; }
