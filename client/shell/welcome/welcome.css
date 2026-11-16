@@ -9,7 +9,8 @@ section.wl { position: relative; box-sizing: border-box; max-width: 100%; margin
   background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); }
 /* the tab: --help-ink on --help 7.67:1, 600, --t-sm, the duck (welcome.js, 20px) in front */
 section.wl .rp-line { position: absolute; top: 0; left: var(--s4); transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px;
-  margin: 0; padding: 4px 12px 4px 8px; border-radius: 8px; background: var(--help); color: var(--help-ink); font-weight: 600; font-size: var(--t-sm); }
+  margin: 0; padding: 4px 12px 4px 8px; border-radius: 8px; background: var(--help); color: var(--help-ink); font-weight: 600; font-size: var(--t-sm);
+  will-change: transform; }   /* its own compositor layer for good: text AA stays grayscale. Without it CI's software raster re-drew the tab's glyphs with LCD fringes on the first repaint after a scroll+tap (desk-layout 3-why, 98px in 13x8) */
 .wl-duck { width: 20px; height: 20px; color: var(--help-ink); flex: none; }
 .wl-stem { margin: 0 0 var(--s3); font-size: var(--t-md); line-height: var(--lh); overflow-wrap: anywhere; }
 .wl-stem .katex { font-size: var(--kx); }
