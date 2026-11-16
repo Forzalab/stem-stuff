@@ -65,7 +65,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="client/shell/welcome/welcome-first.js"></script><script src="client/calc/model_picker/calc-pick.js" defer></script><script>addEventListener("DOMContentLoaded", function () { window.stemCalcPick && window.stemCalcPick.auto(); });</script><!-- the calculator model picker (calc-pick.js, Tony Nov 6): a fresh device sees it once, after the splash -->
 <script src="client/cluck/jev_nudges/peek.js" defer></script><!-- Cluck's duck + sky, the T45 idle peek (docs/design/IDLE-PEEK.md) -->
 <script src="client/answer/answer_strip/strip.js" defer></script><!-- the verdict drawer under a typed answer bar (strip.css; STYLE §3 "Strip ship spec"): reads the DOM, no call-in from app.js -->
-<script src="client/answer/answer_strip/bento_feat.js" defer></script><script src="client/answer/answer_strip/bento_cost.js" defer></script>
+<script src="client/answer/answer_strip/bento_feat.js" defer></script><script src="client/answer/answer_strip/bento_cost.js" defer></script><script src="client/answer/answer_strip/bento_fill.js" defer></script>
 <script src="client/answer/answer_strip/bento.js" defer></script><!-- MC answers as a bento2 mosaic: inert unless html.ui-v7 (bento.css; PROTO-3WAY pick F) -->
 <!-- sugar rewards (docs/design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
 <script src="client/rewards/icons.js" defer></script>
@@ -96,7 +96,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
   setTimeout(end, 4000);
   var loaded = document.readyState === "complete" ? Promise.resolve() : new Promise(function (r) { addEventListener("load", r, { once: true }); });
   function fonts() {
-    var f = ['400 1em "Atkinson Hyperlegible"', '700 1em "Atkinson Hyperlegible"', '700 1em "Atkinson Hyperlegible Mono"'];
+    var f = ['400 1em "Schibsted Grotesk"', '600 1em "Schibsted Grotesk"', '400 1em "Atkinson Hyperlegible"', '700 1em "Atkinson Hyperlegible"', '700 1em "Atkinson Hyperlegible Mono"'];
     return document.fonts ? Promise.all(f.map(function (x) { return document.fonts.load(x); })) : 0;
   }
   function frame() { return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); }); }   // the opened problem has painted
@@ -107,6 +107,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 })();
 </script>
 <!-- The stylesheets sit here, after the splash and its script, on purpose: in the head they hold back the first paint, down here they only hold back what follows. -->
+<link rel="preload" href="client/vendor/fonts/schibsted-grotesk-latin-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="client/vendor/fonts/atkinson.css">
 <link rel="stylesheet" href="client/vendor/katex/katex.min.css">
 <link rel="stylesheet" href="client/answer/explain_box/explain-box.css">

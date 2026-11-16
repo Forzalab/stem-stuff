@@ -167,9 +167,11 @@ const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "
    a number JS writes plainly stays plain, a typed e-number (1.2e-7) keeps the ·10^ form */
 const NUM_TEX = n => n.type === "ConstantNode" && typeof n.value === "number" && !/e/i.test(String(n.value)) ? String(n.value) : undefined;
 const answerTex = s => math.parse(s).toTex({ parenthesis: "auto", implicit: "hide", handler: NUM_TEX });
+/* KaTeX 0.16 has no U+00B7 in text mode: \text{N·m} printed a red "\cdotp" (the real bank's torque answers). Split the \text at each dot and put a math \cdot between. */
+const textDots = s => s.indexOf("\u00b7") < 0 ? s : s.replace(/\\text\{([^{}]*\u00b7[^{}]*)\}/g, (_, t) => t.split("\u00b7").map(x => x ? `\\text{${x}}` : "").join("{\\cdot}"));
 function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
-  return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
+  return katex.renderToString(textDots(src), { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
 /* the codeblock (T43; docs/design/STYLE.md "Codeblock"): a fenced block in question or choice text. One span per real line: its number
    is a CSS counter, and a long line wraps hanging under its own indent with no number. Colour: a tiny regex highlighter (Tokyo Night,

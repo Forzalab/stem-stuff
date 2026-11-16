@@ -75,6 +75,7 @@ const CHECK = () => {
     if (tr.right > r.right - 4 + .5 || tr.left < r.left + 4 - .5 || tr.bottom > r.bottom - 4 + .5 || tr.top < r.top + 4 - .5 || t.scrollWidth > t.clientWidth + 1) out.bad.push("clip " + (o.dataset.l || o.dataset.id));
     if (o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1) out.bad.push("ovf " + (o.dataset.l || o.dataset.id)); }
   if (document.documentElement.scrollWidth > document.documentElement.clientWidth) out.bad.push("hscroll");
+  for (const e of g.querySelectorAll(".katex-error, [style*=\"cc0000\"]")) out.bad.push("katex-error " + (e.title || e.textContent).slice(0, 80));
   for (const o of g.querySelectorAll(".opt .txt")) if (!o.textContent.trim() || o.getBoundingClientRect().height < 10) out.bad.push("empty text");
   return out;
 };
@@ -100,7 +101,7 @@ const PARTS = {};
 for (const k of names) {
   const tmpl = {};
   for (const kind of ["mc", "all"]) { await go(p0, CODE[`${k}|tail`]); await go(p0, CODE[`${k}|${kind}|5`]);
-    tmpl[kind] = await p0.evaluate(() => ({ cls: document.querySelector("#q .choices").className.replace(/\b(bento|inline)\b/g, "").trim(), role: document.querySelector("#q .choices").getAttribute("role"),
+    tmpl[kind] = await p0.evaluate(() => ({ cls: document.querySelector("#q .choices").className.replace(/\b(bento|inline|fill)\b/g, "").trim(), role: document.querySelector("#q .choices").getAttribute("role"),
       ch: document.querySelector("#q .ch").outerHTML, txt: [...document.querySelectorAll("#q .ch .txt")].map(t => t.innerHTML) })); }
   await go(p0, CODE[`${k}|tail`]);
   tmpl.tail = await p0.evaluate(() => [...document.querySelectorAll("#q .ch .txt")].map(t => t.innerHTML));
@@ -109,9 +110,9 @@ for (const k of names) {
 await c0.close();
 const BUILD = ({ t, kind, n }) => {
   const g = document.querySelector("#q .choices"), txt = [...t.mc.txt, ...t.tail.slice(0, 3)].concat(t.mc.txt.slice(0, 3)).slice(0, 8), T = t[kind];
-  g.className = T.cls; g.setAttribute("role", T.role); g.removeAttribute("style"); g.removeAttribute("data-bento");
+  g.className = T.cls; g.setAttribute("role", T.role); g.removeAttribute("style"); g.removeAttribute("data-bento"); g.removeAttribute("data-fill");
   g.innerHTML = Array.from({ length: n }, (_, i) => { const d = document.createElement("div"); d.innerHTML = T.ch; const ch = d.firstElementChild, L = "ABCDEFGH"[i];
-    ch.removeAttribute("style"); ch.className = "ch"; ch.dataset.id = "id" + i; const o = ch.querySelector(".opt"); o.dataset.id = "id" + i; o.dataset.l = L; o.className = "opt"; o.setAttribute("aria-checked", "false"); o.removeAttribute("data-k"); o.removeAttribute("data-brk");
+    ch.removeAttribute("style"); ch.className = "ch"; ch.dataset.id = "id" + i; const o = ch.querySelector(".opt"); o.dataset.id = "id" + i; o.dataset.l = L; o.className = "opt"; o.setAttribute("aria-checked", "false"); o.removeAttribute("data-k"); o.removeAttribute("data-brk"); o.removeAttribute("style");
     const lt = o.querySelector(".lt"); if (lt) lt.textContent = L; else o.querySelector(".badge").textContent = L;
     o.querySelector(".txt").innerHTML = txt[i]; o.setAttribute("aria-label", L + ": " + o.querySelector(".txt").textContent); return ch.outerHTML; }).join("");
   document.dispatchEvent(new Event("drill:problem"));
@@ -130,6 +131,15 @@ for (const W of (process.env.WIDTHS || "360,390,768,1366").split(",").map(Number
     rows.push(r); if (r.bad.length) { bad++; console.log("BAD", W, k, kind, n, (r.shapes || []).join(" "), r.bad.slice(0, 4).join("; ")); }
   }
   if (p.errs.length) console.log("pageerrors", W, p.errs.slice(0, 3));
+  await c.close();
+}
+/* INAPP=1: the n=5 problems opened as real navigations (no DOM rebuild) at every width, same CHECK */
+if (process.env.INAPP) for (const W of (process.env.WIDTHS || "360,390,768,1366").split(",").map(Number)) {
+  const [c, p] = await open(W);
+  for (const k of names.filter(x => !process.env.ONLY || x === process.env.ONLY)) for (const kind of ["mc", "all"]) {
+    await go(p, CODE[`${k}|tail`]); await go(p, CODE[`${k}|${kind}|5`]); await p.waitForTimeout(400);
+    const r = await p.evaluate(CHECK); if (r.bad.length) { bad++; console.log("BAD in-app", W, k, kind, (r.shapes || []).join(" "), r.bad.slice(0, 4).join("; ")); }
+  }
   await c.close();
 }
 /* states in the real app: picked, wrong, right (mc) and ticked, wrong, kept (pick-all) on a mixed set */

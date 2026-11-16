@@ -30,7 +30,7 @@ html.fx-dim .mini-dim { background: color-mix(in srgb, var(--scrim) 88%, transpa
 
 .mini-f { display: flex; gap: var(--s1); align-items: center; margin-top: var(--s2); padding: 0 0 0 var(--s2); border-radius: 10px; background: var(--field); }
 .mini-f:focus-within { box-shadow: inset 0 0 0 1px var(--help); }
-.mini-in { flex: 1; min-width: 0; height: 2.5rem; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; }
+.mini-in { flex: 1; min-width: 0; height: 2.5rem; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-family: var(--font-input); }
 .mini-in:focus { outline: none; }                                          /* the field's rim shows focus (STYLE.md §2.6) */
 .mini-in::placeholder { color: var(--muted); }
 .mini-go { flex: none; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; padding: 0; border: 0; border-radius: 10px;

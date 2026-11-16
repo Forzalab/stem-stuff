@@ -174,7 +174,7 @@ async function gate(page, label, size, tap, allowFn) {
   for (const k of [".top", "#problem", "#blocks"]) if (q0[k] && q1[k] && q0[k].some((v, i) => Math.abs(v - q1[k][i]) > 1)) moved.push(`${k} ${q0[k].map(Math.round)} -> ${q1[k].map(Math.round)}`);
   for (const a of r0) { const b = r1.find(r => r.id === a.id); if (b && a.state === b.state && (Math.abs(a.y - b.y) > 1 || Math.abs(a.h - b.h) > 1)) moved.push(`row ${a.id} y ${Math.round(a.y)} -> ${Math.round(b.y)} h ${Math.round(a.h)} -> ${Math.round(b.h)}`); }
   const cls = await page.evaluate(() => { const w = document.querySelector("#work"); return window.__cls.filter(e => !e.nodes.length || e.nodes.some(n => !w || !w.contains(n))).reduce((s, e) => s + e.v, 0); });
-  assert.deepEqual({ red, moved, cls: cls > 0.01 ? cls : 0 }, { red: [], moved: [], cls: 0 }, `${tag}: jank (diff: DIFF_DIR=<dir> keeps ${tag}-DIFF.png)`);
+  assert.deepEqual({ red, moved, cls: cls > 0.01 ? cls : 0 }, { red: [], moved: [], cls: 0 }, `${tag}: jank ${JSON.stringify({ red, moved, cls }).slice(0, 600)} (diff: DIFF_DIR=<dir> keeps ${tag}-DIFF.png)`);
 }
 /* the rows whose state changed (before or after box) + the tapped control */
 const changedRows = ({ r0, r1 }) => { const out = [], wide = r => ({ ...r, x: r.x - 24, w: r.w + 24 });   // + the ▸ that hangs left of the number
