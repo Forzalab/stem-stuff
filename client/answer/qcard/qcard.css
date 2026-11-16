@@ -163,7 +163,8 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--help, #ffa63e); paddi
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::before { display: none; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { width: 18px; height: 18px; top: 2px; align-self: flex-start; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: var(--muted, #a9b8cc); text-decoration-color: transparent; }   /* CLUCK-GREY (Tony Nov 16): disabled = the --muted token grey, duck too */
-html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-duck { color: var(--muted, #a9b8cc); --c2: var(--muted, #a9b8cc); opacity: .7; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-duck { color: var(--muted, #a9b8cc); --c2: var(--muted, #a9b8cc); }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { opacity: .45; }   /* DIM-A (Tony Nov 16 pick): the whole link at 45%, so it sits below the kicker in brightness and reads as off */
 @media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover { text-decoration-color: var(--cb-tone); } }
 /* CLUCK-LINK states: the chip's box effects are off on the link (the sheen streak is a box-shaped band, the press shrink is a button feel). JS still toggles .cb-sheen on its timers (no transitionend/animationend dependency), it just draws nothing here. */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
