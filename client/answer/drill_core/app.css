@@ -1886,4 +1886,5 @@ html.ui-v7.proof-split #q .ff.proof > #ansGo { position: absolute; top: 0; right
 html.ui-v7 { --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif; --font-input: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif; --font-title: "Schibsted Grotesk", system-ui, sans-serif; }
 html.ui-v7 :is(h1, h2, h3) { font-family: var(--font-title); }
 /* PROOF-GAP (Tony Nov 16 "dead space"): the proof column sat --s3 below the card on top of the card's own 20 px Q-GAP (~55 px); the short answer sits 20 px under. Same 20 now. */
-html.ui-v7.proof-split.pad-off #stage > #work { margin-top: -12px; }   /* measured: card bottom -> proof column was 32 px (Q-GAP 20 + the parent flex gap 12); short answer 21 */
+html.ui-v7.proof-split.pad-off #stage > #work { margin-top: 0; }
+html.ui-v7.proof-split #freeze { padding-bottom: 0; }   /* measured: card -> proof column was 32 px = Q-GAP 20 + #freeze padding-bottom 12 (page-coloured; a -12 px pull slid the hint UNDER it and clipped its first line) */
