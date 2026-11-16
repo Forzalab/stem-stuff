@@ -180,13 +180,20 @@
     if (g.ResizeObserver && !ro) { ro = new ResizeObserver(function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; rowAlign(); }); }); }
     if (ro) { ro.disconnect(); ro.observe(t); ro.observe(b); }
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); }); }
+  /* Q-MORE (Tony Nov 16): a question card that scrolls inside (phone Q-HALF) shows a gradient + chevron at its foot while there is more below */
+  function qmore() {
+    var p = D.getElementById("problem"); if (!p) return;
+    var more = on() && p.scrollHeight - p.clientHeight > 4 && p.scrollHeight - p.scrollTop - p.clientHeight > 4;
+    p.classList.toggle("qmore", more);
+  }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); qmore(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
     if (!blocks) return;
     new MutationObserver(later).observe(blocks, { childList: true });
-    var pr = D.getElementById("problem"); if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });   // the Ask Cluck button lands after build (cluckbtn.js)
+    var pr = D.getElementById("problem"); if (pr) pr.addEventListener("scroll", qmore, { passive: true });
+    if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
     later();

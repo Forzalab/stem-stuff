@@ -88,7 +88,10 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
 /* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
 @media (max-width: 480px) {
   html.ui-v7 #problem.qc7 { max-height: 50svh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
-    -webkit-mask-image: linear-gradient(#000 calc(100% - 24px), transparent); mask-image: linear-gradient(#000 calc(100% - 24px), transparent); }
+    margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
+  /* Q-MORE (qcard.js qmore): more below -> a sticky foot strip: card colour fading up + a thin chevron (2 px stroke, the corner-letter grey, like the dock's) */
+  html.ui-v7 #problem.qc7.qmore::after { content: ""; position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: block; height: 48px; margin: -48px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'%3E%3Cpath d='M2 2l8 8 8-8' fill='none' stroke='%23a7b5d2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center bottom 10px / 20px 12px no-repeat, linear-gradient(transparent, #0d142a 72%); }
   html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */
   html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.5rem; line-height: 28px; }
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }

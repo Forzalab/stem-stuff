@@ -98,3 +98,6 @@ html.ui-v7 .choices.bento.fill .ch:has(> .send:not([hidden])) > .opt.opt, html.u
 html.ui-v7 .choices.bento.fill .ch:has(> .vg) > .opt.opt { padding-right: 30px; }
 /* every Check / Next target scrolls clear of the sticky top bar (68px + 16) */
 html.ui-v7 .choices .ch > :is(.send, .nx), html.ui-v7 .q .chk .send { scroll-margin-top: 84px; scroll-margin-bottom: 16px; }
+/* TILE-CENTER (Tony Nov 16): the corner letter is laid in the padding of ONE side, which pushed the text off centre (phone fill +8 px x, desktop +4 px y). Same padding both sides = true centre; the letter keeps its corner */
+html.ui-v7 .choices.bento.fill .ch > .opt.opt { padding-left: max(var(--lp, 24px), var(--rp, 8px)); padding-right: max(var(--lp, 24px), var(--rp, 8px)); }
+html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt { padding-top: 24px; padding-bottom: 24px; }
