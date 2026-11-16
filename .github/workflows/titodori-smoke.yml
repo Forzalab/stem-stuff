@@ -1,0 +1,12 @@
+# Box runner smoke (orc14, A6): proves titodori-1 picks up a job and the job-completed hook empties _work after.
+# Dispatch only: never runs on pull_request, so fork code can't reach the box.
+name: titodori-smoke
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: titodori
+    timeout-minutes: 5
+    steps:
+      - run: id && python3 --version && node -v && echo hi > "$GITHUB_WORKSPACE/x"
