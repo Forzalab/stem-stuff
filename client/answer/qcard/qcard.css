@@ -119,3 +119,18 @@ html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { d
 /* STACK-NORMAL (Tony Nov 16): a title on its own row (option A: desktop, cramped, > 3 lines) is a normal title, not a hero: 20/26, flush with the text's left edge */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: 1.25rem; line-height: 26px; letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }
 html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-child { margin-bottom: 24px; }   /* BREATHE: the shared title/button row ends on the button's bottom; 24 px air before the text */
+/* == KICKER-C (Tony Nov 16, Opus redesign variant C, "C but the kicker = the question's code, keep the old button font") ==
+   Diagnosis (brain topics/ui-v7-decisions.md KICKER-C): rowAlign's 3 modes started the title at 3 heights, 4 title sizes, box- not baseline-aligned, button 47% of the measure.
+   C = one newspaper layout, NO-BORDER: kicker row (question code, tracked caps, left) + Ask Cluck (right) | 20 px air | headline full measure | body 16/22 | meta. */
+html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle,.qhead):first-child), html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle,.qhead):first-child) { padding-top: 0 !important; }
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 12px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: 36px !important; line-height: 38px !important; } }
+html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: 16px; line-height: 22px; }   /* TYPE-B lock 16/22 (Q-SMALL's 15 px retired) */
+html.ui-v7 #problem.qc7.qbr { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; }
+html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { position: relative !important; top: auto !important; right: auto !important; order: 1; flex: none; float: none; margin: 0 !important; }   /* keeps cluckbtn.css's font, fill, 44 px, states */
+html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 20px; }
+html.ui-v7 #problem.qc7.qbr > .qfold, html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
+html.ui-v7 #problem.qc7.qbr > .qghostbox, html.ui-v7 #problem.qc7.qbr > .pcode { flex: none; }
+html.ui-v7 #problem.qc7.qbr > .qfold { flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); }   /* the fade strip stays full-bleed inside the flex kicker layout (flex 100% cut its right edge: text showed through) */
