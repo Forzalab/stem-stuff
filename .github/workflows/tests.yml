@@ -23,9 +23,12 @@ on:
 # below sends it down the fast pipe instead. A PR run therefore gets its own per-run concurrency group (no cancellation,
 # no pending-run replacement); main/schedule/dispatch queue every run in order (max), so 3 quick merges left the middle
 # one untested before and must not again.
+# orc14 (decision 13a + all-never-skipped): a PR push now CANCELS the run for its old head and runs the full pipe on the
+# new head (newest wins). The old M5 fast pipe left the new head without a full run, so with `all` red on fast-only heads
+# a PR with a mid-CI push could never merge. main/schedule/dispatch still queue every run in order (max).
 concurrency:
-  group: tests-${{ github.ref }}${{ github.event_name == 'pull_request' && format('-{0}', github.run_id) || '' }}
-  cancel-in-progress: false
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
   queue: max
 env:
   BLOCKS: 4   # runners for the .pw specs (GitHub Free: 20 jobs at once)
@@ -50,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           in_flight=false
-          if [ "$EVENT" = pull_request ]; then
+          if false && [ "$EVENT" = pull_request ]; then   # orc14: PR runs are newest-wins (concurrency above), never fast
             n="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?event=pull_request&per_page=100" \
               | jq --arg ref "$HEAD_REF" --arg sha "$HEAD_SHA" --argjson rid "$RUN_ID" \
               '[.workflow_runs[] | select(.head_branch == $ref) | select(.head_sha != $sha) | select(.id < $rid)
@@ -117,6 +120,7 @@ jobs:
       - run: cd tests && npm ci
       - run: tests/run-all.sh --quick
       - run: node --test tests/invariants.slow.mjs   # ~50 s whole-repo invariant loops (tests/INVARIANTS.md); kept out of npm test so --fast/--quick stay fast
+      - run: node tools/operations/sleep-ratchet.mjs   # AC2.5: no spec may gain a waitForTimeout( above tests/sleep-baseline.json
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: [decide, plan]
     if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true'   # zero-.pw affected PR: no block work (unit still runs)
@@ -239,15 +243,24 @@ jobs:
         env: { PW_BROWSER: webkit, ENGINES: webkit, PW_FORCE_FALLBACK: "1" }
         run: SPECS="$WK_FALLBACK_SPECS" tests/run-all.sh 2>&1 | tee wk-fallback.log
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
+  # AC0.2: never skipped (`if: always()`, every pipe). Fast pipe = red "fast pipe only"; skips only for docs-only / zero-.pw (tools/operations/ci-all-verdict.sh)
   all:
     needs: [decide, plan, unit, block]
-    if: always() && inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'
+    if: always()
     runs-on: ubuntu-24.04
+    env:
+      INPUT_PIPE: ${{ inputs.pipe }}
+      PIPE: ${{ needs.decide.outputs.pipe }}
+      DECIDE: ${{ needs.decide.result }}
+      PLAN: ${{ needs.plan.result }}
+      UNIT: ${{ needs.unit.result }}
+      BLOCK: ${{ needs.block.result }}
+      DOCS_ONLY: ${{ needs.plan.outputs.docs_only }}
+      SKIP_BLOCK: ${{ needs.plan.outputs.skip_block }}
     steps:
-      - run: test "${{ needs.decide.result }}" = success && test "${{ needs.plan.result }}" = success && (test "${{ needs.unit.result }}" = success || test "${{ needs.unit.result }}" = skipped) && (test "${{ needs.block.result }}" = success || test "${{ needs.block.result }}" = skipped)
+      - uses: actions/checkout@v4
+      - run: tools/operations/ci-all-verdict.sh
       # W4 (minimal addition): every block that ran must hand in flaky.txt, and each flaky spec must be in the unexpired jail
-      - if: needs.block.result == 'success'
-        uses: actions/checkout@v4
       - if: needs.block.result == 'success'
         uses: actions/download-artifact@v4
         with: { pattern: flaky-block-*, path: flaky }
