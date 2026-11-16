@@ -178,6 +178,7 @@ jobs:
           # no --with-deps: ubuntu-24.04 already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
           npx playwright install --only-shell chromium
       - name: lanes
+        id: lanes
         env:
           LANE_SPECS: ${{ matrix.lanes }}
           DIFF_DIR: ${{ github.workspace }}/jank-diff   # specs that diff screenshots (desk-layout) keep shots + *-DIFF.png here
@@ -186,7 +187,9 @@ jobs:
         run: |
           IFS='|' read -ra lane <<<"$LANE_SPECS"
           : >flaky.txt   # W4: always exists in a block that ran; each lane appends the specs that failed once and passed on retry
-          for i in "${!lane[@]}"; do SPECS="${lane[$i]}" FLAKY_FILE="flaky-$((i + 1)).txt" tests/run-all.sh >"lane-$((i + 1)).log" 2>&1 & pid[$i]=$!; done
+          mkdir -p logs
+          # CI-FLAKE-LOGS: each lane keeps its spec logs + serve.log (+ each *.try1.log) in logs/lane-N/ for the upload below
+          for i in "${!lane[@]}"; do SPECS="${lane[$i]}" FLAKY_FILE="flaky-$((i + 1)).txt" LOG_DIR="logs/lane-$((i + 1))" tests/run-all.sh >"lane-$((i + 1)).log" 2>&1 & pid[$i]=$!; done
           rc=0
           for i in "${!lane[@]}"; do
             wait "${pid[$i]}" || rc=1
@@ -194,6 +197,9 @@ jobs:
             echo "::group::lane $((i + 1)): ${lane[$i]}"; cat "lane-$((i + 1)).log"; echo "::endgroup::"
             grep -E '^(FAIL|NOT COVERED)|FAILED' "lane-$((i + 1)).log" | sed "s/^/lane $((i + 1)): /" || true
           done
+          cp lane-*.log logs/ 2>/dev/null || true   # the lane stdout logs too, next to each lane's spec logs
+          # CI-FLAKE-LOGS: flaky.txt always exists, so it can never gate the upload; a red lane or a real flake line can
+          if [ -s flaky.txt ] || [ "$rc" -ne 0 ]; then echo "has_logs=true" >>"$GITHUB_OUTPUT"; fi
           exit "$rc"
       - name: upload flaky list   # W4: the `all` job reads it (FLAKY <spec> lines, one spec per line)
         if: always()
@@ -201,6 +207,14 @@ jobs:
         with:
           name: flaky-block-${{ matrix.block }}
           path: flaky.txt
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: upload lane logs   # CI-FLAKE-LOGS: the lane logs die with the runner otherwise
+        if: always() && steps.lanes.outputs.has_logs == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-block-${{ matrix.block }}
+          path: logs
           if-no-files-found: ignore
           retention-days: 7
       - name: upload jank diffs
