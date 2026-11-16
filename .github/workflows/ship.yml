@@ -80,7 +80,7 @@ jobs:
           exit 1
       # ref main: ship.sh deploys origin/main and stops if its own copy differs from main's. fetch-depth 0: version.sh reads the
       # first-parent history for the PR number ("#83+1"); a shallow clone would stamp "?".
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main, fetch-depth: 0 }
       # the bank gate (tools/build_and_ship/ship.sh, #261) runs slips.py --strict (sympy) and the schema check (tests/node_modules): no deps = nothing deployed
       - uses: actions/setup-python@v7
@@ -226,7 +226,7 @@ jobs:
     timeout-minutes: 5
     permissions: { contents: write }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - env:
           SHA: ${{ needs.ship.outputs.sha }}
         run: |
@@ -244,7 +244,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: '[ -n "$VERCEL_TOKEN" ] || { echo "::error::missing repo secret VERCEL_TOKEN"; exit 1; }'
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main, fetch-depth: 0, fetch-tags: true }
       - name: plan
         id: plan

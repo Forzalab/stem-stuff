@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - run: tools/operations/prune-branches.sh ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.max_age_days || '7' }}
         env:
