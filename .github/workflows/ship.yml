@@ -144,6 +144,7 @@ jobs:
         id: gate
         if: inputs.ref == 'main' && steps.live.outputs.already != 'true'
         env:
+          GH_TOKEN: ${{ github.token }}   # the attempt-1 log reads below use gh; without it FAILED stays "unknown" and every yellow is refused
           SHIP_MODE: ${{ vars.SHIP_MODE }}
           AUTO: ${{ inputs.auto }}
         run: |
