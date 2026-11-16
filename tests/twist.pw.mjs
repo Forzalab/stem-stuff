@@ -145,6 +145,19 @@ try {
     });
     await ctx.close();
   }
+  await step("ui-v7: no Twist chip on the card; the duck row toast announces each twist question (once per show), none on a non-twist item", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
+    const page = await ctx.newPage();
+    await page.goto(BASE + "/?ui=v7#PHYS_W01"); await opened(page, "PHYS_W01");
+    assert.equal(await page.locator("#twistChip").count(), 0, "no chip under ui-v7");
+    await waitToast(page);
+    assert.deepEqual(await page.evaluate(() => { const e = document.querySelector(".stoast.on"); return { row: e.classList.contains("stoast-v7"), duck: /duck8-twist/.test(e.querySelector(".stoast-duck img").src) }; }), { row: true, duck: true });
+    await go(page, "PHYS_W02"); await page.waitForTimeout(400);
+    assert.equal(await twistToastOn(page), false, "a non-twist item: no toast");
+    await go(page, "PHYS_W03"); await waitToast(page);
+    await ctx.close();
+  });
   await step("blocked storage: no toast (never a toast on every twist), the chip still shows", async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await ctx.addInitScript(() => { const ls = window.localStorage; try { ls.setItem("stem-ob", "done"); } catch { /* */ }

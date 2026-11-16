@@ -1,0 +1,84 @@
+/* qcard.css: QCARD-SWISS v3 (qcard.js), html.ui-v7 ONLY. Flag off = nothing here applies.
+   Owner pick V3 (Nov 15): ONE card background, top to bottom: ghost numeral (ECHO trail, 6 copies, step -12px x, fades out before the chip column), figure, topic headline,
+   setup + question text (14px, flush-left, scrolls inside past a max height, NO Show all), small meta row. Text, headline, meta share the left edge --qpad.
+   Ask Cluck (cluckbtn.css) stays top right: opaque, no border, a soft dark halo plate + drop shadow lift it off the trail. Echo animates on prev/next (transform + opacity only). */
+@font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
+@font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 24px; --qc-pad: 24px; --qnum: 108px; --qmax: 170px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 16px; --qc-pad: 24px; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 32px; --qc-pad: 48px; --qnum: 156px; --qmax: 190px; } }
+html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
+
+/* GHOST: in the flow at the top of the card (nothing is laid over it), full card width, clipped by its own box; the horizontal mask fades the trail before the chip column */
+html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height: calc(var(--qnum) * .74 + var(--qpad)); margin: calc(-1 * var(--qpad)) calc(-1 * var(--qc-pad)) 0; border-radius: inherit; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 52%, transparent 76%); mask-image: linear-gradient(90deg, #000 52%, transparent 76%); }
+html.ui-v7 .qghost { position: absolute; left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); font: 900 var(--qnum)/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.05em; white-space: nowrap; color: #5b6a9a; user-select: none; }
+html.ui-v7 .qghost i { font-style: normal; position: absolute; left: 0; top: 0; z-index: calc(10 - var(--k)); transform: translate(calc(var(--k) * -12px), 0); opacity: var(--o); }
+html.ui-v7 .qghost i:nth-child(1) { position: relative; --o: 1; color: #e8ebf5; }   /* MAIN numeral: SOLID Swiss bold (headline ink, opaque), the echo copies behind it stay ghosted */
+/* the echo copies (not the front) dissolve top and bottom: a vertical fade so the trail has no flat top or base edge (their shared base bar sat at the baseline) */
+html.ui-v7 .qghost i:not(:first-child) { -webkit-mask-image: linear-gradient(transparent 6%, #000 30%, #000 40%, transparent 78%); mask-image: linear-gradient(transparent 6%, #000 30%, #000 40%, transparent 78%); }
+html.ui-v7 .qghost i:nth-child(2) { --o: .15; }
+html.ui-v7 .qghost i:nth-child(3) { --o: .10; }
+html.ui-v7 .qghost i:nth-child(4) { --o: .07; }
+html.ui-v7 .qghost i:nth-child(5) { --o: .045; }
+html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
+/* PROTOTYPE ?qcecho=br (qcard.js sets .qbr on the card): the echo trail moves to the card's BOTTOM-RIGHT, big and dim, bleeding off the corner (the card clips it to its radius);
+   the solid main numeral stays top-left. The in-flow box keeps its height (layout unchanged); the trail is positioned against the whole card. */
+html.ui-v7 #problem.qc7.qbr { overflow: hidden; }
+html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: 72px; }   /* QC-NOFRONT (Tony Nov 15): no top-left numeral; headline starts below the Ask Cluck row (44 + 28 air) */
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { display: none; }
+html.ui-v7 #problem.qc7.qbr .blocks > :first-child { margin-top: 0; }
+html.ui-v7 #problem.qc7.qbr .qghostbox { position: absolute; inset: 0; height: auto; margin: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+html.ui-v7 #problem.qc7.qbr .qghost { inset: 0; }
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); }
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { top: auto; left: auto; right: calc(var(--qnum) * -.5); bottom: calc(var(--qnum) * -.7); font-size: calc(var(--qnum) * 2.6); }
+/* prev/next: the trail slides in from its offsets and fades to rest. Compositor only (transform, opacity); will-change lives only while it runs (qcard.js adds / removes .qanim) */
+@keyframes qecho { from { opacity: 0; transform: translate(calc(var(--k) * -12px + 32px), 0); } }
+html.ui-v7 .qghostbox.qanim .qghost i { will-change: transform, opacity; animation: qecho 360ms cubic-bezier(.2, .7, .2, 1) calc(var(--k) * 18ms) backwards; }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .qghostbox.qanim .qghost i { animation: none; will-change: auto; } }
+
+/* Ask Cluck: top right, out of the flow. SOLID: opaque fill, no border, a soft dark halo plate + drop shadow lift it off the trail (owner: v1 style button) */
+html.ui-v7 #problem.qc7 > .cluckbtn { position: absolute; top: var(--qpad); right: var(--qpad); float: none; margin: 0; z-index: 3; border: 0;
+  box-shadow: inset 0 1px 0 rgb(44 59 102 / .5), 0 1px 2px rgba(2, 4, 12, .15), 0 4px 10px rgba(2, 4, 12, .06); }
+html.ui-v7 #problem.qc7 > .cluckbtn .cb-duck { position: relative; top: -1px; }   /* optical, phone: the duck sat ~1.2px low of the label's cap-height centre at 390 (Pillow); desktop is already centred (see the @media below) */
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 > .cluckbtn .cb-duck { top: 0; } }
+/* raised, Refactoring UI: a lit top edge (hand-picked lighter navy) + a tight dark shadow + a faint soft one */
+html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]) { box-shadow: inset 0 1px 0 rgb(61 77 130 / .5), 0 1px 2px rgba(2, 4, 12, .15), 0 4px 10px rgba(2, 4, 12, .06); }
+html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-shadow: inset 0 1px 0 rgb(61 77 130 / .5), 0 1px 1px rgba(2, 4, 12, .15); }   /* pressed = lower elevation */
+
+/* figure, headline, text, meta: one grid edge */
+html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; }
+html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
+html.ui-v7 #problem.qc7 .qtext { font: 400 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: 17px; line-height: 24px; } }
+html.ui-v7 #problem.qc7 .qscroll { max-height: var(--qmax); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 0; }
+html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 16px); mask-image: linear-gradient(transparent 0, #000 16px); }
+html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 16px), transparent); mask-image: linear-gradient(#000 calc(100% - 16px), transparent); }
+html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 16px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(transparent 0, #000 16px, #000 calc(100% - 16px), transparent); }
+html.ui-v7 #problem.qc7 .qscroll > * { margin: 0 0 8px; max-width: 64ch; }
+html.ui-v7 #problem.qc7 .qscroll > :last-child, html.ui-v7 #problem.qc7 .qscroll > :last-child > :last-child { margin-bottom: 0; }
+html.ui-v7 #problem.qc7 .qscroll:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
+html.ui-v7 #problem.qc7 .qtext > * { margin: 0 0 8px; max-width: 64ch; }
+html.ui-v7 #problem.qc7 .qtext > :last-child { margin-bottom: 0; }
+html.ui-v7 #problem.qc7 .qtext p, html.ui-v7 #problem.qc7 .qtext ul, html.ui-v7 #problem.qc7 .qtext ol { margin: 0 0 8px; max-width: none; }
+html.ui-v7 #problem.qc7 .qtext > :last-child > :last-child { margin-bottom: 0; }
+html.ui-v7 #problem.qc7 .qsetup { color: #cdd4ea; font-weight: 400; }
+html.ui-v7 #problem.qc7 .qlead { color: #e8ebf5; font-weight: 600; }   /* the question: one step brighter and heavier than the setup */
+html.ui-v7 #problem.qc7 .qlead .katex, html.ui-v7 #problem.qc7 .qsetup .katex { font-size: 1em; }
+html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: 400 13px/18px var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
+html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
+/* KATEX-COVER (Nov 15): the G4.3 edge-fade "local covers" (app.css .md :is(.tbl,.katex-display)) paint solid --qbox squares that hid the echo numeral behind
+   a display equation / table. Only a box that scrolls needs the fade (wideBoxes() sets tabindex then); a box that fits draws no background. */
+html.ui-v7 #problem.qc7 .md :is(.tbl, .katex-display):not([tabindex]) { background: none; }
+/* QBR-MASK (Nov 15): the per-copy top/bottom fade above is tuned for the old top-left trail; at the bottom-right 2.6x size it shows as flat horizontal cuts. qbr = no per-copy mask (the card clips the corner). */
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { -webkit-mask-image: none; mask-image: none; }
+/* one smooth fade for the whole trail, centred on the bottom-right corner (no per-copy edges, so no cuts); keeps 2-3 digit numerals quiet behind the text */
+html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(130% 130% at 100% 100%, #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); mask-image: radial-gradient(130% 130% at 100% 100%, #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); }
+/* LEAD-MATH-BOLD (Tony Nov 15): math in the question sentence (.qlead) reads bold like its words, display lines (lim, integrals) included.
+   KaTeX fonts ship no bold weight for CSS, so a thin same-colour stroke = faux bold; it scales with the font size (em). */
+html.ui-v7 #problem.qc7 .qlead .katex { color: #e8ebf5; -webkit-text-stroke: .028em currentColor; paint-order: stroke fill; }
+/* QD-SCALE (Tony Nov 15): 3+ digits shrink so the trail is as wide as 2 digits (--qd = digit count, qcard.js) */
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--qnum) * 2.6 * min(1, 2 / var(--qd, 1))); }
+/* TBL-CENTER (Tony Nov 15): tables sit centred in the card (the scroll box hugs the table, never wider than the card) */
+html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }
