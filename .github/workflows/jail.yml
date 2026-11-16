@@ -1,0 +1,85 @@
+# C3 (CI-ARCH Sprint C3): the auto-jail bot. Every 6 hours it reads the last 20 completed main push runs of
+# tests.yml (their flaky-block-* artifacts), decides which specs to jail / un-jail with tools/operations/ci-jail.mjs,
+# and opens a PR against tests/quarantine.json. A spec jailed here still runs; its result is ignored (ci-flaky.mjs).
+# The cap is a hard stop: when a sixth spec wants in, the run goes red on purpose (that red IS the ping to Tony).
+name: jail
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write        # the bot branch + commit
+  pull-requests: write   # gh pr create
+  actions: read          # gh run download of the flaky-block-* artifacts
+concurrency:
+  group: jail
+  cancel-in-progress: false
+jobs:
+  jail:
+    if: github.repository == 'Forzalab/stem-stuff'   # never on forks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: "22" }
+      - name: collect the last 20 main push runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/operations/ci-jail.mjs collect "$GITHUB_REPOSITORY" > history.json
+      - name: decide + write tests/quarantine.json
+        id: decide
+        run: |
+          set +e
+          node tools/operations/ci-jail.mjs history.json tests/quarantine.json --write > result.json
+          rc=$?
+          set -e
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -eq 3 ]; then
+            specs="$(node -e 'const r=require("./result.json"); process.stdout.write(r.skipped.filter((s)=>s.why.startsWith("cap")).map((s)=>s.spec).join(", "))')"
+            echo "::error::jail cap 5 hit: $specs; ship stop, ping Tony"
+            {
+              echo "### jail cap 5 hit"
+              echo ""
+              echo "Over the cap: $specs"
+              echo ""
+              echo "ship stop, ping Tony"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          [ "$rc" -eq 0 ] || exit "$rc"
+      - name: open the bot PR
+        if: steps.decide.outputs.rc == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- tests/quarantine.json; then echo "jail: tests/quarantine.json unchanged"; exit 0; fi
+          node -e '
+            const r = require("./result.json");
+            const list = (a) => (a.length ? a.map((s) => "- `" + s + "`").join("\n") : "- (none)");
+            const lines = [
+              "Auto-jail bot (CI-ARCH C3): updates tests/quarantine.json.",
+              "",
+              "Added:",
+              list(r.added),
+              "",
+              "Removed:",
+              list(r.removed),
+            ];
+            for (const s of r.added) lines.push("", "JAIL-" + s, "orc: add a JAIL-" + s + " row to brain pack-queue.tsv");
+            require("fs").writeFileSync("body.md", lines.join("\n") + "\n");
+          '
+          date="$(date -u +%Y-%m-%d)"
+          branch="jail-bot/$date"
+          git config user.name "ci-jail bot"
+          git config user.email "ci-jail-bot@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add tests/quarantine.json
+          git commit -m "ci: auto-jail $date"
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            git push -f -u origin "$branch"
+            echo "jail: updated the open PR for $branch"
+          else
+            git push -u origin "$branch"
+            gh pr create --base main --head "$branch" --title "ci: auto-jail $date" --body-file body.md
+          fi
