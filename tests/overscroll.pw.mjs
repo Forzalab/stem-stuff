@@ -12,6 +12,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -32,7 +33,7 @@ let browser;
 try { browser = await pw[ENGINE].launch(ENGINE === "chromium" ? { args: ["--no-sandbox"] } : {}); }
 catch (e) { console.log(`FAIL engine: PW_BROWSER=${ENGINE} could not launch (not installed? PLAYWRIGHT_BROWSERS_PATH?): ${String(e.message).split("\n")[0]}`); process.exit(1); }
 const srv = spawn(process.env.PY || "python3", [join(ROOT, "server", "http_server", "serve.py"), String(port)], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 let failures = 0;
 try {

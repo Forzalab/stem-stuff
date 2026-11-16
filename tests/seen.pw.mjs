@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -29,7 +30,7 @@ const PROBS = [1, 2].map(n => ({ code: `CALC1_T96M${n}`, title: `Limit from a ta
   wrong: [{ choice: "b", error: "negation", hint: "QUACK. Look at the not." }, { choice: "c", error: "sign", hint: "QUACK. Check the sign." }, { choice: "d", error: "misread", hint: "QUACK. Reread it." }] }));
 writeFileSync(join(banks, "BANK_T96.json"), JSON.stringify({ v: 1, problems: PROBS }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) {

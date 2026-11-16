@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bankReady, watchBank } from "./lib/bankguard.mjs";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -41,7 +42,7 @@ const PIN = s => { try { for (const k of ["stem-q-BANK_AB12", "stem-q-upload"]) 
 const SERVE = join(ROOT, "server", "http_server", "serve.py");
 const srv = spawn("python3", [SERVE, String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), STEM_TODAY: PIN_DAY }, stdio: "ignore" });
 const srv2 = spawn("python3", [SERVE, String(PORT2)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries2.json"), STEM_TODAY: PAST_SUNSET }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok && (await fetch(BASE2 + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE); await serverUp(BASE2);
 // the harness guard first: both servers alive, the healthy banks load (a stale port or a dropped bank fails here, with the server's text)
 await bankReady({ child: srv, port: PORT, bank: "BANK_AB12" });
 await bankReady({ child: srv, port: PORT, bank: "BANK_NW12" });

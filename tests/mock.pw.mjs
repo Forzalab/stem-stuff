@@ -10,6 +10,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -30,7 +31,7 @@ const { deadOpen } = await import("../client/pure_logic_modules/shuffle.mjs");
 const SALT = Array.from({ length: 200 }, (_, i) => "m" + i).find(s => deadOpen({ salt: s, pos: 1, seen: { PHYS_DQ1: { n: 1 } }, hist: [{ c: "PHYS_DQ1" }] }, ["PHYS_DQ1", "PHYS_DQ2"]) === "PHYS_DQ2");
 assert.ok(SALT, "no salt with a two dead-easy opener");
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) {

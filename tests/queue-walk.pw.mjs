@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -32,7 +33,7 @@ if (!/^https?:/.test(ARG)) {
   writeFileSync(join(banks, "BANK_QW5.json"), JSON.stringify({ v: 1, problems: [1, 2, 3, 4, 5].map(q5) }));
   OWN = true;
   srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), ARG], { env: { ...process.env, STEM_BANKS: banks, STEM_FRONT: "BANK_P2X", STEM_FRONT_TITLE: "Exam 2", STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });   // the front bank as it was when this walk was written
-  for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+  await serverUp(BASE);
 }
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const KEY = new Map(JSON.parse(readFileSync(join(BANKS, BANK + ".json"), "utf8")).problems.map(p => [p.code, p]));   // the answers: test side only

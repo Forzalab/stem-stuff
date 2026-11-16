@@ -16,6 +16,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 import { createServer } from "node:net";
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 /* run-all.sh hands .pw scripts a base URL; this one starts its own server, so a number is the port, anything else a free one */
 const freePort = () => new Promise(r => { const s = createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => r(p)); }); });
 const PORT = /^\d+$/.test(process.argv[2] || "") ? +process.argv[2] : await freePort(), BASE = `http://localhost:${PORT}`;
@@ -37,7 +38,7 @@ const FINE = ["CSCI26_BAA", "CSCI26_BAB", "CSCI26_BAC", "CSCI26_BAD"].map((c, i)
 const fineFile = { name: "FINE.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ v: 1, problems: FINE })) };
 
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
+await serverUp(BASE);
 
 let failures = 0;
 const ONLY = process.env.NEXT_ONLY ? new RegExp(process.env.NEXT_ONLY) : null;
