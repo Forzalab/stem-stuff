@@ -806,11 +806,12 @@ function render() {
    Pick 9 + stage 2). #q (the how line, the box, the chips, the reference proof) and #fb (the verdict) live in #work, the pad's pane; the
    notes pad (#xb) is not shown. Any other item: both go back into the question card. Same #sash, same anchors (applyMT). */
 function proofHome() {
-  const on = isProof(), fi = $("#freezeIn"), w = $("#work");
+  const on = isProof() && !bridge.sideMQ.matches, fi = $("#freezeIn"), w = $("#work");   // PROOF-UNDER (Tony Nov 16, supersedes Nov 4 on wide screens): side by side, the proof box sits right under the question card; the split (pad's place) is phone-only
   if (on && !w.contains($("#q"))) w.append($("#q"), $("#fb"));
   else if (!on && !fi.contains($("#q"))) fi.append($("#q"), $("#fb"));
   root.classList.toggle("proof-split", on);
 }
+matchMedia("(min-width: 720px)").addEventListener("change", () => { if (S) { proofHome(); bridge.applyMT?.(); } });   // same breakpoint as shell.js sideMQ (bridge may not be ready at load)   // crossing the side breakpoint moves the proof box home
 /* == §twist-chip == */
 /* ---------- the Twist chip + its one-time toast (W133, todo 133; copy LOCKED, Tony Oct 29, verbatim) ----------
    An item with `twist: true` (SCHEMA.md) gets a small "Twist" chip in the card's header, left of the title (the title row when sugar
