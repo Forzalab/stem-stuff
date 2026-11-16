@@ -27,7 +27,8 @@ on:
 # new head (newest wins). The old M5 fast pipe left the new head without a full run, so with `all` red on fast-only heads
 # a PR with a mid-CI push could never merge. main/schedule/dispatch still queue every run in order (max).
 concurrency:
-  group: tests-${{ github.ref }}
+  # CI-ARCH PR 3: push = per-sha group, main runs in parallel; PR rule unchanged.
+  group: tests-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
   # queue: max cannot be combined with cancel-in-progress: true (every PR run died at startup, 0 jobs, since #589).
   # PRs: newest wins (default queue). main/schedule/dispatch: no cancel, queue every run in order.
@@ -287,66 +288,6 @@ jobs:
         shell: bash
         env: { PW_BROWSER: webkit, ENGINES: webkit, PW_FORCE_FALLBACK: "1" }
         run: SPECS="$WK_FALLBACK_SPECS" tests/run-all.sh 2>&1 | tee wk-fallback.log
-  # CI-LOOSEN 21 (AC9.1-9.5): the tandem box (titodori-1) hunts flakes in the specs the hosted blocks keep losing, while the
-  # hosted blocks run. Never gating: continue-on-error, no entry in `all.needs`, no green stamp, and no `flaky-block-*`
-  # artifact (ci-flaky.mjs reads only flaky-block-*), so the box being offline or the job being cancelled cannot change a
-  # ship verdict. Result = a per-spec `pass k/5` line in the flake-hunt.txt artifact, nothing else.
-  flake-hunt:
-    runs-on: [self-hosted, titodori]   # titodori-1: user pwuser (uid 1001), node 22 + python 3.12, no docker.sock
-    continue-on-error: true
-    timeout-minutes: 20
-    # AC9.4: the fork guard is written in this `if` itself (not only implied by the event list): on a pull_request the head
-    # repo must be this repo, so fork code never reaches a self-hosted runner that keeps its own credentials.
-    if: ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    env:
-      LANES: 2   # the box has 2 CPUs (the lane count tests/run-all.sh --plan takes; one SPECS lane runs its names in order)
-    steps:
-      - uses: actions/checkout@v4
-      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
-      - run: cd tests && npm ci
-      # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
-      # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
-      - run: |
-          cd tests
-          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
-          npx playwright install --only-shell chromium
-      - name: hunt
-        shell: bash
-        run: |
-          set -uo pipefail
-          # the specs in the flaky jail (tests/quarantine.json); an empty jail = the 5 worst from the brain sleep-sweep list
-          specs="$(node -e 'const j = require("./tests/quarantine.json"); process.stdout.write((Array.isArray(j) ? j : []).map((e) => e.spec).filter(Boolean).join(" "))')"
-          [ -n "$specs" ] || specs="easy flow expr mc-bento bar"
-          echo "hunting: $specs"
-          : > flake-hunt.txt
-          bad=0
-          for spec in $specs; do
-            pass=0; failed=()
-            for k in 1 2 3 4 5; do
-              # FLAKY_FILE per run: never the block job's flaky.txt (a spec that flakes here is counted as a miss, which is the point)
-              if SPECS="$spec" FLAKY_FILE="hunt-$spec-$k.flaky" tests/run-all.sh > "hunt-$spec-$k.log" 2>&1; then
-                pass=$((pass + 1))
-              else
-                failed+=("$k")
-              fi
-            done
-            echo "$spec pass $pass/5" | tee -a flake-hunt.txt
-            [ "$pass" -eq 5 ] && continue
-            bad=1
-            for k in "${failed[@]}"; do
-              echo "  $spec run $k: $(grep -E '^(FAIL|FLAKY|NOT COVERED)' "hunt-$spec-$k.log" | head -5 | paste -sd'; ' -)" >> flake-hunt.txt
-            done
-          done
-          echo; cat flake-hunt.txt
-          exit "$bad"
-      - name: upload flake-hunt
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: flake-hunt   # never named flaky-block-*: the `all` job downloads only that pattern (AC9.5)
-          path: flake-hunt.txt
-          if-no-files-found: ignore
-          retention-days: 7
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   # AC0.2: never skipped (`if: always()`, every pipe). Fast pipe = red "fast pipe only"; skips only for docs-only / zero-.pw (tools/operations/ci-all-verdict.sh)
   all:
