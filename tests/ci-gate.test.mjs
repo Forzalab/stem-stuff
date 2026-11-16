@@ -368,3 +368,53 @@ test("AC3.14 parseFailedSpecs: exactly the failed unit names from a timestamped 
   assert.deepEqual(parseFailedSpecs(LOG.replace(/\n/g, "\r\n")), ["flow", "desk-layout@3", "easy"]);
   assert.ok(readFileSync(here("../.github/workflows/ship.yml"), "utf8").includes("(lane [0-9]+: *)?FAIL ([^ ]+) +[0-9.]+ s$"), "ship.yml sed must match FAIL_LINE");
 });
+
+// --- CI-LOOSEN 21 (AC9.1-9.5): the box flake-hunt job is never a required job ----------------
+// SOURCE of every fact below: .github/workflows/tests.yml `flake-hunt:` (AC9.1) and `all:` (the one required check).
+// Text-only parse, like tests/test_ci_all_job.py: no YAML dep, and a job block ends at the next job-level key/comment.
+const WF = fileURLToPath(new URL("../.github/workflows/tests.yml", import.meta.url));
+function jobBlock(name) {
+  const lines = readFileSync(WF, "utf8").split("\n");
+  const start = lines.findIndex((l) => l === `  ${name}:`);
+  assert.notEqual(start, -1, `tests.yml must carry a top-level \`  ${name}:\` job`);
+  const body = [];
+  for (const l of lines.slice(start + 1)) {
+    if (/^ {2}\S/.test(l)) break;   // the next job, or a job-level comment
+    body.push(l);
+  }
+  return body.join("\n");
+}
+
+test("AC9.1 flake-hunt: self-hosted box, continue-on-error, <= 20 min, hunt step present", () => {
+  const j = jobBlock("flake-hunt");
+  assert.match(j, /^ {4}runs-on: \[self-hosted, titodori\]/m, "runs-on [self-hosted, titodori]");
+  assert.match(j, /^ {4}continue-on-error: true$/m, "the box job may fail without failing the run");
+  const t = /^ {4}timeout-minutes: (\d+)$/m.exec(j);
+  assert.ok(t, "timeout-minutes must be set");
+  assert.ok(Number(t[1]) <= 20, `timeout-minutes ${t[1]} must be <= 20`);
+  assert.match(j, /SPECS="\$spec"/, "the hunt runs each spec through tests/run-all.sh with SPECS=");
+  assert.match(j, /pass \$pass\/5/, "a per-spec `pass k/5` line is the result");
+  assert.doesNotMatch(j, /^ {4}needs:/m, "the box job waits on nothing (it runs beside the hosted blocks)");
+});
+
+test("AC9.4 flake-hunt: the fork guard is written in the job `if` itself, and the events are push-main + schedule", () => {
+  const j = jobBlock("flake-hunt");
+  const cond = /^ {4}if: (.*)$/m.exec(j)[1];
+  assert.match(cond, /github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/, "push to main only");
+  assert.match(cond, /github\.event_name == 'schedule'/, "the nightly run");
+  // AC9.4: not only implied by the event list — the guard itself is in this `if`
+  assert.match(cond, /github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.head\.repo\.full_name == github\.repository/,
+    "fork guard in the job `if` itself");
+});
+
+test("AC9.2/9.5 flake-hunt is NOT a required job: never in all.needs, no green stamp, no flaky-block artifact", () => {
+  const all = jobBlock("all");
+  const needs = /^ {4}needs:\s*\[(.*)\]$/m.exec(all)[1].split(",").map((s) => s.trim()).sort();
+  assert.deepEqual(needs, ["block", "decide", "plan", "unit"], "the required check needs exactly the four gating jobs");
+  assert.doesNotMatch(all, /flake-hunt/, "the `all` verdict must not read the box job (a cancelled box can never refuse a ship)");
+  const j = jobBlock("flake-hunt");
+  assert.match(j, /^ {10}name: flake-hunt\b/m, "the artifact is named flake-hunt");
+  assert.doesNotMatch(j, /^ {10}name: flaky-block-/m, "never a flaky-block-* artifact: ci-flaky.mjs reads only that pattern");
+  // ci-gate.mjs has no job allow-list, so the only "required jobs" list is all.needs: prove the gate never names it
+  assert.doesNotMatch(readFileSync(here("../tools/operations/ci-gate.mjs"), "utf8"), /flake-hunt/, "the ship gate never sees the box job");
+});
