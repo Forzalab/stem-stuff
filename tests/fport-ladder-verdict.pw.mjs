@@ -87,7 +87,10 @@ async function drawerH(w, flag) {
     const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
     await typeAnswer("1.636");
     if (!await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 4000 }).then(() => true, () => false)) {
-      await page.waitForSelector("#q .ff.bad .vk", { state: "visible", timeout: 5000 }); await typeAnswer("0.650");
+      /* the miss is recorded (S.tries pushed, then startWait sets S.wait in the same tick): only then can skipRetryWait see the 10 s wait; the .vk mark alone paints before that on a loaded runner */
+      await page.waitForSelector("#q .ff.bad .vk", { state: "visible", timeout: 5000 });
+      await page.waitForFunction(() => window.__drill && window.__drill.state && window.__drill.state.tries.length === 1, null, { timeout: 6000 });
+      await typeAnswer("0.650");
       await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
     }
     /* the drawer's slide-out (vd-out 380ms) must be done before its height is read */
@@ -233,7 +236,8 @@ try {
       assert.deepEqual(wrong.painted, [], "wrong: nothing painted in the field's right 60px except the mark");
       await page.locator("#ff :is(input, textarea)").first().focus();
             // caption gone, mouse focus: no ring
-      await page.locator("#q #ff.ff input").first().click({ force: true });
+      /* no force: a real tap waits until the field is the hit target. On a phone the fixed "Ready when you are" toast can sit over a field that CI fonts push down; a forced click then lands on the toast, focus never moves, and the next wait ran to 30 s */
+      await page.locator("#q #ff.ff input").first().click();
       await page.waitForFunction(() => !!document.activeElement && !!document.activeElement.closest("#q #ff.ff"));
       const mouse = await page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), i = ff.querySelector("input"), cs = getComputedStyle(i), fl = ff.querySelector(".fl");
         return { ol: cs.outlineStyle, sh: getComputedStyle(ff).boxShadow, fl: fl ? getComputedStyle(fl).display : "none", ptr: ff.hasAttribute("data-ptr") }; });
@@ -253,7 +257,7 @@ try {
       assert.deepEqual([kb.input, kb.ol, kb.w, kb.off], ["none", "solid", "2px", "4px"], "keyboard focus: the outline wraps the field: " + JSON.stringify(kb));
       assert.ok(!/0px 0px 0px 2px/.test(kb.sh), "no glow ring: " + kb.sh);
       await page.evaluate(() => document.activeElement.blur());
-      await page.locator("#q #ff.ff input").first().click({ force: true });
+      await page.locator("#q #ff.ff input").first().click();
       await page.waitForFunction(() => !!document.activeElement && !!document.activeElement.closest("#q #ff.ff"));
       const ms = await page.evaluate(() => getComputedStyle(document.querySelector("#q #ff.ff")).outlineStyle);
       assert.ok(ms === "none", "mouse focus: no ring: " + ms);
