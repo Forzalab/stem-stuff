@@ -180,24 +180,24 @@ html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { bottom: calc(var(--qnu
 /* NO-EXAM (Tony Nov 16): the "questions · q1" source line under the question is gone; the meta row only shows when it still holds something (the Twist chip) */
 html.ui-v7 #problem.qc7 .qmeta .qexam { display: none; }
 html.ui-v7 #problem.qc7 .qmeta:not(:has(> :not(.qexam))) { display: none; }
-/* EDGE-FADE (Tony Nov 16 "add fade gradient to make edge transition less abrupt"): the Q-HALF scroller cut lines hard at its top / bottom edge. The mask sits on the scroller's own
-   box (it does not scroll). Top fades only once scrolled (.qscrolled, qcard.js qmore: the kicker row never dims at rest); bottom fades only when the fold strip is not there
-   (.qmore has its own gradient + chevron, which a mask would dim). Open (no scroll) = no mask. */
+/* EDGE-FADE v2 (Tony Nov 16): a mask on the scroller also faded the CARD'S OWN FILL (bottom edge dissolved into the page, even on cards that do not scroll). Now an overlay
+   instead: a sticky 40 px strip in the card's fill (#0d142a, the fold strip's colour) that fades to clear, pinned at the top edge, only once scrolled (.qscrolled, qcard.js qmore).
+   Net height 0 (margins), pointer-events none. The bottom edge already has the fold strip. */
 @media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qopen) { --ft: 0px; --fb: 32px; -webkit-mask-image: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent);
-    mask-image: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); }
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qscrolled:not(.qopen) { --ft: 40px; }
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qmore:not(.qopen) { --fb: 0px; }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qscrolled:not(.qopen)::before { content: ""; display: block; position: sticky; top: calc(-1 * var(--qpad, 24px)); z-index: 3; order: -1;
+    flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); height: 40px; margin: calc(-1 * var(--qpad, 24px)) calc(-1 * var(--qc-pad, 24px)) calc(var(--qpad, 24px) - 40px);
+    pointer-events: none; background: linear-gradient(#0d142a, transparent); }
 }
 /* SETUP-FADE wider (Tony Nov 16 "fade slightly earlier and wider"): the setup scroller's edge fades go 16 -> 44 px, so the cut line dissolves over ~2 lines, not one */
 html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 44px); mask-image: linear-gradient(transparent 0, #000 44px); }
 html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent); mask-image: linear-gradient(#000 calc(100% - 44px), transparent); }
 html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); }
-/* FOLD-JUT (Tony Nov 16, Firefox phone: code peeked below the fold strip by a few px): the sticky strip's bottom is not guaranteed flush in every engine, so the scroller's own
-   mask also clears its last 12 px (the chevron sits 14+ px up, untouched). Smaller chevron: 20x12 -> 16x10. */
+/* FOLD-JUT (Tony Nov 16, Firefox phone: code peeked below the fold strip by a few px): the sticky strip's bottom is not flush in every engine, so the strip casts a 12 px
+   solid shadow of its own end colour below itself (clipped by the card, covers any peek). Smaller chevron: 20x12 -> 16x10. */
 @media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qmore:not(.qopen) { --fb: 12px; }
+  html.ui-v7 #problem.qc7:not(.qopen) > .qfold { box-shadow: 0 12px 0 #0d142a; }
   html.ui-v7 #problem.qc7 > .qfold svg { width: 16px; height: 10px; }
+}
 }
 /* CLUCK-SWEEP (Tony Nov 16 "underline sweep as emphasis, replacing any existing emphasis"): every emphasis class cluckbtn.js sets (.cb-sheen / .cb-shake / .cb-nod / .cb-hop)
    now plays ONE thing: a full-tone underline sweeps left -> right under the label (scaleX 0 -> 1, holds, fades), over the 40% resting underline. The duck stays still.
