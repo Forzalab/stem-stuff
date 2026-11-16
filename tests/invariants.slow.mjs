@@ -86,7 +86,10 @@ test("I6 run-all flags (ALL): --list and --plan (as CI calls them) keep their ou
   assert.equal(list[1], "npm");
   assert.ok(list.length > 50, "--list names every unit");
   for (const l of list) assert.match(l, /^[A-Za-z0-9_-]+(@[A-Za-z0-9_-]+)?$/, `bad --list line: ${l}`);
-  assert.ok(list.includes("ux-flows@phone") && list.includes("desk-layout@3"));
+  assert.ok(list.includes("ux-flows@phone"));
+  // C1: wall-clock specs (tests/wallclock.json) leave the hosted list for the box quiet lane; everywhere else they stay
+  const hosted = process.env.RUNNER_ENVIRONMENT === "github-hosted" && process.env.WALLCLOCK_RUN !== "1";
+  assert.equal(list.includes("desk-layout@3"), !hosted, `desk-layout@3 listed=${!hosted} (hosted=${hosted})`);
 
   // CI: tests.yml `tests/run-all.sh --plan "$BLOCKS" "$LANES"` with BLOCKS=4 LANES=3
   const yml = readFileSync(path.join(ROOT, ".github/workflows/tests.yml"), "utf8");
