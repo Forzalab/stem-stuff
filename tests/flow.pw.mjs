@@ -285,22 +285,23 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/flow-desktop-1440.png` });
   });
   await step("1440 the divider: tap = next (1/2 -> 1/3 -> strip -> 2/3), double-click = 1/2, a drag snaps; never the pad under the problem", async () => {
-    const tap = async () => { await page.locator("#sash").click(); await page.waitForTimeout(400); };
+    const { vtN, vtDone } = await vtHook(page);
+    const tap = async () => { const n0 = await vtN(); await page.locator("#sash").click(); await vtDone(n0); };
     await tap(); let g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 3) < 2, `1/3 (${g.fW})`);
     await tap(); assert.ok(await page.locator("#pstrip").isVisible(), "strip"); assert.equal(Math.round((await page.locator("#pstrip").boundingBox()).width), 52);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#pstrip span")).writingMode), "vertical-rl");
     await tap(); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) * 2 / 3) < 2, `2/3 (${g.fW})`);
-    const { vtN, vtDone } = await vtHook(page); const n0 = await vtN();
-    await page.locator("#sash").dblclick(); await vtDone(n0); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 2) < 2, `dblclick 1/2 (${g.fW})`);
+    const n1 = await vtN();
+    await page.locator("#sash").dblclick(); await vtDone(n1); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 2) < 2, `dblclick 1/2 (${g.fW})`);
     const s = await page.locator("#sash").boundingBox(), y = s.y + 200;
     await page.mouse.move(s.x + 8, y); await page.mouse.down();
-    await page.mouse.move(s.x - 200, y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(400);
+    await page.mouse.move(s.x - 200, y, { steps: 6 }); const n2 = await vtN(); await page.mouse.up(); await vtDone(n2);
     g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 3) < 2, `drag snapped to 1/3 (${g.fW})`);
     assert.ok(g.wL > g.fR, "pad right of the problem"); assert.ok(g.wT < g.qB, "pad not under the problem");
     assert.ok(await page.locator("#mtMode").isHidden(), "no q | a switch side by side (both are on screen)");
-    await page.locator("#sash").click(); await page.waitForTimeout(400);
+    await tap();
     assert.ok(await page.locator("#pstrip").isVisible(), "1/3 -> strip");
-    await page.locator("#pstrip").click(); await page.waitForTimeout(400);
+    const n3 = await vtN(); await page.locator("#pstrip").click(); await vtDone(n3);
     g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 3) < 2, `strip tap brings the problem back (${g.fW})`);
   });
   await step("1440 no keyboard shortcuts are shown or documented for the divider", async () => {
