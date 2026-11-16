@@ -786,7 +786,7 @@ function render() {
       f._block = b; blocks.append(f);
     }
   }
-  wideBoxes(blocks);
+  wideBoxes(blocks); texTables(blocks);
   drawFigures();
   proofHome();
   renderQuestion();
@@ -1187,6 +1187,15 @@ function fitMath(root) {
 }
 /* G4.3: a table / display equation wider than the card scrolls inside its own box; the box takes keyboard focus (tabindex 0 + a label) only
    while it overflows. The edge fade is CSS (.md .tbl / .katex-display). Re-checked on resize and once fonts are in. */
+/* LATEX-BOOKTABS: a table is "LaTeX-based" (class tbl-tex, CSS: KaTeX_Main in every cell) when any cell holds KaTeX, or every non-empty cell is a bare number.
+   Prose tables keep the text face. The booktabs rules themselves are CSS (app.css, html.ui-v7 only). */
+function texTables(root) {
+  root.querySelectorAll(".md .tbl table").forEach(t => {
+    const cells = [...t.querySelectorAll("th, td")].filter(c => c.textContent.trim());
+    const num = c => /^[-+\u2212]?[\d.,]+(\s*[%\u00b0])?$/.test(c.textContent.trim());
+    t.classList.toggle("tbl-tex", !!t.querySelector(".katex") || (cells.length > 0 && cells.every(num)));
+  });
+}
 function wideBoxes(root) {
   const run = () => root.querySelectorAll(".md .tbl, .md .katex-display").forEach(b => {
     const wide = b.scrollWidth > b.clientWidth + 1;
