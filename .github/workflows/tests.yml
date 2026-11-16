@@ -71,15 +71,21 @@ jobs:
     needs: decide
     if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast'   # empty on push/pull_request, so those still run; block follows via needs
     runs-on: ubuntu-24.04
+    permissions: { contents: read, actions: read }   # stamp-find reads artifacts + runs (SHIP_MODE pr-green)
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
       skip_block: ${{ steps.p.outputs.skip_block }}
       docs_only: ${{ steps.p.outputs.docs_only }}
+      kind: ${{ steps.p.outputs.kind }}
+      stamped: ${{ steps.p.outputs.stamped }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # the PR base sha must be in history for the selection diff
       - id: p
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHIP_MODE: ${{ vars.SHIP_MODE }}
         run: |
           set -euo pipefail
           total="$(tests/run-all.sh --list | wc -l)"
@@ -99,12 +105,27 @@ jobs:
             [ -n "$specs" ] || skip=true   # zero .pw: an empty SPECS would plan ALL, so skip block instead (§5)
           fi
           matrix="$(SPECS="$specs" tests/run-all.sh --plan "$BLOCKS" "$LANES")"
+          # SHIP_MODE pr-green (P4): a push to main whose tree already has a FULL green stamp from a same-repo PR run needs no duplicate full run
+          stamped=false
+          if [ "${{ github.event_name }}" = push ] && [ "${SHIP_MODE:-strict}" = pr-green ]; then
+            node tools/operations/ci-ship.mjs stamp-find "$(git rev-parse 'HEAD^{tree}')" stamps.json
+            stamped="$(TREE="$(git rev-parse 'HEAD^{tree}')" node --input-type=module -e '
+              import { decideStamp } from "./tools/operations/ci-ship.mjs";
+              import { readFileSync } from "node:fs";
+              const jail = (() => { try { return JSON.parse(readFileSync("tests/quarantine.json", "utf8")); } catch { return []; } })();
+              const d = decideStamp({ tree: process.env.TREE, entries: JSON.parse(readFileSync("stamps.json", "utf8")), repo: process.env.GITHUB_REPOSITORY, jail });
+              console.error(`stamp: ${d.reason}`);
+              process.stdout.write(d.ok && d.kind === "full" && d.source === "pull_request" ? "true" : "false");
+            ')"
+          fi
+          echo "stamped=$stamped" >> "$GITHUB_OUTPUT"
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
           echo "skip_block=$skip" >> "$GITHUB_OUTPUT"
           echo "docs_only=$([ "$kind" = docs ] && echo true || echo false)" >> "$GITHUB_OUTPUT"   # docs-only PR: unit + block skip
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
     needs: [decide, plan]
-    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true'   # docs-only PR: skipped
+    if: inputs.pipe != 'fast' && needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # docs-only PR: skipped; stamped push (P4): the PR run already ran this tree
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -123,7 +144,7 @@ jobs:
       - run: node tools/operations/sleep-ratchet.mjs   # AC2.5: no spec may gain a waitForTimeout( above tests/sleep-baseline.json
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: [decide, plan]
-    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true'   # zero-.pw affected PR: no block work (unit still runs)
+    if: needs.decide.outputs.pipe != 'fast' && needs.plan.outputs.skip_block != 'true' && needs.plan.outputs.docs_only != 'true' && needs.plan.outputs.stamped != 'true'   # stamped push (P4) skips too; zero-.pw affected PR: no block work (unit still runs)
     # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
     # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
     runs-on: ubuntu-24.04
@@ -152,6 +173,7 @@ jobs:
         env:
           LANE_SPECS: ${{ matrix.lanes }}
           DIFF_DIR: ${{ github.workspace }}/jank-diff   # specs that diff screenshots (desk-layout) keep shots + *-DIFF.png here
+          FLAKY_PASS: ${{ github.event_name == 'pull_request' && vars.SHIP_MODE == 'pr-green' && '1' || '' }}   # Tony Nov 15: unjailed flake on a PR = yellow + ticket (`all`), never a block
         run: |
           IFS='|' read -ra lane <<<"$LANE_SPECS"
           : >flaky.txt   # W4: always exists in a block that ran; each lane appends the specs that failed once and passed on retry
@@ -248,7 +270,13 @@ jobs:
     needs: [decide, plan, unit, block]
     if: always()
     runs-on: ubuntu-24.04
+    outputs:
+      tickets: ${{ steps.fl.outputs.tickets }}
     env:
+      EVENT: ${{ github.event_name }}
+      SHIP_MODE: ${{ vars.SHIP_MODE }}
+      KIND: ${{ needs.plan.outputs.kind }}
+      STAMPED: ${{ needs.plan.outputs.stamped }}
       INPUT_PIPE: ${{ inputs.pipe }}
       PIPE: ${{ needs.decide.outputs.pipe }}
       DECIDE: ${{ needs.decide.result }}
@@ -264,9 +292,106 @@ jobs:
       - if: needs.block.result == 'success'
         uses: actions/download-artifact@v4
         with: { pattern: flaky-block-*, path: flaky }
-      - if: needs.block.result == 'success'
+      - id: fl
+        if: needs.block.result == 'success'
         env: { MATRIX: "${{ needs.plan.outputs.matrix }}" }
-        run: node tools/operations/ci-flaky.mjs all tests/quarantine.json flaky "$(jq '.include | length' <<<"$MATRIX")"
+        run: |
+          PR=; [ "$EVENT" = pull_request ] && [ "${SHIP_MODE:-strict}" = pr-green ] && PR=--pr   # unjailed flake: yellow + ticket (flake-ticket job)
+          node tools/operations/ci-flaky.mjs all tests/quarantine.json flaky "$(jq '.include | length' <<<"$MATRIX")" $PR
+      # P4: the green stamp, keyed by this checkout's git tree hash. Only a PR/push run, only pr-green, only when everything passed (an unjailed
+      # flaky spec = no stamp, AC3.11), never for a docs-only run, and not when the push run was itself skipped by a stamp.
+      - id: st
+        if: success() && vars.SHIP_MODE == 'pr-green' && (github.event_name == 'pull_request' || github.event_name == 'push') && needs.plan.outputs.stamped != 'true' && (needs.plan.outputs.kind == 'full' || needs.plan.outputs.kind == 'affected')
+        run: node tools/operations/ci-ship.mjs stamp-write --kind "${{ needs.plan.outputs.kind }}" --flaky-dir flaky
+      - if: steps.st.outputs.stamp == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.st.outputs.name }}
+          path: stamp.json
+          overwrite: true
+          retention-days: 30
+  # ---- SHIP_MODE pr-green only (everything below is skipped while the repo variable is strict/unset) ----
+  # Tony Nov 15: an unjailed FLAKY spec on a PR = merge (yellow) + a ticket. One issue "flake tickets", a `- [ ]` line per flake, deduped.
+  # issues: write lives in this job only.
+  flake-ticket:
+    needs: [all, postdeploy]
+    if: always() && vars.SHIP_MODE == 'pr-green' && (needs.all.outputs.tickets != '' || needs.postdeploy.outputs.tickets != '') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { issues: write, contents: read }
+    concurrency: { group: flake-tickets, cancel-in-progress: false }   # one writer at a time (the issue body is read-modify-write)
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TICKETS: ${{ needs.all.outputs.tickets }},${{ needs.postdeploy.outputs.tickets }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node tools/operations/ci-flake-ticket.mjs "$(tr ',' '\n' <<<"$TICKETS" | grep . | sort -u | paste -sd, -)" "$RUN_URL"
+  # P5: the post-deploy verdict. The main push run IS the post-deploy full run. Confirmed red (a spec failed twice) -> dispatch ship.yml
+  # mode=rollback to the last-known-good and, when the red covers more than one merge, the culprit matrix. An unjailed flaky spec only files a ticket
+  # (the red run keeps the gate strict). A jailed flake or an infra failure (retry.yml reruns it) does nothing.
+  postdeploy:
+    needs: [plan, unit, block, all]
+    if: always() && github.event_name == 'push' && vars.SHIP_MODE == 'pr-green' && needs.all.result == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: { contents: read, actions: write }
+    outputs:
+      tickets: ${{ steps.d.outputs.tickets }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, fetch-tags: true }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { pattern: flaky-block-*, path: flaky }
+      - id: d
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          : >failed.log
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" --jq '.jobs[] | select((.conclusion == "failure" or .conclusion == "timed_out") and .name != "all" and .name != "postdeploy") | .id'); do
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" >>failed.log || true
+          done
+          read -r FAILED INFRA < <(node --input-type=module -e '
+            import { parseFailedSpecs } from "./tools/operations/ci-gate.mjs";
+            import { shouldRetry } from "./tools/operations/ci-retry.mjs";
+            import { readFileSync } from "node:fs";
+            const log = readFileSync("failed.log", "utf8");
+            console.log((parseFailedSpecs(log).join(",") || "-") + " " + (shouldRetry({ conclusion: "failure", run_attempt: 1 }, log) ? "infra" : "test"));
+          ')
+          [ "$FAILED" != - ] || FAILED=
+          FLAKY="$(cat flaky/*/flaky.txt 2>/dev/null | sort -u | paste -sd, - || true)"
+          LKG="$(git rev-parse 'refs/tags/lkg^{commit}' 2>/dev/null || true)"
+          echo "postdeploy: failed=[$FAILED] flaky=[$FLAKY] lkg=${LKG:-none} ($INFRA)"
+          node tools/operations/ci-ship.mjs postdeploy --failed "$FAILED" --flaky "$FLAKY" --lkg "$LKG" $([ "$INFRA" = infra ] && echo --infra)
+          ROLLBACK="$(grep '^rollback=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
+          HARD="$(grep '^hard=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
+          if [ -n "$ROLLBACK" ]; then
+            gh workflow run ship.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=rollback -f target="$ROLLBACK"
+            K="$(git rev-list --first-parent --count "$ROLLBACK..$GITHUB_SHA")"
+            echo "confirmed red covers $K merge(s) since $ROLLBACK"
+            if [ "$K" -gt 1 ]; then gh workflow run culprit.yml --repo "$GITHUB_REPOSITORY" --ref main -f from="$ROLLBACK" -f to="$GITHUB_SHA" -f specs="$HARD"; fi
+          elif [ -n "$HARD" ]; then
+            echo "::error::$HARD failed twice and there is no last-known-good tag (git tag lkg <sha>): no rollback was dispatched"
+          fi
+  # P5: the last-known-good = a commit that was live AND has a full green. This is the tests half (ship.yml `lkg-after-ship` is the other):
+  # the full run is green, and production already serves this commit -> move the lkg tag (never backwards).
+  lkg:
+    needs: [all]
+    if: always() && github.event_name == 'push' && vars.SHIP_MODE == 'pr-green' && needs.all.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, fetch-tags: true }
+      - run: |
+          live="$(curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://stem-stuff.vercel.app/version.json?t=$(date +%s)" | jq -r '.sha // empty' || true)"
+          if [ -z "$live" ] || [[ "$GITHUB_SHA" != "$live"* ]]; then echo "lkg: prod serves ${live:-nothing}, not $GITHUB_SHA: the ship run moves the tag"; exit 0; fi
+          if git rev-parse -q --verify refs/tags/lkg >/dev/null && git merge-base --is-ancestor "$GITHUB_SHA" refs/tags/lkg; then echo "lkg: tag is already at or past $GITHUB_SHA"; exit 0; fi
+          git tag -f lkg "$GITHUB_SHA"
+          git push -f origin refs/tags/lkg
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]
