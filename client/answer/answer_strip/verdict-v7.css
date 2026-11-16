@@ -7,6 +7,7 @@ html.ui-v7 #q .ansl { position: absolute; width: 1px; height: 1px; margin: -1px;
 html.ui-v7 .ff.rbox.ok { margin-right: var(--nxw); border-radius: 16px 0 0 16px; }
 html.ui-v7 .ff.rbox.ok > .nx { right: calc(-1 * var(--nxw)); top: 0; height: 100%; padding: 0; border-radius: 0 16px 16px 0; }
 html.ui-v7 .ff.rbox.ok > .nx .nf { border: 0; border-radius: 0 16px 16px 0; }
+html.ui-v7 #q .ff.rbox.ok > .nx .nf { box-shadow: var(--shadow-raise), inset 0 0 0 1px #0c2c22; }   /* NEXT-RIM D (Tony Nov 15 "D"): 1px inner line all round in the row fill (--mc-right green-900; that var is scoped to .choices, so the hex), so the bright face stops reading as a light source bleeding past its edge */   /* NEXT-LINK r2 (Tony: Next 'a teensy bit below'): same edges, but only the row cast the raise shadow, so Next read lower; one pill = one shadow */
 html.ui-v7 .ff.rbox.ok > .nx::before { display: none; }
 html.ui-v7 #q .ff.bad { border-radius: 16px; }
 /* the judged-wrong typed box (Tony Nov 14: "dashed red edge should be gone too, more like our bento answer card on wrong state"): no dash, the MC bento wrong look
@@ -29,3 +30,49 @@ html.ui-v7 :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-
 html.ui-v7 .btn-go.waiting::before { inset: auto 8px 6px 8px; height: 3px; border-radius: 2px; z-index: 0; background: var(--wrong); transform-origin: left center; transform: scaleX(0); animation: vd-wait 10s linear var(--wd, 0s) forwards; }
 @media (prefers-reduced-motion: reduce) { html.ui-v7 .btn-go.waiting::before { animation: none; transform: scaleX(1); } }
 html.ui-v7 .ff.ok, html.ui-v7 .ff.rbox.ok, html.ui-v7 .q .ff.rbox.cue.ok:focus-within { border: 0; }   /* the right row: fill only, no green rim */
+
+/* the judged-right typed box, the plain .ff.ok (not the reveal pill .rbox.ok above): strip.css .ff.strip.ok paints the soft --correct-fill there, so it read as a different green from the MC bento right tile.
+   Now the same tile look as the judged-wrong box: green-900 fill (bento.css --mc-right), --correct-on text, the 16px tile radius. Edge stays off (the rule at the foot of this file). */
+html.ui-v7 .ff.ok { background: var(--mc-right); }
+html.ui-v7 .ff.ok input { color: var(--correct-on); }
+html.ui-v7 #q .ff.ok:not(.rbox) { border-radius: 16px; }
+
+/* NO BORDER (Tony Nov 15): the typed answer field (.ff) and the code box are wells, not outlined boxes. Refactoring UI p.155-157, the INSET light-source technique:
+   (1) a dark top inner shadow (the lip above blocks the light), (2) a lighter bottom lip facing the sky (hand-picked navy, not white alpha), (3) a fill a step off the page.
+   Zero border in every state (idle, hover, focus, typed, wrong, correct). Focus: no border, the soft accent glow added to the inset stack (keyboard focus stays visible).
+   The judged states (.bad / .ok / .rbox.ok) keep their MC fills and raise (below). Flag off: app.css untouched. The Cluck composer is not in these selectors.
+   #q is on the field's selector because app.css "html.ui-v7 #q .ff { box-shadow: var(--well) }" sits at that specificity. */
+html.ui-v7 #q .ff, html.ui-v7 #q .ff:hover, html.ui-v7 #q .ff:focus-within,
+html.ui-v7 .code-box, html.ui-v7 .code-box:hover, html.ui-v7 .code-box:focus-within {
+  border: 0;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 var(--line);   /* FIELD-LIP-3:1 (Tony Nov 15 "read refactoring ui" + "part of the color swatch"): RUI p.156-157 inset input = dark top inset + lighter bottom lip; lip = --line (navy-500 #556791 under ui-v7), 3.64:1 vs the page (WCAG 1.4.11) */
+}
+html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box {
+  background: #060b1b;
+}
+/* focus (Tony Nov 15, round 3): no glow. Keyboard focus = the offset outline (focus-visible); a mouse or tap focus (strip.js sets [data-ptr] on pointerdown) shows no ring, only the well */
+/* round 4: the outline wraps the whole field (the well), never the inner input; the input itself never shows one. A judged field (.bad / .ok) shows none either. */
+html.ui-v7 #q .ff input:focus-visible, html.ui-v7 #q .ff input:focus, html.ui-v7 .code-box input:focus-visible, html.ui-v7 .code-box input:focus { outline: none; }
+html.ui-v7 #q .ff:has(input:focus-visible):not(.bad):not(.ok):not(.rbox):not([data-ptr]), html.ui-v7 .code-box:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 16px; }
+html.ui-v7 #q .ff input:focus::placeholder { color: var(--hint); }   /* the placeholder shows while the field is empty, focus or not */
+html.ui-v7 #q > .how { display: block !important; }   /* the hint line stays (the caption's :has rule hid it on focus) */
+html.ui-v7 .ff > .fl { display: none; }   /* Tony Nov 15 (round 3): no floating caption; the placeholder is the only label, and it hides when typing */
+html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.ok, html.ui-v7 #q .ff.rbox.ok { box-shadow: var(--shadow-raise); }
+
+/* the typed field's tick / cross (Tony Nov 15): no button. No raised tile, no fill, no shadow, no hover; just the glyph in the field. It stays a click target only for the
+   toast "Tap Ask Cluck for help" (strip.js); aria-hidden, not in the tab order (strip.js icon()). The judged row's Check slot loses its raised fill too (the retry bar stays). */
+html.ui-v7 #q .ff .vk { pointer-events: auto; cursor: default; background: none; box-shadow: none; border-radius: 0; width: 24px; height: 24px; top: 50%; right: 14px; transform: translateY(-50%); }   /* centred vertically, the same box and inset for the tick and the cross */
+html.ui-v7 #q .ff .vk:hover, html.ui-v7 #q .ff .vk:focus-visible { background: none; outline: 0; }
+html.ui-v7 #q .ff.bad .btn-go, html.ui-v7 #q .ff.rbox.ok .btn-go { background: none; box-shadow: none; }
+/* the retry-wait bar (app.css .btn-go.waiting::before, red 3px) drew a dot under the cross: hidden under ui-v7 (the wait itself is unchanged) */
+html.ui-v7 #q .ff .btn-go.waiting::before { display: none; }
+/* round 4: the reveal pill's mark (.ff.rbox .vk, app.css: position static, a flex item) sat 12px high: its translate ran with no absolute box. Absolute under ui-v7 in both
+   states, so the mark centres on the row (and the pill) like the cross; the row keeps 48px of room on the right for it. */
+html.ui-v7 #q .ff.rbox { padding-right: 48px; }
+html.ui-v7 #q .ff.rbox .vk { position: absolute; order: 0; margin: 0; right: 14px; top: 50%; transform: translateY(-50%); }
+/* round 5 (Tony, Nov 15: "make the check button apple squircle too"): the Check arrow (.send / .btn-go in the field, blue when typed) and the field well share the progbar's
+   squircle (client/answer/progbar/progbar.css: corner-shape superellipse(1.52) under @supports) and its 16px tile radius, so the two shapes agree. ui-v7 only; the fallback is the 16px round corner. */
+@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .ff, #q .ff .send, .code-box, .code-box .btn-go) { corner-shape: superellipse(1.52); } }
+html.ui-v7 #q .ff, html.ui-v7 .code-box { border-radius: 16px; }
+html.ui-v7 #q .ff.rbox.ok { border-radius: 16px 0 0 16px; }   /* NEXT-LINK (Tony Nov 15 "link the Next button and the input box together"): the #q .ff radius above out-ranked the pill's flat join (.ff.rbox.ok, top of file) */
+html.ui-v7 #q .ff .send, html.ui-v7 .code-box .btn-go { border-radius: 16px; }
