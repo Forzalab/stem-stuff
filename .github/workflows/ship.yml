@@ -57,7 +57,7 @@ jobs:
       # the bank gate (tools/build_and_ship/ship.sh, #261) runs slips.py --strict (sympy) and the schema check (tests/node_modules): no deps = nothing deployed
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install sympy
+      - run: pip install -r requirements.txt   # bankcheck gate needs jsonschema (B-DEPS); ship 65b26bd failed without it
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: cd tests && npm ci
