@@ -29,14 +29,10 @@ jobs:
         with:
           # the tested commit, never the default branch head
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
-      - run: cd tests && npm ci
-      # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
-      # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
-      - run: |
-          cd tests
-          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
-          npx playwright install --only-shell chromium
+      # no root on the box: the script falls back to a venv when pip cannot write the system python
+      # no --with-deps (that needs root): the box's Chromium system libs are expected to be there already
+      - name: playwright install (chromium)
+        run: tools/operations/ci-install.sh
       - name: hunt
         shell: bash
         env:
@@ -109,14 +105,10 @@ jobs:
         with:
           # the tested commit, never the default branch head
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
-      - run: cd tests && npm ci
-      # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
-      # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
-      - run: |
-          cd tests
-          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
-          npx playwright install --only-shell chromium
+      # no root on the box: the script falls back to a venv when pip cannot write the system python
+      # no --with-deps (that needs root): the box's Chromium system libs are expected to be there already
+      - name: playwright install (chromium)
+        run: tools/operations/ci-install.sh
       - name: quiet lane
         shell: bash
         run: |
