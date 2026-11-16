@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { countSleeps, ratchet } from "../tools/operations/sleep-ratchet.mjs";
+import { countSleeps, ratchet, sumSleepMs } from "../tools/operations/sleep-ratchet.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(HERE, "..", "tools", "operations", "sleep-ratchet.mjs");
@@ -46,4 +46,9 @@ test("CLI: adding one sleep to a baselined spec exits 1; the unchanged tree exit
 test("CLI: the committed baseline matches the committed tree (no drift from main)", () => {
   const r = spawnSync(process.execPath, [SCRIPT], { encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
+});
+
+test("sumSleepMs: summed literal ms; a non-literal arg counts 0 (CI-ARCH B2)", () => {
+  assert.equal(sumSleepMs("await p.waitForTimeout(300); await p.waitForTimeout(1_500);\nawait p.waitForTimeout(MS); p.waitForTimeout( 50 , x)"), 1850);
+  assert.equal(sumSleepMs("no sleeps"), 0);
 });
