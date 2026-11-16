@@ -12,7 +12,10 @@ on:
 concurrency: { group: box, cancel-in-progress: false }
 permissions: { contents: read }
 jobs:
+  # Job B: second opinion on the specs the hosted blocks flagged (or the flaky jail on a manual dispatch).
+  # Job B "second opinion" (id flake-hunt kept: ci-gate.test.mjs AC9 + test_ci_image pin it); order B then A
   flake-hunt:
+    permissions: { contents: read, actions: read }   # gh run download of the tests run's flaky-block-* artifacts
     runs-on: [self-hosted, titodori]   # titodori-1: user pwuser (uid 1001), node 22 + python 3.12, no docker.sock
     continue-on-error: true
     timeout-minutes: 20
@@ -20,7 +23,7 @@ jobs:
     # push to main in THIS repo, so fork code never reaches the self-hosted box that keeps its own credentials.
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
     env:
-      LANES: 2   # box = 4 vCPU, runner capped at 3 CPUs; never size from nproc (prints 4)
+      LANES: 2   # box = 4 vCPU, runner capped at 3 CPUs; never size from nproc (prints 4); runner cap 3 = APPLIED; owui 1 + runner 3
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,10 +39,27 @@ jobs:
           npx playwright install --only-shell chromium
       - name: hunt
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}   # gh run download of this run's flaky-block-* artifacts
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
-          # the specs in the flaky jail (tests/quarantine.json); an empty jail = the 5 worst from the brain sleep-sweep list
-          specs="$(node -e 'const j = require("./tests/quarantine.json"); process.stdout.write((Array.isArray(j) ? j : []).map((e) => e.spec).filter(Boolean).join(" "))')"
+          specs=""
+          if [ -n "${RUN_ID:-}" ]; then
+            # the finished tests run's flaky blocks (one flaky-block-* artifact per block/lane shard)
+            rm -rf flaky
+            gh run download "$RUN_ID" -R "$REPO" -p 'flaky-block-*' -D flaky || true
+            specs="$(find flaky -type f -name flaky.txt -exec cat {} + 2>/dev/null | sed '/^[[:space:]]*$/d' | LC_ALL=C sort -u | paste -sd' ' -)"
+            if [ -z "$specs" ]; then
+              echo "no flakes in run $RUN_ID" > flake-hunt.txt
+              cat flake-hunt.txt
+              echo "no flakes in run $RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+          # manual dispatch (no run id): the flaky jail, then the 5 worst from the brain sleep-sweep list
+          [ -n "$specs" ] || specs="$(node -e 'const j = require("./tests/quarantine.json"); process.stdout.write((Array.isArray(j) ? j : []).map((e) => e.spec).filter(Boolean).join(" "))')"
           [ -n "$specs" ] || specs="easy flow expr mc-bento bar"
           echo "hunting: $specs"
           : > flake-hunt.txt
@@ -62,6 +82,7 @@ jobs:
             done
           done
           echo; cat flake-hunt.txt
+          { echo "## second opinion (flake-hunt)"; cat flake-hunt.txt; } >> "$GITHUB_STEP_SUMMARY"
           exit "$bad"
       - name: upload flake-hunt
         if: always()
@@ -69,5 +90,52 @@ jobs:
         with:
           name: flake-hunt   # never named flaky-block-*: the `all` job downloads only that pattern (AC9.5)
           path: flake-hunt.txt
+          if-no-files-found: ignore
+          retention-days: 7
+  # Job A: the quiet lane. Runs after Job B (never in parallel with it): the wall-clock specs measure real time, so they need
+  # the box to themselves. LANES: 1 is the point; never size from nproc. If this lane takes >15 min, split
+  # tests/wallclock.json across jobs instead of raising the 20 min timeout.
+  quiet-lane:
+    needs: flake-hunt
+    if: always() && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: [self-hosted, titodori]
+    continue-on-error: true
+    timeout-minutes: 20
+    env:
+      LANES: 1   # quiet is the point; never nproc
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # the tested commit, never the default branch head
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - run: pip install -r requirements.txt --user   # no root on the box: --user, on the preinstalled python 3.12
+      - run: cd tests && npm ci
+      # same install as the block job: tests/package.json pins only playwright-core, so add the matching playwright version.
+      # No --with-deps (that needs root): the box's Chromium system libs are expected to be there already.
+      - run: |
+          cd tests
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --only-shell chromium
+      - name: quiet lane
+        shell: bash
+        run: |
+          set -uo pipefail
+          rc=0
+          # the quiet-lane list is tests/wallclock.json; WALLCLOCK_RUN=1 tells run-all.sh not to skip it
+          SPECS="$(node -p 'require("./tests/wallclock.json").join(" ")')" WALLCLOCK_RUN=1 tests/run-all.sh > quiet.log 2>&1 || rc=$?
+          tail -n 40 quiet.log
+          { echo "quiet-lane $SHA $( [ "$rc" -eq 0 ] && echo PASS || echo FAIL )"; grep -E '^(FAIL|FLAKY) ' quiet.log || true; } > quiet-lane.txt
+          cat quiet-lane.txt
+          { echo "## quiet-lane"; cat quiet-lane.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+      - name: upload quiet-lane
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiet-lane
+          path: |
+            quiet-lane.txt
+            quiet.log
           if-no-files-found: ignore
           retention-days: 7

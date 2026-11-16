@@ -77,9 +77,19 @@ declare -A PART_ENV=(
   [desk-layout@3]="SIZES=1920x1080,2560x1440,1366x768@1.25,1366x768@1.5"
 )
 parts_of() { local p; for p in "${!PART_ENV[@]}"; do [ "${p%%@*}" = "$1" ] && echo "$p"; done | LC_ALL=C sort; }
+# C1: wall-clock specs run on the tito box quiet lane (box.yml job quiet-lane), never on hosted.
+WALLCLOCK_SPECS=""
+if [ -f tests/wallclock.json ]; then
+  WALLCLOCK_SPECS="$(node -e 'const a = JSON.parse(require("fs").readFileSync("tests/wallclock.json", "utf8")); process.stdout.write((Array.isArray(a) ? a : []).join(" "))' 2>/dev/null || true)"
+fi
+wallclock_skipped() {   # 0 = skip this unit (a part skips with its base): hosted runner, unless the quiet lane asks to run it
+  [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ] && [ "${WALLCLOCK_RUN:-}" != "1" ] || return 1
+  case " $WALLCLOCK_SPECS " in *" ${1%%@*} "*) return 0 ;; esac
+  return 1
+}
 units() {   # every schedulable name: a spec's parts if it has any, else the spec
   local f n p
-  for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; p="$(parts_of "$n")"; if [ -n "$p" ]; then echo "$p"; else echo "$n"; fi; done
+  for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; wallclock_skipped "$n" && continue; p="$(parts_of "$n")"; if [ -n "$p" ]; then echo "$p"; else echo "$n"; fi; done
 }
 plan_units() {   # --plan with SPECS deals exactly that subset; unset/empty = every unit (I6)
   if [ "$plan_subset" -eq 1 ]; then printf '%s\n' $SPECS; else units; fi
@@ -348,7 +358,7 @@ while read -r n; do
 done < <(plan_units)
 if [ "$plan_subset" -eq 0 ]; then
   for f in tests/*.pw.mjs; do
-    n="$(basename "$f" .pw.mjs)"; want="$(parts_of "$n")"; [ -n "$want" ] || want="$n"
+    n="$(basename "$f" .pw.mjs)"; wallclock_skipped "$n" && continue; want="$(parts_of "$n")"; [ -n "$want" ] || want="$n"
     got="$(grep -xE "$(printf '%s' "$n" | sed 's/[.[\*^$]/\\&/g')(@.*)?" <<<"$dealt" | LC_ALL=C sort)"
     [ "$got" = "$want" ] || { echo "schedule check: $n is covered by [$(paste -sd' ' <<<"$got")], want exactly [$(paste -sd' ' <<<"$want")]" >&2; bad=1; }
   done
