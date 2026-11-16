@@ -3,8 +3,8 @@
    A spec that fails and passes on its in-lane retry is FLAKY; the lane passes only if the spec is in the unexpired jail
    (tests/quarantine.json, same rules as ci-gate: jailedSpecs). Never a clock of its own: `now` is passed in.
      node tools/operations/ci-flaky.mjs jailed <spec> [jail.json]          exit 0 = jailed (lane may pass), 1 = not
-     node tools/operations/ci-flaky.mjs all <jail.json> <dir> <nBlocks>    reads <dir>/flaky-block-<i>/flaky.txt, exit 0 = ok */
-import { existsSync, readFileSync } from "node:fs";
+     node tools/operations/ci-flaky.mjs all <jail.json> <dir> <nBlocks> [--pr]   reads <dir>/flaky-block-<i>/flaky.txt, exit 0 = ok */
+import { existsSync, readFileSync, appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { jailedSpecs } from "./ci-gate.mjs";
 
@@ -16,16 +16,18 @@ export function flakyVerdict(spec, jail, now) {
 }
 
 // The `all` job: blocks = [{block, flaky: string[] | null}] for every block that ran (null = its flaky file is missing = fail closed).
-export function decideAll({ blocks = [], jail = [], now } = {}) {
-  const live = jailedSpecs(jail, now), warnings = [], bad = [];
+// pr = SHIP_MODE pr-green on a pull_request run (Tony, Nov 15): an UNJAILED flaky spec does not fail `all` (yellow); it becomes a ticket.
+export function decideAll({ blocks = [], jail = [], now, pr = false } = {}) {
+  const live = jailedSpecs(jail, now), warnings = [], bad = [], tickets = [];
   for (const b of blocks) {
     if (!Array.isArray(b.flaky)) { bad.push(`block ${b.block}: flaky.txt missing (cannot tell what flaked)`); continue; }
     for (const s of b.flaky) {
       if (live.has(s)) warnings.push(`${s} flaky (jailed)`);
-      else bad.push(`${s} flaky and not jailed (block ${b.block})`);
+      else if (pr) { warnings.push(`${s} flaky, not jailed: passes yellow, ticket filed`); tickets.push(s); }
+      else { bad.push(`${s} flaky and not jailed (block ${b.block})`); tickets.push(s); }
     }
   }
-  return { ok: bad.length === 0, warnings, reason: bad.join("; ") };
+  return { ok: bad.length === 0, warnings, reason: bad.join("; "), tickets: [...new Set(tickets)] };
 }
 
 const names = (txt) => String(txt).split("\n").map((l) => l.trim()).filter(Boolean);
@@ -44,7 +46,8 @@ export function main(argv, now = Date.now()) {
       const f = `${b}/flaky-block-${i}/flaky.txt`;
       blocks.push({ block: i, flaky: existsSync(f) ? names(readFileSync(f, "utf8")) : null });
     }
-    const v = decideAll({ blocks, jail: readJail(a), now });
+    const v = decideAll({ blocks, jail: readJail(a), now, pr: process.argv.includes("--pr") });
+    if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `tickets=${v.tickets.join(",")}\n`);
     for (const w of v.warnings) console.log(`::warning::${w}`);
     if (!v.ok) console.log(`::error::${v.reason}`);
     return v.ok ? 0 : 1;

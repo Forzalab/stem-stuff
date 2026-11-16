@@ -41,7 +41,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
 
   await step(`${W} (e) no strip handle: phones show the whole problem in the page (pad off); desktop is side by side`, async () => {
     await page.goto(BASE + "/#PHYS_ZZ1"); await opened(page, "PHYS_ZZ1");
-    await page.mouse.wheel(0, 600); await page.waitForTimeout(500);
+    await page.mouse.wheel(0, 600); await page.waitForFunction(() => scrollY > 0, null, { timeout: 5000 });   // the wheel landed on the page
     const more = page.locator("#more");
     if (!phone) {   // desktop is side by side now (docs/design/MULTITASK.md "Desktop, revised"): no frozen strip over the pad, so no strip handle
       assert.ok(await more.isHidden(), "no strip handle side by side");
@@ -62,17 +62,17 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       assert.ok(await page.isVisible("#codeChip") && !(await page.isVisible("#code")), "C7 (Tony, Oct 5): a lone question: the code rests as a label");
       await page.click("#codeChip"); assert.ok(await page.isVisible("#code"), "the label opens the box");
       assert.equal(await page.evaluate(() => document.activeElement.id), "code", "focus in the box");
-      await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(50);
+      await page.evaluate(() => document.activeElement.blur()); await page.waitForFunction(() => !document.documentElement.classList.contains("entry-open"), null, { timeout: 5000 });
       assert.ok(await page.isVisible("#codeChip") && !(await page.isVisible("#code")), "focus gone: the label again");
       assert.ok(!(await page.isVisible("#barTab")));
     });
   } else {
     await step(`${W} (f) no problem: the full bar; problem open: a strip with the up-chevron`, async () => {
-      await page.goto(BASE + "/"); await page.waitForTimeout(400);
+      await page.goto(BASE + "/"); await page.locator("#code").waitFor({ state: "visible", timeout: 5000 });
       assert.ok(await page.isVisible("#code"), "full bar with nothing open");
       assert.ok(!(await page.isVisible("#barTab")));
       await page.fill("#code", "CALC1_X2P"); await page.press("#code", "Enter"); await opened(page, "CALC1_X2P");
-      await page.waitForTimeout(300);
+      await page.waitForFunction(() => document.documentElement.classList.contains("bar-mini") && !document.documentElement.classList.contains("bar-open"), null, { timeout: 5000 });
       assert.ok(!(await page.isVisible("#code")), "code box put away");
       const tab = await page.locator("#barTab").boundingBox();
       assert.ok(tab.height <= 44 && tab.y + tab.height >= H - 2, `strip at the bottom: ${JSON.stringify(tab)}`);
@@ -82,16 +82,17 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
     await step(`${W} (f) tap and swipe up reveal it over the page (no reflow); tap and swipe down put it away`, async () => {
       const at = () => page.$eval("#xb", e => Math.round(e.getBoundingClientRect().top + scrollY));
       const y0 = await at(), docH = await page.evaluate(() => document.documentElement.scrollHeight);
-      await page.tap("#barTab"); await page.waitForTimeout(250);
+      await page.tap("#barTab"); await page.waitForFunction(() => document.documentElement.classList.contains("bar-open"), null, { timeout: 5000 });
       assert.ok(await page.isVisible("#code"), "tap reveals");
       assert.equal(await at(), y0, "nothing moved"); assert.equal(await page.evaluate(() => document.documentElement.scrollHeight), docH, "page height kept");
       await shot("revealed");
-      await page.tap("#barTab"); await page.waitForTimeout(250);
+      await page.tap("#barTab"); await page.waitForFunction(() => !document.documentElement.classList.contains("bar-open"), null, { timeout: 5000 });
       assert.ok(!(await page.isVisible("#code")), "tap hides");
-      const swipe = async dy => { const r = await page.locator("#barTab").boundingBox(), x = r.x + r.width / 2, y = r.y + r.height / 2;
-        await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + dy, { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(250); };
-      await swipe(-40); assert.ok(await page.isVisible("#code"), "swipe up reveals");
-      await swipe(40); assert.ok(!(await page.isVisible("#code")), "swipe down hides");
+      const swipe = async (dy, open) => { const r = await page.locator("#barTab").boundingBox(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+        await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + dy, { steps: 4 }); await page.mouse.up();
+        await page.waitForFunction(o => document.documentElement.classList.contains("bar-open") === o, open, { timeout: 5000 }); };
+      await swipe(-40, true); assert.ok(await page.isVisible("#code"), "swipe up reveals");
+      await swipe(40, false); assert.ok(!(await page.isVisible("#code")), "swipe down hides");
     });
     /* phones since round 3b: the pad lives on the pad page (Scratchpad button), the code bar is away there; the pad fills to the
        bottom and scrolls inside itself, the caret always visible */
@@ -100,7 +101,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       await page.tap("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt"));
       await page.locator("#scratch").focus();
       for (let i = 1; i <= 40; i++) await page.keyboard.type(i === 1 ? "line 1" : `\nline ${i}`);
-      await page.waitForTimeout(300);
+      await page.waitForFunction(() => { const t = document.querySelector("#scratch"); return !!t && t.value.split("\n").length === 40 && t.value.endsWith("line 40"); }, null, { timeout: 5000 });
       const g = await page.evaluate(() => { const v = visualViewport, t = document.querySelector("#scratch"), r = t.getBoundingClientRect();
         return { bottom: r.bottom, vb: v.offsetTop + v.height, sh: t.scrollHeight, ch: t.clientHeight, away: document.documentElement.classList.contains("dock-away") }; });
       assert.ok(g.bottom <= g.vb + 0.5, `pad past the visible bottom: ${g.bottom} > ${g.vb}`);
@@ -120,7 +121,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       await page.focus("#code");
       await page.setViewportSize({ width: 390, height: 450 });
       await page.fill("#code", "PHY");
-      await page.waitForTimeout(300);
+      await page.locator("#codeSug").waitFor({ state: "visible", timeout: 5000 });
       const g = await page.evaluate(() => {
         const vis = sel => getComputedStyle(document.querySelector(sel)).visibility, v = visualViewport, r = document.querySelector("#codeSug").getBoundingClientRect();
         const cx = r.left + r.width / 2, hit = document.elementsFromPoint(cx, r.top + 4)[0];
@@ -134,7 +135,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       assert.equal(g.hit, "list", `something over the list: ${JSON.stringify(g)}`);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.evaluate(() => document.activeElement.blur());
-      await page.waitForTimeout(200);
+      await page.waitForFunction(y => !document.documentElement.classList.contains("coding") && Math.abs(scrollY - y) <= 1, y0, { timeout: 5000 });
       const e = await page.evaluate(() => ({ coding: document.documentElement.classList.contains("coding"), problem: getComputedStyle(document.querySelector("#problem")).visibility, y: scrollY }));
       assert.ok(!e.coding && e.problem === "visible" && Math.abs(e.y - y0) <= 1, `not restored: ${JSON.stringify(e)} y0=${y0}`);
     });
