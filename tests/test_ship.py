@@ -261,7 +261,7 @@ class Gate(unittest.TestCase):
     an origin, so the run gets as far as a real one
     The fake root has server/data/problems.json and the committed server/data/banks/figs PNGs; the banks go in server/data/banks/."""
     FILES = ("tools/build_and_ship/ship.sh", "tools/build_and_ship/brain_banks.py", "tools/build_and_ship/version.sh", "tools/bank_tools/slips.py", "tools/bank_tools/tol.py", "tools/bank_tools/schema-check.mjs",
-             "server/answer_grading/slips.py", "server/data/problems.json", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs") + FIG_ASSETS
+             "server/answer_grading/slips.py", "server/data/problems.json", "SCHEMA.md", "tests/schemas.mjs", "tools/bank_tools/fig_png.mjs", "tools/bank_tools/bankcheck.py") + FIG_ASSETS
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-gate-")
@@ -271,6 +271,7 @@ class Gate(unittest.TestCase):
             os.makedirs(os.path.dirname(os.path.join(self.root, f)), exist_ok=True)
             shutil.copy(os.path.join(ROOT, f), os.path.join(self.root, f))
         shutil.copytree(os.path.join(ROOT, "client", "vendor", "katex"), os.path.join(self.root, "client", "vendor", "katex"))
+        shutil.copytree(os.path.join(ROOT, "server"), os.path.join(self.root, "server"), dirs_exist_ok=True, ignore=shutil.ignore_patterns("data"))   # bankcheck.py imports serve.py (rules, no copies)
         os.symlink(os.path.join(ROOT, "tests", "node_modules"), os.path.join(self.root, "tests", "node_modules"))
         put(self.root, ".gitignore", "tests/node_modules\n")
         put(self.root, "server/data/banks/.keep", "")
@@ -331,7 +332,7 @@ class Gate(unittest.TestCase):
     def test_a_clean_set_deploys_and_an_old_bank_only_warns(self):
         self.bank("ok", "BANK_GOOD")
         self.bank("ok", "BANK_OLD", v=1, form=None)                       # v1, no form: still ships
-        r = self.ship("ok")
+        r = self.ship("ok", STEM_TODAY="2026-11-04")   # the day before SUNSET: v1 only warns (past it, bankcheck B-VER stops the deploy, the server would drop it)
         self.assertIn("BANK_OLD v1: stops loading 2026-11-05", r.stderr)
         self.assertNotIn("BANK_GOOD v", r.stderr)
         self.assertIn("demo ready: https://t.vercel.app", r.stdout, r.stderr)

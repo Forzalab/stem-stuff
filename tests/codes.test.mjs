@@ -222,7 +222,7 @@ test("bank versions (SCHEMA.md Version table): bankNotice reads the banner / dro
   for (const b of [null, undefined, { banner: 1, dropped: {} }]) assert.deepEqual(C.bankNotice(b), { banner: "", dropped: "" });
   assert.equal(C.BANNER_CLASS, "entry-msg warn bank-banner");   // the entry line's warn tone (app.css), no new style
   const app = read("client/answer/drill_core/app.js");
-  assert.match(app, /if \(nb\.dropped\) \{ if \(!quiet\) entryMsg\(nb\.dropped, "warn"\); return false; \}/);   // the line, not "not found"
+  assert.match(app, /if \(nb\.dropped\) \{ (incident\("bank", "dropped", at\); )?if \(!quiet\) entryMsg\(nb\.dropped, "warn"\); return false; \}/);   // BANKCHECK: the dropped branch also emits the bank incident line   // the line, not "not found"
   assert.match(app, /el\.className = codes\.BANNER_CLASS;[^\n]*panel\.prepend\(el\)/);                       // top of #qlist
   assert.match(read("server/http_server/serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);
 });
