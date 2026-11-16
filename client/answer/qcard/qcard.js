@@ -161,12 +161,60 @@
     if (mm) meta(mm);
     var sc2 = tt && tt.querySelector(":scope > .qscroll"); if (sc2) scrollable(sc2);
   }
-  function later() { if (!raf) raf = requestAnimationFrame(build); }
+  /* ROW-ALIGN (Tony Nov 16, option B, every bank): a title-first card shares one row with the Ask Cluck float. The title reserves the button's MEASURED width
+     (--cbw) + a gap; the button keeps its own size and drops so its BOTTOM sits on the title's last line (1, 2, 3+ lines alike). No title first / flag off = reset. */
+  var ro = null;
+  function rowAlign() {   // KICKER-C (Tony Nov 16): one layout (kicker row = code + Ask Cluck, then the headline); the old beside/stack measuring is retired, this only clears its leftovers and writes the code
+    var p = D.getElementById("problem"), b = p && p.querySelector(":scope > .cluckbtn"), t = p && p.querySelector(":scope > .blocks > :is(.ptitle, .qhead):first-child");
+    if (!p) return;
+    if (b) b.style.marginTop = ""; if (t) t.style.paddingTop = ""; p.classList.remove("qstack"); p.style.removeProperty("--cbw");
+    var c = D.getElementById("pcode"), code = c ? c.textContent.trim() : ""; p.dataset.code = code;
+    if (!on() || !p.classList.contains("qbr")) return;
+    var k = p.querySelector(":scope > .qkicker");
+    if (!k) { k = D.createElement("span"); k.className = "qkicker"; k.setAttribute("aria-hidden", "true"); p.insertBefore(k, p.firstChild); }
+    if (k.textContent !== code) k.textContent = code;
+    /* KICKER-BASELINE (Tony Nov 16): the Ask Cluck LABEL's baseline = the code's baseline (flex 'baseline' picked the duck icon) */
+    k.style.marginTop = "";
+    if (!b) return;
+    var lab = [].slice.call(b.querySelectorAll("*")).filter(function (e) { return !e.children.length && /\S/.test(e.textContent) && e.getClientRects().length; })[0];
+    if (!lab) return;
+    var base = function (host) { var s = D.createElement("span"); s.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline"; host.appendChild(s); var y = s.getBoundingClientRect().top; host.removeChild(s); return y; };
+    var d = base(lab) - base(k);
+    if (Math.abs(d) > 0.25) k.style.marginTop = d + "px";
+  }
+  /* Q-FOLD (Tony Nov 16): the chevron is a real button: tap = expand the card to full height; at the foot a reversed chevron collapses it (scrolls the card top back into view) */
+  function foldBtn(p) {
+    var b = p.querySelector(":scope > .qfold");
+    if (!b) {
+      b = D.createElement("button"); b.type = "button"; b.className = "qfold"; b.setAttribute("aria-label", "Show the whole question"); b.setAttribute("aria-expanded", "false");
+      b.innerHTML = '<svg viewBox="0 0 20 12" width="20" height="12" aria-hidden="true"><path d="M2 2l8 8 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = !p.classList.contains("qopen"); p.classList.toggle("qopen", open);
+        b.setAttribute("aria-expanded", String(open)); b.setAttribute("aria-label", open ? "Fold the question" : "Show the whole question");
+        if (!open) { p.scrollTop = 0; var r = p.getBoundingClientRect(); if (r.top < 0) g.scrollBy({ top: r.top - 16, behavior: "smooth" }); }
+        requestAnimationFrame(qmore);
+      });
+      p.appendChild(b);
+    }
+    return b;
+  }
+  function qmore() {
+    var p = D.getElementById("problem"); if (!p) return;
+    if (!on()) { p.classList.remove("qmore", "qopen"); return; }
+    var open = p.classList.contains("qopen");
+    var over = p.scrollHeight - p.clientHeight > 4, more = !open && over && p.scrollHeight - p.scrollTop - p.clientHeight > 4;
+    p.classList.toggle("qmore", more);
+    if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }
+  }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; var pp = D.getElementById("problem"); if (pp && pp.dataset.qfor !== location.hash) { pp.dataset.qfor = location.hash; pp.classList.remove("qopen"); } build(); rowAlign(); qmore(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
     if (!blocks) return;
     new MutationObserver(later).observe(blocks, { childList: true });
+    var pr = D.getElementById("problem"); if (pr) pr.addEventListener("scroll", qmore, { passive: true });
+    if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
     later();

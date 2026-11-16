@@ -251,6 +251,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
   <!-- the one drag handle in the gap between the problem and the pad (M3 pane expansion): drag snaps to an anchor, a tap goes to the next -->
   <div class="sash" id="sash" role="separator" tabindex="0" aria-controls="freeze" hidden></div>
   <section class="work" id="work" hidden>
+    <div class="xb-label x-label" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg><span>Explain</span></div>   <!-- EXPLAIN-TAG (Tony Nov 16): v7 side layout, level with "Question"; qcard.css shows it -->
     <div class="xb" id="xb">
       <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Notes</span><span class="xb-save" id="xbSave" role="status"></span>
       </div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->

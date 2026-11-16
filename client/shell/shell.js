@@ -896,23 +896,33 @@ function closeMT(toAnswer) {
 /* proof: focus into / out of the proof pane opens / closes the split (out: on the next task, when the new focus is known) */
 function proofSync() {
   if (!isProof() || sideMQ.matches || proofTyping() === bridge.mtOpen) return;
+  const wasOpen = bridge.mtOpen;
   if (!bridge.mtOpen) { swapY = scrollY; root.style.setProperty("--swap-doc-h", root.scrollHeight + "px"); }
-  applyMT(); layoutDock();
+  applyMT(); layoutDock(); requestAnimationFrame(proofAir);
+  /* PROOF-BACK (Tony Nov 16): the proof split gets its own history entry, so a phone Back gesture closes it (popstate below) instead of leaving the page */
+  try {
+    if (!wasOpen && bridge.mtOpen) history.pushState({ mt: 1, proof: 1, stemD: (history.state && history.state.stemD) || 0 }, "", location.href);
+    else if (wasOpen && !bridge.mtOpen && history.state && history.state.proof) { mtSkipPop = true; history.back(); }   // closed by a tap / blur: drop our entry
+  } catch { /* sandboxed */ }
   if (!bridge.mtOpen) { if (scrollY !== swapY) scrollTo(0, swapY); requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); }); }
 }
+/* PROOF-AIR (Tony Nov 16, balanced gap): the split's question pane keeps its big bottom air (app.css html.mt .p, --s6) only when it scrolls; a question that fits gets top = bottom */
+function proofAir() { const fi = $("#freezeIn"); if (!fi) return; const fits = !!bridge.mtOpen && isProof() && fi.scrollHeight <= fi.clientHeight + 1 && problemEl.scrollHeight <= problemEl.clientHeight + 1; problemEl.classList.toggle("p-fit", fits); }   // the pane OR the card itself (Q-HALF) may be the scroller
+if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(proofAir)).observe(problemEl);
+addEventListener("resize", () => requestAnimationFrame(proofAir));
 document.addEventListener("focusin", () => proofSync());
 document.addEventListener("focusout", () => setTimeout(proofSync, 0));
 document.addEventListener("pointerdown", e => { if (bridge.mtOpen && isProof() && $("#work").contains(e.target)) bridge.proofHold = true; }, true);
 for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => { if (bridge.proofHold) setTimeout(() => { bridge.proofHold = false; proofSync(); }, 0); }, true);
 window.stemNotes = { open: () => bridge.mtOpen && !isProof(), close: () => closeMT(false) };   // nav.js: the iOS Back button closes the split (a proof item's split is its page: not offered)
-addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (bridge.mtOpen) shutMT(); });   // Back closes it, never leaves the page
+addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (bridge.mtOpen) { if (isProof()) document.activeElement?.blur(); else shutMT(); } });   // Back closes it, never leaves the page (proof: blur = proofSync closes the split)
 for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
 mtExp.addEventListener("click", () => closeMT(false));
 mtMode.addEventListener("click", () => setTile(bridge.mtTile === "q" ? "a" : "q"));
 pstrip.addEventListener("click", () => setRatio(lastPeek()));
 /* tap the problem (not the answer) = close, caret in the answer */
 for (const ev of ["pointerdown", "mousedown"]) problemEl.addEventListener(ev, e => { if (bridge.mtOpen) e.preventDefault(); });
-problemEl.addEventListener("click", () => { if (bridge.mtOpen) closeMT(true); });
+problemEl.addEventListener("click", () => { if (!bridge.mtOpen) return; if (isProof()) { document.activeElement?.blur(); return; } closeMT(true); });   // PROOF-TAP-OUT (Tony Nov 16): a proof split never "closes to the answer" (its split is its page): a tap on the question blurs the box
 /* the handle: the pane follows the finger, release snaps to the nearest anchor; a tap (no move) goes to the next anchor */
 let mtDrag = null;
 sash.addEventListener("pointerdown", e => {

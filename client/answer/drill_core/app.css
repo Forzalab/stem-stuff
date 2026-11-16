@@ -1498,6 +1498,7 @@ html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margi
 html.mt #fb:empty { display: none; }
 html.mt #q { order: 3; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 html.mt .p, html.mt .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s6); }   /* bottom room: the end of a scroll lands with air, not on the edge (Tony, Oct 3: KISS over a bounce) */
+html.mt .p.p-fit, html.mt .boxed .p.p-fit { padding-bottom: var(--s3); }   /* PROOF-AIR (shell.js proofAir): a question that fits the pane gets top = bottom; the big air is for a scrolling one */
 html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s6); }
 html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }

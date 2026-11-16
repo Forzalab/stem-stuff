@@ -120,6 +120,7 @@
     if (fill) {
       var bar = D.querySelector("#q .chk"), bb = bar && bar.querySelector(".send"), top = g.getBoundingClientRect().top + (window.pageYOffset || 0);
       A = Math.floor(svh() - top - (bar ? ((bb && bb.offsetHeight) || 48) + 10 : 0) - 8);
+      A = Math.max(A, Math.round(svh() * 0.35));                  // FILL-FLOOR (Tony Nov 16): a long card puts the grid below the first screen (A <= 0 -> 1px rows, 10px text); fill a third of a screen instead
     }
     var k = (fill ? "F" + Math.round(A / 8) + "|" : "") + R + "|" + chs.map(function (c) { return c.dataset.id + (c.querySelector(".txt") || {}).innerHTML; }).join("|");
     if (k === key && g.dataset.bento) return;

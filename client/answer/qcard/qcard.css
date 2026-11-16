@@ -26,6 +26,9 @@ html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
    the solid main numeral stays top-left. The in-flow box keeps its height (layout unchanged); the trail is positioned against the whole card. */
 html.ui-v7 #problem.qc7.qbr { overflow: hidden; }
 html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: 72px; }   /* QC-NOFRONT (Tony Nov 15): no top-left numeral; headline starts below the Ask Cluck row (44 + 28 air) */
+html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 2px; }   /* ROW-ALIGN: title top on the button top (its 2px margin); qcard.js rowAlign() puts the shorter one's BOTTOM on the other's */
+html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.625rem; line-height: 30px; letter-spacing: -.03em; }
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { margin-top: 0; text-wrap: balance; overflow-wrap: anywhere; padding-right: calc(var(--cbw, 152px) + 24px); }   /* TITLE-BIG B (Tony Nov 16): big balanced title, reserves the MEASURED button width (--cbw, qcard.js) + 24 air */
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { display: none; }
 html.ui-v7 #problem.qc7.qbr .blocks > :first-child { margin-top: 0; }
 html.ui-v7 #problem.qc7.qbr .qghostbox { position: absolute; inset: 0; height: auto; margin: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; }
@@ -82,3 +85,63 @@ html.ui-v7 #problem.qc7 .qlead .katex { color: #e8ebf5; -webkit-text-stroke: .02
 html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--qnum) * 2.6 * min(1, 2 / var(--qd, 1))); }
 /* TBL-CENTER (Tony Nov 15): tables sit centred in the card (the scroll box hugs the table, never wider than the card) */
 html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }
+/* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
+@media (max-width: 480px) {
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+    margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
+  /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
+  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 104px;
+    margin: -104px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
+    background: linear-gradient(transparent, color-mix(in srgb, #0d142a 70%, transparent) 45%, #0d142a 78%); -webkit-tap-highlight-color: transparent; }
+  html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
+  html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
+  html.ui-v7 #problem.qc7 > .qfold:focus-visible { outline: none; } html.ui-v7 #problem.qc7 > .qfold:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
+  html.ui-v7 #problem.qc7.qopen { max-height: none; overflow-y: visible; }
+  html.ui-v7 #problem.qc7.qopen > .qfold { position: static; height: 44px; margin: 8px auto calc(-1 * var(--qpad, 24px) + 4px); padding: 0; place-items: center; background: none; width: 100%; }
+  html.ui-v7 #problem.qc7.qopen > .qfold svg { transform: rotate(180deg); }
+  html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */
+  html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.5rem; line-height: 28px; }
+  html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
+}
+/* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
+html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .22em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
+html.ui-v7 #problem .blocks :is(p, li):has(> code) { line-height: 1.75; }   /* room so two wrapped chip lines never touch */
+/* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
+html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 74px; }   /* 2 + 48 button + 24 air (BREATHE) */
+html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
+/* GHOST-CLIP (Tony Nov 16 "text too close / gap at the bottom"): the echo trail bleeds past the card's bottom-right; with overflow visible it grew the card's SCROLL area,
+   so a phone card (Q-HALF scroller) scrolled into empty space and every card measured as overflowing. Clip at the ghost box (= the card box): same picture, no phantom scroll */
+html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }
+html.ui-v7 #problem.qc7 .blocks > :last-child, html.ui-v7 #problem.qc7 .blocks > :last-child > :last-child { margin-bottom: 0; }   /* Q-FOOT: the card's own padding is the bottom air (top = bottom); no extra block margin */
+/* EXPLAIN-TAG (Tony Nov 16): the Cluck column gets the same label as "Question", level with it; off where brainrot's own "Explain" row (.rot-hd) already heads the column, and off outside v7 side-by-side */
+.x-label { display: none; }
+html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex; margin-bottom: var(--s2); }
+/* STACK-NORMAL (Tony Nov 16): a title on its own row (option A: desktop, cramped, > 3 lines) is a normal title, not a hero: 20/26, flush with the text's left edge */
+html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: 1.25rem; line-height: 26px; letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }
+html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-child { margin-bottom: 24px; }   /* BREATHE: the shared title/button row ends on the button's bottom; 24 px air before the text */
+/* == KICKER-C (Tony Nov 16, Opus redesign variant C, "C but the kicker = the question's code, keep the old button font") ==
+   Diagnosis (brain topics/ui-v7-decisions.md KICKER-C): rowAlign's 3 modes started the title at 3 heights, 4 title sizes, box- not baseline-aligned, button 47% of the measure.
+   C = one newspaper layout, NO-BORDER: kicker row (question code, tracked caps, left) + Ask Cluck (right) | 20 px air | headline full measure | body 16/22 | meta. */
+html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle,.qhead):first-child), html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle,.qhead):first-child) { padding-top: 0 !important; }
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 12px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: 36px !important; line-height: 38px !important; } }
+html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: 16px; line-height: 22px; }   /* TYPE-B lock 16/22 (Q-SMALL's 15 px retired) */
+html.ui-v7 #problem.qc7.qbr { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; }
+html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { position: relative !important; top: auto !important; right: auto !important; order: 1; flex: none; float: none; margin: 0 !important; }   /* keeps cluckbtn.css's font, fill, 44 px, states */
+html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 20px; }
+html.ui-v7 #problem.qc7.qbr > .qfold, html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
+html.ui-v7 #problem.qc7.qbr > .qghostbox, html.ui-v7 #problem.qc7.qbr > .pcode { flex: none; }
+html.ui-v7 #problem.qc7.qbr > .qfold { flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); }   /* the fade strip stays full-bleed inside the flex kicker layout (flex 100% cut its right edge: text showed through) */
+/* KICKER-C v2 (Tony Nov 16): button a touch bigger; its label's BASELINE sits on the code kicker's baseline (flex baseline alignment, not centre) */
+html.ui-v7 #problem.qc7.qbr { align-items: baseline; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { padding: 14px 24px 14px 20px !important; }
+/* the kicker is a real element now (qcard.js span.qkicker, baseline-matched to the button label); the ::before kicker is off */
+html.ui-v7 #problem.qc7.qbr::before { content: none; display: none; }
+html.ui-v7 #problem.qc7.qbr { align-items: flex-start; }
+html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; align-self: flex-start; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qkicker { display: none; } html.ui-v7 #problem.qc7.qbr > .qkicker { display: block; }
+/* EXPLAIN-TAG fix (CI polish '(d) pad page gap 33px'): html.mt .xb-label { display: contents } (app.css) un-hid the label in the pad split; hidden everywhere unless the v7 side case */
+#work > .x-label { display: none !important; }
+html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }
