@@ -22,7 +22,7 @@ html.ui-v7 .pb-list .btn, html.ui-v7 .pb-nav .btn {
 html.ui-v7 .pb-list .btn:hover, html.ui-v7 .pb-nav .btn:hover { background: var(--float); }
 html.ui-v7 .pb-list .btn:active, html.ui-v7 .pb-nav .btn:active { transform: none; background: var(--float); }
 html.ui-v7 .pb-list .btn:focus-visible, html.ui-v7 .pb-nav .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-html.ui-v7 #qlistBtn { flex: 1 1 auto; min-width: 0; padding: 0 10px 0 12px; gap: 8px; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; }
+html.ui-v7 #qlistBtn { flex: 1 1 auto; min-width: 0; padding: 0 var(--s4) 0 var(--s3); gap: var(--s2); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; }   /* text side (right) >= icon side (left), tokens only; the width follows the name, which ellipses at #qlistName's max-width */
 html.ui-v7 #qlistBtn .ico { width: 20px; height: 20px; flex: none; }
 html.ui-v7 #qlistName { min-width: 0; max-width: none; }
 html.ui-v7 #qlistBtn[aria-expanded="true"] { background: var(--float); }
