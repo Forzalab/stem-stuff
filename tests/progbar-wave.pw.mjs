@@ -64,7 +64,7 @@ const geo = p => p.evaluate(() => {
 });
 const states = p => p.evaluate(() => [...document.querySelectorAll("#pbTile .pb-n")].map(e => e.className.replace("pb-n ", "")));
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 /* three rights in a row; a per-frame sampler (started before the 3rd) records every streak notch's inline transform. Returns the samples after 3 s. */
 async function run(flag, extra = {}) {
   const [c, p] = await fresh(browser, flag, 390, 844, extra);

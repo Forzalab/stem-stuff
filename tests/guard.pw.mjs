@@ -43,7 +43,7 @@ const pick = async (page, i) => {
   await (await page.$$("#q .opt:not(:disabled)"))[i].click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await graded(page, t0 + 1);
 };
 async function run(w, h) {
-  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
   const fresh = async o => (await b.newContext({ viewport: { width: w, height: h }, ...o })).newPage();   // a new browser id = a fresh item (tries live on the server, per id)
   let page = await fresh();
   const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.waitForTimeout(900); await page.screenshot({ path: `${SHOTS}/${n}-${w}.png` }); } };
@@ -84,7 +84,7 @@ async function run(w, h) {
     await shot("revisit");
   });
   await b.close();
-  const b2 = await launchBrowser(pw, { args: ["--no-sandbox"] });
+  const b2 = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
   const p2 = await (await b2.newContext({ viewport: { width: w, height: h }, reducedMotion: "reduce" })).newPage();
   await step(`${w} reduced motion: redeem live has no burst`, async () => {
     await open(p2, true); await pick(p2, 0);
