@@ -209,9 +209,11 @@ async function rewardShow(mine, res) {
   rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
   if (RWUI.coins && rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
-  fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
+  let landed = 0;                                                                // when the count started (engine.js countUp: 900 ms; the coin pill grows as its digits do): the right-answer tip aims its caret at the coin after, never at a width still changing
+  const land = () => { RW().render(res.xp + held); landed = performance.now(); };
+  fx.hud ? fx.hud(land) : setTimeout(land, 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct! +${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
+  if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) { const tip = n => !landed && n < 60 ? setTimeout(() => tip(n + 1), 50) : setTimeout(() => rwTip("right", $("#rwCoin")), Math.max(0, landed + 950 - performance.now())); setTimeout(() => tip(0), 1050); } return; }
   /* flow C (Tony, Oct 21): one beat per answer, at most one overlay. A level up is the only overlay, with the slot reels spinning inside
      it when the same answer dropped; any other drop (WIN / BONUS / LEGEND) or a streak note is the banner (LEGEND: gold + small confetti) */
   if (!RWUI.burst) { if (mine.rwBack) comeback(); return; }                  // the bar's flip: no overlay, no banner (the set-end overlay is P8)
