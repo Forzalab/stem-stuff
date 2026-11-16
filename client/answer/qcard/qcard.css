@@ -74,7 +74,11 @@ html.ui-v7 #problem.qc7 .md :is(.tbl, .katex-display):not([tabindex]) { backgrou
 /* QBR-MASK (Nov 15): the per-copy top/bottom fade above is tuned for the old top-left trail; at the bottom-right 2.6x size it shows as flat horizontal cuts. qbr = no per-copy mask (the card clips the corner). */
 html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { -webkit-mask-image: none; mask-image: none; }
 /* one smooth fade for the whole trail, centred on the bottom-right corner (no per-copy edges, so no cuts); keeps 2-3 digit numerals quiet behind the text */
-html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(120% 120% at 100% 100%, #000 15%, rgb(0 0 0 / .55) 45%, transparent 85%); mask-image: radial-gradient(120% 120% at 100% 100%, #000 15%, rgb(0 0 0 / .55) 45%, transparent 85%); }
+html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(130% 130% at 100% 100%, #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); mask-image: radial-gradient(130% 130% at 100% 100%, #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); }
 /* LEAD-MATH-BOLD (Tony Nov 15): math in the question sentence (.qlead) reads bold like its words, display lines (lim, integrals) included.
    KaTeX fonts ship no bold weight for CSS, so a thin same-colour stroke = faux bold; it scales with the font size (em). */
 html.ui-v7 #problem.qc7 .qlead .katex { color: #e8ebf5; -webkit-text-stroke: .028em currentColor; paint-order: stroke fill; }
+/* QD-SCALE (Tony Nov 15): 3+ digits shrink so the trail is as wide as 2 digits (--qd = digit count, qcard.js) */
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--qnum) * 2.6 * min(1, 2 / var(--qd, 1))); }
+/* TBL-CENTER (Tony Nov 15): tables sit centred in the card (the scroll box hugs the table, never wider than the card) */
+html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }

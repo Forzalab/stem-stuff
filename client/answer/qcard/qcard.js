@@ -77,7 +77,7 @@
     var num = number(), cur = box.firstChild, was = cur.getAttribute("data-n");
     inkLeft(cur, num);
     if (was !== num) {
-      cur.setAttribute("data-n", num); for (var j = 0; j < cur.children.length; j++) cur.children[j].textContent = num;
+      cur.setAttribute("data-n", num); cur.style.setProperty("--qd", String(num).length); for (var j = 0; j < cur.children.length; j++) cur.children[j].textContent = num;
       if (was !== null) echo(box);                                          // a question change (not the first paint): the trail slides in
     }
   }
