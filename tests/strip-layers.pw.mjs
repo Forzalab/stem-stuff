@@ -53,6 +53,9 @@ async function pageFor(browser, W, H, o = {}) {
      about the drawer, not the wait (retry-wait.pw.mjs is); reach(.., "out") releases it. Nothing is loosened: every assert after it is the same. */
   if (o.hold) await ctx.addInitScript(c => { try { sessionStorage.setItem("stem-wait", JSON.stringify({ code: c, until: Date.now() + 1e8, t0: Date.now() })); } catch { /* blocked */ } }, o.hold);
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
+  /* no real network: brainrot's YouTube iframe (Cluck's corner after a miss) loads from the live web and, once loaded, takes focus (document.activeElement = the IFRAME) at an
+     arbitrary moment, which fell after the drawer close on a slow runner and failed the focus-return assert (CI run 44012646370). A stub document never grabs focus; brainrot.pw.mjs stubs it the same way. */
+  await ctx.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));
   const page = await ctx.newPage(); page.ctx = ctx; page.setDefaultTimeout(8000);
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
   const tries = {};

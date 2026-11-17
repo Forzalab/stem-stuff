@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -137,11 +138,11 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
   await step("393 keyboard up (expr: no Swap): the Key formulas card sits under the answer, inside the question card, notch on its container's colour, reachable", async () => {
     const [ctx, page] = await open({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, "no-preference");
     const down = await page.$eval("#fcard", e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, h: Math.round(r.height) }; });
-    await page.focus("#ff input"); await page.waitForTimeout(300);
+    await page.focus("#ff input"); await page.waitForTimeout(300);   // keep: layout settle
     await page.setViewportSize({ width: 393, height: 469 });
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(700);   // keep: layout settle
     assert.ok(!(await page.evaluate(() => document.documentElement.classList.contains("swap"))), "a short-answer item got the Swap restyle");
-    await page.$eval("#fcard", e => e.scrollIntoView({ block: "end" })); await page.waitForTimeout(200);
+    await page.$eval("#fcard", e => e.scrollIntoView({ block: "end" })); await settled(page, "#fcard");
     const m = await page.evaluate(() => {
       const r = s => document.querySelector(s).getBoundingClientRect(), fc = r("#fcard"), q = r("#q"), fi = r("#freezeIn");
       let c = document.querySelector("#fcard").parentElement, bg = "";
