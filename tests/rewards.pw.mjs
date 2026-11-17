@@ -265,7 +265,7 @@ try {
     await p.click("#cluck .cl-bar .cl-x");
     await p.route("**/explain", r => r.fulfill({ contentType: "text/plain", body: "QUACK. Pick a." }));   // Cluck's live stream, stubbed
     const told = p.waitForResponse(r => r.url().endsWith("/explain"));
-    await pick(p, "b"); await told; await p.waitForSelector("#wish", { state: "hidden", timeout: 5000 });
+    await pick(p, "b"); await told; await p.waitForTimeout(200);   // keep: observation window (the chip must not appear)
     assert.equal(await p.isHidden("#wish"), true, "phone + a snack, after a miss: no Cluck chip, the card is the one way in (TODO C)");
     await p.click("#origHd");
     await p.waitForFunction(() => /Pick a/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });

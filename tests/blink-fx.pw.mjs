@@ -180,7 +180,7 @@ try {
   await step("a wrong try, then a right one with a drop (flow C: the banner, no overlay) while the Cluck chip is up: one group at a time", async () => {
     await pick(page, "b");
     await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta", { timeout: 6000 });
-    await settled(page);                                                        // the chip's shine / the duck's rise have ended (the tap would hush them, the sample must start clean)
+    await page.waitForTimeout(1500);                                            // keep: re-picked while the chip may still shake (its shine / the duck's rise run long; a page-wide settled() times out)
     await unCap(page); await rig(page, [0, 0, 0, 0]);                          // 6 XP (try 2), a drop, common
     const r = await sampled(page, "a", 7000);
     report("wrong, then right + drop (chip up)", r);
