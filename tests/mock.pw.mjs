@@ -141,7 +141,7 @@ try {
   await step("a night mock already running (started before the switch) ends on the next load: normal tries; ?mock=1 alone keeps going", async () => {
     await night("2026-11-03T19:00:00");
     await page.goto(BASE + "/?mock=1"); await opened(page, "PHYS_MQ1");
-    await load("PHYS_MQ1"); await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 8000 });   // the boot (first question) ran: the night-mock check at its end has run
+    await load("PHYS_MQ1"); await page.waitForTimeout(600);   // keep: app timer nav.js's startMock (the night-mock check runs on a timer after the first question opened)
     assert.equal(await page.evaluate(() => window.stemMock.on()), true, "a ?mock=1 mock (no night key) ended");
     await page.evaluate(() => localStorage.setItem("stem-mock-night", "2026-11-03"));   // the night's key: this mock was the night's
     await load("PHYS_MQ1");

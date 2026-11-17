@@ -108,9 +108,9 @@ try {
     await step(`${V}: DIET_BANK_P2X typed in the code box, Next 10x: every press moves`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
       await page.goto(BASE + "/#BANK_P2X"); await settled(page);
-      const reopened = onEvent(page, "drill:problem");
+      const reopened = await onEvent(page, "drill:problem");
       await page.evaluate(() => { const i = document.querySelector("#code"); i.value = "DIET_BANK_P2X"; i.form.requestSubmit(); });
-      await reopened; await settled(page);
+      await reopened(); await settled(page);
       const rows = await tenPresses(page, "DIET");
       assert.deepEqual(silent(rows).map(r => r.code), [], "silent presses");
       await ctx.close();
