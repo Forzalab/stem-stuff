@@ -1918,3 +1918,6 @@ html.ui-v7 .cb-hd { background: color-mix(in srgb, var(--cb-well) 50%, var(--car
    the lift; on a near-black page they must be deep to read). Apple squircle on every v7 code block (was #q only). A choice row's block stays flat. */
 html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-1), var(--shadow-4); }   /* STYLE §2.7 tokens: tight edge + large soft lift */
 @supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(1.52); } }
+/* PH-NAVY (Tony Nov 17 "placeholder dimmer"; Refactoring UI p.36-38: dim by moving toward the background's own hue, never grey/opacity on colour):
+   v7 placeholders take --line (#556791, the navy family of the #060b1b well) instead of --hint (#a9b8cc) */
+html.ui-v7 :is(input, textarea)::placeholder { color: var(--line); opacity: 1; }

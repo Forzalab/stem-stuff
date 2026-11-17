@@ -97,7 +97,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
   html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
   html.ui-v7 #problem.qc7 > .qfold:focus-visible { outline: none; } html.ui-v7 #problem.qc7 > .qfold:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qopen { max-height: none; overflow-y: visible; }   /* (:not x2 = the Q-HALF rule's specificity; without them max-height: 50svh won and the chevron expanded nothing) */
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qopen, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qfit { max-height: none; overflow-y: visible; }   /* .qfit = FOLD-MIN: at most 64px over the cap, the card grows instead of folding */   /* (:not x2 = the Q-HALF rule's specificity; without them max-height: 50svh won and the chevron expanded nothing) */
   html.ui-v7 #problem.qc7.qopen > .qfold { position: static; height: 44px; margin: calc(8px - var(--qpad, 24px)) auto 4px; padding: 0; place-items: center; background: none; width: 100%; }
   html.ui-v7 #problem.qc7.qopen > .qfold svg { transform: rotate(180deg); }
   html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */

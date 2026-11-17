@@ -211,6 +211,11 @@
     var lastc = open && p.querySelector(":scope > .qfold:not([hidden])") || p.querySelector(":scope > .blocks"), cs = g.getComputedStyle(p),
       sh = lastc ? Math.max(p.clientHeight, lastc.offsetTop + lastc.offsetHeight + (parseFloat(g.getComputedStyle(lastc).marginBottom) || 0) + (parseFloat(cs.paddingBottom) || 0)) : p.clientHeight;
     p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-PIN: the ghost box is as tall as the card box and sticks to its top while the content scrolls (no --qover any more)
+    /* FOLD-MIN (Tony Nov 17, "64px go"): fold only when the hidden part is at least ~2 lines. Up to 64px over the 50svh cap, the card just grows (.qfit), no chevron.
+       Measured against the cap itself (half the viewport), never the card's own height: once .qfit lifts the cap, clientHeight = sh and it would flip back. */
+    var cap = (g.visualViewport ? g.visualViewport.height : g.innerHeight) * 0.5, fit = !open && sh > p.clientHeight - 1 && sh - cap <= 64 && sh - cap > 0;
+    p.classList.toggle("qfit", fit);
+    if (fit) sh = p.clientHeight;
     var over = sh - p.clientHeight > 4, more = !open && over && sh - p.scrollTop - p.clientHeight > 4;
     p.classList.toggle("qmore", more); p.classList.toggle("qscrolled", !open && p.scrollTop > 4);   // EDGE-FADE: top fade only once scrolled
     if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }
