@@ -224,13 +224,16 @@ for (const [w, h] of [[390, 700], [360, 640]]) {
   });
 }
 for (const mode of ["diet", "sugar"]) {
-  await step(`${mode} 1024: the proof pane is right of the question, same sash between, no nested box`, async () => {
+  await step(`${mode} 1024: the proof box sits under the question card (PROOF-UNDER, #633), same left edge, no nested box`, async () => {
     const { ctx, page } = await open(mode, { width: 1024, height: 800 });
-    const [pr, ta, sh] = [await rect(page, "#problem"), await rect(page, "#ans"), await rect(page, "#sash")];
-    assert.ok(ta.l >= pr.r, `proof pane is not right of the question: ${JSON.stringify({ pr, ta })}`);
-    assert.ok(sh.w > 0 && sh.l >= pr.r - 1 && sh.r <= ta.l + 1, "sash not between: " + JSON.stringify(sh));
+    const [pr, q, ta] = [await rect(page, "#problem"), await rect(page, "#q"), await rect(page, "#ans")];
+    assert.ok(q.t >= pr.b - 1 && q.t - pr.b < 40, `proof box is not directly under the question card: ${JSON.stringify({ pr, q })}`);
+    assert.ok(Math.abs(q.l - pr.l) <= 2, `proof box is not on the card's left edge: ${JSON.stringify({ pr, q })}`);
+    assert.ok(ta.t >= pr.b && ta.l >= q.l && ta.r <= q.r + 1 && ta.l < pr.r, `answer field is not inside the proof box under the card: ${JSON.stringify({ pr, q, ta })}`);
+    const where = await page.$eval("#q", e => ({ inFreezeIn: !!e.closest("#freezeIn"), inProblem: !!e.closest("#problem"), inPad: !!e.closest("#pad") }));
+    assert.deepEqual(where, { inFreezeIn: true, inProblem: false, inPad: false }, "proof box is not a sibling under the card in #freezeIn");
     const b = await nearestBordered(page, "#ans");
-    assert.ok(b && b.inWork && !b.inFreeze, "nested box: " + JSON.stringify(b));
+    assert.ok(b && b.id !== "problem" && !(await page.$eval("#ans", e => !!e.closest("#problem"))), "nested box: " + JSON.stringify(b));
     await ctx.close();
   });
 }
