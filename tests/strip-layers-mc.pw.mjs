@@ -115,7 +115,7 @@ const move = page => page.evaluate(() => {
   return { q: Math.round(document.querySelector("#q").getBoundingClientRect().height), ch: t("#q .ch"), chk: t("#q .chk"), part: t("#q .part"), ff: t("#q .part .ff"), nx: t("#q .nx"), fb: t("#fb"), wish: t("#wish"), choices: t("#q .choices") };
 });
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, /* reduce: try1 focus-return race after vd-x close (CI #636 run 43989896908); suspect first-close tip toast. D1 sweep lead. */ args: ["--no-sandbox"] });
 const CASES = [["mc", [360, 390, 393, 1280], ["wrong", "out", "right"]], ["inl", [390], ["wrong", "right"]], ["all", [390], ["wrong", "right"]], ["multi", [390], ["wrong", "right"]]];
 const SIZE = { 360: 740, 390: 844, 393: 852, 1280: 800 };
 for (const [kind, widths, states] of CASES) {
