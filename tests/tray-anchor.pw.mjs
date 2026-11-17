@@ -17,7 +17,6 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
-import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -62,10 +61,7 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 1800)); }
 }
-/* the drawer's open slide (vd-out 380 ms) is over: the state every check after a verdict needs; an infinite animation never blocks */
-const drawerSettled = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none" && !d.getAnimations({ subtree: true }).some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime)); }, null, { timeout: 5000 });
-/* the drawer is gone: hidden after its 240 ms slide and the 260 ms timer (strip.js hide) */
-const drawerGone = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !d || d.hidden || getComputedStyle(d).display === "none"; }, null, { timeout: 5000 });
+const SETTLE = 600;   // > the drawer's 380 ms slide
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(code, width = 390) {
   const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
@@ -90,7 +86,7 @@ const geo = page => page.evaluate(() => {
 });
 const boxBottom = m => Math.max(m.box.bottom, m.ansl ? m.ansl.bottom : 0);
 const typeAnswer = async (page, v) => { const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
-const trayOpen = page => page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 8000 }).then(() => drawerSettled(page));
+const trayOpen = page => page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 8000 }).then(() => page.waitForTimeout(SETTLE));
 const shot = (page, n) => SHOTS ? page.screenshot({ path: join(SHOTS, n) }) : null;
 const near = (a, b, t, what) => assert.ok(Math.abs(a - b) <= t, `${what}: ${a.toFixed(1)} vs ${b.toFixed(1)} (tol ${t})`);
 
@@ -115,7 +111,7 @@ try {
     const top = await page.evaluate(sel => { const a = document.querySelector("#q " + sel), r = a.getBoundingClientRect(), d = document.querySelector("#q .vdrawer:not([hidden])"), dr = d.getBoundingClientRect(); const e = document.elementFromPoint(Math.max(r.left, dr.left) + 12, r.bottom - 1); return { in: !!e && a.contains(e), tag: e && (e.tagName + "." + e.className) }; }, anchorSel);
     assert.ok(top.in, "the anchor does not paint above the tray at its bottom border: " + JSON.stringify(top));
     assert.equal(m.rooms, 0, "a .vd-room spacer is in the flow");
-    await page.click("#q .vdrawer .vd-x"); await drawerGone(page);
+    await page.click("#q .vdrawer .vd-x"); await page.waitForTimeout(SETTLE);
     const shut = await pick();
     assert.equal(shut.d, null, "the tray did not close");
     assert.equal(shut.flow, m.flow, "reflow: opening/closing the tray moved something\n open " + m.flow + "\n shut " + shut.flow);
@@ -181,7 +177,7 @@ try {
         assert.ok(m.edgeInRow, "the picked card does not paint above the tray at its bottom edge");
         if (m.nextOk !== null) assert.ok(m.nextOk, "Next / the send arrow on the picked card is covered");
         assert.ok(m.top < m.gb - 20, `the tray still hangs from the end of the list: tray ${m.top}, list bottom ${m.gb}`);
-        await page.mouse.click(w > 500 ? 5 : 3, 3); await drawerGone(page);
+        await page.mouse.click(w > 500 ? 5 : 3, 3); await page.waitForTimeout(SETTLE);
         assert.equal(await page.locator("#q .vdrawer:not([hidden])").count(), 0, "a tap outside did not close the tray");
       } finally { await page.context().close(); }
     });
@@ -198,7 +194,7 @@ try {
     try {
       await typeAnswer(page, "18");
       await page.waitForSelector("#q .ansl b", { timeout: 6000 });
-      await settled(page, "#q .ansl");   // the reveal line is placed: the ink gaps measured below are final
+      await page.waitForTimeout(SETTLE);
       await shot(page, "ta-ansl.png");
       const g = await page.evaluate(() => {
         const l = document.querySelector("#q .ansl"), v = l.querySelector(".ansv, :scope > b"), b = v.querySelector("b") || v, u = l.querySelector(".ansu");

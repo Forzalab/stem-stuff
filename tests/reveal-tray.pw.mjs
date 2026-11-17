@@ -185,6 +185,7 @@ try {
       try {
         await typeAnswer(page, "1.636");
         await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
+        await page.waitForSelector("#cluck", { state: "attached", timeout: 5000 });
         await settled(page, "#cluck");   // Cluck's reply is drawn and its box stopped moving
         const m = await page.evaluate(() => {
           const msg = [...document.querySelectorAll("#cluck .msg:not(.me)")].find(x => /Egg-cellent/.test(x.textContent));
@@ -205,6 +206,7 @@ try {
         const h0 = await page.evaluate(() => Math.round(document.querySelector("#cluck").getBoundingClientRect().height));
         await typeAnswer(page, "1.636");
         await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
+        await page.waitForSelector("#cluck", { state: "attached", timeout: 5000 });
         await settled(page, "#cluck");   // the reply is drawn and the box took its room
         const m = await page.evaluate(() => ({ st: document.querySelector("#rot").classList.contains("stashed"), link: document.querySelector("#rot .rot-link")?.textContent.trim(),
           h: Math.round(document.querySelector("#cluck").getBoundingClientRect().height) }));

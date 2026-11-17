@@ -62,13 +62,14 @@ for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "
   const page = await pageFor(browser, W, H);
   const go = async v => { await skipRetryWait(page); await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };
   // "before" = the state the closing Check is pressed in (out: after the first wrong try; its pips row is the tries' own, older, design)
-  if (outcome === "out") { await go("1"); await page.waitForSelector("#ff.bad"); await settled(page, "#q .vdrawer"); }   // the miss is drawn and its drawer's slide is over (the 10 s retry sweep is the bar's background, outside this box)
+  if (outcome === "out") { await go("1"); await page.waitForSelector("#ff.bad"); await page.waitForSelector("#q .vdrawer", { state: "attached", timeout: 5000 }); await settled(page, "#q .vdrawer"); }   // the miss is drawn and its drawer's slide is over (the 10 s retry sweep is the bar's background, outside this box)
   await page.fill("#ans", outcome === "right" ? "3.03" : "2");
   const before = await pos(page);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/before-${outcome}-${W}.png` });
   await go(outcome === "right" ? "3.03" : "2");
   await page.waitForSelector("#q .nx", { timeout: 5000 });
   await page.waitForSelector(".cue-chip", { timeout: 5000 });
+  await page.waitForSelector("#q .vdrawer", { state: "attached", timeout: 5000 });
   await settled(page, "#q .vdrawer");   // the verdict is drawn and its drawer's slide is over: the rects below are final
   const after = await pos(page);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${outcome === "right" ? "correct" : "wrong"}-${W}.png` });

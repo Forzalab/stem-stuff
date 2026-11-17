@@ -33,6 +33,8 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
+const SETTLE = 500;   // > the 380 ms drawer slide
+
 const txt = md => [{ type: "text", md }];
 const GRAPH = { type: "graph", kind: "cartesian", alt: "x(t) for a cart: a line through (0,1) and (4,9)", x: { min: -1, max: 5, label: "$t$" }, y: { min: -1, max: 10, label: "$x$" }, grid: true, axes: true, marks: [{ type: "fn", y: "2*x+1" }] };
 const P = [
@@ -96,8 +98,7 @@ async function reach(page, code, state) {
   if (state === "out") { await page.evaluate(() => { window.__drill.state.wait = null; }); await skipRetryWait(page); await page.fill(fieldSel, WRONGV[code] + "0"); await page.evaluate(() => document.querySelector("#ansGo").click()); await page.waitForSelector("#q.closed"); }
   else if (state === "wrong") { await submit(page, WRONGV[code]); await page.waitForFunction(() => window.__drill.state.tries.length >= 1); }
   else { await submit(page, RIGHT[code]); await page.waitForSelector("#q.closed"); }
-  if (code === "STP_PRF" && state === "wrong") await settled(page, "#q");   // a proof wrong with a try left has no drawer to wait for
-  else await settleDrawer(page, true);                                      // the verdict is in and the drawer's slide is over
+  await page.waitForTimeout(SETTLE + 300);   // keep: drawer slide + verdict settle, no single state hook
 }
 /* wait for the drawer to be really open (its 380 ms slide done) or really gone (its 240 ms slide + the 260 ms timer in strip.js hide()); an
    infinite animation never blocks (as in lib/wait.mjs settled()). The asserts after it are unchanged, and a missing wait is caught by them. */
