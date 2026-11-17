@@ -7,7 +7,7 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
   await page.waitForFunction(s => {
     const els = s ? [...document.querySelectorAll(s)] : null;
     const anims = els ? els.flatMap(e => e.getAnimations({ subtree: true })) : document.getAnimations();
-    return !anims.some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime));
+    return !anims.some(a => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity && Number.isFinite(a.effect?.getComputedTiming().endTime));   // WK-INF: webkit can report a finite endTime for an infinite loop (the .wcaret blink): skip by iterations too
   }, sel, { timeout }).catch(e => { throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]})`); });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
