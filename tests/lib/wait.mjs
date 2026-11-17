@@ -7,7 +7,10 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
   await page.waitForFunction(s => {
     const els = s ? [...document.querySelectorAll(s)] : null;
     const anims = els ? els.flatMap(e => e.getAnimations({ subtree: true })) : document.getAnimations();
-    return !anims.some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime));
+    /* "running" AND not yet past its end: WebKit can leave a finished (pseudo-element) transition in playState "running", e.g. the .cl::before
+       0.9 s ember fade (target = aside#cluck), so a playState-only check never settles there (desk-layout@1 on the webkit job since #641). */
+    return !anims.some(a => { const end = a.effect?.getComputedTiming().endTime;
+      return a.playState === "running" && Number.isFinite(end) && !((a.currentTime ?? 0) >= end); });
   }, sel, { timeout }).catch(e => { throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]})`); });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
