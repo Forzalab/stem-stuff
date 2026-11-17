@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";    // CI-ARCH D1: wait on page state, not on time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -65,7 +66,7 @@ try {
     await page.goto(BASE + "/#PHYS_PA1"); await up(page);
     await page.waitForSelector("#problem .cc-row .cc-cta-calc", { timeout: 8000 });
     assert.equal(await page.evaluate(() => window.CalcCoach.loadCram().then(x => x.enabled === false)), true, "the one flag is off");
-    await page.waitForTimeout(300);
+    await settled(page);                                            // the loadCram → slots() pass has painted: the slot decision is final
     assert.equal(await page.$("#problem .cc-cta-hm"), null, "no Hail Mary button");
     assert.equal(await page.$$eval("#problem .cc-row [role=link]", e => e.length), 1, "only the Calc entry");
     assert.equal(await page.evaluate(() => window.CalcCoach.cramFor("BANK_P3X")), null);
@@ -74,9 +75,9 @@ try {
   await step("peek keeps the normal cadence: no cram toast, stemCram.on false", async () => {
     const { ctx, page } = await newPage();
     await page.goto(BASE + "/#PHYS_PA1"); await up(page);
-    await page.waitForTimeout(1000);                                // the one-time cram.json read resolves
+    await page.waitForLoadState("networkidle", { timeout: 8000 });   // the one-time cram.json read resolves (peek.js + calc-coach.js)
     assert.equal(await page.evaluate(() => !!(window.stemCram && window.stemCram.on() === false)), true, "normal timings");
-    await page.waitForTimeout(3000);                                // past peek.js's 2.5 s cram-toast delay
+    await page.waitForTimeout(3000);                                // keep: app timer peek.js's 2.5 s cram-toast delay (no cram toast may fire)
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-cram-toast")), null);
     assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false);
     assert.deepEqual(page.errs, []); await ctx.close();
