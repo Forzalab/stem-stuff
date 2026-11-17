@@ -210,7 +210,7 @@
        the card scrolled into empty space. The content height is measured from the in-flow content instead: last block's bottom + the card's bottom pad. */
     var lastc = open && p.querySelector(":scope > .qfold:not([hidden])") || p.querySelector(":scope > .blocks"), cs = g.getComputedStyle(p),
       sh = lastc ? Math.max(p.clientHeight, lastc.offsetTop + lastc.offsetHeight + (parseFloat(g.getComputedStyle(lastc).marginBottom) || 0) + (parseFloat(cs.paddingBottom) || 0)) : p.clientHeight;
-    p.style.setProperty("--qover", Math.max(0, sh - p.clientHeight) + "px"); p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-BLEED: the ghost box spans the whole scroll height, the trail stays put
+    p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-PIN: the ghost box is as tall as the card box and sticks to its top while the content scrolls (no --qover any more)
     var over = sh - p.clientHeight > 4, more = !open && over && sh - p.scrollTop - p.clientHeight > 4;
     p.classList.toggle("qmore", more); p.classList.toggle("qscrolled", !open && p.scrollTop > 4);   // EDGE-FADE: top fade only once scrolled
     if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }

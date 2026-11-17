@@ -235,3 +235,11 @@ html.ui-v7 #problem.qc7 .qlead .katex { -webkit-text-stroke-width: .012em; }
 /* GHOST-ONE (Tony Nov 17 "funky gradient in the question box"): the 5 offset echo copies read as stepped bands; one faint flat copy, no mask */
 html.ui-v7 .qghost i:nth-child(n+3) { display: none; }
 html.ui-v7 .qghost i:nth-child(2) { --o: .08; -webkit-mask-image: none; mask-image: none; transform: none; }
+/* GHOST-PIN (Tony Nov 17: the numeral stays put while the card's text scrolls): in the phone Q-HALF scroller an absolute ghost box scrolled away with the text. Once the card scrolls
+   (.qmore / .qscrolled) the box becomes a sticky first flex line: card-box tall (--qch, qcard.js), zero net height (margins cancel: -32 top pad ... +32 - qch), stuck at the scrollport
+   top (-32 = the card's top padding: sticky offsets measure from the padding-deflated scrollport), so the trail is a fixed background. +1px on the basis = the line-break trick of STRIP-WRAP (a margin box of exactly one line let the 0-basis kicker share the line). The
+   trail's own offsets (bottom, mask) were written for the box = the card's client box, which it is again (--qover is gone). Short cards keep the absolute box. */
+@media (max-width: 480px) {
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:is(.qmore, .qscrolled):not(.qopen) > .qghostbox { position: sticky; top: -32px; bottom: auto; inset-inline: auto; order: -2; flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px) + 1px);
+    height: var(--qch, 216px); margin: -32px calc(-1 * var(--qc-pad, 24px)) calc(32px - var(--qch, 216px)); }
+}
