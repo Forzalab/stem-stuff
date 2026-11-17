@@ -319,7 +319,7 @@ try {
     const [fc] = await Promise.all([p5.waitForEvent("filechooser"), p5.click("#upload")]);
     await fc.setFiles({ name: "grid.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE3)) });
     await opened(p5, "CSCI26_U03");
-    assert.match(await p5.textContent("#how"), /You may submit an answer with none, some, or all ticks\./);
+    assert.match(await p5.textContent("#how"), /There might be none, some, or all of them\./);
     await row(p5, "b").click(); await check(p5);
     let s = await st(p5); assert.deepEqual(s.wrong, ["b"]); assert.match(s.fb, /U03 b/); assert.equal(s.finished, false, "a 2-row grid keeps two tries");
     assert.equal(await p5.evaluate(() => window.__drill.state.triesLeft), 1);

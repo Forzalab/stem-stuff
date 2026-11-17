@@ -71,6 +71,10 @@ Render rule (client/answer/qcard/qcard.js `takeLead`, app.js): with `ask` the ca
 cuts a sentence out of `body`; without `ask` (old banks) the last sentence of the last `body` paragraph is still promoted, as before.
 Server line: none. The server passes `ask` through `public()` and does not check it. Rank: after B-SCHEMA (the field must be well formed first).
 
+
+## B-TICK
+From v 20261118 (same gate as B-ASK). FAIL when `ask` or a body text block (code fences skipped) has a sentence that starts with a tick instruction: tick / untick / tap a row / check all|each|every|the box / select|choose|pick|mark all|each|every. Why (Tony Nov 17): the grey `how` line under the question already says how to answer; a second meta sentence repeats it. The noun ("per-tick labels") passes: only a sentence start counts. Fix: delete the sentence; put a bank-specific rule in `how`.
+
 ## B-DUP
 Class: SPEC (a warning across files). Meaning: one code appears twice in a file with different content (FAIL), or in two files
 with different content (WARN; the first file in server order wins: problems.json, then banks A-Z).

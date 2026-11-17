@@ -1144,7 +1144,7 @@ const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autoc
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).
    It shows on the first choose-all question of the visit only (clutter C6, Tony Oct 5); an authored how always shows */
 let howAt = null;
-const GRID_HOW = "Tick all correct options. You may submit an answer with none, some, or all ticks.";   // a grid item with no how (SCHEMA.md grid)
+const GRID_HOW = "Tick correct options. There might be none, some, or all of them.";   // a grid item with no how (SCHEMA.md grid)
 const howLine = p => {
   let h = p.how;
   if (!h && all(p) && p.grid) h = GRID_HOW;                                    // a grid: say that nothing ticked is an answer too, in both modes

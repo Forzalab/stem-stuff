@@ -673,7 +673,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "ask": {
           "type": "string",
           "minLength": 3,
-          "description": "optional, the question itself: Markdown like a text block (plain text + $..$ + `code`), one or two sentences that ASK (\"Using the Master Theorem, compute the running time.\"). `body` is then only the situation (givens, code, figures), with no question in it. The card shows `ask` as the bold lead under the setup; with `ask` set nothing from `body` is promoted. No `ask` = the old rule: the last sentence of the last `body` paragraph is the lead. Required from v 20261118 (bankcheck B-ASK)."
+          "description": "optional, the question itself: Markdown like a text block (plain text + $..$ + `code`), one or two sentences that ASK (\"Using the Master Theorem, compute the running time.\"). `body` is then only the situation (givens, code, figures), with no question in it. The card shows `ask` as the bold lead under the setup; with `ask` set nothing from `body` is promoted. No `ask` = the old rule: the last sentence of the last `body` paragraph is the lead. Required from v 20261118 (bankcheck B-ASK). Never a tick instruction in `ask` or `body` (\"Tick each one\", \"Check all that apply\", \"Choose all that are...\"): the grey `how` line (or the page default for a grid) says how to answer (Tony Nov 17; bankcheck B-TICK from v 20261118)."
         },
         "how": {
           "type": "string",
