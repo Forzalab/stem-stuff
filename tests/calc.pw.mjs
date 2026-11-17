@@ -84,20 +84,20 @@ try {
     assert.equal(await page.$("#problem .cc-strip, #problem .cc-x"), null);
     const sz = await page.$$eval("#problem .cc-row .cc-cta", e => e.map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
     assert.equal(sz[0][0], sz[1][0], "equal widths"); assert.ok(sz[0][1] >= 44 && sz[1][1] >= 44, "44px tall");
-    await page.waitForTimeout(900);
+    await page.waitForFunction(() => !!(window.stemCram && window.stemCram.on()), null, { timeout: 5000 });   // the cram read is in: peek.js's toast is the one today, so Calc Coach arms none
     const tk = () => page.evaluate(() => Object.keys(localStorage).filter(k => /^stem-calc-toast-/.test(k)));
     assert.equal(await page.evaluate(() => !!(window.stemCram && window.stemCram.on())), true, "cram day on");
     assert.equal((await tk()).length, 0, "cram day: peek.js's toast is the one; Calc Coach adds no second toast");
     await page.click("#problem .cc-cta-hm"); await page.waitForSelector(".cc-ov .cc-deck"); await page.keyboard.press("Escape");
     await page.reload(); await anyUp(page); await page.waitForSelector("#problem .cc-cta-calc");
-    await page.waitForTimeout(1500); assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false, "no second toast the same day");
+    await page.waitForTimeout(1500); assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false, "no second toast the same day");   // keep: app timer __ccToastMs 300 ms toast delay (proves no second toast fires)
     await page.click("#problem .cc-cta-calc"); await page.waitForSelector(".cc-ov .cc");
     assert.equal(await noH(page), true); await ctx.close();
   });
   await step("after the exam copy expires: no strip, no toast, the Calc chip stays; other banks never get the strip", async () => {
     const a = await fresh({ ...SEEN }, "2026-11-10T09:00:00Z");
     await a.page.goto(BASE + "/#PHYS_PA1"); await anyUp(a.page);
-    await a.page.waitForSelector("#problem .cc-cta-calc"); await a.page.waitForTimeout(1500);
+    await a.page.waitForSelector("#problem .cc-cta-calc"); await a.page.waitForTimeout(1500);   // keep: app timer __ccToastMs 300 ms toast delay (proves the expired copy arms no toast and no strip)
     assert.equal(await a.page.$("#problem .cc-cta-hm"), null, "outside the window only the calc button"); assert.equal(await a.page.$$eval("#problem .cc-row [role=link]", e => e.length), 1); assert.equal(await a.page.$(".stoast"), null); await a.ctx.close();
   });
   await step("no calculator chosen: the chip opens the picker (stemCalcPick), not an empty panel", async () => {
@@ -129,12 +129,17 @@ try {
     await page.goto(BASE + "/#PHYS_PA1"); await anyUp(page); await page.waitForSelector("#problem .cc-cta-calc"); await wrap(page);
     await page.waitForFunction(() => window.CalcCoach.cramFor("BANK_P3X"), null, { timeout: 4000 });
     await page.evaluate(() => dispatchEvent(new CustomEvent("drill:answer", { detail: { code: document.getElementById("pcode").textContent, right: false } })));
-    await page.waitForTimeout(1300); assert.equal(await shown(page), 0, "one wrong pick is not enough");
+    await page.waitForTimeout(1300); assert.equal(await shown(page), 0, "one wrong pick is not enough");   // keep: app timer 900 ms "miss2" offer delay (no offer before it)
     const code = await page.evaluate(() => document.getElementById("pcode").textContent);
     await wrong(page, code); await page.waitForFunction(() => window.__shown.some(t => /Guess smart/.test(t)), null, { timeout: 4000 });
     assert.equal(await page.evaluate(() => window.__shown.find(t => /Guess smart/.test(t))), "Stuck? Guess smart.\nLearn 4 fast guess tricks. Go from 1 in 5 to up to 1 in 2.");
-    await wrong(page, code); await page.waitForTimeout(1300); assert.equal(await shown(page), 1, "once per item");
-    for (const c of ["X2", "X3", "X4"]) { await page.evaluate(c => { document.getElementById("pcode").textContent = c; window.CalcCoach.onItem("BANK_P3X"); }, c); await wrong(page, c); await page.waitForTimeout(1100); }
+    await wrong(page, code); await page.waitForTimeout(1300); assert.equal(await shown(page), 1, "once per item");   // keep: app timer 900 ms "miss2" offer delay (the second offer must not come)
+    for (const [i, c] of ["X2", "X3", "X4"].entries()) {
+      await page.evaluate(c => { document.getElementById("pcode").textContent = c; window.CalcCoach.onItem("BANK_P3X"); }, c);
+      await wrong(page, c);
+      if (i < 2) await page.waitForFunction(n => window.__shown.filter(t => /^Stuck\? Guess smart\./.test(t)).length >= n, i + 2, { timeout: 5000 });   // this item's offer landed
+      else await page.waitForTimeout(1100);   // keep: app timer 900 ms "miss2" offer delay (the 3-a-session cap must hold past it)
+    }
     assert.equal(await shown(page), 3, "capped at 3 a session");
     await ctx.close();
   });
@@ -148,11 +153,11 @@ try {
     await b.page.goto(BASE + "/#PHYS_PA1"); await anyUp(b.page); await b.page.waitForSelector("#problem .cc-cta-calc"); await wrap(b.page);
     await b.page.waitForFunction(() => window.CalcCoach.cramFor("BANK_P3X"), null, { timeout: 4000 });
     await b.page.evaluate(() => window.CalcCoach.openCram("BANK_P3X")); await b.page.waitForSelector(".cc-ov");
-    await wrong(b.page, await b.page.evaluate(() => document.getElementById("pcode").textContent)); await b.page.waitForTimeout(1300);
+    await wrong(b.page, await b.page.evaluate(() => document.getElementById("pcode").textContent)); await b.page.waitForTimeout(1300);   // keep: app timer 900 ms "miss2" offer delay (a modal must swallow it)
     assert.equal(await shown(b.page), 0, "not over an open modal"); await b.ctx.close();
     const c = await fresh({ ...SEEN }, "2026-11-10T09:00:00Z");
     await c.page.goto(BASE + "/#PHYS_PA1"); await anyUp(c.page); await c.page.waitForSelector("#problem .cc-cta-calc"); await wrap(c.page);
-    await wrong(c.page, await c.page.evaluate(() => document.getElementById("pcode").textContent)); await c.page.waitForTimeout(1300);
+    await wrong(c.page, await c.page.evaluate(() => document.getElementById("pcode").textContent)); await c.page.waitForTimeout(1300);   // keep: app timer 900 ms "miss2" offer delay (off after the exam window)
     assert.equal(await shown(c.page), 0, "off after the exam window"); await c.ctx.close();
   });
   await step("Hail Mary deck: 4 full-height snap slides, rail, keyboard moves a slide; reduced motion = static chevron", async () => {

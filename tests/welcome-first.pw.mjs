@@ -56,8 +56,9 @@ try {
     const ctx = await newCtx();
     await ctx.addInitScript(() => { window.__welcomeFirst = true; });
     const page = await ctx.newPage();
+    const posted = page.waitForResponse(r => r.request().method() === "POST" && /\/calc$/.test(r.url()), { timeout: 8000 }).catch(() => null);   // mark()'s POST /calc {welcomed:true}
     await page.goto(BASE + "/#OTH_W01"); assert.equal(await code(page), "PHYS_PWQ1");
-    await page.waitForTimeout(400);
+    assert.ok(await posted, "the welcomed flag reached the server");
     await page.evaluate(k => localStorage.removeItem(k), FLAG);
     await page.goto(BASE + "/#OTH_W01"); await page.reload();
     assert.notEqual(await code(page), "PHYS_PWQ1", "the server remembered");
