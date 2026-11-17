@@ -7,7 +7,8 @@
 //   lines    every border the strip draws is 1px; the drawer's edge is the neutral --line
 //   motion   open 380ms, close 240ms on cubic-bezier(.32,.72,0,1); prefers-reduced-motion = a fade
 //   duck     the sunrise duck is a status nudge: a tap only dismisses it (no Cluck, no callback); the drawer's Ask Cluck is the action
-// The mock waits 500 ms (> the 380 ms slide; clip-path hides the drawer mid-slide). So does this spec: every check runs after SETTLE.
+// The mock waited 500 ms (> the 380 ms slide; clip-path hides the drawer mid-slide). This spec waits on the drawer's own state instead
+// (settleDrawer: shown + every animation finished), so every check runs on a drawer that is really open, on any runner.
 // Starts its own serve.py (static files); the bank and /check are routed.   node tests/strip-layers.pw.mjs [port] [shotDir]
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
@@ -17,6 +18,7 @@ import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -31,8 +33,6 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const SETTLE = 500;   // > the 380 ms drawer slide
-
 const txt = md => [{ type: "text", md }];
 const GRAPH = { type: "graph", kind: "cartesian", alt: "x(t) for a cart: a line through (0,1) and (4,9)", x: { min: -1, max: 5, label: "$t$" }, y: { min: -1, max: 10, label: "$x$" }, grid: true, axes: true, marks: [{ type: "fn", y: "2*x+1" }] };
 const P = [
@@ -69,17 +69,20 @@ async function pageFor(browser, W, H, o = {}) {
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "STP_NUM", null, { timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector("#qnav").hidden, null, { timeout: 6000 });
-  await page.waitForTimeout(400);
+  await page.waitForFunction(() => document.fonts.status === "loaded", null, { timeout: 5000 });   // the webfonts place the bar and the card (the rects below are compared)
+  await settled(page, "#q");   // the first question is placed (its entrance animations are over, two frames painted)
   return page;
 }
 /* walk to question n by the bar's own Next (nav.js go(1)): the queue order is the bank order */
 async function goTo(page, code) {
   for (let i = 0; i < 6 && (await page.textContent("#pcode")) !== code; i++) {
+    const before = await page.textContent("#pcode");
     await page.evaluate(() => document.querySelector("#qnext").click());
-    await page.waitForTimeout(500);
+    await page.waitForFunction(p => document.querySelector("#pcode")?.textContent !== p, before, { timeout: 4000 }).catch(() => {});   // the next question is up
   }
   assert.equal(await page.textContent("#pcode"), code);
   await page.waitForSelector("#ff");
+  await settled(page, "#q");   // the question is placed before an answer is typed into it
 }
 const fieldSel = "#ans";
 async function submit(page, v) {
@@ -93,12 +96,19 @@ async function reach(page, code, state) {
   if (state === "out") { await page.evaluate(() => { window.__drill.state.wait = null; }); await skipRetryWait(page); await page.fill(fieldSel, WRONGV[code] + "0"); await page.evaluate(() => document.querySelector("#ansGo").click()); await page.waitForSelector("#q.closed"); }
   else if (state === "wrong") { await submit(page, WRONGV[code]); await page.waitForFunction(() => window.__drill.state.tries.length >= 1); }
   else { await submit(page, RIGHT[code]); await page.waitForSelector("#q.closed"); }
-  await page.waitForTimeout(SETTLE + 300);
+  if (code === "STP_PRF" && state === "wrong") await settled(page, "#q");   // a proof wrong with a try left has no drawer to wait for
+  else await settleDrawer(page, true);                                      // the verdict is in and the drawer's slide is over
 }
-/* wait for the drawer to be really open / really gone, then the SETTLE: the close is a 240 ms animation + a 260 ms timer in strip.js hide(); a fixed
-   sleep alone loses that race on a loaded CI runner (CPU x8: the timer fires after SETTLE and the drawer still shows). The asserts after it are unchanged. */
-const drawerShown = () => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none"; };
-const settleDrawer = async (page, open) => { await page.waitForFunction(([f, o]) => (new Function("return (" + f + ")()")()) === o, [drawerShown.toString(), open], { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(SETTLE); };
+/* wait for the drawer to be really open (its 380 ms slide done) or really gone (its 240 ms slide + the 260 ms timer in strip.js hide()); an
+   infinite animation never blocks (as in lib/wait.mjs settled()). The asserts after it are unchanged, and a missing wait is caught by them. */
+const settleDrawer = async (page, open) => {
+  await page.waitForFunction(o => { const d = document.querySelector("#q .vdrawer");
+    if (!d) return !o;
+    const shown = !d.hidden && getComputedStyle(d).display !== "none";
+    const run = d.getAnimations({ subtree: true }).some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime));
+    return o ? shown && !run : !shown;
+  }, open, { timeout: 8000 }).catch(() => {});
+};
 const geo = page => page.evaluate(() => {
   const R = e => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
   const bar = document.querySelector("#ff"), d = document.querySelector("#q .vdrawer");
@@ -206,7 +216,7 @@ for (const [W, H] of VPS) {
       await pg.mouse.click(5, 5); await settleDrawer(pg, false);
       assert.equal((await geo(pg)).d, null, "an outside tap did not close");
     });
-    if (SHOTS && state !== "right") { await pg.click("#ff .vk"); await pg.waitForTimeout(SETTLE); await pg.screenshot({ path: `${SHOTS}/${kind}-${state}-${W}.png` }); }
+    if (SHOTS && state !== "right") { await pg.click("#ff .vk"); await settleDrawer(pg, true); await pg.screenshot({ path: `${SHOTS}/${kind}-${state}-${W}.png` }); }
     assert.deepEqual(pg.errs, [], "page errors");
    }
    if (pg) await pg.ctx.close();
@@ -220,7 +230,7 @@ await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced m
     await goTo(pg, "STP_NUM"); await submit(pg, "2");
     await pg.waitForSelector("#q .vdrawer");
     const open = await pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"), cs = getComputedStyle(d); return { n: cs.animationName, d: cs.animationDuration, f: cs.animationTimingFunction }; });
-    await pg.waitForTimeout(SETTLE);
+    await settleDrawer(pg, true);   // the open slide is over before the close is asked for (the class it reads must be the open one)
     await pg.click("#q .vdrawer .vd-x");
     const shut = await pg.evaluate(() => { const d = document.querySelector("#q .vdrawer"), cs = getComputedStyle(d); return { n: cs.animationName, d: cs.animationDuration, f: cs.animationTimingFunction, hid: d.hidden }; });
     if (!reduced) {
@@ -252,7 +262,7 @@ await step("right answer: focus put on the verdict icon inside doneExit's beat s
   const pg = await pageFor(browser, 390, 844);
   await goTo(pg, "STP_NUM"); await submit(pg, RIGHT.STP_NUM); await pg.waitForSelector("#q.closed");
   await pg.evaluate(() => document.querySelector("#ff .vk").focus());
-  await pg.waitForTimeout(1300);
+  await pg.waitForTimeout(1300);   // keep: app timer doneExit's 900 ms beat (the focus put inside it must survive it)
   assert.equal(await pg.evaluate(() => document.activeElement && document.activeElement.matches("#ff .vk")), true, "the beat blurred the verdict icon");
   await pg.ctx.close();
 });
@@ -263,11 +273,11 @@ await step("duck: a tap on the sunrise duck only dismisses it (Cluck stays close
   await pg.evaluate(() => { window.__tap = 0; window.__away = 0; document.documentElement.classList.add("sugar"); });
   const rose = await pg.evaluate(() => window.stemDuck.say("Need a hand?", { onTap: () => { window.__tap++; }, onAway: () => { window.__away++; } }));
   assert.equal(rose, true, "the duck did not rise");
-  await pg.waitForTimeout(SETTLE);
+  await pg.waitForFunction(() => window.stemDuck.up === true, null, { timeout: 5000 });   // the duck is fully up
   assert.equal(await pg.evaluate(() => window.stemDuck.up), true);
   const label = await pg.getAttribute(".ck-peek", "aria-label");
   assert.match(label, /dismiss/i, "the only action is dismiss, say so: " + label);
-  await pg.click(".ck-peek"); await pg.waitForTimeout(SETTLE + 400);
+  await pg.click(".ck-peek"); await pg.waitForFunction(() => window.stemDuck.up === false, null, { timeout: 5000 });   // the dismissal is done
   assert.equal(await pg.evaluate(() => window.stemDuck.up), false, "the tap must dismiss the duck");
   assert.equal(await pg.evaluate(() => window.stemCluckOpen()), false, "the duck must not open Cluck");
   assert.equal(await pg.evaluate(() => window.__tap), 0, "the duck must not run the action callback");
@@ -279,7 +289,7 @@ await step("duck: a tap on the sunrise duck only dismisses it (Cluck stays close
 await step("Cluck's reply already streaming: the tray's Ask Cluck is the only Cluck entry (no peek), no page error", async () => {
   const pg = await pageFor(browser, 390, 844, { stream: true });
   await goTo(pg, "STP_NUM"); await submit(pg, "2");
-  await pg.waitForFunction(() => window.__drill.state.tries.length >= 1); await pg.waitForTimeout(SETTLE + 600);
+  await pg.waitForFunction(() => window.__drill.state.tries.length >= 1); await settleDrawer(pg, true);   // the tray is up (Cluck's chip only)
   const g = await pg.evaluate(() => ({ tray: !!document.querySelector("#q .vdrawer:not([hidden]) .wchip"), peek: !!document.querySelector(".cl-peek, .cl-cta") }));
   assert.deepEqual(g, { tray: true, peek: false });
   assert.deepEqual(pg.errs, []); await pg.ctx.close();
@@ -290,7 +300,7 @@ await step("a question without Cluck's key has no drawer and no wash", async () 
   const pg = await pageFor(browser, 390, 844);
   await goTo(pg, "STP_NUM");
   await pg.evaluate(() => { window.__drill.state.prob.wish = false; });
-  await submit(pg, "2"); await pg.waitForFunction(() => window.__drill.state.tries.length >= 1); await pg.waitForTimeout(SETTLE);
+  await submit(pg, "2"); await pg.waitForFunction(() => window.__drill.state.tries.length >= 1); await pg.waitForFunction(() => window.stemStrip && window.stemStrip.open === false, null, { timeout: 5000 });   // the strip synced: no drawer for a question without Cluck's key
   assert.equal(await pg.evaluate(() => !!document.querySelector("#q .vdrawer:not([hidden])")), false);
   await pg.ctx.close();
 });

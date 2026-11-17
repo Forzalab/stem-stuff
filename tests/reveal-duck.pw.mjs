@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -59,14 +60,15 @@ try {
   for (const w of [393, 1280]) for (const scheme of ["dark", "light"]) {
     await step(`${w} ${scheme}: right -> "That's it!" line has the duck`, async () => {
       const page = await open(w, scheme, "#PHYS_RD1");
-      try { await typeAnswer(page, "1.38"); await page.waitForSelector("#q .ansl b", { timeout: 6000 }); await page.waitForTimeout(500); ok(await duckOf(page, "#q .ansl"), "right"); } finally { await page.context().close(); }
+      try { await typeAnswer(page, "1.38"); await page.waitForSelector("#q .ansl b", { timeout: 6000 }); await settled(page, "#q .ansl"); ok(await duckOf(page, "#q .ansl"), "right"); } finally { await page.context().close(); }
     });
     await step(`${w} ${scheme}: 2nd miss -> "Not it. The answer is" line has the duck`, async () => {
       const page = await open(w, scheme, "#PHYS_RD1");
       try {
         await typeAnswer(page, "1.636"); await page.waitForFunction(() => window.__drill.state.tries.length === 1, null, { timeout: 6000 });
-        await page.waitForTimeout(2200); await typeAnswer(page, "0.650");
-        await page.waitForSelector("#q .ansl b", { timeout: 6000 }); await page.waitForTimeout(500);
+        await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });   // the 2 s guess-spam window (nav.js SPAM_MS) is past: this try is not a spam pick
+        await typeAnswer(page, "0.650");
+        await page.waitForSelector("#q .ansl b", { timeout: 6000 }); await settled(page, "#q .ansl");
         assert.match(await page.textContent("#q .ansl"), /Not it/); ok(await duckOf(page, "#q .ansl"), "wrong");
       } finally { await page.context().close(); }
     });

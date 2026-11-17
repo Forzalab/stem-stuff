@@ -14,6 +14,7 @@ import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -28,8 +29,6 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const SETTLE = 500;   // > the 380 ms drawer slide
-
 const txt = md => [{ type: "text", md }];
 const ch = (...ids) => ids.map(id => ({ id, md: id === "a" ? "The first long choice about the ball" : `Choice ${id.toUpperCase()}, a sentence about the ball` }));
 const P = [
@@ -67,7 +66,8 @@ async function pageFor(browser, W, H, o = {}) {
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "STM_MCQ", null, { timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector("#qnav").hidden, null, { timeout: 6000 });
-  await page.waitForTimeout(400);   // UNKNOWN-kept: not sure what this waits for (first paint / intro?), no signal identified
+  await page.waitForFunction(() => document.fonts.status === "loaded", null, { timeout: 5000 });   // the webfonts place the rows and the drawer (the rects below are compared)
+  await settled(page, "#q");   // the first question is placed (its entrance animations are over, two frames painted)
   return page;
 }
 async function goTo(page, code) {
@@ -102,7 +102,7 @@ async function reach(page, kind, state) {
   if (!(kind === "multi" && state === "wrong")) await drawerSettled(page);   // the drawer slides in after the verdict (a part miss with a try left has none)
 }
 const drawerOpen = page => page.evaluate(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none"; });
-/* the drawer is shown and its open slide (vd-out, 380 ms) has finished; the wait behind every old SETTLE after a verdict or a mark tap. A missing wait is caught by the assert after it. */
+/* the drawer is shown and its open slide (vd-out, 380 ms) has finished; the wait behind every check after a verdict or a mark tap. A missing wait is caught by the assert after it. */
 const drawerSettled = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && !d.classList.contains("vd-shut") && d.getAnimations().every(a => a.playState === "finished"); }, null, { timeout: 4000 }).catch(() => {});
 /* the drawer is gone (hidden after its 240 ms slide shut, or never built) */
 const drawerGone = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !d || d.hidden; }, null, { timeout: 4000 }).catch(() => {});
@@ -227,9 +227,9 @@ await step("the first close by ^ on a row teaches the badge once (toast), never 
   await pg.click("#q .vdrawer .vd-x");
   await pg.waitForFunction(() => /badge/i.test(document.body.innerText), null, { timeout: 3000 });
   assert.equal(await pg.evaluate(() => localStorage.getItem("stem-strip-badge")), "1");
-  await pg.waitForTimeout(6000);   // UNKNOWN-kept: not sure what the 6 s waits for (toast timer / cooldown?), no signal identified
+  await pg.waitForTimeout(6000);   // keep: app timer the one-time badge toast's 5 s lifetime (it must be gone before the "never twice" check)
   await pg.locator(ICON.mc).last().click(); await drawerSettled(pg);
-  await pg.click("#q .vdrawer .vd-x"); await pg.waitForTimeout(700);   // UNKNOWN-kept: a negative check (no toast came), no positive signal to wait on
+  await pg.click("#q .vdrawer .vd-x"); await drawerGone(pg);   // the tip fires in the click handler (strip.js tip), so a closed drawer is past it
   assert.equal(await pg.evaluate(() => /badge/i.test(document.body.innerText)), false, "the toast came a second time");
   await pg.ctx.close();
 });
@@ -239,7 +239,7 @@ await step("a question without Cluck's key has no drawer on mc / pick-all / mult
     const pg = await pageFor(browser, 390, 844);
     await goTo(pg, code); await pg.evaluate(() => { window.__drill.state.prob.wish = false; });
     if (code === "STM_MCQ") await pickMC(pg, "a"); else await pickAll(pg, ["a", "b"]);
-    await verdictCount(pg, 1); await pg.waitForTimeout(SETTLE + 300);   // negative check follows (no drawer): no positive signal to wait on
+    await verdictCount(pg, 1); await pg.waitForFunction(() => window.stemStrip && window.stemStrip.open === false, null, { timeout: 5000 });   // the strip synced: no drawer (no chip) and no badge button
     assert.equal(await drawerOpen(pg), false, code); assert.equal(await pg.evaluate(() => document.querySelectorAll("#q .vkb").length), 0, code + " stray badge buttons");
     await pg.ctx.close();
   }
@@ -255,9 +255,9 @@ await step("phone: a tap inside Cluck's sheet is not a tap outside the drawer (u
   const opened = () => pg.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 4000 });
   await pg.click("#q .vdrawer .wchip"); await opened();
   await pg.waitForSelector("#cluck .wtext .wretry", { timeout: 6000 });
-  await pg.waitForTimeout(SETTLE);   // UNKNOWN-kept: not sure what this waits for (the sheet's own slide?), no signal identified
+  await settled(pg, "#cluck");   // the sheet's slide in is over
   await pg.click("#cluck .wtext .wretry");                                    // a tap in the sheet (the sheet floats over the drawer at phone width: #wish stays shown)
-  await pg.waitForTimeout(SETTLE);   // UNKNOWN-kept: not sure what this waits for (the retry's own state change?), no signal identified
+  await settled(pg, "#cluck");   // the retry's own state change is drawn
   await pg.keyboard.press("Escape");
   await pg.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
   await drawerSettled(pg);

@@ -47,8 +47,13 @@ async function openBank(page) {
   await page.waitForFunction(() => /^CALC1_V/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
 }
 /* every /check reply, in order, as the network sees it */
-const watch = page => { const log = []; page.on("response", async r => { if (/\/check$/.test(r.url())) log.push(await r.json().catch(() => null)); }); return log; };
-const settled = async (log, n) => { for (let i = 0; i < 60 && log.length < n; i++) await new Promise(r => setTimeout(r, 50)); };   // the response listener is async
+const watch = page => { const log = []; log.wake = null; page.on("response", async r => { if (/\/check$/.test(r.url())) { log.push(await r.json().catch(() => null)); log.wake?.(); } }); return log; };
+/* wait until the log holds n replies (the response listener is async): the push wakes the wait, an 8 s guard fails the step */
+const settled = (log, n) => new Promise((ok, fail) => {
+  const t = setTimeout(() => { log.wake = null; fail(new Error(`settled: ${log.length} of ${n} /check replies in 8000 ms`)); }, 8000);
+  const check = () => { if (log.length < n) return; clearTimeout(t); log.wake = null; ok(); };
+  log.wake = check; check();
+});
 async function pick(page, id) {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`#q .opt[data-id="${id}"]`); await page.click(`#q .ch[data-id="${id}"] .send`);
@@ -98,7 +103,7 @@ try {
     const r = Object.fromEntries((await rows(S.page)).map(o => [o.id, o]));
     assert.match(r.a.cls, /\bright\b/); assert.match(r.a.cls, /\breveal\b/); assert.match(r.a.badge, /i-ok$/);
     for (const id of ["b", "c"]) { assert.match(r[id].cls, /\bwrong\b/); assert.doesNotMatch(r[id].cls, /\bright\b/); assert.match(r[id].badge, /i-x$/); }
-    await S.page.waitForTimeout(1200);
+    await S.page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });   // the lockout verdict is complete: rewardTry paid in that same pass (a reveal pays 0)
     assert.equal(await xp(S.page), x1, "the revealed pick pays 0 XP");
     assert.match(await S.page.textContent("#sr"), /right answer: one/i);
     assert.equal(await S.page.$$eval(".nod, .rw-nod", e => e.length), 0, "a reveal is not a right answer: no calm nod");
@@ -138,7 +143,7 @@ try {
     await S.page.waitForSelector("#q .ansl");
     assert.equal(await S.page.textContent("#q .ansl b"), "2.02");
     assert.match(await S.page.textContent("#q .ansl"), /^Not it\. The answer is/);   // W114f: Tony's 114r v1f reveal box: a plain sentence under the field (was "Answer 2.02")
-    await S.page.waitForTimeout(1200);
+    await S.page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });   // the lockout verdict is complete: rewardTry paid in that same pass (a reveal pays 0)
     assert.equal(await xp(S.page), x, "0 XP on the revealed pick");
   });
   await S.ctx.close();
