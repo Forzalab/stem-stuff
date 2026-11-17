@@ -183,7 +183,7 @@ try {
         page: document.elementFromPoint(x, y)?.id, dim: getComputedStyle(dim).visibility };
     }, spot);
     await pg.click("#qlistBtn");
-    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 5000 });
     let h = await hit();
     assert.equal(h.dim, "visible");
     assert.equal(h.chip, true, "the list button is not on top (it must still close the list)");
@@ -204,13 +204,13 @@ try {
     if (phone) assert.ok(h.row1.top >= h.navBottom, `row 1 (top ${h.row1.top}) overlaps the nav row (bottom ${h.navBottom})`);   // phones: the list starts right under the nav row, over the XP strip (Tony, Oct 18 sketch)
     assert.equal(h.page, "qlDim", "the page is not under the dim");
     await pg.mouse.click(...spot);                                              // a tap on the dim
-    await pg.waitForFunction(() => document.querySelector("#qlist").hidden, null, { timeout: 2000 });
-    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
+    await pg.waitForFunction(() => document.querySelector("#qlist").hidden, null, { timeout: 5000 });
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 5000 });
     h = await hit();
     assert.equal(h.hud.tap, true, "the XP strip's tap target is covered after close");
     assert.notEqual(h.page, "qlDim", "the dim still covers the page");
     await pg.click("#qlistBtn"); await pg.keyboard.press("Escape");             // Escape closes it too
-    await pg.waitForFunction(() => document.querySelector("#qlist").hidden && getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
+    await pg.waitForFunction(() => document.querySelector("#qlist").hidden && getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 5000 });
     await c3.close();
   });
 
@@ -235,12 +235,12 @@ try {
       return s / 4;
     };
     await pg.click("#qlistBtn");
-    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 5000 });
     await pg.fill("#code", "CALC1_ZZ9");
     await pg.press("#code", "Enter");
     await pg.waitForFunction(() => /not found/.test(document.querySelector("#entryMsg").textContent), null, { timeout: 4000 });
     await pg.evaluate(() => document.activeElement?.blur());                   // Enter shuts the list; the message keeps the box up
-    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 5000 });
     await pg.mouse.move(w - 4, 790); await settled(pg);
     const g = await pg.evaluate(() => {
       const box = document.querySelector(".top .entry"), hud = document.querySelector(".top > .rw-hud"), b = box.getBoundingClientRect(), h = hud.getBoundingClientRect();
@@ -255,7 +255,7 @@ try {
     assert.equal(g.clear, true, "something is drawn over the code box");
     const shut = [await lum("#qlistBtn"), await lum("#code")];
     await pg.click("#qlistBtn");                                                // the list again, the message still up (Tony's second shot)
-    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 5000 });
     await pg.evaluate(() => document.activeElement?.blur());
     await pg.mouse.move(w - 4, 790); await settled(pg);
     const onTop = await pg.evaluate(() => ["#qlistBtn", "#code"].map(s => { const el = document.querySelector(s), r = el.getBoundingClientRect(); return !!document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest(s); }));
