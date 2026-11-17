@@ -46,8 +46,10 @@ test("a repeated console line or page error is one counted line, so it cannot pu
   tr.push(1, "click", "#go");
   for (let i = 0; i < 50; i++) tr.push(1, "console.warn", "", "same warning");
   tr.push(1, "console.warn", "", "another");
+  tr.push(1, "console.warn", "", "[GroupMarkerNotSet!:A07020001C300000] fallback"); tr.push(1, "console.warn", "", "[GroupMarkerNotSet!:A0D020001C300000] fallback");
   const r = tr.report().split("\n");
-  assert.equal(r[0].slice(0, 27), "TRACE last 3 of 52 events (");
+  assert.equal(r[0].slice(0, 27), "TRACE last 4 of 54 events (");
+  assert.match(r[4], /A07020001C300000\] fallback {2}\(x2, first time shown\)$/);
   assert.match(r[2], /console\.warn +same warning {2}\(x50, first time shown\)$/);
   assert.match(r[3], /another$/);
 });

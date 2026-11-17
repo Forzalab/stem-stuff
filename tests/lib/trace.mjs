@@ -10,6 +10,7 @@
    ONE clock: Node time since this module loaded, stamped when the event reaches Node, so pages and reloads need no stitching.
    No typed text, no query strings, no event payloads (a printing key is "char"; an app event is its name only).
    App seam: window.__trace(kind, detail) for state the DOM does not show. Pattern: Hotwire Turbo window.eventLogs.
+   A key that never shows as `key` did not reach the top page: look for `blur window ... into iframe` and `key.in-frame`.
    Read with care: the browser fires `toggle` one task AFTER a popover opens or closes, so its line can sit below a key that came later. */
 const T0 = performance.now(), OFF = process.env.PW_TRACE === "0";
 
@@ -20,7 +21,7 @@ export function makeTrace({ cap = 400, now = () => performance.now() - T0 } = {}
     const e = { t: now(), pg, k, el: String(el), d: String(d ?? "").replace(/\s+/g, " ").slice(0, 80), n: 1 };
     total++;
     if (/^(console\.|pageerror|resp\.bad)/.test(k)) {   // a page that repeats one warning 40 times must not push the real events out: one line, counted
-      const id = `${pg} ${k} ${e.el} ${e.d}`, old = noise.get(id);
+      const id = `${pg} ${k} ${e.el} ${e.d.replace(/[0-9A-Fa-f]{6,}/g, "#")}`, old = noise.get(id);   // the same warning with a new hex id each time is still the same warning
       if (old) { old.n++; return; }
       noise.set(id, e); e.id = id;
     }
@@ -43,7 +44,11 @@ export function makeTrace({ cap = 400, now = () => performance.now() - T0 } = {}
 
 /* runs in the page, before its scripts: capture listeners on window, so the app cannot stop them and they change nothing */
 const PAGE = `(() => {
-  if (window !== top || window.__traceOn || !window.__traceEv) return; window.__traceOn = 1;   // the top page only: an embed (a YouTube player) floods the ring
+  if (window.__traceOn || !window.__traceEv) return; window.__traceOn = 1;
+  if (window !== top) {   // an embed (a YouTube player) would flood the ring: from a frame, only the keys it takes. A key pressed while a frame holds focus never reaches the top page
+    addEventListener("keydown", e => { try { const p = window.__traceEv("key.in-frame", location.host || "frame", e.key && e.key.length === 1 ? "char" : e.key); p && p.catch && p.catch(() => {}); } catch { /* */ } }, true);
+    return;
+  }
   const send = (k, el, d) => { try { const p = window.__traceEv(k, el || "", d == null ? "" : String(d)); p && p.catch && p.catch(() => {}); } catch { /* page is closing */ } };
   const name = e => { if (!e || e.nodeType !== 1) return e === document ? "document" : "window"; if (e.id) return "#" + e.id;
     const c = typeof e.className === "string" && e.className.trim().split(/\\s+/)[0]; return e.tagName.toLowerCase() + (c ? "." + c : ""); };
@@ -52,6 +57,7 @@ const PAGE = `(() => {
     setTimeout(() => { if (e.defaultPrevented) send("key.cancelled", name(e.target), key + " (the app called preventDefault)"); }, 0); });
   on("click", e => send("click", name(e.target)));
   on("focusin", e => send("focus", name(e.target)));
+  addEventListener("blur", e => { if (e.target === window) setTimeout(() => send("blur", "window", "focus left the page" + (document.activeElement && document.activeElement.tagName === "IFRAME" ? " into " + name(document.activeElement) : "")), 0); });
   on("toggle", e => send("toggle", name(e.target), e.newState));
   on("animationstart", e => send("anim.start", name(e.target), e.animationName));
   on("animationend", e => send("anim.end", name(e.target), e.animationName));
