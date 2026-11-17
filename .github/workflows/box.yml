@@ -89,7 +89,7 @@ jobs:
           exit "$bad"
       - name: upload flake-hunt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flake-hunt   # never named flaky-block-*: the `all` job downloads only that pattern (AC9.5)
           path: flake-hunt.txt
@@ -130,7 +130,7 @@ jobs:
           exit "$rc"
       - name: upload quiet-lane
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quiet-lane
           path: |
