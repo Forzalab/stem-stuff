@@ -245,3 +245,6 @@ html.ui-v7 .qghost i:nth-child(2) { --o: .08; -webkit-mask-image: none; mask-ima
 }
 
 /* PAD-TIGHT (Tony Nov 17 "too spacey"): --qpad / --qc-pad 24 -> 16 (desktop 32/48 -> 22/32, pad-split 16/24 -> 11/16), phone top 32 -> 22 (--qpt, also the ghost pin's offset), kicker row -> headline 12 -> 8, row -> text 20 -> 14. Corners (radius ~20) stay clear of the text: the first line starts below the kicker row. */
+/* GHOST-CLIP (Nov 17, Firefox Android "horizontal scroll"): the ghost numeral's glyph ran ~38px past the card's right edge (the box is overflow: visible here);
+   clip it to its box so nothing pokes past the viewport */
+html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }
