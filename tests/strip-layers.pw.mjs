@@ -122,7 +122,7 @@ for (const [W, H] of VPS) {
     await reach(pg, code, state);
     if (kind === "proof" && state === "wrong") {   // a proof wrong with a try left has no verdict mark on its bar (the rubric chips carry it): no drawer to hang from
       await step(`${T}: no verdict mark on the bar, so no drawer (the rubric chips and Cluck's chip stay as they are)`, async () => {
-        assert.equal((await geo(pg)).d, null); assert.ok(await pg.isVisible("#rubric"), "rubric chips");
+        assert.equal((await geo(pg)).d, null); assert.ok(await pg.$("#rubric [data-v]"), "the rubric verdict (sr-only text since Nov 17)");
       });
       continue;
     }
