@@ -1922,7 +1922,7 @@ html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow
    v7 placeholders take --line (#556791, the navy family of the #060b1b well) instead of --hint (#a9b8cc) */
 html.ui-v7 :is(input, textarea)::placeholder { color: var(--line); opacity: 1; }
 /* PH-FOCUS (Tony Nov 17): the grey format hint ("Ex: 9/2, 5e-4, sqrt(3)", the fix/part hints) goes while the field has focus / keyboard is up: the caret gets a clean box */
-html.ui-v7 :is(input, textarea):focus::placeholder, html.ui-v7:is(.kb, .mt) :is(#q, #ff) :is(input, textarea)::placeholder { color: transparent; }
+html.ui-v7 :is(input, textarea):focus::placeholder, html.ui-v7:is(.kb, .kbup, .mt) :is(#q, #ff) :is(input, textarea)::placeholder { color: transparent; }
 
 /* RE-ENTRY GUARD (shell.js): the answer controls rest for 1.5 s after the tab comes back */
 html.reentry :is(#q .send, #q .btn-go, #q .opt, #q .nx, #codeGo) { opacity: .55; transition: opacity .2s ease-out; }
