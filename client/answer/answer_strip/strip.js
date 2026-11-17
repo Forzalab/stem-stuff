@@ -238,6 +238,9 @@
   var sheetFocus = false;                                    // the keyboard is inside Cluck's sheet or on the drawer (the sheet hides the chip and shuts the drawer under it)
   D.addEventListener("focusin", function (e) { sheetFocus = !!(e.target.closest && e.target.closest("#cluck, .vdrawer")); }, true);
   var BTN = "#q .ff .vk[role=button], #q .vkb";
+  /* ui-v7: a press on the decorative mark must not blur the typed field: the blur re-shows the hint line (HOW-KB hides it while the field has focus), the field slides down under the pointer
+     and the click lands elsewhere (no toast) */
+  D.addEventListener("mousedown", function (e) { if (e.target.closest && e.target.closest("#q .ff .vk") && D.documentElement.classList.contains("ui-v7")) e.preventDefault(); }, true);
   D.addEventListener("click", function (e) {
     var mark = e.target.closest && e.target.closest("#q .ff .vk");   // ui-v7: the typed field's tick / cross is no button; a tap points to Ask Cluck (no drawer)
     if (mark && D.documentElement.classList.contains("ui-v7")) { e.preventDefault(); if (window.stemToast) window.stemToast.show({ text: "Tap Ask Cluck for help", bar: false, ms: 3000, at: mark }); return; }
