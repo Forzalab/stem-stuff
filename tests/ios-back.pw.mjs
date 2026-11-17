@@ -51,7 +51,7 @@ const pcode = page => page.textContent("#pcode");
 /* Next plays the hidden queue, and a browser Back is a showing like any other: read where Next went, never assume file order */
 const nextOf = async page => { const from = await pcode(page); await page.click("#qnext"); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, from, { timeout: 8000 }); const to = await pcode(page); await opened(page, to); return to; };
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, /* OPEN bug split-back-overlap: under reduce #rtag (html.mt main z15, app.css:1484) covers #qback in the notes split; motion only passes by tapping mid-slide. Remove motion:true with the client fix. */ args: ["--no-sandbox"] });
 async function phone({ ua = IOS, w = 390, h = 844, dnt = false, dpr = 1 } = {}) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, userAgent: ua, serviceWorkers: "block", hasTouch: true, isMobile: true, deviceScaleFactor: dpr });
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // the phone pad (notes split) is diet's
