@@ -224,7 +224,7 @@ try {
       await page.fill('.rp-step[data-state="active"] input', "5");
       await act(".rp-check");
       await page.waitForFunction(k => window.__graded.length === k, k);
-      await page.waitForTimeout(120);                                           // the stub's round trip lands
+      await page.waitForFunction(k => k === 1 ? !!document.querySelector('.rp-step[data-id="answer"] .rp-miss') : !!document.querySelector(".rp-solved"), k, { timeout: 5000 });   // the stub's round trip landed and the ladder re-drew (a miss, then the answer)
     }
     assert.deepEqual(await page.evaluate(() => window.__ns), [1, 2]);
   });
@@ -299,7 +299,8 @@ try {
     await act('.rp-why .rp-chip[data-why="0"]');
     for (const [k, v] of [[1, "5"], [2, "7"]]) {
       await page.fill('.rp-step[data-state="active"] input', v); await act(".rp-check");
-      await page.waitForFunction(k => window.__graded.length === k, k); await page.waitForTimeout(120);
+      await page.waitForFunction(k => window.__graded.length === k, k);
+      await page.waitForFunction(k => k === 1 ? !!document.querySelector('.rp-step[data-id="answer"] .rp-miss') : !!document.querySelector(".rp-solved"), k, { timeout: 5000 });   // the stub's round trip landed and the ladder re-drew
     }
     await page.waitForSelector(".rp-solved");
     assert.equal(await page.textContent(".rp-done"), "D3! TAIL");

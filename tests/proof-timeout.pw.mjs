@@ -31,20 +31,25 @@ async function open() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   await ctx.addInitScript(() => { for (let i = 0; i < 3000; i++) setInterval(() => {}, 20 + (i % 7)); });   // timer noise on purpose: it makes the clock race below hit ~30% of runs instead of ~3%, so an unfrozen jump goes red here, not only on a busy CI lane
-  const page = await ctx.newPage(), held = [];
+  const page = await ctx.newPage(), held = [], waiting = [];
+  /* heldAt(n): resolve once n POST /check requests are held (the route handler pushes them). A state wait with an explicit timeout: a
+     missing request never eats a fixed sleep, and the assert right after it still says what went wrong. */
+  const heldAt = n => held.length >= n ? Promise.resolve() : new Promise((ok, no) => {
+    waiting.push({ n, ok }); setTimeout(() => no(new Error(`POST /check #${n} not sent in 6000 ms`)), 6000); });
   await page.clock.install({ time: new Date("2026-10-28T12:00:00Z") });
-  await page.route("**/check", r => { if (r.request().method() === "POST") held.push(r); else r.continue(); });
+  await page.route("**/check", r => { if (r.request().method() === "POST") { held.push(r); for (const w of [...waiting]) if (held.length >= w.n) { waiting.splice(waiting.indexOf(w), 1); w.ok(); } } else r.continue(); });
   await page.goto(BASE + "/#" + CODE);
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, CODE, { timeout: 8000 });
   await page.fill("#ans", "Base case: n = 1.\nAssume it for k.\nAdd 3k+2 and factor."); await page.click("#ansGo");
   await page.waitForFunction(() => document.querySelector("#ansGo") !== null);
-  return { ctx, page, held };
+  return { ctx, page, held, heldAt };
 }
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
 try {
   await step("a slow-but-valid proof (answer at 12 s) shows its verdict, not 'could not check it'", async () => {
-    const { ctx, page, held } = await open();
-    await page.waitForTimeout(300); assert.equal(held.length, 1, "Check sent no request");
+    const { ctx, page, held, heldAt } = await open();
+    await heldAt(1).catch(() => {});                                   // the POST is held by the route (the assert below says it if it never came)
+    assert.equal(held.length, 1, "Check sent no request");
     await freeze(page); await page.clock.fastForward(12000); await page.clock.resume();
     await held[0].fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(OK) });
     await page.waitForSelector("#rubric .rb", { timeout: 6000 });
@@ -53,9 +58,8 @@ try {
     await ctx.close();
   });
   await step("no answer: at 25 s a timeout line + Try again, no try spent; Try again re-sends", async () => {
-    const { ctx, page, held } = await open();
-    await page.waitForTimeout(300);
-    for (let i = 0; i < 100 && !held.length; i++) await page.waitForTimeout(50);   // the 25 s timer starts when the request is sent: jump the clock only after that, or a slow runner's late send leaves the timer ahead of the jump
+    const { ctx, page, held, heldAt } = await open();
+    await heldAt(1).catch(() => {});                                   // the 25 s timer starts when the request is sent: jump the clock only after that, or a slow runner's late send leaves the timer ahead of the jump
     assert.equal(held.length, 1, "Check sent no request");
     await freeze(page);
     await page.clock.fastForward(24000);
@@ -67,7 +71,8 @@ try {
     assert.equal(await page.evaluate(() => window.__drill.state.triesLeft), 3);
     await page.click("#retry");
     await page.waitForFunction(() => document.querySelector("#fb .verdict.wait") === null);
-    await page.waitForTimeout(300); assert.equal(held.length, 2, "Try again did not re-send");
+    await heldAt(2).catch(() => {});                                   // the re-send is on the wire (the assert below reports it if not)
+    assert.equal(held.length, 2, "Try again did not re-send");
     await held[1].fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(OK) });
     await page.waitForSelector("#rubric .rb", { timeout: 6000 });
     assert.equal(await tries(page), 1);

@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -46,7 +47,7 @@ async function run(w, h) {
   const b = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
   const fresh = async o => (await b.newContext({ viewport: { width: w, height: h }, ...o })).newPage();   // a new browser id = a fresh item (tries live on the server, per id)
   let page = await fresh();
-  const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.waitForTimeout(900); await page.screenshot({ path: `${SHOTS}/${n}-${w}.png` }); } };
+  const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await settled(page); await page.screenshot({ path: `${SHOTS}/${n}-${w}.png` }); } };   // the burst/lock animations are over before the shot
   await step(`${w} locked: guard shows lock + words (no duck), choices take no click`, async () => {
     await open(page); await pick(page, 1); await pick(page, 1);
     await page.waitForSelector("#q.closed .guard.lock", { timeout: 4000 });
@@ -56,7 +57,7 @@ async function run(w, h) {
     const snap = () => page.evaluate(() => JSON.stringify({ t: window.__drill.state.tries.length, c: [...document.querySelectorAll("#q .opt")].map(x => x.getAttribute("aria-checked")) }));
     const s0 = await snap();
     for (const el of await page.$$("#q .opt")) await el.click({ force: true });
-    await page.waitForTimeout(200);
+    await settled(page, "#q");                                     // the forced clicks are dispatched, the row is at rest: nothing may have changed
     assert.equal(await snap(), s0, "a click on a locked choice changed something");
     assert.ok((await page.$$eval("#q .opt", a => a.map(x => x.disabled && x.getAttribute("aria-disabled") === "true"))).every(Boolean), "every choice disabled");
     await shot("locked");
@@ -79,7 +80,7 @@ async function run(w, h) {
     assert.ok(ctl.every(Boolean), "every choice disabled");
     const s0 = await page.evaluate(() => window.__drill.state.tries.length);
     for (const el of await page.$$("#q .opt")) await el.click({ force: true });
-    await page.waitForTimeout(200);
+    await settled(page, "#q");                                     // the forced clicks are dispatched, the row is at rest: no try may have been taken
     assert.equal(await page.evaluate(() => window.__drill.state.tries.length), s0, "revisit took a click");
     await shot("revisit");
   });

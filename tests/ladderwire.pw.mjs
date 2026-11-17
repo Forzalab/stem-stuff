@@ -12,6 +12,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -45,7 +46,7 @@ async function miss(page, v) {
   await skipRetryWait(page);
   await page.fill("#q #ans", v); await page.press("#q #ans", "Enter");
   await page.waitForSelector("#q .pips, #fb .verdict, #q .ff.bad, #q .ff .i-lock, #q [data-verdict], #q .ff", { timeout: 4000 });
-  await page.waitForTimeout(600);
+  await settled(page, "#q, #fb, #rpHost");                                       // the verdict's drawer and the ladder under it have finished drawing
 }
 try {
   for (const [w, h] of [[393, 800], [1280, 860]]) {
@@ -108,15 +109,18 @@ try {
   {                                                                              // a slow ladder for miss A must not land over miss B's (other family)
     const { ctx, page, errs } = await open("PHYS_LW3", { width: 393, height: 800 });
     await step("race: a slow GET /repair for family A never lands over family B's ladder; the old mount is destroyed", async () => {
-      let nCheck = 0, nRep = 0;
+      let nCheck = 0, nRep = 0, reps = 0, repsOk; const bothReplies = new Promise(ok => { repsOk = ok; });
       const ladder = label => ({ code: "PHYS_LW3", steps: [{ id: "who", label, kind: "pick", opts: [{ id: "a", md: "x" }, { id: "b", md: "y" }], ok: "a" }, { id: "answer", label: "Final answer", kind: "num" }] });
       await page.route("**/check", r => r.request().method() === "POST" && !/repair/.test(r.request().url())
         ? r.fulfill({ json: { verdict: "wrong", triesLeft: 2 - ++nCheck, error: nCheck === 1 ? "famA" : "famB" } }) : r.fallback());
-      await page.route("**/repair/PHYS_LW3", async r => { const mine = ++nRep; if (mine === 1) await new Promise(x => setTimeout(x, 1500)); await r.fulfill({ json: ladder(mine === 1 ? "Ladder A" : "Ladder B") }); });
-      await page.fill("#q #ans", "3"); await page.press("#q #ans", "Enter"); await page.waitForTimeout(300);
+      await page.route("**/repair/PHYS_LW3", async r => { const mine = ++nRep; if (mine === 1) await new Promise(x => setTimeout(x, 1500)); await r.fulfill({ json: ladder(mine === 1 ? "Ladder A" : "Ladder B") }); if (++reps === 2) repsOk(); });   // keep: fixture timer the stub's 1.5 s slow reply IS the race under test, not a wait for the app
+      const firstRepair = page.waitForRequest(r => /\/repair\/PHYS_LW3$/.test(new URL(r.url()).pathname), { timeout: 6000 });
+      await page.fill("#q #ans", "3"); await page.press("#q #ans", "Enter");
+      await firstRepair;                                                         // miss 1 reached the server: its ladder fetch is out (and held by the stub)
       await skipRetryWait(page);
       await page.fill("#q #ans", "5"); await page.press("#q #ans", "Enter");
-      await page.waitForSelector("section.rp", { timeout: 4000 }); await page.waitForTimeout(2200);
+      await page.waitForSelector("section.rp", { timeout: 4000 });
+      await bothReplies; await settled(page, "section.rp");                      // family B's reply, then the slow family A's: both have landed
       assert.equal(nRep, 2, "two families = two fetches");
       assert.equal(await page.locator("section.rp").count(), 1, "more than one ladder");
       assert.match(await page.textContent("section.rp"), /Ladder B/, "the stale ladder A landed over B");
