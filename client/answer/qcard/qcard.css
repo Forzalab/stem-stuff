@@ -178,8 +178,9 @@ html.ui-v7 #problem.qc7 .qmeta:not(:has(> :not(.qexam))) { display: none; }
    Net height 0 (margins), pointer-events none. The bottom edge already has the fold strip. */
 @media (max-width: 480px) {
   html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qscrolled:not(.qopen)::before { content: ""; display: block; position: sticky; top: calc(-1 * var(--qpad, 24px)); z-index: 3; order: -1;
-    flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); height: 40px; margin: calc(-1 * var(--qpad, 24px)) calc(-1 * var(--qc-pad, 24px)) calc(var(--qpad, 24px) - 40px);
+    flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px) + 1px); height: 40px; margin: calc(-1 * var(--qpad, 24px)) calc(-1 * var(--qc-pad, 24px)) calc(var(--qpad, 24px) - 40px);
     pointer-events: none; background: linear-gradient(#0d142a, transparent); }
+  /* STRIP-WRAP (Nov 17, Ask Cluck 45px off the code kicker once the card scrolled): the strip's MARGIN box was exactly one line wide (basis 100% + 2 pads - 2 pads of negative margin), so the 0-basis kicker still fit on the strip's line (kicker 0 px wide, button alone on the next line). +1px makes it a line of its own. */
 }
 /* SETUP-FADE wider (Tony Nov 16 "fade slightly earlier and wider"): the setup scroller's edge fades go 16 -> 44 px, so the cut line dissolves over ~2 lines, not one */
 html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 44px); mask-image: linear-gradient(transparent 0, #000 44px); }
