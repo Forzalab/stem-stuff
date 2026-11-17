@@ -41,7 +41,7 @@ import { incident, reason, debugOn, incLabel, incDiag, trackingOff, traceparent,
 /* split-app.mjs (W152): part 1 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 export const bridge = {};   // the bridge to cluck.js + shell.js (split-app.mjs)
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
-  busy: { get: () => busy, set: v => { busy = v; }, enumerable: true },   // let
+  busy: { get: () => busy, set: v => { setBusy(v); }, enumerable: true },   // let
   forceWelcome: { get: () => forceWelcome, set: v => { forceWelcome = v; }, enumerable: true },   // let
   lastEdit: { get: () => lastEdit, set: v => { lastEdit = v; }, enumerable: true },   // let
   lastQuack: { get: () => lastQuack, set: v => { lastQuack = v; }, enumerable: true },   // let
@@ -690,6 +690,17 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
 /* == §problem-state == */
 /* ================= problem state ================= */
 let busy = false;    // a grading request is out (MC and typed answers)
+/* the wait is shown (Tony, Nov 17: "no animation denoting it is waiting"): html.grading while a request is out, 150 ms late so an
+   on-device grade (instant) never flashes it. app.css "grading wait" dims the Check button and spins a ring in it. One place: setBusy. */
+let busyT = 0, busyRow = null;
+function setBusy(v, row) {   // row: a multi-part item's own part (only its Check spins, not every part's)
+  busy = v; clearTimeout(busyT); busyT = 0;
+  const H = document.documentElement;
+  if (busyRow) busyRow.classList.remove("g-on");
+  busyRow = v && row ? row : null;
+  if (busyRow) busyRow.classList.add("g-on");
+  if (v) busyT = setTimeout(() => H.classList.add("grading"), 150); else H.classList.remove("grading");
+}
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
 /* one problem source: the open bank already holds every question (the same public view the server sends), so it answers at
    once; p/CODE.json still goes out in the background (the server's resume pointer for this browser). Else the network
@@ -1441,9 +1452,9 @@ async function submitMC() {
   if (all(S.prob)) return submitAll();
   const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished || busy) return;
   const c = S.prob.choices.find(x => x.id === S.selected), mine = S;
-  busy = true; waitSubmitted();
+  setBusy(true); waitSubmitted();
   let r;
-  try { r = await check(S.code, { choice: c.id }); } finally { busy = false; }
+  try { r = await check(S.code, { choice: c.id }); } finally { setBusy(false); }
   if (S !== mine) return;                                   // another problem opened meanwhile
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
@@ -1466,9 +1477,9 @@ async function submitAll() {
   waitSubmitted();
   const mine = S, c = on.map(o => o.dataset.id), xs = S.prob.fix ? opts().filter(o => markOf(o) === "x" && fixOf(o)) : [];
   const f = Object.fromEntries(xs.map(o => [o.dataset.id, fixOf(o).querySelector("input").value.trim()]));
-  busy = true;
+  setBusy(true);
   let r;
-  try { r = await check(S.code, { choices: c, ...(S.prob.fix ? { fixes: f } : {}) }); } finally { busy = false; }
+  try { r = await check(S.code, { choices: c, ...(S.prob.fix ? { fixes: f } : {}) }); } finally { setBusy(false); }
   if (S !== mine) return;
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the ticks stay, retry resends them
   const tick = c.map(id => S.prob.choices.find(x => x.id === id).md);
@@ -1619,7 +1630,7 @@ async function xDiag(r, text, i) {                                         // a 
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
   if (vals.some(v => !v) || S.finished || busy || waiting()) return;
-  busy = true; waitSubmitted();
+  setBusy(true); waitSubmitted();
   const t = vals.join(" , ");
   vmark($("#ff"), null);   // a new verdict replaces the old mark, never stacks on it
   try {
@@ -1635,7 +1646,7 @@ async function submitFF() {
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
     feedback(r, t);
-  } finally { busy = false; }
+  } finally { setBusy(false); }
 }
 
 /* ---------- proof (W107): a textarea (Enter = a new line, no new key handler), Check sends it to Cluck's grader ---------- */
@@ -1668,7 +1679,7 @@ function rubricChips(g) {
 async function submitProof() {
   const inp = $("#ans"), v = inp ? inp.value : "";
   if (!v.trim() || S.finished || busy) return;
-  busy = true;
+  setBusy(true);
   try {
     const mine = S, host = () => (S === mine ? $("#stgp") : null), st = Stages.make({ host, cap: PROOF_TIMEOUT / 1000 });   // stages.js: the Check's real steps, live
     const h0 = host(); if (h0) h0.innerHTML = h0._stg = "";
@@ -1682,7 +1693,7 @@ async function submitProof() {
     if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your answer here first (up to ${PROOF_MAX} letters).</span></p>`; bridge.layoutFreeze(); return; }
     feedback(r, "");
     if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
-  } finally { busy = false; }
+  } finally { setBusy(false); }
 }
 /* the grader could not answer (no key, the hourly cap, a failure, an uploaded file): one wait line, with the S- code when there is one */
 function proofWait(r) {
@@ -1735,7 +1746,7 @@ function partFeedback(i, r, typed) {
 async function submitPart(i) {
   const { inp, hint } = partEls(i), v = inp.value.trim();
   if (!v || S.parts[i].shut || S.finished || busy) return;
-  busy = true;
+  setBusy(true, partEls(i).row);
   try {
     const mine = S, r = await check(S.code, { part: i, answer: v });
     if (S !== mine) return;
@@ -1751,7 +1762,7 @@ async function submitPart(i) {
     if (mine.parts.every(x => x.shut)) { settle(); bridge.rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && [document.body, inp].includes(document.activeElement)) partEls(nxt).inp.focus(); }   // inp: Chromium 153 keeps focus on the just-disabled box until the next frame, 141 blurred at once (W100)
     bridge.layoutFreeze();
-  } finally { busy = false; }
+  } finally { setBusy(false); }
 }
 /* every part right or locked: the problem is finished. It counts as correct only if every part is right. */
 function settle() {
