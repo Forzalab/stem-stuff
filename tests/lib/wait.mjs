@@ -13,7 +13,7 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
       return a.playState === "running" && a.effect?.getTiming().iterations !== Infinity && Number.isFinite(end) && !((a.currentTime ?? 0) >= end); });
   }, sel, { timeout }).catch(async e => {
     const left = await page.evaluate(s => (s ? [...document.querySelectorAll(s)].flatMap(x => x.getAnimations({ subtree: true })) : document.getAnimations())
-      .filter(a => a.playState === "running").map(a => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"} it=${a.effect?.getTiming().iterations} end=${ti.endTime}`; }).slice(0, 8), sel).catch(() => []);
+      .filter(a => a.playState === "running").map(a => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"}${a.effect?.pseudoElement || ""} it=${a.effect?.getTiming().iterations} end=${ti.endTime} t=${a.currentTime == null ? "null" : Math.round(a.currentTime)} ps=${a.playState} rm=${matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0}`; }).slice(0, 8), sel).catch(() => []);
     throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]}) running: ${JSON.stringify(left)}`); });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
