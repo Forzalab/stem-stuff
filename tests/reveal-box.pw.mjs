@@ -12,6 +12,7 @@ import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -47,7 +48,8 @@ async function pageFor(browser, W, H) {
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_RRN", null, { timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector("#qnav").hidden, null, { timeout: 6000 });
-  await page.waitForTimeout(400);
+  await page.waitForFunction(() => document.fonts.status === "loaded", null, { timeout: 5000 });   // the webfonts place the field and the card (the rects below are compared)
+  await settled(page, "#q");   // the first question is placed (its entrance animations are over, two frames painted)
   return page;
 }
 const R = `(e => e && (({ left, top, right, bottom, width, height }) => ({ left, top, right, bottom, width, height }))(e.getBoundingClientRect()))`;
@@ -60,14 +62,15 @@ for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "
   const page = await pageFor(browser, W, H);
   const go = async v => { await skipRetryWait(page); await page.fill("#ans", v); await page.evaluate(() => document.querySelector("#ansGo").click()); };
   // "before" = the state the closing Check is pressed in (out: after the first wrong try; its pips row is the tries' own, older, design)
-  if (outcome === "out") { await go("1"); await page.waitForSelector("#ff.bad"); await page.waitForTimeout(900); }
+  if (outcome === "out") { await go("1"); await page.waitForSelector("#ff.bad"); await page.waitForSelector("#q .vdrawer", { state: "attached", timeout: 5000 }); await settled(page, "#q .vdrawer"); }   // the miss is drawn and its drawer's slide is over (the 10 s retry sweep is the bar's background, outside this box)
   await page.fill("#ans", outcome === "right" ? "3.03" : "2");
   const before = await pos(page);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/before-${outcome}-${W}.png` });
   await go(outcome === "right" ? "3.03" : "2");
   await page.waitForSelector("#q .nx", { timeout: 5000 });
   await page.waitForSelector(".cue-chip", { timeout: 5000 });
-  await page.waitForTimeout(1500);
+  await page.waitForSelector("#q .vdrawer", { state: "attached", timeout: 5000 });
+  await settled(page, "#q .vdrawer");   // the verdict is drawn and its drawer's slide is over: the rects below are final
   const after = await pos(page);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${outcome === "right" ? "correct" : "wrong"}-${W}.png` });
   await step(`${T}: nothing jumps (Next where Check was, field and card too)`, async () => {
