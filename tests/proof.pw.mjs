@@ -59,7 +59,7 @@ async function prove(page, text) {
   await page.waitForFunction(n => window.__drill.state.tries.length > n || document.querySelector("#fb .verdict.wait"), n, { timeout: 6000 });
   await settled(page);                                                           // the verdict line, its chips and the drawer have drawn
 }
-const chips = page => page.$$eval("#rubric .rb", xs => xs.map(x => x.dataset.v));
+const chips = page => page.$$eval("#rubric [data-v]", xs => xs.map(x => x.dataset.v));
 const GOOD = "Base case: n = 1, both sides are 2.\nAssume it for k.\nAdd 3k+2 and factor: (k+1)(3k+4)/2.";
 
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });

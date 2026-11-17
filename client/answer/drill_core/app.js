@@ -1641,7 +1641,7 @@ async function submitFF() {
 
 /* ---------- proof (W107): a textarea (Enter = a new line, no new key handler), Check sends it to Cluck's grader ---------- */
 const PROOF_MAX = 3000;                                    // serve.py PROOF_MAX
-const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // the one verdict chip (Nov 8: no rubric rows)
+const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // verdict text, sr-only (ui-v7: no visible chip; Nov 8: no rubric rows)
 function wireProof() {
   const inp = $("#ans"), go = $("#ansGo");
   inp.addEventListener("input", () => {
@@ -1663,8 +1663,8 @@ function proofLen(v) {
 function rubricChips(g) {
   const el = $("#rubric"); if (!el) return;
   el.hidden = !g;
-  const [ic, w] = PROOF_V[g] || PROOF_V.wrong;
-  el.innerHTML = g ? `<span class="rb ${esc(g)}" data-v="${esc(g)}">${icon(ic)}<span>${w}</span></span>` : "";
+  const [, w] = PROOF_V[g] || PROOF_V.wrong;
+  el.innerHTML = g ? `<span class="sr-only" data-v="${esc(g)}">${w}</span>` : "";
 }
 async function submitProof() {
   const inp = $("#ans"), v = inp ? inp.value : "";

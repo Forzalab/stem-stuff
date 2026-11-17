@@ -22,3 +22,4 @@
 @media (pointer: coarse) { .stg-sum { min-height: 44px; } }   /* a finger needs 44; a mouse does not, and the desktop sheet is short */
 @keyframes stg-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .stg-r.run .stg-ic { animation: none; } .stg-chev { transition: none; } }
+@media (max-width: 480px) { .stg-sum { display: none; } }   /* ui-v7: no "Thought for Ns" line on the phone */
