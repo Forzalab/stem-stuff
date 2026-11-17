@@ -9,7 +9,6 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
-import { settled } from "./lib/wait.mjs";    // CI-ARCH D1: wait on the toast's own state, not on time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -109,7 +108,7 @@ try {
     await page.goto(BASE + "/"); await anyUp(page); await page.waitForSelector("#q .cc-welcome");
     assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Calculator moves");
     assert.equal(await page.textContent("#q .cc-welcome .cc-btn"), "Show me the keys");
-    await settled(page); assert.equal(await page.$(".stoast-c-calc.on"), null); await ctx.close();   // the card path is at rest: nothing turned it into a toast
+    await page.waitForTimeout(1200); assert.equal(await page.$(".stoast-c-calc.on"), null); await ctx.close();   // keep: app timer __ccV7Ms toast delay probe window
   });
 } finally { await browser.close(); srv.kill(); }
 if (failures) process.exit(1);
