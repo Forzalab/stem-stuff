@@ -1899,3 +1899,6 @@ html.ui-v7.proof-split.pad-off #stage > #work { margin-top: 0; }
 html.ui-v7.proof-split #freeze { padding-bottom: 0; }   /* measured: card -> proof column was 32 px = Q-GAP 20 + #freeze padding-bottom 12 (page-coloured; a -12 px pull slid the hint UNDER it and clipped its first line) */
 /* PROGBAR P6 (PORT-ARCH §D2; Tony Nov 17 "those 2 brown chips should not exist anymore"): the old reward HUD (coin + count chips) is off under ui-v7; the notch bar replaced it */
 html.ui-v7 #rwHud { display: none !important; }
+/* STARTER-NOFRAME (Tony Nov 17, desk: "it looks like it has border"): v7 drops the starter chips' frame, like the Ask Cluck link; the soft help fill marks the tap */
+html.ui-v7 .cl-starter { border-color: transparent; }
+html.ui-v7 .cl-starter:hover { border-color: transparent; background: color-mix(in srgb, var(--help) 22%, transparent); }
