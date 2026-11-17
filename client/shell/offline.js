@@ -137,7 +137,9 @@
     let busy = false;
     for (const t of ["pointerdown", "keydown"]) addEventListener(t, () => { busy = true; }, { capture: true, passive: true });
     const check = () => { if (reg) reg.then(r => r && r.update()).catch(() => {}); };
-    addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { busy = false; check(); } });
+    /* coming back to the tab clears "busy", but never over a typed-but-unsent answer (.ans keeps no draft: a reload would eat it) */
+    const drafting = () => { try { return [...document.querySelectorAll(".ans")].some(e => e.value && e.value.trim()); } catch (x) { return false; } };
+    addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { if (!drafting()) busy = false; check(); } });
     setInterval(() => { if (document.visibilityState === "visible") check(); }, 15 * 60 * 1000);
     const bar = () => {
       if (document.getElementById("updateBar")) return;

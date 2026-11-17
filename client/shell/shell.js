@@ -320,6 +320,15 @@ function autosave(ta) {
 }
 addEventListener("pagehide", () => autosave.flush && autosave.flush());
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && autosave.flush) autosave.flush(); });
+/* RE-ENTRY GUARD (Tony Nov 17: coming back to the tab, a stray tap landed on Check and spent a try): for 1.5 s after the tab is shown again (visibilitychange only; a bfcache pageshow keeps buttons live, reload.pw "(b)"), taps on the
+   answer controls (Check / send arrows, MC choices, the code box Go) are swallowed; html.reentry dims them so the pause reads as intended */
+let reentryT = 0;
+const reentry = () => { clearTimeout(reentryT); document.documentElement.classList.add("reentry"); reentryT = setTimeout(() => document.documentElement.classList.remove("reentry"), 1500); };
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reentry(); });
+for (const t of ["pointerdown", "click"]) document.addEventListener(t, e => {
+  if (!document.documentElement.classList.contains("reentry")) return;
+  if (e.target.closest?.("#q .send, #q .btn-go, #q .opt, #q .nx, #codeGo")) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
   /* plain-http LAN (serve.py): no async clipboard, use a hidden textarea */
