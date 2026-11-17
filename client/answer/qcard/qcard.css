@@ -213,7 +213,7 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn { font-family: var(--qfont); }
 /* GHOST-LIQUID (Tony Nov 16 "a liquid blur on top of the ghost number, mind CPU"): ONE static filter on the echo layer (not backdrop-filter, which re-runs every scroll
    frame, and not one filter per copy: 5 passes). The blurred layer is drawn once and moved as a texture; saturate keeps the blur from going grey. contain: paint keeps
    its repaint area to the ghost box. The front numeral (desktop card) stays sharp. */
-html.ui-v7 #problem.qc7.qbr .qghost { filter: blur(3.5px) saturate(1.2); contain: paint; }
+html.ui-v7 #problem.qc7.qbr .qghost { filter: none; }   /* GHOST-FLAT (Nov 17 "funky blocky gradient"): the blur+saturate of GHOST-LIQUID smeared the six offset copies into muddy dark blobs; the numeral renders flat now, the radial mask above is the only fade */
 @media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7.qbr .qghost { filter: none; } }
 /* PHONE-TOP-AIR (Tony Nov 16 "on phone, top margin add more, it looks too cramped"): the kicker row sat 24 px under the card's top edge, the same as the side insets;
    the top gets 32 px (desktop's --qpad), sides and bottom stay 24. The ghost and the fold read --qpad, so they keep their own geometry. */
