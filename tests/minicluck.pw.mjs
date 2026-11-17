@@ -26,6 +26,8 @@ try {
   await page.goto(BASE + "/client/labs/mini-lab.html?live");
   const mini = () => page.$$eval(".ai-box .pop.mini", ps => ps.length);
   const at = sel => page.$eval(sel, el => { const b = el.getBoundingClientRect(), t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return el.contains(t) ? "clear" : t.className; });
+  /* a bounded wait on what the fake /mini recorded (50 ms steps), never a fixed sleep */
+  const until = async (get, tries = 60) => { for (let i = 0; i < tries; i++) { const v = get(); if (v) return v; await new Promise(r => setTimeout(r, 50)); } return null; };
 
   await step("open: a tiny Cluck on the step, the page dims, the stem and the student's work stay clear", async () => {
     assert.equal(await mini(), 0, "lazy");
@@ -52,7 +54,7 @@ try {
   await step("the type-in box sends what the student typed", async () => {
     await page.fill(".pop.mini .mini-in", "it pushes back?");
     await page.press(".pop.mini .mini-in", "Enter");
-    for (let i = 0; i < 40 && sent.length < 2; i++) await page.waitForTimeout(50);
+    await until(() => sent.length >= 2);   // the page's own POST /mini (route-recorded)
     assert.equal(sent.at(-1).text, "it pushes back?");
     assert.equal(await mini(), 1, "still open");
   });

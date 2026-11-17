@@ -28,10 +28,10 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
     await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P"); await pad(page);
     await page.fill("#scratch", "x = 9");
     const t0 = Date.now();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2000);                                          // keep: app timer autosave delay (3 s) still quiet
     assert.equal((await status(page)).t, "", "quiet while typing");
     await page.type("#scratch", "!");                                // an edit restarts the 3 s
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(2500);                                          // keep: app timer autosave delay restarted by the edit
     assert.equal((await status(page)).t, "", "restarted by the edit");
     await page.waitForFunction(() => document.querySelector("#xbSave").textContent === "saving", null, { timeout: 2000 });
     const s = await status(page);
@@ -54,7 +54,7 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
     await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B"); await pad(page);
     assert.equal(await page.inputValue("#scratch"), "limit is 12");
     await page.fill("#scratch", "");                                          // emptied: the draft goes
-    await page.waitForTimeout(3300);
+    await page.waitForTimeout(3300);                                          // keep: app timer autosave delay (draft cleared)
     assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(k => k.endsWith(":CALC1_T6B")).length), 0);
   });
   await ctx.close();

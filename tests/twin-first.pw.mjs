@@ -45,7 +45,7 @@ async function next(page) {
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c && !document.querySelector("#freeze").hidden, was, { timeout: 4000 });
 }
 async function answer(page, c, ok) {                               // a graded first try (a wrong one under 2 s is spam = a skip, nav.js)
-  if (!ok) await page.waitForTimeout(2300);
+  if (!ok) await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });   // past nav.js SPAM_MS (2 s): a graded miss, not a spam skip
   await page.fill("#ans", ok ? ANS[c] : "999"); await page.click("#ansGo");
   await page.waitForFunction(() => window.stemQueue.state().seen[document.querySelector("#pcode").textContent]?.first, null, { timeout: 4000 });
 }

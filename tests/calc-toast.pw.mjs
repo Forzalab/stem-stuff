@@ -64,11 +64,12 @@ try {
       return { text: e.querySelector(".stoast-t").textContent, border: cs.borderTopWidth, radius: cs.borderTopLeftRadius, h: b.getBoundingClientRect().height, x: e.querySelector(".stoast-x").getBoundingClientRect().width, role: e.querySelector(".stoast-b").getAttribute("role"), bw: getComputedStyle(b).borderTopWidth, label: b.textContent }; });
     assert.equal(t.text, "Calculator moves: solve in one go, store a number."); assert.equal(t.border, "0px"); assert.equal(t.radius, "16px");
     assert.ok(t.h >= 44 && t.x >= 44 && t.role === null && t.bw === "0px" && t.label === "Show keys", JSON.stringify(t));
-    await page.waitForTimeout(2500); await page.screenshot({ path: join(SHOTS, "calc-toast-btn-390.png") });
+    await page.waitForFunction(() => document.querySelector(".stoast-c-calc")?.dataset.done === "1", null, { timeout: 5000 });   // the toast has landed (its count/fit ran): a stable shot and a live button
+    await page.screenshot({ path: join(SHOTS, "calc-toast-btn-390.png") });
     await page.focus(".stoast-c-calc .stoast-a"); await page.keyboard.press("Enter");
     await page.waitForSelector(".cc-ov .cc-deck"); assert.equal(await page.$(".cpick[role=dialog]"), null, "keys, not the picker");
     await page.keyboard.press("Escape");
-    await page.reload(); await anyUp(page); await page.waitForTimeout(1500);
+    await page.reload(); await anyUp(page); await page.waitForTimeout(1500);   // keep: app timer __ccV7Ms 1500 ms toast delay (the once-a-day toast must not come back)
     assert.equal(await page.$(".stoast-c-calc.on"), null, "once per day");
     assert.deepEqual(errs, []); await ctx.close();
   });
@@ -80,14 +81,14 @@ try {
     await ctx.close();
     const b = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER);
     await b.page.goto(BASE + "/"); await anyUp(b.page); await b.page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 });
-    await b.page.click(".stoast-c-calc .stoast-x"); await b.page.waitForTimeout(600);
-    assert.equal(await b.page.$(".stoast.on"), null); await b.page.reload(); await anyUp(b.page); await b.page.waitForTimeout(1500);
+    await b.page.click(".stoast-c-calc .stoast-x"); await b.page.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 5000 });   // the X took it down
+    assert.equal(await b.page.$(".stoast.on"), null); await b.page.reload(); await anyUp(b.page); await b.page.waitForTimeout(1500);   // keep: app timer __ccV7Ms 1500 ms toast delay (dismissed stays dismissed)
     assert.equal(await b.page.$(".stoast-c-calc.on"), null, "dismissed stays dismissed"); await b.ctx.close();
   });
   for (const [w, h] of [[390, 844], [360, 640], [1366, 768]]) await step(`toast never covers the question card, ladder or answer controls (${w}x${h})`, async () => {
     const { ctx, page } = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER, { viewport: { width: w, height: h } });
     await page.goto(BASE + "/"); await anyUp(page);
-    await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 }); await page.waitForTimeout(2500);
+    await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 }); await page.waitForFunction(() => document.querySelector(".stoast-c-calc")?.dataset.done === "1", null, { timeout: 5000 });   // landed: the rects below are its final place
     const hit = await page.evaluate(() => {
       const t = document.querySelector(".stoast-c-calc").getBoundingClientRect();
       return [...document.querySelectorAll("#problem, #q .wl-stem, #q .wl-ladder, #q button, #q input, #q .opt, #fb")].filter(e => e.getClientRects().length && (e.id !== "fb" || e.textContent.trim()))
@@ -99,7 +100,7 @@ try {
   await step("desktop 1366 shot", async () => {
     const { ctx, page } = await fresh({ ...V7, "stem-calc-model": "ti-36x-pro" }, AFTER, { viewport: { width: 1366, height: 768 } });
     await page.goto(BASE + "/"); await anyUp(page);
-    await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 }); await page.waitForTimeout(400);
+    await page.waitForSelector(".stoast.on.stoast-c-calc", { timeout: 12000 }); await page.waitForFunction(() => document.querySelector(".stoast-c-calc")?.dataset.done === "1", null, { timeout: 5000 });   // the toast has landed: a stable shot
     await page.screenshot({ path: join(SHOTS, "calc-toast-btn-1366.png") }); await ctx.close();
   });
   await step("flag off: the card is unchanged, no toast", async () => {
@@ -107,7 +108,7 @@ try {
     await page.goto(BASE + "/"); await anyUp(page); await page.waitForSelector("#q .cc-welcome");
     assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Calculator moves");
     assert.equal(await page.textContent("#q .cc-welcome .cc-btn"), "Show me the keys");
-    await page.waitForTimeout(1200); assert.equal(await page.$(".stoast-c-calc.on"), null); await ctx.close();
+    await page.waitForTimeout(1200); assert.equal(await page.$(".stoast-c-calc.on"), null); await ctx.close();   // keep: app timer __ccV7Ms toast delay probe window
   });
 } finally { await browser.close(); srv.kill(); }
 if (failures) process.exit(1);

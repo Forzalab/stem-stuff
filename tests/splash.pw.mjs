@@ -127,7 +127,7 @@ await step("pageshow persisted: no splash (while loading, and after)", async () 
   const c2 = await fresh(), p2 = await c2.newPage();
   await p2.goto(BASE + "/", { waitUntil: "load" }); await gone(p2, 4000);
   await p2.evaluate(() => dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
-  await p2.waitForTimeout(100);
+  await p2.waitForSelector("#splash", { state: "detached", timeout: 3000 }).catch(() => {});   // the pageshow handler removes it; the assert below is the judge
   assert.equal(await p2.locator("#splash").count(), 0);
   await c2.close();
 });

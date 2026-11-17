@@ -9,6 +9,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -56,7 +57,7 @@ await step("a still tap on the question text is a dead_tap (travel_px 0); a 40 p
   assert.ok(box, "a dead-tap target is on the page");
   const fire = (type, x, y) => page.evaluate(([type, x, y]) => document.elementFromPoint(x, y).dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "touch" })), [type, x, y]);
   await fire("pointerdown", box.x, box.y); await fire("pointermove", box.x, box.y + 40); await fire("pointerup", box.x, box.y + 40);
-  await page.waitForTimeout(300);
+  await settled(page, "#q");                             // dead_tap is sent from the pointerup handler; two frames let a stray one land
   assert.equal((await evs("dead_tap")).length, 0, "a scroll-like move is no dead_tap");
   await fire("pointerdown", box.x, box.y); await fire("pointerup", box.x, box.y);
   await wait("dead_tap");

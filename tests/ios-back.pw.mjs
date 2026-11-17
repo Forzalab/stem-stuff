@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the page's own animations, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -169,11 +170,11 @@ try {
   /* screenshots for Tony: dpr 2, iPhone UA, 390x844 */
   if (SHOTS) {
     const { ctx, page } = await phone({ dpr: 2 });
-    await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]); await page.waitForTimeout(500);
+    await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]); await settled(page);
     await page.screenshot({ path: `${SHOTS}/back-root.png` });
-    await nextOf(page); await page.waitForTimeout(500);
+    await nextOf(page); await settled(page);
     await page.screenshot({ path: `${SHOTS}/back-visible.png` });
-    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])"); await page.waitForTimeout(600);
+    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])"); await settled(page);
     await page.screenshot({ path: `${SHOTS}/back-list.png` });
     await ctx.close();
   }
@@ -181,7 +182,7 @@ try {
   await step("Android UA: Back is never shown", async () => {
     const { ctx, page } = await phone({ ua: ANDROID });
     await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]);
-    await page.click("#qnext"); await page.waitForTimeout(800);
+    const was = await pcode(page); await page.click("#qnext"); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent && document.querySelector("#pcode").textContent !== c, was, { timeout: 8000 });
     assert.equal(await backShown(page), false);
     await ctx.close();
   });
@@ -233,7 +234,7 @@ try {
     await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]);
     await nextOf(page); await waitBack(page, true, "DNT depth 1");
     await page.tap("#qback"); await opened(page, CODES[0]);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(500);   // keep: app timer the collector's deferred boot (posthog/clarity load on an idle callback / 1.2 s fallback; DNT must load neither)
     assert.equal(await page.evaluate(() => !!window.posthog || !!window.clarity), false, "a collector library loaded under DNT");
     assert.deepEqual(hits, []);
     await ctx.close();

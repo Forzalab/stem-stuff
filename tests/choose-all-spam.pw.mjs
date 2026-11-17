@@ -44,13 +44,14 @@ async function rig(ctx) {
   page.on("response", async res => { if (res.url().endsWith("/check")) { try { got.push(await res.json()); } catch { /* aborted */ } } });
   return { page, sent, got };
 }
-/* n taps on Check inside one task (faster than any finger), then a dblclick and Enter while the request is out */
-async function burst(page, touch, n = 6) {
+/* n taps on Check inside one task (faster than any finger), then a dblclick and Enter while the request is out.
+   wantTries: the try this burst must record (a finished problem records none) — the wait is on the app's own record, not a timer. */
+async function burst(page, touch, wantTries, n = 6) {
   await page.evaluate(k => { const b = document.querySelector("#mcGo"); for (let i = 0; i < k; i++) b.click(); }, n);
   if (touch) await page.locator("#mcGo").tap({ force: true, timeout: 500 }).catch(() => {});
   else await page.locator("#mcGo").dblclick({ force: true, timeout: 500 }).catch(() => {});
   await page.keyboard.press("Enter").catch(() => {});
-  await page.waitForTimeout(DELAY + 600);                       // the held request lands, the UI settles
+  await page.waitForFunction(k => window.__drill.state.tries.length >= k, wantTries, { timeout: 8000 });   // the held request landed: one try recorded
 }
 
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
@@ -64,7 +65,7 @@ try {
     await page.goto(`${BASE}/#CSCI26_A7K`); await opened(page, "CSCI26_A7K");
     await step(`${name}: wrong set spammed = one request, one try, one strike`, async () => {
       for (const id of ["a", "b", "d"]) await tapOn(page, id);
-      await burst(page, touch);
+      await burst(page, touch, 1);
       const s = await st(page);
       assert.equal(sent.length, 1, `requests sent: ${sent.length}`);
       assert.deepEqual([got.at(-1).verdict, got.at(-1).triesLeft], ["wrong", 1]);
@@ -73,14 +74,16 @@ try {
     });
     await step(`${name}: second set spammed = one more request, then closed`, async () => {
       await skipRetryWait(page);                       // past the second try's 10 s wait
-      await burst(page, touch);                                  // ticks a + d stay: a new set (a subset of right = miss)
+      await burst(page, touch, 2);                                  // ticks a + d stay: a new set (a subset of right = miss)
       const s = await st(page);
       assert.equal(sent.length, 2, `requests sent: ${sent.length}`); assert.equal(s.tries, 2); assert.equal(s.finished, true);
       assert.equal(got.filter(r => r.verdict !== "locked").length, 2, "no extra graded try");
     });
     await step(`${name}: finished: taps, Enter and a direct click send nothing`, async () => {
       await page.evaluate(() => document.querySelector("#mcGo")?.click());
-      await page.keyboard.press("Enter"); await page.waitForTimeout(DELAY + 300);
+      await page.keyboard.press("Enter");
+      /* a finished problem must send nothing: no request for a bounded window (there is no state to wait on for something that must not happen) */
+      await page.waitForRequest(r => /\/check$/.test(r.url()), { timeout: 1000 }).then(() => assert.fail("a finished problem sent a request"), () => {});
       assert.equal(sent.length, 2); assert.equal((await st(page)).tries, 2);
     });
     await ctx.close();
@@ -90,11 +93,12 @@ try {
     await page.goto(`${BASE}/#CSCI26_A7K`); await opened(page, "CSCI26_A7K");
     await step(`${name}: right set spammed = one request, correct, one try`, async () => {
       await tapOn(page, "c"); await tapOn(page, "a");
-      await burst(page, touch);
+      await burst(page, touch, 1);
       const s = await st(page);
       assert.equal(sent.length, 1); assert.equal(got[0].verdict, "correct"); assert.deepEqual(s.right, ["a", "c"]);
       assert.equal(s.tries, 1); assert.equal(s.finished, true);
-      await page.reload(); await opened(page, "CSCI26_A7K"); await page.waitForTimeout(300);
+      await page.reload(); await opened(page, "CSCI26_A7K");
+      await page.waitForFunction(() => document.querySelector('#q .opt.right[data-id="a"]') && document.querySelector('#q .opt.right[data-id="c"]') && window.__drill.state.tries.length === 1, null, { timeout: 5000 });
       const r = await st(page); assert.deepEqual(r.right, ["a", "c"]); assert.equal(r.tries, 1);
     });
     await ctx.close();

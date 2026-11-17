@@ -16,6 +16,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -57,7 +58,7 @@ const fake = createServer(async (req, res) => {
   res.writeHead(200, { "content-type": "text/event-stream" });
   const ev = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
   ev({ type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 1 } } });
-  for (const p of REPLIES[reply]) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }
+  for (const p of REPLIES[reply]) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }   // keep: fake Claude's chunk pace (the stream is meant to arrive in pieces)
   ev({ type: "message_delta", usage: { output_tokens: 50 } }); ev({ type: "message_stop" }); res.end();
 });
 await new Promise(r => fake.listen(0, "127.0.0.1", r));
@@ -90,7 +91,7 @@ async function wish(which, w, h) {
   await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 8000 });
   if (!(await page.locator("#cluck .wtext").count())) await page.click(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta");
   await page.waitForFunction(() => /once more/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
-  await page.waitForTimeout(400);                                      // views.js is imported lazily
+  await settled(page, "#cluck");                                      // views.js is imported lazily; the reply's draw settles
   return page;
 }
 const noRaw = async page => assert.doesNotMatch(await page.evaluate(() => document.querySelector("#cluck .wtext").textContent), /```|Geometry\(|Table\(|root =/);

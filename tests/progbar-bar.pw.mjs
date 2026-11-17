@@ -171,7 +171,8 @@ try {
     await q.waitForSelector("#pbTile", { timeout: 8000 });
     assert.equal(await q.evaluate(() => localStorage.getItem("stem-ui")), "v7");
     await q.goto(BASE + "/#BANK_PB1"); await q.waitForSelector("#pbTile", { timeout: 8000 });                      // remembered
-    await q.goto(BASE + "/?ui=off#BANK_PB1"); await q.waitForSelector("#qnav", { state: "attached" }); await q.waitForTimeout(400);
+    await q.goto(BASE + "/?ui=off#BANK_PB1"); await q.waitForSelector("#qnav", { state: "attached" });
+    await q.waitForFunction(() => !document.documentElement.classList.contains("ui-v7") && !document.querySelector("#pbTile"), null, { timeout: 5000 });   // the exact state the assert reads
     assert.equal(await q.evaluate(() => [document.documentElement.classList.contains("ui-v7"), !!document.querySelector("#pbTile")]).then(a => a.join()), "false,false");
     await c2.close();
   });
