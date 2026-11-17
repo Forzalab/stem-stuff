@@ -1932,10 +1932,15 @@ function retryTag() {
   const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
   const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
   const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
-  t.hidden = !k;
-  t.className = "qtag rtag" + (k ? " rt-" + k : "");
-  t.innerHTML = k ? `${icon(RTAG[k][1])}<span>${RTAG[k][0]}</span>` : "";
+  t.hidden = true;   // RTAG-TOAST (Tony, Nov 16): no chip on the card; the state lands as a toast, once per question + state
+  t.className = "qtag rtag";
+  t.innerHTML = "";
+  const key = k && S.code + ":" + k;
+  if (!k || key === rtagLast) return;
+  rtagLast = key;
+  window.stemToast?.show({ text: RTAG[k][0], row: true, duck: k === "won" || k === "kept" ? "landmark" : "twist", at: () => $("#q"), until: Date.now() + 15000 });
 }
+let rtagLast = null;
 /* W104 Sleeping guard (MC only): a closed item says so in a row under the choices, three cues so colour never carries it: the lock, the words,
    Cluck napping on it. A Redeem closed right wakes him instead: the feather burst plays on the live moment only (a revisit is still, and
    reduced motion never gets one). Kind copy; no clock (nothing on the page knows when it comes back). */

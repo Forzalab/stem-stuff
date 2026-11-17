@@ -171,7 +171,7 @@
       var mo = new MutationObserver(function () { if (cur !== o) { mo.disconnect(); return; } if (!place() || yields()) hide(true); });
       d.querySelectorAll(o.clear).forEach(function (c) { mo.observe(c, { childList: true, subtree: true, characterData: true }); });
     }
-    arm(o.row && el.classList.contains('stoast-v7') ? Math.max(100, 100 * (el.querySelector('.stoast-t').textContent + (el.querySelector('.stoast-s').hidden ? '' : el.querySelector('.stoast-s').textContent)).length) : (o.ms || 4000));   // PHONE-TOAST-FLOAT: a ui-v7 row toast lives 100 ms per character of its words (title + sub); the drain bar reads the same --life
+    arm(o.row && el.classList.contains('stoast-v7') ? Math.max(150, 150 * (el.querySelector('.stoast-t').textContent + (el.querySelector('.stoast-s').hidden ? '' : el.querySelector('.stoast-s').textContent)).length) : (o.ms || 4000));   // PHONE-TOAST-FLOAT: a ui-v7 row toast lives 150 ms per character (Tony, Nov 16) of its words (title + sub); the drain bar reads the same --life
     if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
   }
   /* the row toast (html.ui-v7 only, DUCK-V8-TOAST / TOAST-GAP): o.row + o.duck (a mood: start, landmark, twist, cram, miss, late) = the duck
