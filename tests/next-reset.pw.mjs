@@ -50,7 +50,7 @@ const look = page => page.evaluate(() => {
 });
 async function settle(page) {
   await page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 }).catch(() => {});
-  await page.waitForNetworkIdle({ idleTime: 400, timeout: 6000 }).catch(() => {});   // the /state sync of a reopened question has come back: no request in flight for 400 ms
+  await page.waitForTimeout(700);   // keep: the /state sync of a reopened question lands (no app event for it; Playwright networkidle does not re-arm after load)
   await settled(page, "#q");   // the card's own transitions are at rest
 }
 async function moved(page, from) {
