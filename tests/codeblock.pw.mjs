@@ -88,7 +88,7 @@ try {
     const m = await page.evaluate(measure);
     check(m.scrollW <= m.innerW, `${at} no sideways page scroll (${m.scrollW} <= ${m.innerW})`);
     check(m.lang === "C++" && m.label === "C++ code", `${at} the header shows the language (${m.lang})`);
-    check(m.lines === 9 && m.numbered, `${at} one numbered line per real line (${m.lines})`);
+    check(m.lines === 9 && (width <= 480 ? !m.numbered : m.numbered), `${at} one line per real line, numbered on desktop only (${m.lines})`);   // CB-PHONE: no gutter on phones
     check(/Atkinson Hyperlegible Mono/.test(m.font) && m.size === (width <= 480 ? "12px" : "16px") && m.weight === "400", `${at} --mono ${width <= 480 ? 12 : 16}px 400 (${m.size} ${m.weight})`);   // CB-PHONE-13 (Nov 16): 13px on phones
     check(m.pad > 0 && m.inset[0] === m.pad && m.inset[1] === m.pad && m.radius === "8px", `${at} a well inside the card's margin, 8px radius (${m.inset} pad ${m.pad} ${m.radius})`);
     check(m.longRows >= 2 && m.lefts.length === m.longRows, `${at} the long line wraps (${m.longRows} rows)`);
