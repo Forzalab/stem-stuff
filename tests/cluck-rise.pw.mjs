@@ -138,7 +138,7 @@ for (const [tag, vp] of VPS) {
     assert.equal(await page.isVisible("#cluck .cl-bar .cl-x"), true, "its X shows");
     assert.equal(await page.isHidden("#cluck .cl-x2"), true, "no corner X");
     await page.screenshot({ path: join(SHOTS, `b7-cluck-open-${tag}.png`) });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(500);                                     // keep: fake clock (a duplicate /explain must have its chance; no state marks a request that must NOT fire)
     assert.equal(asked, 1, "exactly one Cluck request: opening reuses the stream");
     assert.equal(page.ai, 1, "one /explain from the page");
     await page.click("#cluck .cl-bar .cl-x");
@@ -155,7 +155,7 @@ for (const [tag, vp] of VPS) {
     assert.equal(await up(page), true, "the duck rises");
     assert.equal(await cluckOpen(page), false, "Cluck stays closed");
     await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(600);                                     // keep: fake clock (a stray /explain must have its chance; no state marks its absence)
     assert.equal(asked, 0, "no Cluck request"); assert.equal(page.ai, 0, "no /explain");
     await page.click(".ck-peek");                                       // B3 PR-B1: the duck only dismisses; the chip asks (it did the same request as the duck, Oct 19 pick b)
     await page.clock.runFor(300);
@@ -167,7 +167,7 @@ for (const [tag, vp] of VPS) {
     await page.click("#cluck .wtext").catch(() => {});
     await page.clock.runFor(2000);
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000, polling: 100 });
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(400);                                     // keep: fake clock (a stray /explain must have its chance; no state marks its absence)
     assert.equal(asked, 1, "one request, on the tap"); assert.equal(page.ai, 1);
     await page.context().close();
   });
@@ -195,7 +195,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await page.clock.runFor(1500);                                        // Q3's rise timer has fired: real time may tick again (Cluck's typing below)
   await page.clock.resume();
   await page.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(800);                                       // keep: fake clock (a prefetch that must NOT fire needs its chance; no state marks its absence)
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
   assert.equal(await up(page), true, "Q3: the duck rises");
@@ -209,7 +209,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await page.click("#cluck .wtext").catch(() => {});
   await page.clock.runFor(2000);
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000, polling: 100 });
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(400);                                       // keep: fake clock (a stray /explain must have its chance; no state marks its absence)
   assert.equal(asked, 3, "Q3: exactly one request, on the duck's tap"); assert.equal(page.ai, 3);
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();
@@ -219,7 +219,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await go(p2, o2[1]); await go(p2, o2[2]);
   await pick(p2, "b");
   await p2.waitForFunction(() => /Explain my mistake|Ask Cluck/.test([...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.textContent).join(" ")), null, { timeout: 4000 });
-  await p2.waitForTimeout(600);
+  await p2.waitForTimeout(600);                                         // keep: fake clock (no prefetch must have its chance; no state marks its absence)
   assert.equal(asked, 0, "Q3 via the chip: nothing yet");
   await p2.click(":is(#wish, .rbox) .wchip");
   await p2.clock.runFor(300);
@@ -311,12 +311,12 @@ for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the d
 await step("1280: a right answer and diet ask Cluck nothing (desktop sugar: its box is open from load, diet has none)", async () => {
   const page = await open(DESK);
   await pick(page, "a");
-  await page.clock.runFor(1500); await page.waitForTimeout(600);
+  await page.clock.runFor(1500); await page.waitForTimeout(600);       // keep: fake clock (no /explain may fire on a right answer; no state marks its absence)
   assert.equal(page.ai, 0, "right: no /explain"); assert.equal(await cluckOpen(page), true);
   await page.context().close();
   const d = await open(DESK, { diet: true });
   await pick(d, "b");
-  await d.clock.runFor(1500); await d.waitForTimeout(600);
+  await d.clock.runFor(1500); await d.waitForTimeout(600);             // keep: fake clock (diet asks nothing; no state marks a request's absence)
   assert.equal(d.ai, 0, "diet: no /explain"); assert.equal(asked, 0); assert.equal(await cluckOpen(d), false);
   await d.context().close();
 });

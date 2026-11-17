@@ -15,6 +15,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -89,7 +90,7 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close
   }
   await page.evaluate(() => window.stemIdleTap());
   await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
-  await page.waitForTimeout(300);
+  await settled(page, "#cluck");
   return page;
 }
 const state = page => page.evaluate(() => {
@@ -127,7 +128,9 @@ const one = async (page, what) => { const c = await ctas(page); assert.ok(!(c.ho
 await step("E phone 360: open / close never show both", async () => {
   const page = await cluck({ width: 360, height: 740 }, { close: false });
   await one(page, "open");
-  await page.click("#cluck .cl-bar .cl-x"); await page.waitForTimeout(300);
+  await page.click("#cluck .cl-bar .cl-x");
+  await page.waitForFunction(() => !window.stemCluckOpen(), null, { timeout: 10000 });   // UIP5: the phone sheet leaves down on a rAF spring: wait for the close itself, not a fixed sleep
+  await settled(page, "#cluck");
   await one(page, "closed");
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();

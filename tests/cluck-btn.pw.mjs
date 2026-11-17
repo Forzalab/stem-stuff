@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -72,7 +73,7 @@ const geo = page => page.evaluate(() => {
     padR: parseFloat(getComputedStyle(p).paddingRight) || 0, padT: parseFloat(getComputedStyle(p).paddingTop) || 0,
     tb: (() => { const t = document.querySelector("#problem > .blocks > :is(.ptitle, .qhead):first-child"); if (!t) return null; const g = document.createRange(); g.selectNodeContents(t); const rs = [...g.getClientRects()]; return rs.length ? t.getBoundingClientRect().bottom : null; })() };
 });
-const open2 = async (w, code, flag = "v7") => { const p = await open(w, flag, "#" + code); await p.waitForSelector("#q", { timeout: 10000 }); await p.waitForTimeout(500); return p; };
+const open2 = async (w, code, flag = "v7") => { const p = await open(w, flag, "#" + code); await p.waitForSelector("#q", { timeout: 10000 }); await settled(p); return p; };
 const typeAnswer = async (page, v) => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
 const toastText = page => page.evaluate(() => { const t = document.getElementById("toast"); return t && t.classList.contains("on") ? t.textContent.trim() : ""; });
 const W = [390, 1366];
@@ -97,15 +98,16 @@ try {
   await step("1366: disabled: hover shows 'Cluck unlocks after your first try.'; a click does not open Cluck", async () => {
     const page = await open2(1366, "PHYS_FP2");
     try {
-      await page.hover("#cluckBtn"); await page.waitForTimeout(400);
+      await page.hover("#cluckBtn");
+      await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Cluck unlocks after your first try."; }, null, { timeout: 5000 });
       assert.equal(await toastText(page), "Cluck unlocks after your first try.");
-      await page.click("#cluckBtn", { force: true }); await page.waitForTimeout(300);
+      await page.click("#cluckBtn", { force: true }); await settled(page, "#cluckBtn");
       assert.equal(await page.evaluate(() => { const c = document.querySelector("#cluck"); return !!c && !c.hidden && c.getClientRects().length > 0 && !c.closest("[hidden]") && document.body.classList.contains("x") ; }), false);
     } finally { await page.context().close(); }
   });
   await step("390: disabled: a tap shows the note (phone)", async () => {
     const page = await open2(390, "PHYS_FP2");
-    try { await page.locator("#cluckBtn").tap({ force: true }); await page.waitForTimeout(400); assert.equal(await toastText(page), "Cluck unlocks after your first try."); } finally { await page.context().close(); }
+    try { await page.locator("#cluckBtn").tap({ force: true }); await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Cluck unlocks after your first try."; }, null, { timeout: 5000 }); assert.equal(await toastText(page), "Cluck unlocks after your first try."); } finally { await page.context().close(); }
   });
   await step("390: flag on: a wrong try unlocks it (fill sweeps in, 150-300 ms), the sheen plays, no chip / tray / slot duck anywhere; a press opens Cluck", async () => {
     const page = await open2(390, "PHYS_FP2");
@@ -140,21 +142,25 @@ try {
     try {
       await typeAnswer(page, "1.636");
       await page.waitForFunction(() => document.querySelector("#cluckBtn") && !document.querySelector("#cluckBtn").hasAttribute("aria-disabled"), null, { timeout: 8000 });
-      await page.waitForTimeout(1300);
+      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), false, "ends by itself");
-      await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await page.waitForTimeout(350);
+      await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6"));
+      await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), true, "Jev S6 sheen");
       assert.match(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage), /gradient/, "a band");
       assert.equal(await page.evaluate(() => /(?:90, 169, 255|0\.35|#5aa9ff)/i.test(getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage)), true, "tinted site blue --action, not white");
-      await page.waitForTimeout(1200);
-      await page.evaluate(() => window.stemCluckBtn.sheen("reply")); await page.waitForTimeout(400);
+      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
+      await page.evaluate(() => window.stemCluckBtn.sheen("reply"));
+      await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-shake"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-duck")).animationName; }), "cb-shake", "reply = duck head shake, chip still");
-      await page.waitForTimeout(1200);
-      await page.evaluate(() => window.stemCluckBtn.sheen("right")); await page.waitForTimeout(400);
+      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-shake"), null, { timeout: 8000 });
+      await page.evaluate(() => window.stemCluckBtn.sheen("right"));
+      await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-nod"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-duck")).animationName), "cb-nod", "right = duck nod");
-      await page.waitForTimeout(1200);
-      await page.emulateMedia({ reducedMotion: "reduce" }); await page.waitForTimeout(1200);
-      await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await page.waitForTimeout(400);
+      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-nod"), null, { timeout: 8000 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.waitForFunction(() => matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });
+      await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await settled(page, "#cluckBtn");
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), false, "reduced motion: none");
       const d = await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::before").transitionDuration);
       assert.equal(d.split(",")[0], "0s", "reduced motion: instant");
