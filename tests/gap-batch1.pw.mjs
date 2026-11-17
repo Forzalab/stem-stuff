@@ -29,8 +29,9 @@ async function step(name, fn) { try { await fn(); console.log("ok  ", name); } c
 async function open(path) {
   const c = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-ui", "v7"); } catch { /* blocked */ } });
-  const p = await c.newPage(); await p.goto(BASE + "/#BANK_FHT"); await p.waitForTimeout(2500);
-  if (path) { await p.goto(BASE + path); await p.waitForTimeout(3000); }
+  const p = await c.newPage(); await p.goto(BASE + "/#BANK_FHT");
+  await p.waitForFunction(() => /^PHYS_TC/.test(document.querySelector("#pcode")?.textContent || "") && !!document.querySelector("#blocks .md"), null, { timeout: 10000 });
+  if (path) { await p.goto(BASE + path); await p.waitForFunction(h => document.querySelector("#pcode")?.textContent === h.replace(/^#/, "") && !!document.querySelector("#blocks .md"), path, { timeout: 10000 }); }
   return { c, p };
 }
 const S = process.env.SHOT;

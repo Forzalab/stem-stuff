@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (animations ended + 2 frames), not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -53,7 +54,7 @@ async function open(flag, hash, w = 390, h = 844, dsf = 1, code = hash) {
     await p.waitForFunction(h => document.querySelector("#pcode")?.textContent === h, code, { timeout: 8000 });
   }
   await p.waitForSelector(hash.startsWith("PRF_") ? "#ans" : "#qnav:not([hidden])", { timeout: 10000 });
-  await p.waitForTimeout(400);
+  await settled(p);   // the card's styles are at rest before the computed-style reads
   return [c, p];
 }
 /* computed box-shadow / border of the first visible match */

@@ -2,6 +2,7 @@
 // Spec: the wait keeps its deadline across hide/show and across a page reload of the same tab (sessionStorage), never restarts to 10 s.
 //   STEM_TODAY=2026-10-23 python3 server/http_server/serve.py 8813 &   then   node tests/tab-countdown.pw.mjs http://localhost:8813
 import { launchBrowser } from "./pw-browser.mjs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (animations ended + 2 frames), not a fixed sleep
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -15,6 +16,8 @@ async function step(name, fn) {
 }
 const WRONG = { verdict: "wrong", triesLeft: 1 };
 const secs = page => page.$eval("#ansGo", e => { const m = /\((?:wait )?(\d+) s\)/.exec(e.getAttribute("aria-label") || ""); return m ? +m[1] : null; });
+/* wait until the countdown has ticked down to `n` s or less (the state `before` should read after 3 s of a 10 s wait) */
+const until = (page, n) => page.waitForFunction(m => { const r = /\((?:wait )?(\d+) s\)/.exec(document.querySelector("#ansGo")?.getAttribute("aria-label") || ""); return !!r && +r[1] <= m; }, n, { timeout: 9000 });
 const setVis = (page, v) => page.evaluate(v => {
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => v });
   Object.defineProperty(document, "hidden", { configurable: true, get: () => v !== "visible" });
@@ -39,10 +42,10 @@ await step("hide/show mid-wait keeps the remaining time (no restart to 10)", asy
   await open(page);
   await page.fill("#ans", "1"); await page.click("#ansGo");
   await page.waitForFunction(() => window.__drill.state.wait, null, { timeout: 5000 });
-  await page.waitForTimeout(3000);
+  await until(page, 7);
   const before = await secs(page);
-  await setVis(page, "hidden"); await page.waitForTimeout(2000); await setVis(page, "visible");
-  await page.waitForTimeout(300);
+  await setVis(page, "hidden"); await page.waitForTimeout(2000); await setVis(page, "visible");   // keep: app timer the 10 s countdown runs while the tab is hidden (the elapsed time under test)
+  await settled(page);
   const after = await secs(page);
   console.log("     remaining before hide:", before, "after return:", after);
   assert.ok(after !== null && after <= before, `countdown restarted: ${after} s left after return (was ${before})`);
@@ -54,11 +57,11 @@ await step("reload of the same tab mid-wait keeps the remaining time (no restart
   await open(page);
   await page.fill("#ans", "1"); await page.click("#ansGo");
   await page.waitForFunction(() => window.__drill.state.wait, null, { timeout: 5000 });
-  await page.waitForTimeout(3000);
+  await until(page, 7);
   const before = await secs(page);
   await page.reload();
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_T6B" && !document.querySelector("#freeze").hidden, null, { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await settled(page);
   const after = await secs(page);
   console.log("     remaining before reload:", before, "after reload:", after);
   assert.ok(after !== null && after <= before, `countdown restarted: ${after} s left after reload (was ${before})`);

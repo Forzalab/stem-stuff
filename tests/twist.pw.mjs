@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (animations ended + 2 frames), not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -109,11 +110,11 @@ try {
           seen: localStorage.getItem("stem-twist-seen") }; });
       assert.deepEqual(s, { a: ACT, btn: true, bar: "none", seen: "1" });
       const o = await overlaps(page); assert.deepEqual(o.out, [], JSON.stringify(o));
-      if (SHOTS && w !== 1440) { await page.waitForTimeout(300); await page.screenshot({ path: join(SHOTS, `twist-toast-${w}.png`) }); }
+      if (SHOTS && w !== 1440) { await settled(page, ".stoast.on"); await page.screenshot({ path: join(SHOTS, `twist-toast-${w}.png`) }); }
     });
     await step(`${w}: "What is that?" opens the chip's popover, the copy exact; the toast goes`, async () => {
       await page.click(".stoast.on .stoast-a");
-      await page.waitForSelector(".pop", { timeout: 3000 }); await page.waitForTimeout(400);   // its fade-in ends
+      await page.waitForSelector(".pop", { timeout: 3000 }); await settled(page, ".pop");   // its fade-in ends
       const s = await page.evaluate(() => { const p = document.querySelector(".pop"), c = document.querySelector("#twistChip");
         return { text: p.textContent, variant: p.dataset.variant, ctl: c.getAttribute("aria-controls") === p.id, exp: c.getAttribute("aria-expanded"),
           toast: [...document.querySelectorAll(".stoast.on .stoast-t")].some(t => t.textContent === "You found a twist."), under: p.getBoundingClientRect().top - c.getBoundingClientRect().bottom }; });
@@ -135,13 +136,13 @@ try {
     await step(`${w}: once per device: the next twist and a reload show no toast; the chip stays`, async () => {
       await go(page, "PHYS_W03");
       assert.equal(await page.locator("#blocks .ptitle .twist-chip").count(), 1);
-      await page.waitForTimeout(2500); assert.equal(await twistToastOn(page), false);
+      await page.waitForTimeout(2500); assert.equal(await twistToastOn(page), false);   // keep: app timer toast lifetime (the once-per-device toast must not show at all)
       await page.reload(); await opened(page, "PHYS_W03");
       assert.equal(await page.locator("#blocks .ptitle .twist-chip").count(), 1);
-      await page.waitForTimeout(2500); assert.equal(await twistToastOn(page), false);
+      await page.waitForTimeout(2500); assert.equal(await twistToastOn(page), false);   // keep: app timer toast lifetime (the once-per-device toast must not show at all)
     });
     await step(`${w}: the non-twist card is pixel-identical after a twist was open (nothing leaks)`, async () => {
-      await go(page, "PHYS_W02"); await page.waitForTimeout(300);
+      await go(page, "PHYS_W02"); await settled(page, "#problem");
       const card1 = await page.locator("#problem").screenshot(CARD);
       assert.ok(card0 && card0.equals(card1), "the non-twist card changed");
     });
@@ -155,7 +156,7 @@ try {
     assert.equal(await page.locator("#twistChip").count(), 0, "no chip under ui-v7");
     await waitToast(page);
     assert.deepEqual(await page.evaluate(() => { const e = document.querySelector(".stoast.on"); return { row: e.classList.contains("stoast-v7"), duck: /duck8-twist/.test(e.querySelector(".stoast-duck img").src) }; }), { row: true, duck: true });
-    await go(page, "PHYS_W02"); await page.waitForTimeout(400);
+    await go(page, "PHYS_W02"); await page.waitForTimeout(400);   // keep: app timer toast lifetime (a non-twist item shows no toast)
     assert.equal(await twistToastOn(page), false, "a non-twist item: no toast");
     await go(page, "PHYS_W03"); await waitToast(page);
     await ctx.close();
@@ -167,7 +168,7 @@ try {
     const page = await ctx.newPage();
     await openBank(page, "PHYS_W01");
     assert.equal(await page.locator("#twistChip").count(), 1);
-    await page.waitForTimeout(5000); assert.equal(await twistToastOn(page), false);
+    await page.waitForTimeout(5000); assert.equal(await twistToastOn(page), false);   // keep: app timer toast lifetime (no toast when storage is blocked)
     await ctx.close();
   });
 } finally {

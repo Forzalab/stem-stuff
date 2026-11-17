@@ -44,7 +44,7 @@ try {
       const page = await ctx.newPage(); page.on("pageerror", e => console.log("ERR", e.message));
       await page.goto(BASE + "/#BANK_TCT");
       await page.waitForSelector("#q .cc-welcome", { timeout: 12000 });
-      await page.waitForTimeout(w > 500 ? 2500 : 1500);   // the start line shows now-ish or never (15 s); a phone may find no room and wait: that covers nothing
+      await page.waitForTimeout(w > 500 ? 2500 : 1500);   // keep: app timer stage toast start line (15 s); the start line shows now-ish or never, a phone may find no room and wait: that covers nothing
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `toast-calc-${w}.png`) });
       const bad = await page.evaluate(() => window.__tc.flatMap(s => s.cards.filter(c => !(s.r.right <= c.r.left || s.r.left >= c.r.right || s.r.bottom <= c.r.top || s.r.top >= c.r.bottom)).map(c => ({ card: c.c, toast: s.r, rect: c.r }))));
       const seen = await page.evaluate(() => window.__tc.length);
