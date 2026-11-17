@@ -1905,6 +1905,9 @@ html.ui-v7 .cl-starter:hover { border-color: transparent; background: color-mix(
 /* CB-HEAD (Tony Nov 17, ref: the Claude app's code block; Refactoring UI: one size, one colour, one weight across a toolbar row): the language, Wrap and Copy
    share --mono 400 at --t-xs in --muted; the header sits on its own faint tint. Wrap on = ink (state by colour + aria-pressed, no strike-through). */
 .cb-hd { background: color-mix(in srgb, var(--ink) 4%, transparent); border-bottom-color: transparent; }
+/* CB-NAVY (Tony Nov 17: "neutral grey looks wrong"): under v7 the block uses the site's navy swatch: code bed = the input well #060b1b, header = between the bed and --card */
+html.ui-v7 .cb { background: #060b1b; }
+html.ui-v7 .cb-hd { background: color-mix(in srgb, #060b1b 50%, var(--card)); }   /* between the bed and the card: the bar reads as part of the block, never as the card */
 .cb-lang, .cb-wrap { font-family: var(--mono); font-weight: 400; font-size: var(--t-xs); letter-spacing: 0; color: var(--muted); }
 .cb-wrap { text-decoration: none; padding: 0 var(--s2); }
 .cb-wrap[aria-pressed="false"] { text-decoration-line: none; }
