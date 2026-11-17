@@ -41,9 +41,9 @@ const fake = createServer(async (req, res) => {
   const ev = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
   ev({ type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 1 } } });
   for (const p of REPLY) {
-    if (p === "HOLD") { await new Promise(r => { gate = r; setTimeout(r, 4000); }); continue; }   // the fence is open here
+    if (p === "HOLD") { await new Promise(r => { gate = r; setTimeout(r, 4000); }); continue; }   // keep: fake server gate (the spec opens it; the 4 s is only a stuck-run valve, not an app wait)
     ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } });
-    await new Promise(r => setTimeout(r, 60));
+    await new Promise(r => setTimeout(r, 60));   // keep: fake Claude's chunk pace (the stream is meant to arrive in pieces)
   }
   ev({ type: "message_delta", usage: { output_tokens: 50 } }); ev({ type: "message_stop" }); res.end();
 });
@@ -134,17 +134,17 @@ try {
     await step(`${tag}: a Flip view: cards turn from "you did" to "the fix" by themselves, a tap turns one back, reduced motion shows both faces`, async () => {
       const tf = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].map(e => getComputedStyle(e).transform));
       assert.equal(await page.locator("#cluck .wtext .vw-flip .fl-card").count(), 2);
-      await page.waitForTimeout(1600);                                        // the beat (3 x --d-dim) + the turn
+      await page.waitForFunction(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].every(e => /^matrix3d\(-1/.test(getComputedStyle(e).transform)), null, { timeout: 6000 });   // the beat (3 x --d-dim) + the turn
       assert.ok((await tf()).every(t => /^matrix3d\(-1/.test(t)), "after the beat each card shows the fix (turned 180): " + (await tf()));
       // Firefox Android showed both faces at once: exactly one .fl-face may be visible, at rest and after each tap
       const up = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-card")].map(c => [...c.querySelectorAll(".fl-face")].filter(f => { const cs = getComputedStyle(f); return cs.visibility !== "hidden" && +cs.opacity > 0; }).map(f => f.classList.contains("fl-a") ? "a" : "b").join("")));
       assert.deepEqual(await up(), ["b", "b"], "at rest exactly the fix face is visible");
       const c0 = page.locator("#cluck .wtext .vw-flip .fl-card").first();
-      await c0.click(); await page.waitForTimeout(500);
+      await c0.click(); await page.waitForFunction(() => getComputedStyle(document.querySelector("#cluck .vw-flip .fl-in")).transform === "none", null, { timeout: 5000 });
       assert.equal((await tf())[0], "none", "a tap turns card 1 back to what you did");
       assert.deepEqual(await up(), ["a", "b"], "after a tap: card 1 shows only what you did");
       assert.ok(/^matrix3d\(-1/.test((await tf())[1]), "card 2 stays on the fix");
-      await c0.click(); await page.waitForTimeout(500);
+      await c0.click(); await page.waitForFunction(() => /^matrix3d\(-1/.test(getComputedStyle(document.querySelector("#cluck .vw-flip .fl-in")).transform), null, { timeout: 5000 });
       assert.ok(/^matrix3d\(-1/.test((await tf())[0]), "a second tap: the fix again");
       const g = await page.evaluate(() => { const w = document.querySelector("#cluck .wtext"), c = [...w.querySelectorAll(".vw-flip .fl-card")].map(x => x.getBoundingClientRect().width), cw = w.querySelector(".vw-flip").getBoundingClientRect().width;
         return { c, cw, role: w.querySelector(".fl-card").getAttribute("role") }; });

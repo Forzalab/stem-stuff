@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -87,7 +88,7 @@ async function wrong(page, id) {
 const helped = page => page.evaluate(() => window.stemT("cluck_open", { tab: "explain" }));   // Jev only: q.help = true, so S6 stays quiet and the lock is the trigger
 const shown = page => page.evaluate(d => { const e = document.querySelector(d); return !!e && e.getClientRects().length > 0; }, DLG);
 const up = (page, t = 4000) => page.waitForSelector(DLG, { state: "visible", timeout: t });
-const gone = async page => { await page.waitForTimeout(1800); return !(await shown(page)); };
+const gone = async page => { await page.waitForTimeout(1800); return !(await shown(page)); };   // keep: app timer (the help modal's own delay before it would show)
 const key = page => page.evaluate(() => localStorage.getItem("stem-lockhelp"));
 const lhev = page => page.evaluate(() => window.__ev.filter(e => e[0] === "lockhelp").map(e => e[1]));
 const lines = page => page.evaluate(() => window.stemJev().lines.filter(l => /jev {2}help /.test(l)));
@@ -97,7 +98,7 @@ async function primed(vp, code, o = {}) {
   await wrong(page, "b"); await go(page, code);
   return page;
 }
-const noThanks = async page => { await page.click(`${DLG} button:has-text("No thanks")`); await page.waitForTimeout(200); };
+const noThanks = async page => { await page.click(`${DLG} button:has-text("No thanks")`); await page.waitForSelector(DLG, { state: "hidden", timeout: 5000 }); };
 
 for (const [vn, vp] of Object.entries(VPS)) {
   await step(`(a) ${vn}: lock -> say-line, art, exactly 2 buttons, focus on Open help panel, the strip chip drawn, NO box`, async () => {
@@ -193,7 +194,7 @@ await step("(f) S5 double wrong within 3 s is unreachable behind the 10 s wait: 
   const page = await open(VPS.phone, "CALC1_LHP1");
   await wrong(page, "b");
   await page.evaluate(() => document.querySelector('.opt[data-id="c"]').click());
-  await page.waitForTimeout(300);
+  await settled(page);
   assert.equal(await page.evaluate(() => window.__drill.state.tries.length), 1, "a tap during the wait is ignored");
   await wrong(page, "c");                                              // waits the 10 s out, then the lock
   await up(page);
@@ -208,7 +209,7 @@ await step("(g) reload -> re-shown (reshown); leaving the item keeps the key, co
   assert.equal(JSON.parse(await key(page)).via, "s6");
   await page.reload(); await ready(page, "CALC1_LHP1"); await up(page);
   assert.equal((await lhev(page))[0].phase, "reshown");
-  await go(page, "CALC1_LHP2"); await page.waitForTimeout(400);
+  await go(page, "CALC1_LHP2"); await page.waitForFunction(() => window.__ev.some(e => e[0] === "lockhelp" && e[1].phase === "left"), null, { timeout: 5000 });
   assert.ok(!(await shown(page)), "not on another item"); assert.ok(await key(page), "the key stays");
   assert.ok((await lhev(page)).some(e => e.phase === "left"));
   await go(page, "CALC1_LHP1"); await up(page);
@@ -217,7 +218,7 @@ await step("(g) reload -> re-shown (reshown); leaving the item keeps the key, co
 await step("(h) backdrop tap + Escape + Tab keep it; Tab stays between the 2 buttons", async () => {
   const page = await primed(VPS.phone, "CALC1_LHP1");
   await wrong(page, "b"); await up(page);
-  await page.mouse.click(5, 5); await page.keyboard.press("Escape"); await page.waitForTimeout(300);
+  await page.mouse.click(5, 5); await page.keyboard.press("Escape"); await settled(page);
   assert.ok(await shown(page), "still up");
   for (let i = 0; i < 3; i++) { await page.keyboard.press("Tab"); assert.ok(await page.evaluate(d => document.querySelector(d).contains(document.activeElement), DLG), "focus trapped"); }
   assert.ok(await key(page));
