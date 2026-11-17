@@ -7,7 +7,7 @@ import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { appendFileSync, cpSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, dirname, extname, normalize } from "node:path";
@@ -137,6 +137,24 @@ try {
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);                   // a tap still updates
     assert.deepEqual(await ver(page), ["#93", "#93"]);
     page.off("console", onMsg);
+  });
+  await step("a typed-but-unsent answer survives a tab switch + deploy: coming back never clears busy over a draft (phone: 'progress lost during auto update')", async () => {
+    mkdirSync(join(SITE, "p"), { recursive: true });                              // a one-box question the static site can serve
+    writeFileSync(join(SITE, "p", "CALC1_ZZ1.json"), JSON.stringify({ code: "CALC1_ZZ1", title: "t", type: "num", body: [{ type: "text", md: "Say 5" }] }));
+    await page.evaluate(() => sessionStorage.removeItem("stem-swr"));              // the loop step above left its reloads in the guard
+    await page.goto(BASE + "#CALC1_ZZ1");
+    await page.reload();
+    await page.locator("input.ans, textarea.ans").first().waitFor({ state: "visible", timeout: 10000 });
+    await page.locator("input.ans, textarea.ans").first().fill("42");
+    await page.keyboard.press("Shift");
+    const vis = v => page.evaluate(v => { Object.defineProperty(document, "visibilityState", { configurable: true, get: () => v }); document.dispatchEvent(new Event("visibilitychange", { bubbles: true })); }, v);
+    await vis("hidden"); await vis("visible");                                   // she switched apps and came back
+    await page.evaluate(() => { window.__same = 1; });
+    deploy("#94", "eee5555");
+    await check(page);
+    await bar(page).waitFor({ state: "visible", timeout: 15000 });
+    assert.equal(await page.evaluate(() => window.__same), 1, "no reload under a typed answer");
+    assert.equal(await page.locator("input.ans, textarea.ans").first().inputValue(), "42");
   });
 } finally {
   await browser.close();
