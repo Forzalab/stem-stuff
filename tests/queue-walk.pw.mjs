@@ -12,7 +12,6 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
-import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the state, not a fixed sleep
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -65,7 +64,6 @@ async function answer(page, code, right) {
   await page.waitForFunction(ids => ids.every(i => document.querySelector(`#q .opt[data-id="${i}"]`)?.getAttribute("aria-checked") === "true"), pickIds, { timeout: 5000 });   // the picks registered (their send bubble up)
   if (all) await tap("#mcGo"); else await tap(`#q .ch[data-id="${pickIds[0]}"] .send`);
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 8000 });
-  await settled(page, "#q, #ff");
   await quiet(page);
   return page.evaluate(() => window.__drill.state.tries.at(-1).v);
 }
