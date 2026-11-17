@@ -73,6 +73,11 @@ const rects = (page, sels) => page.evaluate(ss => ss.map(q => { const e = docume
 const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
 const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
+/* hermetic: this spec tests rewards, not the brainrot corner. The real YouTube embed takes keyboard focus ~100 ms after a tap, so a later
+   keyboard.press("Escape") lands in the frame and the top page never sees it (#rwPop stays open). ci-arch-e TRACE proof: PR #650 run 44023614895
+   (blur window "focus left the page into iframe", key.in-frame youtube-nocookie Escape). Abort the player in every context of this spec. */
+{ const nc = browser.newContext.bind(browser);
+  browser.newContext = async (...a) => { const c = await nc(...a); await c.route(/youtube|ytimg|googlevideo/, r => r.abort()); return c; }; }
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   /* stem-jev=0 in every context here: Jev (on for all) and its duck lines stay out of the toasts under test (seen.pw.mjs covers them) */

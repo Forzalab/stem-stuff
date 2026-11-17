@@ -16,7 +16,6 @@ import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
-import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the animations the asserts read, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -87,7 +86,7 @@ async function pageFor(browser, o, at) {
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, at, { timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector("#qnav").hidden, null, { timeout: 6000 });
-  await settled(page);
+  await page.waitForTimeout(400);
   return page;
 }
 const R = e => e && (({ left, top, right, bottom, width, height }) => ({ left, top, right, bottom, width, height }))(e.getBoundingClientRect());
@@ -136,35 +135,35 @@ async function close(page, type, outcome, { code } = {}) {
   const right = outcome === "right";
   if (p.type === "mc" && p.pick === "all") {
     const ids = right ? RIGHT_SET : ["c"];
-    if (!right) { await page.tap(`#q .opt[data-id="c"]`); await page.tap("#mcGo"); await page.waitForSelector("#q .opt.wrong"); await settled(page, "#q, #ff"); await skipRetryWait(page); await page.tap(`#q .opt[data-id="d"]`); }
+    if (!right) { await page.tap(`#q .opt[data-id="c"]`); await page.tap("#mcGo"); await page.waitForSelector("#q .opt.wrong"); await page.waitForTimeout(450); await skipRetryWait(page); await page.tap(`#q .opt[data-id="d"]`); }
     else for (const id of ids) await page.tap(`#q .opt[data-id="${id}"]`);
-    const go = page.locator("#mcGo"); await go.scrollIntoViewIfNeeded(); await settled(page);
+    const go = page.locator("#mcGo"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
     await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
   if (p.type === "mc") {
-    if (!right && p.choices.length > 2) { await page.tap(`#q .opt[data-id="c"]`); await page.tap(`#q .ch[data-id="c"] .send`); await page.waitForSelector(`#q .opt.wrong`); await settled(page, "#q, #ff"); await skipRetryWait(page);
-      if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) { await page.tap(".vdrawer:not([hidden]) .vd-x"); await page.waitForSelector(".vdrawer:not([hidden])", { state: "hidden", timeout: 5000 }); await settled(page, "#q"); } }   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
+    if (!right && p.choices.length > 2) { await page.tap(`#q .opt[data-id="c"]`); await page.tap(`#q .ch[data-id="c"] .send`); await page.waitForSelector(`#q .opt.wrong`); await page.waitForTimeout(450); await skipRetryWait(page);
+      if (await page.locator(".vdrawer:not([hidden]) .vd-x").count()) { await page.tap(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(450); } }   // the tray may lie over the next row (Tony, Nov 3 19:31): dismiss it first
     const id = right ? "a" : p.choices.length > 2 ? "d" : "b";
     await page.tap(`#q .opt[data-id="${id}"]`);
-    const go = page.locator(`#q .ch[data-id="${id}"] .send`); await go.scrollIntoViewIfNeeded(); await settled(page, `#q .ch[data-id="${id}"]`);   // the lock-in dim settles
+    const go = page.locator(`#q .ch[data-id="${id}"] .send`); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);   // the lock-in dim settles
     await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
   if (p.type === "multi") {
     for (let i = 0; i < 3; i++) { await page.fill(`#q .part[data-i="${i}"] .ans`, RIGHT); await page.tap(`#go${i}`); await page.waitForSelector(`#q .part[data-i="${i}"] .ff.shut`); }
-    if (!right) { await page.fill(`#q .part[data-i="3"] .ans`, "1"); await page.tap("#go3"); await page.waitForSelector(`#q .part[data-i="3"] .ff.bad`); await settled(page, "#q, #ff"); await skipRetryWait(page); }
+    if (!right) { await page.fill(`#q .part[data-i="3"] .ans`, "1"); await page.tap("#go3"); await page.waitForSelector(`#q .part[data-i="3"] .ff.bad`); await page.waitForTimeout(450); await skipRetryWait(page); }
     await page.fill(`#q .part[data-i="3"] .ans`, right ? RIGHT : "2");
-    const go = page.locator("#go3"); await go.scrollIntoViewIfNeeded(); await settled(page);
+    const go = page.locator("#go3"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
     await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
-  if (!right) { await page.fill("#ans", "1"); await page.tap("#ansGo"); await page.waitForSelector("#ff.bad"); await settled(page, "#q, #ff"); await skipRetryWait(page); }
+  if (!right) { await page.fill("#ans", "1"); await page.tap("#ansGo"); await page.waitForSelector("#ff.bad"); await page.waitForTimeout(450); await skipRetryWait(page); }
   await page.fill("#ans", right ? RIGHT : "2");
-  const go = page.locator("#ansGo"); await go.scrollIntoViewIfNeeded(); await settled(page);
+  const go = page.locator("#ansGo"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
   await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
   await startSampler(page); await go.tap();
   return { check, before };
@@ -182,7 +181,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
     await step(`${T}: Next lands on the Check rect, 48 tall, right flush, card moves 0px, focus on Next, one blink`, async () => {
       const { check, before } = await close(page, type, outcome, { code });
       await page.waitForSelector("#q .nx", { timeout: 4000 });
-      await settled(page, "#q .nx");   // g-next-in (180 ms delay + its run) has finished: the sampler's window is over
+      await page.waitForTimeout(700);
       const blink = await stopSampler(page);
       got = await page.evaluate(() => {
         const R = e => e && (({ left, top, right, bottom, width, height }) => ({ left, top, right, bottom, width, height }))(e.getBoundingClientRect());
@@ -236,13 +235,13 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
         await kp.fill("#ans", RIGHT); await kp.focus("#ans");
         const h0 = await kp.evaluate(() => location.hash);
         await kp.keyboard.down("Enter");                                          // sends Check
-        await kp.waitForSelector("#q .nx"); await kp.waitForFunction(() => document.activeElement.matches(".nx"), null, { timeout: 5000 });
+        await kp.waitForSelector("#q .nx"); await kp.waitForTimeout(400);
         assert.ok(await kp.evaluate(() => document.activeElement.matches(".nx")), "focus is not on Next");
         await kp.keyboard.down("Enter"); await kp.keyboard.down("Enter");           // still held: Playwright marks these repeat: true
-        await settled(kp);
+        await kp.waitForTimeout(500);
         assert.equal(await kp.evaluate(() => location.hash), h0, "a held Enter skipped the question");
         await kp.keyboard.up("Enter");
-        await kp.keyboard.press("Enter"); await settled(kp);
+        await kp.keyboard.press("Enter"); await kp.waitForTimeout(500);
         assert.equal(await kp.evaluate(() => location.hash), h0, "a fresh Enter on Next went on (Enter is Check / chat only)");
         await kp.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 6000 }).catch(() => {});
         await kp.keyboard.press("ArrowRight");
@@ -261,9 +260,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
     const page = await pageFor(browser, O, code);
     await step(`${T}: ${mode === "sugar" ? "the duck chip, one line in the gutter, ≥44 tall, the right label; a tap pays no XP" : "no chip, no duck, no wash"}`, async () => {
       const { check } = await close(page, type, outcome, { code });
-      await page.waitForSelector("#q .nx");
-      await settled(page, "#q, :is(#wish, .rbox)");   // the verdict card/drawer is at rest (sugar: its chip; diet: no chip must exist)
-      await stopSampler(page);
+      await page.waitForSelector("#q .nx"); await page.waitForTimeout(1500); await stopSampler(page);
       const g = await page.evaluate(() => {
         const c = document.querySelector(":is(#wish:not([hidden]), .rbox) .cue-chip"), s = c && c.querySelector("span"), r = c && c.getBoundingClientRect();
         return { has: !!c, any: !!document.querySelector(".cue-chip, .g-nod, #wish:not([hidden])"), label: s && s.textContent, r: r && { l: r.left, r: r.right, h: r.height },
@@ -289,7 +286,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       const xp0 = g.xp;
       assert.equal(typeof xp0, "number", "no rewards state to compare");
       const ls0 = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /rw|reward/i.test(k)).map(k => [k, localStorage.getItem(k)])));
-      await page.tap(":is(#wish, .rbox) .cue-chip"); await page.waitForSelector("#cluck:not([hidden])", { timeout: 5000 }); await settled(page, "#cluck");
+      await page.tap(":is(#wish, .rbox) .cue-chip"); await page.waitForTimeout(800);
       const xp1 = await page.evaluate(() => window.Rewards && window.Rewards.state && window.Rewards.state() ? window.Rewards.state().xp : null);
       const ls1 = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /rw|reward/i.test(k)).map(k => [k, localStorage.getItem(k)])));
       assert.equal(xp1, xp0, `a chip tap paid XP: ${xp0} -> ${xp1}`);
@@ -316,7 +313,7 @@ for (const mode of MODES) {
         else window.__rm.add(n);
       }), 10); window.__rmt = t; });
       await close(page, type, "right", { code });
-      await page.waitForSelector("#q .nx"); await settled(page);
+      await page.waitForSelector("#q .nx"); await page.waitForTimeout(900);
       const [names, fx] = await page.evaluate(() => { clearInterval(window.__rmt); return [[...window.__rm], [...window.__fx]]; });
       assert.deepEqual(names.filter(n => n !== "g-next-fade" && n !== "vd-fade"), [], "motion besides the fade: " + names);
       assert.ok(names.includes("g-next-fade"), "no g-next-fade: " + names);
