@@ -32,3 +32,15 @@ export async function onEvent(page, name, { timeout = 8000 } = {}) {
     .then(h => h.jsonValue()).then(v => v.detail)
     .catch(e => { throw new Error(`onEvent(${name}): not fired in ${timeout} ms (${e.message.split("\n")[0]})`); });
 }
+
+/* rectStable: `sel`'s box has not moved or resized for `frames` painted frames in a row (web fonts / late reflow nudge a field a few px
+   after load; an assert that reads the box once and compares it to a later read races that). Reads exactly what such an assert reads. */
+export async function rectStable(page, sel, { frames = 15, timeout = 8000 } = {}) {
+  await page.waitForFunction(([s, n]) => {
+    const r = document.querySelector(s)?.getBoundingClientRect(); if (!r) return false;
+    const k = [r.x, r.y, r.width, r.height].join(); const w = window.__rs || (window.__rs = {});
+    if (w.s !== s || w.k !== k) { w.s = s; w.k = k; w.n = 0; } else w.n++;
+    return w.n >= n;
+  }, [sel, frames], { polling: "raf", timeout })
+    .catch(e => { throw new Error(`rectStable(${sel}): still moving after ${timeout} ms (${e.message.split("\n")[0]})`); });
+}
