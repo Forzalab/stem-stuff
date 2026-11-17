@@ -4,6 +4,7 @@
 // Checks: the prose reaches the page in >=3 updates BEFORE the re-ask returns; while pending and when dropped the page holds no figure box, no
 // empty block (no gap), no control char; a good figure lands at its anchor (between the lines around it); no main-thread long task > 100 ms.
 // Starts its own serve.py and fake Claude:   node tests/figstream.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -78,7 +79,7 @@ const junk = page => page.evaluate(() => {
   return { boxes: x.querySelectorAll(".wfig, .fig, .fig-off, .fig-alt").length,
     empty: [...x.children].filter(c => !c.classList.contains("wcaret") && !c.classList.contains("wgap") && !c.textContent.trim() && !c.querySelector("svg,img,table")).length, ctl: /[\u0003-\u0007]/.test(x.textContent), gaps: x.querySelectorAll(".wgap").length };
 });
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const init = () => {
   try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
   window.__long = []; window.__texts = [];

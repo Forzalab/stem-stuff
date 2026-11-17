@@ -7,6 +7,7 @@
 //   guard   phone sugar (393): no box on load, the X shows once opened, Escape and the X close it; desktop diet: no box
 // CP_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-permanent@desk, cluck-permanent@phone. Own serve.py + a stub OpenRouter.
 //   node tests/cluck-permanent.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -15,6 +16,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -51,7 +53,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, { diet = false } = {}) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
@@ -62,7 +64,7 @@ async function open(w, { diet = false } = {}) {
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
   await page.goto(BASE + "/#BANK_CPM");
   await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
-  await page.waitForTimeout(500);
+  await settled(page);
   return page;
 }
 const box = page => page.evaluate(() => {
@@ -79,13 +81,13 @@ for (const w of W.filter(w => w >= 720)) {
     let s = await box(page);
     assert.ok(s.on && s.box && s.open, "open on load, no click: " + JSON.stringify(s));
     assert.ok(!s.x, "no X");
-    await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+    await page.keyboard.press("Escape"); await settled(page);
     s = await box(page);
     assert.ok(s.on && s.box && s.open && !s.gone, "Escape leaves it open: " + JSON.stringify(s));
     const b = await page.locator("#sash").boundingBox(), y = b.y + 200, x0 = b.x + b.width / 2;
     await page.mouse.move(x0, y); await page.mouse.down();
     for (let i = 1; i <= 10; i++) await page.mouse.move(x0 + (w - 10 - x0) * i / 10, y);
-    await page.mouse.up(); await page.waitForTimeout(200);
+    await page.mouse.up(); await settled(page);
     s = await box(page);
     assert.ok(s.on && s.box && s.open && !s.gone, "the sash dragged to the right edge does not dismiss it: " + JSON.stringify(s));
     await page.screenshot({ path: join(SHOTS, `cperm-open-${w}.png`) });
@@ -105,7 +107,7 @@ for (const w of W.filter(w => w >= 720)) {
     const a = await box(page);
     assert.ok(a.rot > 100, "the videos show above the box: " + JSON.stringify(a));
     await page.evaluate(() => { const l = [...document.querySelectorAll("#rot button, #rot a")].find(e => /hide/i.test(e.textContent)); l.click(); });
-    await page.waitForTimeout(700);
+    await settled(page, "#work");
     const b = await box(page);
     assert.ok(b.h - a.h >= (w >= 1000 ? 250 : 100), `box grows: ${a.h} -> ${b.h}`);
     assert.ok(b.rot >= 0 && b.rot <= 40, `videos row folds: ${b.rot}`);
@@ -116,7 +118,7 @@ for (const w of W.filter(w => w >= 720)) {
     const code = await page.textContent("#pcode");
     await page.evaluate(() => document.querySelector("#qnext").click());
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, code, { timeout: 8000 });
-    await page.waitForTimeout(500);
+    await settled(page, "#work");
     const s = await box(page);
     assert.ok(s.on && s.box && !s.x && s.open, "open on Q2: " + JSON.stringify(s));
     await page.context().close();

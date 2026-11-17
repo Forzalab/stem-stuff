@@ -9,6 +9,7 @@
 // Points outside the window are skipped (a tap cannot land there); at least 5 of the 9 must be inside.
 // Own serve.py + throwaway banks (a formula card bank and the welcome ladder bank), 390 phone (touch) and 1366 desktop.
 //   node tests/tap-targets.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -17,6 +18,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -53,7 +55,7 @@ async function step(name, fn) {
 }
 /* the 9 probe points of the 44 px square centred on the element (offsets +-21.5 px), the ones inside the window: each must hit el or a
    child of it, or (siblings: a row of chips, 8 px apart, shares the overlap of two 44 px areas) an element matching `sibs` */
-const hitArea = async (page, sel, sibs = null) => { await page.waitForTimeout(500); return page.evaluate(([sel, sibs]) => {
+const hitArea = async (page, sel, sibs = null) => { await settled(page, sel); return page.evaluate(([sel, sibs]) => {
   const el = document.querySelector(sel);
   { const q = el.getBoundingClientRect(); if (q.top < 0 || q.bottom > innerHeight) el.scrollIntoView({ block: "center", inline: "center" }); }
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, miss = [], own = [];
@@ -102,7 +104,7 @@ async function badgeContrast(page) {
 
 const VIEWS = [["390x844 phone", { width: 390, height: 844 }, true], ["1366x768 desktop", { width: 1366, height: 768 }, false]];
 for (const [label, vp, phone] of VIEWS) {
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   // the onboarding is done, so the rewards HUD (#rwHud) shows on a question (as blink-fx.pw.mjs sets it)
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const x of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + x, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
@@ -114,7 +116,7 @@ for (const [label, vp, phone] of VIEWS) {
       await fresh();
       await page.goto(BASE + (phone ? "/" : "/#BANK_FCC"));
       if (!phone) await page.waitForFunction(() => /^#CALC1_/.test(location.hash) && !!document.querySelector("#fcard .fq"), null, { timeout: 15000 });
-      await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 15000 }); await page.waitForTimeout(300);
+      await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 15000 }); await settled(page, "#privacy");
       await visible(page, "#privacy");
       const h = await hitArea(page, "#privacy");
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/tap-privacy-${vp.width}.png` });
@@ -130,7 +132,7 @@ for (const [label, vp, phone] of VIEWS) {
     });
     await step(`${label}: .rw-star b digit reads 4.5:1 on the star`, async () => { await fresh(); await page.goto(BASE + "/#BANK_FCC"); await page.waitForFunction(() => /^#CALC1_/.test(location.hash), null, { timeout: 15000 });
       await visible(page, "#rwHud .rw-star b");
-      await page.waitForFunction(() => !!document.querySelector("#rwHud .rw-star b") && [...document.querySelectorAll("#rwHud, #rwHud *")].every(e => getComputedStyle(e).opacity === "1" && !e.getAnimations().length), null, { timeout: 10000 }).catch(() => {}); await page.waitForTimeout(800);
+      await page.waitForFunction(() => !!document.querySelector("#rwHud .rw-star b") && [...document.querySelectorAll("#rwHud, #rwHud *")].every(e => getComputedStyle(e).opacity === "1" && !e.getAnimations().length), null, { timeout: 10000 }).catch(() => {}); await settled(page, "#rwHud .rw-star b");
       const c = await badgeContrast(page);
       console.log(`     digit ${c.ink}: median ${c.med.toFixed(2)}:1, least ${c.min.toFixed(2)}:1 on the star under it (${c.n} px); ${c.onPage.toFixed(2)}:1 on the page behind the star`);
       assert.ok(c.med >= 4.5, `digit ${c.ink} on the star: median ${c.med.toFixed(2)}:1 over ${c.n} px`);

@@ -3,6 +3,7 @@
 // twin pick (mockList, tests/shuffle.test.mjs). Fixture front bank: two tier-1 templates, their tier-1 twins, two tier-2 items.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/twin-first.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -44,11 +45,11 @@ async function next(page) {
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c && !document.querySelector("#freeze").hidden, was, { timeout: 4000 });
 }
 async function answer(page, c, ok) {                               // a graded first try (a wrong one under 2 s is spam = a skip, nav.js)
-  if (!ok) await page.waitForTimeout(2300);
+  if (!ok) await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });   // past nav.js SPAM_MS (2 s): a graded miss, not a spam skip
   await page.fill("#ans", ok ? ANS[c] : "999"); await page.click("#ansGo");
   await page.waitForFunction(() => window.stemQueue.state().seen[document.querySelector("#pcode").textContent]?.first, null, { timeout: 4000 });
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function fresh(salt) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
   await ctx.addInitScript(s => { try {

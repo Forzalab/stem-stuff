@@ -2,6 +2,7 @@
 // "None of these" row (nothing ticked is the answer "none"), keys, strike + ticks kept, miss, prove mode, restore on reload.
 // Server mode uses CSCI26_A7K from problems.json; upload mode an inline file. Starts its own serve.py with a throwaway tries.json:
 //   node tests/choose-all.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -10,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state (animations ended + two frames), not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -59,11 +61,11 @@ async function check(page) {
   await page.waitForFunction(() => document.querySelector("#fb").textContent.trim() || document.querySelector("#q .chk .cluck") || document.querySelector("#q .opt.right"), null, { timeout: 4000 });
   /* the previous try's hint already fills #fb, so that wait can pass before this Check is graded (CI, PR #91): also wait for the new try */
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 4000 }).catch(() => {});
-  await page.waitForTimeout(150);
+  await settled(page);
 }
 const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.querySelector('.badge use[href="#i-ok"]')).map(o => o.dataset.id).sort());
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const newCtx = browser.newContext.bind(browser);
 browser.newContext = async o => { const c = await newCtx(o); await c.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]); return c; };
 try {
@@ -109,7 +111,7 @@ try {
       await tap(row(page, "d")); await tap(row(page, "a")); await tap(row(page, "b"));
       const n0 = await page.evaluate(() => window.__drill.state.tries.length);
       await row(page, "a").focus(); await page.keyboard.press("Enter");
-      await page.waitForFunction(k => window.__drill.state.tries.length > k, n0, { timeout: 4000 }); await page.waitForSelector("#fb .cluck, #q .chk .cluck"); await page.waitForTimeout(150);
+      await page.waitForFunction(k => window.__drill.state.tries.length > k, n0, { timeout: 4000 }); await page.waitForSelector("#fb .cluck, #q .chk .cluck"); await settled(page);
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
       assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast.on")?.textContent || ""), /try|wisely/i, "no try toast over the choices (Tony, Oct 5)");   // text, never a handle: a failing assert on a handle inspects the whole Playwright graph assert.match(s.fb, /qu+a+c+k/i); assert.equal(s.finished, false);
@@ -128,7 +130,8 @@ try {
       assert.deepEqual(t.l, ls);
     });
     await step(`${name}: reload restores the strike and the ticks`, async () => {
-      await page.reload(); await opened(page, CODE); await page.waitForTimeout(300);
+      await page.reload(); await opened(page, CODE);
+      await page.waitForFunction(() => document.querySelector('#q .opt.wrong[data-id="b"]') && document.querySelector('#q .opt[data-id="a"]')?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.on, ["a", "d"]); assert.equal(s.go, false); assert.match(s.fb, /qu+a+c+k/i);
     });
@@ -148,7 +151,8 @@ try {
       await (touch ? row(p2, "c").tap() : row(p2, "c").click()); await (touch ? row(p2, "a").tap() : row(p2, "a").click());
       await check(p2);
       let s = await st(p2); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true); assert.deepEqual(await okRows(p2), ["a", "c"]);
-      await p2.reload(); await opened(p2, CODE); await p2.waitForTimeout(300);
+      await p2.reload(); await opened(p2, CODE);
+      await p2.waitForFunction(() => document.querySelector('#q .opt.right[data-id="a"]') && document.querySelector('#q .opt.right[data-id="c"]') && window.__drill.state.finished === true, null, { timeout: 5000 });
       s = await st(p2); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true); assert.deepEqual(await okRows(p2), ["a", "c"]);
     });
     await c2.close();
@@ -176,7 +180,8 @@ try {
     let s = await st(page); assert.match(s.fb, /U01 miss/); assert.deepEqual(s.on, ["a"]); assert.deepEqual(s.wrong, []);
     await check(page);
     assert.equal(await page.evaluate(() => window.__drill.state.triesLeft), 1, "same set again: no try spent");
-    await page.reload(); await opened(page, "CSCI26_U01"); await page.waitForTimeout(300);
+    await page.reload(); await opened(page, "CSCI26_U01");
+    await page.waitForFunction(() => document.querySelector('#q .opt[data-id="a"]')?.getAttribute("aria-checked") === "true" && /U01 miss/.test(document.querySelector("#fb").textContent), null, { timeout: 5000 });
     s = await st(page); assert.deepEqual(s.on, ["a"]); assert.match(s.fb, /U01 miss/); assert.equal(s.finished, false);
     await row(page, "c").click(); await check(page);
     s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.deepEqual(await okRows(page), ["a", "c"]);
@@ -243,7 +248,7 @@ try {
       await page.evaluate(() => { window.__drill.state.keptTold = false; });
       await tap(row(page, "c"), { force: true });
       await page.waitForFunction(() => { const t = document.querySelector("#toast.on"); if (t) t.dispatchEvent(new PointerEvent("pointerenter")); return !!t; });
-      await page.waitForTimeout(500);                                          // past the .3 s toast-in
+      await settled(page, "#toast");                                          // the .3 s toast-in has ended: no animation holds the card
       const t = await page.evaluate(() => { const e = document.querySelector("#toast"), r = e.getBoundingClientRect();
         return { on: e.classList.contains("on"), row: e.classList.contains("row"), tf: getComputedStyle(e).transform, anim: e.getAnimations().length, px: [e.style.left, e.style.top, r.left, r.top] }; });
       assert.deepEqual([t.on, t.row], [true, true], "the row toast is up " + JSON.stringify(t));
@@ -259,7 +264,8 @@ try {
       await page.keyboard.press("ArrowDown"); assert.equal((await st(page)).focus, live[0], "wraps, never lands on c");
     });
     await step(`${name} sugar: a reload keeps the row; the right set then turns it right`, async () => {
-      await page.reload(); await opened(page, CODE); await page.waitForTimeout(300);
+      await page.reload(); await opened(page, CODE);
+      await page.waitForFunction(() => !!document.querySelector('#q .opt.kept[data-id="c"]'), null, { timeout: 5000 });
       const c = await look(page, "c"); assert.deepEqual([c.kept, c.on, c.ad], [true, "true", "true"]);
       assert.equal((await look(page, "a")).kept, false);
       await tap(row(page, "a")); await check(page);

@@ -5,6 +5,7 @@
 //   toast   the stage toast ("Ready when you are.") sat on the hint card on desktop: it may never lie on the hint card (#fb)
 // 393 phone (touch) + 1280 + 721, sugar. Own serve.py + a throwaway bank (no brain bank). No page.clock.   node tests/reveal-tray.pw.mjs <port> [shots dir]
 //   RT_W=393 or RT_W=1280,721 picks the widths (default all).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -46,7 +47,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const SETTLE = 500;   // > the drawer's 380 ms slide
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, o = {}) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });

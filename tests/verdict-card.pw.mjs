@@ -2,6 +2,7 @@
 // the judged row + Next are one borderless pill (zero gap, same top / bottom, outer radius 16), and the "That's it!" / "Not it." line stays in the DOM, visually hidden (live region).
 // Flag off: the loose line, the tray and the gap before Next as before.
 // Own serve.py, throwaway bank, a stub OpenRouter.   node tests/verdict-card.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -49,7 +50,7 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, flag, hash = "") {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 2, serviceWorkers: "block" });

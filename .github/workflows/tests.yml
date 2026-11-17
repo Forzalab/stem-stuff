@@ -199,7 +199,7 @@ jobs:
           exit "$rc"
       - name: upload flaky list   # W4: the `all` job reads it (FLAKY <spec> lines, one spec per line)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flaky-block-${{ matrix.block }}
           path: flaky.txt
@@ -207,7 +207,7 @@ jobs:
           retention-days: 7
       - name: upload lane logs   # CI-FLAKE-LOGS: the lane logs die with the runner otherwise
         if: always() && steps.lanes.outputs.has_logs == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: logs-block-${{ matrix.block }}
           path: logs
@@ -215,7 +215,7 @@ jobs:
           retention-days: 7
       - name: upload jank diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jank-diff-block-${{ matrix.block }}
           path: jank-diff
@@ -302,7 +302,7 @@ jobs:
       - run: tools/operations/ci-all-verdict.sh
       # W4 (minimal addition): every block that ran must hand in flaky.txt, and each flaky spec must be in the unexpired jail
       - if: needs.block.result == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with: { pattern: flaky-block-*, path: flaky }
       - id: fl
         if: needs.block.result == 'success'
@@ -317,7 +317,7 @@ jobs:
         if: success() && vars.SHIP_MODE == 'pr-green' && (github.event_name == 'pull_request' || github.event_name == 'push') && needs.plan.outputs.stamped != 'true' && (needs.plan.outputs.kind == 'full' || needs.plan.outputs.kind == 'affected')
         run: node tools/operations/ci-ship.mjs stamp-write --kind "${{ needs.plan.outputs.kind }}" --flaky-dir flaky
       - if: steps.st.outputs.stamp == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.st.outputs.name }}
           path: stamp.json
@@ -363,7 +363,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0, fetch-tags: true }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { pattern: flaky-block-*, path: flaky }
       - id: d

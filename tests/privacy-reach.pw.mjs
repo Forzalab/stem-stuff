@@ -3,8 +3,10 @@
 // page footer link still works, and the link covers nothing (not the list, not the code bar), and the page's one privacy-signal
 // line (#sigTx) is right. Needs a running server and Playwright:
 //   python3 serve.py 8816 &   then   node tests/privacy-reach.pw.mjs http://localhost:8816 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -15,7 +17,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const phone = () => browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
 const box = (page, s) => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; }, s);
 
@@ -23,11 +25,11 @@ await step("393 phone, a question open: list button -> 'privacy' link -> privacy
   const ctx = await phone(), page = await ctx.newPage();
   await page.goto(BASE + "/#BANK_PSY6");   // a tracked practice bank: the list is on
   await page.waitForFunction(() => !document.querySelector("#freeze").hidden && !document.querySelector("#qnav").hidden && document.querySelector("#pcode").textContent, null, { timeout: 8000 });
-  await page.waitForTimeout(400);
+  await settled(page);
   assert.ok(await page.locator("#privacy").isHidden(), "over a closed question the bottom stays the bar's (D75)");
   await page.tap("#qlistBtn");                                                      // tap 1
   await page.waitForFunction(() => document.documentElement.classList.contains("ql-open"), null, { timeout: 4000 });
-  await page.waitForTimeout(400);
+  await settled(page);
   const a = page.locator("a#privacy");
   assert.ok(await a.isVisible(), "privacy link not shown with the open list");
   assert.equal(await a.getAttribute("href"), "privacy.html");

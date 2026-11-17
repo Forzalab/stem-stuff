@@ -1,6 +1,7 @@
 // GAP-BATCH1 smoke (ui-v7 only): B the old star "1" is hidden and the welcome pill clears the phone stash tab;
 // C the question menu is the float family and the orange intro pill does not show under it; D the miss hint is the float family.
 // Own serve.py.   node tests/gap-batch1.pw.mjs [port]   (SHOT=/path/prefix saves -390.png, -menu-390.png, -miss-390.png)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -22,7 +23,7 @@ const welcome = { code: "PHYS_TC1", type: "num", answer: "4", form: "8/2", tol: 
 writeFileSync(join(BANKS, "BANK_FHT.json"), JSON.stringify({ v: 1, problems: [welcome, ...Array.from({ length: 12 }, (_, i) => num("PHYS_TC" + (i + 2), i + 1))] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_FHT", STEM_FRONT_TITLE: "Exam 3", STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 await serverUp(BASE);
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 500)); } }
 async function open(path) {

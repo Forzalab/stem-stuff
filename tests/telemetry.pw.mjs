@@ -3,6 +3,7 @@
 // The real libraries are never fetched: a stamped key is faked by rewriting index.html's <meta name="stem-t">, and the PostHog /
 // Clarity hosts answer with a stub that records calls. LIVE=1 + POSTHOG_TOKEN in the env stamps the real token and lets the
 // requests through (a manual check that events reach PostHog; never in CI).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -18,7 +19,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 400)); }
 }
 const exe = (() => { try { return require("node:fs").readdirSync("/opt/pw-browsers").filter(d => d.startsWith("chromium-")).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0]; } catch { return undefined; } })();
-const browser = await pw.chromium.launch(exe ? { executablePath: exe } : {});
+const browser = await launchBrowser(pw, exe ? { executablePath: exe } : {});
 const HOSTS = /posthog\.com|clarity\.ms/;
 const STUB = `window.posthog = { init(k, o) { window.__ph = { key: k, opts: o, ev: [] }; this.__loaded = true; o.loaded && o.loaded(this); },
   capture(n, p, x) { window.__ph.ev.push({ n, p, x }); }, register(o) { window.__ph.reg = o; } };`;
@@ -65,7 +66,7 @@ for (const [name, env] of [["Do Not Track", { dnt: true }], ["Global Privacy Con
   await step(`${name} on + a key stamped: zero requests to PostHog / Clarity, stemT a no-op, nothing said`, async () => {
     const { ctx, page, hits, errors } = await open({ ...env, key: true, hash: "#" + CODE });
     await firstQ(page);
-    await page.waitForTimeout(4500);   // past the idle loader
+    await page.waitForTimeout(4500);   // keep: app timer — the idle loader's window (the assert is that it never fires)
     await page.evaluate(() => window.stemT("pick", { code: "X" }));
     assert.equal(hits.length, 0, "requests: " + hits.map(h => h.url).join(" "));
     assert.equal(await page.evaluate(() => !!window.posthog || !!window.clarity), false, "a library global exists");
@@ -78,7 +79,7 @@ for (const [name, env] of [["Do Not Track", { dnt: true }], ["Global Privacy Con
 await step("no key (local / preview): zero requests, no console errors, the app works", async () => {
   const { ctx, page, hits, errors } = await open({ hash: "#" + CODE });
   await firstQ(page);
-  await page.waitForTimeout(4500);
+  await page.waitForTimeout(4500);   // keep: app timer — the idle loader's window (the assert is that it never fires)
   assert.equal(hits.length, 0, "requests: " + hits.map(h => h.url).join(" "));
   assert.equal(typeof await page.evaluate(() => typeof window.stemT), "string");
   assert.equal(await page.evaluate(() => { try { window.stemT("pick", null); window.stemT(); return true; } catch { return false; } }), true);

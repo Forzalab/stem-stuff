@@ -1,6 +1,7 @@
 // Sugar rewards in the real page (docs/design/REWARDS-WIRING.md): the HUD row, XP + the bells on every correct, a quiet +1 on a wrong try,
 // 6 XP on try 2, a drop (flow C: a banner, no overlay, never with #toast), a level up + drop (one overlay, the reels inside, keys), state across a reload, snacks right before their real, the fading original,
 // and nothing at all in diet. Starts its own serve.py with a throwaway banks/ folder and tries.json:   node tests/rewards.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2/D1: wait on animation state, not on the clock
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -58,6 +60,9 @@ const quiet = page => page.waitForFunction(() => !document.querySelector(".fx-ov
 /* the engine's rolls on the next answer only (confetti and the rest keep the real Math.random) */
 const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => q.length ? q.shift() : r();
   try { return A(o); } finally { Math.random = r; R.answer = A; } }; }, q);
+/* CI-ARCH D1: wait on the app, not the clock: its reward queue idle (html.fx-busy: the HUD's 900 ms count-up is a step in it) and its
+   dwell (S.start; engine.js minDwell = 1 s gates the drop roll this spec's rigs rely on) */
+const appSettled = page => page.waitForFunction(() => { const S = window.__drill.state; return !!S && !document.documentElement.classList.contains("fx-busy") && Date.now() - S.start > 1100; }, null, { timeout: 8000 });
 /* the list toggle by script: on desktop the brainrot corner can sit over the toggle of an open list (a pre-existing race on main;
    the overlap is in docs/design/UX-TOPDOWN.md), and this file tests rewards, not the corner */
 const toggleList = page => page.$eval("#qlistBtn", b => b.click());
@@ -67,7 +72,7 @@ const watchFx = async page => { await page.waitForFunction(() => !document.query
 const rects = (page, sels) => page.evaluate(ss => ss.map(q => { const e = document.querySelector(q); return e && e.getClientRects().length ? e.getBoundingClientRect().toJSON() : null; }), sels);
 const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   /* stem-jev=0 in every context here: Jev (on for all) and its duck lines stay out of the toasts under test (seen.pw.mjs covers them) */
@@ -127,7 +132,7 @@ try {
     const n0 = await shown();
     await watchFx(page);
     await pick(page, "b");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: observation window (a wrong try with a try left must move nothing; no positive condition to wait on, the assert below is the check)
     assert.deepEqual(await page.evaluate(() => window.__fxc), [], "a wrong try with a try left: no +1 float");
     assert.equal(await xp(page), x0 + 1, "the +1 is kept");
     assert.equal(await shown(), n0, "the HUD number waits until the question closes");
@@ -148,7 +153,7 @@ try {
     await page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.lastBurst = 0; s.dry = 0; localStorage.setItem(k, JSON.stringify(s)); });
     await page.evaluate(() => { window.__ov = 0; new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && n.classList?.contains("fx-ov")) window.__ov++; }).observe(document.body, { childList: true }); });
     await rig(page, [0, 0, 0, 0]);                                              // 14 XP, a drop, common, line 1
-    await page.waitForTimeout(1100);
+    await appSettled(page);
     await pick(page, "a");
     await page.waitForSelector(".fx-toast", { timeout: 6000 });
     assert.match(await page.textContent(".fx-toast"), /QUACK! Brain boost!/);
@@ -265,7 +270,7 @@ try {
     await p.click("#cluck .cl-bar .cl-x");
     await p.route("**/explain", r => r.fulfill({ contentType: "text/plain", body: "QUACK. Pick a." }));   // Cluck's live stream, stubbed
     const told = p.waitForResponse(r => r.url().endsWith("/explain"));
-    await pick(p, "b"); await told; await p.waitForTimeout(200);
+    await pick(p, "b"); await told; await p.waitForTimeout(200);   // keep: observation window (the chip must not appear)
     assert.equal(await p.isHidden("#wish"), true, "phone + a snack, after a miss: no Cluck chip, the card is the one way in (TODO C)");
     await p.click("#origHd");
     await p.waitForFunction(() => /Pick a/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
@@ -293,7 +298,7 @@ try {
     await watchFx(dp);
     await pick(dp, "b"); await pick(dp, "a");                                  // a wrong try, then the closing right one: sugar would pay +1, then 6 with the bells
     assert.deepEqual(await dp.evaluate(() => window.__drill.state.tries.map(t => [t.c, t.v])), [["b", "wrong"], ["a", "correct"]], "both picks were graded");
-    await dp.waitForTimeout(1000);                                            // the FX nodes land a frame or so after a correct in sugar
+    await dp.waitForTimeout(1000);                                            // keep: observation window (diet must add no FX node a frame or so after a correct; no positive condition to wait on)
     assert.deepEqual(await dp.evaluate(() => window.__fxc), [], "no FX node in diet");
     assert.equal(await dp.$$eval("#rwHud, .fx-layer, .fx-ov", e => e.length), 0);
     assert.equal(await dp.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("stem-rw")).length), 0);
@@ -332,7 +337,7 @@ try {
       await rig(p5, [0.99]);
       await pick(p5, "c");
       await pick(p5, "a");
-      await p5.waitForTimeout(900);
+      await p5.waitForTimeout(900);   // keep: observation window (the closing right pick must pulse nothing; the classes land with the verdict, no later condition to wait on)
       const n = await p5.evaluate(() => window.__nudge);
       const first = c => n.find(x => x[1] === c);
       assert.ok(first("jolt") && first("jolt")[0] === "c", `wrong pick c got the shake (${rmode}): ${JSON.stringify(n)}`);
@@ -366,7 +371,7 @@ try {
     await tip("Points always go up and never let you down.", "#rwCoin");
     assert.equal(await seen("right"), "1");
     await go(o, "CALC1_R02"); await pick(o, "b");
-    await o.waitForTimeout(1200);
+    await o.waitForTimeout(1200);   // keep: observation window (a try left must toast nothing; no positive condition to wait on, the assert below is the check)
     assert.equal(await o.$eval("#toast", t => t.classList.contains("on")), false, "a try left: nothing up there (C12)");
     await pick(o, "c");
     await tip("Did an oopsie or two? Your progress is safe!", "#rwHud .rw-streak");
@@ -409,7 +414,7 @@ try {
     await lp.reload(); await opened(lp, "CALC1_R02"); await lp.waitForSelector("#rwHud:not([hidden])");
     await lp.evaluate(() => { window.__ov = []; new MutationObserver(ms => { for (const m of ms) { for (const n of m.addedNodes) if (n.nodeType === 1 && n.classList?.contains("fx-ov")) window.__ov.push({ cls: n.className, t0: performance.now(), reels: 0 });
       for (const n of m.removedNodes) if (n.nodeType === 1 && n.classList?.contains("fx-ov")) { const o = window.__ov.find(x => x.cls === n.className && !x.t1); if (o) o.t1 = performance.now(); } } }).observe(document.body, { childList: true }); });
-    await lp.waitForTimeout(1100);
+    await appSettled(lp);
     await rig(lp, [0, 0, 0, 0]);                                                // 14 XP (84: level 2), a common drop
     const h0 = await lp.evaluate(() => location.hash);
     await lp.click('#q .opt[data-id="a"]'); await lp.focus('#q .opt[data-id="a"]'); await lp.keyboard.press("Enter");   // Enter = Check
@@ -419,14 +424,14 @@ try {
     await lp.waitForSelector("#q .nx", { state: "attached" });
     await lp.evaluate(() => document.querySelector("#q .nx").focus());
     for (let i = 0; i < 3; i++) await lp.keyboard.press("Enter");
-    await lp.waitForTimeout(300);
+    await lp.waitForTimeout(300);                                                          // keep: observation window (the Enter presses under the overlay must not reach Next; the key handler is synchronous, the assert below is the check)
     assert.equal(await lp.evaluate(() => location.hash), h0, "Enter under the overlay reached Next");
     await lp.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 6000 });
     const ov = await lp.evaluate(() => window.__ov);
     assert.equal(ov.length, 1, "more than one overlay on one answer: " + JSON.stringify(ov));
     assert.ok(ov[0].t1 - ov[0].t0 <= 2500, `the level-up beat took ${Math.round(ov[0].t1 - ov[0].t0)} ms`);
     assert.equal(await lp.$$eval(".fx-toast", e => e.length), 0, "a banner after the level-up overlay (two beats)");
-    await lp.focus("#q .nx"); await lp.keyboard.press("Enter"); await lp.waitForTimeout(400);
+    await lp.focus("#q .nx"); await lp.keyboard.press("Enter"); await lp.waitForTimeout(400);   // keep: observation window (one Enter on Next must not advance; no positive condition to wait on, the assert below is the check)
     assert.equal(await lp.evaluate(() => location.hash), h0, "Enter pressed Next");
     /* a fresh overlay (a level-up burst by hand): the first -> only closes it, the next -> goes Next */
     await lp.evaluate(() => { window.FX.burst("levelup", { title: "LEVEL UP", sub: "LEVEL 3", drop: "rare" }); });
@@ -523,7 +528,7 @@ try {
     for (const w of [1024, 1280, 1440, 1920]) {
       const [c, p] = await fresh(w);
       for (const b of await hudFit(p)) bad.push(w + ": " + b);
-      await toggleList(p); await p.waitForTimeout(200);
+      await toggleList(p); await settled(p);
       for (const b of await hudFit(p)) bad.push(w + " list open: " + b);
       await c.close();
     }

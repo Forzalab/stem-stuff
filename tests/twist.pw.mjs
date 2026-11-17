@@ -5,6 +5,7 @@
 //   the box, the choices) or Next. A non-twist item: no chip, no header row, its card pixel-identical before and after a twist was open.
 // Screens: 390x844, 1366x768, 1440x900. Starts its own serve.py with a throwaway banks/ folder (made-up items, never bank items):
 //   node tests/twist.pw.mjs [port]      SHOTS=<dir> also saves chip + toast + popover shots at 390 and 1366
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -69,7 +70,7 @@ const overlaps = page => page.evaluate(() => {
 
 let browser = null;
 try {
-  browser = await pw.chromium.launch({ args: ["--no-sandbox"] });   // inside the try: a failed launch still kills the server
+  browser = await launchBrowser(pw, { args: ["--no-sandbox"] });   // inside the try: a failed launch still kills the server
   await step("serve: /p/ carries `twist: true` only (false stays home), never the key", async () => {
     const a = await (await fetch(`${BASE}/p/PHYS_W01.json`)).json(), b = await (await fetch(`${BASE}/p/PHYS_W04.json`)).json();
     assert.equal(a.twist, true); assert.ok(!("answer" in a)); assert.ok(!("twist" in b), JSON.stringify(b));

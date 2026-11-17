@@ -3,6 +3,7 @@
 // should be hidden" = it leaked before a layer opened; "explain Cluck clicked, then note cannot be reopened" = the layer toggle hid it with
 // no way back. Hidden = visibility (the box height stays the column floor, W129 L4). Phones keep the notes in both modes.
 //   node tests/desk-notes-off.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -11,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -38,10 +40,10 @@ async function open(browser, w, h, mode) {
   const page = await ctx.newPage();
   await page.goto(BASE + "/#PHYS_DA1");
   await page.waitForSelector("#ans", { timeout: 10000 }).catch(async e => { console.log(await page.evaluate(() => document.body.innerText.slice(0, 300)), page.url()); throw e; });
-  await page.waitForTimeout(800);
+  await settled(page, "#xb");
   return { ctx, page };
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const box = page => page.evaluate(() => { const e = document.querySelector("#xb"), r = e.getBoundingClientRect(); return { h: Math.round(r.height), vis: getComputedStyle(e).visibility, shown: r.height > 0 && getComputedStyle(e).visibility !== "hidden" }; });
   for (const w of [720, 721, 1280]) for (const mode of ["diet", "sugar"]) {
@@ -58,14 +60,14 @@ try {
       await page.fill("#ans", "1"); await page.keyboard.press("Enter");
       if (mode === "sugar") {
         await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });   // open from load: nothing to click
-        await page.waitForTimeout(600);
+        await settled(page, "#xb");
         await check("after Explain Cluck opened");
-        await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+        await page.keyboard.press("Escape"); await settled(page, "#work.cl-on #cluck");
         assert.equal(await shown(page, "#work.cl-on #cluck"), true, "Escape leaves Cluck's box open");
         await check("after Escape");
       } else await check("after a wrong answer");
       if (want) {
-        await page.fill("#xbField textarea", "my note"); await page.waitForTimeout(700);
+        await page.fill("#xbField textarea", "my note"); await page.waitForSelector("#xbLabel", { state: "visible", timeout: 5000 });
         assert.ok(await shown(page, "#xbLabel"), "notes label gone");
       }
       await ctx.close();
@@ -73,17 +75,17 @@ try {
   }
   await step("719px (diet): phone pad opens", async () => {
     const { ctx, page } = await open(browser, 719, 800, "diet");
-    await page.click("#padFab"); await page.waitForTimeout(500);
+    await page.click("#padFab"); await page.waitForSelector("#scratch", { state: "visible", timeout: 5000 });
     assert.equal(await shown(page, "#scratch"), true, "phone pad does not open");
     await ctx.close();
   });
   await step("390x844 diet: phone notes open, take text, close, reopen", async () => {
     const { ctx, page } = await open(browser, 390, 844, "diet");
     for (let i = 0; i < 2; i++) {
-      await page.click("#padFab"); await page.waitForTimeout(500);
+      await page.click("#padFab"); await page.waitForSelector("#scratch", { state: "visible", timeout: 5000 });
       assert.equal(await shown(page, "#scratch"), true, `pad closed on open #${i + 1}`);
       if (i === 0) await page.fill("#scratch", "my note");
-      await page.click("#mtExp"); await page.waitForTimeout(500);
+      await page.click("#mtExp"); await page.waitForFunction(() => !document.documentElement.classList.contains("mt"), null, { timeout: 5000 });
     }
     await ctx.close();
   });

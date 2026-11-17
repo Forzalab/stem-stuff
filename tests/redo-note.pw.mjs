@@ -3,6 +3,7 @@
 // with its caret on the tag. Once per device (app.js rwTip beat "redo", stem-ob-rw-redo): the second Redeem says nothing. Sugar only
 // (rewardOn), and it logs "ob redo 1" for intent.js (Jev). Own serve.py on a temp bank, real clock (a pick needs the 2 s dwell).
 //   node tests/redo-note.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -11,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2/D1: wait on animation state, not on the clock
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -42,7 +44,7 @@ async function pick(page, id) {
   await skipRetryWait(page);
   const n = await nTries(page);
   await page.$eval(`#q .opt[data-id="${id}"]`, b => b.click());
-  await page.waitForTimeout(80);
+  await page.waitForFunction(id => document.querySelector(`#q .ch[data-id="${id}"] .send`)?.hidden === false, id, { timeout: 5000 });   // select() has shown this row's send
   await page.$eval(`#q .ch[data-id="${id}"] .send`, b => b.click());
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 8000 });
   await page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 }).catch(() => {});
@@ -55,7 +57,7 @@ async function next(page) {
   const c = await code(page);
   await page.$eval("#qnext", b => b.click());
   await page.waitForFunction(c => { const p = document.querySelector("#pcode")?.textContent; return p && p !== c && !document.querySelector("#freeze").hidden; }, c, { timeout: 8000 });
-  await page.waitForTimeout(250);
+  await settled(page);   // the new question's entry animations have ended
 }
 /* Next (answering right on the way) until a Redeem showing opens; returns its code */
 async function toRedeem(page) {
@@ -68,7 +70,7 @@ async function toRedeem(page) {
   throw new Error("no Redeem showing within 14 Nexts");
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 390, height: 844 }]]) {
   await step(`${w}: the first Redeem says "${NOTE}" once, on the retry tag; the second Redeem does not`, async () => {
     const phone = vp.width < 500;
@@ -106,7 +108,7 @@ for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 
     const r2 = await toRedeem(page);
     assert.equal(r2, m2, "the second miss comes back");
     assert.match(await page.textContent("#rtag"), /Pity roll/);
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(1200);   // keep: observation window (the second Redeem must toast nothing; no positive condition to wait on, the assert below is the check)
     const seen = await notes(page);
     assert.equal(seen.length, 1, "the redo note shows once per device: " + JSON.stringify(seen));
     assert.equal(seen[0].at, m1);

@@ -4,6 +4,7 @@
 //   (c) Next is OUTSIDE the field box, beside it
 //   (d) the line under the field is a plain sentence: wrong "Not it. The answer is 3.03 s" + the copy icon, right "That's it! The answer is ..."
 // Starts its own serve.py (static files); the bank and /check are routed.   node tests/reveal-box.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -52,7 +53,7 @@ async function pageFor(browser, W, H) {
 const R = `(e => e && (({ left, top, right, bottom, width, height }) => ({ left, top, right, bottom, width, height }))(e.getBoundingClientRect()))`;
 const pos = page => page.evaluate(`(() => { const R = ${R}, y = window.scrollY; const g = s => R(document.querySelector(s));
   return { chk: g("#ansGo"), nx: g("#q .nx"), ff: g("#ff"), card: g("#q"), fz: g("#freezeIn"), y }; })()`);
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 // BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) shows no drawer chip (its box is open and carries Cluck), so the wide pass runs at 700
 for (const [W, H] of [[390, 844], [700, 900]]) for (const outcome of ["right", "out"]) {
   const T = `${W}x${H} ${outcome}`;

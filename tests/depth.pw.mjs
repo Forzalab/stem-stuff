@@ -4,6 +4,7 @@
 // raised send; the proof box .xb and the short-answer .ff are recessed wells. HARD GATE (WCAG 1.4.11): the field vs its card >= 3:1 by
 // computed colours, else the 1px edge stays (both are reported). Flag OFF: none of the depth shadows, no change.
 // Own serve.py, throwaway banks. Smoke size, feature-local:   node tests/depth.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -34,7 +35,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* a fresh context; flag "on" stores stem-ui=v7 (fx.js sets html.ui-v7 before first paint) */
 async function open(flag, hash, w = 390, h = 844, dsf = 1, code = hash) {
   const phone = w < 500;

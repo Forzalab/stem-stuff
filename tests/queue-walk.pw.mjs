@@ -61,10 +61,9 @@ async function answer(page, code, right) {
   const n = await tries(page);
   const tap = sel => page.$eval(sel, b => b.click());                // a DOM click: a send bubble from the last pick may sit over the row
   for (const id of pickIds) await tap(`#q .opt[data-id="${id}"]`);
-  await page.waitForTimeout(80);
+  await page.waitForFunction(ids => ids.every(i => document.querySelector(`#q .opt[data-id="${i}"]`)?.getAttribute("aria-checked") === "true"), pickIds, { timeout: 5000 });   // the picks registered (their send bubble up)
   if (all) await tap("#mcGo"); else await tap(`#q .ch[data-id="${pickIds[0]}"] .send`);
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 8000 });
-  await page.waitForTimeout(150);
   await quiet(page);
   return page.evaluate(() => window.__drill.state.tries.at(-1).v);
 }
@@ -88,7 +87,7 @@ try {
   await step("no Shuffle button, no Redo my misses", async () => {
     assert.equal(await page.$("#qshuf"), null);
     assert.equal(await page.$("#qredo"), null);
-    await page.click("#qlistBtn"); await page.waitForTimeout(200);
+    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])", { timeout: 5000 });
     assert.ok(!/redo|shuffle/i.test(await page.$eval("header.top", h => h.innerText)), "no Redo / Shuffle words in the bar");
     await page.click("#qlistBtn");
   });
@@ -172,7 +171,7 @@ try {
       if (i === 6) break;
       await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
       const n = await tries(page);
-      await page.$eval('#q .opt[data-id="a"]', b => b.click()); await page.waitForTimeout(80); await page.$eval('#q .ch[data-id="a"] .send', b => b.click());
+      await page.$eval('#q .opt[data-id="a"]', b => b.click()); await page.waitForFunction(() => document.querySelector('#q .opt[data-id="a"]')?.getAttribute("aria-checked") === "true", null, { timeout: 5000 }); await page.$eval('#q .ch[data-id="a"] .send', b => b.click());
       await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 8000 });
       await quiet(page);
       await page.click("#qnext");
@@ -183,7 +182,7 @@ try {
     assert.ok(five.slice(0, 5).some(x => x.code === five[5].code), "the 6th is a re-showing");
     assert.equal(five[5].open, true, "the re-showing is answerable (a fresh round)");
     await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
-    await page.$eval('#q .opt[data-id="a"]', b => b.click()); await page.waitForTimeout(80); await page.$eval('#q .ch[data-id="a"] .send', b => b.click());
+    await page.$eval('#q .opt[data-id="a"]', b => b.click()); await page.waitForFunction(() => document.querySelector('#q .opt[data-id="a"]')?.getAttribute("aria-checked") === "true", null, { timeout: 5000 }); await page.$eval('#q .ch[data-id="a"] .send', b => b.click());
     await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 8000 });
     assert.equal(await page.evaluate(() => window.__drill.state.tries.at(-1).v), "correct", "graded again");
     assert.ok(!/Ask Tony/.test(await page.textContent("body")), "no shaming lockout line");

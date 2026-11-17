@@ -1,6 +1,7 @@
 // PROGBAR P7 wave smoke (brain ui-polish/wave/P7-SPEC.md): the streak notches spring-wave on land, behind html.ui-v7. Flag ON: transform dips below 0.75,
 // never above 1, clears after the wave; reduced motion and flag OFF: never a transform. Smoke size, feature-local. Own serve.py, throwaway bank.
 //   node tests/progbar-wave.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -63,16 +64,18 @@ const geo = p => p.evaluate(() => {
 });
 const states = p => p.evaluate(() => [...document.querySelectorAll("#pbTile .pb-n")].map(e => e.className.replace("pb-n ", "")));
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-/* three rights in a row; a per-frame sampler (started before the 3rd) records every streak notch's inline transform. Returns the samples after 3 s. */
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
+/* three rights in a row; a per-frame sampler (started before the 3rd) records every streak notch's inline transform. Returns the samples
+   once the sampler's own 4.5 s window is over and the wave is back at rest (no fixed sleep). */
 async function run(flag, extra = {}) {
   const [c, p] = await fresh(browser, flag, 390, 844, extra);
   for (const n of [1, 2]) { await go(p, "CALC1_P0" + n); await pick(p, "a"); }
-  await p.evaluate(() => { window.__w = []; const t0 = performance.now(); const f = () => { const ns = [...document.querySelectorAll("#pbTile .pb-n.streak")];
-    window.__w.push({ t: performance.now() - t0, s: ns.map(e => e.style.transform) }); if (performance.now() - t0 < 4500) requestAnimationFrame(f); }; requestAnimationFrame(f); });
+  await p.evaluate(() => { window.__w = []; window.__wDone = false; const t0 = performance.now(); const f = () => { const ns = [...document.querySelectorAll("#pbTile .pb-n.streak")];
+    window.__w.push({ t: performance.now() - t0, s: ns.map(e => e.style.transform) }); if (performance.now() - t0 < 4500) requestAnimationFrame(f); else window.__wDone = true; }; requestAnimationFrame(f); });
   await go(p, "CALC1_P03"); await pick(p, "a");
   if (flag === "on") await p.waitForFunction(() => document.querySelectorAll("#pbTile .pb-n.streak").length === 3);
-  await p.waitForTimeout(3000);
+  // CI-ARCH D1: the sampler's own 4.5 s window has finished and the wave is back at rest (the two things the asserts below read)
+  await p.waitForFunction(() => window.__wDone && [...document.querySelectorAll("#pbTile .pb-n.streak")].every(e => !e.style.transform && !e.style.willChange), null, { timeout: 8000 });
   const w = await p.evaluate(() => window.__w), end = await p.evaluate(() => [...document.querySelectorAll("#pbTile .pb-n.streak")].map(e => e.style.transform + "|" + e.style.willChange));
   assert.deepEqual(p.__errs, []); await c.close();
   return { sc: w.flatMap(r => r.s.filter(Boolean).map(s => +/scaleY\(([\d.]+)\)/.exec(s)[1])), end };

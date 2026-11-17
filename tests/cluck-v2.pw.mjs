@@ -11,6 +11,7 @@
 //             no peek, no "okay, but how?"; out of tries, no "Try again" anywhere
 // CV_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-v2@desk, cluck-v2@phone. Own serve.py + a stub OpenRouter. No page.clock jumps (nothing here waits on time).
 //   node tests/cluck-v2.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -20,6 +21,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -66,7 +68,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, hash = "#BANK_CVT") {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
@@ -77,7 +79,7 @@ async function open(w, hash = "#BANK_CVT") {
   page.chats = []; page.on("request", r => { if (/\/chat$/.test(r.url()) && r.method() === "POST") page.chats.push(JSON.parse(r.postData() || "{}")); });
   await page.goto(BASE + "/" + hash);
   await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 }).catch(async e => { throw new Error(e.message.split("\n")[0] + " " + JSON.stringify(await page.evaluate(() => ({ h: location.hash, b: window.stemBank && window.stemBank.code, f: document.getElementById("freeze")?.hidden, s: !!document.getElementById("splash") })))); });
-  await page.waitForTimeout(500);
+  await settled(page);
   return page;
 }
 const vis = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)].some(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"), sel);
@@ -86,7 +88,7 @@ const wrong = async page => { await skipRetryWait(page); await page.click('.opt[
 const right = async page => { await skipRetryWait(page); await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send'); };
 const num = async (page, v) => { await skipRetryWait(page); await page.fill("#ans", v); await page.press("#ans", "Enter"); };
 const streamedPick = (page, v) => page.waitForFunction(v => { const t = document.querySelector("#cluck")?.innerText || "", p = document.querySelector("#fb")?.innerText || ""; return t.includes("You picked " + v + ".") && /Egg-cellent/.test(t + p); }, v, { timeout: 10000 });
-const toNum = async page => { await page.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans"), null, { timeout: 8000 }); await page.waitForTimeout(500); };
+const toNum = async page => { await page.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans"), null, { timeout: 8000 }); await settled(page, "#q"); };
 const streamed = page => page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
 
 for (const w of W.filter(w => w >= 720)) {
@@ -169,7 +171,8 @@ for (const w of W.filter(w => w >= 720)) {
     const page = await open(w);
     await page.evaluate(() => { location.hash = "#CALC1_CVT3"; });
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT3", null, { timeout: 8000 });
-    await page.waitForTimeout(600);
+    await page.waitForSelector("#work.cl-on #cluck", { state: "visible", timeout: 5000 });
+    await settled(page, "#work");
     assert.ok(await vis(page, "#work.cl-on #cluck"), "the box stays");
     const t = await boxText(page);
     assert.match(t, /404/, "the note: " + t);
@@ -206,9 +209,9 @@ await step(`@${w < 720 ? "phone" : "desk"} ${w}: wrong MC pick -> tray -> dismis
   const t0 = await tops();
   await wrong(page);
   await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
-  await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) settles
+  await settled(page, ".vdrawer");                                    // the drawer's slide (380 ms) settles
   assert.deepEqual(await tops(), t0, "opening the tray moved a row");
-  await page.click(".vdrawer:not([hidden]) .vd-x"); await page.waitForTimeout(500);
+  await page.click(".vdrawer:not([hidden]) .vd-x"); await settled(page, ".vdrawer");
   assert.deepEqual(await tops(), t0, "dismissing the tray left a gap / moved a row");
   await page.context().close();
 });
@@ -220,10 +223,10 @@ for (const w of W) for (const early of [true, false]) {
     const page = await open(w);
     await wrong(page);
     await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
-    if (!early) await page.waitForTimeout(2500);   // the stub's reply has streamed by now (the closed phone sheet shows no text to wait on)
-    await page.waitForTimeout(500);
+    if (!early) await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000, polling: 100 });   // the stub's reply has streamed by now (the closed phone sheet shows no text to wait on, its cache does)
+    await settled(page, ".vdrawer");
     await page.click(".vdrawer .wchip");
-    await page.waitForTimeout(900);
+    await page.waitForFunction(() => { const e = document.querySelector("#cluck"); return !!window.stemCluckOpen() && !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"; }, null, { timeout: 5000 });
     const g = await page.evaluate(() => ({ open: !!window.stemCluckOpen(), cl: (() => { const e = document.querySelector("#cluck"); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"; })(), tray: !!document.querySelector(".vdrawer:not([hidden])") }));
     assert.ok(g.open && g.cl, "the first tap did not open Cluck: " + JSON.stringify(g));
     await page.context().close();
@@ -235,15 +238,15 @@ const generic = async page => { await skipRetryWait(page); if (await page.locato
      // the tray may lie over the rows (Tony, Nov 3 19:31): dismiss it first
    await page.click('.ch[data-id="c"] .send'); };
 const numMiss = async page => { await toNum(page); await num(page, "7"); };
-const mcOut = async page => { await wrong(page); await page.waitForTimeout(400); await generic(page); };
-const numOut = async page => { await numMiss(page); await page.waitForTimeout(400); await num(page, "8"); };
+const mcOut = async page => { await wrong(page); await page.waitForSelector(".vdrawer:not([hidden]) .vd-x", { state: "visible", timeout: 6000 }).catch(() => { /* the tray may be absent: generic() handles it */ }); await generic(page); };
+const numOut = async page => { await numMiss(page); await page.waitForFunction(() => window.__drill.state.tries.length >= 1, null, { timeout: 5000 }); await num(page, "8"); };
 for (const w of W) for (const [kind, miss] of [["matched", wrong], ["generic", generic], ["freeform", numMiss], ["mc out-of-tries", mcOut], ["freeform out-of-tries", numOut]]) {
   await step(`@${w < 720 ? "phone" : "desk"} ${w}: a ${kind} miss: the tray's Ask Cluck is the ONLY Cluck entry (no peek, no "okay, but how?")`, async () => {
     const page = await open(w);
     await miss(page);
     await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
     await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000 }).catch(() => { /* the stream may be off; the entries are what is asserted */ });
-    await page.waitForTimeout(600);
+    await settled(page, "#q");
     const g = await page.evaluate(() => {
       const shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
       const ent = [...document.querySelectorAll(".wchip, .cl-cta, .cl-peek, .cue-chip, #clBack")].filter(shown);

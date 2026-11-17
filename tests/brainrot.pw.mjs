@@ -4,6 +4,7 @@
 // (www-widgetapi.js: the page sends {"event":"listening"} until it hears back, then a "command" addEventListener onError; the player answers
 // with {"event":"onError","info":<code>} posted to the embed URL's origin parameter, so a missing / wrong origin = no message = red).
 // usage: node tests/brainrot.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -30,7 +31,7 @@ let fails = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 
 /* one page on the sugar start page (the players warm up parked, all built: one per category, up to 6): cats = the fixture CATS, verdict(id, seen) = the code the
    stub reports for that id (0 = plays); seen = the ids requested so far, in order. -> { page, seen, told, ids() } */
@@ -62,6 +63,8 @@ async function open(cats, verdict) {
 }
 const catOf = (cats, id) => cats.findIndex(([, v]) => v.some(x => x[0] === id));
 const v = (id, short = 0) => [id, `Video ${id}`, short];
+/* a bounded wait on what the test itself records (the stub players' requests), not on the clock: 50 ms steps to an 8 s deadline */
+const until = async (get, what, tries = 160) => { for (let i = 0; i < tries; i++) { const got = get(); if (got) return got; await new Promise(r => setTimeout(r, 50)); } throw new Error("never came: " + what); };
 
 await step("the embed asks for the JS API, for this page's origin only (enablejsapi=1, origin=)", async () => {
   const { c, page } = await open([["A", [v("aaaaaaaaaa1")]], ["B", [v("bbbbbbbbbb1")]], ["C", [v("cccccccccc1")]]], () => 0);
@@ -76,7 +79,7 @@ await step("a video that can't be embedded (150) is swapped for an unused one of
   const cats = [["A", [v("aaaaaaaaaa1"), v("aaaaaaaaaa2", 1)]], ["B", [v("bbbbbbbbbb1"), v("bbbbbbbbbb2")]], ["C", [v("cccccccccc1"), v("cccccccccc2")]]];
   const first = new Map();                                              // the first id asked for in each category is dead
   const { c, page, ids, seen, other } = await open(cats, id => { const k = catOf(cats, id); if (!first.has(k)) first.set(k, id); return first.get(k) === id ? 150 : 0; });
-  for (let t = Date.now(); first.size < 3 && Date.now() - t < 8000;) await page.waitForTimeout(100);   // all 3 slots asked for their first video
+  await until(() => first.size >= 3, "all 3 slots asked for their first video");   // all 3 slots asked for their first video
   await page.waitForFunction(dead => [...document.querySelectorAll("#rot iframe")].every(f => !dead.some(d => f.src.includes("/embed/" + d))),
     [...first.values()], { timeout: 8000 });
   const dead = [...first.values()], now = await ids();
@@ -93,11 +96,10 @@ await step("a video that can't be embedded (150) is swapped for an unused one of
 await step("its category used up: another category's unused video; nothing left: the slot keeps YouTube's message (no loop)", async () => {
   const cats = [["A", [v("aaaaaaaaaa1"), v("aaaaaaaaaa2")]], ["B", [v("bbbbbbbbbb1")]], ["C", [v("cccccccccc1")]]];
   const { c, page, ids, seen, told } = await open(cats, id => (id[0] === "a" ? 0 : 101));   // A plays; B and C are dead
-  const until = Date.now() + 8000;
-  while (Date.now() < until && !(told.includes("bbbbbbbbbb1") && told.includes("cccccccccc1"))) await page.waitForTimeout(100);
+  await until(() => told.includes("bbbbbbbbbb1") && told.includes("cccccccccc1"), "B and C reported 101");
   assert.equal(told.length, 2, `B and C reported 101: ${told}`);
   await page.waitForFunction(() => [...document.querySelectorAll("#rot iframe")].filter(f => f.src.includes("/embed/aaaaaaaaaa")).length === 2, null, { timeout: 8000 });
-  await page.waitForTimeout(500);                                          // a stray second swap would be asked for by now
+  await page.waitForTimeout(500);                                          // keep: quiet window — the asserts below prove no stray swap (a negative needs one)
   const now = await ids();
   assert.equal(new Set(now).size, 3, `no repeat: ${now}`);
   assert.deepEqual(now.filter(id => id[0] === "a").sort(), ["aaaaaaaaaa1", "aaaaaaaaaa2"], `the one free video took a dead slot: ${now}`);
@@ -110,10 +112,9 @@ await step("153 (no Referer: every video would fail the same) is not swapped", a
   const cats = [["A", [v("aaaaaaaaaa1"), v("aaaaaaaaaa2")]], ["B", [v("bbbbbbbbbb1"), v("bbbbbbbbbb2")]], ["C", [v("cccccccccc1"), v("cccccccccc2")]]];
   const { c, page, ids, told } = await open(cats, () => 153);
   const before = await ids();
-  const until = Date.now() + 8000;
-  while (Date.now() < until && told.length < 3) await page.waitForTimeout(100);
+  await until(() => told.length >= 3, "the 3 stubs reported 153");
   assert.equal(told.length, 3, `the 3 stubs reported 153: ${told}`);
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(500);                                          // keep: quiet window — the assert below proves 153 is never swapped
   assert.deepEqual(await ids(), before);
   await c.close();
 });
@@ -124,7 +125,7 @@ await step("8 categories, 5 slots (W135b): a dead one is swapped for its categor
   const { c, page, ids, seen } = await open(cats, id => { const k = catOf(cats, id); if (!first.has(k)) first.set(k, id); return first.get(k) === id ? 150 : 0; });
   const at0 = await ids();
   assert.equal(new Set(at0.map(id => catOf(cats, id))).size, 5, `5 slots, 5 categories: ${at0}`);
-  for (let t = Date.now(); first.size < 3 && Date.now() - t < 8000;) await page.waitForTimeout(100);   // slots 1-3 load (4-6 wait for a scroll)
+  await until(() => first.size >= 3, "slots 1-3 load (4-6 wait for a scroll)");   // slots 1-3 load (4-6 wait for a scroll)
   await page.waitForFunction(dead => [...document.querySelectorAll("#rot iframe")].every(f => !dead.some(d => (f.src || f.dataset.src).includes("/embed/" + d))), [...first.values()], { timeout: 8000 });
   const now = await ids();
   assert.equal(new Set(now).size, 5, `no repeat across all 5: ${now} (asked ${seen})`);
@@ -136,9 +137,9 @@ await step("8 categories, 5 slots (W135b): a dead one is swapped for its categor
 await step("5 categories of one video each: a dead slot has nothing free (the other 4 are all shown) and keeps YouTube's message", async () => {
   const cats = "abcde".split("").map(x => [x.toUpperCase(), [v(x.repeat(10) + "1")]]);
   const { c, page, ids, told } = await open(cats, (id, seen) => (seen.length ? 0 : 150));   // the first asked is dead
-  for (let t = Date.now(); !told.length && Date.now() - t < 8000;) await page.waitForTimeout(100);
+  await until(() => told.length >= 1, "the first stub reported 150");
   assert.equal(told.length, 1, `one 150: ${told}`);
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(500);                                          // keep: quiet window — the asserts below prove the dead slot never loops
   const now = await ids();
   assert.equal(new Set(now).size, 5, `no repeat: ${now}`);
   assert.ok(now.includes(told[0]), `the dead slot was left as it was: ${now}`);

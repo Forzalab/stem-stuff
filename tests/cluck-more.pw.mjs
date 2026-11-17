@@ -3,6 +3,7 @@
 // visible part (above the fade's solid part) misses the disc. A tap scrolls ~80% down; at the bottom it goes; a short reply never shows it.
 // Jev hears cluck_more shown (once) / tap / bottom, and telemetry.js never sends it. 390x844 + 1280x800; own serve.py + a stub OpenRouter.
 //   node tests/cluck-more.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -11,6 +12,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -61,7 +63,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const VPS = [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 800 }]];
 
 /* a wrong pick streams Cluck's reply (prefetch); the idle duck's tap opens the sheet on it; the typing is skipped */
@@ -97,7 +99,7 @@ async function cluck(vp, watch = false) {
   });
   else await page.click("#cluck .wtext").catch(() => {});               // a tap skips the typing
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
-  await page.waitForTimeout(400);                                       // KaTeX + the 180 ms fade
+  await page.waitForTimeout(400);                                       // keep: app timer (clMore's 150 ms show delay + the hint's 180 ms fade)
   return page;
 }
 /* the hint's geometry: the disc (.cl-more's 28px ::before), where the body's mask fade starts (4rem above its bottom), and every text line's
@@ -134,20 +136,21 @@ for (const [tag, vp] of VPS) {
     await page.screenshot({ path: join(SHOTS, `built-more-${tag}.png`) });
     const t0 = g.top;
     await page.click("#cluck .cl-more");
-    await page.waitForTimeout(900);                                     // the smooth scroll
+    const want = t0 + Math.min(g.max - t0, g.h * 0.8) - 4;              // the smooth scroll's end
+    await page.waitForFunction(w => document.querySelector("#cluck .cl-bd").scrollTop >= w, want, { timeout: 5000 });
     g = await geo(page);
     assert.ok(g.top - t0 >= Math.min(g.max - t0, g.h * 0.8) - 4, `a tap scrolls ~80% of the body (${t0} -> ${g.top}, height ${g.h}, max ${g.max})`);
     if (g.below) assert.deepEqual(g.hits, [], "after the tap: still no readable line under the disc");
     await page.evaluate(() => { const bd = document.querySelector("#cluck .cl-bd"); bd.scrollTop = bd.scrollHeight; });
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => { const bd = document.querySelector("#cluck .cl-bd"), b = document.querySelector("#cluck .cl-more"); return !bd.classList.contains("below") && +getComputedStyle(b).opacity === 0; }, null, { timeout: 5000 });
     g = await geo(page);
     assert.ok(!g.below && g.op === 0 && g.fade === 0 && !g.vis, "at the bottom the hint is gone: " + JSON.stringify(g));
     await page.screenshot({ path: join(SHOTS, `built-bottom-${tag}.png`) });
     await page.evaluate(() => { const bd = document.querySelector("#cluck .cl-bd"); bd.scrollTop = 0; });   // back up, down again: shown/bottom once per reply
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => document.querySelector("#cluck .cl-bd").classList.contains("below"), null, { timeout: 5000 });
     assert.equal((await geo(page)).below, true, "scrolled back up: it shows again");
     await page.evaluate(() => { const bd = document.querySelector("#cluck .cl-bd"); bd.scrollTop = bd.scrollHeight; });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => (window.__more || []).includes("bottom"), null, { timeout: 5000 });
     assert.deepEqual(await page.evaluate(() => window.__more), ["shown", "tap", "bottom"], "Jev: shown once, the tap, the bottom once");
     assert.deepEqual(page.net, [], "cluck_more never leaves the device");
     assert.deepEqual(page.errs, [], "no page errors");
@@ -156,7 +159,7 @@ for (const [tag, vp] of VPS) {
   await step(`${tag}: a short reply never shows the hint`, async () => {
     parts = SHORT;
     const page = await cluck(vp);
-    await page.waitForTimeout(400);
+    await settled(page, "#cluck");
     const g = await geo(page);
     assert.ok(g.max <= 8, "the reply fits: " + JSON.stringify(g));
     assert.equal(await page.evaluate(() => window.__below), false, ".below never set (not even for a frame)");

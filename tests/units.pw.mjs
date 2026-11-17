@@ -4,6 +4,7 @@
 //   the old markup. Copy = the value only (WebAssign has its own unit box). serve.py lets `unit` through, never the key; `twist: true`
 //   goes too since W133 (the Twist chip, tests/twist.pw.mjs).
 // Screens: 390x844, 1366x768, 1440x900. Starts its own serve.py with a throwaway banks/ folder:   node tests/units.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -73,7 +74,7 @@ const line = (page, sel) => page.evaluate(sel => {
       gap: ur.left - br.right, dy: Math.abs((ur.top + ur.bottom) / 2 - (br.top + br.bottom) / 2), prev: u.previousSibling?.textContent ?? null } : null };
 }, sel);
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   await step("serve: /p/ carries `unit` (num item, num parts) and `twist: true` (W133), never the key", async () => {
     const a = await (await fetch(`${BASE}/p/PHYS_U01.json`)).json();

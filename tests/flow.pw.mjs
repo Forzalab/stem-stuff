@@ -4,9 +4,10 @@
 //   python3 serve.py 8812 &   then   node tests/flow.pw.mjs http://localhost:8812 [shotDir]
 // The software keyboard is simulated as in swap.pw.mjs: the viewport shrinks to 55% of its height after a field is focused. Keyboard down
 // after Back = the field loses focus and the viewport grows back. With a shotDir it saves flow-{1..N}-390.png and flow-desktop-1440.png.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
-import { vtHook } from "./lib/wait.mjs";   // CI-ARCH B2: the shared view-transition counter (was defined here)
+import { vtHook, settled } from "./lib/wait.mjs";   // CI-ARCH B2: the shared view-transition counter (was defined here)
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -32,7 +33,7 @@ const CA = { code: "CSCI26_FW1", type: "mc", pick: "all", shuffle: false, body: 
 const PAD = "N = mg cos30 = 33.9\nf = 0.20 N = 6.79\nF = 19.6 - 6.79";
 
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
@@ -44,10 +45,11 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   page.on("pageerror", e => errors.push(String(e)));
   await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
   const T = `${W}x${H}`;
-  const openPad = async () => { await page.locator("#padFab").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt"), null, { timeout: 5000 }); await page.waitForTimeout(350); };
-  const shot = async () => { if (SHOTS && W === 390) { n++; await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/flow-${n}-390.png` }); } };
-  const kbUp = async () => { await page.setViewportSize({ width: W, height: Math.round(H * KB) }); await page.waitForTimeout(450); };
-  const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(500); };
+  const openPad = async () => { await page.locator("#padFab").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt"), null, { timeout: 5000 }); await settled(page); };
+  const shot = async () => { if (SHOTS && W === 390) { n++; await settled(page); await page.screenshot({ path: `${SHOTS}/flow-${n}-390.png` }); } };
+  /* keyboard up/down: the app lays the page out on the resize (layoutDock), so wait for the new viewport height to be the page's, not a fixed time */
+  const kbUp = async () => { const h = Math.round(H * KB); await page.setViewportSize({ width: W, height: h }); await page.waitForFunction(h => Math.round(visualViewport ? visualViewport.height : innerHeight) === h, h, { timeout: 5000 }); await settled(page); };
+  const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForFunction(h => Math.round(visualViewport ? visualViewport.height : innerHeight) === h, H, { timeout: 5000 }); await settled(page); };
   const cls = () => page.evaluate(() => document.documentElement.className);
   const has = c => page.evaluate(c => document.documentElement.classList.contains(c), c);
   const active = () => page.evaluate(() => { const a = document.activeElement; return a.id || a.getAttribute("aria-label") || a.tagName; });
@@ -60,7 +62,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
 
   await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, CA.code, { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await page.evaluate(() => document.fonts.ready); await settled(page);   // the text metrics below read the real faces
   await page.evaluate(t => { const ta = document.querySelector("#scratch"); ta.value = t; ta.dispatchEvent(new Event("input", { bubbles: true })); }, PAD);
 
   await step(`${T} fix box: the long how fits (wraps above the box), never clipped`, async () => {
@@ -95,7 +97,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await shot();   // 2: keyboard up, problem pane, pad peek
 
   await step(`${T} tap the pad peek: the pad page opens on q and the pad has focus in the same tap, caret at the end`, async () => {
-    await page.locator("#padPeek").tap(); await page.waitForTimeout(450);
+    await page.locator("#padPeek").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt-q"), null, { timeout: 5000 }); await settled(page);
     assert.ok(await has("mt") && await has("mt-q"), `pad page on q (${await cls()})`);
     assert.equal(await active(), "scratch");
     const c = await page.evaluate(() => { const t = document.querySelector("#scratch"); return [t.selectionStart, t.value.length]; });
@@ -105,7 +107,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await shot();   // 3: the pad page from the peek
 
   await step(`${T} tap the question: the pad page closes, the fix box you typed in has focus`, async () => {
-    await page.locator("#problem").tap({ position: { x: 40, y: 20 } }); await page.waitForTimeout(450);
+    await page.locator("#problem").tap({ position: { x: 40, y: 20 } }); await page.waitForFunction(s => !document.documentElement.classList.contains("mt") && document.activeElement === document.querySelector(s), fix, { timeout: 5000 });
     assert.equal(await has("mt"), false, `still open (${await cls()})`);
     assert.equal(await page.evaluate(s => document.activeElement === document.querySelector(s), fix), true, `focus: ${await active()}`);
   });
@@ -125,9 +127,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await step(`${T} the Scratchpad button: pad off the page; button >= 48px, above the bar, off the answer controls; hidden while typing an answer`, async () => {
     /* the button steps off answer controls where it (re)appears, then holds still while scrolling (Tony, Oct 3: it must not jump
        with the scroll; tests/fab.pw.mjs). So scroll first, then make it reappear (typing hides it, blur shows it), then check. */
-    await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(200);
-    await page.locator(fix).focus(); await page.waitForTimeout(250);
-    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    await page.evaluate(() => scrollTo(0, 0)); await settled(page);
+    await page.locator(fix).focus(); await page.waitForFunction(() => document.querySelector("#padFab").hidden === true, null, { timeout: 5000 });
+    await page.waitForFunction(s => { const r = document.querySelector(s).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 0.5; }, fix, { timeout: 5000 });   // the focus scroll landed (the button's re-show placement below reads this layout)
+    await page.evaluate(() => document.activeElement.blur()); await page.waitForFunction(() => document.querySelector("#padFab").hidden === false, null, { timeout: 5000 });
     assert.ok(await page.locator("#work").isHidden(), "pad on the plain page");
     const g = await page.evaluate(() => { const f = document.querySelector("#padFab").getBoundingClientRect(), d = document.querySelector("#dock").getBoundingClientRect();
       const hits = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > f.left && q.left < f.right && q.bottom > f.top && q.top < f.bottom).length;
@@ -136,9 +139,9 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     assert.ok(g.bottom <= g.dockTop + 0.5, `over the bar: ${g.bottom} > ${g.dockTop}`);
     assert.equal(g.hits, 0, "rests over an answer control");
     assert.equal((await page.locator("#padFab").textContent()).trim(), "Open notes");
-    await page.locator(fix).focus(); await page.waitForTimeout(250);
+    await page.locator(fix).focus(); await page.waitForFunction(() => document.querySelector("#padFab").hidden === true, null, { timeout: 5000 });
     assert.ok(await page.locator("#padFab").isHidden(), "shown while an answer field has focus");
-    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    await page.evaluate(() => document.activeElement.blur()); await page.waitForFunction(() => document.querySelector("#padFab").hidden === false, null, { timeout: 5000 });
     assert.ok(await page.locator("#padFab").isVisible(), "back after blur");
   });
   await shot();   // 6: the plain page with the button
@@ -161,30 +164,30 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     const cap = (g.vh < 700 ? 1 / 3 : 0.45) * g.vh;
     assert.ok(g.tileH <= Math.min(g.need, cap) + 2, `tile ${g.tileH} > min(content ${g.need}, cap ${Math.round(cap)})`);
     await shot();   // 7: the pad page on q
-    await page.goBack(); await page.waitForTimeout(400);
+    await page.goBack(); await page.waitForFunction(() => !document.documentElement.classList.contains("mt"), null, { timeout: 5000 });
     assert.equal(await has("mt"), false, "Back closes"); assert.equal(page.url(), url, "Back stays on the page");
   });
 
   await step(`${T} q | a: a shows the answer only, q the problem only; keyboard up never closes; tap the problem = closed, caret in the answer`, async () => {
     await openPad();
-    await page.locator("#mtMode").tap(); await page.waitForTimeout(400);
+    await page.locator("#mtMode").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt-a"), null, { timeout: 5000 });
     assert.ok(await has("mt-a"), "a");
     assert.ok(await page.locator('#q .opt[data-id="a"]').isVisible() && await page.locator("#problem").isHidden(), "a: answer only");
     await shot();   // 8: the pad page on a
-    await page.locator("#mtMode").tap(); await page.waitForTimeout(400);
+    await page.locator("#mtMode").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt-q"), null, { timeout: 5000 });
     assert.ok(await has("mt-q") && await page.locator("#problem").isVisible() && await page.locator("#q").isHidden(), "q: problem only");
     await page.locator("#scratch").focus(); await kbUp();
     assert.ok(await has("mt") && !(await has("swap")), `still the pad page (${await cls()})`);
     assert.ok(await page.locator("#mtMode").isVisible(), "q | a hidden with the keyboard up on the pad page");
-    await page.locator("#mtMode").tap(); await page.waitForTimeout(400);
+    await page.locator("#mtMode").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt-a") && document.activeElement.id === "scratch", null, { timeout: 5000 });
     assert.ok(await has("mt-a") && await page.evaluate(() => document.activeElement.id) === "scratch", "q | a with the keyboard up: a, and the pad keeps focus");
-    await page.locator("#mtMode").tap(); await page.waitForTimeout(400);
+    await page.locator("#mtMode").tap(); await page.waitForFunction(() => document.documentElement.classList.contains("mt-q"), null, { timeout: 5000 });
     await kbDown();
     assert.ok(await has("mt"), "keyboard down never closes");
-    await page.locator("#problem").tap({ position: { x: 30, y: 20 } }); await page.waitForTimeout(400);
+    await page.locator("#problem").tap({ position: { x: 30, y: 20 } }); await page.waitForFunction(() => !document.documentElement.classList.contains("mt") && !!document.activeElement.closest("#q"), null, { timeout: 5000 });
     assert.equal(await has("mt"), false, "tap the problem closes");
     assert.equal(await page.evaluate(() => !!document.activeElement.closest("#q")), true, `caret in the answer (${await active()})`);
-    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
+    await page.evaluate(() => document.activeElement.blur()); await page.waitForFunction(() => document.querySelector("#padFab").hidden === false, null, { timeout: 5000 });
   });
 
   await step(`${T} the thin bar: tap = an anchor (the hug ends); a drag follows the finger and snaps`, async () => {
@@ -206,27 +209,31 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     /* the finger rests before it lifts: a lift while still moving is a flick, Chrome starts a touchscreen fling, and the next tap (the
        #mtExp one) only stops that fling: no click (todo 55 cause 2). The fling outlives a short gap, longer under CPU load. A rest of
        >= 40 ms reads as velocity 0 (no fling); load can only make it longer. */
-    await touch("touchMove", y0 + H * 0.3); await page.waitForTimeout(150);
+    await touch("touchMove", y0 + H * 0.3); await page.waitForTimeout(150);   // keep: browser gesture timing (a >= 40 ms touch rest reads as velocity 0; no page state to wait on)
     n0 = await vtN();
     await touch("touchEnd"); await vtDone(n0);
     const r2 = +(await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"))).toFixed(3);
     assert.ok([0, 0.333, 0.5].includes(r2), `snapped to an anchor (${r2})`);
-    await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
+    await page.locator("#mtExp").tap(); await page.waitForFunction(() => !document.documentElement.classList.contains("mt") && !(history.state && history.state.mt), null, { timeout: 5000 }); await settled(page);   // the pad page closed and its history entry popped (the close's scroll has landed)
     assert.equal(await has("mt"), false, "collapse closes");
   });
 
   await step(`${T} drag the Scratchpad button: snaps to the left edge, a drag is not a tap, kept after reload`, async () => {
+    /* the raw CDP touch below bypasses Playwright's actionability check: the button must be back on top at its centre first
+       (it re-shows after the pad page closes and steps off the answer controls a frame later) */
+    await page.waitForFunction(() => { const f = document.querySelector("#padFab"); if (!f || f.hidden) return false;
+      const r = f.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!e && f.contains(e); }, null, { timeout: 5000 });
     const f = await page.locator("#padFab").boundingBox();
     const cdp = await ctx.newCDPSession(page);
     const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
     const x0 = f.x + f.width / 2, y0 = f.y + f.height / 2;
     await touch("touchStart", x0, y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", x0 - i * (W * 0.6) / 8, y0 - i * 20);
-    await touch("touchEnd"); await page.waitForTimeout(400);
+    await touch("touchEnd"); await page.waitForFunction(() => document.querySelector("#padFab").getBoundingClientRect().left <= 24, null, { timeout: 5000 });   // the drop snapped to the left edge (the drag must not open the pad)
     assert.equal(await has("mt"), false, "a drag opened the pad page");
     const left = async () => (await page.locator("#padFab").boundingBox()).x;
     assert.ok(await left() <= 24, `not on the left edge: ${await left()}`);
-    await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(600);
+    await page.reload({ waitUntil: "networkidle" }); await page.waitForFunction(() => document.querySelector("#padFab") && document.querySelector("#padFab").getBoundingClientRect().left <= 24, null, { timeout: 8000 });
     assert.ok(await left() <= 24, "edge not kept after reload");
   });
   await step(`${T} no page errors`, async () => assert.deepEqual(errors, []));
@@ -241,17 +248,19 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
   const toastText = () => page.evaluate(() => { const t = document.querySelector("#toast"); return t.classList.contains("on") ? t.textContent.trim() : ""; });
   await step("390 onboarding: new device only, once each (button, then q | a)", async () => {
-    await page.goto(`${BASE}/#CALC1_X2P`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1200);
+    await page.goto(`${BASE}/#CALC1_X2P`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
+    await page.waitForFunction(() => { const t = document.querySelector("#toast"); return !!t && t.classList.contains("on") && t.classList.contains("up") && /^Quack up your thoughts here\.\.\.$/.test(t.textContent.trim()); }, null, { timeout: 5000 });   // the tip's own 700 ms timer fired
     assert.equal(await toastText(), "Quack up your thoughts here...");
     assert.ok(await page.evaluate(() => document.querySelector("#toast").classList.contains("up")), "the caret points down at the button");
-    await page.locator("#padFab").tap(); await page.waitForTimeout(900);
+    await page.locator("#padFab").tap();
+    await page.waitForFunction(() => /Switch question\/answer here\./.test((document.querySelector("#toast")?.classList.contains("on") ? document.querySelector("#toast").textContent : "") || ""), null, { timeout: 5000 });
     assert.equal(await toastText(), "Switch question/answer here.");
-    await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
-    await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);
+    await page.locator("#mtExp").tap(); await page.waitForFunction(() => !document.documentElement.classList.contains("mt"), null, { timeout: 5000 });
+    await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);   // keep: app timer the tip's 700 ms delay (it must not show again on a reload)
     assert.equal(await toastText(), "", "shown again");
   });
   await step("390 wrong MC answer: no toast over the choices; no try pips (Tony, Nov 3 16:23)", async () => {
-    await page.locator('.opt[data-id="a"]').tap(); await page.locator('.ch[data-id="a"] .send').tap(); await page.waitForTimeout(500);
+    await page.locator('.opt[data-id="a"]').tap(); await page.locator('.ch[data-id="a"] .send').tap(); await page.waitForSelector("#q .opt.wrong", { timeout: 5000 });
     assert.equal(await toastText(), "");
     assert.equal(await page.locator("#q .pips").count(), 0, "try pips are back");
   });
@@ -267,7 +276,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
   await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_T6B", null, { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await page.evaluate(() => document.fonts.ready); await settled(page);
   const geo = () => page.evaluate(() => { const f = document.querySelector("#freeze").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), q = document.querySelector("#q").getBoundingClientRect();
     const m = document.querySelector("main"), cs = getComputedStyle(m), inner = m.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     return { fL: f.left, fR: f.right, fW: f.width, wL: w.left, wT: w.top, qB: q.bottom, inner, side: document.documentElement.classList.contains("side") }; });

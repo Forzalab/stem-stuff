@@ -47,7 +47,8 @@ async function run(type, label, launchOpts) {
     const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(BANK)) });
     await opened(page, "CALC1_ZZ9");
-    await page.waitForTimeout(300);                              // the IndexedDB write
+    /* the IndexedDB write (offline.js saveBank): the file is on disk before this context closes */
+    await page.waitForFunction(() => new Promise(res => { const o = indexedDB.open("stem-stuff", 2); o.onsuccess = () => { const r = o.result.transaction("bank").objectStore("bank").get("files"); r.onsuccess = () => { const fs = r.result || []; o.result.close(); res(fs.some(f => f.name === "mine.json")); }; }; }), null, { timeout: 8000 });
     await ctx.close();
     ctx = await launch(); await pin(ctx); page = ctx.pages()[0] || await ctx.newPage();
     await page.goto(BASE + "/#CALC1_ZZ9");
@@ -63,10 +64,11 @@ async function run(type, label, launchOpts) {
 
   await step(`${label} (b) pageshow persisted after a stalled request: buttons work`, async () => {
     let n = 0;
-    await page.route("**/check", r => { if (++n === 1) return; r.continue(); });   // first request never answers
+    let firstHit; const firstRequest = new Promise(r => { firstHit = r; });
+    await page.route("**/check", r => { if (++n === 1) { firstHit(); return; } r.continue(); });   // first request never answers
     await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");
     await answer(page, "1");
-    await page.waitForTimeout(300);
+    await firstRequest;                                            // the first request is out and held by the route
     await page.evaluate(() => dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
     await answer(page, "1");
     assert.match(await verdict(page), /^i-(x|lock)$/);
@@ -88,7 +90,7 @@ async function run(type, label, launchOpts) {
     assert.match(await page.textContent("#fb"), /^\s*Timeout! Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}\s*$/);   // the incident code (incident.mjs), never its reason
     assert.equal(await page.inputValue("#ans"), "7", "typed answer kept");
     assert.equal(await page.evaluate(() => window.__drill.state.tries.length), before, "a timeout is not a try: " + JSON.stringify(await page.evaluate(() => window.__drill.state.tries)));
-    if (SHOTS) { await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }); await page.waitForTimeout(100); await page.screenshot({ path: `${SHOTS}/reload-timeout-${label}-390.png` }); }
+    if (SHOTS) { await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }); await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); await page.screenshot({ path: `${SHOTS}/reload-timeout-${label}-390.png` }); }
     stall = false;
     await page.click("#retry");
     assert.match(await verdict(page, before), /^i-(x|lock)$/);

@@ -1,6 +1,7 @@
 // Done questions (docs/design/DONE.md): list marks, read-only reopen, state across reloads, server restarts and hand resets.
 // Starts its own serve.py (it restarts it), with a throwaway tries.json:
 //   node tests/done.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the verdict's own animations, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -52,12 +54,12 @@ const go = async (page, code) => { await page.goto("about:blank"); await page.go
 /* graded: one more try recorded (the verdict is an icon in the box / badge, no words in #fb) */
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
 const graded = (page, n) => page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 4000 });
-async function typed(page, v) { const n = await tries(page); await page.fill("#ans", v); await page.click("#ansGo"); await graded(page, n); await page.waitForTimeout(150); }
+async function typed(page, v) { const n = await tries(page); await page.fill("#ans", v); await page.click("#ansGo"); await graded(page, n); await settled(page, "#ff, #q"); }
 async function pick(page, id) {
   const n = await tries(page);
   await page.click(`.opt[data-id="${id}"]`);
   await page.click(`.ch[data-id="${id}"] .send`);
-  await graded(page, n); await page.waitForTimeout(150);
+  await graded(page, n); await settled(page, "#ff, #q");
 }
 /* the rows in code order (CALC1_D01 = r[0] ...): the list is file order (docs/design/NAV.md); sorted by code to stay independent of that */
 const rows = page => page.$$eval("#qlist a", as => as.sort((a, b) => a.getAttribute("href") < b.getAttribute("href") ? -1 : 1).map(a => ({
@@ -82,7 +84,7 @@ async function upload(page) {
 }
 
 await start();
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   /* ---------------- upload mode ---------------- */
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
@@ -98,7 +100,7 @@ try {
   });
 
   const part = async (pg, i, v) => {
-    await pg.fill(`#q .part[data-i="${i}"] .ans`, v); await pg.press(`#q .part[data-i="${i}"] .ans`, "Enter"); await pg.waitForTimeout(250);
+    await pg.fill(`#q .part[data-i="${i}"] .ans`, v); await pg.press(`#q .part[data-i="${i}"] .ans`, "Enter"); await settled(pg, "#q .part");
   };
   const partState = pg => pg.$$eval("#q .part", ps => ps.map(p => ({ shut: p.querySelector(".ff").classList.contains("shut"),
     ok: p.querySelector(".ff").classList.contains("ok"), val: p.querySelector(".ans").value, dis: p.querySelector(".ans").disabled,
@@ -142,7 +144,7 @@ try {
     await expectRows();
     if (SHOTS) {
       await page.screenshot({ path: `${SHOTS}/done-list-390.png` });
-      await page.setViewportSize({ width: 1920, height: 1080 }); await page.waitForTimeout(200);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await settled(page);
       await page.screenshot({ path: `${SHOTS}/done-list-1920.png` });
       await page.setViewportSize({ width: 390, height: 844 });
     }
@@ -174,7 +176,7 @@ try {
     assert.doesNotMatch(html, /\bright\b/, "no .right anywhere");
     if (SHOTS) {
       await page.screenshot({ path: `${SHOTS}/done-open-out-390.png` });
-      await page.setViewportSize({ width: 1920, height: 1080 }); await page.waitForTimeout(200);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await settled(page);
       await page.screenshot({ path: `${SHOTS}/done-open-out-1920.png` });
       await page.setViewportSize({ width: 390, height: 844 });
     }
@@ -205,7 +207,7 @@ try {
     await page.goto(BASE + "/");
     const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await fc.setFiles({ name: "done.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(edited)) });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => /^CALC1_D0\d$/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });   // the upload landed and opened its first problem
     await go(page, "CALC1_D04"); assert.ok((await qstate(page)).finished, "unchanged problem keeps its tick");
     await go(page, "CALC1_D03"); assert.equal((await qstate(page)).finished, false, "edited problem is fresh");
   });
@@ -234,16 +236,16 @@ try {
     assert.ok(s.finished); assert.doesNotMatch(s.fb, /Out of tries|comes back around/);
     await sp.waitForSelector("#q .opt.reveal", { timeout: 6000 });   // T19: sugar, out of tries: /state hands the answer back after a reload
     assert.deepEqual((await qstate(sp)).right, ["b"]);
-    await sp.waitForTimeout(500);
+    await settled(sp, "#q");
     assert.ok((await qstate(sp)).finished, "still locked after /state");
   });
 
   await step("server multi: a wrong part survives a restart; the other part stays open", async () => {
     await go(sp, "CSCI26_M5V");
-    await sp.fill('#q .part[data-i="0"] .ans', "17"); await sp.press('#q .part[data-i="0"] .ans', "Enter"); await sp.waitForTimeout(300);
+    await sp.fill('#q .part[data-i="0"] .ans', "17"); await sp.press('#q .part[data-i="0"] .ans', "Enter"); await sp.waitForSelector('#q .part[data-i="0"] .ff.bad', { timeout: 5000 });
     const before = await sp.$eval('#q .part[data-i="0"] .phint', e => e.textContent);
     await restart();
-    await sp.reload(); await opened(sp, "CSCI26_M5V"); await sp.waitForTimeout(400);
+    await sp.reload(); await opened(sp, "CSCI26_M5V"); await settled(sp, "#q .part");
     const st = await sstate(sctx, "CSCI26_M5V");
     assert.ok(Array.isArray(st.parts)); assert.equal(st.parts[0].wrong, 1); assert.match(before, /overlap twice/);
     const hint = await sp.$eval('#q .part[data-i="0"] .phint', e => e.textContent);
@@ -288,7 +290,7 @@ try {
     await go(sp, "CALC1_A9R"); await typed(sp, "1"); await typed(sp, "2");
     await stop(); rmSync(TRIES); await start();
     await go(sp, "CALC1_A9R");
-    await sp.waitForTimeout(800);
+    await sp.waitForLoadState("networkidle");   // the lost tries.json's /state round trip is over, and the cache still holds the lock
     const s = await qstate(sp);
     assert.ok(s.finished, "stays read-only"); assert.equal(s.mark, "i-lock");
   });

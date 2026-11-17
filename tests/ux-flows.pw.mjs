@@ -6,6 +6,7 @@
 // on a temp banks folder of fixtures (no real bank needed) with $OPENROUTER_API_KEY empty and a throwaway tries.json.
 // /explain and /chat are stubbed with page.route (no key): the sheet UI is real, the text is fake. Log + shots go to outDir
 // (default: a temp folder); the log line per flow per width is `<row> <flow> <width> ok|FAIL|SKIP <detail>`.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -16,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: the spec's own serve.py boots (or fails at once with its URL)
 
 const require = createRequire(import.meta.url);
 let pw;
@@ -84,9 +86,8 @@ writeFileSync(UPLOAD, JSON.stringify({ v: 1, problems: [1, 2, 3].map(n => ({ ...
 /* serve.py on a free port (tests/queue-walk.pw.mjs bootstrap; stdio ignored = non-TTY, so the Q4 guard never prompts). Killed by its own handle only. */
 const serve = (root, port, tag) => spawn("python3", [join(root, "server", "http_server", "serve.py"), String(port)], { cwd: root,
   env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, `tries-${tag}.json`), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
-const up = async base => { for (let i = 0; i < 100; i++) { try { if ((await fetch(base + "/")).ok) return; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); } throw new Error("serve.py did not start on " + base); };
 const srv = serve(ROOT, PORT, "main");
-await up(BASE).catch(e => { srv.kill(); throw e; });
+await serverUp(BASE).catch(e => { srv.kill(); throw e; });
 
 /* the answers (test side only) */
 const KEY = new Map([...UXS, CA1, real("CALC1_UK1", 1)].map(p => [p.code, p]));
@@ -234,8 +235,8 @@ flow(43, "offline-sw", async (page, w, ctx) => {
   const need = await page.evaluate(() => [...new Set([...document.querySelectorAll("script[src], link[href]")].map(e => e.src || e.href).concat(["privacy.html", "client/shell/telemetry/telemetry.js", "client/shell/offline.js", "index.html"].map(p => new URL(p, location.href).href)))]
     .filter(u => new URL(u).origin === location.origin));
   const missing = () => page.evaluate(async urls => { const out = []; for (const u of urls) if (!(await caches.match(u))) out.push(new URL(u).pathname); return out; }, need);
-  let miss = await missing();
-  for (let i = 0; i < 20 && miss.length; i++) { await page.waitForTimeout(500); miss = await missing(); }
+  await page.waitForFunction(async urls => { for (const u of urls) if (!(await caches.match(u))) return false; return true; }, need, { timeout: 15000 });   // the worker has precached every shell url (polled in the page until the state holds)
+  const miss = await missing();
   assert.deepEqual(miss, [], `sw.js did not precache what the app needs offline (${need.length} urls checked)`);
   await ctx.setOffline(true);
   const real = await page.evaluate(() => fetch("log/nope-" + Math.random(), { cache: "no-store" }).then(() => false, () => true));
@@ -282,7 +283,7 @@ flow(21, "cluck-sheet", async (page, w) => {
   await page.screenshot({ path: join(OUT, `21-cluck-sheet-${w}-chromium.png`) });
   if (w !== 393) {                                                   // desktop sugar (BIG PLAN V1, Tony Nov 2): the box is a permanent fixture: no X, Escape leaves it open; the close / reopen flow below is phone-only
     assert.ok(!(await vis(page, "#cluck .cl-bar .cl-x")), "desktop: no X");
-    await page.keyboard.press("Escape"); await page.waitForTimeout(300);
+    await page.keyboard.press("Escape"); await settled(page, "#cluck");
     assert.ok(await vis(page, "#cluck"), "desktop: Escape leaves the box open");
     return "desktop: the box is open from load, no X, Escape leaves it open (the phone row covers close / reopen / fold)";
   }
@@ -345,9 +346,10 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 3000 });   // the wish loop has stopped
   assert.ok(!/typing/i.test(await sheetTxt()), "no 'typing' text left on a failure");
   assert.equal(await page.evaluate(() => document.querySelectorAll("#cluck .wtext .wcaret").length), 0, "no caret forever on a failure");
-  // Nov 13: the sheet may still be rising (spring) here; elementFromPoint mid-rise hits the button's old spot. Poll, don't sample once
-  { let ok = false; for (let t = 0; t < 20 && !(ok = await tappable("#cluck .wtext .wretry")); t++) await page.waitForTimeout(100);
-    assert.ok(ok, "the sheet's Try again is tappable"); }
+  // Nov 13: the sheet may still be rising (spring) here; elementFromPoint mid-rise hits the button's old spot. Wait until the button is tappable, don't sample once
+  await page.waitForFunction(s => { const b = document.querySelector(s); if (!b || !b.getClientRects().length || b.closest("[hidden]")) return false;
+    const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!e && b.contains(e); }, "#cluck .wtext .wretry", { timeout: 4000 });
+  assert.ok(await tappable("#cluck .wtext .wretry"), "the sheet's Try again is tappable");
   assert.equal((await page.textContent("#cluck .wtext .wretry")).trim(), "Try again");
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-explain500-chromium.png`) });
   const before = asks;
@@ -386,7 +388,7 @@ flow(23, "cluck-errors", async (page, w) => {
   assert.equal((await r503).status(), 503, "the keyless server answers a plain 503");
   await page.waitForFunction(() => /Eggs-tra help currently unavailable\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 })
     .catch(() => { throw new Error("keyless 503: the Explain press did nothing (no sheet / no line)"); });
-  await page.waitForTimeout(400);
+  await settled(page, "#cluck");   // the sheet's rise (and the line's reveal) has finished
   assert.ok(await vis(page, "#cluck"), "keyless 503: the sheet stays open");
   assert.ok(!(await vis(page, ":is(#wish, .rbox) .wchip")), "keyless 503: the chip goes");
   assert.ok(!(await vis(page, "#cluck .wretry")), "keyless 503: no Try again (it would 503 again)");
@@ -395,7 +397,7 @@ flow(23, "cluck-errors", async (page, w) => {
   if (w === 393) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
   await go(page, "CALC1_UX06");
   assert.equal(await answerKey(page, "CALC1_UX06", false), "wrong");
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(800);   // keep: observation window (this page load must show no Cluck entry at all; nothing positive to wait on)
   assert.ok(!(await page.evaluate(() => [...document.querySelectorAll(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta")].some(e => e.getClientRects().length && !e.closest("[hidden]")))),
     "keyless: no Cluck entry on the next miss (this page load)");
   out.push("keyless /explain 503: the press opens the sheet with 'Eggs-tra help currently unavailable.', the chip goes, no entry on the next miss");
@@ -517,7 +519,7 @@ flow(39, "update-bar", async (page, w) => {
   cpSync(ROOT, copy, { recursive: true, filter: src => !/(^|\/)(\.git|node_modules|tests|banks|tmp)(\/|$)/.test(src.slice(ROOT.length)) });
   const s2 = serve(copy, port, `upd${w}`);
   try {
-    await up(base);
+    await serverUp(base);
     const css = join(copy, "client", "answer", "drill_core", "app.css"), orig = readFileSync(css, "utf8");
     await page.goto(base + "/");
     await page.evaluate(() => navigator.serviceWorker.ready);
@@ -526,7 +528,7 @@ flow(39, "update-bar", async (page, w) => {
     /* no fetch of app.css by the worker still open: one that read the edit would show the bar now, not after the reload. The worker starts
        1 (precache) + 1 per page load of app.css it served (the background refresh); its own resource timing lists the finished ones.
        Counted inside the worker: Playwright's service-worker request events miss the precache in CI (PW 1.56, no experimental flag) */
-    for (let t0 = Date.now(), n = -1, want = 0; n < want; await new Promise(r => setTimeout(r, 50))) {
+    for (let t0 = Date.now(), n = -1, want = 0; n < want; await new Promise(r => setTimeout(r, 50))) {   // keep: a bounded poll of sw.js's own fetch counters (a worker-side state the page cannot wait on)
       if (Date.now() - t0 > 8000) throw new Error(`sw.js app.css fetches never settled: ${n} of ${want} done`);
       const sw = page.context().serviceWorkers().find(x => new URL(x.url()).pathname === "/sw.js");
       if (!sw) continue;
@@ -548,7 +550,7 @@ flow(39, "update-bar", async (page, w) => {
       ExtendableEvent.prototype.waitUntil = function (p) { self.__bg.open++; self.__bg.n++; Promise.resolve(p).finally(() => self.__bg.open--); return wu.call(this, p); }; });
     const n0 = await sw.evaluate(() => self.__bg.n);
     await Promise.all([page.waitForEvent("load", { timeout: 15000 }), page.click("#updateBar")]);
-    for (let t0 = Date.now(), bg = null; !(bg && bg.n > n0 && !bg.open); await new Promise(r => setTimeout(r, 50))) {
+    for (let t0 = Date.now(), bg = null; !(bg && bg.n > n0 && !bg.open); await new Promise(r => setTimeout(r, 50))) {   // keep: a bounded poll of sw.js's own waitUntil counters (worker-side, no page event)
       if (Date.now() - t0 > 8000) throw new Error(`sw.js background refreshes after the reload never settled: ${JSON.stringify(bg)} (started before: ${n0})`);
       bg = await sw.evaluate(() => self.__bg);
     }
@@ -720,7 +722,7 @@ flow(14, "mc-lockout", async (page, w, ctx) => {
   const right = rows.filter(r => /\bright\b/.test(r.cls));
   assert.deepEqual(right.map(r => [r.id, /\breveal\b/.test(r.cls), /i-ok$/.test(r.badge)]), [[KEY.get(C.single).correct, true, true]], "sugar: out of tries shows the right row, green + check");
   assert.ok(rows.filter(r => /\bwrong\b/.test(r.cls)).every(r => /i-x$/.test(r.badge)), "picked rows stay x'd");
-  await page.waitForTimeout(800);
+  await settled(page, "#q"); await quiet(page);   // the reveal (and any FX) has landed: the XP check below reads "no XP paid"
   assert.ok(await xp(page) - x0 <= 1, "the revealed pick pays 0 XP (only a try's +1 before it)");
   /* DIET twin: same flow, no reveal, no answer line (diet cookie + the v2 flag, as mode.mjs sets them) */
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
@@ -813,7 +815,8 @@ flow(30, "wrong-try-quiet", async (page, w) => {
   const shown = () => page.textContent("#rwHud .rw-num").catch(() => null);
   const x0 = await xp(page), s0 = await shown();
   assert.equal(await answerKey(page, C.single, false), "wrong");
-  await page.waitForTimeout(600);
+  await page.waitForFunction(x => (window.Rewards?.state()?.xp ?? 0) > x, x0, { timeout: 4000 });   // the held +1 is in the state; only its display must not move
+  await frames(page);
   const fx = await page.$$eval(".fx-ov, .fx-float", e => e.length);
   assert.equal(await shown(), s0, "the HUD number did not move");
   assert.equal(fx, 0, "no FX");
@@ -842,7 +845,7 @@ flow(33, "key-formulas", async (page, w) => {
 flow(34, "brainrot-corner", async (page, w) => {
   await go(page, C.single);
   if (w <= 700) {                                                    // phones get no corner and no video (Tony, Oct 17)
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: app timer the brainrot idle warm-up (requestIdleCallback / 1.2 s fallback); a phone must never build the corner
     assert.equal(await page.evaluate(() => [!!document.getElementById("rot"), document.querySelectorAll("iframe").length].join()), "false,0");
     return "phone: no corner, no players";
   }
@@ -856,7 +859,7 @@ flow(35, "sugar-vs-diet", async (page, w) => {
   await page.goto(BASE + "/"); await homeReady(page);
   await showCode(page);
   await page.fill("#code", "DIET_" + C.single); await page.press("#code", "Enter");
-  await opened(page, C.single); await page.waitForTimeout(500);
+  await opened(page, C.single); await settled(page, "#dock");   // the bar (with the HUD slot) has landed in diet
   const hud = await vis(page, "#rwHud");
   assert.equal(hud, false, "diet: no HUD");
   return "DIET_ code: no HUD";
@@ -915,7 +918,7 @@ flow(47, "swap-keyboard", async (page, w) => {
   const at = () => page.evaluate(() => ({ p: Math.round(document.querySelector("#problem").getBoundingClientRect().top + scrollY), a: Math.round(document.querySelector("#ans").getBoundingClientRect().top + scrollY) }));
   const before = await at();
   await page.locator("#ans").focus();
-  await page.setViewportSize({ width: 393, height: Math.round(852 * 0.55) }); await frames(page); await page.waitForTimeout(400);
+  await page.setViewportSize({ width: 393, height: Math.round(852 * 0.55) }); await page.waitForFunction(h => Math.round(visualViewport ? visualViewport.height : innerHeight) === h, Math.round(852 * 0.55), { timeout: 5000 }); await frames(page);
   assert.ok(!(await page.evaluate(() => document.documentElement.classList.contains("swap"))), "a short-answer item got the Swap restyle");
   assert.deepEqual(await at(), before, "the layout moved with the keyboard");
   assert.ok(await vis(page, "#ans"), "the answer box in view");
@@ -942,7 +945,7 @@ flow(51, "telemetry-off", async (page, w, ctx) => {
   const ext = []; page.on("request", r => { if (/posthog|clarity\.ms/.test(r.url())) ext.push(r.url()); });
   await go(page, C.single);
   await answerKey(page, C.single, true);
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(800);   // keep: app timer the collector's deferred boot (posthog/clarity load on idle / 1.2 s fallback under GPC they must not load)
   assert.deepEqual(ext, []);
   return "no key + GPC: zero PostHog / Clarity requests";
 }, { gpc: true });
@@ -968,7 +971,7 @@ flow(54, "reopen-finished", async (page, w) => {
 flow(55, "bfcache-resume", async (page, w) => {
   await go(page, C.single);
   await page.evaluate(() => dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => { const e = document.querySelector("#splash"); return !e || e.hidden || getComputedStyle(e).opacity === "0" || getComputedStyle(e).display === "none"; }, null, { timeout: 3000 });   // the resume shows no splash (the assert below reads this same state)
   const s = await page.evaluate(() => { const e = document.querySelector("#splash"); return !e || e.hidden || getComputedStyle(e).opacity === "0" || getComputedStyle(e).display === "none"; });
   assert.ok(s, "no splash on resume");
   await opened(page, C.single);
@@ -992,7 +995,7 @@ flow(57, "cluck-compare", async (page, w) => {
   assert.equal(await answerKey(page, C.single, true), "correct");
   await page.waitForFunction(() => !!document.querySelector(":is(#wish, .rbox) .cue-ok")?.getClientRects().length, null, { timeout: 6000 })
     .catch(() => { throw new Error("no Compare chip after the right try"); });
-  await page.waitForTimeout(1000);                                  // past doneExit's beat (900 ms): it must not undo the open's focus either
+  await page.waitForTimeout(1000);                                  // keep: app timer doneExit's 900 ms beat (it must not undo the open's focus either)
   await page.click(":is(#wish, .rbox) .cue-ok");
   await page.waitForFunction(() => /SOLUTION-RIGHT/.test(document.querySelector("#cluck:not([hidden]) #clTabEP")?.textContent || ""), null, { timeout: 8000 })
     .catch(async () => { throw new Error("Compare: no new solution message in the sheet; sheet text: " + JSON.stringify((await page.textContent("#cluck #clTabEP").catch(() => "")).slice(0, 160))); });
@@ -1013,7 +1016,7 @@ flow(57, "cluck-compare", async (page, w) => {
 const PRIO = [43, 21, 20, 23, 28, 38, 6, 8, 39, 24, 46, 50, 49, 52, 22];
 const order = [...PRIO.map(n => F.find(f => f.n === n)), ...F.filter(f => !PRIO.includes(f.n)).sort((a, b) => a.n - b.n)].filter(f => f && (!ONLY || ONLY.has(f.n)));
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const f of order) for (const w of WIDTHS) {
     const phone = w === 393;   // keyed on 393, not w < 600: the flow bodies branch on w === 393 / w === 1280, so a phone context at another width would disagree with them
@@ -1031,7 +1034,7 @@ try {
     let st = "ok", detail = "";
     const t0 = Date.now();
     try {
-      detail = await Promise.race([f.run(page, w, ctx), new Promise((_, no) => setTimeout(() => no(new Error("flow timeout 60 s")), 60000))]);
+      detail = await Promise.race([f.run(page, w, ctx), new Promise((_, no) => setTimeout(() => no(new Error("flow timeout 60 s")), 60000))]);   // keep: the row's 60 s timeout guard (not a wait)
     } catch (e) {
       if (e instanceof Skip) { st = "SKIP"; detail = e.message; } else { st = "FAIL"; detail = String(e.message).replace(/\s+/g, " ").slice(0, 400); }
     }

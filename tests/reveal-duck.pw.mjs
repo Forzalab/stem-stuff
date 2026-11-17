@@ -1,6 +1,7 @@
 // REVEAL-DUCK (Nov 3, Tony 22:48): the reveal lines under the strip drawer wear the dark duck (the old "Why does this work?" CTA's i-duck, one shared
 //   icon: app.js revDuck / .rv-duck, trailing the copy button so nothing shifts; NOT on Avenged!, guard.pw asserts no duck there): "That's it! ..." (right), "Not it. The answer is ..." (wrong). Present, drawn, not hidden,
 //   contrast >= 3:1 against the line's background; dark + light colour scheme, 393 + 1280.   node tests/reveal-duck.pw.mjs <port>
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -25,7 +26,7 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, scheme, hash, redeem) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: 852 }, hasTouch: phone, isMobile: phone, colorScheme: scheme, serviceWorkers: "block" });

@@ -1,5 +1,6 @@
 // Nov 4 (Tony): the Cluck reply caret follows the WORDS: inline right after the last streamed word on its line box; no status slug ("Thinking…", "Drawing…", wait lines)
 // ever; nothing (no caret) before the first word; caret gone when the reply ends. Real serve.py + a fake Claude, at 393 and 1280.   node tests/caret.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -64,7 +65,7 @@ async function wish(page) {
   await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 6000 });
   if (!(await page.locator("#cluck .wtext").count())) await page.click(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta");
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 // every frame: slugs, a caret with no words, the caret's place against the end of the last word
 const init = () => {
   try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }

@@ -3,6 +3,7 @@
 // wider than its row, no word split mid-word.
 // Starts its own serve.py with a throwaway bank of nasty rows:   node tests/katex-wrap.pw.mjs [port]
 // Survey real banks instead (counts only, no verdict):           KW_BANKS=<dir with BANK_*.json> node tests/katex-wrap.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
@@ -10,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -71,7 +73,7 @@ function measure() {
   return out;
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let bad = 0;
 try {
   for (const width of [320, 390, 768, 1440]) {
@@ -82,7 +84,7 @@ try {
       await page.goto(`${BASE}/#${code}`);
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && document.querySelector("#q .opt"), code, { timeout: 8000 });
       await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(120);                                   // the fit pass runs on the next frame
+      await settled(page);                                              // the fit pass runs on the next frame
       const m = await page.evaluate(measure);
       for (const k of Object.keys(tot)) tot[k] += m[k];
       where.push(...m.where.map(x => `${code} ${x}`));

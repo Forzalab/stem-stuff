@@ -1,6 +1,7 @@
 // The generated proof ladder (client half; server = serve.py proof_grade / proof_step_check, STEM_PROOF_LADDER=1): a wrong proof's /check reply
 // carries repair {gen:true, att, steps} (no answers); repair.js draws the steps empty and grades each one through POST /repair/<code>/check.
 // Starts its own serve.py (flag on) with a throwaway banks/ folder and a stub grader:   node tests/proof-ladder.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -10,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -51,7 +53,7 @@ async function step(name, fn) {
 const opened = page => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), CODE, { timeout: 8000 });
 const GOOD = "Base case: n = 1, both sides are 2.\nAssume it for k.\nAdd 3k+2 and factor: (k+1)(3k+4)/2.";
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(viewport = { width: 1280, height: 860 }, touch = false) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block", ...(touch ? { isMobile: true, hasTouch: true } : {}) });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
@@ -61,7 +63,7 @@ async function open(viewport = { width: 1280, height: 860 }, touch = false) {
   page.on("request", r => reqs.push(r.method() + " " + new URL(r.url()).pathname));
   await page.exposeFunction("__wire", t => { wire.push(t); });                    // every /check and /repair/ reply body, read in the page (a response event may not hold the body)
   await page.addInitScript(() => { const f = window.fetch; window.fetch = async (...a) => { const r = await f(...a);
-    try { if (/\/(check|repair\/)/.test(new URL(r.url).pathname)) r.clone().text().then(t => window.__wire(t)); } catch { /* not a tracked call */ } return r; }; });
+    try { if (/\/(check|repair\/)/.test(new URL(r.url).pathname)) r.clone().text().then(t => { window.__wireN = (window.__wireN || 0) + 1; window.__wire(t); }); } catch { /* not a tracked call */ } return r; }; });
   await page.goto(BASE + "/#" + CODE); await opened(page);
   return { ctx, page, errs, wire, reqs };
 }
@@ -73,8 +75,10 @@ const leaks = async (page, wire) => [...SECRET.filter(s => wire.some(b => b.incl
   ...await page.evaluate(S => S.filter(s => document.documentElement.outerHTML.includes(s) || [...document.querySelectorAll("input")].some(i => i.value.includes(s))).map(s => "dom:" + s), SECRET)];
 const state = (page, id) => page.$eval(`#rpHost .rp-step[data-id="${id}"]`, li => li.dataset.state);
 async function answer(page, id, v) {
+  const n = await page.evaluate(() => window.__wireN || 0);
   await page.fill(`#rpHost .rp-step[data-id="${id}"] .rp-in`, v); await page.click(`#rpHost .rp-step[data-id="${id}"] .rp-check`);
-  await page.waitForTimeout(400);
+  await page.waitForFunction(n => (window.__wireN || 0) > n, n, { timeout: 5000 });   // the step's reply is in: the ladder has re-drawn
+  await settled(page, "#rpHost");
 }
 
 try {
@@ -102,7 +106,10 @@ try {
     assert.equal(await page.$eval('#rpHost .rp-step[data-id="s_expr"] .rp-in', i => i.inputMode), "text");
     await answer(page, "s_expr", "(3*k^2+k)/2");
     assert.equal(await state(page, "s_expr"), "done");
-    await page.click('#rpHost .rp-step[data-id="s_pick"] .rp-chip[data-v="optb"]'); await page.waitForTimeout(400);
+    const nPick = await page.evaluate(() => window.__wireN || 0);
+    await page.click('#rpHost .rp-step[data-id="s_pick"] .rp-chip[data-v="optb"]');
+    await page.waitForFunction(n => (window.__wireN || 0) > n, nPick, { timeout: 5000 });   // the pick's reply is in
+    await settled(page, "#rpHost");
     assert.equal(await state(page, "s_pick"), "done");
     assert.deepEqual((await leaks(page, wire)).filter(x => x.startsWith("wire:")), []);
     await ctx.close();
@@ -133,7 +140,9 @@ try {
       await miss(page);
       await page.$eval("#work", e => { e.scrollTop = e.scrollHeight; });
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));   // not typing (Nov 8): the proof page, the page scrolls
-      await page.waitForTimeout(100);
+      await page.waitForFunction(() => { const w = document.querySelector("#work");
+        return w.scrollTop + w.clientHeight >= w.scrollHeight - 1 && scrollY + innerHeight >= document.documentElement.scrollHeight - 1; }, null, { timeout: 5000 });   // both scrollers are at their end: what the hit test must see
+      await settled(page);
       const hit = await page.evaluate(() => {
         const vh = innerHeight, steps = [...document.querySelectorAll("#rpHost .rp-step")], out = {};
         for (const [k, el] of [["last", steps.at(-1)], ["skip", document.querySelector("#rpHost .rp-skip")]]) {
