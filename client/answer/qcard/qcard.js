@@ -205,8 +205,13 @@
     var p = D.getElementById("problem"); if (!p) return;
     if (!on()) { p.classList.remove("qmore", "qopen"); return; }
     var open = p.classList.contains("qopen");
-    p.style.setProperty("--qover", Math.max(0, p.scrollHeight - p.clientHeight) + "px"); p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-BLEED: the ghost box spans the whole scroll height, the trail stays put
-    var over = p.scrollHeight - p.clientHeight > 4, more = !open && over && p.scrollHeight - p.scrollTop - p.clientHeight > 4;
+    /* BLANK-CARD (Nov 17, Firefox phone: card went empty navy after scrolling): the ghost box is as tall as the scroll area (GHOST-BLEED, bottom: -qover), so p.scrollHeight
+       itself includes it: reading qover back from scrollHeight is a ratchet (every viewport resize that grew clientHeight left qover + the gap in the scroll height, never shrank), and
+       the card scrolled into empty space. The content height is measured from the in-flow content instead: last block's bottom + the card's bottom pad. */
+    var lastc = open && p.querySelector(":scope > .qfold:not([hidden])") || p.querySelector(":scope > .blocks"), cs = g.getComputedStyle(p),
+      sh = lastc ? Math.max(p.clientHeight, lastc.offsetTop + lastc.offsetHeight + (parseFloat(g.getComputedStyle(lastc).marginBottom) || 0) + (parseFloat(cs.paddingBottom) || 0)) : p.clientHeight;
+    p.style.setProperty("--qover", Math.max(0, sh - p.clientHeight) + "px"); p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-BLEED: the ghost box spans the whole scroll height, the trail stays put
+    var over = sh - p.clientHeight > 4, more = !open && over && sh - p.scrollTop - p.clientHeight > 4;
     p.classList.toggle("qmore", more); p.classList.toggle("qscrolled", !open && p.scrollTop > 4);   // EDGE-FADE: top fade only once scrolled
     if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }
   }
