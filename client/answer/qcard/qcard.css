@@ -88,16 +88,17 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
 /* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
 @media (max-width: 480px) {
   html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { max-height: 50svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
-    margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
+    margin-bottom: 20px; padding-bottom: 0; }   /* Q-GAP: the answers start clearly below the card. FOLD-FLUSH: the bottom pad moves into .blocks (below), so the sticky fold's containing block reaches the card's bottom edge */
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7 > .blocks { padding-bottom: var(--qpad, 24px); }
   /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
-  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: calc(-1 * var(--qpad, 24px)); z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 104px;
-    margin: -104px calc(-1 * var(--qc-pad, 24px)) calc(-1 * var(--qpad, 24px)); padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
+  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: 0; z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 104px;
+    margin: -104px calc(-1 * var(--qc-pad, 24px)) 0; padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
     background: linear-gradient(transparent, color-mix(in srgb, #0d142a 70%, transparent) 45%, #0d142a 78%); -webkit-tap-highlight-color: transparent; }
   html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
   html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
   html.ui-v7 #problem.qc7 > .qfold:focus-visible { outline: none; } html.ui-v7 #problem.qc7 > .qfold:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
-  html.ui-v7 #problem.qc7.qopen { max-height: none; overflow-y: visible; }
-  html.ui-v7 #problem.qc7.qopen > .qfold { position: static; height: 44px; margin: 8px auto calc(-1 * var(--qpad, 24px) + 4px); padding: 0; place-items: center; background: none; width: 100%; }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qopen { max-height: none; overflow-y: visible; }   /* (:not x2 = the Q-HALF rule's specificity; without them max-height: 50svh won and the chevron expanded nothing) */
+  html.ui-v7 #problem.qc7.qopen > .qfold { position: static; height: 44px; margin: calc(8px - var(--qpad, 24px)) auto 4px; padding: 0; place-items: center; background: none; width: 100%; }
   html.ui-v7 #problem.qc7.qopen > .qfold svg { transform: rotate(180deg); }
   html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */
   html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.5rem; line-height: 28px; }
