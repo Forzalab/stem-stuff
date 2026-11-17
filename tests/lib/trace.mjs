@@ -57,6 +57,8 @@ const PAGE = `(() => {
     setTimeout(() => { if (e.defaultPrevented) send("key.cancelled", name(e.target), key + " (the app called preventDefault)"); }, 0); });
   on("click", e => send("click", name(e.target)));
   on("focusin", e => send("focus", name(e.target)));
+  /* focus that ends on nothing fires no focusin: say so, and say if the element that had it is gone (a re-render replaced it) */
+  on("focusout", e => { const t = e.target; if (e.relatedTarget) return; setTimeout(() => { if (document.hasFocus() && document.activeElement === document.body) send("focus.lost", name(t), t.isConnected ? "focus went to the body; the element is still in the page" : "the element was removed from the page"); }, 0); });
   addEventListener("blur", e => { if (e.target === window) setTimeout(() => send("blur", "window", "focus left the page" + (document.activeElement && document.activeElement.tagName === "IFRAME" ? " into " + name(document.activeElement) : "")), 0); });
   on("toggle", e => send("toggle", name(e.target), e.newState));
   on("animationstart", e => send("anim.start", name(e.target), e.animationName));
