@@ -2,7 +2,7 @@
 dialog.lg { box-sizing: border-box; width: min(22rem, calc(100vw - 2 * var(--s4))); max-width: none; max-height: calc(100dvh - 2 * var(--s4));
   margin: auto; padding: var(--s5) var(--s4) var(--s4); overflow: auto; overscroll-behavior: contain;
   background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--line); border-radius: 16px;
-  font: 400 var(--t-md)/var(--lh) var(--font); text-align: center; }
+  font: var(--w-body, 400) var(--t-md)/var(--lh) var(--font); text-align: center; }
 dialog.lg::backdrop { background: color-mix(in srgb, var(--scrim) 60%, transparent); }
 .lg-title { margin: 0 var(--s6) var(--s3); font-size: var(--t-lg); line-height: var(--lh-title); font-weight: var(--w-em); }
 .lg-x { position: absolute; top: var(--s1); right: var(--s1); width: var(--btn); height: var(--btn); padding: 0;

@@ -88,7 +88,7 @@ Source: chat-redesign round 5 TYPE-DECISION v3.1 (brain), Tony's round 7 PICKER 
 | `--t-xl` | 28 (desktop 36) | `--lh-title` | the start page's title only |
 
   Single-line inputs keep `line-height: 1`. A field is never under 16px (iOS zooms on focus): the code box uses `max(1rem, var(--t-sm))`.
-- Weights: 400 and 600 (`--w-em`) only. Atkinson has no 600, so it renders its 700 (CSS font matching); `font-synthesis: none` stops any faux weight or oblique. 600 = a name, a state, a title, emphasis. In tutor markdown `**b**` and `*i*` both render 600 in the running ink: emphasis is weight, never colour, never italic.
+- Weights: 400 (the body weight, `--w-body`: 400, 450 under `html.ui-v7` since Atkinson Hyperlegible Next is a variable wght face; code / mono stay a literal 400) and 600 (`--w-em`) only. Atkinson has no 600, so it renders its 700 (CSS font matching); `font-synthesis: none` stops any faux weight or oblique. 600 = a name, a state, a title, emphasis. In tutor markdown `**b**` and `*i*` both render 600 in the running ink: emphasis is weight, never colour, never italic.
 - Italic: none outside `$..$`.
 - Tracking: 0 on sentence case; `0.05em` only on uppercase strings (the code box, the TUTOR tag).
 - Prose is at most 65ch wide.
