@@ -63,6 +63,8 @@ const opened = (page, code, timeout = 8000) => page.waitForFunction(c => documen
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), code, { timeout });
 const settled = page => page.waitForFunction(() => /\S/.test(document.querySelector("#pcode")?.textContent || "")
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), null, { timeout: 8000 });
+/* the page has booted: the splash goes when the fonts, the saved-bank restore (stemOffline.ready) and the #CODE problem are done (index.html) */
+const boot = page => page.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
 
 async function ctxFor(browser, vp) {
   const phone = vp.width < 600;
@@ -70,11 +72,20 @@ async function ctxFor(browser, vp) {
   await ctx.addInitScript(() => { try { if (!localStorage.getItem("stem-ob")) localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   return ctx;
 }
-/* the upload button: the OS file dialog, one file. The button hides once a question is open on a phone, so the click is made in the page. */
+/* the upload button: the OS file dialog, one file. The button hides once a question is open on a phone, so the click is made in the page.
+   Waits on the read and on its outcome: offline.js resets the picker's value once the file is in memory + IndexedDB, then app.js opens its
+   first problem (a new state.prob) or says why not (a line / a toast). */
 async function upload(page, f) {
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.evaluate(() => document.querySelector("#upload").click())]);
+  await page.evaluate(() => { window.__prob = window.__drill?.state?.prob || null; });
   await fc.setFiles(f);
-  await page.waitForTimeout(900);
+  await page.waitForFunction(() => {
+    const i = [...document.querySelectorAll('input[type=file][accept=".json,application/json"]')].find(x => !x.closest(".so"));   // the button's own picker, not the dialog's
+    if (!i || i.value) return false;                                   // offline.js has not read the file yet
+    const now = window.__drill?.state?.prob || null;
+    const said = /\S/.test((document.querySelector("#toast.on")?.textContent || "") + (document.querySelector("#entryMsg")?.textContent || ""));
+    return said || (!!now && now !== window.__prob);
+  }, null, { timeout: 8000 });
 }
 /* the dialog (offline.js read()): several files in one pick */
 async function pickMany(page, files, code) {
@@ -82,7 +93,8 @@ async function pickMany(page, files, code) {
   await p;
   await page.waitForSelector(".so:not([hidden])");
   await page.setInputFiles('.so input[type=file][multiple]:not([webkitdirectory])', files);
-  await page.waitForTimeout(900);
+  /* the dialog has taken the pick: it closes on a good file, keeps asking (with its line) when the pick has none */
+  await page.waitForFunction(() => { const el = document.querySelector(".so"); return !!el && (el.hidden || /\S/.test(el.querySelector(".so-msg")?.textContent || "")); }, null, { timeout: 8000 });
 }
 const idbCodes = page => page.evaluate(() => new Promise(res => { const o = indexedDB.open("stem-stuff", 2); o.onsuccess = () => { const r = o.result.transaction("bank").objectStore("bank").get("files"); r.onsuccess = () => { o.result.close(); res((r.result || []).flatMap(f => JSON.parse(f.text).problems.map(p => p.code))); }; }; }));
 const memCodes = page => page.evaluate(() => window.stemOffline.codes());
@@ -110,7 +122,9 @@ async function snap(page) {
 async function reload(page, hash) {
   await page.goto("about:blank"); await page.goto(BASE + "/" + hash);
   await page.waitForFunction(() => window.stemOffline); await page.evaluate(() => window.stemOffline.ready);
-  await settled(page); await page.waitForTimeout(400);
+  await settled(page);
+  /* the restored list is drawn for the open problem (nav.js update); snap() reads it next */
+  await page.waitForFunction(() => { const a = document.querySelector('#qlist a[aria-current="true"]'); return !!a && a.getAttribute("href") === "#" + (document.querySelector("#pcode")?.textContent || ""); }, null, { timeout: 8000 });
 }
 /* the whole contract for one expected set: memory, IndexedDB, list rows and 20 Next presses are exactly `want`; gone codes do not open */
 async function expectOnly(page, want, gone, tag) {
@@ -120,7 +134,9 @@ async function expectOnly(page, want, gone, tag) {
   assert.deepEqual(sorted(s.rows), sorted(want), `${tag}: list rows`);
   assert.deepEqual(s.next, sorted(want), `${tag}: Next pool over 20 presses`);
   for (const g of gone) {
-    await page.goto(BASE + "/#" + g); await page.waitForTimeout(900);
+    const asked = page.waitForResponse(r => r.url().endsWith("/p/" + g + ".json"), { timeout: 8000 });
+    await page.goto(BASE + "/#" + g);
+    await asked;   // the app's request for the gone code has answered (the flight ring cannot name it: app.js logs the endpoint "p")
     assert.notEqual(await pcode(page), g, `${tag}: ${g} still opens by #code`);
     assert.ok(!(await page.evaluate(c => window.stemOffline.has(c), g)), `${tag}: ${g} still in memory`);
   }
@@ -134,7 +150,7 @@ try {
 
     await step(`${V}: A then B: only B is left in codes, list, Next; a reload gives the same`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await boot(page);
       await upload(page, fA); await settled(page);
       assert.deepEqual(sorted(await memCodes(page)), sorted(codes(A)), "A in memory");
       await upload(page, fB); await settled(page);
@@ -148,7 +164,7 @@ try {
 
     await step(`${V}: A then A' (a code removed, one edited, one added): the removed code is gone at once; a reload gives the same`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await boot(page);
       await upload(page, fA); await settled(page);
       await upload(page, fA2); await settled(page);
       const before = await expectOnly(page, codes(A2), ["CALC1_ZA2"], "after A'");
@@ -162,7 +178,7 @@ try {
 
     await step(`${V}: a file with no valid problem wipes nothing (not JSON, no problems, a bad code, a custom prefix without a flag, not .json)`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await boot(page);
       await upload(page, fA); await settled(page);
       for (const j of junk) {
         await upload(page, j);
@@ -180,7 +196,7 @@ try {
 
     await step(`${V}: several files in one pick add up to each other; the next pick replaces them all; a reload gives the same`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await boot(page);
       await upload(page, fA); await settled(page);
       await pickMany(page, [fB, fC]);                                     // A is gone; B and C stay together
       await settled(page);
@@ -203,13 +219,13 @@ try {
 
     await step(`${V}: the dialog that waits for a code: a file without it says so and keeps asking; the right file answers`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await boot(page);
       await upload(page, fA); await settled(page);
       const got = page.evaluate(() => { window.__w = null; window.stemOffline.openPicker("CALC1_ZB2").then(p => { window.__w = p; }, e => { window.__w = "rejected: " + e.message; }); return null; });
       await got;
       await page.waitForSelector(".so:not([hidden])");
       await page.setInputFiles('.so input[type=file][multiple]:not([webkitdirectory])', [fC]);   // has other codes, not CALC1_ZB2
-      await page.waitForTimeout(700);
+      await page.waitForFunction(() => /\S/.test(document.querySelector(".so-msg")?.textContent || ""), null, { timeout: 8000 });   // the dialog has read the file and said the code is not in it
       assert.match(await page.textContent(".so-msg"), /CALC1_ZB2/, "the dialog should say the code is not in that file");
       assert.equal(await page.evaluate(() => window.__w), null, "the wait must stay open");
       assert.ok(await page.isVisible(".so"), "the dialog should stay open");
@@ -247,7 +263,7 @@ try {
 
     await step(`${V}: done marks are untouched by a replace: they come back when the same problem is uploaded again`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await boot(page);
       await upload(page, fA); await settled(page);
       await page.evaluate(() => window.stemOffline.donePut("CALC1_ZA1", { n: 1 }));
       const key = await page.evaluate(() => window.stemOffline.doneKey("CALC1_ZA1"));

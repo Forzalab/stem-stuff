@@ -48,12 +48,12 @@ try {
   await page.evaluate(() => navigator.serviceWorker.ready);
   if (!(await page.evaluate(() => !!navigator.serviceWorker.controller))) await page.reload();
   await step("first visit: no bar", async () => {
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: app timer the service worker's (dev) update-check window (a no-bar probe: no state says "nothing changed")
     assert.equal(await bar(page).count(), 0);
   });
   await step("same files on reload: no bar", async () => {
     await page.reload();
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: app timer the service worker's (dev) update-check window (a no-bar probe: no state says "nothing changed")
     assert.equal(await bar(page).count(), 0);
   });
   appendFileSync(join(SITE, "client", "answer", "drill_core", "app.css"), "\n/* v2 */\n");
@@ -64,7 +64,7 @@ try {
   });
   await step("tap: reload onto the new version, bar gone", async () => {
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(async () => { const r = await caches.match(new URL("client/answer/drill_core/app.css", location.href).href); return !!r && (await r.text()).includes("/* v2 */"); }, null, { timeout: 5000 });   // the new shell is in the cache: the bar has nothing left to offer
     assert.equal(await bar(page).count(), 0);
     const css = await page.evaluate(async () => (await caches.match(new URL("client/answer/drill_core/app.css", location.href).href)) ?.text());
     assert.ok(css && css.includes("/* v2 */"), "the cache holds the new app.css");
@@ -109,14 +109,14 @@ try {
     await bar(page).click();
     await page.waitForFunction(() => document.querySelector('meta[name="stem-build"]')?.content === "#92" && document.readyState === "complete", null, { timeout: 15000 });
     await page.keyboard.press("Shift");                    // busy again on the new page
-    await page.waitForTimeout(10000);                      // past the slow install
+    await page.waitForTimeout(10000);                      // keep: app timer past the slow (4 s) worker install: the no-second-bar / one-reload probe needs the window
     assert.equal(await bar(page).count(), 0, "no second bar");
     assert.equal(loads, 1, "one reload, no second one");
     assert.deepEqual(await ver(page), ["#92", "#92"]);
     const keys = await page.evaluate(() => caches.keys());
     assert.deepEqual(keys.filter(k => k.endsWith("-shell")), ["stem-92-ccc3333-shell"], `the page runs on the new worker's shell: ${keys}`);
     await page.reload();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2000);   // keep: app timer the worker's update check after a reload (a no-bar probe: no state says "nothing changed")
     assert.equal(await bar(page).count(), 0, "no bar after a further reload");
     slow = null;
   });
@@ -126,10 +126,11 @@ try {
     page.on("console", onMsg);
     await page.evaluate(() => { const t = Date.now(); sessionStorage.setItem("stem-swr", JSON.stringify([t - 5000, t - 1000])); window.__same = 1; });   // two reloads just now
     deploy("#93", "ddd4444");
+    const inc = page.waitForEvent("console", m => /^incident /.test(m.text()) && /"sw_loop"/.test(m.text()), { timeout: 8000 });   // the sw_loop incident line (a poll of 20 x 100 ms before)
     await check(page);
     await bar(page).waitFor({ state: "visible", timeout: 15000 });
     assert.equal(await page.evaluate(() => window.__same), 1, "no reload");
-    for (let i = 0; i < 20 && !incs.length; i++) await page.waitForTimeout(100);
+    await inc;
     assert.deepEqual(incs.map(x => [x.where, x.reason]), [["sw", "sw_loop"]]);
     assert.ok(await page.evaluate(() => window.stemFR.ring.some(e => e[1] === "sw" && e[2] === "loop")), "the ring has it");
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);                   // a tap still updates
