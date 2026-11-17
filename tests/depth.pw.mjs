@@ -122,7 +122,7 @@ await step("flag on: the short-answer .ff is a recessed well, its edge gated on 
   assert.match(g.shadow, WELL, "the recessed well: " + g.shadow);
   const r = ratio(g.fill, g.surround);
   console.log(`     .ff field ${g.fill} vs ${g.surround} (${g.via}): ${r.toFixed(2)}:1, border ${g.bw}`);
-  // FIELD-LIP-3:1 (Tony Nov 15: INPUT-NO-BORDER + "read refactoring ui"): a 3:1 lighter bottom lip (RUI p.156-157 inset input) is the field's edge, in place of the 1px border
+  // ICK PR-A (Tony Nov 17, ICK-R1 5a): the lit bottom lip (FIELD-LIP-3:1) is gone; the field's edge is the one --edge-hair 1px border (bw 1px passes the gate below)
   const lip = (g.shadow.match(/(rgba?\([^)]*\)) 0px -1px 0px 0px inset/) || [])[1];
   const lr = lip ? ratio(lip, g.surround) : 0;
   console.log(`     .ff lip ${lip} vs ${g.surround}: ${lr.toFixed(2)}:1`);

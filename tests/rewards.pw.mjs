@@ -561,7 +561,7 @@ try {
           return { t, x, tx, bar, hud: r("#rwHud"), col: r("#freeze"), p: getComputedStyle(document.querySelector(".stoast.on .stoast-bar i")).getPropertyValue("--p").trim(), vw: innerWidth }; });
         assert.ok(g.t.left >= g.col.left - 1 && g.t.right <= g.col.right + 1 && g.t.right <= g.vw, `${w} ${tpl}: in the question column ${JSON.stringify([g.t, g.col])}`);
         assert.ok(!overlap(g.t, g.hud), w + " " + tpl + ": not over the HUD");
-        assert.ok(Math.abs(g.tx.left - g.bar.left) < 1, "d1: words and bar share one left edge");
+        assert.equal(await p.evaluate(() => getComputedStyle(document.querySelector(".stoast.on .stoast-bar")).display), "none", "ICK PR-A: the capsule / countdown bar is hidden on the v7 toast");
         assert.ok(Math.abs((g.x.top + g.x.bottom) / 2 - (g.t.top + g.t.bottom) / 2) < 2, "d1: the close button is centred");
         assert.equal(+g.p, +tpl.slice(1) / 4, "the bar ends at this landmark");
         /* r4 (cluck-rise, easy): it never lies on a live control (Check, Next, a choice, the duck) */

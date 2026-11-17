@@ -100,7 +100,7 @@ async function drawerH(w, flag) {
     return await page.evaluate(() => document.querySelector("#q .vdrawer:not([hidden])").getBoundingClientRect().height);
   } finally { await page.context().close(); }
 }
-const ZERO = "0px 0px 0px 0px";
+const ZERO = "0px 0px 0px 0px", HAIR = "1px 1px 1px 1px";   // HAIR: ICK PR-A, the one --edge-hair round a text field
 const W = [390, 1366];
 try {
   for (const w of W) {
@@ -192,17 +192,17 @@ try {
       const read = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(ff);
         return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor }; });
       const idle = await read();
-      assert.equal(idle.bw, ZERO, "idle: no border " + JSON.stringify(idle));
-      assert.ok(/rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/.test(idle.shadow) && /rgb\(85, 103, 145\) 0px -1px 0px 0px inset/.test(idle.shadow), "idle: inset top shadow + 3:1 bottom lip = --line navy-500 (FIELD-LIP-3:1, Tony Nov 15): " + idle.shadow);
+      assert.equal(idle.bw, HAIR, "idle: the 1px hairline edge " + JSON.stringify(idle));
+      assert.ok(/rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/.test(idle.shadow) && !/0px -1px 0px 0px inset/.test(idle.shadow), "idle: the dark top inset only, the lit bottom lip is gone (ICK PR-A, ICK-R1 5a): " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus();
       await page.waitForFunction(() => document.activeElement === document.querySelector("#ff :is(input, textarea)"));
       const focus = await read();
-      assert.equal(focus.bw, ZERO, "focus: no border " + JSON.stringify(focus));
+      assert.equal(focus.bw, HAIR, "focus: the same hairline " + JSON.stringify(focus));
       assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring, the well only: " + focus.shadow);
       await page.locator("#ff :is(input, textarea)").first().fill("1.5");
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
       const typed = await read();
-      assert.equal(typed.bw, ZERO, "typed: no border " + JSON.stringify(typed));
+      assert.equal(typed.bw, HAIR, "typed: the same hairline " + JSON.stringify(typed));
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });

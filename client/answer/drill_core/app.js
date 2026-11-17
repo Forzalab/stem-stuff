@@ -785,7 +785,7 @@ function render() {
       f._block = b; blocks.append(f);
     }
   }
-  if (typeof prob.ask === "string" && prob.ask.trim()) { const d = document.createElement("div"); d.className = "md ask"; d.innerHTML = md(prob.ask); blocks.append(d); }   // ASK (SCHEMA.md `ask`): the question, its own block after the setup; qcard.js shows it as the lead and never promotes a setup sentence
+  if (typeof prob.ask === "string" && prob.ask.trim()) { const d = document.createElement("div"); d.className = "md qask"; d.innerHTML = md(prob.ask); blocks.append(d); }   // ASK (SCHEMA.md `ask`): the question, its own block after the setup; qcard.js shows it as the lead and never promotes a setup sentence
   wideBoxes(blocks); texTables(blocks);
   drawFigures();
   proofHome();

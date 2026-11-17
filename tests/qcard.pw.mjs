@@ -1,5 +1,5 @@
 // QCARD-SWISS v3 smoke (owner pick V3, Nov 15; brain ui-v7-decisions): under html.ui-v7 the question card is ONE surface, top to bottom: ghost numeral (ECHO trail, 6 copies), headline,
-// ONE text block (setup + the question sentence; scrolls inside past a max height, no Show all), meta row (exam . q#, Twist chip, answer hint). Ask Cluck top right, SOLID (opaque, no border)
+// ONE text block (setup + the question sentence; no fold, no inner scroll: the page scrolls the card and its bold ask pins at the top, ICK PR-A), meta row (exam . q#, Twist chip, answer hint). Ask Cluck top right, SOLID (opaque, no border)
 // and never over the numeral's front copy. The echo animates on prev/next (transform + opacity only, will-change only while it runs, none under reduced motion). Flag off: untouched.
 // Own serve.py + throwaway bank.   node tests/qcard.pw.mjs [port]
 import { launchBrowser } from "./pw-browser.mjs";
@@ -32,9 +32,9 @@ await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); } }
 const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
-async function open(w, flag, code) {
+async function open(w, flag, code, h) {
   const phone = w < 500;
-  const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 1, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: w, height: h || (phone ? 852 : 800) }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 1, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-twist-seen", "1"); } catch { /* blocked */ } });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/?ui=${flag}&qcecho=tl#${code}`);   // tl = the old top-left numeral layout these geometry checks pin; default is qbr (QC-NOFRONT)
@@ -44,12 +44,12 @@ async function open(w, flag, code) {
 }
 const geo = page => page.evaluate(() => {
   const r = s => { const e = document.querySelector(s); return e && e.getBoundingClientRect(); };
-  const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn"), tx = document.querySelector("#blocks .qscroll");
+  const lead = document.querySelector("#blocks .qlead"), set = document.querySelector("#blocks .qsetup"), btn = document.querySelector("#cluckBtn");
   const cs = btn && getComputedStyle(btn), alpha = c => { const m = c.match(/rgba?\(([^)]+)\)/); const v = m[1].split(/[ ,\/]+/).filter(Boolean); return v.length > 3 ? +v[3] : 1; };
   return { lead: lead && lead.textContent.trim(), l: r(".qlead"), s: set && r(".qsetup"), p: r("#problem"), b: btn && btn.getBoundingClientRect(), front: r(".qghost i:nth-child(1)"), head: r(".qhead"), meta: r(".qmeta"),
     headTx: (document.querySelector(".qhead") || {}).textContent, gbox: r(".qghostbox"), qtx: (document.querySelector(".qtext") || {}).textContent, gap: document.querySelector(".qhead").getBoundingClientRect().top - document.querySelector(".qghostbox").getBoundingClientRect().bottom, metaTx: (document.querySelector(".qmeta") || {}).textContent,
     ghosts: document.querySelectorAll(".qghost i").length, ghostHidden: document.querySelector(".qghostbox").getAttribute("aria-hidden"), twist: !!document.querySelector(".qmeta #twistChip"),
-    chipAlpha: alpha(cs.backgroundColor), chipBorder: cs.borderTopWidth, chipShadow: cs.boxShadow, qOut: !document.querySelector(".qscroll .qlead"), scrollTop: tx ? tx.scrollTop : -1, txOv: tx && getComputedStyle(tx).overflowY, txMax: tx && getComputedStyle(tx).maxHeight, txH: tx && tx.clientHeight,
+    chipAlpha: alpha(cs.backgroundColor), chipBorder: cs.borderTopWidth, chipShadow: cs.boxShadow, folds: document.querySelectorAll(".qfold, .qscroll").length, cardOv: getComputedStyle(document.querySelector("#problem")).overflowY, cardMax: getComputedStyle(document.querySelector("#problem")).maxHeight, cardH: document.querySelector("#problem").clientHeight, cardSH: document.querySelector("#problem").scrollHeight,
     show: document.querySelectorAll(".qshow").length, sw: document.documentElement.scrollWidth, vw: innerWidth };
 });
 const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
@@ -69,7 +69,7 @@ try {
         assert.ok(!/Schibsted/.test(await page.evaluate(() => getComputedStyle(document.querySelector("#ans, #q input, #q textarea")).fontFamily)), "inputs keep Atkinson");
       } finally { await page.context().close(); }
     });
-    await step(`${w}: long question: setup then the question in ONE text block on one left edge, scroll container with a max height, no Show all`, async () => {
+    await step(`${w}: long question: setup then the question in ONE text block on one left edge, no fold, no inner scroll box, no Show all`, async () => {
       const page = await open(w, "v7", "PHYS_QL2");
       try {
         const g = await geo(page);
@@ -78,18 +78,33 @@ try {
         assert.ok(g.s.top < g.l.top, "setup above the question");
         assert.equal(g.headTx, "Hydraulic lift", "whole topic word"); assert.ok(g.gap <= 17, "no empty band under the numeral: " + g.gap);
         assert.ok(g.qtx.includes("2.55\u00a0m"), "number + unit joined by a no-break space"); assert.ok(!/\s[.,;:?]/.test(g.qtx), "no stray space before punctuation: " + g.qtx.match(/.{8}\s[.,;:?].{3}/));
-        assert.equal(g.txOv, "auto"); assert.equal(g.txMax, w < 900 ? "170px" : "190px"); assert.ok(g.txH <= (w < 900 ? 170 : 190) + 1, "setup scroll box capped"); assert.ok(g.qOut, "question sits outside the scroll box"); assert.equal(g.scrollTop, 0, "scroll box starts at its first line");
+        assert.equal(g.folds, 0, "no fold strip, no inner scroll box (ICK PR-A: the page scrolls the card)"); assert.equal(g.cardMax, "none"); assert.notEqual(g.cardOv, "auto"); assert.ok(g.cardSH <= g.cardH + 1, "the card shows all its text: " + g.cardSH + " vs " + g.cardH);
         assert.equal(g.show, 0, "no Show all"); assert.ok(!hit(g.b, g.front), "chip clear of the numeral");
       } finally { await page.context().close(); }
     });
   }
-  await step("text block scrolls inside when over the max height (long setup)", async () => {
-    const page = await open(390, "v7", "PHYS_QL2");
+  await step("no fold + ask-pin (ICK PR-A, F1): in a 390x420 viewport the long card scrolls with the page and its bold ask strip pins at the top; a tap on the strip scrolls back to the full question; a short card on a short page never pins", async () => {
+    const page = await open(390, "v7", "PHYS_QL2", 420);
     try {
-      await page.evaluate(() => { const t = document.querySelector(".qscroll"); const d = document.createElement("div"); d.className = "md qsetup"; d.innerHTML = "<p>" + "More setup text that goes on and on. ".repeat(40) + "</p>"; t.insertBefore(d, t.firstChild); });
-      const o = await page.evaluate(() => { const t = document.querySelector(".qscroll"); t.scrollTop = 9999; t.dispatchEvent(new Event("scroll")); const l = document.querySelector(".qlead").getBoundingClientRect(), c = document.querySelector("#problem").getBoundingClientRect(); return { h: t.clientHeight, sh: t.scrollHeight, st: t.scrollTop, qft: t.classList.contains("qft"), qfb: t.classList.contains("qfb"), leadIn: l.top >= c.top && l.bottom <= c.bottom }; });
-      assert.ok(o.sh > o.h && o.st > 0 && o.h <= 171 && o.qft && !o.qfb && o.leadIn, JSON.stringify(o));
+      const o = await page.evaluate(async () => {
+        const p = document.querySelector("#problem"), lead = document.querySelector("#problem .qlead"), q = (el, k) => getComputedStyle(el)[k];
+        const base = { qpin: p.classList.contains("qpin"), pos: q(p, "position"), ov: q(p, "overflowY"), max: q(p, "maxHeight"), tall: p.offsetHeight, fold: document.querySelectorAll(".qfold, .qscroll").length, pad: document.documentElement.classList.contains("pad-off") };
+        const sp = document.createElement("div"); sp.style.height = "900px"; document.querySelector("#freezeIn").appendChild(sp);   // the answers under this card are short: give the page the room a real long question has below it (a card only stays pinned while the page under it is long enough)
+        window.scrollTo(0, 100000); await new Promise(r => setTimeout(r, 400));
+        const r = lead.getBoundingClientRect(), c = p.getBoundingClientRect();
+        return { base, y: scrollY, leadTop: r.top, leadBottom: r.bottom, cardTop: c.top, cardBottom: c.bottom, pinned: p.classList.contains("qpinned"), weight: q(lead, "fontWeight"), lh: q(lead.querySelector("p") || lead, "lineHeight"), shadow: q(lead, "boxShadow"), border: q(lead, "borderTopWidth"), pad: q(document.documentElement, "scrollPaddingTop") };
+      });
+      assert.deepEqual([o.base.fold, o.base.max, o.base.ov === "auto"], [0, "none", false], "no fold, no cap: " + JSON.stringify(o.base));
+      assert.ok(o.base.pad && o.base.qpin && o.base.pos === "sticky", "the long card engages the pin: " + JSON.stringify(o.base));
+      assert.ok(o.pinned && o.leadTop >= -1 && o.leadBottom <= 420 * 0.4 && o.cardBottom <= 420 * 0.4, "the ask strip is stuck at the top, the rest of the card scrolled away: " + JSON.stringify(o));
+      assert.ok(parseFloat(o.pad) > 20, "scroll-padding-top = the strip height while pinned (WCAG 2.4.11): " + o.pad);
+      assert.ok(+o.weight >= 600 && o.shadow === "none" && o.border === "0px", "bold ask, no box / shadow: " + JSON.stringify([o.weight, o.shadow, o.border]));
+      await page.mouse.click(60, Math.round(o.cardBottom / 2));   // a tap on the visible strip (the card's bottom edge is the strip's)
+      await page.waitForFunction(() => scrollY < 2, null, { timeout: 4000 });
+      assert.ok(!(await page.evaluate(() => document.querySelector("#problem").classList.contains("qpinned"))), "tap = back to the full question, un-pinned");
     } finally { await page.context().close(); }
+    const sp = await open(390, "v7", "PHYS_QS1");   // a short card on a page shorter than the screen: nothing scrolls, so nothing pins
+    try { assert.ok(await sp.evaluate(async () => { window.scrollTo(0, 100000); await new Promise(r => setTimeout(r, 200)); return scrollY === 0 && !document.querySelector("#problem").classList.contains("qpinned"); }), "short card on a short page never pins"); } finally { await sp.context().close(); }
   });
   await step("echo animation: prev/next slides the trail in (transform + opacity only, will-change only while it runs); reduced motion: none", async () => {
     for (const rm of [false, true]) {

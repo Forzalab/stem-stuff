@@ -46,8 +46,12 @@ html.ui-v7 #q .ff, html.ui-v7 #q .ff:hover, html.ui-v7 #q .ff:focus-within,
 html.ui-v7.proof-split #q .ff.proof, html.ui-v7.proof-split #q .ff.proof:focus-within,   /* PROOF-V7: the proof field is the short-answer field (beats app.css "html.proof-split #q .ff.proof { box-shadow: none }") */
 html.ui-v7 .code-box, html.ui-v7 .code-box:hover, html.ui-v7 .code-box:focus-within {
   border: 0;
-  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 var(--line);   /* FIELD-LIP-3:1 (Tony Nov 15 "read refactoring ui" + "part of the color swatch"): RUI p.156-157 inset input = dark top inset + lighter bottom lip; lip = --line (navy-500 #556791 under ui-v7), 3.64:1 vs the page (WCAG 1.4.11) */
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45);   /* ICK PR-A (Tony Nov 17, ICK-R1 5a): the lit bottom lip (FIELD-LIP-3:1) is gone, only the dark top inset stays */
 }
+/* ICK PR-A (A1, ICK-R1 5a): the one hairline (--edge-hair, app.css) is the edge of a text field (short answer + proof) and the code box; the judged states (.ok / .bad / .rbox) keep their fills and no edge */
+html.ui-v7 #q .ff:not(.ok, .bad, .rbox), html.ui-v7 #q .ff:not(.ok, .bad, .rbox):hover, html.ui-v7 #q .ff:not(.ok, .bad, .rbox):focus-within,
+html.ui-v7.proof-split #q .ff.proof:not(.ok, .bad), html.ui-v7.proof-split #q .ff.proof:not(.ok, .bad):focus-within,
+html.ui-v7 .code-box, html.ui-v7 .code-box:hover, html.ui-v7 .code-box:focus-within { border: var(--edge-hair); }
 html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box, html.ui-v7.proof-split #q .ff.proof:not(.ok):not(.bad) {
   background: #060b1b;
 }
@@ -56,7 +60,7 @@ html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box, html.ui-v
 html.ui-v7 #q .ff input:focus-visible, html.ui-v7 #q .ff input:focus, html.ui-v7 .code-box input:focus-visible, html.ui-v7 .code-box input:focus { outline: none; }
 html.ui-v7 #q .ff:has(input:focus-visible):not(.bad):not(.ok):not(.rbox):not([data-ptr]), html.ui-v7 .code-box:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 16px; }
 html.ui-v7 #q .ff input:focus::placeholder { color: var(--hint); }   /* the placeholder shows while the field is empty, focus or not */
-html.ui-v7 #q > .how { display: block !important; }   /* the hint line stays (the caption's :has rule hid it on focus) */
+html.ui-v7 #q > .how { display: block !important; font-size: 13px; line-height: 1.4; color: var(--muted); }   /* ICK PR-A (A1, ICK-R1 3a): the "Tick all..." line is a caption: 13px, muted */   /* the hint line stays (the caption's :has rule hid it on focus) */
 html.ui-v7 .ff > .fl { display: none; }   /* Tony Nov 15 (round 3): no floating caption; the placeholder is the only label, and it hides when typing */
 html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.ok, html.ui-v7 #q .ff.rbox.ok { box-shadow: var(--shadow-raise); }
 
@@ -90,8 +94,8 @@ html.ui-v7 #q .cb:not(.opt .cb) { border-radius: 16px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .cb, input:not([type=checkbox], [type=radio], [type=range]), textarea, select) { corner-shape: superellipse(1.52); } }
 /* OMNIBAR (Tony, Nov 16): on the start page the whole entry row (upload + code + paste) is one sunken well, no border; the inner code box is flat */
 html.ui-v7.start .entry, html.ui-v7.start .entry:hover, html.ui-v7.start .entry:focus-within {
-  border: 0; background: #060b1b; border-radius: 16px;
-  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 var(--line);
+  border: var(--edge-hair); background: #060b1b; border-radius: 16px;   /* ICK PR-A (A1): the hairline edge, no lit lip */
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45);
 }
 html.ui-v7.start .code-box, html.ui-v7.start .code-box:hover, html.ui-v7.start .code-box:focus-within { background: none; box-shadow: none; border: 0; }
 html.ui-v7.start .code-box:has(input:focus-visible):not([data-ptr]) { outline: none; }

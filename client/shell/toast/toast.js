@@ -99,13 +99,13 @@
     }
     return false;
   }
-  function hold() { if (el) el.classList.add('stoast-hold'); if (left) { clearTimeout(timer); left = Math.max(800, left - (Date.now() - since)); } }
-  function go() { if (el) el.classList.remove('stoast-hold'); if (left && cur) arm(left, true); }
+  function hold() { if (left) { clearTimeout(timer); left = Math.max(800, left - (Date.now() - since)); } }
+  function go() { if (left && cur) arm(left); }
   /* its own exit waits for the reward FX too (one blink: never two things moving at once, tests/blink-fx.pw.mjs) */
   var late = 0;
   function expire() { if (busy() && late++ < 32) { timer = setTimeout(expire, 250); return; } late = 0; hide(false, 'expired'); }   // at most 8 s more: a stuck fx-busy never pins it
-  /* TOAST-DYN r2: the row's capsules fill in (count) then drain away over the toast's real life = this timer (CSS --life, .stoast-drain; hover/focus holds it) */
-  function arm(ms, keep) { if (el && !keep) { el.style.setProperty('--life', ms + 'ms'); el.classList.remove('stoast-drain'); void el.offsetWidth; el.classList.add('stoast-drain'); }   // keep = resume after a hold: the paused drain just continues from where it stopped
+  /* the toast's life = this timer (hover/focus holds it: hold() / go()); no countdown bar is drawn (ICK PR-A) */
+  function arm(ms) {
     clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(expire, ms); }
   /* the words into `t` with the number v: "Bold line\nsecond line" = a bold head, a break, the rest (BUG-COACHBOLD: count()'s put() used to rewrite it flat) */
   function render(t, o, v) {

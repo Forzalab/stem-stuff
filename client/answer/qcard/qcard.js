@@ -2,7 +2,8 @@
    Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered), top to bottom on ONE card background:
    - GHOST: the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
    - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
-     kept bold); only the setup scrolls inside past a max height (the question stays fully visible, no Show all), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
+     kept bold); no fold and no inner scroller (ICK PR-A: the card is as tall as its text and the page scrolls), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
+   - ASK-PIN (ICK PR-A, F1): on a long card the page scrolls it away until only its last strip, the bold ask, is left; that strip stays pinned at the top, a tap on it scrolls back to the full question.
    Source: brain ui-polish/hintbox/v71/longq (DESIGN.md), ui-v7-decisions QCARD-SWISS v3 (owner picked V3). Looks: qcard.css. */
 (function (g) {
   "use strict";
@@ -29,7 +30,7 @@
 
   /* the lead: the last <p> of the last .md; its last sentence moves into div.md.qlead. Returns the element or null (no clean question sentence: the card keeps its flow) */
   function takeLead(blocks) {
-    var ask = blocks.querySelector(":scope > .md.ask");   // an explicit ask (SCHEMA.md `ask`) IS the lead; the setup is never cut, whatever its last sentence says
+    var ask = blocks.querySelector(":scope > .md.qask");   // an explicit ask (SCHEMA.md `ask`) IS the lead; the setup is never cut, whatever its last sentence says
     if (ask) { ask.remove(); ask.classList.add("qlead"); return ask; }
     var mds = blocks.querySelectorAll(":scope > .md");
     var md = mds[mds.length - 1];
@@ -105,19 +106,6 @@
     UNIT.lastIndex = 0;
     list.forEach(function (x) { x.nodeValue = x.nodeValue.replace(UNIT, "$1\u00a0"); });
   }
-  /* ONLY the setup scrolls (div.qscroll, max height in qcard.css); the question sentence sits below it, always fully visible. Focusable when it overflows;
-     a 16px fade at the top / bottom edge shows only where content is hidden (.qft / .qfb) */
-  function fades(t) {
-    t.classList.toggle("qft", t.scrollTop > 1);
-    t.classList.toggle("qfb", t.scrollTop + t.clientHeight < t.scrollHeight - 1);
-  }
-  function scrollable(t) {
-    var over = t.scrollHeight > t.clientHeight + 1;
-    if (over) { t.tabIndex = 0; t.setAttribute("role", "region"); t.setAttribute("aria-label", "Question setup"); } else { t.removeAttribute("tabindex"); t.removeAttribute("role"); t.removeAttribute("aria-label"); }
-    if (!t.hasAttribute("data-f")) { t.setAttribute("data-f", "1"); t.addEventListener("scroll", function () { fades(t); }, { passive: true }); }
-    fades(t);
-  }
-
   function build() {
     raf = 0;
     var p = D.getElementById("problem"), blocks = D.getElementById("blocks");
@@ -148,7 +136,7 @@
           if (kids.some(function (n) { return (n.textContent || "").trim(); })) { head = D.createElement("h2"); head.className = "qhead"; kids.forEach(function (n) { head.appendChild(n.cloneNode(true)); }); }
         }
         var tx = D.createElement("div"); tx.className = "qtext";
-        if (texts.length) { var sc = D.createElement("div"); sc.className = "qscroll"; texts.forEach(function (c) { sc.appendChild(c); }); tx.appendChild(sc); }
+        texts.forEach(function (c) { tx.appendChild(c); });
         tx.appendChild(lead);
         if (tw) m.appendChild(tw);
         figs.forEach(function (c) { blocks.appendChild(c); });
@@ -159,9 +147,8 @@
         if (pt) pt.remove();
       }
     }
-    var mm = blocks.querySelector(":scope > .qmeta"), tt = blocks.querySelector(":scope > .qtext");
+    var mm = blocks.querySelector(":scope > .qmeta");
     if (mm) meta(mm);
-    var sc2 = tt && tt.querySelector(":scope > .qscroll"); if (sc2) scrollable(sc2);
   }
   /* ROW-ALIGN (Tony Nov 16, option B, every bank): a title-first card shares one row with the Ask Cluck float. The title reserves the button's MEASURED width
      (--cbw) + a gap; the button keeps its own size and drops so its BOTTOM sits on the title's last line (1, 2, 3+ lines alike). No title first / flag off = reset. */
@@ -184,50 +171,45 @@
     var d = base(lab) - base(k);
     if (Math.abs(d) > 0.25) k.style.marginTop = d + "px";
   }
-  /* Q-FOLD (Tony Nov 16): the chevron is a real button: tap = expand the card to full height; at the foot a reversed chevron collapses it (scrolls the card top back into view) */
-  function foldBtn(p) {
-    var b = p.querySelector(":scope > .qfold");
-    if (!b) {
-      b = D.createElement("button"); b.type = "button"; b.className = "qfold"; b.setAttribute("aria-label", "Show the whole question"); b.setAttribute("aria-expanded", "false");
-      b.innerHTML = '<svg viewBox="0 0 20 12" width="20" height="12" aria-hidden="true"><path d="M2 2l8 8 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      b.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var open = !p.classList.contains("qopen"); p.classList.toggle("qopen", open);
-        b.setAttribute("aria-expanded", String(open)); b.setAttribute("aria-label", open ? "Fold the question" : "Show the whole question");
-        if (!open) { p.scrollTop = 0; var r = p.getBoundingClientRect(); if (r.top < 0) g.scrollBy({ top: r.top - 16, behavior: "smooth" }); }
-        requestAnimationFrame(qmore);
-      });
-      p.appendChild(b);
-    }
-    return b;
+  /* ASK-PIN (ICK PR-A, Tony Nov 17 F1; brain ui-polish/ick-v1 R2): the card is no scroller, the page scrolls it. qcard.css gives a long card `position: sticky; top: -(offset of its
+     last strip)`, so it scrolls away until only the bold ask (+ the card's bottom pad) is left at the top. This measures that offset (--qpin, on <html>: the proof page pins #freeze, an
+     ancestor of the card), the pinned top bar's height (--qbar) and the strip's height + the bar's (--qstrip, the page's scroll-padding-top while pinned, WCAG 2.4.11). .qpin = it engages (an ask taller than a third of the screen
+     never pins), .qpinned = the strip is stuck now (it gets the bar look). A tap on the stuck strip, not on a control, scrolls back to the full question. */
+  var pinStrip = 0, pinEl = null, pinRaf = 0;
+  /* the pinned top bar (header.top, sticky: the question bank bar on a multi-question bank) is on top of the strip's spot: the strip sticks under it (--qbar) */
+  function barH() { var b = D.querySelector("header.top"), cs = b && g.getComputedStyle(b); return cs && cs.position === "sticky" ? Math.max(0, Math.round((parseFloat(cs.top) || 0) + b.offsetHeight)) : 0; }
+  function pinVars() { var bar = barH(); H.style.setProperty("--qbar", bar + "px"); H.style.setProperty("--qstrip", (pinStrip + bar) + "px"); }
+  function pinMeasure() {
+    var p = D.getElementById("problem"), lead = p && p.querySelector(":scope > .blocks > .qtext > .qlead");
+    if (!on() || !p || !lead || !p.classList.contains("qc7")) { if (p) p.classList.remove("qpin", "qpinned"); ["--qpin", "--qbar", "--qstrip"].forEach(function (k) { H.style.removeProperty(k); }); pinEl = null; return; }
+    var off = Math.round(lead.getBoundingClientRect().top - p.getBoundingClientRect().top) - 12, strip = p.offsetHeight - off;   // strip = 12px air + the ask + the card's bottom pad
+    pinStrip = strip; p.classList.toggle("qpin", off > 40 && strip < g.innerHeight * 0.34);
+    H.style.setProperty("--qpin", off + "px"); pinVars();
+    pinEl = H.classList.contains("proof-split") && p.parentNode && p.parentNode.parentNode && p.parentNode.parentNode.id === "freeze" ? p.parentNode.parentNode : p;
+    pinState();
   }
-  function qmore() {
-    var p = D.getElementById("problem"); if (!p) return;
-    if (!on()) { p.classList.remove("qmore", "qopen"); return; }
-    var open = p.classList.contains("qopen");
-    /* BLANK-CARD (Nov 17, Firefox phone: card went empty navy after scrolling): the ghost box is as tall as the scroll area (GHOST-BLEED, bottom: -qover), so p.scrollHeight
-       itself includes it: reading qover back from scrollHeight is a ratchet (every viewport resize that grew clientHeight left qover + the gap in the scroll height, never shrank), and
-       the card scrolled into empty space. The content height is measured from the in-flow content instead: last block's bottom + the card's bottom pad. */
-    var lastc = open && p.querySelector(":scope > .qfold:not([hidden])") || p.querySelector(":scope > .blocks"), cs = g.getComputedStyle(p),
-      sh = lastc ? Math.max(p.clientHeight, lastc.offsetTop + lastc.offsetHeight + (parseFloat(g.getComputedStyle(lastc).marginBottom) || 0) + (parseFloat(cs.paddingBottom) || 0)) : p.clientHeight;
-    p.style.setProperty("--qch", p.clientHeight + "px");   // GHOST-PIN: the ghost box is as tall as the card box and sticks to its top while the content scrolls (no --qover any more)
-    /* FOLD-MIN (Tony Nov 17, "64px go"): fold only when the hidden part is at least ~2 lines. Up to 64px over the 50svh cap, the card just grows (.qfit), no chevron.
-       Measured against the cap itself (half the viewport), never the card's own height: once .qfit lifts the cap, clientHeight = sh and it would flip back. */
-    var cap = (g.visualViewport ? g.visualViewport.height : g.innerHeight) * 0.5, fit = !open && sh > p.clientHeight - 1 && sh - cap <= 64 && sh - cap > 0;
-    p.classList.toggle("qfit", fit);
-    if (fit) sh = p.clientHeight;
-    var over = sh - p.clientHeight > 4, more = !open && over && sh - p.scrollTop - p.clientHeight > 4;
-    p.classList.toggle("qmore", more); p.classList.toggle("qscrolled", !open && p.scrollTop > 4);   // EDGE-FADE: top fade only once scrolled
-    if (more || open || over) foldBtn(p).hidden = !(more || open); else { var b = p.querySelector(":scope > .qfold"); if (b) b.hidden = true; }
+  function pinState() {
+    var p = D.getElementById("problem"); if (!p || !pinEl) return;
+    if (p.classList.contains("qpin") && parseFloat(H.style.getPropertyValue("--qbar")) !== barH()) pinVars();   // the bar changed height since the last measure
+    var on_ = p.classList.contains("qpin") && g.getComputedStyle(pinEl).position === "sticky" && pinEl.getBoundingClientRect().top <= (parseFloat(g.getComputedStyle(pinEl).top) || 0) + 1;
+    p.classList.toggle("qpinned", on_);
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; var pp = D.getElementById("problem"); if (pp && pp.dataset.qfor !== location.hash) { pp.dataset.qfor = location.hash; pp.classList.remove("qopen"); } build(); rowAlign(); qmore(); }); }
+  function pinSoon() { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; pinState(); }); }
+  function pinTap(e) {
+    var p = D.getElementById("problem");
+    if (!p || !p.classList.contains("qpinned") || e.target.closest("button, a, input, textarea, select, [role=link], [role=button]")) return;
+    g.scrollTo({ top: 0, behavior: g.matchMedia && g.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); pinMeasure(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
     if (!blocks) return;
     new MutationObserver(later).observe(blocks, { childList: true });
-    var pr = D.getElementById("problem"); if (pr) pr.addEventListener("scroll", qmore, { passive: true });
-    if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });   // the Ask Cluck button lands after build (cluckbtn.js)
+    var pr = D.getElementById("problem");
+    if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });
+    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; pinMeasure(); }); }).observe(pr); }   // a figure / font landing changes the offset
+    g.addEventListener("scroll", pinSoon, { passive: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
     later();

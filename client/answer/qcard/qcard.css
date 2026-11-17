@@ -1,12 +1,12 @@
 /* qcard.css: QCARD-SWISS v3 (qcard.js), html.ui-v7 ONLY. Flag off = nothing here applies.
    Owner pick V3 (Nov 15): ONE card background, top to bottom: ghost numeral (ECHO trail, 6 copies, step -12px x, fades out before the chip column), figure, topic headline,
-   setup + question text (14px, flush-left, scrolls inside past a max height, NO Show all), small meta row. Text, headline, meta share the left edge --qpad.
+   setup + question text (16px, 1.45 leading, flush-left, no fold and no inner scroll: the page scrolls it, the bold ask pins at the top), small meta row. Text, headline, meta share the left edge --qpad.
    Ask Cluck (cluckbtn.css) stays top right: opaque, no border, a soft dark halo plate + drop shadow lift it off the trail. Echo animates on prev/next (transform + opacity only). */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
-html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 16px; --qc-pad: 16px; --qnum: 108px; --qmax: 170px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 16px; --qc-pad: 16px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
 html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pad: 16px; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 22px; --qc-pad: 32px; --qnum: 156px; --qmax: 190px; } }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 22px; --qc-pad: 32px; --qnum: 156px; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
 
 /* GHOST: in the flow at the top of the card (nothing is laid over it), full card width, clipped by its own box; the horizontal mask fades the trail before the chip column */
@@ -53,23 +53,20 @@ html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-sha
 html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; }
 html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
-html.ui-v7 #problem.qc7 .qtext { font: 400 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
+html.ui-v7 #problem.qc7 .qtext { font: var(--w-body, 400) 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: 17px; line-height: 24px; } }
-html.ui-v7 #problem.qc7 .qscroll { max-height: var(--qmax); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 0; }
-html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 16px); mask-image: linear-gradient(transparent 0, #000 16px); }
-html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 16px), transparent); mask-image: linear-gradient(#000 calc(100% - 16px), transparent); }
-html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 16px, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(transparent 0, #000 16px, #000 calc(100% - 16px), transparent); }
-html.ui-v7 #problem.qc7 .qscroll > * { margin: 0 0 8px; max-width: 64ch; }
-html.ui-v7 #problem.qc7 .qscroll > :last-child, html.ui-v7 #problem.qc7 .qscroll > :last-child > :last-child { margin-bottom: 0; }
-html.ui-v7 #problem.qc7 .qscroll:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
 html.ui-v7 #problem.qc7 .qtext > * { margin: 0 0 8px; max-width: 64ch; }
 html.ui-v7 #problem.qc7 .qtext > :last-child { margin-bottom: 0; }
 html.ui-v7 #problem.qc7 .qtext p, html.ui-v7 #problem.qc7 .qtext ul, html.ui-v7 #problem.qc7 .qtext ol { margin: 0 0 8px; max-width: none; }
 html.ui-v7 #problem.qc7 .qtext > :last-child > :last-child { margin-bottom: 0; }
-html.ui-v7 #problem.qc7 .qsetup { color: #cdd4ea; font-weight: 400; }
-html.ui-v7 #problem.qc7 .qlead { color: #e8ebf5; font-weight: 600; }   /* the question: one step brighter and heavier than the setup */
+/* ICK PR-A (A1, ICK-R1 2b): tighter body: 1.45 leading (was 22px; the code-chip lines carried 1.75) and half the paragraph gap (8 -> 4) */
+html.ui-v7 #problem.qc7 .qtext .md :is(p, li), html.ui-v7 #problem.qc7 .qtext > :is(p, li) { line-height: var(--qbody-lh); margin-bottom: var(--qbody-gap); }
+/* ICK PR-A (A1, ICK-R1 3a): the ask is a bold line on the body axis: no box, no shadow, no inset (app.css's `.ask` was the Cluck composer's class; the block is .qask now) */
+html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 600; line-height: var(--qbody-lh); }
+html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 600; }
+html.ui-v7 #problem.qc7 .qsetup { color: #cdd4ea; font-weight: var(--w-body, 400); }
 html.ui-v7 #problem.qc7 .qlead .katex, html.ui-v7 #problem.qc7 .qsetup .katex { font-size: 1em; }
-html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: 400 13px/18px var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
+html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: var(--w-body, 400) 13px/18px var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
 html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
 /* KATEX-COVER (Nov 15): the G4.3 edge-fade "local covers" (app.css .md :is(.tbl,.katex-display)) paint solid --qbox squares that hid the echo numeral behind
    a display equation / table. Only a box that scrolls needs the fade (wideBoxes() sets tabindex then); a box that fits draws no background. */
@@ -80,33 +77,20 @@ html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { -webkit-mask-image: no
 html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(130% 130% at 100% 100%, #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); mask-image: radial-gradient(130% 130% at 100% 100%, #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); }
 /* LEAD-MATH-BOLD (Tony Nov 15): math in the question sentence (.qlead) reads bold like its words, display lines (lim, integrals) included.
    KaTeX fonts ship no bold weight for CSS, so a thin same-colour stroke = faux bold; it scales with the font size (em). */
-html.ui-v7 #problem.qc7 .qlead .katex { color: #e8ebf5; -webkit-text-stroke: .028em currentColor; paint-order: stroke fill; }
+html.ui-v7 #problem.qc7 .qlead .katex { color: #e8ebf5; -webkit-text-stroke: .022em currentColor; paint-order: stroke fill; }   /* ICK PR-A (A1): .028em -> .022em with the 600 ask */
 /* QD-SCALE (Tony Nov 15): 3+ digits shrink so the trail is as wide as 2 digits (--qd = digit count, qcard.js) */
 html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--qnum) * 2.6 * min(1, 2 / var(--qd, 1))); }
 /* TBL-CENTER (Tony Nov 15): tables sit centred in the card (the scroll box hugs the table, never wider than the card) */
 html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }
-/* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
+/* NO-FOLD (ICK PR-A, Tony Nov 17, ICK-R1 1a: the Q-HALF cap, the fold chevron and the inner scrollers are gone): the card is as tall as its text and the page scrolls it (ASK-PIN below) */
 @media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { max-height: 50svh; max-height: round(down, 50svh, 1px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: auto; scrollbar-width: thin;   /* SCROLL-HANDOFF (Tony Nov 17, grill 1a-5a): at the card's top/bottom the NEXT swipe moves the page (native scroll latching; Edge/Chromium dropped mid-gesture chaining as buggy) */ /* WHOLE-PX (Nov 17): 50svh is often fractional (419.5); the scroller's clip snaps outward but the content layer does not, so one device row of the next code line painted BELOW the card edge. round(down) = whole px. */
-    margin-bottom: 20px; padding-bottom: 0; }   /* Q-GAP: the answers start clearly below the card. FOLD-FLUSH: the bottom pad moves into .blocks (below), so the sticky fold's containing block reaches the card's bottom edge */
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7 > .blocks { padding-bottom: var(--qpad, 24px); }
-  /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
-  html.ui-v7 #problem.qc7 > .qfold { position: sticky; bottom: 0; z-index: 3; display: grid; place-items: end center; width: calc(100% + 2 * var(--qc-pad, 24px)); height: 104px;
-    margin: -104px calc(-1 * var(--qc-pad, 24px)) 0; padding: 0 0 14px; border: 0; cursor: pointer; color: #a7b5d2;
-    background: linear-gradient(transparent, color-mix(in srgb, #0d142a 70%, transparent) 45%, #0d142a 78%); -webkit-tap-highlight-color: transparent; }
-  html.ui-v7 #problem.qc7 > .qfold[hidden] { display: none; }
-  html.ui-v7 #problem.qc7 > .qfold svg { width: 20px; height: 12px; transition: transform .2s ease-out; }
-  html.ui-v7 #problem.qc7 > .qfold:focus-visible { outline: none; } html.ui-v7 #problem.qc7 > .qfold:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qopen, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qfit { max-height: none; overflow-y: visible; }   /* .qfit = FOLD-MIN: at most 64px over the cap, the card grows instead of folding */   /* (:not x2 = the Q-HALF rule's specificity; without them max-height: 50svh won and the chevron expanded nothing) */
-  html.ui-v7 #problem.qc7.qopen > .qfold { position: static; height: 44px; margin: calc(8px - var(--qpad, 24px)) auto 4px; padding: 0; place-items: center; background: none; width: 100%; }
-  html.ui-v7 #problem.qc7.qopen > .qfold svg { transform: rotate(180deg); }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7 { margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
   html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */
   html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.5rem; line-height: 28px; }
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
 }
 /* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
 html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .22em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
-html.ui-v7 #problem .blocks :is(p, li):has(> code) { line-height: 1.75; }   /* room so two wrapped chip lines never touch */
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 74px; }   /* 2 + 48 button + 24 air (BREATHE) */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
@@ -132,9 +116,8 @@ html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 
 html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { position: relative !important; top: auto !important; right: auto !important; order: 1; flex: none; float: none; margin: 0 !important; }   /* keeps cluckbtn.css's font, fill, 44 px, states */
 html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 14px; }
-html.ui-v7 #problem.qc7.qbr > .qfold, html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
+html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
 html.ui-v7 #problem.qc7.qbr > .qghostbox, html.ui-v7 #problem.qc7.qbr > .pcode { flex: none; }
-html.ui-v7 #problem.qc7.qbr > .qfold { flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); }   /* the fade strip stays full-bleed inside the flex kicker layout (flex 100% cut its right edge: text showed through) */
 /* KICKER-C v2 (Tony Nov 16): button a touch bigger; its label's BASELINE sits on the code kicker's baseline (flex baseline alignment, not centre) */
 html.ui-v7 #problem.qc7.qbr { align-items: baseline; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { padding: 14px 24px 14px 20px !important; }
@@ -162,37 +145,11 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { opacity: .45; } 
 /* CLUCK-LINK states: the chip's box effects are off on the link (the sheen streak is a box-shaped band, the press shrink is a button feel). JS still toggles .cb-sheen on its timers (no transitionend/animationend dependency), it just draws nothing here. */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):active { transform: none; }
-/* GHOST-BLEED (Tony Nov 16 "the ghost number got cut off, it is allowed to bleed down"): in a Q-HALF scroller the ghost box was the card's CLIENT box, so scrolling showed its
-   hard bottom edge. The box now reaches the end of the scroll content (--qover, qcard.js qmore); the trail keeps its spot (bottom + --qover) and the mask keeps its centre and
-   size (--qch), so it fades on down instead of stopping. No growth past the content: no phantom scroll (GHOST-CLIP holds). */
-html.ui-v7 #problem.qc7.qbr .qghostbox { bottom: calc(-1 * var(--qover, 0px));
-  -webkit-mask-image: radial-gradient(130% calc(var(--qch, 100%) * 1.3) at 100% calc(100% - var(--qover, 0px)), #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%);
-  mask-image: radial-gradient(130% calc(var(--qch, 100%) * 1.3) at 100% calc(100% - var(--qover, 0px)), #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); }
-html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { bottom: calc(var(--qnum) * -.7 + var(--qover, 0px)); }
-/* FOLD-CENTER (Tony Nov 16 "collapse chevron is uneven"): open, the fold kept the folded strip's flex basis (100% + 2 pads) with width 100%, so it overflowed right and the chevron sat one pad right of centre */
-@media (max-width: 480px) { html.ui-v7 #problem.qc7.qbr.qopen > .qfold { flex-basis: 100%; margin-inline: 0; } }
+/* GHOST-BLEED (Tony Nov 16 "the ghost number got cut off, it is allowed to bleed down"): the trail runs on below the card's edge (the radial mask above fades it; GHOST-CLIP clips it at the box) */
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { bottom: calc(var(--qnum) * -.7); }
 /* NO-EXAM (Tony Nov 16): the "questions · q1" source line under the question is gone; the meta row only shows when it still holds something (the Twist chip) */
 html.ui-v7 #problem.qc7 .qmeta .qexam { display: none; }
 html.ui-v7 #problem.qc7 .qmeta:not(:has(> :not(.qexam))) { display: none; }
-/* EDGE-FADE v2 (Tony Nov 16): a mask on the scroller also faded the CARD'S OWN FILL (bottom edge dissolved into the page, even on cards that do not scroll). Now an overlay
-   instead: a sticky 40 px strip in the card's fill (#0d142a, the fold strip's colour) that fades to clear, pinned at the top edge, only once scrolled (.qscrolled, qcard.js qmore).
-   Net height 0 (margins), pointer-events none. The bottom edge already has the fold strip. */
-@media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qscrolled:not(.qopen)::before { content: ""; display: block; position: sticky; top: calc(-1 * var(--qpad, 24px)); z-index: 3; order: -1;
-    flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px) + 1px); height: 40px; margin: calc(-1 * var(--qpad, 24px)) calc(-1 * var(--qc-pad, 24px)) calc(var(--qpad, 24px) - 40px);
-    pointer-events: none; background: linear-gradient(#0d142a, transparent); }
-  /* STRIP-WRAP (Nov 17, Ask Cluck 45px off the code kicker once the card scrolled): the strip's MARGIN box was exactly one line wide (basis 100% + 2 pads - 2 pads of negative margin), so the 0-basis kicker still fit on the strip's line (kicker 0 px wide, button alone on the next line). +1px makes it a line of its own. */
-}
-/* SETUP-FADE wider (Tony Nov 16 "fade slightly earlier and wider"): the setup scroller's edge fades go 16 -> 44 px, so the cut line dissolves over ~2 lines, not one */
-html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 44px); mask-image: linear-gradient(transparent 0, #000 44px); }
-html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent); mask-image: linear-gradient(#000 calc(100% - 44px), transparent); }
-html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); }
-/* FOLD-JUT (Tony Nov 16, Firefox phone: code peeked below the fold strip by a few px): the sticky strip's bottom is not flush in every engine, so the strip casts a 12 px
-   solid shadow of its own end colour below itself (clipped by the card, covers any peek). Smaller chevron: 20x12 -> 16x10. */
-@media (max-width: 480px) {
-  html.ui-v7 #problem.qc7:not(.qopen) > .qfold { box-shadow: 0 12px 0 #0d142a; }
-  html.ui-v7 #problem.qc7 > .qfold svg { width: 16px; height: 10px; }
-}
 /* CLUCK-SWEEP (Tony Nov 16 "underline sweep as emphasis, replacing any existing emphasis"): every emphasis class cluckbtn.js sets (.cb-sheen / .cb-shake / .cb-nod / .cb-hop)
    now plays ONE thing: a full-tone underline sweeps left -> right under the label (scaleX 0 -> 1, holds, fades), over the 40% resting underline. The duck stays still.
    ::after = the sweep line (the old sheen layer, free on the link). Label starts at 12 pad + 18 duck + 6 gap = 36 px; the line sits on the text underline (offset 4). */
@@ -226,25 +183,21 @@ html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.u
 /* ANCHOR-BOTTOM (Tony Nov 16 "anchor the title + question text to the bottom, then extend the height a teensy bit; all cards like that"): a short card gets a floor
    (240 px phone, 280 px desktop) and its rows spread: the kicker / Ask Cluck row stays on top, the headline + text sit on the card's bottom pad (Swiss poster).
    A card taller than the floor is unchanged (nothing to spread). Not in the Q-HALF open/scroll states, where the height is the scroller's. */
-html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 216px; align-content: space-between; }   /* BALANCE (Tony Nov 16 "shrink that space"): 240 -> 216, 256 desk */
-@media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 256px; } }
-/* LEAD-LIGHTER (Tony Nov 16 "de-emphasise the question's thickness / boldness"): the question sentence drops 600 -> 400 (STYLE 2.2: weights are 400 / 600 only) and
-   its math stroke .028em -> .012em to match; it keeps the one-step-brighter ink, so it still reads as THE question under the grotesk headline. */
-html.ui-v7 #problem.qc7 .qlead { font-weight: 400; }
-html.ui-v7 #problem.qc7 .qlead .katex { -webkit-text-stroke-width: .012em; }
+html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { min-height: 216px; align-content: space-between; }   /* BALANCE (Tony Nov 16 "shrink that space"): 240 -> 216, 256 desk */
+@media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { min-height: 256px; } }
 /* GHOST-ONE (Tony Nov 17 "funky gradient in the question box"): the 5 offset echo copies read as stepped bands; one faint flat copy, no mask */
 html.ui-v7 .qghost i:nth-child(n+3) { display: none; }
 html.ui-v7 .qghost i:nth-child(2) { --o: .08; -webkit-mask-image: none; mask-image: none; transform: none; }
-/* GHOST-PIN (Tony Nov 17: the numeral stays put while the card's text scrolls): in the phone Q-HALF scroller an absolute ghost box scrolled away with the text. Once the card scrolls
-   (.qmore / .qscrolled) the box becomes a sticky first flex line: card-box tall (--qch, qcard.js), zero net height (margins cancel: -32 top pad ... +32 - qch), stuck at the scrollport
-   top (-32 = the card's top padding: sticky offsets measure from the padding-deflated scrollport), so the trail is a fixed background. +1px on the basis = the line-break trick of STRIP-WRAP (a margin box of exactly one line let the 0-basis kicker share the line). The
-   trail's own offsets (bottom, mask) were written for the box = the card's client box, which it is again (--qover is gone). Short cards keep the absolute box. */
-@media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:is(.qmore, .qscrolled):not(.qopen) > .qghostbox { position: sticky; top: calc(-1 * var(--qpt, 22px)); bottom: auto; inset-inline: auto; order: -2; flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px) + 1px);
-    height: var(--qch, 216px); margin: calc(-1 * var(--qpt, 22px)) calc(-1 * var(--qc-pad, 16px)) calc(var(--qpt, 22px) - var(--qch, 216px)); }
-}
-
 /* PAD-TIGHT (Tony Nov 17 "too spacey"): --qpad / --qc-pad 24 -> 16 (desktop 32/48 -> 22/32, pad-split 16/24 -> 11/16), phone top 32 -> 22 (--qpt, also the ghost pin's offset), kicker row -> headline 12 -> 8, row -> text 20 -> 14. Corners (radius ~20) stay clear of the text: the first line starts below the kicker row. */
 /* GHOST-CLIP (Nov 17, Firefox Android "horizontal scroll"): the ghost numeral's glyph ran ~38px past the card's right edge (the box is overflow: visible here);
    clip it to its box so nothing pokes past the viewport */
 html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }
+
+/* ASK-PIN (ICK PR-A, Tony Nov 17, F1; qcard.js pinMeasure): the card scrolls with the page; a long one is sticky with a NEGATIVE top = the offset of its last strip (--qpin, <html>), so it
+   scrolls away until only the bold ask is left at the top; a tap on that strip scrolls back to the full question. Phone only (pad-off: app.css makes the freeze layer a plain flow box there). */
+html.ui-v7.pad-off:not(.mt):not(.swap) #problem.qc7.qpin { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--qbar, 0px) - var(--qpin, 0px)); z-index: 5; }
+html.ui-v7.pad-off:not(.mt):not(.swap) #problem.qc7.qpin.qpinned { box-shadow: 0 10px 24px rgb(0 0 0 / .55); border-top-left-radius: 0; border-top-right-radius: 0; cursor: pointer; }   /* stuck: the strip reads as a bar, the whole card is the tap target */
+/* the proof page: the card is alone in #freezeIn (the proof box lives in #work), so the sticky box is #freeze itself (its 8px pad is in the offset) */
+html.ui-v7.pad-off.proof-split:not(.mt):not(.swap) #freeze:has(> #freezeIn > #problem.qpin) { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--qbar, 0px) - var(--qpin, 0px) - 8px); z-index: 5; }
+/* WCAG 2.4.11 (focus not obscured): while the strip is pinned, anything scrolled or focused into view stops below it */
+html.ui-v7.pad-off:not(.mt):not(.swap):has(#problem.qpin) { scroll-padding-top: var(--qstrip, 0px); }

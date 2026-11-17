@@ -117,9 +117,9 @@ test("§2.1 retired colour tokens stay gone (PALETTE-v3 §1: one warm family, un
     .filter(([, , l]) => RETIRED.test(l)).map(([f, n, l]) => `${f}:${n} ${l.trim().slice(0, 90)}`);
   assert.deepEqual(hits, [], "use the v5 role (app.css :root)");
 });
-test("§2.2 weights: 400 and 600 (--w-em), nothing else", () => {
+test("§2.2 weights: 400 (--w-body: 400, 450 under ui-v7) and 600 (--w-em), nothing else", () => {
   const w = v => (v.match(/^(?:font-weight:)?\s*(\d{3})/) || [])[1];
-  const bad = ALL.filter(d => d.sel !== "@font-face" && (d.prop === "font-weight" && !["400", "600", "var(--w-em)", "inherit", "normal"].includes(d.value)) || (d.prop === "font" && w(d.value) && !["400", "600"].includes(w(d.value))));
+  const bad = ALL.filter(d => d.sel !== "@font-face" && (d.prop === "font-weight" && !["400", "600", "var(--w-em)", "var(--w-body)", "var(--w-body, 400)", "inherit", "normal"].includes(d.value)) || (d.prop === "font" && w(d.value) && !["400", "600"].includes(w(d.value))));
   assert.deepEqual(bad.map(fmt), [], "two weights (STYLE.md §2.2)");
 });
 test("§2.2 no italic outside math", () => {
