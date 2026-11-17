@@ -5,6 +5,7 @@
 // device and bank: a reload, the item opened again, a returner (stem-noob-<bank>) never see it again; a bank without a welcome item is
 // unchanged. A fixture bank stands in for BANK_P3X (BQ3's shape: pick, sheet + why, fill + why, keyless num answer). Own serve.py:
 //   node tests/welcome-app.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -107,7 +108,7 @@ async function warmFace(page, sel) {
   assert.notEqual(f.bg, raised, `${sel}: the navy --raised face`);
   assert.deepEqual([f.bg, f.line, f.ink], [help, help, ink], `${sel}: not the warm face`);
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function fresh(init = {}, viewport = { width: 1280, height: 860 }) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block" });
   await ctx.addInitScript(init => { try {

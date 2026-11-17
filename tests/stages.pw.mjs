@@ -4,6 +4,7 @@
 // A front server in front of serve.py plays /explain and /check(proof) by hand, so the test writes each event itself while the PAGE clock
 // is paused and moved with clock.runFor (no sleeps). WIDTHS=393 or 1280 (run-all.sh parts stages@phone / stages@desk).
 //   WIDTHS=393 node tests/stages.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer, request as httpRequest } from "node:http";
 import assert from "node:assert/strict";
@@ -53,7 +54,7 @@ await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const until = async (get, what) => { for (let i = 0; i < 100; i++) { const v = get(); if (v) return v; await new Promise(r => setTimeout(r, 50)); } throw new Error("never came: " + what); };
 const mk = async (w, reduced) => {
   const phone = w < 500;

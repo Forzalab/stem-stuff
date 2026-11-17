@@ -3,9 +3,11 @@
 // append-only paint (a painted statement keeps its node while later ones stream in), Steps' Back/Next bounds, the Doodle fallback,
 // and the P11 answer is nowhere in the DOM, localStorage or sessionStorage before Check (F4/F5); after Check the Reveal opens.
 // usage: python3 serve.py 8815 &   node tests/views.pw.mjs http://localhost:8815 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the state, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -19,7 +21,7 @@ async function step(name, fn) {
 }
 const ANSWER = ["χ(P) = 3", "Three classes cover"];   // the Reveal body: only the fake server has it before the stage changes
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const W of [390, 1280]) {
   const phone = W < 700;
   const ctx = await b.newContext({ viewport: { width: W, height: phone ? 844 : 900 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
@@ -96,7 +98,7 @@ for (const W of [390, 1280]) {
       verdict: document.querySelector("#v2 .vw-verdict").textContent, used: document.querySelectorAll("#v2 .vw-pips i.used").length,
       digits: [...document.querySelectorAll("#v2 .cm text")].map(t => t.textContent).join(""), ans: document.querySelector("#v2 .vw-ans").textContent }));
     assert.deepEqual(r, { same: true, verdict: "Not 5.", used: 2, digits: "1212321332", ans: "χ(P) = 3" });
-    await page.waitForTimeout(400);
+    await settled(page, "#v2 .vw-reveal");   // the Reveal patch has finished opening (its height/opacity transition)
     await fits();
     await shot("reveal");
     assert.deepEqual(errors, []);
@@ -106,7 +108,7 @@ for (const W of [390, 1280]) {
     await open("?fast=1&grey=1");
     await shot("grey");
     await open("?fast=1&grey=1&reveal=1&s1=4");
-    await page.waitForTimeout(400);
+    await settled(page);   // the streamed view's animations are over before the record shot
     await shot("grey-reveal");
     assert.deepEqual(errors, []);
   });

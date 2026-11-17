@@ -2,8 +2,10 @@
 // (c) one type scale across normal and Swap, (d) Swap scratchpad grows up to a small gap under the question.
 // Needs a running server and Playwright:   python3 serve.py 8815 &   then   node tests/polish.pw.mjs http://localhost:8815 [shotDir] [prefix]
 // The keyboard is simulated as in swap.pw.mjs: the viewport shrinks to 55% of its height.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the state, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -25,28 +27,29 @@ const fontOf = (page, sel) => page.$eval(sel, e => { const s = getComputedStyle(
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   const phone = W < 1000;
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   await ctx.addCookies(DIET);   // sugar-hides-notes: desktop sugar has no notes box; the 1920 steps focus #scratch (phones were already diet)
   const page = await ctx.newPage();
   const shot = async n => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${W}.png` }); };
-  const kbUp = async () => { await page.setViewportSize({ width: W, height: Math.round(H * 0.55) }); await page.waitForTimeout(500); };
-  const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(500); };
+  /* keyboard up/down: the app re-lays the page on the resize; wait for the new viewport height, then for its animations */
+  const kbUp = async () => { const h = Math.round(H * 0.55); await page.setViewportSize({ width: W, height: h }); await page.waitForFunction(h => Math.round(visualViewport ? visualViewport.height : innerHeight) === h, h, { timeout: 5000 }); await settled(page); };
+  const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForFunction(h => Math.round(visualViewport ? visualViewport.height : innerHeight) === h, H, { timeout: 5000 }); await settled(page); };
   await page.goto(BASE + "/");
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(BANK)) });
   await page.waitForFunction(() => /^CALC1_ZZ/.test(document.querySelector("#pcode")?.textContent || "") && !document.querySelector("#freeze").hidden);   // the first in the shuffled list
   await page.evaluate(() => { location.hash = "CALC1_ZZ9"; });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_ZZ9" && !document.querySelector("#freeze").hidden);
-  await page.waitForTimeout(300);
+  await page.evaluate(() => document.fonts.ready); await settled(page);   // the type sizes below are read after the real faces land
 
   const normal = { p: await fontOf(page, "#blocks .md p"), opt: await fontOf(page, "#q .opt .txt") };
   /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (docs/design/MULTITASK.md) */
   const padPage = async () => { if (!phone || await page.evaluate(() => document.documentElement.classList.contains("mt"))) return;
-    await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await page.waitForTimeout(300); };
+    await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settled(page); };
   await step(`${W} (a) focused scratchpad: one edge (border --focus + 1px inset = 2px, STYLE.md 2.6), no outline`, async () => {
     await padPage();
-    await page.locator("#scratch").focus(); await page.waitForTimeout(200);
+    await page.locator("#scratch").focus(); await page.waitForFunction(() => document.activeElement === document.querySelector("#scratch"), null, { timeout: 5000 }); await settled(page, "#scratch");
     await shot("focus");
     if (!ONLY_SHOTS) {
       const s = await page.$eval("#scratch", e => { const c = getComputedStyle(e); return { o: c.outlineStyle, w: c.outlineWidth, bc: c.borderTopColor, sh: c.boxShadow }; });
@@ -64,17 +67,17 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       await kbUp(); await kbDown();
       if (!ONLY_SHOTS) assert.ok(!(await navSeen()), "top bar back while the pad page is still open");
       await shot("pad-page");
-      await page.click("#mtExp"); await page.waitForFunction(() => !document.documentElement.classList.contains("mt")); await page.waitForTimeout(300);
+      await page.click("#mtExp"); await page.waitForFunction(() => !document.documentElement.classList.contains("mt")); await settled(page);
       if (!ONLY_SHOTS) assert.ok(await navSeen(), "top bar not back after the pad page closed");
     });
     await step(`${W} (c) same type sizes in the pad page's tile (q and a) as in the normal view`, async () => {
       await padPage();
       if (!ONLY_SHOTS) assert.equal(await fontOf(page, "#blocks .md p"), normal.p, "question text");
       await shot("tile-q");
-      await page.click("#mtMode"); await page.waitForTimeout(400);
+      await page.click("#mtMode"); await page.waitForFunction(() => document.documentElement.classList.contains("mt-a")); await settled(page, "#freeze");
       await shot("tile-a");
       if (!ONLY_SHOTS) assert.equal(await fontOf(page, "#q .opt .txt"), normal.opt, "choices");
-      await page.click("#mtMode"); await page.waitForTimeout(300);
+      await page.click("#mtMode"); await page.waitForFunction(() => document.documentElement.classList.contains("mt-q")); await settled(page);
     });
     await step(`${W} (d) pad page: the pad starts a small gap under the tile and reaches the bottom`, async () => {
       await padPage();
@@ -96,7 +99,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       assert.equal(normal.p.split("/")[0], normal.opt.split("/")[0], "problem = choices");
       assert.equal(lab.split("/")[0], how, "scratchpad title = problem code size");
     });
-    await page.$eval("#scratch", e => e.blur()); await page.waitForTimeout(200);
+    await page.$eval("#scratch", e => e.blur()); await settled(page);
     await shot("normal");
   }
   await b.close();

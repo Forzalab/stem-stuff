@@ -1,8 +1,10 @@
 // Disabled answer UI after the tries lock and after a correct answer. Needs a running server and Playwright:
 //   python3 serve.py 8813 &   then   node tests/disabled.pw.mjs http://localhost:8813 [shotDir] [shotPrefix]
 // /check is answered by the test (route), so no answers are needed. Runs at 390x844 and 1920x1080.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: hover/layout state, not fixed 150-200 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -41,9 +43,9 @@ async function assertDead(page, keep, op = "1") {
     if (info.hidden) continue;
     assert.equal(info.cur, "not-allowed", `cursor on ${info.cls}`);
     const look = () => el.evaluate(e => { const b = e.closest(".ch .opt, .ff") || e, s = getComputedStyle(b); return [s.borderColor, s.backgroundColor, s.opacity].join("|"); });
-    await page.mouse.move(0, 0); await page.waitForTimeout(150);
+    await page.mouse.move(0, 0); await settled(page, "#q");
     const before = await look();
-    await el.hover({ force: true }); await page.waitForTimeout(150);
+    await el.hover({ force: true }); await settled(page, "#q");
     assert.equal(await look(), before, `hover changed ${info.cls}`);
   }
   const snap = () => page.evaluate(() => JSON.stringify({ t: window.__drill.state.tries.length, sel: window.__drill.state.selected,
@@ -51,7 +53,7 @@ async function assertDead(page, keep, op = "1") {
     c: [...document.querySelectorAll("#q .opt")].map(x => x.getAttribute("aria-checked")) }));
   const s0 = await snap();
   for (const el of await page.$$("#q .opt, #q .ans")) { await el.click({ force: true }); await page.keyboard.type("9"); await page.keyboard.press("Enter"); }
-  await page.waitForTimeout(200);
+  await settled(page, "#q");
   assert.equal(await snap(), s0, "clicks changed something");
   if (keep) {   // the right answer keeps its --correct ring; a right MC choice stays bright, a right box dims like every closed box (Tony, Oct 2)
     const o = await page.$eval(keep, e => { const s = getComputedStyle(e); return { op: s.opacity, bc: s.borderColor }; });
@@ -61,9 +63,9 @@ async function assertDead(page, keep, op = "1") {
 }
 
 async function run(w, h) {
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const page = await b.newPage({ viewport: { width: w, height: h } });
-  const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }).catch(() => {}); await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${w}.png` }); } };
+  const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }).catch(() => {}); await settled(page, "#freezeIn"); await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${w}.png` }); } };
   /* wait for option i to be live: a reopened problem paints its cached record first and the /state reconcile re-enables it a
      moment later (app.js load → paint → syncServer); CI was red once on this race (docs/design/TESTING.md) */
   const pickMC = async i => { await page.waitForFunction(n => document.querySelectorAll("#q .opt:not(:disabled)").length > n, i, { timeout: 5000 });

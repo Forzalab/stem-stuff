@@ -5,6 +5,7 @@
 // no red); the last step → welcome_done. Nothing in it animates. 360px, text only.
 //   node tests/welcome.pw.mjs                          (the lab from disk)
 //   node tests/welcome.pw.mjs http://localhost:8832    (the lab through serve.py)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { join, dirname } from "node:path";
@@ -20,7 +21,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const page = await browser.newPage({ viewport: { width: 360, height: 800 } });
   const errs = []; page.on("pageerror", e => errs.push(e.message));

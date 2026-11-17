@@ -5,6 +5,7 @@
 //   weight    every chip border is --bw (1px) (STYLE.md "one weight"): the welcome chips were 1.5px
 // 393 phone (touch) + 1280 + 721, sugar + diet. Own serve.py + a throwaway bank (no brain bank).   node tests/ladder-ui.pw.mjs <port> [shots dir]
 //   LU_W=393 or LU_W=1280,721 picks the widths (default all).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -83,7 +84,7 @@ const chips = page => page.evaluate(() => {
   });
 });
 const W = (process.env.LU_W || "393,1280,721").split(",").map(Number);
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const mode of ["sugar", "diet"]) for (const w of W) {
     const T = `${mode} ${w}`, phone = w < 500;

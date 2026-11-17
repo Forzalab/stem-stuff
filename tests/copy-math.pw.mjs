@@ -6,6 +6,7 @@
 // revealed answer, with the toast), and the paste-back: the copied revealed answer typed into the box grades correct on /check.
 // The clipboard is read for real: clipboard-read/write granted, Ctrl+C (or the button), navigator.clipboard.readText() (stable on Chromium 141 headless).
 // Own serve.py with a throwaway bank + formula sheet.   node tests/copy-math.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -16,6 +17,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: the copy write / the drawer's exit are state, not 80-400 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -58,7 +60,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, code, touch = false, diet = false) {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: touch, isMobile: touch, serviceWorkers: "block" });
   if (diet) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch / Copy my work
@@ -98,7 +100,7 @@ async function drag(page, from, to) {
   const a = await pt(from), b = await pt(to);
   await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(b.x, b.y, { steps: 8 }); await page.mouse.up();
 }
-const copyNow = async page => { await blank(page); await page.keyboard.press("ControlOrMeta+c"); await page.waitForTimeout(80); return clip(page); };
+const copyNow = async page => { await blank(page); await page.keyboard.press("ControlOrMeta+c"); await page.waitForTimeout(80); return clip(page); };   // keep: clipboard write — the poll could read a stale value
 /* select a whole element's contents (what a triple-tap / long-press + handles do), then copy */
 const selectAll = (page, sel) => page.evaluate(s => { const r = document.createRange(); r.selectNodeContents(document.querySelector(s)); getSelection().removeAllRanges(); getSelection().addRange(r); }, sel);
 
@@ -190,7 +192,7 @@ await step("Cluck reply: a drag over a sentence with math copies plain text", as
   await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
   await page.click("#cluck .wtext").catch(() => { /* the typing may be done already */ });
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
-  await page.waitForTimeout(300);
+  await settled(page, "#cluck .wtext");   // the math spans / the copy listeners are in place
   await page.evaluate(() => { const p = [...document.querySelectorAll("#cluck .wtext .wl")].find(x => /drop turns/.test(x.textContent)); p.id = "cl1"; });
   await selectAll(page, "#cl1");
   await page.evaluate(() => document.execCommand("copy"));
@@ -221,7 +223,7 @@ for (const [tag, vp, touch] of [["1280", DESK, false], ["390", PHONE, true]]) {
     await page.waitForSelector("#preview .ansl .katex", { timeout: 6000 });
     /* B3 PR-B1: the verdict drawer (a popover under the answer bar, STYLE §3) rests over this line until the student closes it (the close button, Esc, or a tap outside) */
     const shut = page.locator("#q .vdrawer .vd-x");
-    if (await shut.isVisible()) { await shut.click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(400); }   // BIG PLAN V1: on desktop sugar the open box hides the chip, so the drawer shuts by itself (may go mid-click)
+    if (await shut.isVisible()) { await shut.click({ timeout: 2000 }).catch(() => {}); await settled(page); }   // BIG PLAN V1: on desktop sugar the open box hides the chip, so the drawer shuts by itself (may go mid-click)
     assert.deepEqual(await tapArea(page, "#preview .ansl .mcopy"), [true, true, true], "the answer's copy keeps its 44px tap area (the preview's clip)");
     await page.locator("#preview .ansl .mcopy").click();
     await page.waitForSelector("#preview .ansl .mcopy.done");

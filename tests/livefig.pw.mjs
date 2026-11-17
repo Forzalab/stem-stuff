@@ -3,6 +3,7 @@
 // while it is open), the one good figure is drawn by Graph.render inside .wtext, a leaking figure before it is dropped, a render
 // error falls back to the alt text (fig-off), reduced motion shows it too. Shots at 390 and 1280 into LIVEFIG_SHOTS (if set).
 // Starts its own serve.py and fake Claude:   node tests/livefig.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -69,7 +70,7 @@ async function wish(page) {
 }
 const done = page => page.waitForFunction(() => /answer is/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const init = () => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
 try {
   for (const [w, h, tag] of [[390, 844, "390"], [1280, 900, "1280"]]) {

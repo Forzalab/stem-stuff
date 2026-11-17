@@ -4,6 +4,7 @@
 // graded in its own round): Prev back to it and Next forward to it again must not wipe it (stemRedo.set dropped its record).
 // Real serve.py grading, its own banks folder. Never the student's real tries.json.
 //   node tests/next-reset.pw.mjs <port>      (starts its own serve.py on that port)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -12,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the state, not a fixed sleep
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -48,7 +50,8 @@ const look = page => page.evaluate(() => {
 });
 async function settle(page) {
   await page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 }).catch(() => {});
-  await page.waitForTimeout(700);                                     // the /state sync of a reopened question lands
+  await page.waitForTimeout(700);   // keep: the /state sync of a reopened question lands (no app event for it; Playwright networkidle does not re-arm after load)
+  await settled(page, "#q");   // the card's own transitions are at rest
 }
 async function moved(page, from) {
   await page.waitForFunction(c => { const t = document.querySelector("#pcode")?.textContent; return t && t !== c && !document.querySelector("#freeze").hidden; }, from, { timeout: 10000 });
@@ -68,10 +71,10 @@ async function answer(page, right) {
       const on = await page.$eval(`#q .opt[data-id="${id}"]`, o => o.getAttribute("aria-checked") === "true" || o.disabled);
       if (on !== want.includes(id) && !(await page.$eval(`#q .opt[data-id="${id}"]`, o => o.disabled))) await tap(`#q .opt[data-id="${id}"]`);
     }
-    await page.waitForTimeout(80); await tap("#mcGo");
+    await settled(page, "#q .choices"); await tap("#mcGo");
   } else {
     const id = right ? "a" : await page.$eval("#q .opt:not(:disabled):not([data-id=a])", o => o.dataset.id);
-    await tap(`#q .opt[data-id="${id}"]`); await page.waitForTimeout(80); await tap(`#q .ch[data-id="${id}"] .send`);
+    await tap(`#q .opt[data-id="${id}"]`); await settled(page, `#q .ch[data-id="${id}"]`); await tap(`#q .ch[data-id="${id}"] .send`);
   }
   await page.waitForFunction(k => { const t = window.__drill.state.tries; return t.length > k && t.at(-1).v !== "pending"; }, n, { timeout: 8000 });   // the verdict is in
   await settle(page);
@@ -80,7 +83,7 @@ const pressNext = async page => { const c = await cur(page); await page.$eval("#
 const arrow = async (page, sel) => { const c = await cur(page); await page.click(sel); await moved(page, c); };
 const same = async (page, want, how) => assert.deepEqual(await look(page), want, `${want.code} after ${how}`);
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const mode of ["sugar", "diet"]) {
     const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });

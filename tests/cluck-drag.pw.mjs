@@ -4,6 +4,7 @@
 // --cl-top never changes during a drag, the footer stays on the screen bottom mid-drag, a release up ends at full (top 0), and a small
 // pull down then release ends at the same top as before the drag. Own serve.py + a stub OpenRouter, like cluck-more.
 //   node tests/cluck-drag.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -12,6 +13,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled as animSettled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time (the local `settled` below waits for the sheet's state)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -46,7 +48,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 const VP = { width: 390, height: 844 };
 
 /* a wrong pick streams Cluck's reply; the idle duck's tap opens the phone sheet on it (as cluck-more) */
@@ -65,7 +67,7 @@ async function openSheet() {
   await page.evaluate(() => window.stemIdleTap());
   await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
   await page.waitForFunction(() => document.getElementById("cluck").dataset.state === "peek", null, { timeout: 4000 });   // the rise has settled
-  await page.waitForTimeout(400);
+  await animSettled(page, "#cluck");
   return page;
 }
 /* the sheet's numbers at rest or during a drag */
@@ -85,7 +87,7 @@ async function drag(page, dy) {
   const x = b.x + b.width / 2, y = b.y + b.height / 2;
   await page.mouse.move(x, y); await page.mouse.down();
   await page.mouse.move(x, y + dy / 2, { steps: 6 }); await page.mouse.move(x, y + dy, { steps: 12 });
-  await page.waitForTimeout(60);
+  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // the drag's transform is painted
   const during = await geo(page);
   const n = await page.evaluate(() => window.__ct.length);
   await page.mouse.up();
@@ -122,7 +124,7 @@ await step("UIP6: a tap on the grab (no momentum) springs back to the dock with 
   await page.click("#cluck .cl-grab"); await settled(page);
   assert.equal((await geo(page)).state, "full", "tap: full");
   await page.evaluate(() => { window.__tops = []; const el = document.getElementById("cluck"); (function f() { window.__tops.push(el.getBoundingClientRect().top); if (window.__tops.length < 120) requestAnimationFrame(f); })(); });
-  await page.click("#cluck .cl-grab"); await settled(page); await page.waitForTimeout(300);
+  await page.click("#cluck .cl-grab"); await settled(page); await page.waitForFunction(() => window.__tops.length >= 120, null, { timeout: 8000 });   // the whole rAF trace of the spring back
   const max = Math.max(...await page.evaluate(() => window.__tops));
   console.log("     tap-back:", JSON.stringify({ dock, max }));
   assert.equal((await geo(page)).state, "peek", "second tap: peek");

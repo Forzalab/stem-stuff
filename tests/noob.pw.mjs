@@ -3,6 +3,7 @@
 // (localStorage stem-noob-<bank>) skips the opener; ?bank=X opens X and stays the last bank. A fixture bank stands in for BANK_P2X
 // (the real one lives in the brain, never on GitHub). Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/noob.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -54,7 +55,7 @@ async function right(page, c) {                                    // a clean fi
   await page.fill("#ans", ANS[c]); await page.click("#ansGo");
   await page.waitForSelector("#ff .vk[data-v=i-ok]", { timeout: 4000 });
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function fresh(init = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
   await ctx.addInitScript(({ s, init }) => { try {

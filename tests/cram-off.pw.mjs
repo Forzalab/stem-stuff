@@ -2,6 +2,7 @@
 // a deep link is not sent to the welcome item, no Hail Mary slot/panel appears, the idle peek keeps its normal cadence (no cram toast),
 // and GET /calc carries no cram fields. CRAM_SPEC_ON=1 flips the temp copy back on (the red demo: the same assertions must fail).
 // Own serve.py with a fixture BANK_P3X + BANK_OTH1: node tests/cram-off.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -35,7 +36,7 @@ await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const PIN = new Date("2026-11-07T12:00:00Z");                      // inside welcome-first.js's window, so only the flag can stop the redirect
 async function newPage() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
@@ -64,7 +65,7 @@ try {
     await page.goto(BASE + "/#PHYS_PA1"); await up(page);
     await page.waitForSelector("#problem .cc-row .cc-cta-calc", { timeout: 8000 });
     assert.equal(await page.evaluate(() => window.CalcCoach.loadCram().then(x => x.enabled === false)), true, "the one flag is off");
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(300);                                 // keep: loadCram -> slots() pass after the fetch
     assert.equal(await page.$("#problem .cc-cta-hm"), null, "no Hail Mary button");
     assert.equal(await page.$$eval("#problem .cc-row [role=link]", e => e.length), 1, "only the Calc entry");
     assert.equal(await page.evaluate(() => window.CalcCoach.cramFor("BANK_P3X")), null);
@@ -73,9 +74,9 @@ try {
   await step("peek keeps the normal cadence: no cram toast, stemCram.on false", async () => {
     const { ctx, page } = await newPage();
     await page.goto(BASE + "/#PHYS_PA1"); await up(page);
-    await page.waitForTimeout(1000);                                // the one-time cram.json read resolves
+    await page.waitForTimeout(1000);                                // keep: the one-time cram.json read resolves; networkidle does not re-arm after load
     assert.equal(await page.evaluate(() => !!(window.stemCram && window.stemCram.on() === false)), true, "normal timings");
-    await page.waitForTimeout(3000);                                // past peek.js's 2.5 s cram-toast delay
+    await page.waitForTimeout(3000);                                // keep: app timer peek.js's 2.5 s cram-toast delay (no cram toast may fire)
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-cram-toast")), null);
     assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false);
     assert.deepEqual(page.errs, []); await ctx.close();

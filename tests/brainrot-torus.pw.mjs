@@ -3,6 +3,7 @@
 // header + ask field are on screen; a wheel of one block height + 60px wraps (a tile's screen y lands where the wrap says, and the page does not
 // scroll); flag off keeps the old scroller. Own serve.py + a one-problem sugar bank; YouTube is a blank stub (no request leaves).
 // usage: node tests/brainrot-torus.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -11,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: the wheel paints on rAF; wait for the frame, not 150 ms
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -24,14 +26,16 @@ await serverUp(BASE);
 
 let fails = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, flag) {
   const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "no-preference" });
   await c.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-welcome-BANK_DSK", "1"); if (f) localStorage.setItem("stem-ui", "v7");
     for (const k of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + k, "9"); } catch { /* */ } }, flag);
   const page = await c.newPage();
-  await page.goto(BASE + "/#" + Q); await page.waitForSelector("#ans", { timeout: 10000 }); await page.waitForTimeout(1500);
+  await page.goto(BASE + "/#" + Q); await page.waitForSelector("#ans", { timeout: 10000 });
+  await page.waitForSelector(flag ? "#rot.docked .vid" : "#rot.docked .duo", { timeout: 15000 });   // the dock builds on window idle; wait for its players, not 1.5 s
+  await settled(page, "#rot");   // place() ran on its rAF: the tab / mosaic is at its final spot
   return { c, page };
 }
 const box = (page, sel) => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
@@ -57,7 +61,7 @@ try {
     });
     assert.ok(pick, "a tile sits in the window, 60px below the block's top");
     await page.mouse.move(pick.cx, pick.cy);
-    await page.mouse.wheel(0, pick.H + 60); await page.waitForTimeout(150);
+    await page.mouse.wheel(0, pick.H + 60); await settled(page, "#rot");
     const ys = await page.$$eval(`#rot .vid[data-k="${pick.k}"]`, vs => vs.map(v => v.getBoundingClientRect().top));
     const want = pick.top + (((pick.rel - 60) % pick.H) + pick.H) % pick.H;
     assert.ok(ys.some(y => Math.abs(y - want) < 1.5), `no copy of tile ${pick.k} at ${want.toFixed(1)} (copies at ${ys.map(y => y.toFixed(1)).join(", ")})`);
@@ -74,7 +78,7 @@ try {
     });
     assert.ok(pick, "a tile sits in the window, 60px in from the block's left");
     await page.mouse.move(pick.cx, pick.cy);
-    await page.mouse.wheel(pick.W + 60, 0); await page.waitForTimeout(150);
+    await page.mouse.wheel(pick.W + 60, 0); await settled(page, "#rot");
     const xs = await page.$$eval(`#rot .vid[data-k="${pick.k}"]`, vs => vs.map(v => v.getBoundingClientRect().left));
     const want = pick.left + (((pick.rel - 60) % pick.W) + pick.W) % pick.W;
     assert.ok(xs.some(x => Math.abs(x - want) < 1.5), `no copy of tile ${pick.k} at ${want.toFixed(1)} (copies at ${xs.map(x => x.toFixed(1)).join(", ")})`);

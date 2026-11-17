@@ -3,6 +3,7 @@
 // (PR #260, hintOf): /check routed to carry `spot` -> the part shows the spot only when Jev's gate says ok, else the plain hint; right -> shut, no line.
 // Starts its own serve.py with a throwaway tries.json:
 //   node tests/part-feedback.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -47,7 +48,7 @@ const part = (page, i) => page.evaluate(i => {
     kind: window.__drill.state.hints.filter(h => h.part === i).at(-1)?.kind };
 }, i);
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);

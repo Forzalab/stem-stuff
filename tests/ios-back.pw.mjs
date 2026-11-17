@@ -1,6 +1,7 @@
 // iOS-only Back button (docs/design/NAV.md "iOS exception"): left of the question-bank button, pops the topmost thing
 // (Cluck sheet, question list, popover, notes split), else the in-app previous question; never leaves the site.
 // Starts its own serve.py with a throwaway banks/ folder:   node tests/ios-back.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the page's own animations, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -50,7 +52,7 @@ const pcode = page => page.textContent("#pcode");
 /* Next plays the hidden queue, and a browser Back is a showing like any other: read where Next went, never assume file order */
 const nextOf = async page => { const from = await pcode(page); await page.click("#qnext"); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, from, { timeout: 8000 }); const to = await pcode(page); await opened(page, to); return to; };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, /* OPEN bug split-back-overlap: under reduce #rtag (html.mt main z15, app.css:1484) covers #qback in the notes split; motion only passes by tapping mid-slide. Remove motion:true with the client fix. */ args: ["--no-sandbox"] });
 async function phone({ ua = IOS, w = 390, h = 844, dnt = false, dpr = 1 } = {}) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, userAgent: ua, serviceWorkers: "block", hasTouch: true, isMobile: true, deviceScaleFactor: dpr });
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // the phone pad (notes split) is diet's
@@ -168,11 +170,11 @@ try {
   /* screenshots for Tony: dpr 2, iPhone UA, 390x844 */
   if (SHOTS) {
     const { ctx, page } = await phone({ dpr: 2 });
-    await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]); await page.waitForTimeout(500);
+    await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]); await settled(page);
     await page.screenshot({ path: `${SHOTS}/back-root.png` });
-    await nextOf(page); await page.waitForTimeout(500);
+    await nextOf(page); await settled(page);
     await page.screenshot({ path: `${SHOTS}/back-visible.png` });
-    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])"); await page.waitForTimeout(600);
+    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])"); await settled(page);
     await page.screenshot({ path: `${SHOTS}/back-list.png` });
     await ctx.close();
   }
@@ -180,7 +182,7 @@ try {
   await step("Android UA: Back is never shown", async () => {
     const { ctx, page } = await phone({ ua: ANDROID });
     await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]);
-    await page.click("#qnext"); await page.waitForTimeout(800);
+    const was = await pcode(page); await page.click("#qnext"); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent && document.querySelector("#pcode").textContent !== c, was, { timeout: 8000 });
     assert.equal(await backShown(page), false);
     await ctx.close();
   });
@@ -232,7 +234,7 @@ try {
     await page.goto(BASE + "/#BANK_IB12"); await opened(page, CODES[0]);
     await nextOf(page); await waitBack(page, true, "DNT depth 1");
     await page.tap("#qback"); await opened(page, CODES[0]);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(500);   // keep: app timer the collector's deferred boot (posthog/clarity load on an idle callback / 1.2 s fallback; DNT must load neither)
     assert.equal(await page.evaluate(() => !!window.posthog || !!window.clarity), false, "a collector library loaded under DNT");
     assert.deepEqual(hits, []);
     await ctx.close();

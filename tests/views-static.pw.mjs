@@ -7,6 +7,7 @@
 //   - a figure graph.js can't fix (fable audit 2026-10-29 U7: two boxes in each other after Graph.fix) never draws: its alt text in a
 //     plain box, no svg; one fig_check telemetry event with the finding codes and counts only (never a label, the alt, any text).
 // Starts its own serve.py and fake Claude:   node tests/views-static.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -15,6 +16,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -56,7 +58,7 @@ const fake = createServer(async (req, res) => {
   res.writeHead(200, { "content-type": "text/event-stream" });
   const ev = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
   ev({ type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 1 } } });
-  for (const p of REPLIES[reply]) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }
+  for (const p of REPLIES[reply]) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }   // keep: fake Claude's chunk pace (the stream is meant to arrive in pieces)
   ev({ type: "message_delta", usage: { output_tokens: 50 } }); ev({ type: "message_stop" }); res.end();
 });
 await new Promise(r => fake.listen(0, "127.0.0.1", r));
@@ -71,7 +73,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const has = async (page, sel) => !!(await page.$(sel));
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* fig_check spy: once every script has set window.stemT (telemetry.js, intent.js and flight.js wrap it while loading; no key here, so
    nothing leaves the page), wrap it once more and log what the app hands the sender */
 const init = () => { window.__figT = [];
@@ -89,7 +91,7 @@ async function wish(which, w, h) {
   await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 8000 });
   if (!(await page.locator("#cluck .wtext").count())) await page.click(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta");
   await page.waitForFunction(() => /once more/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
-  await page.waitForTimeout(400);                                      // views.js is imported lazily
+  await settled(page, "#cluck");                                      // views.js is imported lazily; the reply's draw settles
   return page;
 }
 const noRaw = async page => assert.doesNotMatch(await page.evaluate(() => document.querySelector("#cluck .wtext").textContent), /```|Geometry\(|Table\(|root =/);

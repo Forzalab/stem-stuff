@@ -4,6 +4,7 @@
 // along the arrow), no cross label overlaps another label, the origin marker or a mass, and the z marker (circle + dot) is >= 10 px wide.
 // Synthetic fixtures only (public repo). No server: the page is app.css + KaTeX + math.js + figcheck.js + graph.js inline, the figure in
 // a card-wide box.   node tests/axis-cross.pw.mjs [ignored base url]      SHOTS=<dir> also saves a png per size (and 1440).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -75,7 +76,7 @@ function analyse(m, origin, names) {
 }
 const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 const report = [];
 for (const [w, h] of [...SIZES, [1440, 900]]) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });

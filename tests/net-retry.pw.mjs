@@ -1,6 +1,7 @@
 // app.js net(): a GET killed by a non-abort TypeError (Safari "Load failed" as the service worker takes control mid-fetch, iPhone E-FFXLW, Nov 5)
 // is tried ONCE more; a POST never is. Own serve.py with a throwaway banks/ folder.
 //   node tests/net-retry.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -27,10 +28,10 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* typed into the code box, not the URL hash: the boot path may ask for the bank more than once, which would hide a missing retry */
 async function typeCode(page, code) {
-  await page.goto(BASE + "/"); await page.waitForTimeout(600);
+  await page.goto(BASE + "/"); await page.waitForFunction(() => !document.getElementById("splash") && document.documentElement.classList.contains("start"), null, { timeout: 8000 });   // the start page is up (splash gone)
   for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) break; if (await page.isVisible(s)) await page.click(s); }
   await page.fill("#code", code); await page.press("#code", "Enter");
 }
@@ -57,7 +58,7 @@ try {
     await typeCode(page, "BANK_NR12");
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_NR1" && !document.querySelector("#freeze").hidden, null, { timeout: 10000 });
     await page.fill("#ans", "2"); await page.press("#ans", "Enter");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: app timer — the retry window must pass with no retry
     assert.equal(seen.check, 1, "one POST, no retry");
     await ctx.close();
   });

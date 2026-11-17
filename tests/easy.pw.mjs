@@ -1,6 +1,7 @@
 // Sugar mode (saccharine, the default) vs diet (DIET_<code>, the original questions), docs/design/EASY.md: no "None of these" in either;
 // sugar hides None-is-the-answer questions, drops fix boxes, shows the saccharine title and tip, and Cluck; SUGAR_ goes back. Starts its own
 // serve.py with a throwaway banks/ folder and tries.json:   node tests/easy.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -129,7 +130,7 @@ const roomSet = p => p.waitForFunction(() => { const pv = document.getElementByI
 /* the page's scroll has stopped (a wheel lands on the next frame; nothing animates it) */
 const scrollSet = p => p.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => r(Math.abs(scrollY - y) <= 1)); }), null, { timeout: 5000 });
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => {

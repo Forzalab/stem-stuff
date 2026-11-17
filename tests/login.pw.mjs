@@ -5,8 +5,10 @@
 // place of the Save button (Tony #32; reduced motion: the ✓, no flash). Copy is Tony's own (#32): download line, keep fail, error.
 // /acct/new, /acct/login and /acct/keep (S2) are faked here with page.route. The "fixture" Cluck PNG is drawn by mycluck.mjs in the page itself.
 //   python3 serve.py 8833 & P=$!; sleep 1; node tests/login.pw.mjs http://localhost:8833; kill $P
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: the share rejection / the keep POST are state, not 200-300 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -56,6 +58,8 @@ const ready = page => page.waitForFunction(() => typeof window.jsQR === "functio
 const status = page => page.textContent("#lgStatus");
 const SECRET = "Keep your key secret, like your private story on Snapchat.", FAILED = "Oops, save didn't work! Try again!";
 const isSaved = () => !!document.querySelector("dialog.lg .lg-saved");
+/* a bounded wait on what the fake /acct/keep recorded (50 ms steps), never a fixed sleep */
+const until = async (get, tries = 50) => { for (let i = 0; i < tries; i++) { const v = get(); if (v) return v; await new Promise(r => setTimeout(r, 50)); } return null; };
 /* the saved state: the ✓ sits where Save was (Save gone), green (--correct), named; flashes unless reduced motion */
 async function savedState(page) {
   return page.$eval("dialog.lg", d => { const ok = d.querySelector(".lg-saved"), cs = ok && getComputedStyle(ok);
@@ -67,7 +71,7 @@ async function savedState(page) {
       anim: cs.animationName }; });
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   await step("open: mints, draws MY Cluck with the caption, fits 360px, labelled dialog", async () => {
     const { ctx, page, reqs, errs } = await fresh(browser);
@@ -175,7 +179,7 @@ try {
     await page.waitForSelector("#lgSave:not([disabled])");
     await page.click("#lgSave");
     await page.waitForFunction(() => window.__share.length === 1);
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(300);   // keep: async share rejection / keep POST
     const [s] = await page.evaluate(() => window.__share);
     assert.equal(s.active, true, "called while the tap's user activation is live");
     assert.deepEqual([s.files.length, s.files[0][1]], [1, "image/png"]);
@@ -192,8 +196,8 @@ try {
     await page.waitForSelector("#lgSave:not([disabled])");
     await page.click("#lgSave");
     await page.waitForFunction(() => window.__share.length === 1);
-    for (let i = 0; i < 50 && !keeps().length; i++) await page.waitForTimeout(20);
-    await page.waitForTimeout(200);
+    await until(() => keeps().length);
+    await settled(page, "dialog.lg");   // keep is out (held): the asserts below read "not saved yet"
     assert.deepEqual(keeps().map(r => [r.method, r.body]), [["POST", JSON.stringify({ token: NEW })]], "keep once, with the token");
     assert.match(keeps()[0].type, /^application\/json/);
     assert.equal(await page.evaluate(isSaved), false, "not before keep answers");
@@ -236,7 +240,7 @@ try {
     await page.waitForSelector("#lgSave:not([disabled])");
     const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#lgSave")]);
     assert.match(dl.suggestedFilename(), /\.png$/);
-    for (let i = 0; i < 50 && !keeps().length; i++) await page.waitForTimeout(20);
+    await until(() => keeps().length);
     assert.deepEqual(keeps().map(r => [r.method, r.body]), [["POST", JSON.stringify({ token: NEW })]], "the download fires keep, once");
     assert.doesNotMatch(await status(page), /secret/, "nothing said before keep answers");
     assert.equal(await page.evaluate(isSaved), false);

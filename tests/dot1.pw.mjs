@@ -6,6 +6,7 @@
 //   clip     the dot and its ring are fully inside the viewport and painted (elementFromPoint is the row, no ancestor clips them)
 //   dim      a dot is never inside a dimmed box (opacity of every ancestor up to #q is 1)
 // Own serve.py; the bank and /check are routed.   WIDTH=393|700 (default both; run-all splits them: dot1@phone, dot1@desk)   node tests/dot1.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -13,6 +14,7 @@ import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -27,8 +29,6 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const SETTLE = 800;
-
 const txt = md => [{ type: "text", md }];
 const ch = (...ids) => ids.map(id => ({ id, md: `Choice ${id.toUpperCase()}, a sentence about the ball` }));
 const P = [
@@ -67,13 +67,14 @@ async function pageFor(browser, W, H, o = {}) {
   await page.goto(`${BASE}/#${BANK}`, { waitUntil: "load" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "DOT_MCQ", null, { timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector("#qnav").hidden, null, { timeout: 6000 });
-  await page.waitForTimeout(400);
+  await settled(page, "#q");
   return page;
 }
 async function goTo(page, code) {
   for (let i = 0; i < 6 && (await page.textContent("#pcode")) !== code; i++) {
+    const was = await page.textContent("#pcode");
     await page.evaluate(() => document.querySelector("#qnext").click());
-    await page.waitForTimeout(500);
+    await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, was, { timeout: 5000 });
   }
   assert.equal(await page.textContent("#pcode"), code);
   await page.waitForSelector("#q .opt, #q .ans");
@@ -111,7 +112,7 @@ async function reach(page, kind, state) {
     await part(page, 1, "9"); await verdictCount(page, 3); await part(page, 1, state === "out" ? "8" : "4"); await verdictCount(page, 4);
   }
   if (state !== "wrong") await page.waitForSelector("#q.closed");
-  await page.waitForTimeout(SETTLE);
+  await fadeDone(page);                                               // the dot's .18 s fade settles
 }
 /* every dot the page paints: the ::after of an .ch / .ff that is really drawn, with its box, colour and the opacity up the tree */
 const dots = page => page.evaluate(() => {
@@ -125,13 +126,18 @@ const dots = page => page.evaluate(() => {
   return out;
 });
 const shown = ds => ds.filter(d => d.op > 0.99 && d.vis === "visible");
+/* the dot's .18 s opacity fade has ended: every dot is fully on or fully off (the state the reads below need) */
+const fadeDone = page => page.waitForFunction(() => [...document.querySelectorAll("#q .ch, #q #ff.ff, #q .part")].every(el => { const cs = getComputedStyle(el, "::after"); return cs.content === "none" || cs.content === "normal" || cs.opacity === "0" || cs.opacity === "1"; }), null, { timeout: 5000 });
+/* the dot's fade to off (Cluck open) / back to on (Cluck closed) has ended */
+const dotsOff = page => page.waitForFunction(() => [...document.querySelectorAll("#q .ch, #q #ff.ff, #q .part")].every(el => { const cs = getComputedStyle(el, "::after"); return cs.content === "none" || cs.content === "normal" || +cs.opacity === 0; }), null, { timeout: 5000 });
+const dotsOn = page => page.waitForFunction(() => [...document.querySelectorAll("#q .ch, #q #ff.ff, #q .part")].every(el => { const cs = getComputedStyle(el, "::after"); return cs.content === "none" || cs.content === "normal" || (+cs.opacity > 0.99 && cs.visibility === "visible"); }), null, { timeout: 5000 });
 const HELP = "rgb(255, 154, 62)";
 const chipOpen = async page => {
   await page.evaluate(() => document.querySelector(".vdrawer .wchip, #wish .wchip, .rbox .wchip, .cl-cta").click());
   await page.waitForFunction(() => !document.querySelector("#cluck").hidden);
 };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const WANT = process.env.WIDTH || process.env.DOT_W;
 const SIZE = { 393: 852, 700: 900 };   // BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) has Cluck open from load, so the dot (it hides while the sheet is open) never shows there; the wide pass runs at 700, just under the breakpoint
 const CASES = [   // kind, then the dots expected in each state
@@ -180,11 +186,11 @@ for (const W of [393, 700].filter(w => !WANT || +WANT === w)) {
       if (state === "wrong" || state === "out") {
         if (SHOTS) await pg.screenshot({ path: join(SHOTS, `dot1-${W}-${kind}-${state}.png`) });
         await step(`${T}: Cluck opens: the dot hides; closes: it is back`, async () => {
-          await chipOpen(pg); await pg.waitForTimeout(400);
+          await chipOpen(pg); await dotsOff(pg);
           assert.equal(shown(await dots(pg)).length, 0, "a dot is still shown with Cluck open");
           if (SHOTS) await pg.screenshot({ path: join(SHOTS, `dot1-${W}-${kind}-${state}-open.png`) });
           await pg.evaluate(() => document.querySelector("#cluck .cl-x").click());
-          await pg.waitForFunction(() => document.querySelector("#cluck").hidden); await pg.waitForTimeout(500);
+          await pg.waitForFunction(() => document.querySelector("#cluck").hidden); await dotsOn(pg);
           assert.equal(shown(await dots(pg)).length, n, "the dots are not back after Cluck closed");
         });
       }

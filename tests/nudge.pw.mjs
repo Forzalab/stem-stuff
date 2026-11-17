@@ -2,6 +2,7 @@
 // no pick (Q) → Cluck's peek rises carrying a Q line from copy/nudge-lines.js. Any input puts it away (a dismiss: Jev's gap doubles); a tap
 // on the duck is only a dismiss too (B3 PR-B1: the duck is a status nudge, Cluck opens from the verdict drawer). ?jev=0 (this device off) = no nudge. The roll is pinned (__stemJevRand = 0) so it always fires. Phone 390 + desktop 1280, shots.
 //   node tests/nudge.pw.mjs <port> [shots dir]      (starts its own serve.py on that port)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -38,7 +39,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 
 async function open(o = {}) {
   const ctx = await browser.newContext({ viewport: o.vp || { width: 390, height: 844 }, hasTouch: !!o.touch });

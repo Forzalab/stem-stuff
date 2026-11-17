@@ -8,6 +8,7 @@
 //     proof-b's rows alternate prose / one centred display line; mc-a's θ sits at A and every label keeps 8 px (390) / 10 px (1440) off
 //     every stroke; the stepper's figure changes with the step.
 // Starts its own serve.py and fake Claude:   node tests/shotqa.pw.mjs [port] [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -17,6 +18,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: views.js / the scrolled shot are state, not 150-500 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -60,7 +62,7 @@ const fake = createServer(async (req, res) => {
   const ev = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
   ev({ type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 1 } } });
   const parts = /stepper had no figure/.test(body) ? [fence("openui", card === "stepper-plain" ? BARE : STEPS)] : /was dropped/.test(body) ? [REASK] : CARDS[card];
-  for (const p of parts) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }
+  for (const p of parts) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }   // keep: fixture stream — the deltas arrive 30 ms apart (the scenario)
   ev({ type: "message_delta", usage: { output_tokens: 50 } }); ev({ type: "message_stop" }); res.end();
 });
 await new Promise(r => fake.listen(0, "127.0.0.1", r));
@@ -74,7 +76,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const init = () => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
 async function open(which, w, h) {
   card = which;
@@ -88,9 +90,10 @@ async function open(which, w, h) {
   await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 8000 });
   if (!(await page.locator("#cluck .wtext").count())) await page.click(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta");
   await page.waitForFunction(() => /once more/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
-  await page.waitForTimeout(500);                                      // views.js is imported lazily
+  await page.waitForFunction(() => [...document.querySelectorAll("#cluck .wtext .wview")].every(f => !f.isConnected || !!f.querySelector("img.vw-static, .vw-slot.on:not(.vw-fallback) > *")), null, { timeout: 8000 }).catch(() => {});   // views.js is imported lazily: every view figure is drawn (or dropped)
+  await settled(page, "#cluck .wtext");
   const rot = page.getByText("Hide curated brainrot");                 // the docked players (blank: youtube is blocked here) fold away, as the vet shots had them
-  if (await rot.count()) { await rot.first().click(); await page.waitForTimeout(400); }
+  if (await rot.count()) { await rot.first().click(); await settled(page, "#rot"); }
   return page;
 }
 /* in the page: every figure of the reply: drawn marks, svg width vs its slot, findings, angle labels vs their vertex, label clearance */
@@ -157,7 +160,7 @@ const frame = async page => {
     const fold = (sc, S) => S.bottom - (sc.classList.contains("below") ? parseFloat(getComputedStyle(sc.nextElementSibling || sc, "::before").height) || 40 : 0);   // the fade over the footer hides what is under it
     if (L.bottom > fold(sc, S) && (!F || L.bottom - F.top <= S.height - 8)) sc.scrollTop = sc.scrollHeight;
   });
-  await page.waitForTimeout(150);
+  await settled(page, "#cluck .wtext");   // the scroll above is painted before the fold is measured
   const bad = await page.evaluate(() => {
     const sc = document.querySelector("#cluck .wtext")?.closest(".cl-bd") || document.querySelector("#cluck .cl-bd"), S = sc.getBoundingClientRect(), out = [];
     const fold = (sc, S) => S.bottom - (sc.classList.contains("below") ? parseFloat(getComputedStyle(sc.nextElementSibling || sc, "::before").height) || 40 : 0);   // the fade over the footer hides what is under it
