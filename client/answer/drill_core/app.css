@@ -1934,3 +1934,6 @@ html.ui-v7 :is(input, textarea):focus::placeholder, html.ui-v7:is(.kb, .kbup, .m
 html.reentry :is(#q .send, #q .btn-go, #q .opt, #q .nx, #codeGo) { opacity: .55; transition: opacity .2s ease-out; }
 /* HOW-KB (Tony Nov 17): while the keyboard is up (html.kb) or a proof/notes pane owns the screen (html.mt), the hint line above the answer goes: the field gets the room */
 html.ui-v7:is(.kb, .kbup, .mt) #q > .how, html.ui-v7 #q:has(.ans:focus, textarea:focus, input:focus) > .how { display: none !important; }   /* overrides verdict-v7.css:59 ("the hint line stays"), Tony reversed it Nov 17 */
+
+/* SCROLL-HANDOFF 2a (Tony Nov 17): the card now hands scroll to the page; the page itself never pulls-to-refresh (a fling past the top would reload and lose state) */
+html.ui-v7 { overscroll-behavior-y: contain; }
