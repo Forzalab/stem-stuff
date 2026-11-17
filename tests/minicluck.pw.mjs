@@ -62,7 +62,8 @@ try {
   });
   await step("Esc closes it: no dim, focus back on the step, mini_dismiss logged", async () => {
     await page.keyboard.press("Escape");
-    await page.waitForSelector(".pop.mini", { state: "detached", timeout: 2000 });   // it leaves after its 100 ms exit
+    await page.waitForSelector(".pop.mini", { state: "detached", timeout: 2000 });   // it leaves after its 100 ms exit (at once under reduced motion)
+    await page.waitForSelector(".dim", { state: "detached", timeout: 2000 });        // the dim goes in minicluck done(), a tick after the popover node
     assert.equal(await mini(), 0);
     assert.equal(await page.$$eval(".dim", d => d.length), 0);
     assert.equal(await page.evaluate(() => document.activeElement.id), "s2");
