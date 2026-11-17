@@ -115,6 +115,8 @@ html.ql-open .top::after { opacity: 1; }
 html.ql-open .top :is(#qback, #qlistBtn, #qprev, #qnext, .entry-msg, .entry > :not(.code-box)) { z-index: 11; }
 html.ql-open .top .entry > .code-box { z-index: 31; }
 html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, filter .45s ease-out, z-index .225s step-end; transition-behavior: allow-discrete; }
+/* SPLIT-FLASH (Tony, Nov 17): entering the notes / proof split drops the bar from z 35 to auto; the .225s step-end above held it at 35 (over the paper cover, html.mt body::before z 14) for ~13 frames = the bar flashing over the split. The z-index swap is instant while a notes pane owns the screen. */
+html.mt:not(.ql-open) .top, html.swap:not(.ql-open) .top { transition: opacity .375s ease-out, filter .45s ease-out; }
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
    Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
 html.dock-bottom:not(.start):not(.side):not(.ql-open):not(.mt):not(.swap) .top { z-index: 35; }
