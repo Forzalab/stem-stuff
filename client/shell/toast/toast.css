@@ -82,10 +82,12 @@ html.ui-v7 .stoast-v7 .stoast-bar i::after {   /* 5 capsules: each fills as --p 
   transform: scaleX(clamp(0, calc(var(--p, 0) * 5 - var(--k, 0)), 1));
 }
 html.ui-v7 .stoast-v7 .stoast-h { font-weight: 600; }
-html.ui-v7 .stoast-v7 .stoast-bar { transform-origin: left center; }
-html.ui-v7 .stoast-v7.stoast-drain .stoast-bar { animation: stoast-drain calc(var(--life, 4000ms) - .7s) linear .7s forwards; }
-html.ui-v7 .stoast-v7.stoast-hold .stoast-bar { animation-play-state: paused; }
-@keyframes stoast-drain { to { transform: scaleX(0); opacity: .4; } }
-@media (prefers-reduced-motion: reduce) { html.ui-v7 .stoast-v7.stoast-drain .stoast-bar { animation: none; } }
+/* TOAST-TIMER (Tony, Nov 16): the capsules stay put; a 3px line on the card's bottom edge draws down over --life (hover holds it) */
+html.ui-v7 .stoast.stoast-v7 { overflow: hidden; }
+html.ui-v7 .stoast.stoast-v7::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--help); opacity: .7; transform-origin: left center; transform: scaleX(0); pointer-events: none; }
+html.ui-v7 .stoast-v7.stoast-drain::after { animation: stoast-drain var(--life, 4000ms) linear forwards; }
+html.ui-v7 .stoast-v7.stoast-hold::after { animation-play-state: paused; }
+@keyframes stoast-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .stoast-v7.stoast-drain::after { animation: none; } }
 html.ui-v7 .stoast-v7 .stoast-x { position: absolute; top: 8px; right: 0; width: 44px; height: 44px; display: grid; place-items: center; }
 html.ui-v7 .stoast-v7 .stoast-x svg { width: 16px; height: 16px; }   /* 16 px glyph = ~11 px ink */
