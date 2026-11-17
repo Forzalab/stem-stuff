@@ -66,7 +66,7 @@ for (const [name, env] of [["Do Not Track", { dnt: true }], ["Global Privacy Con
   await step(`${name} on + a key stamped: zero requests to PostHog / Clarity, stemT a no-op, nothing said`, async () => {
     const { ctx, page, hits, errors } = await open({ ...env, key: true, hash: "#" + CODE });
     await firstQ(page);
-    await page.waitForTimeout(4500);   // past the idle loader
+    await page.waitForTimeout(4500);   // keep: app timer — the idle loader's window (the assert is that it never fires)
     await page.evaluate(() => window.stemT("pick", { code: "X" }));
     assert.equal(hits.length, 0, "requests: " + hits.map(h => h.url).join(" "));
     assert.equal(await page.evaluate(() => !!window.posthog || !!window.clarity), false, "a library global exists");
@@ -79,7 +79,7 @@ for (const [name, env] of [["Do Not Track", { dnt: true }], ["Global Privacy Con
 await step("no key (local / preview): zero requests, no console errors, the app works", async () => {
   const { ctx, page, hits, errors } = await open({ hash: "#" + CODE });
   await firstQ(page);
-  await page.waitForTimeout(4500);
+  await page.waitForTimeout(4500);   // keep: app timer — the idle loader's window (the assert is that it never fires)
   assert.equal(hits.length, 0, "requests: " + hits.map(h => h.url).join(" "));
   assert.equal(typeof await page.evaluate(() => typeof window.stemT), "string");
   assert.equal(await page.evaluate(() => { try { window.stemT("pick", null); window.stemT(); return true; } catch { return false; } }), true);

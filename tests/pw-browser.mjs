@@ -6,6 +6,9 @@
 //                            A spec that tests motion opts out with launchBrowser(pw, { motion: true, ... }); a context that
 //                            passes reducedMotion itself keeps its own value.
 //                            PW_MOTION=1 turns the default off for a whole run.
+//   PW_TRACE=0 (CI-ARCH E)   turns the event trace off. Default on: every context is recorded (tests/lib/trace.mjs) and a spec's
+//                            FAIL line gets the last page events under it. Read-only for the page.
+import { traceContext } from "./lib/trace.mjs";
 export const BROWSER = process.env.PW_BROWSER || "chromium";
 const MOTION = process.env.PW_MOTION === "1";
 const FALLBACK = process.env.PW_FORCE_FALLBACK === "1";
@@ -22,5 +25,8 @@ export async function launchBrowser(pw, opts = {}, engine = BROWSER) {
     const nc = b.newContext.bind(b);
     b.newContext = async (...a) => { const c = await nc(...a); await c.addInitScript(INIT); return c; };
   }
+  const nc = b.newContext.bind(b), np = b.newPage.bind(b);
+  b.newContext = async (...a) => traceContext(await nc(...a));
+  b.newPage = async (...a) => { const p = await np(...a); await traceContext(p.context()); return p; };
   return b;
 }

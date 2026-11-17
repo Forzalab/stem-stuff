@@ -7,6 +7,7 @@ import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the state, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -97,7 +98,7 @@ for (const W of [390, 1280]) {
       verdict: document.querySelector("#v2 .vw-verdict").textContent, used: document.querySelectorAll("#v2 .vw-pips i.used").length,
       digits: [...document.querySelectorAll("#v2 .cm text")].map(t => t.textContent).join(""), ans: document.querySelector("#v2 .vw-ans").textContent }));
     assert.deepEqual(r, { same: true, verdict: "Not 5.", used: 2, digits: "1212321332", ans: "χ(P) = 3" });
-    await page.waitForTimeout(400);
+    await settled(page, "#v2 .vw-reveal");   // the Reveal patch has finished opening (its height/opacity transition)
     await fits();
     await shot("reveal");
     assert.deepEqual(errors, []);
@@ -107,7 +108,7 @@ for (const W of [390, 1280]) {
     await open("?fast=1&grey=1");
     await shot("grey");
     await open("?fast=1&grey=1&reveal=1&s1=4");
-    await page.waitForTimeout(400);
+    await settled(page);   // the streamed view's animations are over before the record shot
     await shot("grey-reveal");
     assert.deepEqual(errors, []);
   });

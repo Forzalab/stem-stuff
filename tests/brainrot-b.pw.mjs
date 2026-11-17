@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: the dock builds on window idle; wait for its players, not 1.5 s
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,7 +33,10 @@ async function open(vp, flag, extra = {}) {
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-welcome-BANK_DSK", "1"); if (f) localStorage.setItem("stem-ui", "v7");
     for (const k of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + k, "9"); } catch { /* */ } }, flag);
   const page = await c.newPage();
-  await page.goto(BASE + "/#" + Q); await page.waitForSelector("#ans", { timeout: 10000 }); await page.waitForTimeout(1500);
+  await page.goto(BASE + "/#" + Q); await page.waitForSelector("#ans", { timeout: 10000 });
+  if (flag) await page.waitForFunction(() => document.querySelectorAll("#rot iframe").length >= 2, null, { timeout: 8000 });   // the dock's players build on window idle (requestIdleCallback)
+  else await page.evaluate(() => new Promise(r => (window.requestIdleCallback || (f => setTimeout(f, 0)))(r, { timeout: 3000 })));   // flag off: judge "nothing" after the page's own idle pass (bounded)
+  await settled(page);   // sync() put the tab on a rAF
   return { c, page };
 }
 const rect = (page, sel) => page.$$eval(sel, es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; }));
@@ -44,7 +48,7 @@ try {
     const [tab] = await rect(page, "#rot .rtab"), [vid] = await rect(page, "#rot .duo:not(.dupe) .vid");
     assert.deepEqual([tab.x, tab.w, tab.h], [0, 44, 96], "the tab juts from the edge, 44x96");
     assert.deepEqual([Math.round(vid.x), Math.round(vid.y), vid.w, vid.h], [Math.round(tab.x), Math.round(tab.y), 44, 96], "the player is the tab's background");
-    await page.tap("#rot .rtab"); await page.waitForTimeout(500);
+    await page.tap("#rot .rtab"); await settled(page, "#rot");
     const vs = await rect(page, "#rot .duo:not(.dupe) .vid:nth-child(-n+2)"), cs = await rect(page, "#rot .ctl button");
     assert.deepEqual(vs.map(v => [v.w, v.h]), [[84, 148], [84, 148]], "two 9:16 players");
     assert.equal(cs.length, 2); assert.ok(cs.every(x => x.b <= vs[0].y + 0.5 && x.w === 44 && x.h === 44), "- and x float above the picture: " + JSON.stringify(cs));
@@ -84,9 +88,11 @@ try {
     const seen = () => page.evaluate(() => { const s = document.querySelector("#rot .shelf").getBoundingClientRect(); const vs = [...document.querySelectorAll("#rot .vid[data-k='3']")];
       const i = vs.findIndex(v => { const r = v.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; return cx > s.left + 4 && cx < s.right - 4 && cy > s.top + 20 && cy < s.bottom - 20; }); vs.forEach(v => v.removeAttribute("data-tap")); if (i >= 0) vs[i].setAttribute("data-tap", "1"); return i; });
     const sb = (await rect(page, "#rot .shelf"))[0]; await page.mouse.move(sb.x + sb.w / 2, sb.y + sb.h / 2);
-    for (let i = 0; i < 40 && await seen() < 0; i++) { await page.mouse.wheel(0, 60); await page.waitForTimeout(40); }
+    for (let i = 0; i < 40 && await seen() < 0; i++) { await page.mouse.wheel(0, 60); await page.waitForTimeout(40); }   // keep: wheel step pacing
     assert.ok(await seen() >= 0, "tile 4 can be wheeled into the window");
-    await page.click("#rot .vid[data-tap]"); await page.waitForTimeout(200);
+    await page.click("#rot .vid[data-tap]");
+    await page.waitForFunction(() => document.querySelector("#rot .vid.hero")?.dataset.k === "3", null, { timeout: 5000 }).catch(() => {});
+    await settled(page, "#rot");
     assert.equal(await big(), 3, "the tapped one is the hero now");
     assert.deepEqual(await page.$$eval("#rot .vid.hero", es => [...new Set(es.map(e => e.dataset.k))]), ["3"], "every copy agrees on the hero");
     const after = await rect(page, "#rot .duo:not(.dupe) .vid");

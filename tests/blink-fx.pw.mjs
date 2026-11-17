@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2/D1: wait on animation state, not on the clock
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -120,6 +121,9 @@ const PROBE = () => {
 
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
 const go = async (page, code) => { await page.evaluate(c => { location.hash = c; }, code); await opened(page, code); };
+/* CI-ARCH D1: wait on the app, not the clock: its reward queue idle (html.fx-busy: the HUD's 900 ms count-up is a step in it) and its
+   dwell (S.start; engine.js minDwell = 1 s gates the drop roll this spec's rigs rely on) */
+const appSettled = page => page.waitForFunction(() => { const S = window.__drill.state; return !!S && !document.documentElement.classList.contains("fx-busy") && Date.now() - S.start > 1100; }, null, { timeout: 8000 });
 const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => q.length ? q.shift() : r();
   try { return A(o); } finally { Math.random = r; R.answer = A; } }; }, q);
 /* flow C curve (level 2 = 80 XP): put this bank's XP at xp, so the next right answer crosses a level (a 0 XP reveal makes the key first) */
@@ -176,7 +180,7 @@ try {
   await step("a wrong try, then a right one with a drop (flow C: the banner, no overlay) while the Cluck chip is up: one group at a time", async () => {
     await pick(page, "b");
     await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta", { timeout: 6000 });
-    await page.waitForTimeout(1500);                                            // re-picked while the chip may still shake: the tap settles it
+    await page.waitForTimeout(1500);                                            // keep: re-picked while the chip may still shake (its shine / the duck's rise run long; a page-wide settled() times out)
     await unCap(page); await rig(page, [0, 0, 0, 0]);                          // 6 XP (try 2), a drop, common
     const r = await sampled(page, "a", 7000);
     report("wrong, then right + drop (chip up)", r);
@@ -224,7 +228,7 @@ try {
   });
 
   await step("a first-try right with a level up AND a drop (the bells + ONE level-up overlay, the reels inside): one group at a time", async () => {
-    await go(page, "CALC1_B03"); await page.waitForTimeout(800);               // the question has opened (the HUD's own catch-up has played)
+    await go(page, "CALC1_B03"); await appSettled(page);                        // the question has opened (the HUD's own catch-up has played) + the dwell the drop roll needs
     await seedXp(page, 70); await rig(page, [0.5, 0, 0, 0]);                    // 14 XP (84): crosses level 2; a common drop
     const r = await sampled(page, "a", 6000);
     report("first-try right + level up", r);
@@ -242,13 +246,13 @@ try {
   await step("a level up, then a right answer on the next question ~1 s later: the level-up burst still plays (the cap is spent), then the new FX", async () => {
     const { ctx: lc, page: lp } = await phone();
     await lp.evaluate(() => window.__bf.wrapConf());
-    await lp.waitForTimeout(1100); await rig(lp, [0.99, 0.99]);                 // 16 XP, no drop
+    await appSettled(lp); await rig(lp, [0.99, 0.99]);                          // 16 XP, no drop
     await pick(lp, "a");
     await lp.waitForFunction(() => !document.documentElement.classList.contains("fx-busy"), null, { timeout: 10000 });
-    await go(lp, "CALC1_B02"); await lp.waitForTimeout(1100); await seedXp(lp, 70); await rig(lp, [0.5, 0.99]);   // 14 XP: 84, level 2
+    await go(lp, "CALC1_B02"); await appSettled(lp); await seedXp(lp, 70); await rig(lp, [0.5, 0.99]);   // 14 XP: 84, level 2
     await lp.evaluate(() => { window.__lvl = false; new MutationObserver(() => { if (document.querySelector(".fx-ov.fx-levelup")) window.__lvl = true; }).observe(document.body, { childList: true, subtree: true }); });
     await pick(lp, "a");
-    await lp.waitForTimeout(1000);
+    await lp.waitForTimeout(1000);   // keep: app timer the level-up burst's ~1 s beat (the next answer must land while the burst still plays)
     await go(lp, "CALC1_B03"); await rig(lp, [0.5, 0.99]);
     const r = await sampled(lp, "a", 10500);
     report("level up, then the next question right ~1 s later", r);
@@ -272,7 +276,7 @@ try {
       const p = await c.newPage();
       await p.goto(BASE + "/#CALC1_B01"); await opened(p, "CALC1_B01");
       await p.waitForSelector("#rwHud:not([hidden])", { timeout: 6000 });
-      await p.waitForTimeout(1100); await seedXp(p, 70); await rig(p, [0, 0, 0, 0]);   // 14 XP (84), a drop, common: the level-up overlay, reels inside
+      await appSettled(p); await seedXp(p, 70); await rig(p, [0, 0, 0, 0]);   // 14 XP (84), a drop, common: the level-up overlay, reels inside
       await p.click('#q .opt[data-id="a"]');
       await p.evaluate(([mode, m]) => {
         const T = window.setTimeout.bind(window), sel = { burst: ".fx-ov.fx-burst", slots: ".fx-ov .fx-slots" }[mode];
@@ -293,7 +297,7 @@ try {
   await step("reduced motion: a drop (the banner) is one fade, nothing else moves", async () => {
     const { ctx: rc, page: rp } = await phone("reduce");
     await rp.evaluate(() => window.__bf.wrapConf());
-    await rp.waitForTimeout(1100);
+    await appSettled(rp);
     await unCap(rp); await rig(rp, [0, 0, 0, 0]);                               // 12 XP, a drop, common
     const r = await sampled(rp, "a", 6000);
     report("reduced motion: right + drop", r);

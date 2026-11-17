@@ -9,6 +9,7 @@ import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the state, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -46,7 +47,7 @@ for (const [W, H] of SIZES) {
 
   const T = `${W}x${H}`;
   const frames = () => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // two painted frames: the last change is on screen
-  const shot = async (name) => { if (SHOTS) { await page.waitForTimeout(120); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };   // sleep-keep: a screenshot has no condition to wait on (it is the record, not an assert); the 120ms lets the last transition land
+  const shot = async (name) => { if (SHOTS) { await settled(page); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };   // a shot is the record: take it once the last transition has landed
   const open = async code => {
     await page.setViewportSize({ width: W, height: H });
     await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; docs/design/DONE.md)
@@ -192,7 +193,7 @@ for (const [W, H] of SIZES) {
     await open("CALC1_T6B");
     await ansUp("#ans");
     const seen = new Set();
-    for (let i = 0; i < 10; i++) { seen.add(await cls()); await page.waitForTimeout(100); }   // sleep-keep: the assert IS "nothing changes over 1s"; no event or condition can replace the observation window
+    for (let i = 0; i < 10; i++) { seen.add(await cls()); await page.waitForTimeout(100); }   // keep: observation window (the assert IS "nothing changes over 1 s"; no event or condition can replace it)
     assert.equal(seen.size, 1, `classes changed by themselves: ${[...seen].join(" | ")}`);
     await kbDown();
   });
@@ -242,15 +243,15 @@ for (const [W, H] of SIZES) {
     await open("CALC1_T6B");
     await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settle();
     const r = await page.evaluate(async () => {
-      const has = !!document.startViewTransition; let ran = 0, lead = 0;
+      const has = !!document.startViewTransition; let ran = 0, lead = 0, vt = null;
       const orig = document.startViewTransition.bind(document);
       /* the crossfade itself = ready (pseudo-elements up, animation starts) -> finished. Click -> ready is snapshot capture + the
          callback + a frame, main-thread work that stretches on a loaded runner (500-524ms wall on CI) and is not the fade */
-      document.startViewTransition = cb => { const v = orig(cb), t0 = performance.now(); let t1 = 0;
+      document.startViewTransition = cb => { const v = orig(cb), t0 = performance.now(); let t1 = 0; vt = v;
         v.ready.then(() => { t1 = performance.now(); lead = t1 - t0; }, () => {});
         v.finished.then(() => { ran = performance.now() - t1; }, () => {}); return v; };
       document.querySelector("#mtMode").click();
-      await new Promise(r => setTimeout(r, 1500));
+      if (vt) await vt.finished.catch(() => {});   // the crossfade is over (no fixed wait)
       return { has, ran, lead };
     });
     assert.ok(r.has, "no View Transitions in this browser (falls back to instant)");

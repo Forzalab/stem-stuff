@@ -42,9 +42,11 @@ const openedAny = (page, codes) => page.waitForFunction(([cs, g]) => cs.includes
 const msg = page => page.evaluate(() => document.querySelector("#entryMsg").textContent);
 const waitMsg = (page, text) => page.waitForFunction(t => document.querySelector("#entryMsg").textContent === t, text, { timeout: 6000 })
   .catch(async () => { throw new Error(`entryMsg is ${JSON.stringify(await msg(page))}, wanted ${JSON.stringify(text)}`); });
+/* the page has booted: the splash goes when the fonts, the saved-bank restore (stemOffline.ready) and the #CODE problem are done (index.html) */
+const boot = page => page.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
 /* the computed colour of #entryMsg against a token */
 /* Q11 = b: a clean upload writes nothing extra; give the (async) upload line time to appear, then it must still be empty */
-const quiet = async page => { await page.waitForTimeout(700); assert.equal(await msg(page), "", "a clean upload shows no line"); };
+const quiet = async page => { await page.waitForTimeout(700); assert.equal(await msg(page), "", "a clean upload shows no line"); };   // keep: the async upload line would appear; the assert checks it stays empty
 const toneIs = (page, token) => page.evaluate(t => {
   const probe = document.createElement("i"); probe.style.color = `var(${t})`; document.body.appendChild(probe);
   const want = getComputedStyle(probe).color; probe.remove();
@@ -63,7 +65,7 @@ async function fresh(browser, vp) {
   const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block", hasTouch: phone, isMobile: phone });
   await ctx.addInitScript(() => { try { if (!localStorage.getItem("stem-ob")) localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   const page = await ctx.newPage();
-  await page.goto(BASE + "/"); await page.waitForTimeout(500);
+  await page.goto(BASE + "/"); await boot(page);
   return { ctx, page };
 }
 

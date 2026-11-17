@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the blind walk + paint, not on 300 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -72,7 +73,7 @@ try {
   await step("?blind=ka: no Latin in the UI, the question byte-identical", async () => {
     await page.goto(BASE + "/?blind=ka#CALC1_B01"); await opened(page, "CALC1_B01");
     await page.waitForFunction(() => document.documentElement.dataset.blind === "ka", null, { timeout: 4000 });
-    await page.waitForTimeout(300);
+    await settled(page);
     assert.equal((await page.textContent("#blocks")).trim(), english);
     assert.deepEqual(await leaks(page), []);
   });
@@ -81,14 +82,14 @@ try {
     await page.route("**/explain", r => r.fulfill({ contentType: "text/plain", body: "POOF. Six over three is two." }));   // Cluck's live stream, stubbed (no key here)
     await pick(page, "a");
     await page.waitForSelector(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta", { timeout: 6000 });
-    await page.waitForTimeout(400);
+    await settled(page);
     assert.deepEqual(await leaks(page), []);
     assert.match(await page.textContent("#fb .cluck"), /^\s*qu+a+c+k\S*\s.*Total mass\./i);   // D72: a generated QUACK prefix replaces the bank's "QUACK."
     await page.click(":is(#wish:not([hidden]), .rbox) .wchip, .cl-peek .cl-cta");
     await page.waitForFunction(() => /Six over three/.test(document.querySelector("#cluck .wtext, .cl .msg.me .md")?.textContent || ""), null, { timeout: 6000 });
     assert.deepEqual(await leaks(page), []);
     await page.evaluate(() => { location.hash = "CALC1_B02"; }); await opened(page, "CALC1_B02");
-    await page.waitForTimeout(300);
+    await settled(page);
     assert.deepEqual(await leaks(page), []);
   });
 
@@ -96,7 +97,7 @@ try {
     await page.goto(BASE + "/#CALC1_B01"); await opened(page, "CALC1_B01");
     await page.waitForFunction(() => document.documentElement.dataset.blind === "ka", null, { timeout: 4000 });
     await page.goto(BASE + "/?blind=off#CALC1_B01"); await opened(page, "CALC1_B01");
-    await page.waitForTimeout(300);
+    await settled(page);
     assert.equal(await page.getAttribute("html", "data-blind"), null);
     assert.ok((await leaks(page)).length > 0, "English is back");
   });

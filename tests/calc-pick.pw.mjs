@@ -28,7 +28,11 @@ async function step(name, fn) {
 }
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const DLG = '[role="dialog"].cpick';
-const settled = async page => { await page.waitForFunction(() => !document.getElementById("splash")); await page.waitForTimeout(800); };
+// the picker is done deciding once the pick is stored: auto() reads the server/cache and any saved value (a model, or "skip") stops the popup
+const settled = async page => {
+  await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 8000 });
+  await page.waitForFunction(() => { try { return localStorage.getItem("stem-calc-model") !== null; } catch { return false; } }, null, { timeout: 5000 });
+};
 async function ctxPage(state) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, serviceWorkers: "block", storageState: state });
   await ctx.addInitScript(() => { window.__calcPickAuto = true; window.__cpEv = []; addEventListener("stem-calc-model", e => window.__cpEv.push(e.detail)); });
