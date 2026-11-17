@@ -83,3 +83,12 @@ html.ui-v7 #q:has(.ff.proof) .how { padding-inline: 12px; }
 /* SQUIRCLE-ALL (Tony, Nov 16): the codeblock (proof box) and every input box share the squircle; the codeblock takes the 16px tile radius */
 html.ui-v7 #q .cb:not(.opt .cb) { border-radius: 16px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .cb, input:not([type=checkbox], [type=radio], [type=range]), textarea, select) { corner-shape: superellipse(1.52); } }
+/* OMNIBAR (Tony, Nov 16): on the start page the whole entry row (upload + code + paste) is one sunken well, no border; the inner code box is flat */
+html.ui-v7.start .entry, html.ui-v7.start .entry:hover, html.ui-v7.start .entry:focus-within {
+  border: 0; background: #060b1b; border-radius: 16px;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 var(--line);
+}
+html.ui-v7.start .code-box, html.ui-v7.start .code-box:hover, html.ui-v7.start .code-box:focus-within { background: none; box-shadow: none; border: 0; }
+html.ui-v7.start .code-box:has(input:focus-visible):not([data-ptr]) { outline: none; }
+html.ui-v7.start .entry:has(#code:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
+@supports (corner-shape: superellipse(2)) { html.ui-v7.start .entry { corner-shape: superellipse(1.52); } }

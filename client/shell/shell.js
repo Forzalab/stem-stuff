@@ -238,9 +238,13 @@ const RW_OB = { right: ["Points always go up and never let you down."], three: [
   redo: ["Gravity pulled you back for review."] };                                // Tony, Oct 19: say it the first time a miss comes back
 /* the redo beat: a Redeem showing (a past miss back, the "Pity roll" tag) opens unanswered; caret on the tag. Before the first
    answer only, so it never meets the one-more-try note or the Comeback toast */
+/* RTAG-TOAST (Tony, Nov 16): no chip to point at; the line rides as the retry toast's subtitle (app.js retryTag), once per device, same counter + log */
 function rwRedoTip() {
   const r = window.stemRedo.get();
-  if (S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) rwTip("redo", $("#rtag"));
+  if (!(S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) || !RWUI.tips || !rewardOn()) return null;
+  try { const k = "stem-ob-rw-redo", n = +localStorage.getItem(k) || 0, lines = RW_OB.redo; if (n >= lines.length) return null;
+    return { line: lines[n], take: () => { try { localStorage.setItem(k, n + 1); } catch { /* */ } window.stemT?.("_ob", { beat: "redo", n: n + 1 }); } }; }   // take() once the toast is on screen: a dropped toast never burns the note
+  catch { return null; }
 }
 function rwTip(beat, at) {
   if (!RWUI.tips || !rewardOn() || noteAt() || !rwSeen(at)) return false;
