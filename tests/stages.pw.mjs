@@ -184,7 +184,7 @@ for (const w of WIDTHS) {
     await page.clock.runFor(2000);
     assert.equal(await text(page, "#q .stg .stg-tmr"), "3s / 25s");
     req.write(ev("grade", "end") + ev("record", "start") + ev("record", "end") + JSON.stringify({ verdict: "wrong", triesLeft: 2, grade: "partial", hint: "QUACK. Where do you check n = 1?" }) + "\n"); req.end();
-    await waitSel(page, "#rubric .rb");
+    await waitSel(page, "#rubric [data-v]");
     assert.match(await text(page, "#fb .cluck"), /Where do you check n = 1\?/, "the verdict card is today's");
     await waitSel(page, "#q .stg .stg-sum");
     assert.match(await text(page, "#q .stg .stg-sum"), /Thought for 3s/);
@@ -212,7 +212,7 @@ for (const w of WIDTHS) {
   await step(`${tag}: proof Check with no events (the flag ignored): one JSON body = today's verdict, no stage UI`, async () => {
     const { page, req } = await proofOpen();
     req.write(JSON.stringify({ verdict: "wrong", triesLeft: 2, grade: "partial", hint: "QUACK. Use k." }) + "\n"); req.end();
-    await waitSel(page, "#rubric .rb");
+    await waitSel(page, "#rubric [data-v]");
     assert.equal(await page.locator("#q .stg-r, #q .stg-sum").count(), 0);
     assert.match(await text(page, "#fb .cluck"), /Use k\./);
     await page.context().close();
