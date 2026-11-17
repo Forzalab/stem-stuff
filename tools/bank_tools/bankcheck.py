@@ -25,8 +25,12 @@ except ImportError:  # reported as B-DEPS, never a silent skip
     jsonschema = None
 
 # server give-up order (= the pointer's precedence); B-DEPS is a tool failure, listed first
-CODES = ["B-DEPS", "B-NAME", "B-JSON", "B-VER", "B-EMPTY", "B-HIDDEN", "B-SCHEMA", "B-DUP", "B-PREFIX"]
+CODES = ["B-DEPS", "B-NAME", "B-JSON", "B-VER", "B-EMPTY", "B-HIDDEN", "B-SCHEMA", "B-ASK", "B-DUP", "B-PREFIX"]
 LOAD_CODES = {"B-NAME", "B-JSON", "B-VER", "B-EMPTY", "B-HIDDEN"}
+ASK_V = 20261118   # SCHEMA.md Version table: from this v every problem has an `ask` (the question) apart from `body` (the situation)
+# B-ASK heuristics (docs/design/BANKCHECK.md#B-ASK): a setup paragraph that starts like a question, an ask that has no question in it
+SETUP_Q = re.compile(r"^\W*(compute|calculate|find|determine|what|which|using|how|why|tick|prove|show|solve|evaluate|derive|explain)\b", re.I)
+ASK_OK = re.compile(r"(\?|(^|[.!:]\s+)\W*(compute|calculate|find|determine|what|which|using|how|why|is|are|does|do|can|tick|select|choose|pick|prove|show|solve|evaluate|derive|explain|give|state|list|name|identify|decide|predict|trace|write|simplify|estimate|describe|type|order|count|fill|complete|use|given)\b)", re.I)
 PREFIX = re.compile(r"^([A-Z][A-Z0-9]*)_")
 
 
@@ -42,6 +46,30 @@ def _hidden(p, mode):
         return serve.hidden(p, mode)
     except Exception:  # a malformed item is the schema's to report, not a crash here
         return False
+
+
+def ask_problems(p):
+    """B-ASK messages for one problem: a clear situation (body) + question (ask) entry, nothing bunched either way."""
+    ask = p.get("ask")
+    if not isinstance(ask, str) or not ask.strip():
+        return ["no `ask`: put the question in `ask` and keep only the situation in `body`"]
+    bad = []
+    for bi, b in enumerate(p.get("body") or []):
+        if not isinstance(b, dict) or b.get("type") != "text":
+            continue
+        md = b.get("md")
+        text = "\n\n".join(md) if isinstance(md, list) else str(md or "")
+        text = re.sub(r"```[\s\S]*?```", "", text)   # code is setup, never judged
+        for para in re.split(r"\n\s*\n", text):
+            para = para.strip()
+            if para and (para.endswith("?") or SETUP_Q.match(para)):
+                bad.append(f"body[{bi}] has a question ('{para[:40]}...'): move it to `ask`")
+                break
+    if "```" in ask or "\n\n" in ask or len(ask) > 300:
+        bad.append("`ask` looks like setup (code block, several paragraphs or over 300 chars): move it to `body`")
+    elif not ASK_OK.search(ask):
+        bad.append("`ask` has no question or imperative (no '?', no Compute/Find/What/...): is it setup?")
+    return bad
 
 
 def check_file(path, load_only):
@@ -99,6 +127,10 @@ def check_file(path, load_only):
             out.append(("FAIL", "B-SCHEMA", f"{where}: {detail}"))
         if len(errs) > 3:
             out.append(("FAIL", "B-SCHEMA", f"+{len(errs) - 3} more"))
+    if not load_only and not builtin and isinstance(doc.get("v"), int) and doc["v"] >= ASK_V:
+        for q in ps:
+            for m in ask_problems(q):
+                out.append(("FAIL", "B-ASK", f"{q['code']}: {m}"))
     if not load_only and not builtin:
         seen, reported = {}, set()
         for q in ps:

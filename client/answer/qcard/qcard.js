@@ -29,6 +29,8 @@
 
   /* the lead: the last <p> of the last .md; its last sentence moves into div.md.qlead. Returns the element or null (no clean question sentence: the card keeps its flow) */
   function takeLead(blocks) {
+    var ask = blocks.querySelector(":scope > .md.ask");   // an explicit ask (SCHEMA.md `ask`) IS the lead; the setup is never cut, whatever its last sentence says
+    if (ask) { ask.remove(); ask.classList.add("qlead"); return ask; }
     var mds = blocks.querySelectorAll(":scope > .md");
     var md = mds[mds.length - 1];
     if (!md) return null;
