@@ -11,7 +11,6 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
-import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (animations ended + 2 frames), not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -40,7 +39,7 @@ async function open(w, flag, code) {
   const page = await ctx.newPage();
   await page.goto(`${BASE}/?ui=${flag}&qcecho=tl#${code}`);   // tl = the old top-left numeral layout these geometry checks pin; default is qbr (QC-NOFRONT)
   await page.waitForSelector("#blocks .md", { timeout: 10000 });
-  await page.evaluate(() => document.fonts && document.fonts.ready); await settled(page);   // fonts in, layout at rest before the geometry reads
+  await page.evaluate(() => document.fonts && document.fonts.ready); await page.waitForTimeout(500);
   return page;
 }
 const geo = page => page.evaluate(() => {
@@ -101,13 +100,11 @@ try {
         await page.evaluate(() => { window.__ea = []; document.addEventListener("animationstart", e => { if (e.animationName !== "qecho") return; const an = e.target.getAnimations().find(x => x.animationName === "qecho"); window.__ea.push({ k: an ? Object.keys(an.effect.getKeyframes()[0]).filter(k => !["offset", "computedOffset", "easing", "composite"].includes(k)).sort().join() : "?", wc: getComputedStyle(e.target).willChange }); }, true); });
         await page.click("#qnext");
         await page.waitForFunction(() => document.querySelector(".qghost").getAttribute("data-n") !== "1", null, { timeout: 5000 });
-        // the state the next assert reads: all 6 trail copies started (reduced motion: no animation can start, so just let the paint settle)
-        if (rm) await settled(page); else await page.waitForFunction(() => window.__ea.length >= 6, null, { timeout: 5000 });
+        await page.waitForTimeout(150);
         const a = await page.evaluate(() => window.__ea);
         if (rm) assert.equal(a.length, 0, "reduced motion: no animation");
         else { assert.equal(a.length, 6, "6 trail copies animate"); assert.ok(a.every(x => x.k === "opacity,transform"), JSON.stringify(a)); assert.ok(a.every(x => /transform/.test(x.wc)), "will-change while running"); }
-        // the state the next assert reads: the echo animation has ended (will-change may drop)
-        await page.waitForFunction(() => { const e = document.querySelector(".qghost i"); return !!e && !e.getAnimations().some(x => x.animationName === "qecho"); }, null, { timeout: 5000 });
+        await page.waitForTimeout(900);
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "will-change dropped after");
       } finally { await page.context().close(); }
     }
@@ -118,7 +115,7 @@ try {
       try {
         for (const n of [1, 2, 7, 10, 12, 28]) {
           const code = n === 1 ? "PHYS_QS1" : n === 2 ? "PHYS_QL2" : "PHYS_F" + String(n).padStart(2, "0");
-          if (n > 1) { await page.evaluate(c => { location.hash = c; }, code); await page.waitForFunction(c => document.querySelector("#pcode").textContent === c, code, { timeout: 8000 }); await page.waitForFunction(n => document.querySelector(".qghost").getAttribute("data-n") === String(n), n, { timeout: 5000 }); await settled(page); }
+          if (n > 1) { await page.evaluate(c => { location.hash = c; }, code); await page.waitForFunction(c => document.querySelector("#pcode").textContent === c, code, { timeout: 8000 }); await page.waitForFunction(n => document.querySelector(".qghost").getAttribute("data-n") === String(n), n, { timeout: 5000 }); await page.waitForTimeout(700); }
           const e = await page.evaluate(() => { const gh = document.querySelector(".qghost"), f = gh.firstChild, cs = getComputedStyle(gh), c = document.createElement("canvas").getContext("2d");
             c.font = "900 " + parseFloat(cs.fontSize) + "px \"G Archivo\""; c.fontStretch = "semi-expanded"; c.letterSpacing = "0px";
             const ink = f.getBoundingClientRect().left - c.measureText(f.textContent.charAt(0)).actualBoundingBoxLeft, card = document.querySelector("#problem").getBoundingClientRect(), r = s => document.querySelector(s).getBoundingClientRect(), b = document.querySelector("#cluckBtn").getBoundingClientRect(), fr = f.getBoundingClientRect();
