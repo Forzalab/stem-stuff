@@ -422,13 +422,20 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
 .cb-lang { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
 .cb-act { margin-left: auto; display: flex; align-items: center; }
 .cb-slot { width: 0; }                                              /* T44 run / step / reset go here; empty in T43 */
+.cb-wrap { min-height: 44px; padding: 0 var(--s2); border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.cb-wrap[aria-pressed="false"] { text-decoration-line: line-through; }   /* off reads as off without a colour */
+.cb-wrap:hover { color: var(--ink); }
+.cb.cb-nowrap { min-width: 0; max-width: 100%; contain: inline-size; }   /* its width never comes from the long lines (#blocks is a flex item with min-width auto) */
+.cb.cb-nowrap pre { overflow-x: auto; max-width: 100%; }   /* CB-NOWRAP default (research: wrap broke code shape; nano-style scroll) */
+.cb.cb-nowrap code { width: max-content; min-width: 100%; }
+.cb.cb-nowrap .l { white-space: pre; overflow-wrap: normal; padding-left: calc(var(--g) + var(--cbx) + var(--s2)); text-indent: 0; }
 .cb-copy { width: 44px; height: 44px; background: transparent; color: var(--muted); border-radius: 6px; }
 .cb-copy .ico { width: 20px; height: 20px; }
 .cb-copy:hover { background: var(--raised); color: var(--ink); }
 .cb-copy.done { color: var(--correct); }
 .cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
 .cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
-@media (max-width: 480px) { .cb code { font-size: .8125rem; } }   /* CB-PHONE-13 (Tony Nov 16: 16px mono fit ~26 chars, code shape unreadable): 13px on phones = ~34 chars */
+@media (max-width: 480px) { .cb code { font-size: .75rem; } }   /* CB-PHONE-13 (Tony Nov 16: 16px mono fit ~26 chars, code shape unreadable): 12px on phones = ~37 chars (Tony: 13 -> 12) */
 .cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
   --hang: min(calc((var(--ind) + 2) * 1ch), 8ch);   /* CB-HANG-CAP (Tony Nov 16, phone: a deep continuation line wrapped into a 4-char sliver): the hang stops at 8ch */
   padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + var(--hang)); text-indent: calc(-1 * var(--hang)); }

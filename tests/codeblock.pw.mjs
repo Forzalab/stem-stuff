@@ -77,12 +77,19 @@ try {
     await settled(page, "#blocks .cb");
     if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, `codeblock-${width}-v2.png`), fullPage: true }); }
     if (width === 390) { await ctx.close(); continue; }                 // 390: the screenshot only
-    const m = await page.evaluate(measure);
     const at = `${width}px:`;
+    /* CB-NOWRAP (Nov 16): wrap is off by default (no soft wrap, the code scrolls inside its box); Wrap turns the hang-wrap on */
+    const nw = await page.$eval("#blocks .cb", cb => { const pre = cb.querySelector("pre"), r = cb.getBoundingClientRect();
+      return { nowrap: cb.classList.contains("cb-nowrap"), pressed: cb.querySelector(".cb-wrap")?.getAttribute("aria-pressed"), fits: r.right <= document.documentElement.clientWidth + 0.5, ws: getComputedStyle(cb.querySelector(".l")).whiteSpace, scrolls: pre.scrollWidth > pre.clientWidth }; });
+    check(nw.nowrap && nw.pressed === "false" && nw.ws === "pre" && nw.fits, `${at} default: no wrap, Wrap off, the box fits the column ${JSON.stringify(nw)}`);
+    check(width > 480 || nw.scrolls, `${at} phone: the long line scrolls inside the box ${JSON.stringify(nw)}`);
+    await page.click("#blocks .cb-wrap");
+    check(await page.$eval("#blocks .cb", cb => !cb.classList.contains("cb-nowrap") && cb.querySelector(".cb-wrap").getAttribute("aria-pressed") === "true"), `${at} Wrap turns wrapping on`);
+    const m = await page.evaluate(measure);
     check(m.scrollW <= m.innerW, `${at} no sideways page scroll (${m.scrollW} <= ${m.innerW})`);
     check(m.lang === "C++" && m.label === "C++ code", `${at} the header shows the language (${m.lang})`);
     check(m.lines === 9 && m.numbered, `${at} one numbered line per real line (${m.lines})`);
-    check(/Atkinson Hyperlegible Mono/.test(m.font) && m.size === (width <= 480 ? "13px" : "16px") && m.weight === "400", `${at} --mono ${width <= 480 ? 13 : 16}px 400 (${m.size} ${m.weight})`);   // CB-PHONE-13 (Nov 16): 13px on phones
+    check(/Atkinson Hyperlegible Mono/.test(m.font) && m.size === (width <= 480 ? "12px" : "16px") && m.weight === "400", `${at} --mono ${width <= 480 ? 12 : 16}px 400 (${m.size} ${m.weight})`);   // CB-PHONE-13 (Nov 16): 13px on phones
     check(m.pad > 0 && m.inset[0] === m.pad && m.inset[1] === m.pad && m.radius === "8px", `${at} a well inside the card's margin, 8px radius (${m.inset} pad ${m.pad} ${m.radius})`);
     check(m.longRows >= 2 && m.lefts.length === m.longRows, `${at} the long line wraps (${m.longRows} rows)`);
     check(m.lefts.slice(1).every(x => Math.abs(x - m.lefts[0] - 4 * m.ch) <= 1), `${at} every wrapped row hangs at its indent + 2ch (${m.lefts}, 1ch ${m.ch.toFixed(1)})`);

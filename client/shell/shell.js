@@ -346,6 +346,13 @@ async function copyPad() {
   setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
 }
 $("#copy").addEventListener("click", copyPad);
+/* CB-WRAP (Tony Nov 16): a plain text toggle beside Copy; off = no soft wrap, the code scrolls sideways (nano-style) */
+document.addEventListener("click", e => {
+  const b = e.target.closest?.(".cb-wrap"); if (!b) return;
+  e.stopPropagation();
+  const on = b.getAttribute("aria-pressed") !== "true";
+  b.setAttribute("aria-pressed", String(on)); b.closest(".cb")?.classList.toggle("cb-nowrap", !on);
+}, true);
 /* a codeblock's Copy: the raw code (the line numbers are CSS, never text), then i-ok for 2 s. Capture: the tap does nothing else */
 document.addEventListener("click", async e => {
   const b = e.target.closest?.(".cb-copy"); if (!b) return;
