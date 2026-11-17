@@ -37,7 +37,7 @@ jobs:
       - name: download flaky-block-*
         if: github.event_name == 'workflow_run'
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: flaky-block-*
           path: flaky
