@@ -120,7 +120,7 @@ try {
       await skipRetryWait(page);
       await page.fill("#q #ans", "5"); await page.press("#q #ans", "Enter");
       await page.waitForSelector("section.rp", { timeout: 4000 });
-      await bothReplies; await settled(page, "section.rp");                      // family B's reply, then the slow family A's: both have landed
+      await Promise.race([bothReplies, new Promise((_, no) => setTimeout(() => no(new Error("both /repair replies did not land in 6 s")), 6000))]); await settled(page, "section.rp");   // family B's reply, then the slow family A's: both have landed
       assert.equal(nRep, 2, "two families = two fetches");
       assert.equal(await page.locator("section.rp").count(), 1, "more than one ladder");
       assert.match(await page.textContent("section.rp"), /Ladder B/, "the stale ladder A landed over B");
