@@ -1902,3 +1902,11 @@ html.ui-v7 #rwHud { display: none !important; }
 /* STARTER-NOFRAME (Tony Nov 17, desk: "it looks like it has border"): v7 drops the starter chips' frame, like the Ask Cluck link; the soft help fill marks the tap */
 html.ui-v7 .cl-starter { border-color: transparent; }
 html.ui-v7 .cl-starter:hover { border-color: transparent; background: color-mix(in srgb, var(--help) 22%, transparent); }
+/* CB-HEAD (Tony Nov 17, ref: the Claude app's code block; Refactoring UI: one size, one colour, one weight across a toolbar row): the language, Wrap and Copy
+   share --mono 400 at --t-xs in --muted; the header sits on its own faint tint. Wrap on = ink (state by colour + aria-pressed, no strike-through). */
+.cb-hd { background: color-mix(in srgb, var(--ink) 4%, transparent); border-bottom-color: transparent; }
+.cb-lang, .cb-wrap { font-family: var(--mono); font-weight: 400; font-size: var(--t-xs); letter-spacing: 0; color: var(--muted); }
+.cb-wrap { text-decoration: none; padding: 0 var(--s2); }
+.cb-wrap[aria-pressed="false"] { text-decoration-line: none; }
+.cb-wrap[aria-pressed="true"] { color: var(--ink); }
+.cb-copy .ico { width: 16px; height: 16px; }
