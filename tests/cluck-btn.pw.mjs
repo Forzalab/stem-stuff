@@ -87,9 +87,9 @@ try {
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
       // ROW-ALIGN B (Tony Nov 16): the button sits at the card's right; its top is near the card top OR (a taller title beside it) its bottom meets the title's last line
       // KICKER-C (Tony Nov 16): the button sits in the kicker row, flush with the card's CONTENT box (top-right corner of the padding box)
-      assert.ok(Math.abs(g.br.r - (g.pr.r - g.padR)) < 2 && Math.abs(g.br.t - (g.pr.t + g.padT)) < 2, "top right of the card's content box: " + JSON.stringify({ b: g.br, p: g.pr, padR: g.padR, padT: g.padT }));
+      assert.ok(Math.abs(g.br.r - (g.pr.r - g.padR)) < 2 && Math.abs(g.br.t - (g.pr.t + g.padT - 12)) < 2, "top right (CLUCK-LINK: the 44px tap box reaches 12px above the label line) of the card's content box: " + JSON.stringify({ b: g.br, p: g.pr, padR: g.padR, padT: g.padT }));
       assert.equal(g.overlap, false, "the question text does not run under the button"); assert.equal(g.bw, "0px", "no border");
-      assert.equal(g.bg, "rgb(20, 29, 54)", "option A fill #141d36"); assert.equal(g.color, "rgb(122, 138, 174)", "option A label #7a8aae"); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
+      assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.equal(g.color, "rgb(169, 184, 204)", "CLUCK-GREY: disabled = the --muted token"); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");
@@ -114,11 +114,11 @@ try {
     try {
       await typeAnswer(page, "1.636");
       await page.waitForFunction(() => document.querySelector("#cluckBtn") && !document.querySelector("#cluckBtn").hasAttribute("aria-disabled"), null, { timeout: 8000 });
-      const sw = await page.evaluate(() => { const b = document.querySelector("#cluckBtn"), cs = getComputedStyle(b, "::before"); return { dur: cs.transitionDuration, ease: cs.transitionTimingFunction, origin: cs.transformOrigin.split(" ")[0] }; });
-      assert.equal(sw.dur.split(",")[0], "0.24s"); assert.equal(sw.ease.split(",")[0], "ease-out"); assert.equal(sw.origin, "0px", "sweeps in from the left");
+      const sw = await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::before").display);
+      assert.equal(sw, "none", "CLUCK-LINK: no fill layer (a link, not a chip)");
       await page.waitForSelector("#cluckBtn.cb-sheen, #cluckBtn.cb-shake", { state: "attached", timeout: 4000 });   // wrong try = the sheen; the stub reply that lands next = the duck head shake (the later event wins)
       const g = await geo(page);
-      assert.equal(g.ladder, 0, "no old entry"); assert.equal(g.aria, null); assert.equal(g.bg, "rgb(20, 29, 54)", "base stays; the fill layer sweeps"); assert.equal(g.shadow !== "none", true, "the slight raise");
+      assert.equal(g.ladder, 0, "no old entry"); assert.equal(g.aria, null); assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.equal(g.shadow, "none", "CLUCK-LINK: no raise");
       assert.equal(await page.evaluate(() => document.querySelectorAll("#q .ff .vk[role=button], #q .vdrawer, #wish .wchip, .wchip").length), 0);
       if (SHOTS) await page.screenshot({ path: join(SHOTS, "cluckbtn-unlocked-390.png") });
       await page.locator("#cluckBtn").tap();
@@ -147,16 +147,16 @@ try {
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6"));
       await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), true, "Jev S6 sheen");
-      assert.match(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage), /gradient/, "a band");
-      assert.equal(await page.evaluate(() => /(?:90, 169, 255|0\.35|#5aa9ff)/i.test(getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage)), true, "tinted site blue --action, not white");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName), "cb-sweep", "CLUCK-SWEEP: the underline sweep, not a band");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).backgroundImage.includes("255, 166, 62")), true, "CLUCK-SWEEP: the line is the link's orange tone");
       await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.evaluate(() => window.stemCluckBtn.sheen("reply"));
       await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-shake"), null, { timeout: 8000 });
-      assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-duck")).animationName; }), "cb-shake", "reply = duck head shake, chip still");
+      assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-t")).animationName; }), "cb-sweep", "reply = the underline sweep (CLUCK-SWEEP), duck still");
       await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.evaluate(() => window.stemCluckBtn.sheen("right"));
-      await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-nod"), null, { timeout: 8000 });
-      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-duck")).animationName), "cb-nod", "right = duck nod");
+      await page.waitForFunction(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName === "cb-sweep", null, { timeout: 8000 });
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName), "cb-sweep", "right = the underline sweep (CLUCK-SWEEP)");
       await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.waitForFunction(() => matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });

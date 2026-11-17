@@ -1870,3 +1870,21 @@ html.ui-v7 #rwHud .rw-lvl { display: none; }
 html.ui-v7 #rwHud.rw-z-xp.rw-z-st { display: none; }
 /* D: the miss hint is the float family (the stage toast's fill, radius 16, shadow-3, no edge), not the old filled duck card */
 html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }
+/* PROOF-V7 (Tony Nov 16 "no nested box + an experience like the short answer box"): under ui-v7 the proof pane (#work > #q, the Nov 4 bordered 8 px box) draws nothing;
+   the proof field IS the short-answer field: same .ff well (fill, 16 radius, --well inset + lit foot), same Atkinson 17 px text (no mono), the Check button in the same
+   top-right slot. The how line sits above it as plain hint text, like the pick-all hint. One box, no nesting. */
+html.ui-v7.proof-split #work > #q { padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; gap: var(--s2); }
+html.ui-v7.proof-split #work > #q:focus-within { border: 0; box-shadow: none; }
+html.ui-v7.proof-split #q > .how { margin: 0; padding-inline: 0; color: var(--muted); }
+html.ui-v7.proof-split #q .ff.proof { padding: 12px 49px 12px 12px; border-radius: 16px; }   /* fill + well + lit foot come from verdict-v7.css, the short-answer field rule */
+html.ui-v7.proof-split #q .ff.proof textarea { font-family: inherit; font-size: 17px; line-height: 1.5; letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }
+html.ui-v7.proof-split #q .ff.proof > #ansGo { position: absolute; top: 0; right: 0; }
+/* FONT-SPLIT (Tony Nov 16 "grotesk just for titles, the rest in Atkinson Hyperlegible Next"): under ui-v7 the text face (--font) and the input face (--font-input) are
+   Atkinson Hyperlegible Next (variable 200-800, OFL, @fontsource-variable 5.3.0, Latin subset; licence vendor/fonts/OFL-atkinson-next.txt). Schibsted Grotesk stays on
+   titles only: h1-h3 and the question headline (qcard.css FONT-SPLIT). Flag off = the old faces. */
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-style: normal; font-display: swap; src: url(../../vendor/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2) format("woff2"); }
+html.ui-v7 { --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif; --font-input: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif; --font-title: "Schibsted Grotesk", system-ui, sans-serif; }
+html.ui-v7 :is(h1, h2, h3) { font-family: var(--font-title); }
+/* PROOF-GAP (Tony Nov 16 "dead space"): the proof column sat --s3 below the card on top of the card's own 20 px Q-GAP (~55 px); the short answer sits 20 px under. Same 20 now. */
+html.ui-v7.proof-split.pad-off #stage > #work { margin-top: 0; }
+html.ui-v7.proof-split #freeze { padding-bottom: 0; }   /* measured: card -> proof column was 32 px = Q-GAP 20 + #freeze padding-bottom 12 (page-coloured; a -12 px pull slid the hint UNDER it and clipped its first line) */

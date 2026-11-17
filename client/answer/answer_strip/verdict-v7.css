@@ -43,11 +43,12 @@ html.ui-v7 #q .ff.ok:not(.rbox) { border-radius: 16px; }
    The judged states (.bad / .ok / .rbox.ok) keep their MC fills and raise (below). Flag off: app.css untouched. The Cluck composer is not in these selectors.
    #q is on the field's selector because app.css "html.ui-v7 #q .ff { box-shadow: var(--well) }" sits at that specificity. */
 html.ui-v7 #q .ff, html.ui-v7 #q .ff:hover, html.ui-v7 #q .ff:focus-within,
+html.ui-v7.proof-split #q .ff.proof, html.ui-v7.proof-split #q .ff.proof:focus-within,   /* PROOF-V7: the proof field is the short-answer field (beats app.css "html.proof-split #q .ff.proof { box-shadow: none }") */
 html.ui-v7 .code-box, html.ui-v7 .code-box:hover, html.ui-v7 .code-box:focus-within {
   border: 0;
   box-shadow: inset 0 2px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 var(--line);   /* FIELD-LIP-3:1 (Tony Nov 15 "read refactoring ui" + "part of the color swatch"): RUI p.156-157 inset input = dark top inset + lighter bottom lip; lip = --line (navy-500 #556791 under ui-v7), 3.64:1 vs the page (WCAG 1.4.11) */
 }
-html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box {
+html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box, html.ui-v7.proof-split #q .ff.proof:not(.ok):not(.bad) {
   background: #060b1b;
 }
 /* focus (Tony Nov 15, round 3): no glow. Keyboard focus = the offset outline (focus-visible); a mouse or tap focus (strip.js sets [data-ptr] on pointerdown) shows no ring, only the well */

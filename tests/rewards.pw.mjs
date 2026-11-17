@@ -107,7 +107,12 @@ try {
     const pop = (await rects(page, ["#rwPop"]))[0];
     assert.ok(pop.top >= hud.bottom && pop.right <= 1280, "under the strip, on screen " + JSON.stringify(pop));
     await page.keyboard.press("Escape");
-    await page.waitForSelector("#rwPop:not(:popover-open)", { state: "attached", timeout: 2000 });
+    await page.waitForSelector("#rwPop:not(:popover-open)", { state: "attached", timeout: 2000 }).catch(async e => {   // DIAG (PR #634): why Escape left it open on CI only
+      const st = await page.evaluate(() => ({ active: document.activeElement && (document.activeElement.tagName + "#" + document.activeElement.id + "." + document.activeElement.className),
+        open: [...document.querySelectorAll(":popover-open")].map(x => x.tagName + "#" + x.id + "." + x.className), sitePop: [...document.querySelectorAll(".pop, [class*=pop-]")].filter(x => x.checkVisibility && x.checkVisibility()).map(x => x.className).slice(0, 5),
+        dialogs: [...document.querySelectorAll("dialog[open]")].map(x => x.id), focusIn: document.hasFocus() }));
+      throw new Error(e.message.split("\n")[0] + " | state: " + JSON.stringify(st));
+    });
   });
 
   await step("a first-try correct pays 14-18 XP with the bells (float, coins, coin-pill shine); #toast stays off", async () => {

@@ -147,3 +147,86 @@ html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; al
 html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }
 /* KICKER-SIZE (Tony Nov 16): the code kicker matches the Ask Cluck label size (--t-sm, 600); caps tracking eased to .06em at this size */
 html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: var(--t-sm, .9375rem); line-height: 20px; letter-spacing: .06em; }
+/* CLUCK-LINK (Tony Nov 16: "remove the button frame, make that link-like, try some color scheme from our swatch, baseline align with the CEH text"):
+   no fill, no raise, no radius plate; label + duck read as a link in a palette tone. The 44 px tap target stays (12 px pad, cancelled by -12 px margin), so the label's
+   line box (20 px, --t-sm 600, same as .qkicker) starts at the kicker's top: equal font + line-height = shared baseline. Tone = --help orange (Tony Nov 16 pick); disabled = the same orange, dimmed. */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { --cb-tone: var(--help, #ffa63e); padding: 12px 0 12px 12px !important; margin: -12px 0 !important; line-height: 20px; min-height: 0; gap: 6px; border-radius: 6px;
+  background: none; box-shadow: none !important; color: var(--cb-tone); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--cb-tone) 40%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn::before { display: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { width: 18px; height: 18px; top: 2px; align-self: flex-start; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { color: var(--muted, #a9b8cc); text-decoration-color: transparent; }   /* CLUCK-GREY (Tony Nov 16): disabled = the --muted token grey, duck too */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-duck { color: var(--muted, #a9b8cc); --c2: var(--muted, #a9b8cc); }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] { opacity: .45; }   /* DIM-A (Tony Nov 16 pick): the whole link at 45%, so it sits below the kicker in brightness and reads as off */
+@media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover { text-decoration-color: var(--cb-tone); } }
+/* CLUCK-LINK states: the chip's box effects are off on the link (the sheen streak is a box-shaped band, the press shrink is a button feel). JS still toggles .cb-sheen on its timers (no transitionend/animationend dependency), it just draws nothing here. */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):active { transform: none; }
+/* GHOST-BLEED (Tony Nov 16 "the ghost number got cut off, it is allowed to bleed down"): in a Q-HALF scroller the ghost box was the card's CLIENT box, so scrolling showed its
+   hard bottom edge. The box now reaches the end of the scroll content (--qover, qcard.js qmore); the trail keeps its spot (bottom + --qover) and the mask keeps its centre and
+   size (--qch), so it fades on down instead of stopping. No growth past the content: no phantom scroll (GHOST-CLIP holds). */
+html.ui-v7 #problem.qc7.qbr .qghostbox { bottom: calc(-1 * var(--qover, 0px));
+  -webkit-mask-image: radial-gradient(130% calc(var(--qch, 100%) * 1.3) at 100% calc(100% - var(--qover, 0px)), #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%);
+  mask-image: radial-gradient(130% calc(var(--qch, 100%) * 1.3) at 100% calc(100% - var(--qover, 0px)), #000 4%, rgb(0 0 0 / .6) 34%, transparent 96%); }
+html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { bottom: calc(var(--qnum) * -.7 + var(--qover, 0px)); }
+/* FOLD-CENTER (Tony Nov 16 "collapse chevron is uneven"): open, the fold kept the folded strip's flex basis (100% + 2 pads) with width 100%, so it overflowed right and the chevron sat one pad right of centre */
+@media (max-width: 480px) { html.ui-v7 #problem.qc7.qbr.qopen > .qfold { flex-basis: 100%; margin-inline: 0; } }
+/* NO-EXAM (Tony Nov 16): the "questions · q1" source line under the question is gone; the meta row only shows when it still holds something (the Twist chip) */
+html.ui-v7 #problem.qc7 .qmeta .qexam { display: none; }
+html.ui-v7 #problem.qc7 .qmeta:not(:has(> :not(.qexam))) { display: none; }
+/* EDGE-FADE v2 (Tony Nov 16): a mask on the scroller also faded the CARD'S OWN FILL (bottom edge dissolved into the page, even on cards that do not scroll). Now an overlay
+   instead: a sticky 40 px strip in the card's fill (#0d142a, the fold strip's colour) that fades to clear, pinned at the top edge, only once scrolled (.qscrolled, qcard.js qmore).
+   Net height 0 (margins), pointer-events none. The bottom edge already has the fold strip. */
+@media (max-width: 480px) {
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr.qscrolled:not(.qopen)::before { content: ""; display: block; position: sticky; top: calc(-1 * var(--qpad, 24px)); z-index: 3; order: -1;
+    flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); height: 40px; margin: calc(-1 * var(--qpad, 24px)) calc(-1 * var(--qc-pad, 24px)) calc(var(--qpad, 24px) - 40px);
+    pointer-events: none; background: linear-gradient(#0d142a, transparent); }
+}
+/* SETUP-FADE wider (Tony Nov 16 "fade slightly earlier and wider"): the setup scroller's edge fades go 16 -> 44 px, so the cut line dissolves over ~2 lines, not one */
+html.ui-v7 #problem.qc7 .qscroll.qft { -webkit-mask-image: linear-gradient(transparent 0, #000 44px); mask-image: linear-gradient(transparent 0, #000 44px); }
+html.ui-v7 #problem.qc7 .qscroll.qfb { -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent); mask-image: linear-gradient(#000 calc(100% - 44px), transparent); }
+html.ui-v7 #problem.qc7 .qscroll.qft.qfb { -webkit-mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(transparent 0, #000 44px, #000 calc(100% - 44px), transparent); }
+/* FOLD-JUT (Tony Nov 16, Firefox phone: code peeked below the fold strip by a few px): the sticky strip's bottom is not flush in every engine, so the strip casts a 12 px
+   solid shadow of its own end colour below itself (clipped by the card, covers any peek). Smaller chevron: 20x12 -> 16x10. */
+@media (max-width: 480px) {
+  html.ui-v7 #problem.qc7:not(.qopen) > .qfold { box-shadow: 0 12px 0 #0d142a; }
+  html.ui-v7 #problem.qc7 > .qfold svg { width: 16px; height: 10px; }
+}
+/* CLUCK-SWEEP (Tony Nov 16 "underline sweep as emphasis, replacing any existing emphasis"): every emphasis class cluckbtn.js sets (.cb-sheen / .cb-shake / .cb-nod / .cb-hop)
+   now plays ONE thing: a full-tone underline sweeps left -> right under the label (scaleX 0 -> 1, holds, fades), over the 40% resting underline. The duck stays still.
+   ::after = the sweep line (the old sheen layer, free on the link). Label starts at 12 pad + 18 duck + 6 gap = 36 px; the line sits on the text underline (offset 4). */
+/* both lines are backgrounds of the label (.cb-t), layer 1 = sweep, layer 2 = 40% resting line, same box: they can never sit at different heights (a ::after line drifted 6 px on phones) */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { text-decoration: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn::after { display: none; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { padding-bottom: 3px; background-repeat: no-repeat; background-position: 0 100%, 0 100%;
+  background-image: linear-gradient(var(--cb-tone), var(--cb-tone)), linear-gradient(color-mix(in srgb, var(--cb-tone) 40%, transparent), color-mix(in srgb, var(--cb-tone) 40%, transparent));
+  background-size: 0% 1.5px, 100% 1.5px; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-t { background-image: none; }
+@media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover .cb-t { background-size: 100% 1.5px, 100% 1.5px; } }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn:is(.cb-sheen, .cb-shake, .cb-nod, .cb-hop) .cb-t { animation: cb-sweep 1s cubic-bezier(.2, .7, .2, 1) 1 forwards; }
+html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { animation: none !important; }
+@keyframes cb-sweep { 0% { background-size: 0% 1.5px, 100% 1.5px; } 45%, 75% { background-size: 100% 1.5px, 100% 1.5px; } 100% { background-size: 0% 1.5px, 100% 1.5px; } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { animation: none !important; } }
+/* SIZE-MATCH (Tony Nov 16 "make ask cluck and the code text look similar in size"): both were 15px 600, but the kicker is tracked CAPS (cap height on every letter), so it read
+   bigger than the mixed-case link. Caps drop to 13.5px (about the link's x-height + ascenders), one font file for both (--qfont). Measured baselines stay equal at top alignment (393: 63/63, 1280: 168.5/168.5). */
+html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: calc(var(--t-sm, .9375rem) * .9); letter-spacing: .07em; }   /* 0.9 x the link size: 13.5 on phone, scales with --t-sm (up to 19px) on big screens */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { font-family: var(--qfont); }
+/* GHOST-LIQUID (Tony Nov 16 "a liquid blur on top of the ghost number, mind CPU"): ONE static filter on the echo layer (not backdrop-filter, which re-runs every scroll
+   frame, and not one filter per copy: 5 passes). The blurred layer is drawn once and moved as a texture; saturate keeps the blur from going grey. contain: paint keeps
+   its repaint area to the ghost box. The front numeral (desktop card) stays sharp. */
+html.ui-v7 #problem.qc7.qbr .qghost { filter: blur(3.5px) saturate(1.2); contain: paint; }
+@media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7.qbr .qghost { filter: none; } }
+/* PHONE-TOP-AIR (Tony Nov 16 "on phone, top margin add more, it looks too cramped"): the kicker row sat 24 px under the card's top edge, the same as the side insets;
+   the top gets 32 px (desktop's --qpad), sides and bottom stay 24. The ghost and the fold read --qpad, so they keep their own geometry. */
+@media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { padding-top: 32px; } }
+/* FONT-SPLIT (see app.css): the card's text face follows --font (Atkinson Hyperlegible Next); only the headline keeps the grotesk (G Schibsted) */
+html.ui-v7 #problem.qc7 { --qfont: var(--font); }
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.ui-v7 #problem.qc7 :is(.qhead, .ptitle) { font-family: "G Schibsted", var(--font-title) !important; }
+/* ANCHOR-BOTTOM (Tony Nov 16 "anchor the title + question text to the bottom, then extend the height a teensy bit; all cards like that"): a short card gets a floor
+   (240 px phone, 280 px desktop) and its rows spread: the kicker / Ask Cluck row stays on top, the headline + text sit on the card's bottom pad (Swiss poster).
+   A card taller than the floor is unchanged (nothing to spread). Not in the Q-HALF open/scroll states, where the height is the scroller's. */
+html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 216px; align-content: space-between; }   /* BALANCE (Tony Nov 16 "shrink that space"): 240 -> 216, 256 desk */
+@media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-height: 256px; } }
+/* LEAD-LIGHTER (Tony Nov 16 "de-emphasise the question's thickness / boldness"): the question sentence drops 600 -> 400 (STYLE 2.2: weights are 400 / 600 only) and
+   its math stroke .028em -> .012em to match; it keeps the one-step-brighter ink, so it still reads as THE question under the grotesk headline. */
+html.ui-v7 #problem.qc7 .qlead { font-weight: 400; }
+html.ui-v7 #problem.qc7 .qlead .katex { -webkit-text-stroke-width: .012em; }
