@@ -46,6 +46,9 @@ async function pageFor(browser, W, H, o = {}) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, hasTouch: !wide, isMobile: !wide, serviceWorkers: "block", reducedMotion: "no-preference" });
   await ctx.addInitScript(tip => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))); if (tip) localStorage.setItem("stem-strip-badge", "1"); } catch { /* blocked */ } }, !o.tip);
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
+  /* no real network: brainrot's YouTube iframe (Cluck's corner after a miss) loads from the live web and, once loaded, takes focus (document.activeElement = the IFRAME) at an
+     arbitrary moment, which fell after the drawer close on a slow runner and failed the focus-return assert (CI run 44012646370). A stub document never grabs focus; brainrot.pw.mjs stubs it the same way. */
+  await ctx.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));
   const page = await ctx.newPage(); page.ctx = ctx; page.setDefaultTimeout(8000);
   page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
   const tries = {};

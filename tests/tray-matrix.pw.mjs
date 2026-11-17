@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -69,6 +70,10 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const browser = await pw[process.env.PW_BROWSER || "chromium"].launch({ args: ["--no-sandbox"] });
+/* the drawer's open slide (vd-out 380 ms) is over: the state every check after a verdict needs; an infinite animation never blocks */
+const drawerSettled = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none" && !d.getAnimations({ subtree: true }).some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime)); }, null, { timeout: 5000 });
+/* the drawer is gone: hidden after its 240 ms slide and the 260 ms timer (strip.js hide) */
+const drawerGone = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !d || d.hidden || getComputedStyle(d).display === "none"; }, null, { timeout: 5000 });
 async function open(w, hash = "#BANK_CVT", h) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: h || (phone ? 852 : 800) }, hasTouch: phone && !process.env.PW_BROWSER, isMobile: phone && !process.env.PW_BROWSER, serviceWorkers: "block" });
@@ -80,7 +85,8 @@ async function open(w, hash = "#BANK_CVT", h) {
   page.chats = []; page.on("request", r => { if (/\/chat$/.test(r.url()) && r.method() === "POST") page.chats.push(JSON.parse(r.postData() || "{}")); });
   await page.goto(BASE + "/" + hash);
   await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 }).catch(async e => { throw new Error(e.message.split("\n")[0] + " " + JSON.stringify(await page.evaluate(() => ({ h: location.hash, b: window.stemBank && window.stemBank.code, f: document.getElementById("freeze")?.hidden, s: !!document.getElementById("splash") })))); });
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => document.fonts.status === "loaded", null, { timeout: 5000 });   // the webfonts place the rows (the rects below are compared)
+  await settled(page, "#q");   // the first question is placed (its entrance animations are over, two frames painted)
   return page;
 }
 const probe = page => page.evaluate(() => {
@@ -107,12 +113,12 @@ const probe = page => page.evaluate(() => {
 });
 const same = (a, b, what) => assert.deepEqual(a.near, b.near, what + " moved a neighbour");
 const kinds = {
-  "figure": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT6"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT6" && !!document.querySelector('#q .opt[data-id="e"]')); await p.waitForTimeout(400); },
+  "figure": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT6"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT6" && !!document.querySelector('#q .opt[data-id="e"]')); await settled(p, "#q"); },
     miss: async p => { await p.click('.opt[data-id="d"]'); await p.click('.ch[data-id="d"] .send'); }, second: "c" },
   "MC": { second: "c", go: async (p) => {}, miss: async p => { await p.click('.opt[data-id="b"]'); await p.click('.ch[data-id="b"] .send'); } },
-  "freeform": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans")); await p.waitForTimeout(400); },
+  "freeform": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT4"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT4" && !!document.querySelector("#ans")); await settled(p, "#q"); },
     miss: async p => { await p.fill("#ans", "7"); await p.press("#ans", "Enter"); } },
-  "multi-part": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT5"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT5" && !!document.querySelector("#q .part .ans")); await p.waitForTimeout(400); },
+  "multi-part": { go: async p => { await p.evaluate(() => { location.hash = "#CALC1_CVT5"; }); await p.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_CVT5" && !!document.querySelector("#q .part .ans")); await settled(p, "#q"); },
     miss: async p => { await p.fill('#q .part[data-i="0"] .ans', "5"); await p.press('#q .part[data-i="0"] .ans', "Enter"); } },
 };
 for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, K] of Object.entries(kinds)) {   // kb: the keyboard open = a short window (420 high)
@@ -122,13 +128,14 @@ for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, 
     const t0 = await probe(page);
     await K.miss(page);
     if (kind === "multi-part") {   // a multi-part field has no tray (the chip lives in #wish): nothing to overlay, nothing may move or stay lifted
-      await page.waitForTimeout(1500);
+      await page.waitForFunction(() => window.__drill.state.tries.length >= 1, null, { timeout: 6000 });   // the part's try is in: the verdict is painted
+      await page.waitForFunction(() => window.stemStrip && window.stemStrip.open === false, null, { timeout: 5000 });   // the strip synced: there is no drawer to show
       const m = await probe(page);
       assert.equal(m.drawer, null, "a multi-part field grew a tray"); assert.equal(m.stale, 0, "a host is lifted");
       await page.context().close(); return;
     }
     await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 7000 }).catch(async e => { throw new Error(e.message.split("\n")[0] + " | " + await page.evaluate(() => JSON.stringify({ tries: window.__drill.state.tries.length, dr: [...document.querySelectorAll(".vdrawer")].map(d => d.hidden), cls: [...document.querySelectorAll("#q .part, #q .ff")].map(e => e.className), fb: document.querySelector("#fb")?.textContent.slice(0, 60) }))); });
-    await page.waitForTimeout(700);
+    await drawerSettled(page);
     const a = await probe(page);
     if (K.second) same({ near: a.near.filter(x => /^[a-e]$/.test(x[0])) }, { near: t0.near.filter(x => /^[a-e]$/.test(x[0])) }, "opening the tray");
     assert.ok(a.hits && a.hits.every(Boolean), `${w} ${kind}: the tray is under something (clipped or a sibling over it): ` + JSON.stringify(a.hits));
@@ -136,21 +143,21 @@ for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, 
     assert.ok(a.nextHit !== false, `${w} ${kind}: the tray covers Next`);
     assert.ok(a.drawer.left >= -1 && a.drawer.right <= a.vw + 1, `${w} ${kind}: outside the window ` + JSON.stringify(a.drawer));
     assert.ok(a.focus !== false, `${w} ${kind}: Ask Cluck cannot take focus`);
-    await page.click(".vdrawer .vd-x"); await page.waitForTimeout(600);
+    await page.click(".vdrawer .vd-x"); await drawerGone(page);
     const b = await probe(page);
     same(a, b, "dismissing the tray");
     assert.equal(b.drawer, null, "the tray is gone");
     assert.equal(b.stale, 0, "a host is still lifted (z) after the tray shut");
     if (K.second) {   // out of tries: a 2nd wrong pick, the tray comes back over the same rows
-      await page.waitForTimeout(2200);
+      await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });   // the 2 s guess-spam window (nav.js SPAM_MS) is past
       if (await page.locator("#toast.on").count()) await page.click("#toast.on");   // the one-time tray tip (a tap closes it)
       await skipRetryWait(page);
       await page.click('.opt[data-id="c"]'); await page.click('.ch[data-id="c"] .send');
       await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 7000 });
-      await page.waitForTimeout(700);
+      await drawerSettled(page);
       const c = await probe(page);
       assert.ok(c.hits && c.hits.every(Boolean), `${w} ${kind}: out of tries, the tray is under something ` + JSON.stringify(c.hits));
-      await page.click(".vdrawer .vd-x"); await page.waitForTimeout(600);   // the out-of-tries reveal may grow the right row itself: the contract is tray open vs tray dismissed
+      await page.click(".vdrawer .vd-x"); await drawerGone(page);   // the out-of-tries reveal may grow the right row itself: the contract is tray open vs tray dismissed
       same({ near: (await probe(page)).near.filter(x => /^[a-e]$/.test(x[0])) }, { near: c.near.filter(x => /^[a-e]$/.test(x[0])) }, "dismissing the second tray");
     }
     if (kind === "freeform") {   // out of tries: the answer is revealed with its copy button; the tray lay over that line and the old reserved room kept its 44px tap area clear (Tony, Nov 3: keep it)
@@ -161,9 +168,9 @@ for (const w of W) for (const kb of (w < 500 ? [0, 1] : [0])) for (const [kind, 
         await page.fill("#ans", String(8 + i)); await page.press("#ans", "Enter");
         await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 6000 });
       }
-      await page.waitForTimeout(900);
+      await settled(page, "#q");   // the last verdict is drawn: the reveal line and its copy are placed
       const o = await probe(page);
-      if (o.drawer) { await page.click(".vdrawer .vd-x"); await page.waitForTimeout(600); }
+      if (o.drawer) { await page.click(".vdrawer .vd-x"); await drawerGone(page); }
       const z = await probe(page);
       assert.equal(z.drawer, null, "the tray is gone");
       if (z.copy) {   // sugar bank shows the revealed answer line with a copy; a diet bank may not
