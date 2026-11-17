@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: fonts.ready + painted frames, not 150 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -73,7 +74,7 @@ try {
     await page.goto(`${BASE}/#CSCI26_CB1`);
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CSCI26_CB1" && document.querySelector("#blocks .cb"), null, { timeout: 8000 });
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(150);
+    await settled(page, "#blocks .cb");
     if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, `codeblock-${width}-v2.png`), fullPage: true }); }
     if (width === 390) { await ctx.close(); continue; }                 // 390: the screenshot only
     const m = await page.evaluate(measure);
@@ -98,9 +99,9 @@ try {
     check(got === CODE, `${at} Copy copies the raw code`);
     if (got !== CODE) console.log(JSON.stringify(got));
     if (SHOTS && width === 360) await page.screenshot({ path: join(SHOTS, "codeblock-360-copied-v2.png") });
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: app timer — the "copied" tick lives ~2 s, so 1.5 s must still show it
     check(await page.$eval("#blocks .cb-copy use", u => u.getAttribute("href")) === "#i-ok", `${at} still "copied" at 1.5 s`);
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(800);   // keep: app timer — past the tick's lifetime (~2 s), back to Copy
     check(await page.$eval("#blocks .cb-copy use", u => u.getAttribute("href")) === "#i-copy", `${at} back to Copy after ~2 s`);
     check(await page.$$eval("#q .opt", os => os.every(o => o.getAttribute("aria-checked") === "false")), `${at} Copy picks no choice`);
     await ctx.close();
