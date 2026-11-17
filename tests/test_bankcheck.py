@@ -50,6 +50,9 @@ ROWS = [
     ("ask missing", "BANK_PSY6.json", {"v": 20261118, "problems": [GOOD]}, None, ("fail", ["B-ASK"])),
     ("question in setup", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="Find the sum.", body=[{"type": "text", "md": ["Using the Master Theorem, compute the running time:", "", "It calls itself 3 times"]}])]}, None, ("fail", ["B-ASK"])),
     ("ask is setup", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="At each level it does O(N) work.")]}, None, ("fail", ["B-ASK"])),
+    # B-TICK (v >= 20261118, Tony Nov 17): a tick instruction in ask/body fails; the noun "tick" passes
+    ("tick in ask", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="Which parts are bad? Tick each one.")]}, None, ("fail", ["B-TICK"])),
+    ("noun tick ok", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="Which filter drops a frame on every tick?")]}, None, ("ok", [])),
     ("old v not asked", "BANK_PSY6.json", {"v": 20261022, "problems": [GOOD]}, None, ("ok", [])),
 ]
 

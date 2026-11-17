@@ -25,7 +25,7 @@ except ImportError:  # reported as B-DEPS, never a silent skip
     jsonschema = None
 
 # server give-up order (= the pointer's precedence); B-DEPS is a tool failure, listed first
-CODES = ["B-DEPS", "B-NAME", "B-JSON", "B-VER", "B-EMPTY", "B-HIDDEN", "B-SCHEMA", "B-ASK", "B-DUP", "B-PREFIX"]
+CODES = ["B-DEPS", "B-NAME", "B-JSON", "B-VER", "B-EMPTY", "B-HIDDEN", "B-SCHEMA", "B-ASK", "B-TICK", "B-DUP", "B-PREFIX"]
 LOAD_CODES = {"B-NAME", "B-JSON", "B-VER", "B-EMPTY", "B-HIDDEN"}
 ASK_V = 20261118   # SCHEMA.md Version table: from this v every problem has an `ask` (the question) apart from `body` (the situation)
 # B-ASK heuristics (docs/design/BANKCHECK.md#B-ASK): a setup paragraph that starts like a question, an ask that has no question in it
@@ -46,6 +46,26 @@ def _hidden(p, mode):
         return serve.hidden(p, mode)
     except Exception:  # a malformed item is the schema's to report, not a crash here
         return False
+
+
+# B-TICK (Tony Nov 17, docs/design/BANKCHECK.md#B-TICK): from ASK_V no bank text tells the student how to tick; the page's grey `how`
+# line (or the app default GRID_HOW) says it. Imperative sentence starts only, so the noun ("per-tick labels") passes.
+TICK_META = re.compile(r"(^|[.!?:]\s+)\W*(tick|untick|tap a row|check (all|each|every|the boxes?)|select (all|each|every)|choose (all|each|every)|pick (all|each|every)|mark (all|each|every))\b", re.I)
+
+
+def tick_problems(p):
+    """B-TICK messages for one problem: a tick/choose-all instruction sentence in `ask` or a body text block."""
+    texts = [("ask", p.get("ask") or "")]
+    for bi, b in enumerate(p.get("body") or []):
+        if isinstance(b, dict) and b.get("type") == "text":
+            md = b.get("md")
+            texts.append((f"body[{bi}]", "\n\n".join(md) if isinstance(md, list) else str(md or "")))
+    out = []
+    for where, t in texts:
+        m = TICK_META.search(re.sub(r"```[\s\S]*?```", "", t))
+        if m:
+            out.append(f"{where} tells how to tick ('{t[m.start():m.start() + 40].strip()}...'): drop it, the grey how line says it")
+    return out
 
 
 def ask_problems(p):
@@ -131,6 +151,8 @@ def check_file(path, load_only):
         for q in ps:
             for m in ask_problems(q):
                 out.append(("FAIL", "B-ASK", f"{q['code']}: {m}"))
+            for m in tick_problems(q):
+                out.append(("FAIL", "B-TICK", f"{q['code']}: {m}"))
     if not load_only and not builtin:
         seen, reported = {}, set()
         for q in ps:
