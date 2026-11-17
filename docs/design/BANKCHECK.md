@@ -58,6 +58,19 @@ Fix: the path tells you the field. Edit it to match SCHEMA.md; the schema is the
 Server line: none. The server does not validate on load. SCHEMA.md `<!-- schema: problems -->` is read the way tests/schemas.mjs reads it.
 Rank: after the LOAD codes, because a bank the server cannot load is the cheaper fix.
 
+## B-ASK
+Class: SPEC. Meaning: the bank declares `v` >= 20261118 (SCHEMA.md Version table) and a problem breaks the situation / question split:
+no `ask` field (FAIL); a `body` text paragraph outside code fences that ends with `?` or starts with Compute / Calculate / Find /
+Determine / What / Which / Using / How / Why / Tick / Prove / Show / Solve / Evaluate / Derive / Explain (the question is bunched into
+the setup); an `ask` that has a code fence, several paragraphs or over 300 chars (setup bunched into the ask), or has neither a `?`
+nor an imperative / question word at a sentence start (an ask that is only setup). Heuristics, on purpose simple: a false hit is
+fixed by rewording. Older banks (v < 20261118) are not checked and keep the old render rule (below).
+Fix: `body` = the givens, code and figures only; `ask` = the question in one or two sentences ("Using the Master Theorem, compute the
+running time of this recursive algorithm.").
+Render rule (client/answer/qcard/qcard.js `takeLead`, app.js): with `ask` the card shows it as the bold lead under the setup and never
+cuts a sentence out of `body`; without `ask` (old banks) the last sentence of the last `body` paragraph is still promoted, as before.
+Server line: none. The server passes `ask` through `public()` and does not check it. Rank: after B-SCHEMA (the field must be well formed first).
+
 ## B-DUP
 Class: SPEC (a warning across files). Meaning: one code appears twice in a file with different content (FAIL), or in two files
 with different content (WARN; the first file in server order wins: problems.json, then banks A-Z).

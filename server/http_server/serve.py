@@ -70,7 +70,7 @@ PORT = int(sys.argv[1]) if MAIN and len(sys.argv) > 1 else 5567
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(DATA, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(DATA, "banks")   # practice banks: banks/BANK_XXX.json (docs/design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q", "grid")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "ask", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q", "grid")
 DEFAULT_NUDGE = "Time to consult the duck oracle."
 FIX_NUDGE = "All ducks almost in a row... check your math carefully."
 NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ"
@@ -1427,6 +1427,8 @@ def expr_where(p, u, seen_):
 
 def _question_text(p, u):
     parts = [b.get("md") for b in p.get("body", []) if b.get("type") == "text"]
+    if isinstance(p.get("ask"), str) and p["ask"].strip():
+        parts.append(p["ask"])           # SCHEMA.md `ask`: the question is its own field, Cluck still reads it after the setup
     text = "\n".join("\n".join(x) if isinstance(x, list) else str(x) for x in parts if x)
     if u is not p and u.get("prompt"):
         text += "\nThis part: " + str(u["prompt"])
