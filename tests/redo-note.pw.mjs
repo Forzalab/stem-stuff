@@ -81,8 +81,12 @@ for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 
     const errs = []; page.on("pageerror", e => errs.push(String(e)));
     await page.goto(BASE + (phone ? "/" : "/?jev=1") + "#BANK_RDN");                 // desktop: intent.js on (Jev flag), so its log is checked
     await page.waitForFunction(() => /^CALC1_RDN/.test(document.querySelector("#pcode")?.textContent || "") && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
-    await page.evaluate(() => { window.__notes = []; const t = document.querySelector("#toast");
-      new MutationObserver(() => { if (t.classList.contains("on")) window.__notes.push({ text: t.textContent, at: window.__drill.state.code }); }).observe(t, { attributes: true, childList: true, characterData: true, subtree: true }); });
+    // RTAG-TOAST (Nov 16): no retry chip; the note rides as the retry toast's subtitle (.stoast-s). One record per toast shown
+    await page.evaluate(() => { window.__notes = []; let last = null;
+      new MutationObserver(() => { const t = document.querySelector(".stoast.on"), raw = t ? t.querySelector(".stoast-t").textContent + "|" + (t.querySelector(".stoast-s:not([hidden])")?.textContent || "") : "";
+        const txt = raw.includes("Gravity") ? "Gravity pulled you back for review." : null, key = txt;   // one record per toast on screen (it outlives a question change)
+        if (key && key !== last) { last = key; window.__notes.push({ text: txt, title: t.querySelector(".stoast-t").textContent, at: window.__drill.state.code }); }
+        if (!t) last = null; }).observe(document.body, { attributes: true, childList: true, characterData: true, subtree: true }); });
     const notes = () => page.evaluate(n => window.__notes.filter(x => x.text === n), NOTE);
 
     const m1 = await code(page);
@@ -91,11 +95,11 @@ for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 
     const r1 = await toRedeem(page);
     assert.equal(r1, m1, "the missed one comes back");
     assert.match(await page.textContent("#rtag"), /Pity roll/);
-    await page.waitForFunction(n => { const t = document.querySelector("#toast"); return t.classList.contains("on") && t.textContent === n; }, NOTE, { timeout: 3000 })
+    await page.evaluate(() => window.stemDuck?.down?.());   // the toast yields while Cluck's duck is up (toast.js yields()); the student moving on lowers it
+    await page.waitForFunction(n => { const t = document.querySelector(".stoast.on"); return !!t && t.textContent.includes(n); }, NOTE, { timeout: 8000 })
       .catch(async () => { throw new Error("no redo note on the first Redeem; toasts: " + JSON.stringify(await page.evaluate(() => window.__notes))); });
-    const [t, a] = await page.evaluate(() => ["#toast", "#rtag"].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return { left: r.left, top: r.top, bottom: r.bottom, width: r.width }; }));
-    const mid = await page.$eval("#toast", t => parseFloat(t.style.left) + parseFloat(getComputedStyle(t).getPropertyValue("--px")));
-    assert.ok(Math.abs(mid - (a.left + a.width / 2)) < 2 && t.top >= a.bottom, "caret on the retry tag " + JSON.stringify([t, a, mid]));
+    assert.match(await page.$eval(".stoast.on .stoast-t", e => e.textContent), /^Pity roll/, "the note rides on the Pity roll toast");
+    assert.equal(await page.$eval("#rtag", e => e.hidden), true, "no retry chip on the card (RTAG-TOAST)");
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-ob-rw-redo")), "1");
     const jl = await page.evaluate(() => { try { return window.stemJev.dump(); } catch { return ""; } });
     if (!phone) assert.match(jl, /"c":"CALC1_RDN\d","l":"\+[\d.]+  ob  redo 1"/, "intent.js logs the note on the Redeem item: " + jl.slice(-600));
