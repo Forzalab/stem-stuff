@@ -1921,3 +1921,6 @@ html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow
 /* PH-NAVY (Tony Nov 17 "placeholder dimmer"; Refactoring UI p.36-38: dim by moving toward the background's own hue, never grey/opacity on colour):
    v7 placeholders take --line (#556791, the navy family of the #060b1b well) instead of --hint (#a9b8cc) */
 html.ui-v7 :is(input, textarea)::placeholder { color: var(--line); opacity: 1; }
+
+/* RE-ENTRY GUARD (shell.js): the answer controls rest for 1.5 s after the tab comes back */
+html.reentry :is(#q .send, #q .btn-go, #q .opt, #q .nx, #codeGo) { opacity: .55; transition: opacity .2s ease-out; }
