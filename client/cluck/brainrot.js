@@ -90,6 +90,18 @@
   const off = () => !!sess("stem-rot-off") || (PHONE.matches && !v7()) || slow();   // ✕ for this session, a phone (flag off only: v7 phones get the jut-out tab), or a slow link
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
+  /* keep the page's keyboard focus (Tony, Nov 17: "block it from taking focus"): an autoplaying player focuses itself when it loads, so the
+     student's focus, and Escape for an open popover, ended up inside the cross-origin frame (stem-stuff-bugs brainrot-iframe-focus). We can't stop
+     the frame calling focus(), so we hand focus back unless the user went in on purpose: the pointer is over that player, or Tab just moved it. */
+  let lastFocus = null, lastTab = 0;
+  document.addEventListener("focusin", e => { if (!(e.target instanceof HTMLIFrameElement)) lastFocus = e.target; }, true);
+  document.addEventListener("keydown", e => { if (e.key === "Tab") lastTab = Date.now(); }, true);
+  addEventListener("blur", () => setTimeout(() => {
+    const f = document.activeElement;
+    if (!(f instanceof HTMLIFrameElement) || !f.closest("#rot")) return;           // focus left the window (tab switch) or went to another frame
+    if (f.matches(":hover") || Date.now() - lastTab < 800) return;               // the user chose the player
+    if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else f.blur();
+  }, 0));
   /* a video YouTube won't play here (Tony, Oct 27: "Video unavailable. Playback on other websites has been disabled by the video owner")
      is swapped in its slot: an unused video of the same category, else of any category; never one shown before on this page. Nothing left
      (or 3 swaps in one slot: then it's the browser, not the videos) = the slot keeps YouTube's own message. The player says so
