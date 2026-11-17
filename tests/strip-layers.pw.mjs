@@ -105,7 +105,7 @@ const geo = page => page.evaluate(() => {
   return { bar: R(bar), d: d && !d.hidden && getComputedStyle(d).display !== "none" ? R(d) : null };
 });
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, /* reduce: focus-return race after drawer close, same as strip-layers-mc (CI #636 run 43993473085). D1 sweep lead. */ args: ["--no-sandbox"] });
 const TYPES = [["STP_NUM", "num"], ["STP_EXP", "expr"], ["STP_GRA", "graph"], ["STP_PRF", "proof"]];
 const VPS = [[360, 740], [390, 844], [1280, 800]].filter(v => !process.env.SL_W || v[0] === +process.env.SL_W);   // SL_W=390: one width (quick mutation runs)
 for (const [W, H] of VPS) {
