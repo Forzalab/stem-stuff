@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled, onEvent } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -57,18 +58,21 @@ try {
   };
   await page.goto(`${BASE}/#BANK_P3Q`);
   await page.waitForFunction(() => /_P3/.test(document.querySelector("#pcode")?.textContent || "") && !document.querySelector("#freeze").hidden, null, { timeout: 10000 });
-  await page.waitForTimeout(1000); await check("loaded");
+  await settled(page); await check("loaded");
   await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100);
-  await page.fill("#ans", "7"); await page.$eval("#ansGo", b => b.click()); await page.waitForTimeout(2000);
+  await page.fill("#ans", "7");
+  const graded = onEvent(page, "drill:answer");
+  await page.$eval("#ansGo", b => b.click());
+  await graded();
   await page.fill("#ans", "4"); await page.$eval("#ansGo", b => b.click());
   await page.waitForFunction(() => !!document.querySelector("#q .nx"), null, { timeout: 9000 });
   await page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 }).catch(() => {});
-  await page.waitForTimeout(1500); await check("graded");
-  await page.evaluate(() => document.activeElement?.blur()); await page.waitForTimeout(500); await check("blurred");
+  await settled(page); await check("graded");
+  await page.evaluate(() => document.activeElement?.blur()); await settled(page); await check("blurred");
   if (!await page.isVisible("#padFab")) { failures++; console.log("FAIL notes-open   #padFab not visible in diet mode on a phone"); }
   else {
-    await page.tap("#padFab"); await page.waitForTimeout(800); await check("notes open");
-    await page.$eval("#mtExp", b => b.click()); await page.waitForTimeout(800); await check("notes closed");
+    await page.tap("#padFab"); await settled(page); await check("notes open");
+    await page.$eval("#mtExp", b => b.click()); await settled(page); await check("notes closed");
   }
 } catch (e) { failures++; console.log("FAIL", String(e.message).slice(0, 900)); }
 finally { await browser.close(); srv.kill(); }

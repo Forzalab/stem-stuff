@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not time
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -48,11 +49,12 @@ try {
       const ctx = await browser.newContext({ viewport: { width, height: 800 }, serviceWorkers: "block", isMobile: width < 700, hasTouch: width < 700 });
       const page = await ctx.newPage();
       await page.goto(`${BASE}/`); await page.waitForSelector("#code");
-      await page.fill("#code", "BANK_WC1"); await page.press("#code", "Enter"); await page.waitForTimeout(700);
+      await page.fill("#code", "BANK_WC1"); await page.press("#code", "Enter");
+      await page.waitForFunction(() => document.querySelectorAll("#qlist a").length >= 2, null, { timeout: 8000 });   // the bank's 2 questions listed
       if (await page.isHidden("#qlist")) await page.click("#qlistBtn").catch(() => {});
       await page.locator("#qlist a").nth(code.endsWith("5A") ? 0 : 1).click();
       await page.waitForSelector(".md table, .md .katex-display", { state: "attached", timeout: 8000 });
-      await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(150);
+      await page.evaluate(() => document.fonts.ready); await settled(page);
       const m = await page.evaluate(measure, sel);
       const ok = !m.err && m.box && m.wide && m.hScroll <= 0 && m.focus && m.canScroll;
       if (!ok) bad++;
