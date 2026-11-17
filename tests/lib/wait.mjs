@@ -7,7 +7,10 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
   await page.waitForFunction(s => {
     const els = s ? [...document.querySelectorAll(s)] : null;
     const anims = els ? els.flatMap(e => e.getAnimations({ subtree: true })) : document.getAnimations();
-    return !anims.some(a => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity && Number.isFinite(a.effect?.getComputedTiming().endTime));   // WK-INF: webkit can report a finite endTime for an infinite loop (the .wcaret blink): skip by iterations too
+    /* done = not "running", OR infinite (never ends), OR past its end: WebKit can leave a finished (pseudo-element) transition in playState
+       "running", e.g. the .cl::before 0.9 s ember fade (target = aside#cluck): desk-layout@1 on the webkit job since #641. */
+    return !anims.some(a => { const end = a.effect?.getComputedTiming().endTime;
+      return a.playState === "running" && a.effect?.getTiming().iterations !== Infinity && Number.isFinite(end) && !((a.currentTime ?? 0) >= end); });
   }, sel, { timeout }).catch(async e => {
     const left = await page.evaluate(s => (s ? [...document.querySelectorAll(s)].flatMap(x => x.getAnimations({ subtree: true })) : document.getAnimations())
       .filter(a => a.playState === "running").map(a => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"} it=${a.effect?.getTiming().iterations} end=${ti.endTime}`; }).slice(0, 8), sel).catch(() => []);
