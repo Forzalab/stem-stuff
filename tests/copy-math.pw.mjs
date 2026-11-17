@@ -100,9 +100,7 @@ async function drag(page, from, to) {
   const a = await pt(from), b = await pt(to);
   await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(b.x, b.y, { steps: 8 }); await page.mouse.up();
 }
-const copyNow = async page => { await blank(page); await page.keyboard.press("ControlOrMeta+c");
-  for (let i = 0; i < 150; i++) { const t = await clip(page); if (t !== "<empty>") return t; await new Promise(r => setTimeout(r, 20)); }   // the clipboard write is async: wait for its value, not 80 ms
-  return clip(page); };                                                                                   // never written: the assert below names what it got
+const copyNow = async page => { await blank(page); await page.keyboard.press("ControlOrMeta+c"); await page.waitForTimeout(80); return clip(page); };   // keep: clipboard write — the poll could read a stale value
 /* select a whole element's contents (what a triple-tap / long-press + handles do), then copy */
 const selectAll = (page, sel) => page.evaluate(s => { const r = document.createRange(); r.selectNodeContents(document.querySelector(s)); getSelection().removeAllRanges(); getSelection().addRange(r); }, sel);
 

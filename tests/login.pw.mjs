@@ -179,7 +179,7 @@ try {
     await page.waitForSelector("#lgSave:not([disabled])");
     await page.click("#lgSave");
     await page.waitForFunction(() => window.__share.length === 1);
-    await settled(page, "dialog.lg");   // the rejected share has settled; the assert below reads "no ✓"
+    await page.waitForTimeout(300);   // keep: async share rejection / keep POST
     const [s] = await page.evaluate(() => window.__share);
     assert.equal(s.active, true, "called while the tap's user activation is live");
     assert.deepEqual([s.files.length, s.files[0][1]], [1, "image/png"]);

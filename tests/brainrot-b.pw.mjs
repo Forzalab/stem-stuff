@@ -88,7 +88,7 @@ try {
     const seen = () => page.evaluate(() => { const s = document.querySelector("#rot .shelf").getBoundingClientRect(); const vs = [...document.querySelectorAll("#rot .vid[data-k='3']")];
       const i = vs.findIndex(v => { const r = v.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; return cx > s.left + 4 && cx < s.right - 4 && cy > s.top + 20 && cy < s.bottom - 20; }); vs.forEach(v => v.removeAttribute("data-tap")); if (i >= 0) vs[i].setAttribute("data-tap", "1"); return i; });
     const sb = (await rect(page, "#rot .shelf"))[0]; await page.mouse.move(sb.x + sb.w / 2, sb.y + sb.h / 2);
-    for (let i = 0; i < 40 && await seen() < 0; i++) { await page.mouse.wheel(0, 60); await settled(page, "#rot"); }
+    for (let i = 0; i < 40 && await seen() < 0; i++) { await page.mouse.wheel(0, 60); await page.waitForTimeout(40); }   // keep: wheel step pacing
     assert.ok(await seen() >= 0, "tile 4 can be wheeled into the window");
     await page.click("#rot .vid[data-tap]");
     await page.waitForFunction(() => document.querySelector("#rot .vid.hero")?.dataset.k === "3", null, { timeout: 5000 }).catch(() => {});

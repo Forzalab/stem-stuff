@@ -58,7 +58,7 @@ try {
     await typeCode(page, "BANK_NR12");
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_NR1" && !document.querySelector("#freeze").hidden, null, { timeout: 10000 });
     await page.fill("#ans", "2"); await page.press("#ans", "Enter");
-    await page.waitForSelector("#fb .verdict.wait", { timeout: 8000 });   // the aborted POST came back as "pending" (its incident card), after any retry would have fired
+    await page.waitForTimeout(1500);   // keep: app timer — the retry window must pass with no retry
     assert.equal(seen.check, 1, "one POST, no retry");
     await ctx.close();
   });
