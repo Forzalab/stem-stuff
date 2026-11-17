@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (animations ended + 2 frames), not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -141,7 +142,7 @@ if (process.env.TILT_SHOT !== "0") {
         .tilt-demo img{position:absolute;right:-22px;bottom:-30px;width:96px;height:96px;transform:rotate(-20deg);pointer-events:none}
         .tilt-demo b{display:block;font:700 18px/24px var(--font,system-ui,sans-serif)}`; document.head.appendChild(s);
         const c = document.createElement("div"); c.className = "tilt-demo"; c.innerHTML = '<b>Peek corner</b><img alt="" src="client/rewards/icons/duck8-cram.webp">'; document.body.appendChild(c); });
-      await p.waitForTimeout(150);
+      await settled(p, ".tilt-demo");   // the injected card is laid out (no animation under it) before the shot
       await SH(p, `toast-tilt-${w}.png`);
       await ctx.close();
     }

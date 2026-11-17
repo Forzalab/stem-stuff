@@ -8,7 +8,10 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
     const els = s ? [...document.querySelectorAll(s)] : null;
     const anims = els ? els.flatMap(e => e.getAnimations({ subtree: true })) : document.getAnimations();
     return !anims.some(a => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity && Number.isFinite(a.effect?.getComputedTiming().endTime));   // WK-INF: webkit can report a finite endTime for an infinite loop (the .wcaret blink): skip by iterations too
-  }, sel, { timeout }).catch(e => { throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]})`); });
+  }, sel, { timeout }).catch(async e => {
+    const left = await page.evaluate(s => (s ? [...document.querySelectorAll(s)].flatMap(x => x.getAnimations({ subtree: true })) : document.getAnimations())
+      .filter(a => a.playState === "running").map(a => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"} it=${a.effect?.getTiming().iterations} end=${ti.endTime}`; }).slice(0, 8), sel).catch(() => []);
+    throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]}) running: ${JSON.stringify(left)}`); });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
 
@@ -31,4 +34,16 @@ export async function onEvent(page, name, { timeout = 8000 } = {}) {
   return () => page.waitForFunction(k => window[k].hit && window[k], key, { timeout })
     .then(h => h.jsonValue()).then(v => v.detail)
     .catch(e => { throw new Error(`onEvent(${name}): not fired in ${timeout} ms (${e.message.split("\n")[0]})`); });
+}
+
+/* rectStable: `sel`'s box has not moved or resized for `frames` painted frames in a row (web fonts / late reflow nudge a field a few px
+   after load; an assert that reads the box once and compares it to a later read races that). Reads exactly what such an assert reads. */
+export async function rectStable(page, sel, { frames = 15, timeout = 8000 } = {}) {
+  await page.waitForFunction(([s, n]) => {
+    const r = document.querySelector(s)?.getBoundingClientRect(); if (!r) return false;
+    const k = [r.x, r.y, r.width, r.height].join(); const w = window.__rs || (window.__rs = {});
+    if (w.s !== s || w.k !== k) { w.s = s; w.k = k; w.n = 0; } else w.n++;
+    return w.n >= n;
+  }, [sel, frames], { polling: "raf", timeout })
+    .catch(e => { throw new Error(`rectStable(${sel}): still moving after ${timeout} ms (${e.message.split("\n")[0]})`); });
 }

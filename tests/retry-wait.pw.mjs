@@ -54,13 +54,13 @@ await step("(a) typed num: wrong -> Check is a disabled CCW sweep for 10 s", asy
   const page = await mk(b); await typedFirstWrong(page);
   assert.equal(await dis(page, "#ansGo"), "true"); assert.match(await label(page, "#ansGo"), /^Check \(wait \d+ s\)$/);
   assert.ok(await page.$eval("#ansGo", e => e.classList.contains("waiting")), ".waiting");
-  await page.waitForTimeout(700);
+  await page.waitForFunction(sel => { const e = document.querySelector(sel); if (!e) return false; const v = parseFloat(getComputedStyle(e, "::before").getPropertyValue("--sweep")) || 0; return v > 0 && v < 360; }, "#ansGo", { timeout: 5000 });
   const sw = await sweep(page, "#ansGo"); assert.ok(sw > 0 && sw < 360, "--sweep advances: " + sw);
   assert.equal(await page.$eval("#ansGo", e => getComputedStyle(e, "::before").transform !== "none"), true, "mirrored layer");
   assert.equal(await blue(page, "#ansGo", "::before"), false, "the sweep is the neutral tone, no --action blue");
   await page.fill("#ans", "2");                                   // typing stays allowed
   await ff(page, 5000);
-  await page.click("#ansGo", { force: true }); await page.press("#ans", "Enter"); await page.waitForTimeout(200);
+  await page.click("#ansGo", { force: true }); await page.press("#ans", "Enter"); await page.waitForTimeout(200);   // keep: app timer 10 s retry wait holds (no /check may fire)
   assert.equal(page.checks, 1, "no /check at 5 s");
   await ff(page, 5100);
   assert.equal(await dis(page, "#ansGo"), null, "enabled at 10 s"); assert.equal(await label(page, "#ansGo"), "Check answer");
@@ -73,8 +73,8 @@ await step("(b) choose-all: Check is the sweep", async () => {
   await open(page, "CSCI26_A7K");
   const o = await page.$$("#q .opt"); await o[0].click(); await page.click("#mcGo"); await graded(page, 1);
   assert.equal(await dis(page, "#mcGo"), "true"); assert.match(await label(page, "#mcGo"), /^Check \(wait \d+ s\)$/);
-  await page.waitForTimeout(700); assert.ok(await sweep(page, "#mcGo") > 0, "--sweep advances");
-  await ff(page, 5000); await page.click("#mcGo", { force: true }); await page.waitForTimeout(200);
+  await page.waitForFunction(sel => { const e = document.querySelector(sel); return !!e && (parseFloat(getComputedStyle(e, "::before").getPropertyValue("--sweep")) || 0) > 0; }, "#mcGo", { timeout: 5000 }); assert.ok(await sweep(page, "#mcGo") > 0, "--sweep advances");
+  await ff(page, 5000); await page.click("#mcGo", { force: true }); await page.waitForTimeout(200);   // keep: app timer 10 s retry wait holds (no /check may fire)
   assert.equal(page.checks, 1, "no /check at 5 s");
   await ff(page, 5100); assert.equal(await dis(page, "#mcGo"), null);
   await page.click("#mcGo"); await graded(page, 2); assert.equal(page.checks, 2);
@@ -87,13 +87,13 @@ await step("(c) single MC: options ignore taps for 10 s; each live un-picked opt
   const live = () => page.$$("#q .opt:not(:disabled)");
   let o = await live(); await o[0].click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await graded(page, 1);
   assert.equal(await page.$eval("#q .choices", e => getComputedStyle(e, "::before").content), "none", "no ring on .choices");
-  await page.waitForTimeout(700);
+  await page.waitForFunction(sel => { const e = document.querySelector(sel); if (!e) return false; const m = /\)\s+([\d.]+)%/.exec(getComputedStyle(e).backgroundImage); const v = m ? parseFloat(m[1]) : -1; return v > 0 && v < 100; }, "#q .opt:not(:disabled)", { timeout: 5000 });
   const d0 = await drain(page, "#q .opt:not(:disabled)"); assert.ok(d0 > 0 && d0 < 100, "--drain is falling: " + d0);
   assert.equal(await page.$eval("#q .opt:disabled", e => getComputedStyle(e).backgroundImage), "none", "the struck wrong pick shows no drain");
   assert.equal(await blue(page, "#q .opt:not(:disabled)"), false, "the drain is the neutral tone, no --action blue");
-  await page.waitForTimeout(600); const d1 = await drain(page, "#q .opt:not(:disabled)"); assert.ok(d1 < d0, `drains (CSS animations run in real time): ${d0} -> ${d1}`);
+  await page.waitForFunction(([sel, prev]) => { const e = document.querySelector(sel); if (!e) return false; const m = /\)\s+([\d.]+)%/.exec(getComputedStyle(e).backgroundImage); return !!m && parseFloat(m[1]) < prev; }, ["#q .opt:not(:disabled)", d0], { timeout: 5000 }); const d1 = await drain(page, "#q .opt:not(:disabled)"); assert.ok(d1 < d0, `drains (CSS animations run in real time): ${d0} -> ${d1}`);
   o = await live(); assert.equal(await o[0].getAttribute("aria-disabled"), "true");
-  await ff(page, 5000); await o[0].click({ force: true }); await page.keyboard.press("Enter"); await page.waitForTimeout(200);
+  await ff(page, 5000); await o[0].click({ force: true }); await page.keyboard.press("Enter"); await page.waitForTimeout(200);   // keep: app timer 10 s retry wait holds (a tap at 5 s selects nothing)
   assert.equal(await page.locator("#q .opt[aria-checked=true]").count(), 0, "a tap at 5 s selects nothing"); assert.equal(page.checks, 1);
   await ff(page, 5100);
   o = await live(); assert.equal(await o[0].getAttribute("aria-disabled"), null);
@@ -115,7 +115,7 @@ await step("(e) reload during the wait: it keeps the deadline (no restart to 10 
   const deadline = () => page.evaluate(() => JSON.parse(sessionStorage.getItem("stem-wait") || "null")?.until ?? null);
   const until0 = await deadline();
   await page.reload(); await page.waitForSelector("#ansGo", { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => document.querySelector("#ansGo")?.getAttribute("aria-disabled") === "true", null, { timeout: 5000 });   // the state the next asserts read: still waiting
   // the flowing clock also runs through the reload, so judge against the stored deadline, not a fixed jump
   assert.equal(await deadline(), until0, "the same deadline after the reload (not a new 10 s)");
   assert.equal(await dis(page, "#ansGo"), "true", "still waiting after the reload");
@@ -130,7 +130,7 @@ await step("(f) reduced motion: no sweep animation, unlock at 10 s, countdown an
   const page = await mk(b, { reduced: true }); await typedFirstWrong(page);
   assert.equal(await dis(page, "#ansGo"), "true");
   assert.equal(await page.$eval("#ansGo", e => getComputedStyle(e, "::before").animationName), "none");
-  await page.waitForTimeout(700); assert.equal(await sweep(page, "#ansGo"), 0, "dim, never advances");
+  await page.waitForTimeout(700); assert.equal(await sweep(page, "#ansGo"), 0, "dim, never advances");   // keep: app timer reduced motion starts no sweep (nothing to wait for)
   assert.match(await page.textContent("#waitLive"), /10 s/);
   await jump(page, "runFor", 5100); assert.match(await page.textContent("#waitLive"), /5 s/);   /* runFor, not fastForward: the 5 s countdown line is a 1 s interval tick, and fastForward fires a due interval only once, at the end of the jump */ assert.equal(await dis(page, "#ansGo"), "true");
   await ff(page, 5000); assert.equal(await dis(page, "#ansGo"), null); assert.equal(await page.textContent("#waitLive"), "Ready");

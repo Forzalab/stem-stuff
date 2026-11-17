@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
-import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: animations + 2 painted frames, not fixed 50-300 ms
+import { settled, rectStable } from "./lib/wait.mjs";   // CI-ARCH D1: animations + 2 painted frames, not fixed 50-300 ms
 import { qNew, qPick, qShow } from "../client/pure_logic_modules/shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
@@ -138,6 +138,9 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await go.isDisabled(), "arrow should be dimmed/disabled while empty");
       await inp.fill("4");
       assert.ok(await go.isEnabled());
+      /* the arrow's rect is read now and compared to the x's after the click: web fonts / late reflow after load nudge the field a few px for up to ~0.7 s (CI-only red, desktop), so wait until the arrow's box holds still */
+      await page.waitForFunction(() => document.fonts.status === "loaded", null, { timeout: 8000 });
+      await rectStable(page, "#ansGo");
       const g = await go.boundingBox(), f = await page.locator("#ff").boundingBox();
       assert.ok(g.x + g.width <= f.x + f.width && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside the field");
       const qH = (await page.locator("#q").boundingBox()).height;

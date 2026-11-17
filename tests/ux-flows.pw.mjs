@@ -450,13 +450,15 @@ async function walk28(page, seed) {
     const { item } = await qstate(page), code = await page.textContent("#pcode");
     if (item && item.redeem) {
       const x0 = await xp(page);
-      const tag0 = await page.evaluate(() => { const t = document.querySelector("#rtag"); return t && !t.hidden ? t.textContent : null; });
-      assert.match(tag0 || "", /^Pity roll$/, "a Redeem showing carries the Pity roll tag: " + tag0);
+      /* RTAG-TOAST (Nov 16): no chip on the card (#rtag stays hidden, keeps its words); the state shows as a toast */
+      const [tag0, hid0] = await page.evaluate(() => { const t = document.querySelector("#rtag"); return [t ? t.textContent : null, !!t?.hidden]; });
+      assert.match(tag0 || "", /^Pity roll$/, "a Redeem showing carries the Pity roll state: " + tag0);
+      assert.ok(hid0, "no retry chip on the card");
       assert.ok(await page.$("#qlist .mk-again .mk-back"), "the list keeps the row's marks, faded, behind the history glyph");
       await dwell(page);
       if (seed) await page.evaluate(n => { for (const k of Object.keys(localStorage)) if (k.startsWith("stem-rw:")) { const j = JSON.parse(localStorage.getItem(k)); if (j && "streak" in j) { j.streak = n; localStorage.setItem(k, JSON.stringify(j)); } } }, seed);   // answer() re-reads it
       while (await page.$("#q .opt:not(:disabled)")) { const v = await answerKey(page, code, true); if (v === "correct" || v === null) break; }
-      await page.waitForFunction(() => /^Avenged!$/.test(document.querySelector("#rtag:not([hidden])")?.textContent || ""), null, { timeout: 4000 })
+      await page.waitForFunction(() => /^Avenged!$/.test(document.querySelector("#rtag")?.textContent || ""), null, { timeout: 4000 })
         .catch(async () => { throw new Error(`no "Avenged!" tag on a right Redeem of ${code}: ${await page.textContent("#rtag")}`); });
       await page.waitForFunction(() => window.__toasts.includes("HONK HONK. Spacetime just applauded."), null, { timeout: 8000 })
         .catch(async () => { throw new Error(`no 'HONK HONK. Spacetime just applauded.' toast on a right Redeem of ${code}; fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}`); });

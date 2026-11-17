@@ -749,12 +749,11 @@ async function load(code) {
   if (rec) paint(rec);
   window.stemLockHelp?.resume(code);   // LOCK-HELP: a stored lock offer for this item shows again after a reload / when the student returns
   if (!off()) syncServer(S);
-  retryTag();
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (docs/design/NAV.md)
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   bridge.rwSync();
-  bridge.rwRedoTip();
+  retryTag();   // after rwSync: the redo line's sugar gate (rewardOn) reads the synced state
   twistToast();
   bridge.origRender();
   bridge.padRule();
@@ -1933,10 +1932,17 @@ function retryTag() {
   const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
   const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
   const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
-  t.hidden = !k;
+  t.hidden = true;   // RTAG-TOAST (Tony, Nov 16): no chip on the card; the state lands as a toast, once per question + state (the hidden tag keeps its words for state reads)
   t.className = "qtag rtag" + (k ? " rt-" + k : "");
-  t.innerHTML = k ? `${icon(RTAG[k][1])}<span>${RTAG[k][0]}</span>` : "";
+  t.textContent = k ? RTAG[k][0] : "";
+  const key = k && S.code + ":" + k;
+  if (!k || key === rtagLast) return;
+  rtagLast = key;
+  const rd = k === "owe" && !painting ? bridge.rwRedoTip?.() : null, sub = rd && rd.line;   // the first Redeem on this device: "Gravity pulled you back for review."
+  const v7 = document.documentElement.classList.contains("ui-v7");     // v7: the row toast's dim subtitle; else the plain toast's bold head + line
+  window.stemToast?.show({ text: sub && !v7 ? RTAG[k][0] + "\n" + sub : RTAG[k][0], sub: (v7 && sub) || undefined, row: true, dock: true, onshow: rd ? rd.take : undefined, duck: k === "won" || k === "kept" ? "landmark" : "twist", at: () => $("#q"), until: Date.now() + 15000 });
 }
+let rtagLast = null;
 /* W104 Sleeping guard (MC only): a closed item says so in a row under the choices, three cues so colour never carries it: the lock, the words,
    Cluck napping on it. A Redeem closed right wakes him instead: the feather burst plays on the live moment only (a revisit is still, and
    reduced motion never gets one). Kind copy; no clock (nothing on the page knows when it comes back). */
