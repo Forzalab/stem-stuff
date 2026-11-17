@@ -80,6 +80,10 @@ html.ui-v7 #q .ff .send, html.ui-v7 .code-box .btn-go { border-radius: 16px; }
 html.ui-v7 #q.q:has(.ff.proof), html.ui-v7 #work > #q.q:has(.ff.proof) { border: 0; }   /* 2 ids: beats html.proof-split #work > #q (app.css) */
 html.ui-v7 #q .ff.proof > textarea { padding: 12px 56px 12px 12px; }
 html.ui-v7 #q:has(.ff.proof) .how { padding-inline: 12px; }
+/* GO-MUTED (Tony Nov 16 "too vibrant"): the send / go arrows join the Ask Cluck family instead of the saturated --action blue: navy fill, grey arrow; hover = one step lighter + ink + the raise. Verdict colours (.bad / .ok) keep their own rules */
+html.ui-v7 :is(#q .ff .send, #q .ff .btn-go, .code-box .btn-go, html.start .code-box .btn-go) { background: var(--chip, #283352); color: #a7b5d2; border-color: transparent; box-shadow: inset 0 1px 0 hsl(225 60% 90% / .06), var(--shadow-raise); }
+@media (hover: hover) { html.ui-v7 :is(#q .ff .send, #q .ff .btn-go, .code-box .btn-go):hover { background: color-mix(in srgb, var(--chip, #283352) 82%, #fff); color: var(--ink); } }
+html.ui-v7 :is(#q .ff .send, #q .ff .btn-go, .code-box .btn-go):active { background: color-mix(in srgb, var(--chip, #283352) 90%, #000); }
 /* SQUIRCLE-ALL (Tony, Nov 16): the codeblock (proof box) and every input box share the squircle; the codeblock takes the 16px tile radius */
 html.ui-v7 #q .cb:not(.opt .cb) { border-radius: 16px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .cb, input:not([type=checkbox], [type=radio], [type=range]), textarea, select) { corner-shape: superellipse(1.52); } }
