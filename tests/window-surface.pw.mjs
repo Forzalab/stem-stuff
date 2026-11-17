@@ -6,6 +6,7 @@
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: the window names after first paint, not 300 ms
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -28,7 +29,7 @@ for (const [vname, viewport] of [["phone", { width: 390, height: 844 }], ["desk"
     await page.waitForFunction(() => window.stemFirst, null, { timeout: 15000 });
     await page.evaluate(() => window.stemFirst);
     await page.waitForSelector("#pcode", { state: "attached" });
-    await page.waitForTimeout(300);
+    await settled(page);
     got[`${vname}-${mode}`] = Object.fromEntries((await own(page)).filter(([k]) => !native.has(k)).sort(([a], [c]) => a < c ? -1 : 1));
     assert.deepEqual(errs, [], `${vname} ${mode}: page errors`);
     await ctx.close();

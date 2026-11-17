@@ -47,7 +47,7 @@ const drop = createServer((req, res) => {
   req.resume();
   res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Transfer-Encoding": "chunked" });
   res.flushHeaders();
-  setTimeout(() => res.socket.destroy(), 300);
+  setTimeout(() => res.socket.destroy(), 300);   // keep: fixture timer — the stub drops the stream 300 ms in (this IS the scenario, not a wait)
 });
 await new Promise(r => stub.listen(0, "127.0.0.1", r));
 await new Promise(r => drop.listen(0, "127.0.0.1", r));
@@ -92,7 +92,9 @@ async function wrong({ explain, debug = false, off = false } = {}) {
 const chip = page => page.evaluate(() => [...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.innerText).join(" ").replace(/\s+/g, " ").trim());
 const inc = page => page.evaluate(() => [...document.querySelectorAll("#wish .inc, .rbox .wchip .inc")].map(e => e.textContent).join(" ").replace(/\s+/g, " ").trim());
 const SEEN = /^Oops, didn't load\. Tap to try again\.$/;
-const beacon = async (page, n = 1) => { for (let i = 0; i < 30 && page.beacons.length < n; i++) await page.waitForTimeout(100); return page.beacons; };
+/* a bounded wait on state (50 ms steps; the asserts below say what is missing), never a fixed sleep */
+const until = async (get, tries = 60) => { for (let i = 0; i < tries; i++) { const v = await get(); if (v) return v; await new Promise(r => setTimeout(r, 50)); } return null; };
+const beacon = async (page, n = 1) => { await until(() => page.beacons.length >= n); return page.beacons; };
 
 await step("/explain 502 + X-Incident: the old words + the server's code; no reason for a student; one beacon with that code", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 502, headers: { "X-Incident": "S-7K3QX upstream" }, body: "" }) });
@@ -153,7 +155,7 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
   assert.equal(orCalls, 0, "no Cluck model tried once the NOTE call said out of credit");
   const [b] = await beacon(page);
   assert.deepEqual([b.code, b.reason, b.status], [code, "budget_cap", 503]);
-  for (let i = 0; i < 30 && !logs.some(l => l.src === "client"); i++) await page.waitForTimeout(100);
+  await until(() => logs.some(l => l.src === "client"));   // serve.py's stderr arrives on its own time
   assert.ok(logs.some(l => l.incident === code && l.src === "server" && l.reason === "budget_cap" && l.where === "explain"), "the server's line: " + JSON.stringify(logs));
   assert.ok(logs.some(l => l.reason === "budget_cap" && l["gen_ai.system"] === "openrouter" && l["http.response.status_code"] === 402), "the 402 line");
   const cl = logs.find(l => l.src === "client" && l.incident === code), sv = logs.find(l => l.src === "server" && l.incident === code);
@@ -162,7 +164,7 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
   assert.equal(cl.trace_id, b.trace_id, "the beacon's trace id is the request's (traceparent)");
   assert.equal(sv.trace_id, b.trace_id, "the server's line shares it");
   /* P2: the request's ONE trace line: its status (200: the page asks for stages, so the failure is in-band, the status was sent before it; the beacon above keeps 503), the NOTE call's 402, its S- codes, the same trace id */
-  for (let i = 0; i < 30 && !traces.some(x => x.path === "/explain"); i++) await page.waitForTimeout(100);
+  await until(() => traces.some(x => x.path === "/explain"));
   const tl = traces.filter(x => x.path === "/explain");
   assert.equal(tl.length, 1, "one trace line: " + JSON.stringify(traces));
   assert.deepEqual([tl[0].status, tl[0].trace_id, tl[0].q, tl[0].done], [200, b.trace_id, "CALC1_INC1", true]);
@@ -198,7 +200,7 @@ await step("tracking off (privacy.html \"Don't record me\"): the code still show
   const page = await wrong({ explain: r => r.fulfill({ status: 500, body: "" }), off: true });
   assert.match(await chip(page), SEEN);
   assert.match(await inc(page), /^Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking turned off\.$/);
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(800);   // keep: quiet window — the assert below proves tracking off sends no /log/incident (a negative needs one)
   assert.deepEqual(page.beacons, [], "no /log/incident");
   await page.context().close();
 });

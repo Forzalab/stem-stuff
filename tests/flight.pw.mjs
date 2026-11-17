@@ -71,14 +71,18 @@ async function busyThenWrong(page) {
   await page.type("#ans", SENTINEL);
   await page.keyboard.press("Backspace"); await page.keyboard.press("ArrowLeft");
   await page.type("#scratch", SENTINEL + " x");
-  await page.mouse.move(640, 450); await page.mouse.wheel(0, 600); await page.waitForTimeout(400);   // a real page scroll (Oct 31: the old body fit the window, so the only "scroll" entry was the brainrot duo's snap)
-  await page.setViewportSize({ width: 1100, height: 820 }); await page.waitForTimeout(400);
+  await page.mouse.move(640, 450); await page.mouse.wheel(0, 600);
+  await page.waitForFunction(() => window.stemFR && window.stemFR.ring.some(e => e[1] === "scroll"), null, { timeout: 5000 }).catch(() => {});   // a real page scroll (Oct 31: the old body fit the window, so the only "scroll" entry was the brainrot duo's snap)
+  await page.setViewportSize({ width: 1100, height: 820 });
+  await page.waitForFunction(() => window.stemFR && window.stemFR.ring.some(e => e[1] === "vp" && e[2] === 1100 && e[3] === 820), null, { timeout: 5000 }).catch(() => {});
   await page.evaluate(() => { location.hash = "#CALC1_FL2"; });
   await page.waitForFunction(() => /^#CALC1_FL2/.test(location.hash) && document.querySelector('.opt[data-id="b"]'), null, { timeout: 8000 });
   await page.type("#scratch", SENTINEL);
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
 }
-const waitFor = async (page, f, n = 1) => { for (let i = 0; i < 60 && page.beacons.filter(f).length < n; i++) await page.waitForTimeout(100); return page.beacons.filter(f); };
+/* a bounded wait on state (50 ms steps, then whatever it has: the asserts below say what is missing), never a fixed sleep */
+const until = async (get, tries = 120) => { for (let i = 0; i < tries; i++) { const v = await get(); if (v) return v; await new Promise(r => setTimeout(r, 50)); } return null; };
+const waitFor = async (page, f, n = 1) => { const got = await until(() => { const b = page.beacons.filter(f); return b.length >= n ? b : null; }); return got || page.beacons.filter(f); };
 const LAYOUT = ["vp", "scroll", "box", "mq"];
 const KEYS = /^(char|other|Space|Enter|Tab|Escape|Backspace|Delete|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown|Process|Unidentified|[a-zA-Z]+)$/;
 /* the sentinel is nowhere: reports, stemT calls, server log lines, any request but the three that carry it by design (privacy.html: Cluck gets them; Check grades) */
@@ -137,11 +141,11 @@ await step("an /explain 504 after typing, scrolling and a resize: one report wit
   assert.ok(size <= 16384, "under the hard cap: " + size);
   console.log("     report bytes:", size, "fr bytes:", JSON.stringify(b.fr).length, "page.at bytes:", JSON.stringify(at).length, "page.before bytes:", JSON.stringify(bf).length, "ring:", b.fr.ring.length, "kb:", b.fr.kb.length);
   const cl = () => logs.find(l => l.startsWith('{"incident":"' + b.code) && l.includes('"src":"client"'));
-  for (let i = 0; i < 30 && !cl(); i++) await page.waitForTimeout(100);   // serve.py's stderr arrives on its own time (CI shard 2 raced it, Oct 23)
+  await until(() => cl(), 60);   // serve.py's stderr arrives on its own time (CI shard 2 raced it, Oct 23)
   const line = cl();
   assert.ok(line && JSON.parse(line).fr && JSON.parse(line).fr.ring, "the server's line carries the snapshot");
   const hl = () => logs.some(l => /^health \{/.test(l) && / rid=\S+ trace=[0-9a-f]{32}$/.test(l));
-  for (let i = 0; i < 30 && !hl(); i++) await page.waitForTimeout(100);   // serve.py's stderr arrives on its own time
+  await until(() => hl(), 60);   // serve.py's stderr arrives on its own time
   assert.ok(hl(), "the /health line, with rid + trace: " + logs.filter(l => l.startsWith("health")).join(" | "));
   const t = await page.evaluate(() => [...document.querySelectorAll("#wish, .rbox .wchip")].map(e => e.innerText).join(" "));
   assert.ok(!/·|AI:/.test(t), "no diag line for a student: " + t);
