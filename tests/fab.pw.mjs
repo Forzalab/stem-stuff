@@ -256,7 +256,7 @@ for (const [W, H, phone] of [[360, 740, true], [1280, 800, false]]) {
     });
     await step(`${W}x${H} sugar: the pad page cannot be opened, and the keyboard-up problem pane has no pad peek`, async () => {
       await page.evaluate(() => document.querySelector("#padFab").click());
-      await page.waitForTimeout(200);   // sleep-keep: the click must open nothing, and a "nothing happened" has no condition to wait on (the handler is synchronous; the assert below is the check)
+      await page.waitForTimeout(200);   // keep: observation window (the click must open nothing; no condition to wait on, the assert below is the check)
       assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "the pad page opened");
       await page.evaluate(() => { const root = document.documentElement; root.classList.add("swap", "swap-problem"); });   // the keyboard-up PROBLEM pane, as CSS sees it
       assert.equal((await g()).peek, false, "pad peek shown");

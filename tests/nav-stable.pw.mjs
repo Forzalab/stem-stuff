@@ -12,6 +12,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchBrowser } from "./pw-browser.mjs";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on the page's own animations, not a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -85,7 +86,7 @@ try {
     const before = await order(page);
     await page.fill("#ans", "3"); await page.click("#ansGo");                 // 1 + 2: correct
     await page.waitForSelector("#ff .vk[data-v=i-ok]", { timeout: 4000 });
-    await page.waitForTimeout(600);
+    await settled(page, "#qlist, #q");
     assert.deepEqual(await order(page), before, "re-sorted while on the answered question");
     await page.click("#qnext"); await opened(page, CODES[2]);
     assert.deepEqual((await order(page)).slice(0, 3), CODES.slice(0, 3), "the shown rows moved");
@@ -95,13 +96,14 @@ try {
 
   await step("Next does not wait on p/CODE.json (bank in memory), and still tells the server", async () => {
     let asked = 0;
-    await page.route("**/p/*.json", async r => { asked++; await new Promise(res => setTimeout(res, 2000)); await r.continue().catch(() => {}); });
+    await page.route("**/p/*.json", async r => { asked++; await new Promise(res => setTimeout(res, 2000)); await r.continue().catch(() => {}); });   // keep: a deliberate 2 s network stall (the fixture this spec proves Next does not wait on), not a wait for the app
     const list = await order(page), to = list[list.indexOf(await page.textContent("#pcode")) + 1];
     const t0 = Date.now();
+    const told = page.waitForRequest(r => /\/p\/[^/]+\.json$/.test(r.url()), { timeout: 5000 }).catch(() => null);   // the seen pointer reaching the server
     await page.click("#qnext"); await opened(page, to, 1500);
     const dt = Date.now() - t0;
     assert.ok(dt < 1000, `took ${dt} ms`);
-    await page.waitForTimeout(300);
+    await told;
     assert.equal(asked, 1, "the server was not told (seen pointer)");
     await page.unroute("**/p/*.json");
   });
@@ -114,13 +116,13 @@ try {
     await pg.goto(BASE + "/#BANK_NV34");
     await pg.waitForFunction(() => /^CALC1_M0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     if ((await pg.textContent("#pcode")) !== MC.code) { await pg.goto(BASE + "/#" + MC.code); await opened(pg, MC.code); }
-    await pg.waitForTimeout(400);
+    await pg.waitForSelector("#padFab", { state: "visible", timeout: 5000 });   // the notes button is up (its place is set after the splash)
     await pg.click("#padFab");
     await pg.waitForFunction(() => document.documentElement.classList.contains("mt"), null, { timeout: 3000 });
     if (!(await pg.isVisible('.opt[data-id="a"]'))) await pg.click("#mtMode");                // the a tile
     await pg.click('.opt[data-id="a"]'); await pg.click('.ch[data-id="a"] .send');
     await pg.waitForFunction(() => !document.documentElement.classList.contains("mt"), null, { timeout: 3000 });
-    await pg.waitForTimeout(800);                                                   // the smooth scroll
+    await pg.waitForFunction(() => { const t = document.querySelector("#qnext").getBoundingClientRect().top; return t >= 0 && t < 100; }, null, { timeout: 5000 });   // the row's smooth scroll has landed on Next
     const g = await pg.evaluate(() => ({ next: document.querySelector("#qnext").getBoundingClientRect().top, y: scrollY }));
     assert.ok(g.next >= 0 && g.next < 100, `Next not in view: top ${g.next}, scrollY ${g.y}`);
     await c2.close();
@@ -136,7 +138,7 @@ try {
     await pg.waitForFunction(() => /^CALC1_L0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     await pg.waitForFunction(() => !document.querySelector("#qnav").hidden && document.documentElement.classList.contains("dock-bottom"), null, { timeout: 4000 });
     await pg.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
-    await pg.waitForTimeout(400);
+    await settled(pg);
     const probe = () => pg.evaluate(() => {
       const top = document.querySelector(".top"), r = top.getBoundingClientRect(), b = document.querySelector("#qlistBtn").getBoundingClientRect();
       const q = document.querySelector("#freeze .md, #q").getBoundingClientRect();
@@ -147,12 +149,12 @@ try {
     assert.ok(g.h > 40, `no top bar (height ${g.h})`);
     assert.ok(Math.abs(g.top) <= 1, `top bar at ${g.top} before any scroll`);
     assert.ok(g.qTop >= g.bottom - 1, `the bar (bottom ${g.bottom}) covers the first line of the question (top ${g.qTop})`);
-    await pg.evaluate(() => window.scrollTo(0, 600)); await pg.waitForTimeout(400);
+    await pg.evaluate(() => window.scrollTo(0, 600)); await pg.waitForFunction(() => scrollY >= 500, null, { timeout: 5000 });
     g = await probe();
     assert.ok(g.y >= 500, `the page did not scroll (scrollY ${g.y}, room ${g.max}): the test question is not long enough`);
     assert.ok(Math.abs(g.top) <= 1, `top bar scrolled away: top ${g.top} at scrollY ${g.y}`);
     assert.equal(g.on, true, "the list button is not on top of the scrolled page");
-    await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(300);
+    await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForFunction(() => scrollY === 0, null, { timeout: 5000 });
     g = await probe();
     assert.ok(Math.abs(g.top) <= 1 && g.qTop >= g.bottom - 1, `back at the top: bar ${g.top}..${g.bottom}, question ${g.qTop}`);
     await c4.close();
@@ -239,7 +241,7 @@ try {
     await pg.waitForFunction(() => /not found/.test(document.querySelector("#entryMsg").textContent), null, { timeout: 4000 });
     await pg.evaluate(() => document.activeElement?.blur());                   // Enter shuts the list; the message keeps the box up
     await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
-    await pg.mouse.move(w - 4, 790); await pg.waitForTimeout(500);
+    await pg.mouse.move(w - 4, 790); await settled(pg);
     const g = await pg.evaluate(() => {
       const box = document.querySelector(".top .entry"), hud = document.querySelector(".top > .rw-hud"), b = box.getBoundingClientRect(), h = hud.getBoundingClientRect();
       const code = document.querySelector("#code").getBoundingClientRect(), y = code.top + code.height / 2, hits = [];
@@ -255,7 +257,7 @@ try {
     await pg.click("#qlistBtn");                                                // the list again, the message still up (Tony's second shot)
     await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
     await pg.evaluate(() => document.activeElement?.blur());
-    await pg.mouse.move(w - 4, 790); await pg.waitForTimeout(500);
+    await pg.mouse.move(w - 4, 790); await settled(pg);
     const onTop = await pg.evaluate(() => ["#qlistBtn", "#code"].map(s => { const el = document.querySelector(s), r = el.getBoundingClientRect(); return !!document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest(s); }));
     assert.deepEqual(onTop, [true, true], "list button / code box under the dim");
     const open = [await lum("#qlistBtn"), await lum("#code")];
@@ -274,7 +276,7 @@ try {
     assert.deepEqual(await order(pg), CODES, "list is not file order on open");
     await pg.click("#qnext"); await opened(pg, nextOf(SALT));
     assert.deepEqual(await order(pg), CODES, "list moved after Next");
-    await pg.fill("#ans", "99"); await pg.click("#ansGo"); await pg.waitForTimeout(800);   // a wrong try re-ranks the queue, not the list
+    await pg.fill("#ans", "99"); await pg.click("#ansGo"); await pg.waitForSelector("#ff .vk[data-v=i-x]", { timeout: 5000 });   // graded: a wrong try re-ranks the queue, not the list
     assert.deepEqual(await order(pg), CODES, "list moved after answering");
     await pg.reload(); await pg.waitForFunction(() => document.querySelector("#pcode")?.textContent);
     assert.deepEqual(await order(pg), CODES, "list moved after a reload");

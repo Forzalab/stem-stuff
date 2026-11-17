@@ -18,6 +18,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 import { createServer } from "node:net";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { onEvent } from "./lib/wait.mjs";   // CI-ARCH D1: arm the app event before the action, await it after
 /* run-all.sh hands .pw scripts a base URL; this one starts its own server, so a number is the port, anything else a free one */
 const freePort = () => new Promise(r => { const s = createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => r(p)); }); });
 const PORT = /^\d+$/.test(process.argv[2] || "") ? +process.argv[2] : await freePort(), BASE = `http://localhost:${PORT}`;
@@ -61,17 +62,16 @@ async function press(page, tag, n) {
   if (before.hidden) return { ...before, moved: false, said: "", why: "nav hidden" };
   if (before.disabled) { await page.click("#qnext", { force: true, timeout: 1500 }).catch(() => {}); }
   else await page.click("#qnext", { timeout: 3000 });
-  const t0 = Date.now(); let moved = false, said = "";
-  while (Date.now() - t0 < 1200 && !moved && !said) {
-    await page.waitForTimeout(60);
-    const s = await page.evaluate(() => ({ code: document.querySelector("#pcode")?.textContent || "", toast: document.querySelector("#toast.on")?.textContent || "",
+  let moved = false, said = "";
+  /* wait on the answer state itself (a moved question or a visible reason), up to the same 1.2 s the poll had */
+  await page.waitForFunction(c => (document.querySelector("#pcode")?.textContent || "") !== c || !!document.querySelector("#toast.on")?.textContent || !!document.querySelector("#entryMsg")?.textContent, before.code, { timeout: 1200 }).catch(() => {});
+  { const s = await page.evaluate(() => ({ code: document.querySelector("#pcode")?.textContent || "", toast: document.querySelector("#toast.on")?.textContent || "",
       msg: document.querySelector("#entryMsg")?.textContent || "" }));
-    moved = s.code !== before.code; said = s.toast || s.msg;
-  }
+    moved = s.code !== before.code; said = s.toast || s.msg; }
   const after = await page.evaluate(() => ({ hash: location.hash, code: document.querySelector("#pcode")?.textContent || "" }));
   const r = { ...before, hashAfter: after.hash, codeAfter: after.code, moved, said };
   if (LOG) console.log(`      ${tag} #${n} hash ${before.hash || "-"} -> ${after.hash || "-"}  shown ${before.code || "-"} -> ${after.code || "-"}  disabled=${before.disabled}  ${moved ? "MOVED" : said ? "SAID " + JSON.stringify(said) : "SILENT"}`);
-  await page.waitForTimeout(150);
+  await settled(page);
   return r;
 }
 async function tenPresses(page, tag) {
@@ -108,8 +108,9 @@ try {
     await step(`${V}: DIET_BANK_P2X typed in the code box, Next 10x: every press moves`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
       await page.goto(BASE + "/#BANK_P2X"); await settled(page);
+      const reopened = onEvent(page, "drill:problem");
       await page.evaluate(() => { const i = document.querySelector("#code"); i.value = "DIET_BANK_P2X"; i.form.requestSubmit(); });
-      await page.waitForTimeout(800); await settled(page);
+      await reopened; await settled(page);
       const rows = await tenPresses(page, "DIET");
       assert.deepEqual(silent(rows).map(r => r.code), [], "silent presses");
       await ctx.close();
@@ -117,7 +118,7 @@ try {
 
     await step(`${V}: an uploaded file the page can open, Next 10x: every press moves`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 8000 });   // the start page is up (its upload button live)
       await upload(page, fineFile); await settled(page);
       const rows = await tenPresses(page, "UPLOAD");
       assert.deepEqual(silent(rows).map(r => r.code), [], "silent presses");
@@ -126,8 +127,9 @@ try {
 
     await step(`${V}: an uploaded file with custom codes and no bank flag: it says why (codes.mjs, prefix.pw.mjs has the rest)`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
-      await upload(page, oddFile); await page.waitForTimeout(1200);
+      await page.goto(BASE + "/"); await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 8000 });   // the start page is up (its upload button live)
+      await upload(page, oddFile);
+      await page.waitForFunction(() => /bank flag missing/i.test((document.querySelector("#toast.on")?.textContent || "") + " " + (document.querySelector("#entryMsg")?.textContent || "")), null, { timeout: 6000 });   // the reason landed
       const said = await page.evaluate(() => (document.querySelector("#toast.on")?.textContent || "") + "|" + (document.querySelector("#entryMsg")?.textContent || ""));
       if (LOG) console.log(`      ODD after upload: ${JSON.stringify(said)}`);
       assert.match(said, /bank flag missing/i, "an upload nothing of which opens said nothing");
@@ -136,7 +138,7 @@ try {
 
     await step(`${V}: a mixed upload (one good code, two that can't open): Next moves or says why, never silent`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
-      await page.goto(BASE + "/"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/"); await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 8000 });   // the start page is up (its upload button live)
       await upload(page, mixFile); await settled(page);
       const rows = await tenPresses(page, "MIX");
       assert.deepEqual(silent(rows).map(r => r.hash), [], "silent presses");
@@ -146,7 +148,7 @@ try {
     await step(`${V}: direct #CODE link of a question in the remembered bank: Next 10x moves`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
       await page.goto(BASE + "/#BANK_P2X"); await settled(page);
-      await page.goto(BASE + "/#PHYS_P05"); await opened(page, "PHYS_P05"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/#PHYS_P05"); await opened(page, "PHYS_P05"); await settled(page);
       const rows = await tenPresses(page, "DIRECT-IN");
       assert.deepEqual(silent(rows).map(r => r.code), [], "silent presses");
       await ctx.close();
@@ -155,7 +157,7 @@ try {
     await step(`${V}: direct #CODE link of a question NOT in the remembered bank: Next moves or says why`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
       await page.goto(BASE + "/#BANK_P2X"); await settled(page);
-      await page.goto(BASE + "/#PHYS_F3N"); await opened(page, "PHYS_F3N"); await page.waitForTimeout(500);
+      await page.goto(BASE + "/#PHYS_F3N"); await opened(page, "PHYS_F3N"); await settled(page);
       const rows = await tenPresses(page, "DIRECT-OUT");
       assert.deepEqual(silent(rows).map(r => r.code), [], "silent presses");
       await ctx.close();
@@ -178,7 +180,9 @@ try {
     await page.goto(BASE + "/#BANK_P2X"); await settled(page);
     await page.evaluate(() => { window.__swallow = 1; });
     const from = await pcode(page);
-    await page.click("#qnext"); await page.waitForTimeout(700);
+    const h0 = await page.evaluate(() => location.hash);
+    await page.click("#qnext");
+    await page.waitForFunction(h => location.hash !== h, h0, { timeout: 5000 });   // the press set the hash; its hashchange was swallowed
     assert.equal(await pcode(page), from, "the first press should have been swallowed");
     const hash = await page.evaluate(() => location.hash);
     await page.click("#qnext");
@@ -191,17 +195,17 @@ try {
     const ctx = await ctxFor(browser, { width: 393, height: 852 }), page = await ctx.newPage();
     await page.goto(BASE + "/#BANK_P2X"); await settled(page);
     await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 3000 });   // the list's dim has faded in: the bar is at rest
     const from = await pcode(page);
     const box = await page.evaluate(() => { const r = document.querySelector("#qnext").getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
     const moved = page.evaluate(() => new Promise(res => {
       const n = document.querySelector("#qnext"), y0 = n.getBoundingClientRect().y;
-      document.addEventListener("pointerdown", () => setTimeout(() => res(Math.abs(n.getBoundingClientRect().y - y0)), 120), { once: true });
+      document.addEventListener("pointerdown", () => setTimeout(() => res(Math.abs(n.getBoundingClientRect().y - y0)), 120), { once: true });   // keep: the 120 ms movement window is the measurement itself (a pointerdown'd bar must not slide)
     }));
     await page.touchscreen.tap(box.x, box.y);
     const d = await moved;
     if (LOG) console.log(`      LIST-OPEN next moved ${d}px after pointerdown; shown ${from} -> ${await pcode(page)}`);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(c => (document.querySelector("#pcode")?.textContent || "") !== c, from, { timeout: 5000 });   // the tap's next question is up
     assert.ok(d < 1, `Next slid ${d}px under the finger on pointerdown`);
     assert.notEqual(await pcode(page), from, "the tap did not move to another question");
     await ctx.close();
