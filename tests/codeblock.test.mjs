@@ -20,10 +20,10 @@ const lines = h => [...h.matchAll(/<span class="l" style="--ind:(\d+)">(.*?)<\/s
 
 test("a fenced cpp block is one codeblock: language tag, Copy, one span per real line with its indent", () => {
   const h = md(SRC);
-  assert.equal((h.match(/<figure class="cb"/g) || []).length, 1);
+  assert.equal((h.match(/<figure class="cb[ "]/g) || []).length, 1);
   assert.match(h, /aria-label="C\+\+ code"/);
   assert.match(h, /<span class="cb-lang">C\+\+<\/span>/);
-  assert.match(h, /<span class="cb-slot" aria-hidden="true"><\/span><button type="button" class="btn cb-copy" aria-label="Copy code"/);
+  assert.match(h, /<span class="cb-slot" aria-hidden="true"><\/span><button type="button" class="cb-wrap" aria-pressed="false">Wrap<\/button><button type="button" class="btn cb-copy" aria-label="Copy code"/);   // CB-NOWRAP: the Wrap toggle (off) sits before Copy
   const ls = lines(h);
   assert.equal(ls.length, 6, "6 real lines, the blank one too");
   assert.deepEqual(ls.map(l => l[0]), [0, 0, 2, 2, 0, 0]);

@@ -45,6 +45,12 @@ ROWS = [
     ("wrong prefix", "BANK_PSY6.json", {"v": 20261022, "problems": [_p(code="CALC1_A001")]}, None, ("warn", ["B-PREFIX"])),
     ("two faults", "BANK_ab.json", {"v": 20261022, "problems": [{k: v for k, v in GOOD.items() if k != "answer"}]}, None,
      ("fail", ["B-NAME", "B-SCHEMA"])),
+    # B-ASK (v >= 20261118): a clean situation + ask passes; no ask, a question in the setup, an ask that is setup all fail
+    ("ask clean", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="Compute 2 + 2.", body=[{"type": "text", "md": ["A sum of two twos.", "", "It is small."]}])]}, None, ("ok", [])),
+    ("ask missing", "BANK_PSY6.json", {"v": 20261118, "problems": [GOOD]}, None, ("fail", ["B-ASK"])),
+    ("question in setup", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="Find the sum.", body=[{"type": "text", "md": ["Using the Master Theorem, compute the running time:", "", "It calls itself 3 times"]}])]}, None, ("fail", ["B-ASK"])),
+    ("ask is setup", "BANK_PSY6.json", {"v": 20261118, "problems": [_p(ask="At each level it does O(N) work.")]}, None, ("fail", ["B-ASK"])),
+    ("old v not asked", "BANK_PSY6.json", {"v": 20261022, "problems": [GOOD]}, None, ("ok", [])),
 ]
 
 

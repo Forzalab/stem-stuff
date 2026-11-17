@@ -47,6 +47,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `v` | Requires | Check | Sunset for older banks |
 |---|---|---|---|
 | `20261022` | `form` on every `num` item and every `num` part (and the slip gate, design/HANDOFF-slips-v2.md rule 7) | `python3 tools/slips.py --strict` | `2026-11-05` |
+| `20261118` | `ask` on every problem: `body` = the situation only, `ask` = the question only (no bunching either way). Checker-only for now: `serve.CUTOFF` / `SUNSET` stay on the `20261022` row, so no bank is dropped or bannered for this row. | `python3 tools/bank_tools/bankcheck.py` (B-ASK) | none yet |
 
 ## Content rule (Tony, standing)
 - MINIMAL. Textbook language. State the givens and the ask, nothing else.
@@ -668,6 +669,11 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "items": {
             "$ref": "#/$defs/block"
           }
+        },
+        "ask": {
+          "type": "string",
+          "minLength": 3,
+          "description": "optional, the question itself: Markdown like a text block (plain text + $..$ + `code`), one or two sentences that ASK (\"Using the Master Theorem, compute the running time.\"). `body` is then only the situation (givens, code, figures), with no question in it. The card shows `ask` as the bold lead under the setup; with `ask` set nothing from `body` is promoted. No `ask` = the old rule: the last sentence of the last `body` paragraph is the lead. Required from v 20261118 (bankcheck B-ASK)."
         },
         "how": {
           "type": "string",

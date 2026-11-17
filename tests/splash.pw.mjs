@@ -13,7 +13,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 400)); }
 }
-const browser = await launchBrowser(pw, );
+const browser = await launchBrowser(pw, { motion: true });   // splash tests the fade + the mark animation (#636 default is reduce; the reduced step sets it per context)
 const fresh = async (opts = {}) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, ...opts });
   await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });

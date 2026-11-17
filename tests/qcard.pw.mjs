@@ -103,7 +103,7 @@ try {
         await page.waitForTimeout(150);
         const a = await page.evaluate(() => window.__ea);
         if (rm) assert.equal(a.length, 0, "reduced motion: no animation");
-        else { assert.equal(a.length, 6, "6 trail copies animate"); assert.ok(a.every(x => x.k === "opacity,transform"), JSON.stringify(a)); assert.ok(a.every(x => /transform/.test(x.wc)), "will-change while running"); }
+        else { assert.equal(a.length, 2, "the 2 shown copies animate (GHOST-ONE, Nov 17: the main numeral + one echo)"); assert.ok(a.every(x => x.k === "opacity,transform"), JSON.stringify(a)); assert.ok(a.every(x => /transform/.test(x.wc)), "will-change while running"); }
         await page.waitForTimeout(900);
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".qghost i")).willChange), "auto", "will-change dropped after");
       } finally { await page.context().close(); }
