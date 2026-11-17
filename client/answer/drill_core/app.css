@@ -429,7 +429,8 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
 .cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
 .cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
 .cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
-  padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + (var(--ind) + 2) * 1ch); text-indent: calc(-1 * (var(--ind) + 2) * 1ch); }
+  --hang: min(calc((var(--ind) + 2) * 1ch), 8ch);   /* CB-HANG-CAP (Tony Nov 16, phone: a deep continuation line wrapped into a 4-char sliver): the hang stops at 8ch */
+  padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + var(--hang)); text-indent: calc(-1 * var(--hang)); }
 .cb .l::before { content: counter(ln); position: absolute; left: var(--cbx); width: var(--g); text-indent: 0; text-align: right; color: var(--muted); user-select: none; -webkit-user-select: none; }
 .cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
 .cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
