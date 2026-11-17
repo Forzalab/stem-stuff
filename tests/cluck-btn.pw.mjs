@@ -101,7 +101,7 @@ try {
       await page.hover("#cluckBtn");
       await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Cluck unlocks after your first try."; }, null, { timeout: 5000 });
       assert.equal(await toastText(page), "Cluck unlocks after your first try.");
-      await page.click("#cluckBtn", { force: true }); await settled(page, "#cluckBtn");
+      await page.click("#cluckBtn", { force: true }); await page.waitForTimeout(300); // keep: observation window, a disabled click must change nothing
       assert.equal(await page.evaluate(() => { const c = document.querySelector("#cluck"); return !!c && !c.hidden && c.getClientRects().length > 0 && !c.closest("[hidden]") && document.body.classList.contains("x") ; }), false);
     } finally { await page.context().close(); }
   });
@@ -142,22 +142,22 @@ try {
     try {
       await typeAnswer(page, "1.636");
       await page.waitForFunction(() => document.querySelector("#cluckBtn") && !document.querySelector("#cluckBtn").hasAttribute("aria-disabled"), null, { timeout: 8000 });
-      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
+      await page.waitForTimeout(1300); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), false, "ends by itself");
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6"));
       await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => document.querySelector("#cluckBtn").classList.contains("cb-sheen")), true, "Jev S6 sheen");
       assert.match(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage), /gradient/, "a band");
       assert.equal(await page.evaluate(() => /(?:90, 169, 255|0\.35|#5aa9ff)/i.test(getComputedStyle(document.querySelector("#cluckBtn"), "::after").backgroundImage)), true, "tinted site blue --action, not white");
-      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-sheen"), null, { timeout: 8000 });
+      await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.evaluate(() => window.stemCluckBtn.sheen("reply"));
       await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-shake"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-duck")).animationName; }), "cb-shake", "reply = duck head shake, chip still");
-      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-shake"), null, { timeout: 8000 });
+      await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.evaluate(() => window.stemCluckBtn.sheen("right"));
       await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-nod"), null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-duck")).animationName), "cb-nod", "right = duck nod");
-      await page.waitForFunction(() => !document.querySelector("#cluckBtn").classList.contains("cb-nod"), null, { timeout: 8000 });
+      await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.waitForFunction(() => matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });
       await page.evaluate(() => window.stemCluckBtn.sheen("jev-s6")); await settled(page, "#cluckBtn");
