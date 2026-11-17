@@ -1913,3 +1913,7 @@ html.ui-v7 .cb-hd { background: color-mix(in srgb, #060b1b 50%, var(--card)); } 
 .cb-wrap[aria-pressed="false"] { text-decoration-line: none; }
 .cb-wrap[aria-pressed="true"] { color: var(--ink); }
 .cb-copy .ico { width: 16px; height: 16px; }
+/* CB-FLOAT (Tony Nov 17, ref: a floating editor-window snippet; Refactoring UI shadows: two layers = a tight, darker one for the edge + a large soft one for
+   the lift; on a near-black page they must be deep to read). Apple squircle on every v7 code block (was #q only). A choice row's block stays flat. */
+html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .55), 0 2px 6px rgb(0 0 0 / .35), 0 18px 40px -10px rgb(0 0 0 / .75); }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(1.52); } }
