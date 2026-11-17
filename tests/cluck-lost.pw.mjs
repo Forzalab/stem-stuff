@@ -3,6 +3,7 @@
 // line and the empty gap a dropped figure left, and ends on ONE line "Cluck lost signal. Tap to retry." whose tap asks /explain again.
 // 1280 (the box is open from load) + 393 (the tray's Ask Cluck opens it). Own serve.py, /explain mocked by page.route (no model call).
 //   node tests/cluck-lost.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -10,6 +11,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -34,7 +36,7 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const w of [1280, 393]) {
   await step(`@${w}: a reply that dies mid-way ends on one clean "Cluck lost signal. Tap to retry." line; the tap asks again`, async () => {
     const phone = w < 500;
@@ -46,13 +48,13 @@ for (const w of [1280, 393]) {
     const errs = []; page.on("pageerror", e => errs.push(String(e)));
     await page.goto(BASE + "/#BANK_CLS");
     await page.waitForFunction(() => !document.getElementById("splash") && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
-    await page.waitForTimeout(400);
+    await settled(page, "#q");
     await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
     await page.waitForFunction(() => asks => true, null, { timeout: 3000 });
     if (phone) { await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 }); await page.click(".vdrawer .wchip"); }
     await page.click("#cluck .wtext").catch(() => {});                 // a tap skips the typing
     await page.waitForFunction(() => /lost signal|stopped early|2n/.test(document.querySelector("#cluck .wtext")?.innerText || ""), null, { timeout: 8000 });
-    await page.waitForTimeout(800);
+    await page.waitForSelector("#cluck .wlost .wretry", { state: "visible", timeout: 8000 });
     const t = await page.evaluate(() => document.querySelector("#cluck .wtext").innerText);
     await page.screenshot({ path: join(SHOTS, `cluck-lost-${w}.png`) });
     assert.match(t, /Cluck lost signal\. Tap to retry\./, "the clean line: " + t);
@@ -62,8 +64,9 @@ for (const w of [1280, 393]) {
     assert.ok(!/stopped early/.test(t), "the server's stopped-early line goes: " + t);
     assert.ok(!/\n\s*\n\s*\n/.test(t), "no empty gap: " + JSON.stringify(t));
     const before = asks;
+    const again = page.waitForRequest("**/explain", { timeout: 8000 });
     await page.click("#cluck .wlost .wretry");
-    await page.waitForTimeout(800);
+    await again;
     assert.equal(asks, before + 1, "the tap asks /explain again");
     assert.deepEqual(errs, [], "no page errors");
     await ctx.close();

@@ -3,6 +3,7 @@
 // front bank's PE3 questions in exam order (title "X3 Q<n> ..., practice" until exam_q / twins land), ONE try each, no hint / Cluck
 // peek / reveal; then the score line, and each miss comes back in exam order with the normal flow (hint, a second try, Cluck).
 // A fixture bank stands in for BANK_P3X. Starts its own serve.py with a throwaway banks/ folder:   node tests/mock.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -45,7 +46,7 @@ async function answer(page, v) {
   const n = await tries(page);
   await page.fill("#ans", v); await page.click("#ansGo");
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 4000 });
-  await page.waitForTimeout(1200);                                  // past the wrong-answer peek's ~0.7 s
+  await page.waitForTimeout(1200);                                  // keep: app timer the wrong-answer peek's ~0.7 s (this run asserts no duck after it)
 }
 const look = page => page.evaluate(() => ({
   closed: document.querySelector("#q").classList.contains("closed"),
@@ -55,7 +56,7 @@ const look = page => page.evaluate(() => ({
   duck: !!document.querySelector(".ck-rise.on:not([hidden]):not(.out)"),
 }));
 const next = page => page.click("#qnext");
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
   await ctx.addInitScript(s => { try {
@@ -120,7 +121,7 @@ try {
       await night(t);
       await load("PHYS_MQ2");
       await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ2", null, { timeout: 8000 });
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(600);   // keep: app timer nav.js's startMock (setTimeout once the first question opened; these nights must start no mock)
       assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), null, t);
       assert.equal(await page.evaluate(() => window.stemMock.state()?.done), true, t + ": the finished mock restarted");
     }
@@ -132,7 +133,7 @@ try {
       await night(t);
       await load("PHYS_MQ2");
       await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ2", null, { timeout: 8000 });
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(600);   // keep: app timer nav.js's startMock (setTimeout once the first question opened; these nights must start no mock)
       assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), null, t + ": a night mock started");
       assert.equal(await page.evaluate(() => window.stemMock.state()?.done), true, t + ": the finished mock restarted");
     }
@@ -140,7 +141,7 @@ try {
   await step("a night mock already running (started before the switch) ends on the next load: normal tries; ?mock=1 alone keeps going", async () => {
     await night("2026-11-03T19:00:00");
     await page.goto(BASE + "/?mock=1"); await opened(page, "PHYS_MQ1");
-    await load("PHYS_MQ1"); await page.waitForTimeout(600);
+    await load("PHYS_MQ1"); await page.waitForTimeout(600);   // keep: app timer nav.js's startMock (the night-mock check runs on a timer after the first question opened)
     assert.equal(await page.evaluate(() => window.stemMock.on()), true, "a ?mock=1 mock (no night key) ended");
     await page.evaluate(() => localStorage.setItem("stem-mock-night", "2026-11-03"));   // the night's key: this mock was the night's
     await load("PHYS_MQ1");

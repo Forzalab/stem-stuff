@@ -64,7 +64,7 @@ jobs:
         run: |
           mkdir -p res; echo "${{ steps.run.outcome == 'success' && 'pass' || 'fail' }}" > res/result
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: leg-${{ matrix.sha }}
           path: res/result
@@ -77,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { ref: "${{ inputs.to }}", fetch-depth: 0 }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { pattern: leg-*, path: res }
       - env:

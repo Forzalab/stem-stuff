@@ -2,6 +2,7 @@
 // disabled for 10 s (typed Check, choose-all Check); a single MC's live, un-picked options each drain 100% -> 0% (no ring). One neutral subtle tone, no blue (Tony Nov 5). Diet: no wait. Reload mid-wait: keeps the deadline (sessionStorage stem-wait). Reduced motion: no sweep.
 // /check is answered by the test (route); page.clock moves Date / timers (CSS animations run in real time).
 //   STEM_TODAY=2026-10-23 python3 serve.py 8813 &   then   STEM_TODAY=2026-10-23 node tests/retry-wait.pw.mjs http://localhost:8813
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { jump } from "./lib/clock.mjs";
@@ -47,7 +48,7 @@ async function typedFirstWrong(page, code = "CALC1_T6B") {
   await page.fill("#ans", "1"); await page.click("#ansGo"); await graded(page, 1);
 }
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 
 await step("(a) typed num: wrong -> Check is a disabled CCW sweep for 10 s", async () => {
   const page = await mk(b); await typedFirstWrong(page);

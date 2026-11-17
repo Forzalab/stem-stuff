@@ -169,7 +169,7 @@ try {
     await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
     assert.ok(await conquer(p, "Q3"), "Q3 conquered");
     await p.evaluate(() => window.Rewards.render(0));
-    await p.waitForTimeout(1200);
+    await p.waitForTimeout(1200);   // keep: observation window (config stage:false must toast nothing; no positive condition to wait on, the assert below is the check)
     assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on")), false, "config stage:false = no stage toast");
     await c.close();
   });

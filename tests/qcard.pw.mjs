@@ -2,6 +2,7 @@
 // ONE text block (setup + the question sentence; scrolls inside past a max height, no Show all), meta row (exam . q#, Twist chip, answer hint). Ask Cluck top right, SOLID (opaque, no border)
 // and never over the numeral's front copy. The echo animates on prev/next (transform + opacity only, will-change only while it runs, none under reduced motion). Flag off: untouched.
 // Own serve.py + throwaway bank.   node tests/qcard.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -30,7 +31,7 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 async function open(w, flag, code) {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 1, serviceWorkers: "block" });

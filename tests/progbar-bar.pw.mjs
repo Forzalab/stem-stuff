@@ -2,6 +2,7 @@
 // (back + list), notch tile (7 notches from stem-pb:<bank>, P4), nav tile (prev + next) at the v9d numbers (fit06/MEASURE.md V9D-POLISH), no h-scroll,
 // hit targets >= 44, notches never under 12 wide (INTEG B1), iOS back replaces the list icon. Smoke size, feature-local. Own serve.py, throwaway bank.
 //   node tests/progbar-bar.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -64,7 +65,7 @@ const geo = p => p.evaluate(() => {
 });
 const states = p => p.evaluate(() => [...document.querySelectorAll("#pbTile .pb-n")].map(e => e.className.replace("pb-n ", "")));
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   await step("flag OFF: nav DOM untouched (no tile, no wrappers, 4 buttons straight under #qnav), buttons keep the live 48px", async () => {
     const [c, p] = await fresh(browser, "off");
@@ -170,7 +171,8 @@ try {
     await q.waitForSelector("#pbTile", { timeout: 8000 });
     assert.equal(await q.evaluate(() => localStorage.getItem("stem-ui")), "v7");
     await q.goto(BASE + "/#BANK_PB1"); await q.waitForSelector("#pbTile", { timeout: 8000 });                      // remembered
-    await q.goto(BASE + "/?ui=off#BANK_PB1"); await q.waitForSelector("#qnav", { state: "attached" }); await q.waitForTimeout(400);
+    await q.goto(BASE + "/?ui=off#BANK_PB1"); await q.waitForSelector("#qnav", { state: "attached" });
+    await q.waitForFunction(() => !document.documentElement.classList.contains("ui-v7") && !document.querySelector("#pbTile"), null, { timeout: 5000 });   // the exact state the assert reads
     assert.equal(await q.evaluate(() => [document.documentElement.classList.contains("ui-v7"), !!document.querySelector("#pbTile")]).then(a => a.join()), "false,false");
     await c2.close();
   });

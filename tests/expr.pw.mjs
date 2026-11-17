@@ -3,6 +3,7 @@
 // syntax slip a friendly line (no try); the working renders live under the box with its own value dim "(= ...)"; a wrong working opens
 // Cluck with the 6 moves (L3 from a fake Claude on a local port) and underlines the off span. EXPR_MODE off: today's box.
 // 390x844, 1440x900, 1366x768. Starts its own serve.py (two: flag on / off) + the fake Claude:   node tests/expr.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -82,7 +83,7 @@ const labelUp = (page, want) => page.waitForFunction(want => {
 /* the grey hint line steps aside while the label floats (app.css #q:has(.ff input...) > .how), no transition: wait on its display */
 const hintBack = page => page.waitForFunction(() => getComputedStyle(document.querySelector("#q .how")).display !== "none", null, { timeout: 5000 });
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const [w, h] of [[390, 844], [1440, 900], [1366, 768]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });

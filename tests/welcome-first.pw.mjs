@@ -1,5 +1,6 @@
 // The once-per-user welcome redirect (welcome-first.js; Tony Nov 6): during the cram window a first visit on a deep link goes to the start (the welcome item) once.
 // Own serve.py with a fixture BANK_P3X (welcome item) + BANK_OTH1:  node tests/welcome-first.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -31,7 +32,7 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const FLAG = "cram-welcome-2026-11";
 // Pin the page clock inside welcome-first.js's window (2026-11-05T08:00Z..2026-11-10T07:59:59Z): the real clock made this spec go red after the window ended.
 const PIN = new Date(process.env.WELCOME_PIN || "2026-11-07T12:00:00Z");
@@ -55,8 +56,9 @@ try {
     const ctx = await newCtx();
     await ctx.addInitScript(() => { window.__welcomeFirst = true; });
     const page = await ctx.newPage();
+    const posted = page.waitForResponse(r => r.request().method() === "POST" && /\/calc$/.test(r.url()), { timeout: 8000 }).catch(() => null);   // mark()'s POST /calc {welcomed:true}
     await page.goto(BASE + "/#OTH_W01"); assert.equal(await code(page), "PHYS_PWQ1");
-    await page.waitForTimeout(400);
+    assert.ok(await posted, "the welcomed flag reached the server");
     await page.evaluate(k => localStorage.removeItem(k), FLAG);
     await page.goto(BASE + "/#OTH_W01"); await page.reload();
     assert.notEqual(await code(page), "PHYS_PWQ1", "the server remembered");

@@ -2,6 +2,7 @@
 // the choice's VALUE, never its letter); once a later turn exists, an earlier WRONG reply folds under its line (the line toggles it);
 // the latest reply and every right one stay open. Also: the busy ring's rim follows the field's radius (--ask-r) at 390 and 1280.
 // Own serve.py + a stub OpenRouter (as cluck-more.pw.mjs).   node tests/cluck-history.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -10,6 +11,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state, not on time
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -49,7 +51,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const pick = async (page, id) => {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
@@ -71,7 +73,7 @@ async function flow(vp) {
   await page.click(".cue-ok");                                            // See Cluck's steps: the sheet opens, the right reply comes under the miss
   await page.waitForFunction(() => document.querySelectorAll("#cluck .cl-st").length === 2, null, { timeout: 5000 });
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .cl-cmp .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await settled(page, "#cluck");
   return page;
 }
 for (const [tag, vp] of [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 800 }]]) {
@@ -99,7 +101,8 @@ for (const [tag, vp] of [["390", { width: 390, height: 844 }], ["1280", { width:
     await page.evaluate(() => setInterval(() => document.querySelector("#cluck").classList.add("wbusy"), 16));   // clAsk() may clear it: keep it on
     const r = await page.evaluate(() => { const a = document.querySelector("#cluck .ask"), c = getComputedStyle(a); return { v: c.getPropertyValue("--ask-r").trim(), r: c.borderBottomLeftRadius + "/" + c.borderTopLeftRadius }; });
     assert.ok(r.v !== "", "--ask-r is set on the field: " + JSON.stringify(r));
-    await page.waitForTimeout(500);
+    await page.waitForSelector("#cluck.wbusy", { timeout: 5000 });
+    await settled(page, "#cluck");
     await page.screenshot({ path: join(SHOTS, `w2-ring-${tag}.png`), clip: { x: 0, y: vp.height - 130, width: vp.width, height: 130 } });
     await page.context().close();
   });
@@ -115,11 +118,11 @@ async function openAt(vp, code) {
   await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   await page.evaluate(c => { location.hash = "#" + c; }, code);
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !!document.querySelector("#q .opt"), code, { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await settled(page, "#q");
   return page;
 }
 async function sheetLine(page) {
-  await page.waitForTimeout(2500);                                       // the prefetch has started (the line needs the try, not the reply)
+  await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000, polling: 100 });   // the prefetch has finished (the line needs the try, not the reply)
   await page.evaluate(() => window.stemIdleTap());
   await page.waitForFunction(() => window.stemCluckOpen() && !!document.querySelector("#cluck .cl-st"), null, { timeout: 5000 });
   return page.evaluate(() => { const st = document.querySelector("#cluck .cl-st"), b = st.querySelector(".cl-st-b"), r = b.getBoundingClientRect(), cs = getComputedStyle(b);

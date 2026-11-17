@@ -1,5 +1,6 @@
 // The loading splash (docs/design/SPLASH.md). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/splash.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -12,7 +13,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 400)); }
 }
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 const fresh = async (opts = {}) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, ...opts });
   await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
@@ -126,7 +127,7 @@ await step("pageshow persisted: no splash (while loading, and after)", async () 
   const c2 = await fresh(), p2 = await c2.newPage();
   await p2.goto(BASE + "/", { waitUntil: "load" }); await gone(p2, 4000);
   await p2.evaluate(() => dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
-  await p2.waitForTimeout(100);
+  await p2.waitForSelector("#splash", { state: "detached", timeout: 3000 }).catch(() => {});   // the pageshow handler removes it; the assert below is the judge
   assert.equal(await p2.locator("#splash").count(), 0);
   await c2.close();
 });

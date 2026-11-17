@@ -2,6 +2,7 @@
 // Check sends it to Cluck's grader (POST /check -> serve.py proof_grade -> one OpenRouter JSON call, stubbed here), the page shows one verdict
 // chips (base | assume | prove) and Cluck's hint; 3 Checks; sugar shows the reference proof after the last one.
 // Starts its own serve.py with a throwaway banks/ folder and a stub grader:   node tests/proof.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -11,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -55,12 +57,12 @@ async function prove(page, text) {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.fill("#ans", text); await page.click("#ansGo");
   await page.waitForFunction(n => window.__drill.state.tries.length > n || document.querySelector("#fb .verdict.wait"), n, { timeout: 6000 });
-  await page.waitForTimeout(300);
+  await settled(page);                                                           // the verdict line, its chips and the drawer have drawn
 }
 const chips = page => page.$$eval("#rubric .rb", xs => xs.map(x => x.dataset.v));
 const GOOD = "Base case: n = 1, both sides are 2.\nAssume it for k.\nAdd 3k+2 and factor: (k+1)(3k+4)/2.";
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(mode, viewport = { width: 1280, height: 860 }) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
@@ -110,9 +112,11 @@ try {
   });
   await step("a proof that carries an authored ladder never shows it after a miss: no #rpHost, no step, no check mark, no authored key on the wire", async () => {
     const { ctx, page, errs } = await open("diet");
-    const bodies = []; page.on("response", async r => { if (/\/(check|repair)/.test(r.url())) bodies.push(await r.text().catch(() => "")); });
+    const bodies = []; let bodyRead; const checked = new Promise(ok => { bodyRead = ok; });
+    page.on("response", async r => { if (/\/(check|repair)/.test(r.url())) { bodies.push(await r.text().catch(() => "")); bodyRead(); } });
     await prove(page, "NOBASE " + GOOD);
-    await page.waitForTimeout(600);
+    await checked;                                                               // the /check reply body is in `bodies` (what the LEAK assert reads)
+    await settled(page);                                                         // and the verdict is drawn: a ladder mount would show by now
     assert.equal(await page.$$eval("#rpHost, .rp-val, .rp-ok, .rp-step", x => x.length), 0, "a repair ladder mounted on a proof miss");
     assert.equal((await fetch(BASE + "/repair/" + CODE)).status, 404);
     assert.ok(!bodies.some(b => /LEAK/.test(b)), "an authored answer reached the browser");
@@ -156,7 +160,9 @@ for (const mode of ["diet", "sugar"]) {
     const { ctx, page, errs } = await open(mode, { width: 390, height: 844 });
     const b = await nearestBordered(page, "#ans");
     assert.ok(b && b.inWork && !b.inFreeze, "nested box: nearest bordered ancestor = " + JSON.stringify(b));
-    await page.focus("#ans"); await page.waitForTimeout(100);                     // the split is for typing (Nov 8): unfocused = the proof page, no sash
+    await page.focus("#ans");
+    await page.waitForFunction(() => document.querySelector("#sash")?.getBoundingClientRect().height > 0, null, { timeout: 5000 });   // the split is for typing (Nov 8): unfocused = the proof page, no sash
+    await settled(page, "#problem, #ans, #sash");
     const [pr, ta, sh] = [await rect(page, "#problem"), await rect(page, "#ans"), await rect(page, "#sash")];
     assert.ok(ta.t >= pr.b - 1, `proof pane is not below the question: ${JSON.stringify({ pr, ta })}`);
     assert.ok(sh.h > 0 && sh.t >= pr.b - 1 && sh.b <= ta.t + 1, "the sash is not between the question and the proof pane: " + JSON.stringify(sh));
@@ -199,7 +205,9 @@ for (const [w, h] of [[390, 700], [360, 640]]) {
     await page.waitForSelector("#rpHost .rp-skip");
     await page.$eval("#work", e => { e.scrollTop = e.scrollHeight; });
     await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));   // not typing (Nov 8): the proof page, the page scrolls
-    await page.waitForTimeout(100);
+    await page.waitForFunction(() => { const w = document.querySelector("#work");
+      return w.scrollTop + w.clientHeight >= w.scrollHeight - 1 && scrollY + innerHeight >= document.documentElement.scrollHeight - 1; }, null, { timeout: 5000 });   // both scrollers are at their end: what the hit test must see
+    await settled(page);
     const hit = await page.evaluate(() => {
       const vh = innerHeight, steps = [...document.querySelectorAll("#rpHost .rp-step")], out = {};
       for (const [k, el] of [["last", steps.at(-1)], ["skip", document.querySelector("#rpHost .rp-skip")]]) {
@@ -239,7 +247,7 @@ await step("393 phone: drag the sash down past a short proof question -> the til
   const sh = await rect(page, "#sash"), x = sh.l + sh.w / 2, y = sh.t + sh.h / 2;
   await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + 40, { steps: 4 });
   await page.mouse.move(x, 852 * 0.5 + 20, { steps: 8 }); await page.mouse.up();
-  await page.waitForTimeout(500);
+  await settled(page, "#problem, #sash");                                     // the release's snap-back (a view transition under motion, instant under reduce) is done
   const h1 = await h();
   assert.ok(h1 <= h0 + 8, `after dragging down the tile keeps empty space: ${h1}px vs its content ${h0}px`);
   await ctx.close();

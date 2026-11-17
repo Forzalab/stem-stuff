@@ -2,6 +2,7 @@
 // Tokyo Night token classes, a number per real line, a long line wraps hanging under its indent, the header shows the language,
 // Copy (>= 44px) copies the raw code and shows i-ok for ~2 s, no KaTeX inside code. Starts its own serve.py with a throwaway bank.
 //   node tests/codeblock.pw.mjs [port] [shots dir: also saves 360 / 390 / 1280 screenshots there]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: fonts.ready + painted frames, not 150 ms
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -62,7 +64,7 @@ function measure() {
   };
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const width of [360, 390, 1280]) {
     const phone = width < 700;
@@ -72,7 +74,7 @@ try {
     await page.goto(`${BASE}/#CSCI26_CB1`);
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CSCI26_CB1" && document.querySelector("#blocks .cb"), null, { timeout: 8000 });
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(150);
+    await settled(page, "#blocks .cb");
     if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, `codeblock-${width}-v2.png`), fullPage: true }); }
     if (width === 390) { await ctx.close(); continue; }                 // 390: the screenshot only
     const m = await page.evaluate(measure);
@@ -97,9 +99,9 @@ try {
     check(got === CODE, `${at} Copy copies the raw code`);
     if (got !== CODE) console.log(JSON.stringify(got));
     if (SHOTS && width === 360) await page.screenshot({ path: join(SHOTS, "codeblock-360-copied-v2.png") });
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);   // keep: app timer — the "copied" tick lives ~2 s, so 1.5 s must still show it
     check(await page.$eval("#blocks .cb-copy use", u => u.getAttribute("href")) === "#i-ok", `${at} still "copied" at 1.5 s`);
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(800);   // keep: app timer — past the tick's lifetime (~2 s), back to Copy
     check(await page.$eval("#blocks .cb-copy use", u => u.getAttribute("href")) === "#i-copy", `${at} back to Copy after ~2 s`);
     check(await page.$$eval("#q .opt", os => os.every(o => o.getAttribute("aria-checked") === "false")), `${at} Copy picks no choice`);
     await ctx.close();

@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: animations + 2 painted frames, not fixed 50-300 ms
 import { qNew, qPick, qShow } from "../client/pure_logic_modules/shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
@@ -57,13 +58,13 @@ async function run(browserType, label, opts = {}) {
     };
     /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (docs/design/MULTITASK.md) */
     const padPage = async () => { if (vname !== "phone") return; await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt"));
-      await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running")); await page.waitForTimeout(50); };   // measure the settled pad page, not its crossfade (CI red once, docs/design/TESTING.md)
+      await settled(page); };   // measure the settled pad page, not its crossfade (CI red once, docs/design/TESTING.md)
 
     for (const code of CODES) {
       await step(`${label} ${vname} ${code}: renders TeX, no raw TeX visible`, async () => {
         await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
         await page.waitForSelector("#blocks > *", { timeout: 8000 });
-        await page.waitForTimeout(300);
+        await settled(page, "#freeze");
         const n = await page.locator("#freeze .katex").count();
         assert.ok(n > 0, `no .katex in ${code}`);
         // visible text only: KaTeX's MathML copy (.katex-mathml) is screen-reader-only and holds the TeX source on purpose
@@ -94,7 +95,7 @@ async function run(browserType, label, opts = {}) {
         for (const code of ["CALC1_X2P", "CSCI26_M5V", "CALC1_T6B"]) {
           await open(code);
           for (const h of [600, 500, 400, 320]) {
-            await page.setViewportSize({ width: viewport.width, height: h }); await page.waitForTimeout(150);
+            await page.setViewportSize({ width: viewport.width, height: h }); await settled(page, "#q");
             assert.ok(await page.locator("#more").isHidden(), `${code} at ${h}px: pull-tab shown`);
             assert.ok(!(await page.evaluate(() => document.querySelector("#freeze").classList.contains("clipped"))), `${code} at ${h}px: clipped`);
           }
@@ -174,7 +175,7 @@ async function run(browserType, label, opts = {}) {
       await ta.click();
       await ta.fill(Array.from({ length: 60 }, (_, i) => `line ${i + 1}: resolve mg along the slope, then balance with kx.`).join("\n"));
       await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(250);
+      await settled(page, "#freeze");
       const r = await page.evaluate(() => {
         const f = document.querySelector("#freeze").getBoundingClientRect();
         const q = document.querySelector("#q").getBoundingClientRect();
@@ -219,7 +220,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(d.w >= Math.min(viewport.width - 40, 600), `entry not wide: ${d.w}`);
       // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1_T6B");
-      await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
+      await page.evaluate(() => scrollTo(0, 1e5)); await settled(page);
       const o = await page.evaluate(() => {
         const a = document.querySelector("#dock").getBoundingClientRect(), hit = s => { const r = document.querySelector(s).getBoundingClientRect(); return r.bottom > a.top && r.top < a.bottom && getComputedStyle(document.querySelector("#dock")).position === "fixed"; };
         return { copy: hit("#copy"), scratch: hit("#scratch") };
@@ -379,7 +380,7 @@ async function run(browserType, label, opts = {}) {
       await prev.click(); await at(codes[2]);
       // no keyboard shortcuts (Tony, Oct 2 ~23:59 PT: "kill key shortcut"): [ and ] do nothing outside fields
       await page.locator("#problem").click();
-      await page.keyboard.press("]"); await page.waitForTimeout(150);
+      await page.keyboard.press("]"); await settled(page);
       assert.equal(await page.locator("#pcode").textContent(), codes[2], "] still navigates");
       // Next after Prev steps forward through what was shown; the last row: Next still works (the queue never runs dry)
       await next.click(); await at(up);
@@ -581,13 +582,13 @@ async function run(browserType, label, opts = {}) {
         if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: `${SHOTS}/pad-long-390.png` }); }
         // a smaller visible area (keyboard, address bar) re-caps the box
         await page.setViewportSize({ width: 390, height: 520 });
-        await page.waitForTimeout(250);
+        await settled(page, "#scratch");
         g = await geo();
         assert.ok(g.bottom <= g.limit + 0.5, `after resize: textarea bottom ${g.bottom} > visible bottom ${g.limit}`);
         assert.ok(g.h >= 4 * 1.6 * 18, `below 4 rows: ${g.h}`);
         if (SHOTS) await page.screenshot({ path: `${SHOTS}/pad-short-390x520.png` });
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.waitForTimeout(250);
+        await settled(page, "#scratch");
         // Copy is visible in the box's bottom-right corner (the only button there: Cut all is gone, clutter C10)
         const vis = await page.evaluate(() => { const r = document.querySelector("#copy").getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 && r.bottom <= t.bottom && r.right <= t.right; });
         assert.ok(vis, "Copy not in the box's corner");

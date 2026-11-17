@@ -3,6 +3,7 @@
 // A fake clock (Playwright clock) runs the minutes; the CSS run is jumped to its end (getAnimations().finish()). Phone + desktop,
 // motion + reduce. Own serve.py + banks folder, never the student's real tries.json.
 //   node tests/idle-peek.pw.mjs <port>      (starts its own serve.py on that port)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -34,7 +35,7 @@ async function step(name, fn) {
 const MIN = 60000;
 const WIDE = { width: 700, height: 900 };   // BIG PLAN V1 (Tony Nov 2): desktop sugar (>= 720) has Cluck open for good, so the duck never rises there. The mouse flows run at 700: a mouse, the one-column layout, just under the side-by-side breakpoint
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 
 /* a page on a fake clock; errors collected; /explain and /chat counted (a tap must never call the AI) */
 async function open(o = {}) {

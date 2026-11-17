@@ -2,6 +2,7 @@
 // (this browser's pointer, else the server's), upload vs bank, unknown bank, the old-bank banner (SCHEMA.md Version table).
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/bank.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -54,6 +55,8 @@ async function step(name, fn) {
 }
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), code, { timeout: 8000 });
+/* the page has booted: the splash goes when the fonts, the saved-bank restore (stemOffline.ready) and the #CODE problem are done (index.html) */
+const boot = page => page.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
 async function typeCode(page, code) {
   await showCode(page);
   await page.fill("#code", code); await page.press("#code", "Enter");
@@ -61,7 +64,7 @@ async function typeCode(page, code) {
 const label = page => page.getAttribute("#qlistBtn", "title");   // which bank or file is live (the button says the bank code, or "Questions" for a file)
 const rowTexts = async page => { if (await page.isHidden("#qlist")) await page.click("#qlistBtn"); return page.$$eval("#qlist a", as => as.map(a => a.textContent.trim())); };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const [vname, viewport] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1920, height: 1080 }]]) {
     const ctx = await browser.newContext({ viewport, serviceWorkers: "block", hasTouch: vname === "phone", isMobile: vname === "phone" });
@@ -70,7 +73,7 @@ try {
     const watch = watchBank(page);   // every bank incident line and page error of this viewport
 
     await step(`${vname}: new browser = blank page, no list`, async () => {
-      await page.goto(BASE + "/"); await page.waitForTimeout(600);
+      await page.goto(BASE + "/"); await boot(page);
       assert.ok(await page.isHidden("#qnav"), "nav shown with no bank");
       assert.ok(await page.isHidden("#freeze"), "a problem opened with no bank");
     });
@@ -131,7 +134,7 @@ try {
       await opened(page, "CALC1_U01");
       assert.equal(await label(page), "mine.json");
       assert.equal(await page.$("#qlist .bank-banner"), null, "the bank's banner outlived the bank");
-      await page.goto("about:blank"); await page.goto(BASE + "/"); await page.waitForTimeout(1200);
+      await page.goto("about:blank"); await page.goto(BASE + "/"); await boot(page);
       assert.ok(!/^CALC1_B/.test(await page.textContent("#pcode")), "the bank took over after an upload");
       await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_U02"); await opened(page, "CALC1_U02");
       assert.equal(await label(page), "mine.json");
@@ -160,7 +163,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, serviceWorkers: "block" });
     const page = await ctx.newPage();
     const watch = watchBank(page);
-    await page.goto(BASE2 + "/"); await page.waitForTimeout(600);
+    await page.goto(BASE2 + "/"); await boot(page);
     await typeCode(page, "bank ab12");
     await page.waitForFunction(() => /must be updated by/.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 4000 });
     assert.deepEqual(watch.lines.map(j => [j.where, j.reason, j.status]), [["bank", "dropped", 200]], "want one dropped line: " + JSON.stringify(watch.lines));
