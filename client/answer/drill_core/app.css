@@ -322,6 +322,17 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 .choices.waiting .opt[data-w]:not(:disabled, .wrong) { cursor: default; background-image: linear-gradient(to right, var(--wait-fill) var(--drain), transparent 0); animation: drain 10s linear var(--wd, 0s) forwards; }
 /* the miss's x (the strip's way back to the drawer) stays up in the same slot during the wait: the sweep is the bar, its arrow steps aside so the x never sits on it */
 #q:has(.ff > .vk[data-v="i-x"]) #ansGo.waiting .ico { visibility: hidden; }
+/* grading wait (app.js setBusy -> html.grading, 150 ms after the tap; Tony Nov 17): the Check button dims and its arrow gives way to a spinning
+   ring, so a slow grade never looks like a dead tap. A multi-part item: only the part being graded (.g-on). Reduced motion: the ring pulses. */
+html.grading #q .send { opacity: .7; cursor: progress; }
+html.grading #q .send > :is(.ico, svg) { visibility: hidden; }
+html.grading #q .send::after { content: ""; position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 25%, currentColor 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); pointer-events: none;   /* a painted ring, not a border (STYLE.md 2.6 keeps borders at --bw) */ animation: grade-spin .8s linear infinite; }
+html.grading #q .mparts .part:not(.g-on) .send { opacity: 1; cursor: pointer; }
+html.grading #q .mparts .part:not(.g-on) .send > :is(.ico, svg) { visibility: visible; }
+html.grading #q .mparts .part:not(.g-on) .send::after { content: none; }
+@keyframes grade-spin { to { transform: rotate(360deg); } }
+@keyframes grade-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { html.grading #q .send::after { background: currentColor; animation: grade-pulse 1.2s ease-in-out infinite; } }
 @media (prefers-reduced-motion: reduce) { .btn-go.waiting::before, .choices.waiting .opt[data-w]:not(:disabled, .wrong) { animation: none; } }
 .btn[hidden] { display: none; }
 

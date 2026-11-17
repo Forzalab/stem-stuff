@@ -103,6 +103,25 @@ try {
     });
     await ctx.close();
   }
+  /* the wait shows (Tony, Nov 17: a slow grade looked like a dead tap). /check is HELD until the test lets go, so nothing here is a race:
+     html.grading comes 150 ms after the tap (app.js setBusy), the Check button dims, its arrow hides, a ring is drawn; the verdict takes it all away. */
+  await step("grading wait: Check dims and shows a ring while /check is out; gone with the verdict", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
+    const page = await ctx.newPage();
+    let go; const held = new Promise(f => { go = f; });
+    await page.route("**/check", async r => { await held; await r.continue(); });
+    await page.goto(`${BASE}/#CSCI26_A7K`); await opened(page, "CSCI26_A7K");
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains("grading")), false, "idle: no wait shown");
+    for (const id of ["a", "b"]) await row(page, id).tap();
+    await page.locator("#mcGo").tap();
+    await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+    const w = await page.evaluate(() => { const b = document.querySelector("#mcGo"), a = getComputedStyle(b, "::after");
+      return { dim: +getComputedStyle(b).opacity, ring: a.content !== "none" && parseFloat(a.width) > 0, anim: a.animationName, arrow: getComputedStyle(b.querySelector(".ico, svg")).visibility }; });
+    assert.ok(w.dim < 1 && w.ring && /^grade-(spin|pulse)$/.test(w.anim) && w.arrow === "hidden", "the Check button shows the wait: " + JSON.stringify(w));
+    go();
+    await page.waitForFunction(() => window.__drill.state.tries.length >= 1 && !document.documentElement.classList.contains("grading"), null, { timeout: 8000 });
+    await ctx.close();
+  });
 } finally {
   await browser.close(); srv.kill();
 }
