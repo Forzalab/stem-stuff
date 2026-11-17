@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (a fixed sleep loses the race on a loaded runner)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -46,7 +47,13 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const SETTLE = 500;   // > the drawer's 380 ms slide
+/* the drawer's open slide (vd-out 380 ms) is over: the state every check after a verdict needs (a fixed sleep alone loses the race); an
+   infinite animation (a pulse) never ends, so it never blocks, as in lib/wait.mjs settled() */
+const drawerSettled = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && getComputedStyle(d).display !== "none" && !d.getAnimations({ subtree: true }).some(a => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime)); }, null, { timeout: 5000 });
+/* the drawer is gone: hidden after its 240 ms slide and the 260 ms timer (strip.js hide) */
+const drawerGone = page => page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !d || d.hidden || getComputedStyle(d).display === "none"; }, null, { timeout: 5000 });
+/* the synthesized touch scroll has stopped: scrollY holds across two painted frames (every touch / scroll event of the gesture has fired) */
+const scrollStopped = page => page.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(Math.abs(scrollY - y) < 1))); }), null, { timeout: 5000 });
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(w, o = {}) {
   const phone = w < 500;
@@ -103,13 +110,13 @@ try {
         await typeAnswer(page, "1.636");
         await page.waitForFunction(() => window.__drill && window.__drill.state && window.__drill.state.tries.length === 1, null, { timeout: 6000 });
         if (await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 4000 }).then(() => true, () => false)) {
-          await page.waitForTimeout(SETTLE); hasDuck(await duck(page), "1st miss");
+          await drawerSettled(page); hasDuck(await duck(page), "1st miss");
         } else console.log(`     ${w}: no drawer after the 1st miss (the duck checked after the 2nd)`);
-        await page.waitForTimeout(2200);                                     // the 2 s spam gate between tries (redo-note / queue-walk)
+        await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });   // the 2 s guess-spam window (nav.js SPAM_MS) is past (redo-note / queue-walk)
         await typeAnswer(page, "0.650");
         await page.waitForSelector("#q .ansl b", { timeout: 6000 });
         await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
-        await page.waitForTimeout(SETTLE);
+        await drawerSettled(page);
         await page.locator("#q .ansl").scrollIntoViewIfNeeded();
         const m = await reveal(page);
         if (SHOTS) await page.screenshot({ path: join(SHOTS, `rt-reveal-${w}.png`) });
@@ -118,13 +125,13 @@ try {
         hasDuck(await duck(page), "2nd miss");
         const at = () => page.evaluate(() => { const t = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : null; }; return { ff: t("#ff"), pv: t("#preview"), ansl: t("#q .ansl"), fb: t("#fb") }; });
         const a = await at();
-        await page.click("#q .vdrawer .vd-x"); await page.waitForTimeout(SETTLE);
+        await page.click("#q .vdrawer .vd-x"); await drawerGone(page);
         assert.deepEqual(await at(), a, "closing the drawer moved something");
         await page.click("#q .nx");                                           // Next -> the next item, answered right first time
         await page.waitForFunction(() => location.hash === "#PHYS_RT2" && !!document.querySelector("#ff input:not([disabled]), #ff textarea:not([disabled])"), null, { timeout: 8000 });
         await typeAnswer(page, "1.38");
         await page.waitForSelector("#q .ansl b", { timeout: 6000 });
-        await page.waitForTimeout(SETTLE);
+        await settled(page, "#q .ansl");   // the reveal line of the new item is placed
         await page.locator("#q .ansl").scrollIntoViewIfNeeded();
         const ok = await reveal(page);
         if (SHOTS) await page.screenshot({ path: join(SHOTS, `rt-right-${w}.png`) });
@@ -140,17 +147,17 @@ try {
       try {
         await typeAnswer(page, "1.636");
         await page.waitForSelector("#q .vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
-        await page.waitForTimeout(SETTLE);
+        await drawerSettled(page);
         const shown = () => page.evaluate(() => { const d = document.querySelector("#q .vdrawer"); return !!d && !d.hidden && !d.classList.contains("vd-shut"); });
         assert.ok(await shown(), "the tray is open");
         const cdp = await page.context().newCDPSession(page);
         const drag = async dy => cdp.send("Input.synthesizeScrollGesture", { x: 196, y: 700, yDistance: dy, gestureSourceType: "touch", speed: 600 });
-        await drag(-250); await page.waitForTimeout(300);
+        await drag(-250); await scrollStopped(page);
         assert.ok(await shown(), "a touch-drag up left the tray open");
-        await drag(250); await page.waitForTimeout(300);
+        await drag(250); await scrollStopped(page);
         assert.ok(await shown(), "a touch-drag down left the tray open");
         const pt = await page.evaluate(() => { const d = document.querySelector("#q .vdrawer").getBoundingClientRect(); const h = document.querySelector("#q h2, #q .qtitle, #q") ; return { x: 196, y: Math.min(innerHeight - 20, 780) , d: d.toJSON() }; });
-        await page.touchscreen.tap(pt.x, pt.y); await page.waitForTimeout(SETTLE);
+        await page.touchscreen.tap(pt.x, pt.y); await page.waitForFunction(() => { const d = document.querySelector("#q .vdrawer"); return !d || d.hidden || d.classList.contains("vd-shut"); }, null, { timeout: 5000 });   // the same state shown() reads, negated: a still tap is a tap outside
         assert.ok(!(await shown()), "a still tap outside closed it " + JSON.stringify(pt));
       } finally { await page.context().close(); }
     });
@@ -178,7 +185,8 @@ try {
       try {
         await typeAnswer(page, "1.636");
         await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
-        await page.waitForTimeout(SETTLE);
+        await page.waitForSelector("#cluck", { state: "attached", timeout: 5000 });
+        await settled(page, "#cluck");   // Cluck's reply is drawn and its box stopped moving
         const m = await page.evaluate(() => {
           const msg = [...document.querySelectorAll("#cluck .msg:not(.me)")].find(x => /Egg-cellent/.test(x.textContent));
           const r = e => e && e.getBoundingClientRect(), av = r(msg.querySelector(".av")), rows = [...msg.children].filter(e => !e.matches(".av") && e.getClientRects().length);
@@ -198,13 +206,14 @@ try {
         const h0 = await page.evaluate(() => Math.round(document.querySelector("#cluck").getBoundingClientRect().height));
         await typeAnswer(page, "1.636");
         await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck")?.innerText || ""), null, { timeout: 10000 });
-        await page.waitForTimeout(SETTLE);
+        await page.waitForSelector("#cluck", { state: "attached", timeout: 5000 });
+        await settled(page, "#cluck");   // the reply is drawn and the box took its room
         const m = await page.evaluate(() => ({ st: document.querySelector("#rot").classList.contains("stashed"), link: document.querySelector("#rot .rot-link")?.textContent.trim(),
           h: Math.round(document.querySelector("#cluck").getBoundingClientRect().height) }));
         assert.ok(m.st, "the brainrot is still open after Cluck started: " + JSON.stringify(m));
         assert.match(m.link || "", /Show curated brainrot/, "its link offers it back");
         assert.ok(m.h > h0, `the box is not taller: ${h0} -> ${m.h}`);
-        await page.click("#rot .rot-link"); await page.waitForTimeout(200);
+        await page.click("#rot .rot-link"); await page.waitForFunction(() => !document.querySelector("#rot").classList.contains("stashed"), null, { timeout: 5000 });   // the link's own fold-back is done
         assert.equal(await page.evaluate(() => document.querySelector("#rot").classList.contains("stashed")), false, "the student's link opens it again");
       } finally { await page.context().close(); }
     });
@@ -214,7 +223,7 @@ try {
         await page.waitForFunction(() => window.__rtToast.length > 0, null, { timeout: 8000 });   // the start line is up
         await typeAnswer(page, "1.636");                                     // a miss while it shows: the hint card lands
         await page.waitForFunction(() => !!document.querySelector("#fb")?.textContent.trim(), null, { timeout: 6000 });
-        await page.waitForTimeout(4500);                                     // the toast's 4 s
+        await page.waitForTimeout(4500);                                     // keep: app timer the stage toast's 4 s lifetime (the 50 ms sampler must see the whole toast)
         const bad = await page.evaluate(() => window.__rtToast.filter(s => s.fbt && s.fb && s.fb.height > 0 && !(s.r.right <= s.fb.left || s.r.left >= s.fb.right || s.r.bottom <= s.fb.top || s.r.top >= s.fb.bottom)));
         const seen = await page.evaluate(() => window.__rtToast.filter(s => s.fbt).length);
         console.log(`     ${w}: ${seen} toast samples with the hint card up`);
