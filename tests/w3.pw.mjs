@@ -18,6 +18,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -68,7 +69,7 @@ async function open(vp, code, o = {}) {
   await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   if (code) await page.evaluate(c => { location.hash = "#" + c; }, code);
   await page.waitForFunction(c => (!c || document.querySelector("#pcode")?.textContent === c) && !!document.querySelector("#q .opt, #ans"), code, { timeout: 8000 });
-  await page.waitForTimeout(300);
+  await settled(page);                                                         // the item's card, the formulas card and the dock have drawn
   return page;
 }
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
@@ -79,7 +80,7 @@ async function pick(page, id) {
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
 }
 const miss = async page => { await skipRetryWait(page); const n = await tries(page); await page.fill("#ans", "999"); await page.press("#ans", "Enter");
-  await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 8000 }); await page.waitForTimeout(150); };
+  await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 8000 }); await settled(page, "#fb, #q"); };   // the verdict's drawer is drawn
 const replied = page => page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000, polling: 100 });
 const VPS = [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 800 }]];
 
@@ -101,7 +102,7 @@ for (const [tag, vp] of VPS) {
     const page = await open(vp, "CALC1_W3MC");
     await pick(page, "c"); await page.waitForSelector("#rpHost .rp-skip", { timeout: 5000 });
     await page.click("#rpHost .rp-skip");
-    await page.waitForTimeout(200);
+    await page.waitForSelector("#rpHost", { state: "detached", timeout: 5000 });   // Skip removed the ladder (what the next line asserts)
     assert.equal(await page.locator("#rpHost").count(), 0, "Skip left the repair box up");
     assert.equal(await page.evaluate(() => !!document.activeElement?.closest("#q")), true, "the focus is not in the question box");
     await page.context().close();
@@ -110,7 +111,7 @@ for (const [tag, vp] of VPS) {
     const page = await open(vp, "CALC1_W3MC");
     await pick(page, "c"); await page.waitForSelector("#rpHost .rp", { timeout: 5000 });
     await pick(page, "b");
-    await page.waitForTimeout(200);
+    await page.waitForSelector("#rpHost", { state: "detached", timeout: 5000 });   // a right answer unmounted the ladder (what the next line asserts)
     assert.equal(await page.locator("#rpHost").count(), 0, "the repair box is gone after the right answer");
     await page.context().close();
   });
@@ -126,9 +127,9 @@ for (const [tag, vp] of VPS) {
   });
   if (ONLY.includes("4") && tag === "390") await step(`${tag} 4: the 2nd "?" tap: the duck peeks "stuck? ask me"; its tap opens Cluck`, async () => {
     const page = await open(vp, "CALC1_W3N1");
-    await miss(page); await replied(page); await page.waitForTimeout(1200);       // the wrong-answer sunrise has come and goes with the first input
+    await miss(page); await replied(page); await page.waitForTimeout(1200);       // keep: app timer the wrong-answer peek rises at 700 ms (peek.js WRONG_MS); the first input below puts it away
     await page.click("#fcard .fq");
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(800);                                                 // keep: app timer the 2nd-tap peek window (one tap must not show "stuck? ask me")
     assert.ok(!(await page.evaluate(() => /stuck\? ask me/.test(document.querySelector(".ck-say")?.textContent || "") && window.stemDuck.up)), "one tap: no such peek");
     await page.click("#fcard .fq");
     await page.waitForFunction(() => window.stemDuck.up && /stuck\? ask me/.test(document.querySelector(".ck-say")?.textContent || ""), null, { timeout: 3000 });
@@ -152,7 +153,7 @@ for (const [tag, vp] of VPS) {
   if (ONLY.includes("6")) await step(`${tag} 6: the "See Cluck's steps" chip wears the solid i-duck, no webp pose`, async () => {
     const page = await open(vp, "CALC1_W3MC");
     await pick(page, "c"); await replied(page); await pick(page, "b");
-    await page.waitForSelector(":is(#wish, .rbox) .cue-chip", { timeout: 5000 }); await page.waitForTimeout(600);
+    await page.waitForSelector(":is(#wish, .rbox) .cue-chip", { timeout: 5000 }); await settled(page, ":is(#wish, .rbox)");   // the chip has grown in: its box is final
     const g = await page.evaluate(() => { const c = document.querySelector(":is(#wish, .rbox) .cue-chip"), s = c.querySelector("svg.dk");
       return { img: !!c.querySelector("img"), svg: !!s, use: s?.querySelector("use")?.getAttribute("href"), w: s?.getBoundingClientRect().width }; });
     assert.deepEqual([g.img, g.svg, g.use], [false, true, "#i-duck"], JSON.stringify(g));

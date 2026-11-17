@@ -13,6 +13,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";   // the second try waits 10 s (retry-wait.pw.mjs)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -44,13 +45,13 @@ async function open(w, code) {
   await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   await page.evaluate(c => { location.hash = "#" + c; }, code);
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !!document.querySelector("#fcard") && !!document.querySelector("#ans"), code, { timeout: 8000 });
-  await page.waitForTimeout(400);
+  await settled(page, "#fcard");                                                  // the card's rows have drawn (their lad-in animations are done)
   return page;
 }
 const shown = (page, sel) => page.$$eval("#fcard " + sel, es => es.filter(e => !e.hidden && getComputedStyle(e).display !== "none").length);
 const state = async page => [await shown(page, "li.f:not(.mid)"), await shown(page, "li.f.mid"), await shown(page, "li.to")];
 const miss = async page => { await skipRetryWait(page); const n = await page.evaluate(() => window.__drill?.state?.tries?.length ?? 0); await page.fill("#ans", "999"); await page.press("#ans", "Enter");
-  await page.waitForFunction(n => (window.__drill?.state?.tries?.length ?? 0) > n, n, { timeout: 8000 }); await page.waitForTimeout(150); };
+  await page.waitForFunction(n => (window.__drill?.state?.tries?.length ?? 0) > n, n, { timeout: 8000 }); await settled(page, "#fcard"); };   // the revealed row's lad-in is done
 const jev = page => page.evaluate(() => window.stemLadder.step());
 for (const w of W) {
   await step(`@${w} no ladder: row 1 only on load; a wrong try shows row 2; Jev's hits show row 3, then the arrows one by one; then nothing more`, async () => {

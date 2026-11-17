@@ -4,6 +4,7 @@
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state, not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -25,7 +26,7 @@ try {
     const page = await ctx.newPage();
     await step(`old stem-mode=${old}, no flag: sugar on load, flag set for a year, no message, progress kept`, async () => {
       await page.goto(BASE);
-      await page.waitForTimeout(800);
+      await page.waitForFunction(() => /stem-mode-v=2/.test(document.cookie), null, { timeout: 8000 });   // mode.mjs reset() has run: the flag is written (and the old cookie cleared)
       assert.equal(await sugarOn(page), true, "sugar");
       const c = await jar(ctx);
       assert.equal(c["stem-mode"], undefined, "old mode cookie cleared");
@@ -41,7 +42,7 @@ try {
       await page.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 6000 });
       for (let i = 0; i < 2; i++) {
         await page.reload();
-        await page.waitForTimeout(800);
+        await settled(page);                                                     // the reloaded app has booted (mode.mjs imported, page painted)
         assert.equal(await sugarOn(page), false, "still diet after reload " + i);
         assert.equal((await jar(ctx))["stem-mode"]?.value, "diet");
       }
