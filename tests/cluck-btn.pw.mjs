@@ -155,7 +155,7 @@ try {
       assert.equal(await page.evaluate(() => { const b = document.querySelector("#cluckBtn"); return b.classList.contains("cb-shake") && !b.classList.contains("cb-sheen") && getComputedStyle(b.querySelector(".cb-t")).animationName; }), "cb-sweep", "reply = the underline sweep (CLUCK-SWEEP), duck still");
       await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.evaluate(() => window.stemCluckBtn.sheen("right"));
-      await page.waitForFunction(() => document.querySelector("#cluckBtn").classList.contains("cb-nod"), null, { timeout: 8000 });
+      await page.waitForFunction(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName === "cb-sweep", null, { timeout: 8000 });
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn .cb-t")).animationName), "cb-sweep", "right = the underline sweep (CLUCK-SWEEP)");
       await page.waitForTimeout(1200); // keep: app timer removes the class (~1.1 s); the assert checks it ends
       await page.emulateMedia({ reducedMotion: "reduce" });
