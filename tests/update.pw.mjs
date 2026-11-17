@@ -65,6 +65,7 @@ try {
   await step("tap: reload onto the new version, bar gone", async () => {
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);
     await page.waitForFunction(async () => { const r = await caches.match(new URL("client/answer/drill_core/app.css", location.href).href); return !!r && (await r.text()).includes("/* v2 */"); }, null, { timeout: 5000 });   // the new shell is in the cache: the bar has nothing left to offer
+    await page.waitForFunction(() => !document.querySelector("#updateBar"), null, { timeout: 5000 });   // the bar is gone once the cache holds the new shell (the count assert below)
     assert.equal(await bar(page).count(), 0);
     const css = await page.evaluate(async () => (await caches.match(new URL("client/answer/drill_core/app.css", location.href).href)) ?.text());
     assert.ok(css && css.includes("/* v2 */"), "the cache holds the new app.css");

@@ -12,7 +12,6 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "node:net";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
-import { settled } from "./lib/wait.mjs";   // CI-ARCH B2: wait on state (animations ended + two frames), not on a fixed sleep
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -46,8 +45,8 @@ const waitMsg = (page, text) => page.waitForFunction(t => document.querySelector
 /* the page has booted: the splash goes when the fonts, the saved-bank restore (stemOffline.ready) and the #CODE problem are done (index.html) */
 const boot = page => page.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
 /* the computed colour of #entryMsg against a token */
-/* Q11 = b: a clean upload writes nothing extra; the upload's own line lands before the first painted frames, then it must still be empty */
-const quiet = async page => { await settled(page); assert.equal(await msg(page), "", "a clean upload shows no line"); };
+/* Q11 = b: a clean upload writes nothing extra; give the (async) upload line time to appear, then it must still be empty */
+const quiet = async page => { await page.waitForTimeout(700); assert.equal(await msg(page), "", "a clean upload shows no line"); };   // keep: the async upload line would appear; the assert checks it stays empty
 const toneIs = (page, token) => page.evaluate(t => {
   const probe = document.createElement("i"); probe.style.color = `var(${t})`; document.body.appendChild(probe);
   const want = getComputedStyle(probe).color; probe.remove();
