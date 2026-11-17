@@ -40,3 +40,14 @@ test("the ring keeps the newest `cap` events, the report the last n, a detail 80
   assert.equal(r.length, 4);
   assert.ok(r[2].length < 120, r[2]);
 });
+
+test("a repeated console line or page error is one counted line, so it cannot push the real events out", () => {
+  const tr = makeTrace({ now: clock() });
+  tr.push(1, "click", "#go");
+  for (let i = 0; i < 50; i++) tr.push(1, "console.warn", "", "same warning");
+  tr.push(1, "console.warn", "", "another");
+  const r = tr.report().split("\n");
+  assert.equal(r[0].slice(0, 27), "TRACE last 3 of 52 events (");
+  assert.match(r[2], /console\.warn +same warning {2}\(x50, first time shown\)$/);
+  assert.match(r[3], /another$/);
+});
