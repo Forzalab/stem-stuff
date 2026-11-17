@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "spec": "bank",
+    "test": "*",
+    "owner": "ci-jail bot",
+    "reason": "https://github.com/Forzalab/stem-stuff/actions/runs/44030741481 (3/20 flaky)",
+    "added": "2026-11-17",
+    "expires": "2026-11-24"
+  }
+]
