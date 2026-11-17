@@ -435,7 +435,7 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
 .cb-copy.done { color: var(--correct); }
 .cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
 .cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
-@media (max-width: 480px) { .cb code { font-size: .75rem; } .cb { --g: 0px; } .cb code .l::before { content: none; } }   /* CB-PHONE (Tony Nov 17, ref: the Claude app's code block): no line-number gutter on phones, the code gets the width */   /* CB-PHONE-13 (Tony Nov 16: 16px mono fit ~26 chars, code shape unreadable): 12px on phones = ~37 chars (Tony: 13 -> 12) */
+@media (max-width: 480px) { .cb code { font-size: .875rem; } .cb { --g: 0px; } .cb code .l::before { content: none; } }   /* CB-PHONE (Tony Nov 17, ref: the Claude app's code block): no line-number gutter on phones, the code gets the width */   /* CB-PHONE-13 (Tony Nov 16: 16px mono fit ~26 chars, code shape unreadable): 14px on phones (Tony Nov 17: 12 too small; research floor 14; no-wrap scroll covers width) */
 .cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
   --hang: min(calc((var(--ind) + 2) * 1ch), 8ch);   /* CB-HANG-CAP (Tony Nov 16, phone: a deep continuation line wrapped into a 4-char sliver): the hang stops at 8ch */
   padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + var(--hang)); text-indent: calc(-1 * var(--hang)); }
