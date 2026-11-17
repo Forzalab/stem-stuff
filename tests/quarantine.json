@@ -1,3 +1,1 @@
-[
-  { "spec": "cluck-rise", "test": "390: a wrong answer leaves Cluck closed, streams his reply in the background, the duck rises", "owner": "ci-arch-e", "reason": "https://github.com/Forzalab/stem-stuff/actions/runs/44034856023 failed 2/2 on main 3b5b7e53 at 'the dim is gone with the rise (the box is hidden)'; the same tree was green on PR #634; green on re-run. Fix owed, not a skip.", "added": "2026-11-17", "expires": "2026-11-24" }
-]
+[]

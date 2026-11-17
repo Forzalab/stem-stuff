@@ -51,6 +51,6 @@ jobs:
           for l in $(seq 1 "$LANES"); do lane "$l" >"lane-$l.out" 2>&1 & pids="$pids $!"; done
           wait $pids
           cat lane-*.out
-          ok=$(cat lane-*.out | grep -c '^ok ' || true)
+          ok=$(cat lane-*.out | grep -cE '^ok [0-9]+/[0-9]+$' || true)   # only the lane's own "ok l/r" rows: a BAD repeat's log holds run-all's "ok   <spec> 12.3 s" row when the spec is jailed, and that was counted as clean
           echo "stress $SPEC: $ok/$N clean"
           [ "$ok" -eq "$N" ]

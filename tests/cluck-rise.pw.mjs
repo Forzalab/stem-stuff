@@ -13,6 +13,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { freeze } from "./lib/clock.mjs";   // the dim-gone step: a flowing clock can rewind a runFor (bug class fake-clock-timing-flake)
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -67,7 +68,8 @@ async function open(vp, o = {}) {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   if (o.diet) await ctx.addCookies(DIET);
   await ctx.addInitScript(() => { window.__stemHelpRand = () => 1;   /* this spec fails items on purpose (HA is live): the help roll is pinned to miss so Jev's help modal (tests/lockhelp.pw.mjs) stays out of it */
-    try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0");   /* Jev's nudge dice stay out too (stemDuck.say would re-raise the box): nudge.pw.mjs / seen.pw.mjs cover Jev */
+      for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   page.errs = []; page.ai = 0;
@@ -122,11 +124,13 @@ for (const [tag, vp] of VPS) {
       return { pe: s.pointerEvents, op: +s.opacity, h: parseFloat(s.height) / innerHeight, hit: !!t && !r.contains(t) }; });
     assert.ok(dim.pe === "none" && dim.op > 0 && dim.h > 0.3 && dim.h < 0.37 && dim.hit, "the bottom-third dim shows while risen, never blocks taps: " + JSON.stringify(dim));
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
+    await freeze(page);                                               // paused through the tap + 700 ms: on a flowing clock a late real-time tick rewinds the runFor below, so peek.js's 630 ms hide timer has not fired (probe Nov 16: one down(), no 2nd rise, box still .out)
     await page.click(".ck-peek");                                     // B3 PR-B1: the duck is a status nudge, a tap only dismisses it
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
     await page.clock.runFor(400);
     assert.equal(await page.evaluate(() => document.querySelector(".ck-rise").hidden), true, "the dim is gone with the rise (the box is hidden)");
+    await page.clock.resume();                                        // real time again: Cluck's typing + the stream below
     await reopen(page); await page.click(".vdrawer .wchip");                                // the way in is the tray's Ask Cluck (GENMISS, Tony Nov 3: no "okay, but how?" peek)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the hint card CTA opens Cluck");
