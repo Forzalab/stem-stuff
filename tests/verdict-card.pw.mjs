@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skipRetryWait } from "./lib/clock.mjs";
+import { settled } from "./lib/wait.mjs";   // CI-ARCH D1: wait on state (animations ended + 2 frames), not a fixed sleep
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
@@ -71,11 +72,11 @@ async function judge(w, flag, right, tries = 1) {
   else {
     await typeAnswer("1.636");
     await page.waitForSelector("#q .ff.bad .vk, #q .ff.rbox.cue .vk", { state: "attached", timeout: 8000 });
-    for (let i = 1; i < tries; i++) { await page.waitForTimeout(2300); await typeAnswer(["0.650", "2.2", "3.3"][i - 1]); }
+    for (let i = 1; i < tries; i++) { await page.waitForFunction(k => (window.__drill?.state?.tries?.length ?? 0) >= k, i, { timeout: 8000 }); await typeAnswer(["0.650", "2.2", "3.3"][i - 1]); }
   }
   if (flag === "v7") await page.waitForFunction(() => { const b = document.querySelector("#cluckBtn"); return !!b && !b.hasAttribute("aria-disabled"); }, null, { timeout: 8000 });
   else await page.waitForSelector("#q .vdrawer .wchip", { state: "attached", timeout: 8000 });
-  await page.waitForTimeout(900);
+  await settled(page);   // the verdict card is at rest (animations + transitions ended) before the geometry reads
   return page;
 }
 /* the geometry: the row (.ff) + Next (.nx) = the pill, the slot (.vk), the (never shown) tray, the verdict line */
@@ -128,9 +129,9 @@ try {
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       for (let i = 0; i < 5 && !await page.evaluate(() => !!document.querySelector("#q .ansl")); i++) {
-        await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(["1.636", "0.650", "2.2", "3.3", "4.4"][i]); await f.press("Enter"); await page.waitForTimeout(2300);
+        await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); const n0 = await page.evaluate(() => window.__drill.state.tries.length); await f.fill(["1.636", "0.650", "2.2", "3.3", "4.4"][i]); await f.press("Enter"); await page.waitForFunction(k => (window.__drill?.state?.tries?.length ?? 0) > k, n0, { timeout: 8000 });
       }
-      await page.waitForSelector("#q .ansl", { state: "attached", timeout: 8000 }); await page.waitForTimeout(700);
+      await page.waitForSelector("#q .ansl", { state: "attached", timeout: 8000 }); await settled(page);
       const g = await geo(page);
       assert.ok(g.lines.length === 1 && !g.lines[0].shown && /^Not it\. The answer is/.test(g.lines[0].text), JSON.stringify(g.lines));
       assert.equal(g.bg, "rgb(62, 20, 30)"); assert.ok(!g.d);
@@ -142,7 +143,7 @@ try {
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
-      await page.waitForSelector("#q .vdrawer:not([hidden])", { state: "visible", timeout: 8000 }); await page.waitForTimeout(700);
+      await page.waitForSelector("#q .vdrawer:not([hidden])", { state: "visible", timeout: 8000 }); await settled(page);
       const g = await geo(page);
       assert.ok(g.lines.length === 1 && !g.lines[0].inDrawer && g.lines[0].shown, JSON.stringify(g.lines));
       assert.ok(g.dShown && g.nx.l - g.ff.r > 4, "the old tray and the gap before Next: " + JSON.stringify({ d: g.d, ff: g.ff, nx: g.nx }));
