@@ -40,7 +40,7 @@ async function open(browser, w, h, mode) {
   const page = await ctx.newPage();
   await page.goto(BASE + "/#PHYS_DA1");
   await page.waitForSelector("#ans", { timeout: 10000 }).catch(async e => { console.log(await page.evaluate(() => document.body.innerText.slice(0, 300)), page.url()); throw e; });
-  await settled(page);
+  await settled(page, "#xb");
   return { ctx, page };
 }
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
@@ -60,9 +60,9 @@ try {
       await page.fill("#ans", "1"); await page.keyboard.press("Enter");
       if (mode === "sugar") {
         await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });   // open from load: nothing to click
-        await settled(page);
+        await settled(page, "#xb");
         await check("after Explain Cluck opened");
-        await page.keyboard.press("Escape"); await settled(page);
+        await page.keyboard.press("Escape"); await settled(page, "#work.cl-on #cluck");
         assert.equal(await shown(page, "#work.cl-on #cluck"), true, "Escape leaves Cluck's box open");
         await check("after Escape");
       } else await check("after a wrong answer");

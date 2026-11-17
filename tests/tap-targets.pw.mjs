@@ -55,7 +55,7 @@ async function step(name, fn) {
 }
 /* the 9 probe points of the 44 px square centred on the element (offsets +-21.5 px), the ones inside the window: each must hit el or a
    child of it, or (siblings: a row of chips, 8 px apart, shares the overlap of two 44 px areas) an element matching `sibs` */
-const hitArea = async (page, sel, sibs = null) => { await settled(page); return page.evaluate(([sel, sibs]) => {
+const hitArea = async (page, sel, sibs = null) => { await settled(page, sel); return page.evaluate(([sel, sibs]) => {
   const el = document.querySelector(sel);
   { const q = el.getBoundingClientRect(); if (q.top < 0 || q.bottom > innerHeight) el.scrollIntoView({ block: "center", inline: "center" }); }
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, miss = [], own = [];
@@ -116,7 +116,7 @@ for (const [label, vp, phone] of VIEWS) {
       await fresh();
       await page.goto(BASE + (phone ? "/" : "/#BANK_FCC"));
       if (!phone) await page.waitForFunction(() => /^#CALC1_/.test(location.hash) && !!document.querySelector("#fcard .fq"), null, { timeout: 15000 });
-      await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 15000 }); await settled(page);
+      await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 15000 }); await settled(page, "#privacy");
       await visible(page, "#privacy");
       const h = await hitArea(page, "#privacy");
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/tap-privacy-${vp.width}.png` });
@@ -132,7 +132,7 @@ for (const [label, vp, phone] of VIEWS) {
     });
     await step(`${label}: .rw-star b digit reads 4.5:1 on the star`, async () => { await fresh(); await page.goto(BASE + "/#BANK_FCC"); await page.waitForFunction(() => /^#CALC1_/.test(location.hash), null, { timeout: 15000 });
       await visible(page, "#rwHud .rw-star b");
-      await page.waitForFunction(() => !!document.querySelector("#rwHud .rw-star b") && [...document.querySelectorAll("#rwHud, #rwHud *")].every(e => getComputedStyle(e).opacity === "1" && !e.getAnimations().length), null, { timeout: 10000 }).catch(() => {}); await settled(page);
+      await page.waitForFunction(() => !!document.querySelector("#rwHud .rw-star b") && [...document.querySelectorAll("#rwHud, #rwHud *")].every(e => getComputedStyle(e).opacity === "1" && !e.getAnimations().length), null, { timeout: 10000 }).catch(() => {}); await settled(page, "#rwHud .rw-star b");
       const c = await badgeContrast(page);
       console.log(`     digit ${c.ink}: median ${c.med.toFixed(2)}:1, least ${c.min.toFixed(2)}:1 on the star under it (${c.n} px); ${c.onPage.toFixed(2)}:1 on the page behind the star`);
       assert.ok(c.med >= 4.5, `digit ${c.ink} on the star: median ${c.med.toFixed(2)}:1 over ${c.n} px`);

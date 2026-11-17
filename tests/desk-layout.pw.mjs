@@ -89,7 +89,7 @@ async function settle(page) {
   const shown = await page.waitForFunction(up, null, { timeout: 4000 }).then(() => true, () => false);   // it may come late (WebKit): wait for it to show
   if (shown) { await page.click(".stoast-x"); await page.waitForFunction(u => !(0, eval)(u)(), up.toString(), { timeout: 9000 }); }   // closed by its X; no room = it never shows
   await page.mouse.move(1, 1);
-  await settled(page);
+  await page.waitForTimeout(700);   // keep: layout settle
 }
 const rectOf = (page, sel) => page.evaluate(s => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) return null;
   const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; }, sel);
@@ -156,7 +156,7 @@ const AT = [50, 150, 300, 600];
 /* tap.live: the allowed boxes hold content that animates on its own (Cluck typing his reply): there a frame may differ from the last one */
 async function gate(page, label, size, tap, allowFn) {
   if (tap.prep) await tap.prep();                                          // the student scrolls to it first (Playwright's click would, inside the shots)
-  await settled(page);
+  await page.waitForTimeout(250);   // keep: layout settle
   const before = await page.screenshot({ caret: "hide" });
   const q0 = await qCol(page), r0 = await rows(page);
   const focus0 = await page.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null;   // its focus ring leaves on a tap elsewhere: that box may change
@@ -232,7 +232,7 @@ try {
           /* a tap where the student sees it: scrolled into view first (prep, before the shots), then a plain mouse click at its centre (page.click
              would scroll again inside the shots on WebKit) */
           const tapIn = sel => { let at = null; return Object.assign(async () => { await page.mouse.click(at.x, at.y); }, { prep: async () => {
-            const l = page.locator(act(sel)).first(); await l.scrollIntoViewIfNeeded(); await settled(page); const b = await l.boundingBox(); at = { x: b.x + b.width / 2, y: b.y + b.height / 2 }; } }); };
+            const l = page.locator(act(sel)).first(); await l.scrollIntoViewIfNeeded(); await page.waitForTimeout(100); const b = await l.boundingBox(); at = { x: b.x + b.width / 2, y: b.y + b.height / 2 }; } }); };   // keep: layout settle
           const chipAllow = sel => async c => [...changedRows(c), ...(await page.$$eval(act(sel), els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })))];
           await gate(page, "1-pick", size, tapIn('.rp-chip[data-v="a"]'), async c => changedRows(c));
           await gate(page, "2-sheet", size, tapIn('.rp-chip[data-v="PRESSURE"]'), async c => changedRows(c));
@@ -271,7 +271,7 @@ try {
             const fold = () => page.click("#work .rot-link"); fold.live = true;   // V2: the box holds the idle opener + starters; the scroll-down fade (.below) follows the box as it grows, so its edge may repaint once
             await gate(page, "fold", size, fold, async c => [{ x: c.q0["#work"][0], y: c.q0["#work"][1], w: c.q0["#work"][2], h: Math.max(c.q0["#work"][3], c.q1["#work"][3]) }]);
             await column(page, `${tag} folded`, size);
-            await page.click("#work .rot-link"); await settled(page);
+            await page.click("#work .rot-link"); await settled(page, "#work");
           }
           await page.fill("#ans", "1"); await page.keyboard.press("Enter");
           /* BIG PLAN V1 (Tony Nov 2): Cluck's box is open from load on desktop sugar, so a miss streams into it and nothing opens or moves */
@@ -282,7 +282,7 @@ try {
           const sc = await page.$eval("#work .cl-bd", e => [e.scrollHeight, e.clientHeight]);
           if (sc[0] > sc[1] + 4) {
             await page.waitForTimeout(1600);                                   // keep: browser wheel-latch settle (Gecko/WebKit ~1.5 s), not app state
-            await page.mouse.move(bd.x + 24, bd.y + Math.min(16, bd.h / 4)); await page.mouse.wheel(0, 200); await settled(page);   // its top: the scroll-down disc + fade lie over its foot
+            await page.mouse.move(bd.x + 24, bd.y + Math.min(16, bd.h / 4)); await page.mouse.wheel(0, 200); await settled(page, "#work .cl-bd");   // its top: the scroll-down disc + fade lie over its foot
             /* Chromium (CI): a real wheel. Firefox / WebKit latch a wheel run to the page while his reply is still typing (the log grows under it):
                there the log must at least be a live scroller (overflow auto, scrollTop takes) */
             const moved = engine === "chromium" ? await page.waitForFunction(() => document.querySelector("#work .cl-bd").scrollTop > 0, null, { timeout: 2000 }).then(() => true, () => false)
@@ -322,13 +322,13 @@ try {
         assert.ok(six.srcs.slice(4).every(s => !before.some(id => s.includes("/embed/" + id + "?"))), `videos 4-6 loaded before the row was scrolled: asked ${before}; ${await page.$eval("#rot .duo", d => JSON.stringify([d.getBoundingClientRect().toJSON(), [...d.children].map(v => Math.round(v.getBoundingClientRect().left) + "+" + Math.round(v.getBoundingClientRect().width))]))}`);
         await page.$eval("#rot .duo", d => d.scrollTo({ left: d.scrollWidth, behavior: "instant" }));
         await page.waitForFunction(() => { const d = document.querySelector("#rot .duo"); return !!d && [...d.querySelectorAll("iframe")].filter(f => f.getAttribute("src")).length >= 5; }, null, { timeout: 5000 });
-        await settled(page);
+        await settled(page, "#rot .duo");
         assert.equal(new Set(asked).size, 5, `scrolled to the end, all 5 load: ${asked}`);
-        await page.$eval("#rot .duo", d => d.scrollTo({ left: 0, behavior: "instant" })); await settled(page);
+        await page.$eval("#rot .duo", d => d.scrollTo({ left: 0, behavior: "instant" })); await settled(page, "#rot .duo");
         { const p = (await m()).pad; assert.equal(p[0], p[1], `scrolled back, the first video sits in the box's padding (a snap ate it): ${p}`); }
         if (process.env.SHOT_DIR) await page.screenshot({ path: join(process.env.SHOT_DIR, "brainrot-6-1440.png") });
         /* the same page with 3: drop 4-6 and measure again (the box's height is one row, so nothing moves) */
-        await page.$$eval("#rot .vid", vs => vs.slice(3).forEach(v => v.remove())); await settled(page);
+        await page.$$eval("#rot .vid", vs => vs.slice(3).forEach(v => v.remove())); await settled(page, "#work");
         const three = await m();
         assert.deepEqual([six.duo, six.rot, six.work, six.notes], [three.duo, three.rot, three.work, three.notes], "the column with 6 vs with 3 (box, rot, #work top + height, notes)");
         assert.deepEqual(errs, []);
@@ -339,7 +339,7 @@ try {
       const { ctx, page } = await context(browser, { viewport: { width: 710, height: 900 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
       await step(`${engine} 710x900 (not side by side, not a phone): the floating corner still shows 2 of the 6, all different`, async () => {
         await page.goto(BASE + "/#" + PLAIN);
-        await page.waitForSelector("#rot:not([hidden]):not(.docked) .vid", { timeout: 10000 }); await settled(page);
+        await page.waitForSelector("#rot:not([hidden]):not(.docked) .vid", { timeout: 10000 }); await settled(page, "#rot");
         const c = await page.evaluate(() => { const f = [...document.querySelectorAll("#rot iframe")]; return { n: f.length, seen: f.filter(x => x.parentElement.getClientRects().length).length, ids: new Set(f.map(x => new URL(x.src || x.dataset.src).pathname)).size }; });
         assert.deepEqual(c, { n: 5, seen: 2, ids: 5 });
       });
@@ -349,7 +349,7 @@ try {
       const { ctx, page } = await context(browser, { viewport: { width: 390, height: 844 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
       await step(`${engine} 390x844: a phone still gets no brainrot (no box, no player: Tony, Oct 17)`, async () => {
         await page.goto(BASE + "/#" + PLAIN);
-        await page.waitForSelector("#ans", { timeout: 10000 }); await settled(page);
+        await page.waitForSelector("#ans", { timeout: 10000 }); await settled(page, "#rot");
         assert.deepEqual(await page.evaluate(() => [!!document.querySelector("#rot:not([hidden])"), document.querySelectorAll("iframe").length]), [false, 0]);
       });
       await ctx.close();

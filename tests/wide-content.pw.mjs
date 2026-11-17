@@ -54,7 +54,7 @@ try {
       if (await page.isHidden("#qlist")) await page.click("#qlistBtn").catch(() => {});
       await page.locator("#qlist a").nth(code.endsWith("5A") ? 0 : 1).click();
       await page.waitForSelector(".md table, .md .katex-display", { state: "attached", timeout: 8000 });
-      await page.evaluate(() => document.fonts.ready); await settled(page);
+      await page.evaluate(() => document.fonts.ready); await settled(page, sel);
       const m = await page.evaluate(measure, sel);
       const ok = !m.err && m.box && m.wide && m.hScroll <= 0 && m.focus && m.canScroll;
       if (!ok) bad++;
