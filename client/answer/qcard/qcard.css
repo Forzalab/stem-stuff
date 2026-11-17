@@ -4,9 +4,9 @@
    Ask Cluck (cluckbtn.css) stays top right: opaque, no border, a soft dark halo plate + drop shadow lift it off the trail. Echo animates on prev/next (transform + opacity only). */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
-html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 24px; --qc-pad: 24px; --qnum: 108px; --qmax: 170px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
-html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 16px; --qc-pad: 24px; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 32px; --qc-pad: 48px; --qnum: 156px; --qmax: 190px; } }
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 16px; --qc-pad: 16px; --qnum: 108px; --qmax: 170px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pad: 16px; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 22px; --qc-pad: 32px; --qnum: 156px; --qmax: 190px; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
 
 /* GHOST: in the flow at the top of the card (nothing is laid over it), full card width, clipped by its own box; the horizontal mask fades the trail before the chip column */
@@ -124,14 +124,14 @@ html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-
    Diagnosis (brain topics/ui-v7-decisions.md KICKER-C): rowAlign's 3 modes started the title at 3 heights, 4 title sizes, box- not baseline-aligned, button 47% of the measure.
    C = one newspaper layout, NO-BORDER: kicker row (question code, tracked caps, left) + Ask Cluck (right) | 20 px air | headline full measure | body 16/22 | meta. */
 html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle,.qhead):first-child), html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle,.qhead):first-child) { padding-top: 0 !important; }
-html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 12px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 8px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: 36px !important; line-height: 38px !important; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: 16px; line-height: 22px; }   /* TYPE-B lock 16/22 (Q-SMALL's 15 px retired) */
 html.ui-v7 #problem.qc7.qbr { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; }
 html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { position: relative !important; top: auto !important; right: auto !important; order: 1; flex: none; float: none; margin: 0 !important; }   /* keeps cluckbtn.css's font, fill, 44 px, states */
-html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 20px; }
+html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 14px; }
 html.ui-v7 #problem.qc7.qbr > .qfold, html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
 html.ui-v7 #problem.qc7.qbr > .qghostbox, html.ui-v7 #problem.qc7.qbr > .pcode { flex: none; }
 html.ui-v7 #problem.qc7.qbr > .qfold { flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px)); }   /* the fade strip stays full-bleed inside the flex kicker layout (flex 100% cut its right edge: text showed through) */
@@ -219,7 +219,7 @@ html.ui-v7 #problem.qc7.qbr .qghost { filter: none; }   /* GHOST-FLAT (Nov 17 "f
 @media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7.qbr .qghost { filter: none; } }
 /* PHONE-TOP-AIR (Tony Nov 16 "on phone, top margin add more, it looks too cramped"): the kicker row sat 24 px under the card's top edge, the same as the side insets;
    the top gets 32 px (desktop's --qpad), sides and bottom stay 24. The ghost and the fold read --qpad, so they keep their own geometry. */
-@media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { padding-top: 32px; } }
+@media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { --qpt: 22px; padding-top: var(--qpt); } }
 /* FONT-SPLIT (see app.css): the card's text face follows --font (Atkinson Hyperlegible Next); only the headline keeps the grotesk (G Schibsted) */
 html.ui-v7 #problem.qc7 { --qfont: var(--font); }
 html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.ui-v7 #problem.qc7 :is(.qhead, .ptitle) { font-family: "G Schibsted", var(--font-title) !important; }
@@ -240,6 +240,8 @@ html.ui-v7 .qghost i:nth-child(2) { --o: .08; -webkit-mask-image: none; mask-ima
    top (-32 = the card's top padding: sticky offsets measure from the padding-deflated scrollport), so the trail is a fixed background. +1px on the basis = the line-break trick of STRIP-WRAP (a margin box of exactly one line let the 0-basis kicker share the line). The
    trail's own offsets (bottom, mask) were written for the box = the card's client box, which it is again (--qover is gone). Short cards keep the absolute box. */
 @media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:is(.qmore, .qscrolled):not(.qopen) > .qghostbox { position: sticky; top: -32px; bottom: auto; inset-inline: auto; order: -2; flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px) + 1px);
-    height: var(--qch, 216px); margin: -32px calc(-1 * var(--qc-pad, 24px)) calc(32px - var(--qch, 216px)); }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:is(.qmore, .qscrolled):not(.qopen) > .qghostbox { position: sticky; top: calc(-1 * var(--qpt, 22px)); bottom: auto; inset-inline: auto; order: -2; flex: 0 0 calc(100% + 2 * var(--qc-pad, 24px) + 1px);
+    height: var(--qch, 216px); margin: calc(-1 * var(--qpt, 22px)) calc(-1 * var(--qc-pad, 16px)) calc(var(--qpt, 22px) - var(--qch, 216px)); }
 }
+
+/* PAD-TIGHT (Tony Nov 17 "too spacey"): --qpad / --qc-pad 24 -> 16 (desktop 32/48 -> 22/32, pad-split 16/24 -> 11/16), phone top 32 -> 22 (--qpt, also the ghost pin's offset), kicker row -> headline 12 -> 8, row -> text 20 -> 14. Corners (radius ~20) stay clear of the text: the first line starts below the kicker row. */
