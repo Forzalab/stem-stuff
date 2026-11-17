@@ -1906,8 +1906,9 @@ html.ui-v7 .cl-starter:hover { border-color: transparent; background: color-mix(
    share --mono 400 at --t-xs in --muted; the header sits on its own faint tint. Wrap on = ink (state by colour + aria-pressed, no strike-through). */
 .cb-hd { background: color-mix(in srgb, var(--ink) 4%, transparent); border-bottom-color: transparent; }
 /* CB-NAVY (Tony Nov 17: "neutral grey looks wrong"): under v7 the block uses the site's navy swatch: code bed = the input well #060b1b, header = between the bed and --card */
-html.ui-v7 .cb { background: #060b1b; }
-html.ui-v7 .cb-hd { background: color-mix(in srgb, #060b1b 50%, var(--card)); }   /* between the bed and the card: the bar reads as part of the block, never as the card */
+html.ui-v7 { --cb-well: #060b1b; }   /* the input well's navy as a token (STYLE §2.1) */
+html.ui-v7 .cb { background: var(--cb-well); }
+html.ui-v7 .cb-hd { background: color-mix(in srgb, var(--cb-well) 50%, var(--card)); }   /* between the bed and the card: the bar reads as part of the block, never as the card */
 .cb-lang, .cb-wrap { font-family: var(--mono); font-weight: 400; font-size: var(--t-xs); letter-spacing: 0; color: var(--muted); }
 .cb-wrap { text-decoration: none; padding: 0 var(--s2); }
 .cb-wrap[aria-pressed="false"] { text-decoration-line: none; }
@@ -1915,5 +1916,5 @@ html.ui-v7 .cb-hd { background: color-mix(in srgb, #060b1b 50%, var(--card)); } 
 .cb-copy .ico { width: 16px; height: 16px; }
 /* CB-FLOAT (Tony Nov 17, ref: a floating editor-window snippet; Refactoring UI shadows: two layers = a tight, darker one for the edge + a large soft one for
    the lift; on a near-black page they must be deep to read). Apple squircle on every v7 code block (was #q only). A choice row's block stays flat. */
-html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .55), 0 2px 6px rgb(0 0 0 / .35), 0 18px 40px -10px rgb(0 0 0 / .75); }
+html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-1), var(--shadow-4); }   /* STYLE §2.7 tokens: tight edge + large soft lift */
 @supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(1.52); } }
