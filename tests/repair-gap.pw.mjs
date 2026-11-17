@@ -1,6 +1,7 @@
 // GAP-1 (Tony, phone): a wrong pick on a welcome fill step put Cluck's hint at the very foot of the sheet, a half-screen band under the
 // chips: the step's "why" follow-up keeps its room (hidden, for its right pick) and sat between the chips and the hint line.
 // The hint must sit right under the chips. Own serve.py + throwaway banks.   node tests/repair-gap.pw.mjs [port]   SIZES=360x740,390x844,1280x800
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -46,7 +47,7 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const sz of SIZES) {
     await step(`${sz.name}: a wrong pick on the fill step: its own line (chip + why chip), under the chips (gap <= ${MAX_GAP}px, no empty band)`, async () => {

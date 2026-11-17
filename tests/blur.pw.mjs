@@ -3,12 +3,13 @@
 // Tablet width (side by side): the pad and its title are on the page. On a phone the pad is off until the Scratchpad button opens
 // the pad page, which has no title row at all (docs/design/MULTITASK.md), so the title-tap case only exists here.
 // usage: node tests/blur.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const BASE = process.argv[2] || "http://localhost:8812";
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const ctx0 = await b.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true });
 await ctx0.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch
 const page = await ctx0.newPage();

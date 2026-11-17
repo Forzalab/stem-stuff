@@ -2,6 +2,7 @@
 // Check sends it to Cluck's grader (POST /check -> serve.py proof_grade -> one OpenRouter JSON call, stubbed here), the page shows one verdict
 // chips (base | assume | prove) and Cluck's hint; 3 Checks; sugar shows the reference proof after the last one.
 // Starts its own serve.py with a throwaway banks/ folder and a stub grader:   node tests/proof.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -60,7 +61,7 @@ async function prove(page, text) {
 const chips = page => page.$$eval("#rubric .rb", xs => xs.map(x => x.dataset.v));
 const GOOD = "Base case: n = 1, both sides are 2.\nAssume it for k.\nAdd 3k+2 and factor: (k+1)(3k+4)/2.";
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(mode, viewport = { width: 1280, height: 860 }) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });

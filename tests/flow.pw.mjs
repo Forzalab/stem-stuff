@@ -4,6 +4,7 @@
 //   python3 serve.py 8812 &   then   node tests/flow.pw.mjs http://localhost:8812 [shotDir]
 // The software keyboard is simulated as in swap.pw.mjs: the viewport shrinks to 55% of its height after a field is focused. Keyboard down
 // after Back = the field loses focus and the viewport grows back. With a shotDir it saves flow-{1..N}-390.png and flow-desktop-1440.png.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { vtHook } from "./lib/wait.mjs";   // CI-ARCH B2: the shared view-transition counter (was defined here)
@@ -32,7 +33,7 @@ const CA = { code: "CSCI26_FW1", type: "mc", pick: "all", shuffle: false, body: 
 const PAD = "N = mg cos30 = 33.9\nf = 0.20 N = 6.79\nF = 19.6 - 6.79";
 
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });

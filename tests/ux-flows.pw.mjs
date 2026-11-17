@@ -6,6 +6,7 @@
 // on a temp banks folder of fixtures (no real bank needed) with $OPENROUTER_API_KEY empty and a throwaway tries.json.
 // /explain and /chat are stubbed with page.route (no key): the sheet UI is real, the text is fake. Log + shots go to outDir
 // (default: a temp folder); the log line per flow per width is `<row> <flow> <width> ok|FAIL|SKIP <detail>`.
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -1013,7 +1014,7 @@ flow(57, "cluck-compare", async (page, w) => {
 const PRIO = [43, 21, 20, 23, 28, 38, 6, 8, 39, 24, 46, 50, 49, 52, 22];
 const order = [...PRIO.map(n => F.find(f => f.n === n)), ...F.filter(f => !PRIO.includes(f.n)).sort((a, b) => a.n - b.n)].filter(f => f && (!ONLY || ONLY.has(f.n)));
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const f of order) for (const w of WIDTHS) {
     const phone = w === 393;   // keyed on 393, not w < 600: the flow bodies branch on w === 393 / w === 1280, so a phone context at another width would disagree with them

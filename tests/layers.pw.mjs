@@ -1,6 +1,7 @@
 // Emphasis layers in graph.js (W157): a ```fig mark with "layer": 3 draws inside <g class="ly3"> and its stroke computes to the step-3 colour
 // of its hue (app.css --fig-<hue>-3); "layer" omitted (or 1) draws byte-identical to before. No server: graph.js + math.js + app.css inline.
 //   node tests/layers.pw.mjs
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -19,7 +20,7 @@ const rgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join
 const css = read("client/answer/drill_core/app.css"), HEX = (n, hue = "sky") => new RegExp(`(?::root|:root, \\.fig, \\.vw) \\{[^}]*--fig-${hue}-${n}: (#[0-9a-f]{6})`).exec(css)[1];   // W163: a force with no colour gets a palette hue; F sorts before N, so F is sky, N amber
 let failures = 0;
 const step = async (name, fn) => { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); } };
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
 await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body><div id="a" class="fig"></div><div id="b" class="fig"></div><div id="c" class="fig"></div></body></html>`);
 await page.addScriptTag({ content: read("client/vendor/math.min.js") });

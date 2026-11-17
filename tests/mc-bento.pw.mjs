@@ -3,6 +3,7 @@
 // and every state is a fill step: NO border on idle / hover / picked / right / wrong / revealed, no lit-top shadow on a resting tile.
 // Sentence options wrap inside bento3 tiles (no holes). Flag OFF: no .bento class, today's 1px --line edge.
 // PHONE-FILL (<= 480px): justified rows fill the answer area (steps below). Own serve.py, throwaway banks. Smoke size, feature-local:   node tests/mc-bento.pw.mjs [port]      (SHOTS=<dir> also saves screenshots)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -37,7 +38,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* the answer's geometry is final: the bento / phone-fill write is in and unchanged across two frames (the guard may re-place once).
    This is the condition the old fixed pause in open() stood in for. */
 const settled = p => p.waitForFunction(() => new Promise(done => {

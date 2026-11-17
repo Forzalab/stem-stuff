@@ -3,6 +3,7 @@
 // a bad file after A, several files in one pick (the dialog), the dialog that waits for a code, a hosted code reused by an upload.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/upload-replace.pw.mjs [port] [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -126,7 +127,7 @@ async function expectOnly(page, want, gone, tag) {
   return s;
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const vp of [{ width: 393, height: 852 }, { width: 1280, height: 800 }]) {
     const V = `${vp.width}`;

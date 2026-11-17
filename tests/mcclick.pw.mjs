@@ -1,6 +1,7 @@
 // Regression: opening MC problems one after another stacked a click listener on #q per load, so one tap
 // ran select() twice (select, then "tap again = deselect") and the choice showed only its hover border.
 // usage: node tests/mcclick.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -8,7 +9,7 @@ let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/li
 const BASE = process.argv[2] || "http://localhost:8812";
 const CODES = ["CALC1_X2P", "CSCI26_CE05", "CSCI26_CE07", "CSCI26_TF3"];
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let fails = 0;
 for (const [name, viewport, touch] of [["phone", { width: 390, height: 844 }, true], ["desktop", { width: 1920, height: 1080 }, false]]) {
   const page = await (await b.newContext({ viewport, hasTouch: touch })).newPage();

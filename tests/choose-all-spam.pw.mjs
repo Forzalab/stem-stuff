@@ -1,6 +1,7 @@
 // mc pick all under click spam (prove mode is gone in both modes since #57, so its cases went with it) (Tony, Oct 3: "I can click multiple times"). The /check route is slowed so taps land while a
 // request is out. Every burst must send ONE request and spend at most one try; a finished problem sends nothing more.
 // Starts its own serve.py with a throwaway tries.json:   node tests/choose-all-spam.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -52,7 +53,7 @@ async function burst(page, touch, n = 6) {
   await page.waitForTimeout(DELAY + 600);                       // the held request lands, the UI settles
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const [name, viewport, touch] of [["phone", { width: 390, height: 844 }, true], ["desktop", { width: 1280, height: 900 }, false]]) {
     const tapOn = (page, id) => touch ? row(page, id).tap() : row(page, id).click();

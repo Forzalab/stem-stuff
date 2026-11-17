@@ -1,6 +1,7 @@
 // The proof Check waits 25 s (todo 109 item 1; serve.py PROOF_TIMEOUT is 20 s per model, net()'s 8 s cut it as "Cluck could not check it").
 // Case 1: /check answers after 12 s -> the verdict shows. Case 2: it never answers -> at 25 s a timeout line + Try again, no try spent; Try again re-sends.
 // Page clock faked (no real sleeps); own serve.py:   node tests/proof-timeout.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -22,7 +23,7 @@ const CODE = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/proof-bank.json"
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 await serverUp(BASE);
 const OK = { verdict: "wrong", triesLeft: 2, grade: "partial", hint: "QUACK. Where do you check n = 1?" };
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
 /* a page on a fake clock whose POST /check is held until the test lets it go (or never) */

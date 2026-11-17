@@ -1,5 +1,6 @@
 // The loading splash (docs/design/SPLASH.md). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/splash.pw.mjs http://localhost:8812
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -12,7 +13,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 400)); }
 }
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 const fresh = async (opts = {}) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, ...opts });
   await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });

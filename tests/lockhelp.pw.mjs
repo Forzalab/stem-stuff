@@ -6,6 +6,7 @@
 // over the last 3 items, no hand Cluck) or ND (2 swatted nudges) is live, else held reason=scn. The fixtures first establish HA: `primed` = a wrong on the 1-try
 // item CALC1_LHP3 (the modal holds on mode there, the wrong still counts), then the item under test. ND is unit-tested (tests/intent.test.mjs: it needs two 90 s nudge cycles).
 //   STEM_TODAY=2026-10-23 node tests/lockhelp.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -46,7 +47,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const VPS = { phone: { width: 390, height: 844 }, desk: { width: 1024, height: 768 } };
 const DLG = '[role="dialog"].lockhelp';
 

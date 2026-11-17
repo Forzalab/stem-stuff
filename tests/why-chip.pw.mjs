@@ -2,6 +2,7 @@
 // the follow-up through the chat (/chat). A multi's /explain, Compare and /chat bodies carry the part of the pick (the server grades it).
 // The model is stubbed: /explain and /chat are routed in the browser (bodies recorded). Own serve.py + throwaway banks and tries.json.
 //   node tests/why-chip.pw.mjs <port>
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -37,7 +38,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 
 async function open(code) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });   // BIG PLAN V1 (Tony Nov 2): on desktop sugar Cluck's box is open from load, so "See Cluck's steps" never shows there; the flow runs on the phone, 118c then resizes to 1366

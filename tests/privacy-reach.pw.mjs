@@ -3,6 +3,7 @@
 // page footer link still works, and the link covers nothing (not the list, not the code bar), and the page's one privacy-signal
 // line (#sigTx) is right. Needs a running server and Playwright:
 //   python3 serve.py 8816 &   then   node tests/privacy-reach.pw.mjs http://localhost:8816 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -15,7 +16,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const phone = () => browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
 const box = (page, s) => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; }, s);
 

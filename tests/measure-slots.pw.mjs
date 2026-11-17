@@ -6,6 +6,7 @@
 //     fixed-width slot keeps its own box (also whatever its id length);
 // plus: every row is a .vw-tslot box, the CLI writes slots.json + slots.png and exits 0, and a prop with no registry role has none.
 // usage: python3 serve.py 8815 &   node tests/measure-slots.pw.mjs http://localhost:8815 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, mkdtempSync } from "node:fs";
@@ -32,7 +33,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); }
 }
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 for (const W of [360, 390, 1280]) {
   await step(`${W} fixture view: one row per slot, roles + word classes from the registry, maxChars within tol`, async () => {
     const { rows, errors } = await measure(VIEW, { width: W, base: BASE, browser: b, out: SHOTS ? join(SHOTS, `measure-view-${W}`) : undefined });

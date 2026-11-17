@@ -3,6 +3,7 @@
 //   3. sugar after lockout gets it (green right row + check, picked row stays x; typed: "Answer ..."; a reload shows it again)
 //   4. the revealed pick pays 0 XP and stays a miss.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:   node tests/reveal.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -61,7 +62,7 @@ async function typed(page, v) {
 const xp = page => page.evaluate(() => window.Rewards.state().xp);
 const rows = page => page.$$eval("#q .opt", os => os.map(o => ({ id: o.dataset.id, cls: o.className, badge: o.querySelector(".badge use, .vg use")?.getAttribute("href") || "" })));
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const mk = async (diet) => {
     const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block" });

@@ -3,6 +3,7 @@
 // visible part (above the fade's solid part) misses the disc. A tap scrolls ~80% down; at the bottom it goes; a short reply never shows it.
 // Jev hears cluck_more shown (once) / tap / bottom, and telemetry.js never sends it. 390x844 + 1280x800; own serve.py + a stub OpenRouter.
 //   node tests/cluck-more.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -61,7 +62,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const VPS = [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 800 }]];
 
 /* a wrong pick streams Cluck's reply (prefetch); the idle duck's tap opens the sheet on it; the typing is skipped */

@@ -1,6 +1,7 @@
 // Bug (user report): the 10 s second-try countdown restarts from 10 when the user comes back to the tab.
 // Spec: the wait keeps its deadline across hide/show and across a page reload of the same tab (sessionStorage), never restarts to 10 s.
 //   STEM_TODAY=2026-10-23 python3 server/http_server/serve.py 8813 &   then   node tests/tab-countdown.pw.mjs http://localhost:8813
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -31,7 +32,7 @@ async function mk(b) {
   return { ctx, page };
 }
 
-const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 
 await step("hide/show mid-wait keeps the remaining time (no restart to 10)", async () => {
   const { ctx, page } = await mk(b);

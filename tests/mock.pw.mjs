@@ -3,6 +3,7 @@
 // front bank's PE3 questions in exam order (title "X3 Q<n> ..., practice" until exam_q / twins land), ONE try each, no hint / Cluck
 // peek / reveal; then the score line, and each miss comes back in exam order with the normal flow (hint, a second try, Cluck).
 // A fixture bank stands in for BANK_P3X. Starts its own serve.py with a throwaway banks/ folder:   node tests/mock.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -55,7 +56,7 @@ const look = page => page.evaluate(() => ({
   duck: !!document.querySelector(".ck-rise.on:not([hidden]):not(.out)"),
 }));
 const next = page => page.click("#qnext");
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
   await ctx.addInitScript(s => { try {

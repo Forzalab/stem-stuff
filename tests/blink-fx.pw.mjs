@@ -5,6 +5,7 @@
 //   node tests/blink-fx.pw.mjs [port] [--measure] [--log file] [--shots dir --tag before|after] [--serve-only]
 // --measure logs the numbers without asserting (the "before" run); --serve-only keeps the servers up for the WebKitGTK shots;
 // BF_W / BF_H (env) change the 393x852 viewport. "Moving" = a running animation in its active phase (a delay or a fill is still).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -158,7 +159,7 @@ async function step(name, fn) {
 }
 const check = (ok, msg) => { if (MEASURE) { if (!ok) log("   (would fail) " + msg); } else assert.ok(ok, msg); };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const phone = async rm => {
   const ctx = await browser.newContext({ viewport: { width: +(process.env.BF_W || 393), height: +(process.env.BF_H || 852) }, reducedMotion: rm || "no-preference", serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });

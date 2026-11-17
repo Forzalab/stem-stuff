@@ -3,6 +3,7 @@
 // changes app.css, reloads: the bar shows; tap it: the page reloads with the new file and the bar is gone. Then two stamped
 // deploys (a new sw.js each): untouched, the page reloads by itself; after a key press, the bar instead (docs/design/DEPLOY.md).
 //   node tests/update.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -35,7 +36,7 @@ const server = createServer(async (req, res) => {
 });
 await new Promise(r => server.listen(PORT, "127.0.0.1", r));
 
-const browser = await pw.chromium.launch();
+const browser = await launchBrowser(pw, );
 const bar = page => page.locator("#updateBar");
 let fails = 0;
 const step = async (name, fn) => {

@@ -2,6 +2,7 @@
 // /check that recorded the miss) and draws it (repair.js, variant "repair") under the verdict. Every miss, 393 + 1280. An item with no ladder
 // (404) is unchanged; the same slip family on miss 2 keeps the same element (a step is not reset); the 2-try lock, Next and the pips still work.
 // Own serve.py + fixture bank:   node tests/ladderwire.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -28,7 +29,7 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(code, viewport) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-noob-P2X", "1"); } catch { /* blocked */ } });

@@ -4,6 +4,7 @@
 // strict: a note never lies on a live control (its anchor and the Next note's brainrot link aside). Plus the desktop stage toast
 // ("Ready when you are.") sits bottom-left of the question column, not under the question over the Key formulas card (img3).
 // Own serve.py on a temp bank:   node tests/toast-note.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -35,7 +36,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const PHONE = { isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
 /* seen = the onboarding notes already met (a returning device); fresh = a new device (stem-ob "1": the onboarding notes are due) */
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's (Tony, Oct 14)

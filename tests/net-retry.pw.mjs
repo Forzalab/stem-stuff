@@ -1,6 +1,7 @@
 // app.js net(): a GET killed by a non-abort TypeError (Safari "Load failed" as the service worker takes control mid-fetch, iPhone E-FFXLW, Nov 5)
 // is tried ONCE more; a POST never is. Own serve.py with a throwaway banks/ folder.
 //   node tests/net-retry.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -27,7 +28,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* typed into the code box, not the URL hash: the boot path may ask for the bank more than once, which would hide a missing retry */
 async function typeCode(page, code) {
   await page.goto(BASE + "/"); await page.waitForTimeout(600);

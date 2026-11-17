@@ -2,6 +2,7 @@
 // a deep link is not sent to the welcome item, no Hail Mary slot/panel appears, the idle peek keeps its normal cadence (no cram toast),
 // and GET /calc carries no cram fields. CRAM_SPEC_ON=1 flips the temp copy back on (the red demo: the same assertions must fail).
 // Own serve.py with a fixture BANK_P3X + BANK_OTH1: node tests/cram-off.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -35,7 +36,7 @@ await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const PIN = new Date("2026-11-07T12:00:00Z");                      // inside welcome-first.js's window, so only the flag can stop the redirect
 async function newPage() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });

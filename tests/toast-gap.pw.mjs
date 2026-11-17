@@ -1,6 +1,7 @@
 // Smoke: the row reward toast under html.ui-v7 (DUCK-V8-TOAST, TOAST-GAP, tray9 C2). Every beat at 390 + 1366: the duck sits in a square box (TOAST-DYN: 44 + gap 12 for 1 line,
 // 64 + gap 16 for 2-3 lines), the words start at box right + gap (+-1), the duck is the beat's mood webp, the title is one line at 390, the close never sits on a word.
 // Flag off: the plain toast, unchanged. Own serve.py with a fixture bank:  node tests/toast-gap.pw.mjs [port] [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -28,7 +29,7 @@ await serverUp(BASE);
 
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 /* a page on the fixture bank; ui = true turns the row on (localStorage stem-ui, read by fx.js before first paint) */
 async function fresh(w, ui) {
   const h = 800, mobile = w < 600;

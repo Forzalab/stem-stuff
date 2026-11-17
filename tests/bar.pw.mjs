@@ -1,5 +1,6 @@
 // Grab handle (replaces the #more chevron) and the bottom code bar strip (phones). Needs a running server and Playwright:
 //   python3 serve.py 8816 &   then   node tests/bar.pw.mjs http://localhost:8816 [shotDir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -32,7 +33,7 @@ const LONG = { code: "PHYS_ZZ1", type: "num", body: [
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   const phone = W < 1000;
-  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   if (phone) await ctx.addCookies(DIET);
   const page = await ctx.newPage();

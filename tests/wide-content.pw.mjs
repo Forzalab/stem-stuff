@@ -1,6 +1,7 @@
 // Wide content in a question stem (9-col table, 12-col pmatrix display math) scrolls inside its own box (ui-v7 G4.3):
 // content wider than the box, the page never scrolls sideways, the box is scrollable + keyboard-focusable.
 // Starts its own serve.py:   node tests/wide-content.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
@@ -39,7 +40,7 @@ const measure = sel => {
   if (box) { box.scrollLeft = 10; r.canScroll = box.scrollLeft > 0; }
   return r;
 };
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let bad = 0;
 try {
   for (const width of [360, 1366]) {

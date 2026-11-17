@@ -2,6 +2,7 @@
 // fence; the gate passes it, wishHTML puts a placeholder and views.js draws the SVG inside .wtext, at 360 and 1280, with no horizontal
 // scroll and no raw program on the page. Shots into LIVEFIG_SHOTS (if set).
 // Starts its own serve.py and fake Claude:   node tests/views-oui.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -70,7 +71,7 @@ async function wish(page) {
 }
 const done = page => page.waitForFunction(() => /answer is/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 const init = () => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
 try {
   for (const [w, h, tag] of [[360, 780, "360"], [1280, 900, "1280"]]) {

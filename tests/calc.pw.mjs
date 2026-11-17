@@ -1,5 +1,6 @@
 // Calc Coach in the real app (docs/design/CALC-COACH.md): welcome card, item-view chip + cram strip + once-a-day toast, expiry (page.clock), picker hand-off, panel basics.
 // Own serve.py with a fixture BANK_P3X:  node tests/calc.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -35,7 +36,7 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 let failures = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function fresh(init = {}, at = "2026-11-06T18:00:00Z", opts = {}) {
   init = { ...init };
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", ...opts });

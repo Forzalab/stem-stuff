@@ -7,6 +7,7 @@
 //   5  the key-formulas ladder reveals its next piece every 30 s (visible time, sheet closed)
 //   7  a swipe up on the reward banner hides it; a tap still opens its popover; the next question brings it back
 //   node tests/w3.pw.mjs <port> [only: 1,2,3,4,5,7]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -54,7 +55,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, code, o = {}) {
   const phone = vp.width < 500;
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });

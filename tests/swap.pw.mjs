@@ -5,6 +5,7 @@
 // The software keyboard is simulated the only way headless Chromium can: the viewport height shrinks to 55% after a field is focused,
 // and grows back. (The layout viewport and the visual viewport shrink together, so visualViewport.offsetTop stays 0 here.)
 // Not part of `npm test` (that one needs no server or browser).
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -33,7 +34,7 @@ const FIX = {
 
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of SIZES) {
-  const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // onboarding: flow.pw checks it

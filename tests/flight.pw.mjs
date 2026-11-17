@@ -4,6 +4,7 @@
 // and Cluck's chat never reaches a report, a stemT (PostHog) call, a beacon or a server log line. The diag line shows in debug mode only.
 // Own serve.py.
 //   node tests/flight.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -38,7 +39,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 1200)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 
 /* a page that records every request body and every stemT call (what PostHog would get) */
 async function open({ explain, chat, debug = false } = {}) {

@@ -2,6 +2,7 @@
 // "None of these" row (nothing ticked is the answer "none"), keys, strike + ticks kept, miss, prove mode, restore on reload.
 // Server mode uses CSCI26_A7K from problems.json; upload mode an inline file. Starts its own serve.py with a throwaway tries.json:
 //   node tests/choose-all.pw.mjs [port]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -63,7 +64,7 @@ async function check(page) {
 }
 const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.querySelector('.badge use[href="#i-ok"]')).map(o => o.dataset.id).sort());
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const newCtx = browser.newContext.bind(browser);
 browser.newContext = async o => { const c = await newCtx(o); await c.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]); return c; };
 try {

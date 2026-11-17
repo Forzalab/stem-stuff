@@ -2,6 +2,7 @@
 // Flag ON (?ui=v7): the welcome ladder card, its chips, its Final answer input and Check button have NO border (width 0, fill steps instead), chip text >= 4.5:1, tap >= 44,
 // the verdict drawer is a borderless float with only its two buttons (no duck/mask), about its flag-off height. Flag OFF (?ui=off): today's 1px edges.
 // Own serve.py, throwaway banks, a stub OpenRouter (the drawer needs a live Cluck). Smoke size, feature-local:   node tests/fport-ladder-verdict.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -49,7 +50,7 @@ let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 async function open(w, flag, hash = "") {
   const phone = w < 500;
   const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone, deviceScaleFactor: 2, serviceWorkers: "block" });

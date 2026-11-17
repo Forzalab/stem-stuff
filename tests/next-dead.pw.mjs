@@ -3,6 +3,7 @@
 // at 1280 desktop and 393x852 phone. Each row clicks Next 10x and logs hash before/after + what it did.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/next-dead.pw.mjs [port]        (NEXT_LOG=1 prints every press)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -91,7 +92,7 @@ async function upload(page, file) {
   await fc.setFiles(file);
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   for (const vp of [{ width: 1280, height: 800 }, { width: 393, height: 852 }]) {
     const V = `${vp.width}`;

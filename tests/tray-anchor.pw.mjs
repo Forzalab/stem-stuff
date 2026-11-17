@@ -7,6 +7,7 @@
 //   reflow  0: opening / closing the tray moves nothing (.ansl, Next, the next card, #q keep their rects); there is no .vd-room spacer
 //   margin  the inline answer value in the .ansl line: gap before the value = gap after it (+-1px)
 // 390 phone (touch, dpr 2). Own serve.py + a throwaway bank + a stub OpenRouter.   node tests/tray-anchor.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -61,7 +62,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); } catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 1800)); }
 }
 const SETTLE = 600;   // > the drawer's 380 ms slide
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(code, width = 390) {
   const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });

@@ -1,5 +1,6 @@
 // F-PORT hint bar + toast smoke (proto column F): flag ON the stage toast ("Ready when you are.", bar + X) has border-width 0 and the --float fill;
 // flag OFF it keeps the 1px --line edge. Own serve.py.   node tests/fport-hint-toast.pw.mjs [port]   (SHOT=/path/prefix saves -390.png / -1280.png)
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -22,7 +23,7 @@ const welcome = { code: "PHYS_TC1", type: "num", answer: "4", form: "8/2", tol: 
 writeFileSync(join(BANKS, "BANK_FHT.json"), JSON.stringify({ v: 1, problems: [welcome, num("PHYS_TC2", 1), num("PHYS_TC3", 2)] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_FHT", STEM_FRONT_TITLE: "Exam 3", STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 await serverUp(BASE);
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 let failures = 0;
 async function probe(flag, w, h, shot) {
   const c = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });

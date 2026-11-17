@@ -5,6 +5,7 @@
 // place of the Save button (Tony #32; reduced motion: the ✓, no flash). Copy is Tony's own (#32): download line, keep fail, error.
 // /acct/new, /acct/login and /acct/keep (S2) are faked here with page.route. The "fixture" Cluck PNG is drawn by mycluck.mjs in the page itself.
 //   python3 serve.py 8833 & P=$!; sleep 1; node tests/login.pw.mjs http://localhost:8833; kill $P
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
@@ -67,7 +68,7 @@ async function savedState(page) {
       anim: cs.animationName }; });
 }
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 try {
   await step("open: mints, draws MY Cluck with the caption, fits 360px, labelled dialog", async () => {
     const { ctx, page, reqs, errs } = await fresh(browser);

@@ -4,6 +4,7 @@
 // --cl-top never changes during a drag, the footer stays on the screen bottom mid-drag, a release up ends at full (top 0), and a small
 // pull down then release ends at the same top as before the drag. Own serve.py + a stub OpenRouter, like cluck-more.
 //   node tests/cluck-drag.pw.mjs <port> [shots dir]
+import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -46,7 +47,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
 const VP = { width: 390, height: 844 };
 
 /* a wrong pick streams Cluck's reply; the idle duck's tap opens the phone sheet on it (as cluck-more) */
