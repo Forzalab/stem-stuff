@@ -1897,3 +1897,5 @@ html.ui-v7 :is(h1, h2, h3) { font-family: var(--font-title); }
 /* PROOF-GAP (Tony Nov 16 "dead space"): the proof column sat --s3 below the card on top of the card's own 20 px Q-GAP (~55 px); the short answer sits 20 px under. Same 20 now. */
 html.ui-v7.proof-split.pad-off #stage > #work { margin-top: 0; }
 html.ui-v7.proof-split #freeze { padding-bottom: 0; }   /* measured: card -> proof column was 32 px = Q-GAP 20 + #freeze padding-bottom 12 (page-coloured; a -12 px pull slid the hint UNDER it and clipped its first line) */
+/* PROGBAR P6 (PORT-ARCH §D2; Tony Nov 17 "those 2 brown chips should not exist anymore"): the old reward HUD (coin + count chips) is off under ui-v7; the notch bar replaced it */
+html.ui-v7 #rwHud { display: none !important; }

@@ -230,3 +230,6 @@ html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr:not(.qmore):not(.qopen) { min-he
    its math stroke .028em -> .012em to match; it keeps the one-step-brighter ink, so it still reads as THE question under the grotesk headline. */
 html.ui-v7 #problem.qc7 .qlead { font-weight: 400; }
 html.ui-v7 #problem.qc7 .qlead .katex { -webkit-text-stroke-width: .012em; }
+/* GHOST-ONE (Tony Nov 17 "funky gradient in the question box"): the 5 offset echo copies read as stepped bands; one faint flat copy, no mask */
+html.ui-v7 .qghost i:nth-child(n+3) { display: none; }
+html.ui-v7 .qghost i:nth-child(2) { --o: .08; -webkit-mask-image: none; mask-image: none; transform: none; }
