@@ -106,7 +106,7 @@
     var c = H.classList;
     if (window.stemMock && window.stemMock.on()) return false;          // the night-before mock (nav.js, W103b): no Cluck until it ends
     return c.contains("sugar") && !c.contains("start") && !!(window.stemBank && window.stemBank.code) &&
-      !c.contains("ql-open") && !c.contains("bar-open") && !c.contains("kb") && !document.querySelector(".fx-ov") &&
+      !c.contains("ql-open") && !c.contains("bar-open") && !c.contains("kb") && !c.contains("kbup") && !c.contains("mt") && !(document.activeElement && document.activeElement.matches && document.activeElement.matches("input, textarea, [contenteditable]")) &&   /* PEEK-TYPING (Nov 17): the duck never rises while the student types (proof / short-answer pages set kbup, not kb) */ !document.querySelector(".fx-ov") &&
       !(window.stemCluckOpen && window.stemCluckOpen()) && !(window.stemLockHelp && window.stemLockHelp.up) && !(window.stemDuck.up && !mine);   // AMA 10: one duck per screen
   }
   function arm(ms) { clearTimeout(t); t = n < idleList().length ? setTimeout(fire, Math.max(0, ms)) : 0; }

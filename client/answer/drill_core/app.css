@@ -435,7 +435,7 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
 .cb-copy.done { color: var(--correct); }
 .cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
 .cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
-@media (max-width: 480px) { .cb code { font-size: .75rem; } .cb { --g: 0px; } .cb code .l::before { content: none; } }   /* CB-PHONE (Tony Nov 17, ref: the Claude app's code block): no line-number gutter on phones, the code gets the width */   /* CB-PHONE-13 (Tony Nov 16: 16px mono fit ~26 chars, code shape unreadable): 12px on phones = ~37 chars (Tony: 13 -> 12) */
+@media (max-width: 480px) { .cb code { font-size: .875rem; } .cb { --g: 0px; } .cb code .l::before { content: none; } }   /* CB-PHONE (Tony Nov 17, ref: the Claude app's code block): no line-number gutter on phones, the code gets the width */   /* CB-PHONE-13 (Tony Nov 16: 16px mono fit ~26 chars, code shape unreadable): 14px on phones (Tony Nov 17: 12 too small; research floor 14; no-wrap scroll covers width) */
 .cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
   --hang: min(calc((var(--ind) + 2) * 1ch), 8ch);   /* CB-HANG-CAP (Tony Nov 16, phone: a deep continuation line wrapped into a 4-char sliver): the hang stops at 8ch */
   padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + var(--hang)); text-indent: calc(-1 * var(--hang)); }
@@ -1885,8 +1885,14 @@ html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck { background: var(--float); border
 html.ui-v7.proof-split #work > #q { padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; gap: var(--s2); }
 html.ui-v7.proof-split #work > #q:focus-within { border: 0; box-shadow: none; }
 html.ui-v7.proof-split #q > .how { margin: 0; padding-inline: 0; color: var(--muted); }
-html.ui-v7.proof-split #q .ff.proof { padding: 12px 49px 12px 12px; border-radius: 16px; }   /* fill + well + lit foot come from verdict-v7.css, the short-answer field rule */
-html.ui-v7.proof-split #q .ff.proof textarea { font-family: inherit; font-size: 17px; line-height: 1.5; letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }
+html.ui-v7.proof-split #q .ff.proof { padding: 12px 49px 12px 16px; border-radius: 16px; }   /* PROOF-AXIS (Tony Nov 17): 16px so the typed text starts on the card's text axis (card text x = 8 gutter + 16) */   /* fill + well + lit foot come from verdict-v7.css, the short-answer field rule */
+html.ui-v7.proof-split #q .ff.proof textarea { font: 400 16px/22px var(--font); letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */
+@media (min-width: 900px) { html.ui-v7.proof-split #q .ff.proof textarea { font-size: 17px; line-height: 24px; } }
+/* PROOF-LOCK (Tony Nov 17): keyboard up in the proof box = nothing but the textarea scrolls (the column and the page stay put); .shut/verdict ladders keep their scroll */
+html.ui-v7.proof-split.kbup #work:has(> #q:focus-within):not(:has(> #rpHost > *)) { overflow: hidden; overscroll-behavior: none; }
+html.ui-v7.proof-split.kbup #work > #q:focus-within { min-height: 0; }
+html.ui-v7.proof-split.kbup #work > #q:focus-within .ff.proof { flex: 1 1 0; min-height: 0; }
+html.ui-v7.proof-split.kbup #work > #q:focus-within .ff.proof textarea { min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; }
 html.ui-v7.proof-split #q .ff.proof > #ansGo { position: absolute; top: 0; right: 0; }
 /* FONT-SPLIT (Tony Nov 16 "grotesk just for titles, the rest in Atkinson Hyperlegible Next"): under ui-v7 the text face (--font) and the input face (--font-input) are
    Atkinson Hyperlegible Next (variable 200-800, OFL, @fontsource-variable 5.3.0, Latin subset; licence vendor/fonts/OFL-atkinson-next.txt). Schibsted Grotesk stays on
@@ -1921,8 +1927,13 @@ html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; box-shadow
 /* PH-NAVY (Tony Nov 17 "placeholder dimmer"; Refactoring UI p.36-38: dim by moving toward the background's own hue, never grey/opacity on colour):
    v7 placeholders take --line (#556791, the navy family of the #060b1b well) instead of --hint (#a9b8cc) */
 html.ui-v7 :is(input, textarea)::placeholder { color: var(--line); opacity: 1; }
+/* PH-FOCUS (Tony Nov 17): the grey format hint ("Ex: 9/2, 5e-4, sqrt(3)", the fix/part hints) goes while the field has focus / keyboard is up: the caret gets a clean box */
+html.ui-v7 :is(input, textarea):focus::placeholder, html.ui-v7:is(.kb, .kbup, .mt) :is(#q, #ff) :is(input, textarea)::placeholder { color: transparent; }
 
 /* RE-ENTRY GUARD (shell.js): the answer controls rest for 1.5 s after the tab comes back */
 html.reentry :is(#q .send, #q .btn-go, #q .opt, #q .nx, #codeGo) { opacity: .55; transition: opacity .2s ease-out; }
 /* HOW-KB (Tony Nov 17): while the keyboard is up (html.kb) or a proof/notes pane owns the screen (html.mt), the hint line above the answer goes: the field gets the room */
-html.ui-v7:is(.kb, .mt) #q > .how, html.ui-v7 #q:has(.ans:focus, textarea:focus, input:focus) > .how { display: none !important; }   /* overrides verdict-v7.css:59 ("the hint line stays"), Tony reversed it Nov 17 */
+html.ui-v7:is(.kb, .kbup, .mt) #q > .how, html.ui-v7 #q:has(.ans:focus, textarea:focus, input:focus) > .how { display: none !important; }   /* overrides verdict-v7.css:59 ("the hint line stays"), Tony reversed it Nov 17 */
+
+/* SCROLL-HANDOFF 2a (Tony Nov 17): the card now hands scroll to the page; the page itself never pulls-to-refresh (a fling past the top would reload and lose state) */
+html.ui-v7 { overscroll-behavior-y: contain; }

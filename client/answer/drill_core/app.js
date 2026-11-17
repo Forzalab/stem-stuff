@@ -1462,6 +1462,12 @@ async function submitMC() {
 /* pick all: send the ticked ids (prove mode: + fixes { id: text } for every X'd row). Wrong: the ticks and texts stay (the student
    edits the set); the struck row (if any) is unticked + disabled; a wrong fix turns its box red.
    Copy payload: a = the ticked choices' text, c / l = their ids / letters; prove mode: a = { tick, fix: { letter: text } } */
+/* a right choose-all with NOTHING ticked (the key is "none"): every row is right as left, so every row wears the ok look. With ticks, only
+   the ticked rows are right (the unticked ones stay plain). Without it Next (.ch.cue:has(.opt.right)) and the boxes stay neutral. Struck wrong rows keep their x. */
+function rightRest(ticked) {
+  if (ticked.some(Boolean)) return;
+  for (const o of opts()) if (!ticked.includes(o) && !o.classList.contains("wrong")) { o.classList.remove("kept"); o.classList.add("right"); }
+}
 async function submitAll() {
   const on = ticked(), go = $("#mcGo"); if (!go || go.disabled || S.finished || busy || waiting()) return;
   waitSubmitted();
@@ -1477,6 +1483,7 @@ async function submitAll() {
     ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}), ...(r.kept ? { k: r.kept } : {}) }, r);
   if (r.verdict === "correct") {
     for (const o of on) { o.classList.remove("kept"); o.classList.add("right"); glyph(o, "i-ok"); }   // no pop: Next is the one motion (T17b-1); kept turns right in place
+    rightRest(on);
     for (const o of xs) fixOf(o).classList.add("ok", "done");
     finish();
   } else if (r.verdict === "wrong") {
@@ -1641,7 +1648,7 @@ async function submitFF() {
 
 /* ---------- proof (W107): a textarea (Enter = a new line, no new key handler), Check sends it to Cluck's grader ---------- */
 const PROOF_MAX = 3000;                                    // serve.py PROOF_MAX
-const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // the one verdict chip (Nov 8: no rubric rows)
+const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // verdict text, sr-only (ui-v7: no visible chip; Nov 8: no rubric rows)
 function wireProof() {
   const inp = $("#ans"), go = $("#ansGo");
   inp.addEventListener("input", () => {
@@ -1663,8 +1670,8 @@ function proofLen(v) {
 function rubricChips(g) {
   const el = $("#rubric"); if (!el) return;
   el.hidden = !g;
-  const [ic, w] = PROOF_V[g] || PROOF_V.wrong;
-  el.innerHTML = g ? `<span class="rb ${esc(g)}" data-v="${esc(g)}">${icon(ic)}<span>${w}</span></span>` : "";
+  const [, w] = PROOF_V[g] || PROOF_V.wrong;
+  el.innerHTML = g ? `<span class="sr-only" data-v="${esc(g)}">${w}</span>` : "";
 }
 async function submitProof() {
   const inp = $("#ans"), v = inp ? inp.value : "";
@@ -1862,6 +1869,7 @@ function paintRec(rec) {
       if (last.v === "correct") { o.classList.add("right"); glyph(o, "i-ok"); }
       else if (last.v === "wrong" && last.k && last.k.includes(o.dataset.id) && keepOn()) keep(o);
     }
+    if (last && last.v === "correct") rightRest(Array.isArray(last.c) ? last.c.map(opt) : []);   // a right "tick none" has no ticked row to carry the look
     if (last && last.f) for (const [id, v] of Object.entries(last.f)) {
       const o = opt(id), f = o && fixOf(o); if (!f) continue;
       if (!o.disabled) mark(o, "x");

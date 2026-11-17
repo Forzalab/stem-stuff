@@ -329,6 +329,25 @@ try {
     assert.equal(await p5.evaluate(() => window.__drill.state.tries.at(-1).c.length), 0);
   });
   await c5.close();
+  const c6 = await newCtx({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }), p6 = await c6.newPage();
+  await step("upload grid: a right 'tick none' turns every row and Next to the right look (live and after a reload)", async () => {
+    await p6.goto(BASE + "/");
+    const [fc] = await Promise.all([p6.waitForEvent("filechooser"), p6.click("#upload")]);
+    await fc.setFiles({ name: "grid.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ v: 1, problems: [{ ...FILE3.problems[0], code: "CSCI26_U04" }] })) });
+    await opened(p6, "CSCI26_U04");
+    await p6.click("#mcGo");                                      // zero ticks = the key
+    await p6.waitForFunction(() => window.__drill.state.finished, null, { timeout: 4000 });
+    const look = () => p6.evaluate(() => {
+      const probe = document.createElement("i"); probe.style.background = "var(--correct)"; document.body.append(probe);
+      const green = getComputedStyle(probe).backgroundColor; probe.remove();
+      const nf = document.querySelector("#q .nx .nf");
+      return { rows: [...document.querySelectorAll("#q .opt")].map(o => o.classList.contains("right")), nx: nf && getComputedStyle(nf).backgroundColor, green };
+    });
+    let l = await look(); assert.deepEqual(l.rows, [true, true], "every unticked row wears the right look"); assert.equal(l.nx, l.green, "Next is the right-answer Next");
+    await p6.reload(); await opened(p6, "CSCI26_U04"); await p6.waitForSelector("#q .nx");
+    l = await look(); assert.deepEqual(l.rows, [true, true], "restored: the same"); assert.equal(l.nx, l.green, "restored: Next the same");
+  });
+  await c6.close();
 } finally { await browser.close(); srv.kill(); }
 if (fails) { console.log(`${fails} failing`); process.exit(1); }
 console.log("all ok");

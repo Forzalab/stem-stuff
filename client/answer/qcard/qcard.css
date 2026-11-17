@@ -87,7 +87,7 @@ html.ui-v7 #problem.qc7.qbr .qghost i:not(:first-child) { font-size: calc(var(--
 html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-inline: auto; }
 /* Q-HALF (Tony Nov 16): on a phone the question card takes at most half the screen; it scrolls inside (fade at the foot), the answers fill the rest */
 @media (max-width: 480px) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { max-height: 50svh; max-height: round(down, 50svh, 1px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;   /* WHOLE-PX (Nov 17): 50svh is often fractional (419.5); the scroller's clip snaps outward but the content layer does not, so one device row of the next code line painted BELOW the card edge. round(down) = whole px. */
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { max-height: 50svh; max-height: round(down, 50svh, 1px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: auto; scrollbar-width: thin;   /* SCROLL-HANDOFF (Tony Nov 17, grill 1a-5a): at the card's top/bottom the NEXT swipe moves the page (native scroll latching; Edge/Chromium dropped mid-gesture chaining as buggy) */ /* WHOLE-PX (Nov 17): 50svh is often fractional (419.5); the scroller's clip snaps outward but the content layer does not, so one device row of the next code line painted BELOW the card edge. round(down) = whole px. */
     margin-bottom: 20px; padding-bottom: 0; }   /* Q-GAP: the answers start clearly below the card. FOLD-FLUSH: the bottom pad moves into .blocks (below), so the sticky fold's containing block reaches the card's bottom edge */
   html.ui-v7:not(.mt):not(.swap) #problem.qc7 > .blocks { padding-bottom: var(--qpad, 24px); }
   /* Q-FOLD (qcard.js foldBtn): folded = a sticky foot strip, raised (64 px gradient, chevron 22 px up), tap = expand; open = full height, the reversed chevron at the end folds it */
@@ -245,3 +245,6 @@ html.ui-v7 .qghost i:nth-child(2) { --o: .08; -webkit-mask-image: none; mask-ima
 }
 
 /* PAD-TIGHT (Tony Nov 17 "too spacey"): --qpad / --qc-pad 24 -> 16 (desktop 32/48 -> 22/32, pad-split 16/24 -> 11/16), phone top 32 -> 22 (--qpt, also the ghost pin's offset), kicker row -> headline 12 -> 8, row -> text 20 -> 14. Corners (radius ~20) stay clear of the text: the first line starts below the kicker row. */
+/* GHOST-CLIP (Nov 17, Firefox Android "horizontal scroll"): the ghost numeral's glyph ran ~38px past the card's right edge (the box is overflow: visible here);
+   clip it to its box so nothing pokes past the viewport */
+html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }

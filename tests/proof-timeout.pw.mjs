@@ -52,7 +52,7 @@ try {
     assert.equal(held.length, 1, "Check sent no request");
     await freeze(page); await page.clock.fastForward(12000); await page.clock.resume();
     await held[0].fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(OK) });
-    await page.waitForSelector("#rubric .rb", { timeout: 6000 });
+    await page.waitForSelector("#rubric [data-v]", { timeout: 6000 });
     assert.doesNotMatch(await page.textContent("#fb"), /could not check|taking too long/i);
     assert.match(await page.textContent("#fb .cluck"), /Where do you check n = 1\?/);
     await ctx.close();
@@ -74,7 +74,7 @@ try {
     await heldAt(2).catch(() => {});                                   // the re-send is on the wire (the assert below reports it if not)
     assert.equal(held.length, 2, "Try again did not re-send");
     await held[1].fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(OK) });
-    await page.waitForSelector("#rubric .rb", { timeout: 6000 });
+    await page.waitForSelector("#rubric [data-v]", { timeout: 6000 });
     assert.equal(await tries(page), 1);
     await ctx.close();
   });

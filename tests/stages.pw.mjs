@@ -105,7 +105,7 @@ for (const w of WIDTHS) {
     await page.waitForFunction(() => /Base case: clean/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 5000 });
     assert.equal(await page.locator("#cluck .stg .stg-ok").count(), 0, "text is flowing, the reply is not whole yet: no tick");
     req.write(ev("write", "end")); req.end();
-    await waitSel(page, "#cluck .stg .stg-sum");
+    await page.waitForSelector("#cluck .stg .stg-sum", { state: "attached", timeout: 5000 });   // SUM-PHONE (Nov 17): "Thought for" is display:none on phones, present in the DOM
     await page.click("#cluck .wtext").catch(() => {});
     await page.clock.runFor(1500);
     assert.match(await text(page, "#cluck .stg .stg-sum"), /Thought for 3s/);
@@ -113,11 +113,14 @@ for (const w of WIDTHS) {
     const t = await text(page, "#cluck .wtext");
     assert.match(t, /Base case: clean/); assert.doesNotMatch(t + (await text(page, "#cluck")), /\x1e|"stage"|"at"/, "no event line in the reply");
     await noScroll(page);
-    const h = await page.$eval("#cluck .stg-sum", b => b.getBoundingClientRect().height);
-    assert.ok(h >= (w < 500 ? 44 : 28), "the summary is a tap target (44px on a phone): " + h);
-    await page.click("#cluck .stg-sum");
-    assert.equal(await page.locator("#cluck .stg .stg-r").count(), 2, "a tap opens the rows");
-    assert.match(await text(page, "#cluck .stg"), /Fluffed feathers/); assert.match(await text(page, "#cluck .stg"), /Drafted the wish/);
+    if (w < 500) assert.equal(await page.$eval("#cluck .stg-sum", b => getComputedStyle(b).display), "none", "phones hide 'Thought for' (Tony Nov 17)");
+    else {
+      const h = await page.$eval("#cluck .stg-sum", b => b.getBoundingClientRect().height);
+      assert.ok(h >= 28, "the summary is a tap target: " + h);
+      await page.click("#cluck .stg-sum");
+      assert.equal(await page.locator("#cluck .stg .stg-r").count(), 2, "a tap opens the rows");
+      assert.match(await text(page, "#cluck .stg"), /Fluffed feathers/); assert.match(await text(page, "#cluck .stg"), /Drafted the wish/);
+    }
     assert.deepEqual(page.errs, []);
     await page.context().close();
   });
@@ -143,7 +146,7 @@ for (const w of WIDTHS) {
     assert.equal(await page.locator(".stg-r, .stg-sum").count(), 0, "a closed sheet shows no stage UI");
     await page.evaluate(() => window.stemIdleTap());
     await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
-    await waitSel(page, "#cluck .stg .stg-sum");
+    await page.waitForSelector("#cluck .stg .stg-sum", { state: "attached", timeout: 5000 });   // SUM-PHONE (Nov 17): "Thought for" is display:none on phones, present in the DOM
     assert.match(await text(page, "#cluck .stg .stg-sum"), /Thought for/);
     await page.context().close();
   });
@@ -184,13 +187,13 @@ for (const w of WIDTHS) {
     await page.clock.runFor(2000);
     assert.equal(await text(page, "#q .stg .stg-tmr"), "3s / 25s");
     req.write(ev("grade", "end") + ev("record", "start") + ev("record", "end") + JSON.stringify({ verdict: "wrong", triesLeft: 2, grade: "partial", hint: "QUACK. Where do you check n = 1?" }) + "\n"); req.end();
-    await waitSel(page, "#rubric .rb");
+    await waitSel(page, "#rubric [data-v]");
     assert.match(await text(page, "#fb .cluck"), /Where do you check n = 1\?/, "the verdict card is today's");
-    await waitSel(page, "#q .stg .stg-sum");
+    await page.waitForSelector("#q .stg .stg-sum", { state: "attached", timeout: 5000 });   // SUM-PHONE (Nov 17): "Thought for" is display:none on phones, present in the DOM
     assert.match(await text(page, "#q .stg .stg-sum"), /Thought for 3s/);
     assert.equal(await page.evaluate(() => window.__drill.state.tries.length), 1);
-    const h = await page.$eval("#q .stg-sum", b => b.getBoundingClientRect().height);
-    assert.ok(h >= (w < 500 ? 44 : 28), "the summary is a tap target (44px on a phone): " + h);
+    if (w < 500) assert.equal(await page.$eval("#q .stg-sum", b => getComputedStyle(b).display), "none", "phones hide 'Thought for' (Tony Nov 17)");
+    else { const h = await page.$eval("#q .stg-sum", b => b.getBoundingClientRect().height); assert.ok(h >= 28, "the summary is a tap target: " + h); }
     await noScroll(page);
     assert.deepEqual(page.errs, []);
     await page.context().close();
@@ -212,7 +215,7 @@ for (const w of WIDTHS) {
   await step(`${tag}: proof Check with no events (the flag ignored): one JSON body = today's verdict, no stage UI`, async () => {
     const { page, req } = await proofOpen();
     req.write(JSON.stringify({ verdict: "wrong", triesLeft: 2, grade: "partial", hint: "QUACK. Use k." }) + "\n"); req.end();
-    await waitSel(page, "#rubric .rb");
+    await waitSel(page, "#rubric [data-v]");
     assert.equal(await page.locator("#q .stg-r, #q .stg-sum").count(), 0);
     assert.match(await text(page, "#fb .cluck"), /Use k\./);
     await page.context().close();

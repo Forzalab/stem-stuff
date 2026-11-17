@@ -117,6 +117,10 @@ html.ql-open .top .entry > .code-box { z-index: 31; }
 html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, filter .45s ease-out, z-index .225s step-end; transition-behavior: allow-discrete; }
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
    Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
+/* the notes split (html.mt, html.swap) owns the screen: the bar's z steps 35 -> auto after .225s (above, so Back stays tappable mid-slide), and for those frames the bank chip, progbar and Next
+   showed over the split's cover (one-frame flash on a keyboard open). Everything but Back is hidden at once; Back (#qback) stays up and tappable (ios-back.pw split-back-overlap) */
+html.mt:not(.ql-open) .top > *, html.swap:not(.ql-open) .top > * { visibility: hidden; }
+html.mt:not(.ql-open) .top #qback, html.swap:not(.ql-open) .top #qback { visibility: visible; }
 html.dock-bottom:not(.start):not(.side):not(.ql-open):not(.mt):not(.swap) .top { z-index: 35; }
 html:not(.dock-bottom):not(.start):not(.ql-open) .top { z-index: 35; }   /* the pinned desktop bar (app.css) over the page, under Cluck's sheet (45) and the toasts (50+) */
 .top > .rw-hud::after {
