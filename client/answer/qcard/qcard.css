@@ -90,7 +90,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
 }
 /* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
-html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .1em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
+html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: 0 .45em;   /* ICK4-SHORT-LH: no block pad (the chip box = the mono glyph box, ~19px at 16px, fits 1.35 and 1.25 lines with a gap) */ border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 74px; }   /* 2 + 48 button + 24 air (BREATHE) */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
@@ -111,17 +111,12 @@ html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blo
 html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 8px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: 36px !important; line-height: 38px !important; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: 16px; line-height: 22px; }   /* TYPE-B lock 16/22 (Q-SMALL's 15 px retired) */
-/* ICK4-SHORT-LH (Tony Nov 18, 2a): short body text (qcard.js shortText: <= 4 lines) and the cramped typing card (html.mt / html.swap) read at 1.3, long text at rest keeps 1.45 */
-html.ui-v7 #problem.qc7.qshort, html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qbody-lh: 1.3; }
-html.ui-v7 #problem.qc7.qshort > .blocks, html.ui-v7 #problem.qc7.qshort > .blocks > .md,
-html.ui-v7.mt #problem.qc7 > .blocks, html.ui-v7.mt #problem.qc7 > .blocks > .md,
-html.ui-v7.swap #problem.qc7 > .blocks, html.ui-v7.swap #problem.qc7 > .blocks > .md { line-height: 21px; }
-@media (min-width: 900px) {
-  html.ui-v7 #problem.qc7.qshort > .blocks, html.ui-v7 #problem.qc7.qshort > .blocks > .md,
-  html.ui-v7.mt #problem.qc7 > .blocks, html.ui-v7.mt #problem.qc7 > .blocks > .md,
-  html.ui-v7.swap #problem.qc7 > .blocks, html.ui-v7.swap #problem.qc7 > .blocks > .md,
-  html.ui-v7 #problem.qc7.qshort .qtext, html.ui-v7.mt #problem.qc7 .qtext, html.ui-v7.swap #problem.qc7 .qtext { line-height: 22px; }
-}
+/* ICK4-SHORT-LH (Tony Nov 18 "1.35 for med to long, 1.25 for short text"): body leading 1.35, short body text 1.25 (qcard.js shortText: <= 4 setup lines).
+   Unitless, so desktop 17px follows. Beats TYPE-B 16/22 above and .qtext 16/22 + 17/24 (same specificity, later). */
+html.ui-v7 #problem.qc7 { --qbody-lh: 1.35; }
+html.ui-v7 #problem.qc7.qshort { --qbody-lh: 1.25; }
+html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md, html.ui-v7 #problem.qc7 .qtext { line-height: var(--qbody-lh); }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md, html.ui-v7 #problem.qc7 .qtext { line-height: var(--qbody-lh); } }
 html.ui-v7 #problem.qc7.qbr { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; }
 html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
