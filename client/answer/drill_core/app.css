@@ -1165,7 +1165,7 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
   background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
 .cl:has(.wrun)::before, .cl.wbusy::before { opacity: 1; }                   /* brighter while Cluck thinks and types */
 @media (prefers-reduced-motion: no-preference) {                            /* and it breathes, subtly (Tony, Oct 5); still under reduced motion */
-  .cl:has(.wrun)::before, .cl.wbusy::before { animation: wember 2.4s ease-in-out infinite; }
+  .cl:has(.wrun)::before, .cl.wbusy::before { animation: wember 2.4s ease-in-out infinite; transition: none; }   /* wember owns opacity here, so no fade-in to run: WebKit re-matches :has(.wrun) on every typed chunk and restarted the .9s transition each time (never settled; WEBKIT-RESTART, desk-layout@1). The fade back to .6 still runs (the base rule's transition) */
 }
 @keyframes wember { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
 .cl > * { position: relative; }
