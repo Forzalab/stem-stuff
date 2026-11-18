@@ -20,11 +20,18 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
     const one = await cap(page.evaluate(s => { const r = v => v == null ? "null" : Math.round(v);
       window.__wkProbe = (s ? [...document.querySelectorAll(s)].flatMap(x => x.getAnimations({ subtree: true })) : document.getAnimations())
         .filter(a => a.playState === "running").slice(0, 8);
+      /* WEBKIT-RESTART probe: who writes to the running animations' targets in the 500 ms window (attr name / childList / text, per node) */
+      const m = window.__wkMut = {}, key = n => n.nodeType === 1 ? n.tagName.toLowerCase() + (n.id ? "#" + n.id : "") + (n.classList?.length ? "." + [...n.classList].slice(0, 3).join(".") : "") : "#text";
+      window.__wkObs?.disconnect(); window.__wkObs = new MutationObserver(rs => rs.forEach(r => { const k = `${r.type === "attributes" ? "attr:" + r.attributeName : r.type}@${key(r.type === "characterData" ? r.target.parentNode || r.target : r.target)}`; m[k] = (m[k] || 0) + 1; }));
+      [...new Set(window.__wkProbe.map(a => a.effect?.target).filter(Boolean))].slice(0, 3).forEach(t => window.__wkObs.observe(t, { attributes: true, childList: true, characterData: true, subtree: true }));
+      window.__wkObs.observe(document.documentElement, { attributes: true });
       return window.__wkProbe.map(a => `t=${r(a.currentTime)} st=${r(a.startTime)} pd=${a.pending ? 1 : 0}`); }, sel), ["probe1 timed out"]);
     await new Promise(z => setTimeout(z, 500));
     const left = await cap(page.evaluate(one => { const r = v => v == null ? "null" : Math.round(v);
       return (window.__wkProbe || []).map((a, i) => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"}${a.effect?.pseudoElement || ""} it=${a.effect?.getTiming().iterations} end=${ti.endTime} [${one[i]}] -> [t=${r(a.currentTime)} st=${r(a.startTime)} pd=${a.pending ? 1 : 0}] ps=${a.playState} rm=${matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0}`; }); }, one), [`probe2 timed out; probe1: ${one}`]);
-    throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]}) running: ${JSON.stringify(left)}`); });
+    const mut = await cap(page.evaluate(() => { window.__wkObs?.disconnect(); const m = window.__wkMut || {};
+      return `wrun=${document.querySelectorAll(".wrun").length} html=${document.documentElement.className} ` + Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${k}x${v}`).join(" "); }), "mut timed out");
+    throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]}) running: ${JSON.stringify(left)} writes(500ms): ${mut}`); });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
 
