@@ -48,7 +48,7 @@ const part = (page, i) => page.evaluate(i => {
     kind: window.__drill.state.hints.filter(h => h.part === i).at(-1)?.kind };
 }, i);
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { jev: true, args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
