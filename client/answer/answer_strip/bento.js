@@ -128,7 +128,9 @@
     if (fill) { fillLayout(g, chs, R, Math.max(A, 1)); return; }
     if (g.dataset.fill) clear(g);
     var tiny = R < 520 && chs.every(function (c) { var t = c.querySelector(".opt .txt"), w = 0; if (t) [].forEach.call(t.querySelectorAll(".katex"), function (k) { w += k.getBoundingClientRect().width; }); return restLen(t) <= 8 && w <= 44; }), C = colsFor(R, tiny), qid = (D.getElementById("pcode") || {}).textContent || "";
-    cur = { g: g, chs: chs, ms: measure(chs, R, C), R: R, C: C, seed: qid + "|" + R + "|" + chs.map(function (c) { return (c.querySelector(".txt") || {}).textContent; }).join("|"), forbid: {}, tries: 0, stacked: false };
+    /* SEED-NO-WIDTH (Tony Nov 18, "jitter while I drag the resize bar"): the seed had the px width in it, so each pixel of a drag re-rolled the seeded pick
+       (50 layout flips in 76 drag steps). Now: same question + same column count = same pick (layout() adds C); it changes only when the content stops fitting */
+    cur = { g: g, chs: chs, ms: measure(chs, R, C), R: R, C: C, seed: qid + "|" + chs.map(function (c) { return (c.querySelector(".txt") || {}).textContent; }).join("|"), forbid: {}, tries: 0, stacked: false };
     place();
   }
   /* write the placement; the guard (next frame) forbids a shape whose text is clipped and lays out once more, the 2nd failure = stacked rows */

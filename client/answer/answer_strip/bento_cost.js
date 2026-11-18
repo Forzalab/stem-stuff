@@ -1,6 +1,6 @@
 /* bento_cost.js: bento4 PR2. Pure (no DOM): the search. Ordered exact cover (options placed IN ORDER at the first empty cell, row-major: reading order A,B,C.. and no holes by
    construction) over the shapes from bento_feat.js, scored by a content cost + a variety cost; it keeps the K best full solutions and picks one with a SEEDED softmax (same question
-   + same width = same layout, no Math.random). Weights = W below (brain ui-polish/bento4/PLAN.md sec 3, Tony's Nov 15 answers on top):
+   + same column count = same layout, no Math.random; the px width is NOT in the seed: a drag must not re-roll the pick). Weights = W below (brain ui-polish/bento4/PLAN.md sec 3, Tony's Nov 15 answers on top):
      per tile  F1 pref x10 | F2 |ln(area / content-share area)| x6 | F3 grow x3 per extra row | F4 1-col wrapping text +12 | F5 uncramp +40 per text line over the full-row wrap | hero not the max-content option +6 | V7 aspect +5 | V8 jitter x2
      per set   V1 50 x rows | V2 -9 x distinct shapes (<= min(N,5)) | V3 no hero with N>=5 +25 | V4 3rd+ equal run +8 | V5 equal neighbours +4 | V6 3+ 1x1 in a row +10
    Heroes (>= 2x2, not a full row, and not forced by content): max 1 when N <= 6, max 2 when N >= 7 at C = 6. Rows start at ceil(N x A0 / C) so the average tile is ~A0 cells (AMBITION). */
