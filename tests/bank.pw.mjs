@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bankReady, watchBank } from "./lib/bankguard.mjs";
-import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { serverUp, freePort } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -22,7 +22,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8819), BASE = `http://localhost:${PORT}`;
-const PORT2 = PORT + 1, BASE2 = `http://localhost:${PORT2}`;   // a second server, its clock past SUNSET (the dropped step)
+const PORT2 = await freePort(), BASE2 = `http://localhost:${PORT2}`;   // a second server, its clock past SUNSET (the dropped step); PORT + 1 was never checked free
 const PIN_DAY = "2026-11-04", PAST_SUNSET = "2026-11-06";   // BANK_AB12 (v 1) loads with its banner on PIN_DAY
 const SHOTS = process.argv[3] || "";
 const TMP = mkdtempSync(join(tmpdir(), "bank-")), BANKS = join(TMP, "banks");
