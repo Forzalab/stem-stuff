@@ -1,6 +1,6 @@
 // DEPTH 1 smoke (brain ui-polish/depth/PROPOSALS.txt; Tony's DEPTH GRILL, Nov 14): light from above on the ui-v7 surfaces.
 // Flag ON (?ui=v7): unchosen .opt rows and the primary .btn-go carry the lit top edge (inset 0 1px 0) + a tiny shadow; the question card
-// .p is colour only (no shadow); the Cluck box has no rim or lit top; the Cluck input .ask is a recessed well with a
+// .p floats with the bar's drop shadow, no lit top (ICK4-FLOAT, Tony Nov 18); the Cluck box has no rim or lit top; the Cluck input .ask is a recessed well with a
 // raised send; the proof box .xb and the short-answer .ff are recessed wells. HARD GATE (WCAG 1.4.11): the field vs its card >= 3:1 by
 // computed colours, else the 1px edge stays (both are reported). Flag OFF: none of the depth shadows, no change.
 // Own serve.py, throwaway banks. Smoke size, feature-local:   node tests/depth.pw.mjs [port]
@@ -78,12 +78,13 @@ const gate = (p, sel) => p.evaluate(s => {
 
 /* computed order puts the inset last: "<colour> 0px 1px 0px 0px inset" */
 const LIT = /0px 1px 0px 0px inset/, WELL = /0px 2px 3px 0px inset/;
+const DROP = /0px 6px 16px -4px/;   // ICK4-FLOAT (Tony Nov 18): the top bar's drop shadow on resting cards
 
-await step("flag on: an unchosen .opt tile is colour only (MC-BENTO: no lit top, no shadow, no edge at rest)", async () => {
+await step("flag on: an unchosen .opt tile floats (ICK4-FLOAT: the bar's drop shadow, no lit top, no edge at rest)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP01");
   const o = await css(p, "#q .opt:not([aria-checked='true']):not(.pend):not(.reveal)");
   assert.ok(o, "an .opt row is shown");
-  assert.equal(o.shadow, "none", "Tony Nov 14: a lit top on a resting tile reads as a border: " + o.shadow);
+  assert.match(o.shadow, DROP, "ICK4-FLOAT (Tony Nov 18): the resting tile floats: " + o.shadow); assert.doesNotMatch(o.shadow, LIT, "Tony Nov 14: a lit top on a resting tile reads as a border: " + o.shadow);
   assert.equal(o.bw, "0px", "rest edge stays gone (NO-BORDER 1)");
   const card = await css(p, "#q .p, .p");
   assert.equal(o.bg, card.bg, "NAVY-MIN: option rest fill = card fill (one surface, navy-800)");
@@ -108,11 +109,11 @@ await step("flag on: the primary .btn-go is raised (lit top + small shadow)", as
   assert.match(b.shadow, LIT, "the lit top edge: " + b.shadow);
   await c.close();
 });
-await step("flag on: the question card .p is colour only (no lit top, no shadow)", async () => {
+await step("flag on: the question card .p floats (ICK4-FLOAT: drop shadow, no lit top)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP01");
   const card = await css(p, "#q .p, .p");
   assert.ok(card, "a question card is shown");
-  assert.equal(card.shadow, "none", "resting card: colour only, no lit top, no shadow: " + card.shadow);
+  assert.match(card.shadow, DROP, "ICK4-FLOAT: the card floats: " + card.shadow); assert.doesNotMatch(card.shadow, LIT, "no lit top: " + card.shadow);
   await c.close();
 });
 await step("flag on: the short-answer .ff is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {

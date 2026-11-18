@@ -13,7 +13,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/drill_core/app.js` | The drill: code entry, grading on device, Cluck box, scratchpad, Copy. Has a CODEMAP header. | answer flow, Cluck UI, boot order |
 | `client/cluck/cluck.js` | The Cluck genie, split out of app.js (152a; cut at the genie banner): wish render, Cluck box, replies. Reaches app.js through `bridge`. Has a CODEMAP header. | Cluck box, reply render, wish figures |
 | `client/shell/shell.js` | The shell, split out of app.js (152a; cut at the sugar-rewards banner): rewards, copy math, freeze, Swap, Multitask, resume. Reaches app.js through `bridge`. Has a CODEMAP header. | rewards, Swap, Multitask, dock layout |
-| `client/answer/drill_core/app.css` | Styles of the drill page and tokens. Has a CODEMAP header. | colours, sizes, layout of the drill page |
+| `client/answer/drill_core/app.css` | Styles of the drill page and tokens. Has a CODEMAP header. ui-v7 radius tokens --r-card/--r-tile/--r-chip (x1.25 under corner-shape) + --lift. | colours, sizes, layout of the drill page |
 | `client/answer/navigation/nav.js` | Prev / Next, question list, TeX to plain text. Has a CODEMAP header. | question order, list, titles |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
 | `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. <= 480px: PHONE-FILL DOM half (`fillLayout`, `fitAll` font 15 -> 10px). | top bar tiles, notch render |

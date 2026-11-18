@@ -241,8 +241,8 @@ for (const it of picked) for (const vp of vps) {
     if (s1.card.cls.includes("qpinned") || s1.fig) skip("C3", it.code, vp.name, s1.fig ? "has figure" : "ask actually pinned", `bottom=${+(s1.cardBottom - (s1.lastB || 0)).toFixed(1)} lastB=${s1.lastB} cardB=${s1.cardBottom} cls="${s1.card.cls}"`);
     else { const d = +(s1.cardBottom - s1.lastB).toFixed(1), lim = vp.name === "phone" ? 24 : 32; chk("C3", it.code, vp.name, d >= 12 && d <= lim, d, `12..${lim}px (last text line -> card bottom)`, d); }
     /* C9 weights */
-    const w = s1.w, optOk = w.opt == null || w.opt === "500" || w.opt === "600", codeOk = w.code == null || w.code === "400", bodyOk = w.body == null || w.body === "500";
-    chk("C9", it.code, vp.name, bodyOk && optOk && codeOk, `body=${w.body ?? "n/a"} opt=${w.opt ?? "n/a"} code=${w.code ?? "n/a"}`, "body 500, option 500 (600 = a short bento tile, bento.css --w-em), code 400");
+    const w = s1.w, optOk = w.opt == null || w.opt === "400" || w.opt === "600", codeOk = w.code == null || w.code === "400", bodyOk = w.body == null || w.body === "400";
+    chk("C9", it.code, vp.name, bodyOk && optOk && codeOk, `body=${w.body ?? "n/a"} opt=${w.opt ?? "n/a"} code=${w.code ?? "n/a"}`, "body 400, option 400 (ICK5 Tony Nov 18; 600 = a short bento tile, bento.css --w-em), code 400");
     /* C7 at rest: no in-box Cluck, edge tab visible */
     chk("C7/s1", it.code, vp.name, s1.clucks.length === 0 && s1.tab.on, `inBox=${s1.clucks.length} tab=${s1.tab.on ? "visible" : "hidden"}`, "in-box cluck absent, edge tab visible");
     /* ---- s2 typing (proof only) ---- */

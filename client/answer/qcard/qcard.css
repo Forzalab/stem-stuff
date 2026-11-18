@@ -90,7 +90,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
 }
 /* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
-html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: 0 .45em;   /* ICK4-SHORT-LH: no block pad (the chip box = the mono glyph box, ~19px at 16px, fits 1.35 and 1.25 lines with a gap) */ border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
+html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: 0 .45em;   /* ICK4-SHORT-LH: no block pad (the chip box = the mono glyph box, ~19px at 16px, fits 1.35 and 1.25 lines with a gap) */ border-radius: var(--r-chip); background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 74px; }   /* 2 + 48 button + 24 air (BREATHE) */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
@@ -256,4 +256,15 @@ html.ui-v7 #problem.qc7.qbr > button.cluckbtn.cb-sheen .cb-duck { animation: cb-
 html.ui-v7 #problem#problem.qc7 > .qkicker { display: none !important; }
 html.ui-v7 #problem#problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
 html.ui-v7 #problem#problem.qc7.qbr > .blocks { margin-top: 0; }
+
+/* == §ick4-squircle == ICK4-SQUIRCLE-C (Tony Nov 18, option C) + FLOAT: the question card and the answer cards take the one radius token
+   set (card 20, tile 16, x1.25 where corner-shape exists: app.css) and the top bar's drop shadow (--lift-drop, no lit top), so they float like #codeChip / .pb-list /
+   .pb-nav / .pb. Firefox (no corner-shape) keeps k = 1, the plain round token values. */
+html.ui-v7:not(.mt):not(.swap) #problem.qc7 { border-radius: var(--r-card); box-shadow: var(--lift-drop); }   /* the split panes (mt / swap) keep app.css's full-bleed, radius-0 card */
+html.ui-v7 #q .opt { border-radius: var(--r-tile); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
+/* rest state only: selected / pending / reveal / judged / kept / pressed keep their own shadow (pressed = none) */
+html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right):not(.wrong):not(.kept):not(:active) { box-shadow: var(--lift-drop); }
+@supports (corner-shape: superellipse(2)) {
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
+}
 
