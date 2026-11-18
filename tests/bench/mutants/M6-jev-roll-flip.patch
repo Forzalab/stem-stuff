@@ -1,0 +1,13 @@
+diff --git a/client/cluck/jev_nudges/intent.js b/client/cluck/jev_nudges/intent.js
+index df32d89..2d48113 100644
+--- a/client/cluck/jev_nudges/intent.js
++++ b/client/cluck/jev_nudges/intent.js
+@@ -417,7 +417,7 @@
+         var st = sts[i];
+         if (q.rolled[st]) continue;
+         q.rolled[st] = 1;
+-        if (rand() >= pk) { log("jev", "nudge " + st + " pass"); continue; }
++        if (rand() < pk) { log("jev", "nudge " + st + " pass"); continue; }
+         var line = pick(st);
+         if (!line || !o.say || !o.say(line, st)) { log("jev", "nudge " + st + " busy"); continue; }
+         q.nudged = true; nz.n++; nz.at = t; nz.up = true; nz.prev[st] = line;

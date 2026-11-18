@@ -1,0 +1,13 @@
+diff --git a/client/cluck/jev_nudges/intent.js b/client/cluck/jev_nudges/intent.js
+index df32d89..cac8668 100644
+--- a/client/cluck/jev_nudges/intent.js
++++ b/client/cluck/jev_nudges/intent.js
+@@ -339,7 +339,7 @@
+       itemsWH.push({ w: q.wrong, h: q.help }); if (itemsWH.length > HELP_SCN.HA_ITEMS) itemsWH.shift();
+     }
+     function s6() {
+-      if (q.wrong < S6_WRONG || q.help || q.solved || helps.indexOf(true) >= 0) return false;
++      if (q.wrong <= S6_WRONG || q.help || q.solved || helps.indexOf(true) >= 0) return false;
+       if (firsts.length < SKILL_MIN_N) return true;
+       return firsts.filter(Boolean).length / firsts.length <= SKILL_HIGH;
+     }
