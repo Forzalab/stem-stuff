@@ -90,7 +90,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
 }
 /* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
-html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .22em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
+html.ui-v7 #problem .blocks code:not(pre code) { font-family: var(--mono); font-size: .9em; letter-spacing: 0; padding: .1em .45em; border-radius: 6px; background: color-mix(in srgb, #fff 7%, transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }   /* CODE-CHIP (Tony Nov 16): taller chip, soft fill, not a black highlight; a wrap keeps both halves padded */
 /* ROW-ALIGN STACK (qcard.js rowAlign): too narrow or > 3 lines beside the button -> the lead takes its own full-width row under the Ask Cluck row */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 74px; }   /* 2 + 48 button + 24 air (BREATHE) */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
@@ -182,7 +182,7 @@ html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.u
 /* ANCHOR-BOTTOM (Tony Nov 16 "anchor the title + question text to the bottom, then extend the height a teensy bit; all cards like that"): a short card gets a floor
    (240 px phone, 280 px desktop) and its rows spread: the kicker / Ask Cluck row stays on top, the headline + text sit on the card's bottom pad (Swiss poster).
    A card taller than the floor is unchanged (nothing to spread). Not in the Q-HALF open/scroll states, where the height is the scroller's. */
-html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { min-height: 216px; align-content: space-between; }   /* BALANCE (Tony Nov 16 "shrink that space"): 240 -> 216, 256 desk */
+html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { min-height: 216px; align-content: flex-end; }   /* ICK3 C3: spare height goes ABOVE the text (the kicker row is 0-high, the fixed tab is out of flow), the last line sits on the bottom pad; was space-between = spare under the text. BALANCE (Tony Nov 16 "shrink that space"): 240 -> 216, 256 desk */
 @media (min-width: 900px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { min-height: 256px; } }
 /* GHOST-ONE (Tony Nov 17 "funky gradient in the question box"): the 5 offset echo copies read as stepped bands; one faint flat copy, no mask */
 html.ui-v7 .qghost i:nth-child(n+3) { display: none; }

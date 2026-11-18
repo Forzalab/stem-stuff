@@ -33,7 +33,7 @@
   --font: "Schibsted Grotesk", system-ui, sans-serif;
   --font-input: "Atkinson Hyperlegible", system-ui, sans-serif;
   --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
-  --w-body: 400;   /* UI body weight (ICK PR-A): 400 in the old UI; html.ui-v7 sets 450 (Atkinson Hyperlegible Next is a variable wght face). Code / mono stay 400 */
+  --w-body: 400;   /* UI body weight (ICK PR-A): 400 in the old UI; html.ui-v7 sets 500 (variable wght face). Code / mono stay 400 */
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
      Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
@@ -88,7 +88,7 @@
    navy mock (brain ui-polish/hintbox/v71/palette.css). Flag off = the :root values above, untouched. Sits right after the :root block: same
    specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
 html.ui-v7 {
-  --w-body: 450;   /* ICK PR-A: the lighter body weight for the new UI (variable Atkinson Next) */
+  --w-body: 500;   /* ICK3 C9: body weight for the new UI = 500 (variable face; was 450). Code / mono stay 400 */
   --edge-hair: 1px solid rgb(255 255 255 / .09);   /* ICK PR-A (A1): ONE hairline, the edge of every field, input, proof box and code block */
   --edge-hair-ink: rgb(255 255 255 / .09);   /* the same hairline as a colour (the code block's header split) */
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */

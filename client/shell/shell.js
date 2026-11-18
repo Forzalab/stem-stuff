@@ -501,6 +501,7 @@ $("#entry").addEventListener("focusout", e => {
 });
 /* C8: phones, a bank open: the code bar shows only with the list (app.css), up and ready to type */
 addEventListener("drill:qlist", e => { if (dockMQ.matches && root.classList.contains("bar-mini")) barOpen(e.detail.open); layoutDock(); });
+let proofKb = false;   // NO-KB: the keyboard was up with the caret in a proof box (layoutDock)
 function layoutDock() {
   const bottom = dockMQ.matches, h = vv ? vv.height : innerHeight;
   if (innerWidth !== lastW) { lastW = innerWidth; tallest = 0; }        // orientation / window change
@@ -521,7 +522,16 @@ function layoutDock() {
     const r = a.getBoundingClientRect(), top = vv ? vv.offsetTop : 0, bot = top + (vv ? vv.height : innerHeight);
     if (r.top < top || r.bottom > bot) scrollBy(0, r.bottom > bot ? Math.min(r.bottom - bot + 8, r.top - top - 8) : r.top - top - 8);
   });
-  root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (docs/design/MULTITASK.md)
+  /* NO-KB (ICK3 C6, Tony Nov 18): an Android back gesture grows the viewport back and the caret STAYS in the proof box. No keyboard = no typing mode:
+     once the keyboard was seen up with the caret in a proof box (proofKb), the first pass where the page is no longer shrunk and that box still has
+     focus blurs it; the same exit as a tap outside (mt closes, dock-away clears, text kept). State, not the kbup class edge: another pass may have
+     cleared the class first (seen as a 1-in-4 miss). A desktop never shrinks (no on-screen keyboard) = focus stays typing mode. A tap on Check moves
+     focus to the button first, so the textarea is not the active element then: this never blurs mid-tap (the app.css:1843 note). */
+  const kbNow = !!kb || swapNext, inProofBox = !!a && a.tagName === "TEXTAREA" && !!a.closest(".ff.proof");
+  if (!inProofBox) proofKb = false;
+  else if (shrunk) proofKb = true;
+  else if (proofKb) { proofKb = false; a.blur(); }
+  root.classList.toggle("kbup", kbNow);                                // keyboard up: no expand icon, no pill, no toggle (docs/design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (bridge.mtOpen && !!S));
   root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
