@@ -89,6 +89,9 @@
    specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
 html.ui-v7 {
   --w-body: 500;   /* ICK3 C9: body weight for the new UI = 500 (variable face; was 450). Code / mono stay 400 */
+  /* ICK4-SQUIRCLE-C (Tony Nov 18, option C): ONE radius token set for the v7 cards. --r-k = 1 is the plain round fallback (Firefox); 1.25 under corner-shape */
+  --r-k: 1; --r-card: calc(20px * var(--r-k)); --r-tile: calc(16px * var(--r-k)); --r-chip: calc(6px * var(--r-k));
+  --lift: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* the top bar's raise (progbar.css BAR-DEPTH) as a token: cards float like it */
   --edge-hair: 1px solid rgb(255 255 255 / .09);   /* ICK PR-A (A1): ONE hairline, the edge of every field, input, proof box and code block */
   --edge-hair-ink: rgb(255 255 255 / .09);   /* the same hairline as a colour (the code block's header split) */
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
@@ -101,6 +104,8 @@ html.ui-v7 {
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
 }
+/* ICK4-SQUIRCLE-C (Tony Nov 18, option C): a superellipse(2) corner reads tighter than a round one; x1.25 keeps the visual size */
+@supports (corner-shape: superellipse(2)) { html.ui-v7 { --r-k: 1.25; } }
 /* Deep navy is the site theme (Tony Nov 2, replaces Ink: "i dont like that, lets do a dark navy instead"). Page #02060c, surface #0b1422, control
    fill --sheet #14233a, one line #5e7899 (3:1 on page, card and --sheet), a light-sky --action that stays apart from the navy ground. The question
    box etc. keep a 1px inset --line (a 1.10:1 slab step alone dissolves). --sheet, --action and --*-fill are PROPOSALS (STYLE §2.1). */
@@ -1959,7 +1964,7 @@ html.ui-v7 .cb-wrap:focus-visible { outline: var(--ring) solid var(--focus); out
 /* CB-FLOAT (Tony Nov 17, ref: a floating editor-window snippet; Refactoring UI shadows: two layers = a tight, darker one for the edge + a large soft one for
    the lift; on a near-black page they must be deep to read). Apple squircle on every v7 code block (was #q only). A choice row's block stays flat. */
 html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; border: var(--edge-hair); box-shadow: var(--shadow-1), var(--shadow-4); }   /* ICK PR-A (A1): one hairline round the block, the header split by the same line (below) */   /* STYLE §2.7 tokens: tight edge + large soft lift */
-@supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(1.52); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(2); } }
 /* PH-NAVY (Tony Nov 17 "placeholder dimmer"; Refactoring UI p.36-38: dim by moving toward the background's own hue, never grey/opacity on colour):
    v7 placeholders take --line (#556791, the navy family of the #060b1b well) instead of --hint (#a9b8cc) */
 html.ui-v7 :is(input, textarea)::placeholder { color: var(--line); opacity: 1; }
