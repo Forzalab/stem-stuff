@@ -111,6 +111,17 @@ html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blo
 html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 8px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: 36px !important; line-height: 38px !important; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: 16px; line-height: 22px; }   /* TYPE-B lock 16/22 (Q-SMALL's 15 px retired) */
+/* ICK4-SHORT-LH (Tony Nov 18, 2a): short body text (qcard.js shortText: <= 4 lines) and the cramped typing card (html.mt / html.swap) read at 1.3, long text at rest keeps 1.45 */
+html.ui-v7 #problem.qc7.qshort, html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qbody-lh: 1.3; }
+html.ui-v7 #problem.qc7.qshort > .blocks, html.ui-v7 #problem.qc7.qshort > .blocks > .md,
+html.ui-v7.mt #problem.qc7 > .blocks, html.ui-v7.mt #problem.qc7 > .blocks > .md,
+html.ui-v7.swap #problem.qc7 > .blocks, html.ui-v7.swap #problem.qc7 > .blocks > .md { line-height: 21px; }
+@media (min-width: 900px) {
+  html.ui-v7 #problem.qc7.qshort > .blocks, html.ui-v7 #problem.qc7.qshort > .blocks > .md,
+  html.ui-v7.mt #problem.qc7 > .blocks, html.ui-v7.mt #problem.qc7 > .blocks > .md,
+  html.ui-v7.swap #problem.qc7 > .blocks, html.ui-v7.swap #problem.qc7 > .blocks > .md,
+  html.ui-v7 #problem.qc7.qshort .qtext, html.ui-v7.mt #problem.qc7 .qtext, html.ui-v7.swap #problem.qc7 .qtext { line-height: 22px; }
+}
 html.ui-v7 #problem.qc7.qbr { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; }
 html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
