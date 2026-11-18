@@ -101,3 +101,46 @@ html.ui-v7.start .code-box, html.ui-v7.start .code-box:hover, html.ui-v7.start .
 html.ui-v7.start .code-box:has(input:focus-visible):not([data-ptr]) { outline: none; }
 html.ui-v7.start .entry:has(#code:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7.start .entry { corner-shape: superellipse(1.52); } }
+/* == §ick12-key == ICK 12 C4a (Tony Nov 17, port = brain ick-v1/v/R2/style.css PICK 3, value for value): both Checks (#mcGo under the choices, #ansGo in the proof box)
+   are ONE 56px near-white squircle key at the bottom-right of their area, navy arrow, one soft lift. Each rule carries the control's own id so it beats GO-MUTED above. */
+html.ui-v7 {
+  --ick12-size: 56px;                          /* one size for both Checks (--btn is 48 on the phone) */
+  --ick12-r: 16px;                             /* the app's tile radius */
+  --ick12-face: #f2f4f8;                       /* the key's material, near-white on the navy card */
+  --ick12-ink: var(--page);                    /* the arrow is the page's own navy */
+  --ick12-cast: 0 8px 24px rgb(0 0 0 / .45);   /* the lift: one big soft shadow, no tight edge ring */
+  --ick12-off-face: color-mix(in srgb, var(--ick12-face) 40%, var(--card));   /* off: a grey slate, not white */
+  --ick12-off-ink: color-mix(in srgb, var(--page) 72%, var(--muted));         /* off: a soft navy arrow */
+  --ick12-off-cast: 0 2px 6px rgb(0 0 0 / .35);                               /* off: the key sits, it does not float */
+}
+html.ui-v7 #q .chk > .send#mcGo,
+html.ui-v7 #q .ff.proof#ff > .send#ansGo {
+  width: var(--ick12-size); height: var(--ick12-size); border: 0; border-radius: var(--ick12-r);
+  background: var(--ick12-face); color: var(--ick12-ink); box-shadow: var(--ick12-cast);
+  place-items: center;
+}
+@supports (corner-shape: superellipse(2)) {
+  html.ui-v7 #q .chk > .send#mcGo,
+  html.ui-v7 #q .ff.proof#ff > .send#ansGo { corner-shape: superellipse(1.52); }
+}
+html.ui-v7 #q .chk > .send#mcGo .ico,
+html.ui-v7 #q .ff.proof#ff > .send#ansGo .ico { width: 26px; height: 26px; }   /* the arrow grows with the key */
+/* the proof Check sits at the box's bottom-right corner (8px inset); the text clears the key at its foot (56 + 8 inset + 8 air) */
+html.ui-v7 #q .ff.proof#ff > .send#ansGo { position: absolute; right: 8px; bottom: 8px; top: auto; }
+html.ui-v7.proof-split #q .ff.proof#ff > textarea { padding: 0 8px 72px 0; }
+html.ui-v7 #q .ff.proof#ff > textarea { padding-bottom: 72px; }
+/* the Check at rest: grey face, soft navy arrow, tight shadow, still readable */
+html.ui-v7 #q .chk > .send#mcGo:is(:disabled, [aria-disabled="true"]),
+html.ui-v7 #q .ff.proof#ff > .send#ansGo:is(:disabled, [aria-disabled="true"]),
+html.ui-v7 #q .chk > .send#mcGo:is(:disabled, [aria-disabled="true"]):hover,
+html.ui-v7 #q .ff.proof#ff > .send#ansGo:is(:disabled, [aria-disabled="true"]):hover {
+  background: var(--ick12-off-face); color: var(--ick12-off-ink); box-shadow: var(--ick12-off-cast);
+  opacity: 1;
+  cursor: default;
+}
+@media (hover: hover) {
+  html.ui-v7 #q .chk > .send#mcGo:hover,
+  html.ui-v7 #q .ff.proof#ff > .send#ansGo:hover { background: #fff; }
+}
+html.ui-v7 #q .chk > .send#mcGo:active,
+html.ui-v7 #q .ff.proof#ff > .send#ansGo:active { background: color-mix(in srgb, var(--ick12-face) 92%, #000); box-shadow: 0 2px 8px rgb(0 0 0 / .4); }
