@@ -151,6 +151,8 @@ const checkFig = (r, what) => {
    "–" under the stepper's Back / Next at 1440 was the top of "Try once more." showing through the fade over the footer) and no line may be
    only a dash or blanks */
 const frame = async page => {
+  // the reply is fully typed before the fold is measured (state, not a sleep): no late "Try once more." cut at the fold
+  await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun") && !document.querySelector("#cluck.wbusy"), null, { timeout: 8000 });
   const f = page.locator("#cluck .wtext .wfig").first();
   if (await f.count()) await f.scrollIntoViewIfNeeded();
   await page.evaluate(() => {
