@@ -254,7 +254,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          n="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD | grep -cE '^(client/|index\.html$|sw\.js$|tests/pw-browser\.mjs$)' || true)"
+          n="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD | grep -cE '^(client/|index\.html$|sw\.js$|tests/pw-browser\.mjs$|tests/lib/wait\.mjs$)' || true)"
           echo "client files changed: $n"
           echo "run=$([ "$n" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
