@@ -528,9 +528,16 @@ function layoutDock() {
      cleared the class first (seen as a 1-in-4 miss). A desktop never shrinks (no on-screen keyboard) = focus stays typing mode. A tap on Check moves
      focus to the button first, so the textarea is not the active element then: this never blurs mid-tap (the app.css:1843 note). */
   const kbNow = !!kb || swapNext, inProofBox = !!a && a.tagName === "TEXTAREA" && !!a.closest(".ff.proof");
-  if (!inProofBox) proofKb = false;
-  else if (shrunk) proofKb = true;
-  else if (proofKb) { proofKb = false; a.blur(); }
+  const rotFrame = !!a && a.tagName === "IFRAME" && !!a.closest("#rot");
+  if (!inProofBox && !rotFrame) proofKb = false;
+  else if (shrunk) { if (inProofBox) proofKb = true; }
+  else if (proofKb) {
+    proofKb = false; if (inProofBox) a.blur();
+    /* brainrot.js hands focus back to its lastFocus (= this box) when the YouTube player, loading late, steals it: that re-focus re-entered typing mode 1 run in 3
+       (ICK3 C6/C7 flake, brainrot.js:103 < window blur), whether the player took focus before or after our blur. No keyboard = focus is nowhere: a focusin
+       on <body> resets its lastFocus. */
+    document.body.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+  }
   root.classList.toggle("kbup", kbNow);                                // keyboard up: no expand icon, no pill, no toggle (docs/design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (bridge.mtOpen && !!S));
