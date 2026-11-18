@@ -56,8 +56,10 @@
     return { k: rows.length, rows: rows, spans: spans, estH: estH, score: score, estFs: estFs };
   }
   function sum(a) { return a.reduce(function (x, y) { return x + y; }, 0); }
-  function plan(items, R, A) {
+  function plan(items, R, A, o) {
     var n = items.length, best = null;
+    if (o && o.stack) best = planK(items, R, A, n);                                           // LONG-MATH (bento.js): one option per row, in order
+    if (best) return best;
     for (var k = 1; k <= n; k++) { var p = planK(items, R, A, k); if (p && (!best || p.score < best.score - 1e-9)) best = p; }
     if (!best) best = planK(items, R, A, n) || { k: n, rows: items.map(function (_, i) { return [i]; }), spans: items.map(function () { return SPAN; }), estH: items.map(function () { return MINH; }), score: 99, estFs: FS_MIN };
     return best;
