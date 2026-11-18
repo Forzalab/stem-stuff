@@ -43,8 +43,9 @@ export function main(argv, now = Date.now()) {
   if (cmd === "all") {
     const blocks = [];
     for (let i = 1; i <= Number(c); i++) {
-      const f = `${b}/flaky-block-${i}/flaky.txt`;
-      blocks.push({ block: i, flaky: existsSync(f) ? names(readFileSync(f, "utf8")) : null });
+      /* download-artifact@v8 puts a lone matched artifact straight into <dir> (no flaky-block-1/ folder): a 1-block PR run read as "missing" */
+      const f = [`${b}/flaky-block-${i}/flaky.txt`, Number(c) === 1 && `${b}/flaky.txt`].find(p => p && existsSync(p));
+      blocks.push({ block: i, flaky: f ? names(readFileSync(f, "utf8")) : null });
     }
     const v = decideAll({ blocks, jail: readJail(a), now, pr: process.argv.includes("--pr") });
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `tickets=${v.tickets.join(",")}\n`);
