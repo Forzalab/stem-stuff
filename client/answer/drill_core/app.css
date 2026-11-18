@@ -161,7 +161,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 .code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: var(--font-input); font-size: max(1rem, var(--t-sm)); font-weight: var(--w-em); line-height: 1; letter-spacing: 0.05em; text-transform: uppercase;   /* the text face (Tony found the Mono "hideous" here); a field: never under 16px (iOS zooms on focus) */
+  font-family: var(--font-input); font-size: max(1rem, var(--t-sm)); font-weight: 400; line-height: 1; letter-spacing: 0.05em; text-transform: uppercase;   /* the text face (Tony found the Mono "hideous" here); a field: never under 16px (iOS zooms on focus) */   /* ICK4-INPUT-400: typed text = 400 (Tony Nov 18, 1b) */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
@@ -646,7 +646,7 @@ html.ui-v7 .choices:not(.all) .opt.wrong:not(.reveal):not([aria-checked="true"])
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: var(--btn); margin: 0; padding: 0 var(--s2) 0 0;
-  font-family: var(--font-input); font-variant-numeric: tabular-nums; font-size: var(--t-md); font-weight: var(--w-body); line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: var(--font-input); font-variant-numeric: tabular-nums; font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);   /* ICK4-INPUT-400: typed text = 400 (Tony Nov 18, 1b) */
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
@@ -855,7 +855,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .ff.proof { height: auto; align-items: stretch; padding-top: var(--s2); padding-bottom: var(--s2); }
 .ff.proof textarea {
   flex: 1 1 auto; min-width: 0; min-height: 10rem; margin: 0; padding: 0 var(--s2) 0 0; resize: vertical;
-  font-family: var(--mono); font-size: var(--t-sm); line-height: 1.5; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: var(--mono); font-size: var(--t-sm); font-weight: 400; line-height: 1.5; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);   /* ICK4-INPUT-400: typed text = 400 (Tony Nov 18, 1b) */
 }
 .ff.proof textarea:focus { outline: none; }
 .ff.proof textarea::placeholder { color: var(--hint); opacity: 1; }
@@ -1914,7 +1914,7 @@ html.ui-v7.proof-split #work > #q { padding: 0; background: none; border: 0; bor
 html.ui-v7.proof-split #work > #q:focus-within { border: 0; box-shadow: none; }
 html.ui-v7.proof-split #q > .how { margin: 0; padding-inline: 0; color: var(--muted); }
 html.ui-v7.proof-split #q .ff.proof { padding: 12px 16px; border-radius: 16px; }   /* PROOF-AXIS (Tony Nov 17): 16px so the typed text starts on the card's text axis (card text x = 8 gutter + 16) */   /* fill + well + lit foot come from verdict-v7.css, the short-answer field rule */   /* ICK C4a: no right reserve, the Check key sits at the box foot (verdict-v7.css ICK 12) */
-html.ui-v7.proof-split #q .ff.proof textarea { font: var(--w-body) 16px/22px var(--font); letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */
+html.ui-v7.proof-split #q .ff.proof textarea { font: 400 16px/22px var(--font); letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */   /* ICK4-INPUT-400: typed text = 400 */
 @media (min-width: 900px) { html.ui-v7.proof-split #q .ff.proof textarea { font-size: 17px; line-height: 24px; } }
 /* PROOF-LOCK (Tony Nov 17): keyboard up in the proof box = nothing but the textarea scrolls (the column and the page stay put); .shut/verdict ladders keep their scroll */
 html.ui-v7.proof-split.kbup #work:has(> #q:focus-within):not(:has(> #rpHost > *)) { overflow: hidden; overscroll-behavior: none; }
