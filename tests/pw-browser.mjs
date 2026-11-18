@@ -15,6 +15,9 @@ export const BROWSER = process.env.PW_BROWSER || "chromium";
 const MOTION = process.env.PW_MOTION === "1";
 const YOUTUBE = process.env.PW_YOUTUBE === "1";
 const YT_ROUTE = /youtube|ytimg|googlevideo/;
+/* an aborted iframe lands on an opaque chrome-error page, where scripts reading localStorage throw "Access is denied" (mc-bento pageerror):
+   a frame gets an empty page from the youtube origin instead; scripts/images/media are aborted */
+const ytStub = r => r.request().resourceType() === "document" ? r.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><body></body>" }) : r.abort();
 const FALLBACK = process.env.PW_FORCE_FALLBACK === "1";
 const INIT = `(() => { const s = CSS.supports.bind(CSS), no = /^(text-box-trim|text-box-edge|text-box|field-sizing)\\b/;
   CSS.supports = function (a, b) { return no.test(String(a).trim()) ? false : b === undefined ? s(a) : s(a, b); }; })();`;
@@ -33,7 +36,7 @@ export async function launchBrowser(pw, opts = {}, engine = BROWSER) {
   const nc = b.newContext.bind(b), np = b.newPage.bind(b);
   // route before the context is handed back: a spec's own youtube route is registered later, and Playwright runs the LAST
   // matching route first, so a spec stub still wins.
-  b.newContext = async (...a) => { const c = await nc(...a); if (!keepYt) await c.route(YT_ROUTE, r => r.abort()); return traceContext(c); };
-  b.newPage = async (...a) => { const p = await np(...a); if (!keepYt) await p.context().route(YT_ROUTE, r => r.abort()); await traceContext(p.context()); return p; };
+  b.newContext = async (...a) => { const c = await nc(...a); if (!keepYt) await c.route(YT_ROUTE, ytStub); return traceContext(c); };
+  b.newPage = async (...a) => { const p = await np(...a); if (!keepYt) await p.context().route(YT_ROUTE, ytStub); await traceContext(p.context()); return p; };
   return b;
 }
