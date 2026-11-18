@@ -12,15 +12,18 @@ export async function settled(page, sel = null, { timeout = 5000 } = {}) {
     return !anims.some(a => { const end = a.effect?.getComputedTiming().endTime;
       return a.playState === "running" && a.effect?.getTiming().iterations !== Infinity && Number.isFinite(end) && !((a.currentTime ?? 0) >= end); });
   }, sel, { timeout }).catch(async e => {
-    /* WEBKIT-T0 probe: each running entry sampled twice, 500 ms apart (same Animation objects). t=currentTime st=startTime pd=pending.
-       startTime changes between samples = restarted by a style write; st=null + pd=1 both times = start never resolved (WebKit). */
-    const left = await page.evaluate(async s => {
-      const L = (s ? [...document.querySelectorAll(s)].flatMap(x => x.getAnimations({ subtree: true })) : document.getAnimations())
+    /* WEBKIT-T0 probe: each running entry sampled twice, 500 ms apart (same Animation objects, kept on window). t=currentTime st=startTime
+       pd=pending. startTime changes between samples = restarted by a style write; st=null + pd=1 both times = start never resolved.
+       The 500 ms wait is on the Node side and each evaluate is capped at 3 s: a page whose timers never fire (webkit desk-layout@1 hung
+       the job 20 min with an in-page setTimeout) must still throw, never hang. */
+    const cap = (p, v) => Promise.race([p.catch(() => v), new Promise(z => setTimeout(() => z(v), 3000))]);
+    const one = await cap(page.evaluate(s => { const r = v => v == null ? "null" : Math.round(v);
+      window.__wkProbe = (s ? [...document.querySelectorAll(s)].flatMap(x => x.getAnimations({ subtree: true })) : document.getAnimations())
         .filter(a => a.playState === "running").slice(0, 8);
-      const r = v => v == null ? "null" : Math.round(v), snap = a => `t=${r(a.currentTime)} st=${r(a.startTime)} pd=${a.pending ? 1 : 0}`;
-      const one = L.map(snap); await new Promise(z => setTimeout(z, 500));
-      return L.map((a, i) => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"}${a.effect?.pseudoElement || ""} it=${a.effect?.getTiming().iterations} end=${ti.endTime} [${one[i]}] -> [${snap(a)}] ps=${a.playState} rm=${matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0}`; });
-    }, sel).catch(() => []);
+      return window.__wkProbe.map(a => `t=${r(a.currentTime)} st=${r(a.startTime)} pd=${a.pending ? 1 : 0}`); }, sel), ["probe1 timed out"]);
+    await new Promise(z => setTimeout(z, 500));
+    const left = await cap(page.evaluate(one => { const r = v => v == null ? "null" : Math.round(v);
+      return (window.__wkProbe || []).map((a, i) => { const t = a.effect?.target, ti = a.effect?.getComputedTiming() || {}; return `${a.animationName || a.transitionProperty || a.constructor.name}@${t ? t.tagName.toLowerCase() + (t.id ? "#" + t.id : "") + (t.classList?.length ? "." + [...t.classList].join(".") : "") : "?"}${a.effect?.pseudoElement || ""} it=${a.effect?.getTiming().iterations} end=${ti.endTime} [${one[i]}] -> [t=${r(a.currentTime)} st=${r(a.startTime)} pd=${a.pending ? 1 : 0}] ps=${a.playState} rm=${matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0}`; }); }, one), [`probe2 timed out; probe1: ${one}`]);
     throw new Error(`settled(${sel || "page"}): an animation still ran after ${timeout} ms (${e.message.split("\n")[0]}) running: ${JSON.stringify(left)}`); });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 }
