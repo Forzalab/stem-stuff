@@ -5,7 +5,7 @@
 //   1. empty or not a string;
 //   2. it is the item's code turned into words (code lower-cased, `_`/`-` to spaces), or just the code;
 //   3. it has no spaces but has `_` or `-` between lowercase words (snake / kebab);
-//   4. it has a code-ish token ([a-z]{1,2}\d+ : q4, x3, ch7, ex2) among its FIRST TWO words, and no `:` / middle dot / dash (a separator
+//   4. it has an author code (titleCodes below: q4, x3, ch7, ex2; known prefixes only) among its FIRST TWO words, and no `:` / middle dot / dash (a separator
 //      means a prefix + a human label: "Q11 Q1(a): net torque" stays);
 // Not a slug: anything with $math$ or a separator, or a title whose first two words are not code-ish ("Rectangle: $I_x, I_y, I_z$").
 // False-positive risks (a real title hidden): a real title that starts with a short word + digit and has no separator ("Q1 review", "Ch7 Terms",
@@ -20,7 +20,7 @@ export function isSlugTitle(title, code) {
   if (code && (low === codeWords(code) || low === String(code).toLowerCase())) return true;
   const words = t.split(" ");
   if (words.length === 1 && /[a-z0-9][_-][a-z0-9]/i.test(t) && !/[A-Z]/.test(t.slice(1)) && !/\$/.test(t)) return true;
-  if (!/[:·—]/.test(t) && words.slice(0, 2).some(w => /^[a-z]{1,2}\d+$/i.test(w))) return true;   // "Q4 ...: a human label" is a prefixed title, kept
+  if (!/[:·—]/.test(t) && titleCodes(words.slice(0, 2).join(" ")).length) return true;   // the same known-prefix code list as titleCodes: "Original E01" (easy.pw) is no author code   // "Q4 ...: a human label" is a prefixed title, kept
   return false;
 }
 /* NO-MAGIC-CODE (Tony Nov 18: "no magic code in title like x3 q4, makes no sense for students"): an author's code token: exam / question / homework / chapter
