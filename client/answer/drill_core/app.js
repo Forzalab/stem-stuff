@@ -211,7 +211,7 @@ function hl(t, syn, st) {
 function codeblock(code, lang = "", copy = true) {
   const l = String(lang || "").trim().split(/\s+/)[0], name = CB_LANG[l.toLowerCase()] || l, syn = SYN[l.toLowerCase()], st = {};
   return `<figure class="cb${copy ? " cb-nowrap" : ""}" aria-label="${esc(name ? name + " code" : "Code")}"><div class="cb-hd"><span class="cb-lang">${esc(name)}</span>`
-    + `<span class="cb-act"><span class="cb-slot" aria-hidden="true"></span>${copy ? `<button type="button" class="cb-wrap" aria-pressed="false">Wrap</button>` : ""}${copy ? `<button type="button" class="btn cb-copy" aria-label="Copy code" title="Copy code">${icon("i-copy")}</button>` : ""}</span></div>`
+    + `<span class="cb-act"><span class="cb-slot" aria-hidden="true"></span>${copy ? `<button type="button" class="cb-wrap" aria-pressed="false">${icon("i-wrap")}<span>Wrap</span></button>` : ""}${copy ? `<button type="button" class="btn cb-copy" aria-label="Copy code" title="Copy code">${icon("i-copy")}</button>` : ""}</span></div>`
     + `<pre><code>${String(code).replace(/\n$/, "").split("\n").map(t =>
       `<span class="l" style="--ind:${/^[ \t]*/.exec(t)[0].replace(/\t/g, "  ").length}">${hl(t, syn, st)}</span>`).join("")}</code></pre></figure>`;
 }
