@@ -14,13 +14,13 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { freeze } from "./lib/clock.mjs";   // playwright-clock-race: pause the page clock around a jump
-import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { serverUp, freePort } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PORT = /^\d+$/.test(process.argv[2] || "") ? +process.argv[2] : 8881, REAL = PORT + 1000, BASE = `http://127.0.0.1:${PORT}`;
+const PORT = /^\d+$/.test(process.argv[2] || "") ? +process.argv[2] : 8881, REAL = await freePort(), BASE = `http://127.0.0.1:${PORT}`;
 const WIDTHS = (process.env.WIDTHS || "393,1280").split(",").map(Number);
 const tmp = mkdtempSync(join(tmpdir(), "stages-")), banks = join(tmp, "banks");
 mkdirSync(banks);
