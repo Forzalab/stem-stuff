@@ -1,6 +1,7 @@
 # CI-LOOSEN AC1.4: stress ONE spec under CPU load. Dispatch only (never on PR/push), e.g. spec=flow n=60.
 # LANES run-all.sh processes side by side (like a tests.yml block) + 2 `yes` CPU hogs; each lane runs its share of the n repeats.
 # A repeat is bad if it fails OR passes only on the in-job retry (run-all.sh prints `FLAKY <spec>`): n/n clean = pass.
+# A BAD repeat prints its attempt-1 log (failing step + TRACE) and keeps logs/<lane>-<rep>/ in the stress-logs-<spec> artifact.
 name: stress
 on:
   workflow_dispatch:
@@ -11,6 +12,10 @@ on:
       n:
         description: "Total repeats (split over 3 lanes)"
         default: "60"
+      youtube:
+        description: "PW_YOUTUBE=1: real YouTube, no stub (A/B arm vs the default stub)"
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -21,6 +26,7 @@ jobs:
       SPEC: ${{ inputs.spec }}
       N: ${{ inputs.n }}
       LANES: 3
+      PW_YOUTUBE: ${{ inputs.youtube && '1' || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -40,10 +46,12 @@ jobs:
             local l=$1 r
             for r in $(seq 1 "$per"); do
               [ $(( (l - 1) * per + r )) -le "$N" ] || break
-              if SPECS="$SPEC" FLAKY_FILE="flaky-$l.txt" tests/run-all.sh >"run-$l-$r.log" 2>&1 && ! grep -q '^FLAKY ' "run-$l-$r.log"; then
-                echo "ok $l/$r"
+              if SPECS="$SPEC" FLAKY_FILE="flaky-$l.txt" LOG_DIR="logs/$l-$r" tests/run-all.sh >"run-$l-$r.log" 2>&1 && ! grep -q '^FLAKY ' "run-$l-$r.log"; then
+                echo "ok $l/$r"; rm -rf "logs/$l-$r"   # clean repeat: drop its logs, keep the artifact small
               else
                 echo "BAD $l/$r"; cat "run-$l-$r.log"
+                f=$(ls "logs/$l-$r"/*.try1.log 2>/dev/null | head -1)   # retry-pass BAD: attempt 1 holds the failing step + TRACE
+                [ -n "$f" ] && { echo "--- try1 $l/$r: $f"; cat "$f"; }
               fi
             done
           }
@@ -54,3 +62,11 @@ jobs:
           ok=$(cat lane-*.out | grep -cE '^ok [0-9]+/[0-9]+$' || true)   # only the lane's own "ok l/r" rows: a BAD repeat's log holds run-all's "ok   <spec> 12.3 s" row when the spec is jailed, and that was counted as clean
           echo "stress $SPEC: $ok/$N clean"
           [ "$ok" -eq "$N" ]
+      - name: upload BAD repeat logs   # STRESS COUNT LIED follow-up: logs/<lane>-<rep>/ (spec log, *.try1.log, serve.log) of BAD repeats only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stress-logs-${{ inputs.spec }}
+          path: logs
+          if-no-files-found: ignore
+          retention-days: 7
