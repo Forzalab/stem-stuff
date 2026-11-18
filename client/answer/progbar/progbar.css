@@ -88,3 +88,68 @@ html.ui-v7.scrolled:not(.start) .top::before { content: "" !important; position:
   -webkit-mask-image: linear-gradient(#000 12px, transparent); mask-image: linear-gradient(#000 12px, transparent); }   /* 12 px of full glass under the buttons (air), then a 24 px fade */
 /* BAR-DEPTH (Tony Nov 16, Refactoring UI "Creating depth": light from above): bar buttons get the Ask Cluck raise + a 1 px top highlight + a soft ambient drop */
 html.ui-v7 .top :is(#codeChip, .pb-list, .pb-nav, .pb) { box-shadow: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55); }
+
+/* == §ick14-well == ICK 14 D2 + D1 colour + ICK 6 tile centring (Tony Nov 17): the phone code bar = ONE well (upload inside the field, the question list hangs off its bottom edge), D1 lighter fill.
+   Port = brain ick-v1/v/R2/style.css PICK 4, value for value. */
+html.ui-v7 {
+  --v7-fill: var(--card);                  /* ICK 14 (D1 colour): the list panel's own tile fill, shared by the well and its list */
+  --v7-line: rgb(255 255 255 / 0.09);      /* ICK 14 (D1 colour): the one hairline; no rim light, no --line underline */
+  --v7-line-hi: rgb(255 255 255 / 0.18);   /* ICK 14 (D1 colour): hover / current row: the hairline one step up */
+  --v7-r: 16px;                            /* ICK 14 (D2): one radius for the well, its list and the start page */
+  --v7-h: 48px;                            /* ICK 14 (D2): the well's height (--btn) */
+  --v7-bar-top: 8px;                       /* ICK 14 (D2): the well's top edge inside the 68px phone bar row (8 + 52 + 8) */
+  --v7-gap: 8px;                           /* ICK 14 (D2): the one inset/gap inside the well (and the list's padding) */
+  --v7-icon: 44px;                         /* ICK 14 (D2): the upload's touch target inside the well (not a tile) */
+}
+/* ICK 14 (D2): the well. One field: D1's fill + one hairline, no --line bottom lip, no second shape beside it */
+html.ui-v7 #entry > .code-box.code-box,
+html.ui-v7 #entry > .code-box.code-box:hover,
+html.ui-v7 #entry > .code-box.code-box:focus-within {
+  border: 0; border-radius: var(--v7-r); background: var(--v7-fill);
+  box-shadow: inset 0 0 0 1px var(--v7-line);
+}
+/* ICK 14 (D2): keyboard focus: the well's own edge turns --focus */
+html.ui-v7 #entry > .code-box.code-box:has(input:focus-visible) { box-shadow: inset 0 0 0 1px var(--focus); }
+/* ICK 14 (D2): the inside controls take the row radius, not 6px */
+html.ui-v7 #entry .code-box .btn:not(.btn-go) { border-radius: 12px; }
+/* ICK 14 (D2): the phone's code bar is that one well: the upload becomes the field's leading icon (no tile, no gap, nothing beside it) */
+html.ui-v7.dock-bottom #entry.entry { position: relative; gap: 0; }
+html.ui-v7.dock-bottom #entry > #upload {
+  position: absolute; z-index: 32; left: 2px; top: 50%; transform: translateY(-50%);
+  width: var(--v7-icon); height: var(--v7-icon); border-radius: 12px; background: transparent; color: var(--muted);
+}
+html.ui-v7.dock-bottom #entry > #upload:hover { background: var(--float); color: var(--ink); }
+html.ui-v7.dock-bottom #entry > .code-box.code-box { padding-left: calc(var(--v7-icon) + 8px); }   /* the text clears the icon inside the well */
+/* ICK 14 (D2): the list is the same surface, hung off the well's bottom edge: no gap, no second card, one shared 1px divider */
+html.ui-v7.dock-bottom.ql-open #qlist {
+  top: calc(var(--v7-bar-top) + var(--v7-h)) !important;   /* 8 + 48 = 56, the well's own bottom edge; inline top from nav.js fit() */
+  max-height: min(58svh, 520px) !important;                /* inline fit() clamps to 96 here: too few rows to judge */
+  padding: var(--v7-gap); border-top: 1px solid var(--v7-line);
+  border-radius: 0 0 var(--v7-r) var(--v7-r);
+  background: var(--v7-fill);
+  box-shadow: inset 1px 0 0 var(--v7-line), inset -1px 0 0 var(--v7-line), inset 0 -1px 0 var(--v7-line), var(--shadow-3);
+}
+/* ICK 14 (D2): open, the well's bottom corners square off into the list, the divider takes over */
+html.ui-v7.dock-bottom.ql-open #entry > .code-box.code-box {
+  border-radius: var(--v7-r) var(--v7-r) 0 0;
+  box-shadow: inset 0 1px 0 var(--v7-line), inset 1px 0 0 var(--v7-line), inset -1px 0 0 var(--v7-line);
+}
+/* ICK 14 (D1 colour): the rows keep D1's tile colours: hover lifts the fill, the current row adds the hairline */
+html.ui-v7 #qlist a:hover, html.ui-v7 #qlist a[aria-current] { background: var(--float); }
+html.ui-v7 #qlist a[aria-current] { box-shadow: inset 0 0 0 1px var(--v7-line-hi); }
+/* ICK 14 (D2): the well's own dropdown, same surface */
+html.ui-v7 #codeSug { border-radius: var(--v7-r); background: var(--v7-fill); box-shadow: inset 0 0 0 1px var(--v7-line), var(--shadow-3); }
+/* ICK 14 (D2): the start page already is one well; it only takes D1's fill and the hairline */
+html.ui-v7.start #entry.entry,
+html.ui-v7.start #entry.entry:hover,
+html.ui-v7.start #entry.entry:focus-within {
+  border: 0; background: var(--v7-fill); border-radius: var(--v7-r);
+  box-shadow: inset 0 0 0 1px var(--v7-line);
+}
+html.ui-v7.start #entry.entry:has(#code:focus-visible) { box-shadow: inset 0 0 0 1px var(--focus); }
+html.ui-v7.start #entry > .code-box.code-box, html.ui-v7.start #entry > .code-box.code-box:hover,
+html.ui-v7.start #entry > .code-box.code-box:focus-within { border: 0; background: none; box-shadow: none; }   /* the entry IS the well */
+/* ICK 6 (D2): the bank tile's icon + label sit centred in their tile */
+html.ui-v7 .pb-list #qlistBtn { justify-content: center; padding: 0 var(--s3); }
+html.ui-v7.ios .pb-list:has(#qback:not([hidden])) #qlistBtn { justify-content: flex-start; padding: 0 var(--s4) 0 var(--s3); }
+
