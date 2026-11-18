@@ -171,6 +171,26 @@
     var d = base(lab) - base(k);
     if (Math.abs(d) > 0.25) k.style.marginTop = d + "px";
   }
+  /* ICK4-SHORT-LH (Tony Nov 18, 2a): the setup's rendered line count picks the leading (qcard.css: <= 4 lines read at 1.3). Counting the boxes, not raw text,
+     keeps one rule for short sentences, lists and math. The bold ask is one question sentence, not body length (CEH_T2A: 4 setup lines + a 2-line ask still reads
+     short); a card that is only an ask falls back to the lead. The class only changes leading, never the wrap, so later() cannot loop on its own toggle. */
+  function shortText() {
+    var p = D.getElementById("problem");
+    if (!on() || !p) { if (p) p.classList.remove("qshort"); return; }
+    var tx = p.querySelector(":scope > .blocks > .qtext");
+    if (!tx) { p.classList.remove("qshort"); return; }
+    var els = tx.querySelectorAll(":scope > p, :scope > li, :scope > .md:not(.qlead) p, :scope > .md:not(.qlead) li"), lines = 0;
+    for (var i = 0; i < els.length; i++) {
+      var h = els[i].getBoundingClientRect().height, lh = parseFloat(g.getComputedStyle(els[i]).lineHeight);
+      if (!h || !lh) continue;   // NaN / 0: not laid out (display none, a hidden block)
+      lines += Math.round(h / lh);
+    }
+    if (!lines) {
+      var lead = tx.querySelector(":scope > .md.qlead"), lh0 = lead && parseFloat(g.getComputedStyle(lead).lineHeight), h0 = lead && lead.getBoundingClientRect().height;
+      if (h0 && lh0) lines = Math.round(h0 / lh0);
+    }
+    p.classList.toggle("qshort", lines > 0 && lines <= 4);
+  }
   /* ASK-PIN (ICK PR-A, Tony Nov 17 F1; brain ui-polish/ick-v1 R2): the card is no scroller, the page scrolls it. qcard.css gives a long card `position: sticky; top: -(offset of its
      last strip)`, so it scrolls away until only the bold ask (+ the card's bottom pad) is left at the top. This measures that offset (--qpin, on <html>: the proof page pins #freeze, an
      ancestor of the card), the pinned top bar's height (--qbar) and the strip's height + the bar's (--qstrip, the page's scroll-padding-top while pinned, WCAG 2.4.11). .qpin = it engages (an ask taller than a third of the screen
@@ -225,7 +245,7 @@
     if (g.ResizeObserver) new g.ResizeObserver(tabSoon).observe(rot);
     new MutationObserver(tabSoon).observe(rot, { attributes: true, attributeFilter: ["class", "style"] });
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); pinMeasure(); }); }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); pinMeasure(); shortText(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
