@@ -145,6 +145,36 @@ html.ui-v7 #q .ff.proof#ff > .send#ansGo:is(:disabled, [aria-disabled="true"]):h
 html.ui-v7 #q .chk > .send#mcGo:active,
 html.ui-v7 #q .ff.proof#ff > .send#ansGo:active { background: color-mix(in srgb, var(--ick12-face) 92%, #000); box-shadow: 0 2px 8px rgb(0 0 0 / .4); }
 
+/* == §proof-v7 == ICK3 (Tony Nov 18 phone review): the proof question while TYPING (html.mt + .proof-split; app.js proofTyping) */
+/* C5: NO EDGE. The pad split's hairline (app.css "html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line) }") drew a 1px --line ring inside the
+   question pane (measured "#freezeIn box-shadow rgb(85,103,145) 0 0 0 1px inset"). The proof page has no edges: the ring goes for the proof typing split only
+   (the pad page keeps its own). 1 id + 3 classes beats the app.css rule. */
+html.ui-v7.mt.proof-split #freezeIn { box-shadow: none; }
+/* C8: the distance card bottom -> first proof text line read 25px = the split's 12px sash row + the proof box's 12px top pad + its 1px hairline.
+   Typing mode drops the box's own top pad (12 -> 0), so the line sits 13px under the card, inside the 8..16 range; the sash row (the drag handle) stays.
+   1 id + 5 classes beats app.css "html.ui-v7.proof-split #q .ff.proof { padding: 12px 16px }". Keyed on the typing split, not :focus-within, so a Check tap
+   (focus leaves the textarea for the button) never re-pads the box mid-tap (app.css:1843). */
+html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; }
+/* C7: while typing, the ONE Ask Cluck button (cluckbtn.js moves #cluckBtn into the proof box; same element, same states, same window.stemCluckAsk
+   action) sits just left of the 56px Check key: 44x44, tangerine squircle from the left-edge tab's tokens (qcard.css §ick7-tab), bottom 14 / right 72
+   (= the key's 8px inset + 56 + the 8px gap; 14 centres a 44px button on the key's 36px centre line). */
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox {
+  position: absolute !important; top: auto !important; left: auto !important; right: 72px !important; bottom: 14px !important;
+  float: none; display: grid; place-items: center;
+  width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin: 0 !important; padding: 0 !important;
+  border: 0; border-radius: 12px; background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
+  box-shadow: 6px 0 18px -8px rgb(2 6 12 / .7) !important; overflow: hidden; opacity: 1 !important; z-index: 3;
+}
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::before,
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::after { display: none; }
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-duck { width: 24px; height: 24px; top: 0; align-self: center;
+  color: var(--ick7-ink, var(--page, #02040d)) !important; --c2: var(--ick7-eye, var(--help-on, #ffdcc0)) !important; --paper: var(--ick7-eye, var(--help-on, #ffdcc0)); opacity: 1 !important; }
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-t { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: scale(.95); }
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:focus-visible { outline: var(--ring, 2px) solid var(--focus, #8cc2ff); outline-offset: 2px; }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox { corner-shape: superellipse(1.52); } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: none; } }
+
 /* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (C4a, 56px squircle) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
    app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,
    shake (bad) 120-480, hold to 900, crossfade icon -> .nf 900-1150. Percents of 1150: 120=10.43 420=36.52 480=41.74 570=49.57 900=78.26. Reduced motion: colour + full icon, then the swap at 1150. */
