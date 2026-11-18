@@ -154,7 +154,7 @@ html.ui-v7.mt.proof-split #freezeIn { box-shadow: none; }
    Typing mode drops the box's own top pad (12 -> 0), so the line sits 13px under the card, inside the 8..16 range; the sash row (the drag handle) stays.
    1 id + 5 classes beats app.css "html.ui-v7.proof-split #q .ff.proof { padding: 12px 16px }". Keyed on the typing split, not :focus-within, so a Check tap
    (focus leaves the textarea for the button) never re-pads the box mid-tap (app.css:1843). */
-html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; }
+html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; padding-bottom: 0; }   /* ICK4-FADE (Tony Nov 18 "closer to bottom"): the textarea runs to the box edge, so its fade sits on the edge (its own 72px foot still clears the keys) */
 /* C7: while typing, the ONE Ask Cluck button (cluckbtn.js moves #cluckBtn into the proof box; same element, same states, same window.stemCluckAsk
    action) sits just left of the Check key: 56x56 = the Check key (--ick12-size, --ick12-r), bottom 8 / right 72 (= the key's 8px inset + 56 + 8px gap);
    tangerine squircle from the left-edge tab's tokens (qcard.css §ick7-tab). */
@@ -181,8 +181,8 @@ html.ui-v7 #q .ff.proof > textarea {
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--pf-t), #000 calc(100% - var(--pf-b)), transparent);
           mask-image: linear-gradient(to bottom, transparent, #000 var(--pf-t), #000 calc(100% - var(--pf-b)), transparent);
 }
-html.ui-v7 #q .ff.proof > textarea.pf-t { --pf-t: 16px; }
-html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 16px; }
+html.ui-v7 #q .ff.proof > textarea.pf-t { --pf-t: 10px; }
+html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 10px; }   /* Tony Nov 18: thinner (16 -> 10) */
 
 /* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (C4a, 56px squircle) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
    app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,
