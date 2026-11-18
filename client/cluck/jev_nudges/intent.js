@@ -528,6 +528,9 @@
     var h = get(SH); h.h = (h.h || 0) + 1; put(SH, h);
     if (h.h >= SEEN.HOLLOW_N && (h.f || 0) <= SEEN.HOLLOW_OF) { try { localStorage.setItem(SOFF, "1"); } catch (e) { /* blocked */ } }
   }
+  /* JEV-DET 2 ONE DICE SEAM: every Jev roll reads dice(). A spec pins one roll (__stemJevRand / __stemHelpRand, read lazily) or seeds the
+     whole scenario (__stemDice, tests/pw-browser.mjs jev: <seed>); else Math.random */
+  var dice = function (pin) { var f = typeof W[pin] === "function" ? W[pin] : typeof W.__stemDice === "function" ? W.__stemDice : Math.random; return f(); };
   var save = function () { put(HK, hist); }, sid = "s" + Math.random().toString(36).slice(2, 8);
   /* J5, the one seam to the peek (peek.js stemDuck.say): Jev decides, the peek only shows the line and tells back how it went */
   var jev = create(function () { return performance.now(); }, hist, {
@@ -544,8 +547,8 @@
       var m = mids();
       return L.step() ? (mids() > m ? "mid" : "arrow") : "";
     },
-    rand: typeof W.__stemJevRand === "function" ? W.__stemJevRand : Math.random,   // tests pin the roll; the app never sets it
-    helpRand: function () { return (typeof W.__stemHelpRand === "function" ? W.__stemHelpRand : Math.random)(); },   // tests pin the help roll (one function); the app never sets it
+    rand: function () { return dice("__stemJevRand"); },            // JEV-DET 2: ONE dice seam (dice below); the app never sets any of these
+    helpRand: function () { return dice("__stemHelpRand"); },
     helpBlock: function (via) {                                      // "mode": another overlay is up, or the item is already closed (a restored locked item; the lock itself is the one trigger that sees it open)
       var L = W.stemLockHelp, d = W.__drill && W.__drill.state;
       return !L || L.up || (via !== "lock" && !!(d && d.finished));

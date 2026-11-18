@@ -33,7 +33,7 @@ const CA = { code: "CSCI26_FW1", type: "mc", pick: "all", shuffle: false, body: 
 const PAD = "N = mg cos30 = 33.9\nf = 0.20 N = 6.79\nF = 19.6 - 6.79";
 
 const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
-const browser = await launchBrowser(pw, { motion: true, jev: true, args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });   // JEV-DET 2: Jev only in the onboarding context (seeded)
 let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
@@ -242,7 +242,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
 
 /* onboarding (new device = no stem-* key) and the pointy toast on an MC row, phone 390 */
 {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ jev: 1, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });   // intent.js owns onboarding
   await ctx.addCookies(DIET);
   const page = await ctx.newPage(); page.setDefaultTimeout(6000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));

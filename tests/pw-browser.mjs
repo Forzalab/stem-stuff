@@ -11,6 +11,8 @@
 //   jev (JEV-DET 1): every newContext/newPage defaults to Jev OFF (init script: localStorage stem-jev=0 when unset), so no spec
 //                            rolls live nudge/help dice (intent.js returns early). A spec that tests Jev opts in with
 //                            launchBrowser(pw, { jev: true }) and pins its own rolls (__stemJevRand / __stemHelpRand). PW_JEV=1 = off for a whole run.
+//                            JEV-DET 2: jev also per context: browser.newContext({ jev, ... }) / newPage({ jev }) beats the browser value.
+//                            jev: <number> = Jev on with seeded dice (window.__stemDice, mulberry32): the whole scenario replays.
 //   PW_TRACE=0 (CI-ARCH E)   turns the event trace off. Default on: every context is recorded (tests/lib/trace.mjs) and a spec's
 //                            FAIL line gets the last page events under it. Read-only for the page.
 import { traceContext } from "./lib/trace.mjs";
@@ -20,6 +22,10 @@ const YOUTUBE = process.env.PW_YOUTUBE === "1";
 const JEV = process.env.PW_JEV === "1";
 /* try: about:blank / opaque frames throw on localStorage. ?jev=1 still turns it on (intent.js removes the key after this runs) */
 const JEV_OFF = `(() => { try { if (localStorage.getItem("stem-jev") === null) localStorage.setItem("stem-jev", "0"); } catch {} })();`;
+const JEV_SEED = s => `(() => { let a = ${s >>> 0}; window.__stemDice = () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();`;   // mulberry32
+/* the jev init script for a context: off, seeded, or none (live dice) */
+const jevInit = (ctxJev, browserJev) => { const j = JEV || (ctxJev ?? browserJev); return !j ? JEV_OFF : typeof j === "number" ? JEV_SEED(j) : null; };
 const YT_ROUTE = /youtube|ytimg|googlevideo/;
 /* an aborted iframe lands on an opaque chrome-error page, where scripts reading localStorage throw "Access is denied" (mc-bento pageerror):
    a frame gets an empty page from the youtube origin instead; scripts/images/media are aborted */
@@ -29,7 +35,7 @@ const INIT = `(() => { const s = CSS.supports.bind(CSS), no = /^(text-box-trim|t
   CSS.supports = function (a, b) { return no.test(String(a).trim()) ? false : b === undefined ? s(a) : s(a, b); }; })();`;
 export async function launchBrowser(pw, opts = {}, engine = BROWSER) {
   const { motion, youtube, jev, ...lo } = opts;
-  const keepYt = YOUTUBE || youtube, jevOff = !JEV && !jev;
+  const keepYt = YOUTUBE || youtube;
   const b = await pw[engine].launch(engine === "chromium" ? lo : {});
   if (!MOTION && !motion) for (const k of ["newContext", "newPage"]) {
     const f = b[k].bind(b);
@@ -42,7 +48,8 @@ export async function launchBrowser(pw, opts = {}, engine = BROWSER) {
   const nc = b.newContext.bind(b), np = b.newPage.bind(b);
   // route before the context is handed back: a spec's own youtube route is registered later, and Playwright runs the LAST
   // matching route first, so a spec stub still wins.
-  b.newContext = async (...a) => { const c = await nc(...a); if (jevOff) await c.addInitScript(JEV_OFF); if (!keepYt) await c.route(YT_ROUTE, ytStub); return traceContext(c); };
-  b.newPage = async (...a) => { const p = await np(...a); if (jevOff) await p.context().addInitScript(JEV_OFF); if (!keepYt) await p.context().route(YT_ROUTE, ytStub); await traceContext(p.context()); return p; };
+  // jev is ours, never handed to Playwright
+  b.newContext = async ({ jev: cj, ...o } = {}, ...a) => { const c = await nc(o, ...a), js = jevInit(cj, jev); if (js) await c.addInitScript(js); if (!keepYt) await c.route(YT_ROUTE, ytStub); return traceContext(c); };
+  b.newPage = async ({ jev: cj, ...o } = {}, ...a) => { const p = await np(o, ...a), js = jevInit(cj, jev); if (js) await p.context().addInitScript(js); if (!keepYt) await p.context().route(YT_ROUTE, ytStub); await traceContext(p.context()); return p; };
   return b;
 }
