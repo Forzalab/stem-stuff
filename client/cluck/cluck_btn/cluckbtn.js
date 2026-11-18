@@ -38,7 +38,20 @@
     if (T && T.note && st && MSG[st]) T.note({ text: MSG[st], at: btn, ms: 2400, prefer: "under" });
   }
   function press(e) {
-    if (locked()) { e.preventDefault(); tell(); return; }
+    /* DUCK-INBOX-STUCK (Tony Nov 18): in the proof typing box the tap focused the button, which sits inside #work, so app.js proofTyping() kept the
+       typing split (and the keyboard-gone exit never fired: the textarea had no focus to lose). The lock note popped by the keyboard, Cluck opened under
+       the split. Now an in-box tap leaves typing mode first (blur: the button goes back to the card), then acts two frames later from the card. */
+    if (btn.classList.contains("cb-inbox")) {
+      e.preventDefault();
+      var f = D.activeElement; if (f && f.blur) f.blur();
+      requestAnimationFrame(function () { requestAnimationFrame(act); });
+      return;
+    }
+    if (locked()) e.preventDefault();
+    act();
+  }
+  function act() {
+    if (locked()) { tell(); return; }
     var a = ask(); if (a) a.enter();
   }
   /* ICK3 C7 (Tony Nov 18): while a proof box is in TYPING mode the one button moves into the box, just left of the Check key (verdict-v7.css §proof-v7).
