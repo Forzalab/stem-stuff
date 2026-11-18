@@ -150,11 +150,12 @@ const checkFig = (r, what) => {
 /* the shot frames the figure and, when it fits, the reply's last line too; then no text line may be cut at the fold (orc QA: a stray
    "–" under the stepper's Back / Next at 1440 was the top of "Try once more." showing through the fade over the footer) and no line may be
    only a dash or blanks */
+// the fade class is state the app sets late (150 ms timer / scroll event): wait until it matches the scroll position before the fold is read
+const foldReady = page => page.waitForFunction(() => { const sc = document.querySelector("#cluck .wtext")?.closest(".cl-bd") || document.querySelector("#cluck .cl-bd"), ft = document.querySelector("#cluck .cl-ft"); if (!sc) return true; const want = !!ft && !ft.hidden && sc.scrollHeight - sc.scrollTop - sc.clientHeight > 8; return sc.classList.contains("below") === want; }, null, { timeout: 8000 });
 const frame = async page => {
-  // the reply is fully typed before the fold is measured (state, not a sleep): no late "Try once more." cut at the fold
-  await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun") && !document.querySelector("#cluck.wbusy"), null, { timeout: 8000 });
   const f = page.locator("#cluck .wtext .wfig").first();
   if (await f.count()) await f.scrollIntoViewIfNeeded();
+  await foldReady(page);
   await page.evaluate(() => {
     const sc = document.querySelector("#cluck .wtext")?.closest(".cl-bd") || document.querySelector("#cluck .cl-bd"), last = document.querySelector("#cluck .wtext > :last-child");
     if (!sc || !last) return;
@@ -163,6 +164,7 @@ const frame = async page => {
     if (L.bottom > fold(sc, S) && (!F || L.bottom - F.top <= S.height - 8)) sc.scrollTop = sc.scrollHeight;
   });
   await settled(page, "#cluck .wtext");   // the scroll above is painted before the fold is measured
+  await foldReady(page);
   const bad = await page.evaluate(() => {
     const sc = document.querySelector("#cluck .wtext")?.closest(".cl-bd") || document.querySelector("#cluck .cl-bd"), S = sc.getBoundingClientRect(), out = [];
     const fold = (sc, S) => S.bottom - (sc.classList.contains("below") ? parseFloat(getComputedStyle(sc.nextElementSibling || sc, "::before").height) || 40 : 0);   // the fade over the footer hides what is under it
