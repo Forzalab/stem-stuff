@@ -2016,8 +2016,8 @@ function finish() {
 let painting = false;
 function vmorphV() {                                                             // "ok" | "bad" when the Check key (#mcGo / #ansGo) hands over to a verdict-flash Next, else ""
   if (painting || !document.documentElement.classList.contains("ui-v7") || !S) return "";
-  const id = cueCarrier().send?.id, v = S.tries.at(-1)?.v;
-  return (id === "mcGo" || id === "ansGo") ? (v === "correct" ? "ok" : v === "wrong" ? "bad" : "") : "";
+  const send = cueCarrier().send, v = S.tries.at(-1)?.v;                         // the C4a key only: pick-all #mcGo, or #ansGo in the PROOF box (a typed num/expr #ansGo is the row + Next pill)
+  return send && (send.id === "mcGo" || (send.id === "ansGo" && send.closest(".ff.proof"))) ? (v === "correct" ? "ok" : v === "wrong" ? "bad" : "") : "";
 }
 function nextBtn() {                                                             // the cue's Next: nav.js go(1), the same queue as the bar's Next
   const b = document.createElement("button");
