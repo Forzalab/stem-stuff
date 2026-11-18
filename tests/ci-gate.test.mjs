@@ -367,6 +367,7 @@ test("AC3.14 parseFailedSpecs: exactly the failed unit names from a timestamped 
   assert.deepEqual(parseFailedSpecs("2026-11-14T10:22:31Z lane 2: ok   flow 39.6 s\n"), []);
   assert.deepEqual(parseFailedSpecs(LOG.replace(/\n/g, "\r\n")), ["flow", "desk-layout@3", "easy"]);
   assert.ok(readFileSync(here("../.github/workflows/ship.yml"), "utf8").includes("(lane [0-9]+: *)?FAIL ([^ ]+) +[0-9.]+ s$"), "ship.yml sed must match FAIL_LINE");
+  assert.ok(!/gh api [^|\n]*\/jobs\/[^|\n]*\/logs/.test(readFileSync(here("../.github/workflows/ship.yml"), "utf8")), "ship.yml reads job logs with curl: `gh api` refuses a body with terminal escape sequences");
 });
 
 // --- CI-LOOSEN 21 (AC9.1-9.5): the box flake-hunt job is never a required job ----------------
