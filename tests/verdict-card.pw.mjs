@@ -104,7 +104,8 @@ try {
         near(g.nx.l, g.ff.r, "zero gap between the row and Next"); near(g.nx.t, g.ff.t, "same top"); near(g.nx.b, g.ff.b, "same bottom"); near(g.nx.r, g.q.r, "the pill ends at the group's right edge");
         near(g.ff.l, g.q.l, "the pill starts at the row's left edge");
         assert.equal(g.ffBw, "0px 0px 0px 0px"); assert.equal(g.nxBw, "0px 0px 0px 0px"); assert.equal(g.nfBw, "0px 0px 0px 0px", "no seam line");
-        assert.equal(g.radius, "16px 0px 0px 16px", "the row's outer corners r16, the join flat");
+        const t = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");   // ICK4-SQUIRCLE-C: --r-tile x 1.25 under corner-shape
+        assert.equal(g.radius, `${t} 0px 0px ${t}`, "the row's outer corners = the tile radius, the join flat");
         assert.equal(g.bg, "rgb(12, 44, 34)", "the row = the verdict fill"); assert.equal(g.vkBg, "rgba(0, 0, 0, 0)", "the mark is a plain glyph, no slot tile (VERDICT-MARK-INERT, Tony Nov 15)");
         assert.ok(g.nf.w > 0 && g.nfBg === "rgb(78, 230, 175)", "Next keeps its own fill: " + g.nfBg);
       } else {

@@ -5,8 +5,8 @@
 html.ui-v7 #q .ansl { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* the judged row + Next, one pill */
 html.ui-v7 .ff.rbox.ok { margin-right: var(--nxw); border-radius: var(--r-tile) 0 0 var(--r-tile); }
-html.ui-v7 .ff.rbox.ok > .nx { right: calc(-1 * var(--nxw)); top: 0; height: 100%; padding: 0; border-radius: 0 16px 16px 0; }
-html.ui-v7 .ff.rbox.ok > .nx .nf { border: 0; border-radius: 0 16px 16px 0; }
+html.ui-v7 .ff.rbox.ok > .nx { right: calc(-1 * var(--nxw)); top: 0; height: 100%; padding: 0; border-radius: 0 var(--r-tile) var(--r-tile) 0; }
+html.ui-v7 .ff.rbox.ok > .nx .nf { border: 0; border-radius: 0 var(--r-tile) var(--r-tile) 0; }
 html.ui-v7 #q .ff.rbox.ok > .nx .nf { box-shadow: var(--shadow-raise), inset 0 0 0 1px #0c2c22; }   /* NEXT-RIM D (Tony Nov 15 "D"): 1px inner line all round in the row fill (--mc-right green-900; that var is scoped to .choices, so the hex), so the bright face stops reading as a light source bleeding past its edge */   /* NEXT-LINK r2 (Tony: Next 'a teensy bit below'): same edges, but only the row cast the raise shadow, so Next read lower; one pill = one shadow */
 html.ui-v7 .ff.rbox.ok > .nx::before { display: none; }
 html.ui-v7 #q .ff.bad { border-radius: var(--r-tile); }
