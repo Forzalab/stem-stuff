@@ -135,10 +135,14 @@
   function place() {
     var u = cur, g = u.g, cells = Cost.layout(u.ms, u.R, u.C, { seed: u.seed, forbid: u.forbid, stacked: u.stacked });
     g.style.setProperty("--bc", u.C); g.style.setProperty("--bu", Feat.geom(u.R, u.C).unit + "px");
+    /* SAME-BOX-SAME-TYPE (Tony Nov 18): tiles of one box size share ONE text look (size + weight): the smallest look in that size group (t < s < p), so it still fits.
+       Before: two equal boxes, "Bad base case" = s (22px / 600) and "Bad inductive step" = t (18px / 500). Boxes of different sizes keep their own look. */
+    var RANK = { t: 0, s: 1, p: 2 }, low = {};
+    cells.forEach(function (c) { var z = c.cs + "x" + c.rs; if (!(z in low) || RANK[c.kind] < RANK[low[z]]) low[z] = c.kind; });
     cells.forEach(function (c) {
       var el = u.chs[c.i], o = el.querySelector(".opt");
       el.style.gridColumn = c.col + " / span " + c.cs; el.style.gridRow = c.row + " / span " + c.rs;
-      o.dataset.k = c.kind; if (c.brk) o.dataset.brk = "1"; else o.removeAttribute("data-brk");
+      o.dataset.k = low[c.cs + "x" + c.rs]; if (c.brk) o.dataset.brk = "1"; else o.removeAttribute("data-brk");
     });
     u.cells = cells; g.classList.add("bento"); g.dataset.bento = "grid"; if (cells.info && cells.info.fallback) g.dataset.fb = "1"; else g.removeAttribute("data-fb");
     var bar = D.querySelector("#q .chk"), cs = bar && getComputedStyle(bar);

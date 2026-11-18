@@ -861,7 +861,10 @@ function layoutMT() {
    them (W129 L1: no page scroll on a short question, which read as the Explain column scrolling itself), and at least 8px over the fixed
    footer's box (#privacy's 44px tap target in Firefox; L3 / L5: no tap on the notes lands on the link) */
 function padFoot() {
-  const pv = $("#privacy"), r = pv && pv.getClientRects().length ? pv.getBoundingClientRect() : null;
+  /* FOOT-LIST-OPEN (Tony Nov 18): a docked bar with the list open moves #privacy UP under the list (index.html G3: top = --ql-bottom). It is no footer there:
+     counting it made --foot 283px and the Cluck column lost 260px of height while the list was up */
+  const up = root.classList.contains("ql-open") && root.classList.contains("dock-bottom");
+  const pv = $("#privacy"), r = pv && !up && pv.getClientRects().length ? pv.getBoundingClientRect() : null;
   const room = Math.ceil(Math.max(24, parseFloat(getComputedStyle($("main")).paddingBottom) || 0, r ? innerHeight - r.top + 8 : 0));
   root.style.setProperty("--foot", room + "px");
   return room;

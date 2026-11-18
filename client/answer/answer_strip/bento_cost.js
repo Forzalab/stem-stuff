@@ -1,13 +1,13 @@
 /* bento_cost.js: bento4 PR2. Pure (no DOM): the search. Ordered exact cover (options placed IN ORDER at the first empty cell, row-major: reading order A,B,C.. and no holes by
    construction) over the shapes from bento_feat.js, scored by a content cost + a variety cost; it keeps the K best full solutions and picks one with a SEEDED softmax (same question
    + same width = same layout, no Math.random). Weights = W below (brain ui-polish/bento4/PLAN.md sec 3, Tony's Nov 15 answers on top):
-     per tile  F1 pref x10 | F2 |ln(area / content-share area)| x6 | F3 grow x3 per extra row | F4 1-col wrapping text +12 | hero not the max-content option +6 | V7 aspect +5 | V8 jitter x2
+     per tile  F1 pref x10 | F2 |ln(area / content-share area)| x6 | F3 grow x3 per extra row | F4 1-col wrapping text +12 | F5 uncramp +40 per text line over the full-row wrap | hero not the max-content option +6 | V7 aspect +5 | V8 jitter x2
      per set   V1 50 x rows | V2 -9 x distinct shapes (<= min(N,5)) | V3 no hero with N>=5 +25 | V4 3rd+ equal run +8 | V5 equal neighbours +4 | V6 3+ 1x1 in a row +10
    Heroes (>= 2x2, not a full row, and not forced by content): max 1 when N <= 6, max 2 when N >= 7 at C = 6. Rows start at ceil(N x A0 / C) so the average tile is ~A0 cells (AMBITION). */
 (function () {
   "use strict";
   var root = typeof window !== "undefined" ? window : globalThis, Feat = root.stemBentoFeat;
-  var W = { f1: 10, f2: 6, f3: 3, f4: 12, hero: 6, v1: 50, v2: 9, v3: 25, v4: 8, v5: 4, v6: 10, v7: 5, v8: 2, T: 4, K: 8, A0: 1.0, NODES: 9000, MS: 40 };
+  var W = { f1: 10, f2: 6, f3: 3, f4: 12, f5: 40, hero: 6, v1: 50, v2: 9, v3: 25, v4: 8, v5: 4, v6: 10, v7: 5, v8: 2, T: 4, K: 8, A0: 1.0, NODES: 9000, MS: 40 };
   var now = function () { return typeof performance !== "undefined" ? performance.now() : Date.now(); };
   function hashI(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -36,6 +36,9 @@
       return list.map(function (x) {
         var c = x.pref * w.f1 + x.grow * w.f3, ar = g.tileW(x.cs) / g.unitsH(x.rs);
         if (g.phone && x.cs === 1 && !f.mathOnly && f.cls !== "TOKEN" && f.lines[0] >= 3) c += w.f4;
+        /* F5 UNCRAMP (Tony Nov 18: "if text can be relatively UNcramped, do so"): every text line a shape adds over the full-row wrap costs f5, at every width.
+           Before: 2 options, "Bad base case" in a 1-column tile on 3 lines beside a wide, near-empty "Bad inductive step" */
+        if (!f.mathOnly) c += w.f5 * Math.max(0, f.lines[x.cs - 1] - f.lines[C - 1]);
         if ((ar > 3.3 || ar < 1 / 2.6) && !(x.cs === C && (f.cls === "LONG" || f.cls === "WIDE"))) c += w.v7;
         var hero = x.cs >= 2 && x.rs >= 2 && x.cs < C, forced = f.minCells >= 4;
         if (hero && !forced) c += (f.top ? 0 : w.hero) + (f.eligible ? 0 : w.hero * .5);
