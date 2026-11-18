@@ -16,6 +16,10 @@ on:
         description: "PW_YOUTUBE=1: real YouTube, no stub (A/B arm vs the default stub)"
         type: boolean
         default: false
+      jev:
+        description: "PW_JEV=1: Jev on in every spec (live dice; A/B arm vs the default Jev off)"
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -27,6 +31,7 @@ jobs:
       N: ${{ inputs.n }}
       LANES: 3
       PW_YOUTUBE: ${{ inputs.youtube && '1' || '' }}
+      PW_JEV: ${{ inputs.jev && '1' || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
