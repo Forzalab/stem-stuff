@@ -100,7 +100,7 @@ await step("flag on: idle / hover / picked have no border, no outline, no lit to
   const A = "#q .opt[data-id='a']", B = "#q .opt[data-id='b']";
   const idle = await look(p, A);
   assert.equal(idle.bw, "0px 0px 0px 0px", "idle border: " + idle.bw);
-  assert.equal(idle.shadow, "none", "resting tile has no shadow / lit top: " + idle.shadow);
+  assert.ok(/0px 6px 16px -4px/.test(idle.shadow) && !/inset/.test(idle.shadow), "ICK4-FLOAT: resting tile = the bar's drop shadow, no lit top: " + idle.shadow);
   assert.equal(idle.bg, rgb("#0d142a"), "idle = navy-800");
   await p.hover(A); await bgIs(p, A, rgb("#141d36"));
   const hov = await look(p, A);

@@ -91,7 +91,8 @@ html.ui-v7 {
   --w-body: 500;   /* ICK3 C9: body weight for the new UI = 500 (variable face; was 450). Code / mono stay 400 */
   /* ICK4-SQUIRCLE-C (Tony Nov 18, option C): ONE radius token set for the v7 cards. --r-k = 1 is the plain round fallback (Firefox); 1.25 under corner-shape */
   --r-k: 1; --r-card: calc(20px * var(--r-k)); --r-tile: calc(16px * var(--r-k)); --r-chip: calc(6px * var(--r-k));
-  --lift: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* the top bar's raise (progbar.css BAR-DEPTH) as a token: cards float like it */
+  --lift: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* the top bar's raise (progbar.css BAR-DEPTH) as a token */
+  --lift-drop: 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* ICK4-FLOAT: the cards float with the bar's drop only, no lit top (Tony Nov 14: a lit top on a resting tile reads as a border) */
   --edge-hair: 1px solid rgb(255 255 255 / .09);   /* ICK PR-A (A1): ONE hairline, the edge of every field, input, proof box and code block */
   --edge-hair-ink: rgb(255 255 255 / .09);   /* the same hairline as a colour (the code block's header split) */
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
