@@ -88,7 +88,7 @@
    navy mock (brain ui-polish/hintbox/v71/palette.css). Flag off = the :root values above, untouched. Sits right after the :root block: same
    specificity class of rule, so every var(--page) / var(--line) alias on :root follows the remap. No border is added (no-border subgoal). */
 html.ui-v7 {
-  --w-body: 500;   /* ICK3 C9: body weight for the new UI = 500 (variable face; was 450). Code / mono stay 400 */
+  --w-body: 400;   /* ICK5 (Tony Nov 18 "unbold/decrease weight the text body"): 400 = the typed text (ICK4); was 500 (ICK3 C9), 450 before. Code / mono stay 400 */
   /* ICK4-SQUIRCLE-C (Tony Nov 18, option C): ONE radius token set for the v7 cards. --r-k = 1 is the plain round fallback (Firefox); 1.25 under corner-shape */
   --r-k: 1; --r-card: calc(20px * var(--r-k)); --r-tile: calc(16px * var(--r-k)); --r-chip: calc(6px * var(--r-k));
   --lift: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* the top bar's raise (progbar.css BAR-DEPTH) as a token */
