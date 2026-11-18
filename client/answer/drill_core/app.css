@@ -1513,6 +1513,7 @@ html.mt main {
 }
 html.mt.mt-fit main { grid-template-rows: var(--tile-h, 33%) var(--s3) minmax(0, 1fr); }   /* the tile hugs its content (layoutMT) */
 html.mt.mt-r0 main { grid-template-rows: auto var(--s3) minmax(0, 1fr); }
+html.mt.dock-bottom:not(.ql-open) .top { z-index: 16; visibility: hidden; }   /* the sticky bar is its own stacking context, so #qback cannot rise out of it: lift the bar just over the split's stage (main, z 15) and paint none of it; #qback stays visible (nav.css) and a tap on Back is Back's (ios-back split-back-overlap) */
 html.mt #sentinel, html.mt .pad-peek, html.mt .more { display: none; }
 html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-height: 0; }
 html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--qbox); border-radius: 10px; }
