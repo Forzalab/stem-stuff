@@ -156,24 +156,33 @@ html.ui-v7.mt.proof-split #freezeIn { box-shadow: none; }
    (focus leaves the textarea for the button) never re-pads the box mid-tap (app.css:1843). */
 html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; }
 /* C7: while typing, the ONE Ask Cluck button (cluckbtn.js moves #cluckBtn into the proof box; same element, same states, same window.stemCluckAsk
-   action) sits just left of the 56px Check key: 44x44, tangerine squircle from the left-edge tab's tokens (qcard.css §ick7-tab), bottom 14 / right 72
-   (= the key's 8px inset + 56 + the 8px gap; 14 centres a 44px button on the key's 36px centre line). */
+   action) sits just left of the Check key: 56x56 = the Check key (--ick12-size, --ick12-r), bottom 8 / right 72 (= the key's 8px inset + 56 + 8px gap);
+   tangerine squircle from the left-edge tab's tokens (qcard.css §ick7-tab). */
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox {
-  position: absolute !important; top: auto !important; left: auto !important; right: 72px !important; bottom: 14px !important;
+  position: absolute !important; top: auto !important; left: auto !important; right: 72px !important; bottom: 8px !important;
   float: none; display: grid; place-items: center;
-  width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin: 0 !important; padding: 0 !important;
-  border: 0; border-radius: 12px; background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
+  width: var(--ick12-size); height: var(--ick12-size); min-width: var(--ick12-size); min-height: var(--ick12-size); margin: 0 !important; padding: 0 !important;
+  border: 0; border-radius: var(--ick12-r); background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
   box-shadow: 6px 0 18px -8px rgb(2 6 12 / .7) !important; overflow: hidden; opacity: 1 !important; z-index: 3;
 }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::before,
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::after { display: none; }
-html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-duck { width: 24px; height: 24px; top: 0; align-self: center;
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-duck { width: 30px; height: 30px; top: 0; align-self: center;
   color: var(--ick7-ink, var(--page, #02040d)) !important; --c2: var(--ick7-eye, var(--help-on, #ffdcc0)) !important; --paper: var(--ick7-eye, var(--help-on, #ffdcc0)); opacity: 1 !important; }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-t { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: scale(.95); }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:focus-visible { outline: var(--ring, 2px) solid var(--focus, #8cc2ff); outline-offset: 2px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox { corner-shape: superellipse(1.52); } }
 @media (prefers-reduced-motion: reduce) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: none; } }
+
+/* ICK4-FADE (Tony Nov 18): the proof text fades into the gutter at an edge that has more text past it (app.js wireProof sets pf-t / pf-b on scroll) */
+html.ui-v7 #q .ff.proof > textarea {
+  --pf-t: 0px; --pf-b: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--pf-t), #000 calc(100% - var(--pf-b)), transparent);
+          mask-image: linear-gradient(to bottom, transparent, #000 var(--pf-t), #000 calc(100% - var(--pf-b)), transparent);
+}
+html.ui-v7 #q .ff.proof > textarea.pf-t { --pf-t: 16px; }
+html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 16px; }
 
 /* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (C4a, 56px squircle) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
    app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,

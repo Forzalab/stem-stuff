@@ -1662,6 +1662,8 @@ const PROOF_MAX = 3000;                                    // serve.py PROOF_MAX
 const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // verdict text, sr-only (ui-v7: no visible chip; Nov 8: no rubric rows)
 function wireProof() {
   const inp = $("#ans"), go = $("#ansGo");
+  const fade = () => { const t = inp.scrollTop; inp.classList.toggle("pf-t", t > 1); inp.classList.toggle("pf-b", t + inp.clientHeight < inp.scrollHeight - 1); };   // ICK4-FADE: verdict-v7.css §proof-v7
+  inp.addEventListener("scroll", fade, { passive: true }); inp.addEventListener("input", fade); new ResizeObserver(fade).observe(inp);
   inp.addEventListener("input", () => {
     go.disabled = !inp.value.trim();
     proofLen(inp.value);
