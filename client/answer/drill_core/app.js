@@ -32,6 +32,7 @@ import { match as slipMatch, slipSpot, familyHint } from "../../pure_logic_modul
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "../../pure_logic_modules/mode.mjs";
 import { pbKey, pbLoad, pbSubmit, pbFull, pbNext } from "../../pure_logic_modules/progbar.mjs";
 import { quack, withQuack } from "../../pure_logic_modules/quack.mjs";
+import { cardTitle } from "../../pure_logic_modules/titles.mjs";
 /* ./speak.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { changes } from "../../pure_logic_modules/chg.mjs";
 /* ./steps.mjs: used by cluck.js / shell.js only (split-app.mjs) */
@@ -780,7 +781,7 @@ function render() {
   const blocks = $("#blocks"); blocks.innerHTML = "";
   /* the card's bold lead is the question's title, the one the list shows ("Practice Exam 2, Question 13"), not the tip (owner, Oct 6:
      the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
-  const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
+  const lead = modeOf() === "sugar" ? cardTitle(prob.title, code) : "";   // titles.mjs: a slug or no title = no big title, the card's normal no-title layout
   if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.innerHTML = md(lead, true); blocks.append(t); }   // TITLE-MATH (Tony Nov 16): $..$ in a title renders (was raw text)
   if (prob.twist === true && !root.classList.contains("ui-v7")) twistChip(blocks);   // ui-v7: no chip, the row toast announces it (twistToast)                             // W133: a twist item's "Twist" chip, left of the title (none: nothing at all)
   const C = snackChg();
