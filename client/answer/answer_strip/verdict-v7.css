@@ -4,12 +4,12 @@
    3) The verdict line (.ansl "That's it! ...", "Not it. ...") stays in the DOM as a live region, visually hidden (the .sr-only recipe). */
 html.ui-v7 #q .ansl { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* the judged row + Next, one pill */
-html.ui-v7 .ff.rbox.ok { margin-right: var(--nxw); border-radius: 16px 0 0 16px; }
+html.ui-v7 .ff.rbox.ok { margin-right: var(--nxw); border-radius: var(--r-tile) 0 0 var(--r-tile); }
 html.ui-v7 .ff.rbox.ok > .nx { right: calc(-1 * var(--nxw)); top: 0; height: 100%; padding: 0; border-radius: 0 16px 16px 0; }
 html.ui-v7 .ff.rbox.ok > .nx .nf { border: 0; border-radius: 0 16px 16px 0; }
 html.ui-v7 #q .ff.rbox.ok > .nx .nf { box-shadow: var(--shadow-raise), inset 0 0 0 1px #0c2c22; }   /* NEXT-RIM D (Tony Nov 15 "D"): 1px inner line all round in the row fill (--mc-right green-900; that var is scoped to .choices, so the hex), so the bright face stops reading as a light source bleeding past its edge */   /* NEXT-LINK r2 (Tony: Next 'a teensy bit below'): same edges, but only the row cast the raise shadow, so Next read lower; one pill = one shadow */
 html.ui-v7 .ff.rbox.ok > .nx::before { display: none; }
-html.ui-v7 #q .ff.bad { border-radius: 16px; }
+html.ui-v7 #q .ff.bad { border-radius: var(--r-tile); }
 /* the judged-wrong typed box (Tony Nov 14: "dashed red edge should be gone too, more like our bento answer card on wrong state"): no dash, the MC bento wrong look
    (bento.css --mc-wrong red-900 fill, --wrong-on text, 12px tile family radius). The flag-off .ff.bad dashed --wrong-rim rule (app.css, style.test.mjs 2.6) is untouched. */
 html.ui-v7 .ff { --mc-wrong: #3e141e; }
@@ -35,7 +35,7 @@ html.ui-v7 .ff.ok, html.ui-v7 .ff.rbox.ok, html.ui-v7 .q .ff.rbox.cue.ok:focus-w
    Now the same tile look as the judged-wrong box: green-900 fill (bento.css --mc-right), --correct-on text, the 16px tile radius. Edge stays off (the rule at the foot of this file). */
 html.ui-v7 .ff.ok { background: var(--mc-right); }
 html.ui-v7 .ff.ok input { color: var(--correct-on); }
-html.ui-v7 #q .ff.ok:not(.rbox) { border-radius: 16px; }
+html.ui-v7 #q .ff.ok:not(.rbox) { border-radius: var(--r-tile); }
 
 /* NO BORDER (Tony Nov 15): the typed answer field (.ff) and the code box are wells, not outlined boxes. Refactoring UI p.155-157, the INSET light-source technique:
    (1) a dark top inner shadow (the lip above blocks the light), (2) a lighter bottom lip facing the sky (hand-picked navy, not white alpha), (3) a fill a step off the page.
@@ -58,7 +58,7 @@ html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box, html.ui-v
 /* focus (Tony Nov 15, round 3): no glow. Keyboard focus = the offset outline (focus-visible); a mouse or tap focus (strip.js sets [data-ptr] on pointerdown) shows no ring, only the well */
 /* round 4: the outline wraps the whole field (the well), never the inner input; the input itself never shows one. A judged field (.bad / .ok) shows none either. */
 html.ui-v7 #q .ff input:focus-visible, html.ui-v7 #q .ff input:focus, html.ui-v7 .code-box input:focus-visible, html.ui-v7 .code-box input:focus { outline: none; }
-html.ui-v7 #q .ff:has(input:focus-visible):not(.bad):not(.ok):not(.rbox):not([data-ptr]), html.ui-v7 .code-box:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 16px; }
+html.ui-v7 #q .ff:has(input:focus-visible):not(.bad):not(.ok):not(.rbox):not([data-ptr]), html.ui-v7 .code-box:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: var(--r-tile); }
 html.ui-v7 #q .ff input:focus::placeholder { color: var(--hint); }   /* the placeholder shows while the field is empty, focus or not */
 html.ui-v7 #q > .how { display: block !important; font-size: 13px; line-height: 1.4; color: var(--muted); }   /* ICK PR-A (A1, ICK-R1 3a): the "Tick all..." line is a caption: 13px, muted */   /* the hint line stays (the caption's :has rule hid it on focus) */
 html.ui-v7 .ff > .fl { display: none; }   /* Tony Nov 15 (round 3): no floating caption; the placeholder is the only label, and it hides when typing */
@@ -79,11 +79,11 @@ html.ui-v7 #q .ff.rbox .vk { position: absolute; order: 0; margin: 0; right: 14p
    squircle (client/answer/progbar/progbar.css: corner-shape superellipse(2) under @supports) and the --r-tile radius, so the two shapes agree. ui-v7 only; the fallback is the
    plain round --r-tile corner (k = 1). */
 @supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .ff, #q .ff .send, .code-box, .code-box .btn-go) { corner-shape: superellipse(2); } }
-html.ui-v7 #q .ff, html.ui-v7 .code-box { border-radius: 16px; }
+html.ui-v7 #q .ff, html.ui-v7 .code-box { border-radius: var(--r-tile); }   /* ICK4-SQUIRCLE-C: every answer field = the tile token */
 html.ui-v7 #q .ff.proof { border-radius: var(--r-tile); }   /* ICK4-SQUIRCLE-C: the proof box takes the one tile radius (20 under corner-shape) */
 html.ui-v7.proof-split #q .ff.proof { border-radius: var(--r-tile); }   /* same radius in the proof split: beats app.css's 16px proof-axis rule at equal specificity, later file */
-html.ui-v7 #q .ff.rbox.ok { border-radius: 16px 0 0 16px; }   /* NEXT-LINK (Tony Nov 15 "link the Next button and the input box together"): the #q .ff radius above out-ranked the pill's flat join (.ff.rbox.ok, top of file) */
-html.ui-v7 #q .ff .send, html.ui-v7 .code-box .btn-go { border-radius: 16px; }
+html.ui-v7 #q .ff.rbox.ok { border-radius: var(--r-tile) 0 0 var(--r-tile); }   /* NEXT-LINK (Tony Nov 15 "link the Next button and the input box together"): the #q .ff radius above out-ranked the pill's flat join (.ff.rbox.ok, top of file) */
+html.ui-v7 #q .ff .send, html.ui-v7 .code-box .btn-go { border-radius: var(--r-tile); }
 /* PROOF-BOX (Tony Nov 16): the proof box container has ZERO border; the how line + the textarea text sit on one 12px inner margin (placeholder no longer on the edge) */
 html.ui-v7 #q.q:has(.ff.proof), html.ui-v7 #work > #q.q:has(.ff.proof) { border: 0; }   /* 2 ids: beats html.proof-split #work > #q (app.css) */
 html.ui-v7 #q .ff.proof > textarea { padding: 12px 56px 12px 12px; }
@@ -213,3 +213,6 @@ html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
   html.ui-v7 #q .nx.vmorph .nf { animation: none; opacity: 0; }
   html.ui-v7 #q .nx.vmorph .vm-ico, html.ui-v7 #q .nx.vmorph .vm-ico path { animation: none; stroke-dashoffset: 0; }
 }
+/* ICK5-MONO (Tony Nov 18 "inconsistent placeholder font on proof box/input box ... should be monospace ... both placeholder and actual text typed in"):
+   the short-answer input and the proof box type AND hint in the mono (was --font-input Atkinson / --font). Not the code box, not the Cluck composer. */
+html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::placeholder { font-family: var(--mono); }

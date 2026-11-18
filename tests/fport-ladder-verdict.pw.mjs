@@ -180,7 +180,8 @@ try {
       assert.equal(m.text, "rgb(185, 239, 216)", "right text = --correct-on: " + m.text);
       const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"); ff.classList.remove("rbox"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
         return { bg: cs.backgroundColor, bw: cs.borderTopWidth, r: cs.borderTopLeftRadius, color: i.color }; });
-      assert.deepEqual(plain, { bg: "rgb(12, 44, 34)", bw: "0px", r: "16px", color: "rgb(185, 239, 216)" }, "the plain judged-right box = the MC right tile (was the soft --correct-fill): " + JSON.stringify(plain));
+      const tile = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");   // ICK4-SQUIRCLE-C: --r-tile x 1.25 under corner-shape
+      assert.deepEqual(plain, { bg: "rgb(12, 44, 34)", bw: "0px", r: tile, color: "rgb(185, 239, 216)" }, "the plain judged-right box = the MC right tile (was the soft --correct-fill): " + JSON.stringify(plain));
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });
@@ -286,7 +287,7 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
-  for (const w of W) await step(`${w}: flag on (round 5): the Check button and the field well are apple squircles (corner-shape superellipse, 16px radius)`, async () => {
+  for (const w of W) await step(`${w}: flag on (round 5): the Check button and the field well are apple squircles (corner-shape superellipse, --r-tile: 16px, 20px where corner-shape exists: ICK4-SQUIRCLE-C)`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
@@ -294,8 +295,9 @@ try {
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
       const m = await page.evaluate(() => { const b = document.querySelector("#q #ff.ff .send"), ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(b), fs = getComputedStyle(ff);
         return { supports: CSS.supports("corner-shape", "superellipse(1.52)"), btn: cs.cornerShape, btnR: cs.borderTopLeftRadius, well: fs.cornerShape, wellR: fs.borderTopLeftRadius }; });
-      if (m.supports) { assert.match(m.btn, /superellipse/, "button corner-shape: " + JSON.stringify(m)); assert.match(m.well, /superellipse/, "well corner-shape: " + JSON.stringify(m)); }
-      assert.equal(m.btnR, "16px"); assert.equal(m.wellR, "16px");
+      if (m.supports) { assert.match(m.btn, /superellipse|squircle/, "button corner-shape: " + JSON.stringify(m)); assert.match(m.well, /superellipse|squircle/, "well corner-shape: " + JSON.stringify(m)); }
+      const r = m.supports ? "20px" : "16px";   // ICK4-SQUIRCLE-C (Tony Nov 18): --r-tile 16 x --r-k (1.25 under corner-shape)
+      assert.equal(m.btnR, r, JSON.stringify(m)); assert.equal(m.wellR, r, JSON.stringify(m));
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });

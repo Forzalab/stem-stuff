@@ -1920,7 +1920,7 @@ html.ui-v7.proof-split #work > #q { padding: 0; background: none; border: 0; bor
 html.ui-v7.proof-split #work > #q:focus-within { border: 0; box-shadow: none; }
 html.ui-v7.proof-split #q > .how { margin: 0; padding-inline: 0; color: var(--muted); }
 html.ui-v7.proof-split #q .ff.proof { padding: 12px 16px; border-radius: 16px; }   /* PROOF-AXIS (Tony Nov 17): 16px so the typed text starts on the card's text axis (card text x = 8 gutter + 16) */   /* fill + well + lit foot come from verdict-v7.css, the short-answer field rule */   /* ICK C4a: no right reserve, the Check key sits at the box foot (verdict-v7.css ICK 12) */
-html.ui-v7.proof-split #q .ff.proof textarea { font: 400 16px/22px var(--font); letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */   /* ICK4-INPUT-400: typed text = 400 */
+html.ui-v7.proof-split #q .ff.proof textarea { font: 400 16px/22px var(--mono);   /* ICK5-MONO */ letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */   /* ICK4-INPUT-400: typed text = 400 */
 @media (min-width: 900px) { html.ui-v7.proof-split #q .ff.proof textarea { font-size: 17px; line-height: 24px; } }
 /* PROOF-LOCK (Tony Nov 17): keyboard up in the proof box = nothing but the textarea scrolls (the column and the page stay put); .shut/verdict ladders keep their scroll */
 html.ui-v7.proof-split.kbup #work:has(> #q:focus-within):not(:has(> #rpHost > *)) { overflow: hidden; overscroll-behavior: none; }
