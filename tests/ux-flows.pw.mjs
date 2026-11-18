@@ -1018,7 +1018,7 @@ flow(57, "cluck-compare", async (page, w) => {
 const PRIO = [43, 21, 20, 23, 28, 38, 6, 8, 39, 24, 46, 50, 49, 52, 22];
 const order = [...PRIO.map(n => F.find(f => f.n === n)), ...F.filter(f => !PRIO.includes(f.n)).sort((a, b) => a.n - b.n)].filter(f => f && (!ONLY || ONLY.has(f.n)));
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { jev: true, args: ["--no-sandbox"] });
 try {
   for (const f of order) for (const w of WIDTHS) {
     const phone = w === 393;   // keyed on 393, not w < 600: the flow bodies branch on w === 393 / w === 1280, so a phone context at another width would disagree with them

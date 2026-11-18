@@ -13,7 +13,7 @@ let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/li
 const BASE = process.argv[2] || "http://localhost:8812";
 const SNAP = new URL("./window-surface.json", import.meta.url);
 
-const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const b = await launchBrowser(pw, { jev: true, args: ["--no-sandbox"] });   // JEV-DET: the surface inventory includes window.stemJev
 const own = async page => page.evaluate(() => Object.getOwnPropertyNames(window).map(k => { let t; try { t = typeof window[k]; } catch { t = "throws"; } return [k, t]; }));
 const blank = await (await b.newContext()).newPage();
 await blank.goto(`${BASE}/window-surface-blank-404`);         // same origin, no script: what Chromium itself puts on window (secure-context APIs too)

@@ -19,7 +19,7 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 400)); }
 }
 const exe = (() => { try { return require("node:fs").readdirSync("/opt/pw-browsers").filter(d => d.startsWith("chromium-")).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0]; } catch { return undefined; } })();
-const browser = await launchBrowser(pw, exe ? { executablePath: exe } : {});
+const browser = await launchBrowser(pw, exe ? { jev: true, executablePath: exe } : { jev: true });
 const HOSTS = /posthog\.com|clarity\.ms/;
 const STUB = `window.posthog = { init(k, o) { window.__ph = { key: k, opts: o, ev: [] }; this.__loaded = true; o.loaded && o.loaded(this); },
   capture(n, p, x) { window.__ph.ev.push({ n, p, x }); }, register(o) { window.__ph.reg = o; } };`;
