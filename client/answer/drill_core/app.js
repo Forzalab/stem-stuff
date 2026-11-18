@@ -2014,10 +2014,22 @@ function finish() {
    (e.repeat) never skips a question. Live: g-next-in (app.css) lands it once; a restored question shows it still. No list (#qnav hidden)
    = nowhere to go, so no Next. */
 let painting = false;
+function vmorphV() {                                                             // "ok" | "bad" when the Check key (#mcGo / #ansGo) hands over to a verdict-flash Next, else ""
+  if (painting || !document.documentElement.classList.contains("ui-v7") || !S) return "";
+  const send = cueCarrier().send, v = S.tries.at(-1)?.v;                         // the C4a key only: pick-all #mcGo, or #ansGo in the PROOF box (a typed num/expr #ansGo is the row + Next pill)
+  return send && (send.id === "mcGo" || (send.id === "ansGo" && send.closest(".ff.proof"))) ? (v === "correct" ? "ok" : v === "wrong" ? "bad" : "") : "";
+}
 function nextBtn() {                                                             // the cue's Next: nav.js go(1), the same queue as the bar's Next
   const b = document.createElement("button");
-  b.type = "button"; b.className = "nx" + (painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
+  const v = vmorphV();                                                           // SUBMIT-VERDICT-MORPH: the C4a key flashes the verdict, then is Next (verdict-v7.css §verdict-morph)
+  b.type = "button"; b.className = "nx" + (v ? " vmorph" : painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
   b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}</span>`;
+  if (v) {
+    b.dataset.v = v;
+    const P = d => `<path d="${d}" pathLength="100"/>`;
+    b.insertAdjacentHTML("beforeend", `<svg class="vm-ico" viewBox="0 0 24 24" aria-hidden="true">${v === "ok" ? P("M5 12.5 L10 17.5 L19 7") : P("M7 7 L17 17") + P("M17 7 L7 17")}</svg>`);
+    setTimeout(() => b.classList.remove("vmorph"), 1150);
+  }
   b.addEventListener("click", e => {
     e.stopPropagation();
     const n = $("#qnext");

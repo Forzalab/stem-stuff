@@ -144,3 +144,30 @@ html.ui-v7 #q .ff.proof#ff > .send#ansGo:is(:disabled, [aria-disabled="true"]):h
 }
 html.ui-v7 #q .chk > .send#mcGo:active,
 html.ui-v7 #q .ff.proof#ff > .send#ansGo:active { background: color-mix(in srgb, var(--ick12-face) 92%, #000); box-shadow: 0 2px 8px rgb(0 0 0 / .4); }
+
+/* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (C4a, 56px squircle) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
+   app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,
+   shake (bad) 120-480, hold to 900, crossfade icon -> .nf 900-1150. Percents of 1150: 120=10.43 420=36.52 480=41.74 570=49.57 900=78.26. Reduced motion: colour + full icon, then the swap at 1150. */
+html.ui-v7 #q .nx.vmorph { --vm-c: #0c2c22; --vm-s: var(--correct); display: grid; place-items: center; width: var(--ick12-size); height: var(--ick12-size); padding: 0; border-radius: var(--ick12-r);
+  animation: vm-flood 1150ms cubic-bezier(0, 0, .2, 1) both; }
+html.ui-v7 #q .nx.vmorph[data-v="bad"] { --vm-c: #3e141e; --vm-s: var(--wrong); animation: vm-flood 1150ms cubic-bezier(0, 0, .2, 1) both, vm-shake 1150ms linear both; }
+html.ui-v7 #q .nx.vmorph > * { grid-area: 1 / 1; }
+html.ui-v7 #q .nx.vmorph .nf { opacity: 0; animation: vm-label 1150ms cubic-bezier(.4, 0, .2, 1) both; }
+html.ui-v7 #q .nx.vmorph .vm-ico { width: 28px; height: 28px; fill: none; stroke: var(--vm-s); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
+  animation: vm-pop 1150ms linear both, vm-icon-out 1150ms cubic-bezier(.4, 0, .2, 1) both; }
+html.ui-v7 #q .nx.vmorph .vm-ico path { stroke-dasharray: 100; animation: vm-draw 1150ms cubic-bezier(.4, 0, .2, 1) both; }
+html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
+@keyframes vm-flood { 0% { background: var(--ick12-face); width: var(--ick12-size); height: var(--ick12-size); border-radius: var(--ick12-r); }
+  10.43%, 78.26% { background: var(--vm-c); width: var(--ick12-size); height: var(--ick12-size); border-radius: var(--ick12-r); }   /* the key keeps its 56px squircle until the crossfade */
+  100% { background: transparent; border-radius: 8px; width: var(--nxw); height: var(--btn); } }
+@keyframes vm-shake { 0%, 10.43%, 41.74%, 100% { translate: 0; } 19% { translate: 4px; } 27% { translate: -3px; } 35% { translate: 2px; } }
+@keyframes vm-draw { 0%, 10.43% { stroke-dashoffset: 100; } 36.52%, 100% { stroke-dashoffset: 0; } }
+@keyframes vm-draw2 { 0%, 15.65% { stroke-dashoffset: 100; } 41.74%, 100% { stroke-dashoffset: 0; } }   /* the cross's 2nd stroke starts +60 ms */
+@keyframes vm-pop { 0%, 10.43% { scale: .6; } 31% { scale: 1.1; } 49.57%, 100% { scale: 1; } }
+@keyframes vm-icon-out { 0%, 78.26% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes vm-label { 0%, 78.26% { opacity: 0; } 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html.ui-v7 #q .nx.vmorph, html.ui-v7 #q .nx.vmorph[data-v="bad"] { animation: none; background: var(--vm-c); }
+  html.ui-v7 #q .nx.vmorph .nf { animation: none; opacity: 0; }
+  html.ui-v7 #q .nx.vmorph .vm-ico, html.ui-v7 #q .nx.vmorph .vm-ico path { animation: none; stroke-dashoffset: 0; }
+}
