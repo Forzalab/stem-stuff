@@ -7,7 +7,7 @@
        the value is centred (28px math / 22px text). Pick-all (.all) and the stacked-list fallback keep their row layout and get (A) only. */
 
 /* ---- (A) state by fill: every option, list or mosaic ---- */
-html.ui-v7 .choices {
+html.ui-v7 :is(.choices, .rp) {   /* .rp: the repair ladder's step chips wear the same states (LADDER-STATES) */
   --mc-right: #0c2c22;    /* REVIEW2 green-900 */
   --mc-wrong: #3e141e;    /* REVIEW2 red-900 hsl(345 52% 16%): 11.0:1 with --wrong-on */
   --mc-letter: #a7b5d2;   /* REVIEW2 grey-300: idle corner letter (8.6:1 on #0d142a) */
@@ -38,7 +38,13 @@ html.ui-v7 .choices.bento .opt[data-brk] .txt { overflow-wrap: anywhere; }
 html.ui-v7 .choices.bento .opt[data-k="s"] .txt, html.ui-v7 .mc-probe .opt[data-k="s"] .txt { font-size: 1.375rem; line-height: 28px; font-weight: var(--w-em); letter-spacing: -.01em; }
 html.ui-v7 .choices.bento .opt[data-k="p"] .txt, html.ui-v7 .mc-probe .opt[data-k="p"] .txt { font-size: 1.5rem; line-height: 28px; }
 html.ui-v7 .choices.bento .opt .txt > p, html.ui-v7 .mc-probe .opt .txt > p { margin: 0; }
-html.ui-v7 .choices.bento .opt .txt .katex { font-size: 1em; }
+html.ui-v7 .choices.bento .opt .txt .katex { font-size: calc(1em * var(--mz, 1)); }   /* --mz: LONG-MATH shrink (bento.js mathFit, floor .7) */
+/* LONG-MATH (Tony Nov 18): a formula still wider than its full row at the floor size: that tile scrolls sideways, nothing is cut. Right edge fades (the cue);
+   24px of room after the formula so its end clears the fade when scrolled home */
+html.ui-v7 .choices.bento .opt[data-x] .txt { justify-self: stretch; max-width: 100%; overflow-x: auto; overflow-y: hidden; white-space: nowrap; text-align: start; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x pan-y;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+html.ui-v7 .choices.bento .opt[data-x] .txt::-webkit-scrollbar { display: none; }
+html.ui-v7 .choices.bento .opt[data-x] .txt::after { content: ""; display: inline-block; width: 24px; }
 html.ui-v7 .choices.bento .opt .txt .kx-scroll { max-width: none; overflow: visible; }
 html.ui-v7 .mc-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; contain: layout; display: grid; justify-items: start; }
 html.ui-v7 .mc-probe .opt { display: block; box-sizing: content-box; padding: 0; border: 0; background: none; font: inherit; color: inherit; }

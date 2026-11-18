@@ -126,6 +126,7 @@ html.ui-v7.dock-bottom.ql-open #qlist {
   top: calc(var(--v7-bar-top) + var(--v7-h)) !important;   /* 8 + 48 = 56, the well's own bottom edge; inline top from nav.js fit() */
   max-height: min(58svh, 520px) !important;                /* inline fit() clamps to 96 here: too few rows to judge */
   padding: var(--v7-gap); border-top: 1px solid var(--v7-line);
+  width: min(100% - 2 * var(--gut), 30rem);                /* LIST-WELL-WIDTH (Tony Nov 18): the list is as wide as the well it hangs off (.dock > * max-width 30rem, app.css); nav.css let it grow to 52rem on wide touch screens */
   border-radius: 0 0 var(--v7-r) var(--v7-r);
   background: var(--v7-fill);
   box-shadow: inset 1px 0 0 var(--v7-line), inset -1px 0 0 var(--v7-line), inset 0 -1px 0 var(--v7-line), var(--shadow-3);

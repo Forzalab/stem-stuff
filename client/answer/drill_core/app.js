@@ -32,6 +32,7 @@ import { match as slipMatch, slipSpot, familyHint } from "../../pure_logic_modul
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "../../pure_logic_modules/mode.mjs";
 import { pbKey, pbLoad, pbSubmit, pbFull, pbNext } from "../../pure_logic_modules/progbar.mjs";
 import { quack, withQuack } from "../../pure_logic_modules/quack.mjs";
+import { cardTitle } from "../../pure_logic_modules/titles.mjs";
 /* ./speak.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { changes } from "../../pure_logic_modules/chg.mjs";
 /* ./steps.mjs: used by cluck.js / shell.js only (split-app.mjs) */
@@ -780,7 +781,7 @@ function render() {
   const blocks = $("#blocks"); blocks.innerHTML = "";
   /* the card's bold lead is the question's title, the one the list shows ("Practice Exam 2, Question 13"), not the tip (owner, Oct 6:
      the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
-  const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
+  const lead = modeOf() === "sugar" ? cardTitle(prob.title, code) : "";   // titles.mjs: a slug or no title = no big title, the card's normal no-title layout
   if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.innerHTML = md(lead, true); blocks.append(t); }   // TITLE-MATH (Tony Nov 16): $..$ in a title renders (was raw text)
   if (prob.twist === true && !root.classList.contains("ui-v7")) twistChip(blocks);   // ui-v7: no chip, the row toast announces it (twistToast)                             // W133: a twist item's "Twist" chip, left of the title (none: nothing at all)
   const C = snackChg();
@@ -1053,7 +1054,7 @@ function ladderStep() {
   if (!steps.length || (S.lad ||= 0) >= steps.length) return false;
   const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : st.k === "row" ? `.f[data-row="${st.id}"]` : `.to[data-to="${st.to}"]`);
   sec.querySelectorAll(".f.mid.cur").forEach(m => midOpen(m, false));                 // the last piece's notes fold to its "why?"
-  if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); }
+  if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); keyfFit(sec); }
   ladClock();                                                                          // any reveal restarts the 30 s clock
   const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to the key formulas." : st.k === "mid" ? `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.` : "A link was added between key formulas.";
   return true;
@@ -1105,6 +1106,36 @@ function drawDocFig(g, fig) {
     Graph.render(g, fig); g.style.marginInline = "auto";
   }
 }
+/* KEYF-V7 (Tony Nov 18; ui-v7 only): a formula wider than its row is never cut and never under the "?" (the "?" is a flex sibling, outside .fm). First the math
+   shrinks to a 70% floor (--kf-k on .fm, KaTeX is em-based), then .fm scrolls sideways with a 24px fade on each edge that still has more to show (.kf-sx + --kf-l/--kf-r).
+   Re-fit when the card's width changes, when fonts arrive, and when a ladder row appears (a hidden row has no width to measure) */
+const KF_FLOOR = 0.7, KF_FADE = "24px";
+function keyfEdges(fm) {
+  const sx = fm.scrollWidth > fm.clientWidth + 1;
+  fm.classList.toggle("kf-sx", sx);
+  fm.style.setProperty("--kf-l", sx && fm.scrollLeft > 1 ? KF_FADE : "0px");
+  fm.style.setProperty("--kf-r", sx && fm.scrollLeft + fm.clientWidth < fm.scrollWidth - 1 ? KF_FADE : "0px");
+}
+function keyfFit(sec) {
+  if (!document.documentElement.classList.contains("ui-v7")) return;
+  sec.querySelectorAll(".f .fm").forEach(fm => {
+    if (!fm.offsetParent) return;                                                   // a hidden ladder row: fitted when it shows
+    fm.style.removeProperty("--kf-k");
+    let k = 1;
+    for (let i = 0; i < 3 && fm.scrollWidth > fm.clientWidth + 1 && k > KF_FLOOR; i++) {   // the padding does not scale: a second pass settles it
+      k = Math.max(KF_FLOOR, k * fm.clientWidth / fm.scrollWidth);
+      fm.style.setProperty("--kf-k", k.toFixed(3));
+    }
+    keyfEdges(fm);
+  });
+}
+function keyfWire(sec) {
+  sec.querySelectorAll(".fm").forEach(fm => fm.addEventListener("scroll", () => keyfEdges(fm), { passive: true }));
+  let w = 0;
+  if (window.ResizeObserver) new ResizeObserver(() => { if (sec.clientWidth !== w) { w = sec.clientWidth; keyfFit(sec); } }).observe(sec);
+  document.fonts?.ready.then(() => keyfFit(sec));
+  keyfFit(sec);
+}
 function formulaCard() {
   if (window.Pop && Pop.anchor()?.closest("#fcard")) Pop.close();
   $("#fcard")?.remove();
@@ -1114,7 +1145,7 @@ function formulaCard() {
   const sec = document.createElement("section");
   sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
   sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
-  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
+  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><span class="fc-sig" aria-hidden="true">${icon("i-sigma")}</span><ol>${fs.map((f, i) => {
     const arrow = steps.find(x => x.k === "arrow" && x.to === f.id), rowStep = steps.find(x => x.k === "row" && x.id === f.id);
     const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
     return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"${rowStep ? ` data-row="${esc(f.id)}"${out(rowStep) ? "" : " hidden"}` : ""}><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`   /* no copy button on the card (Tony, Nov 3 18:14: "hide the copy buttons on the key formula box"); a drag still copies plain text */
@@ -1137,7 +1168,8 @@ function formulaCard() {
     } });
   });
   $("#q").after(sec);
-  ladClock();                                                                       // the question loaded: the first piece's 30 s start now
+  keyfWire(sec);
+  ladClock();                                                                    // the question loaded: the first piece's 30 s start now
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */

@@ -97,11 +97,16 @@ html.ui-v7 {
   --edge-hair-ink: rgb(255 255 255 / .09);   /* the same hairline as a colour (the code block's header split) */
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
+  /* HINTCARD (Tony Nov 18): ONE pair for every hint on the site, .hintcard (ladder-v7.css): ink text in a small Cluck-tinted card, the duck in --hint-edge. Text is --ink (>= 4.5:1 on the fill) */
+  --hint-fill: color-mix(in srgb, var(--help) 14%, var(--sheet)); --hint-edge: var(--help);
   /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the top edge of a raised control (a hand-picked solid, not white alpha), --shadow-raise = the small contact shadow under it, --press = pressed in,
      --well = a recessed field (dark top inset). Raised controls = a solid lit top + a tight shadow below; resting cards/tiles = colour only; never a border. */
   --lit-top: inset 0 1px 0 #141d36;   /* a hand-picked SOLID navy-700 on the navy-800 face (RUI: not semi-transparent white, that greys out and reads as a border) */   /* NAVY-MIN: --card = --sheet = navy-800 (the one resting surface), --chip = navy-600 (badge slot, empty notch), --float = navy-700 (above the page only) */
   --lit-action: inset 0 1px 0 #74b8ff;   /* hand-picked lighter blue, same hue as --action */
   --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
+  --action-edge: rgb(90 169 255 / .3);   /* KEYF-V7 (Tony Nov 18): the action blue as a quiet 1px frame (mock hintbox/v71 --action-edge); reuse for any blue-tinted frame */
+  --r-surface: 16px;   /* the mock surface radius (v71), kept as the token name for new ui-v7 surfaces; rules write 16px (style.test radius list) */
+  --kf-rail: calc(var(--s4) + 16px + var(--s3));   /* the Key formulas rail: 16px in, a 16px mark, 12px air = the mock's 44px side padding */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
 }
@@ -1084,6 +1089,20 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 .mcopy::after { content: ""; position: absolute; inset: -14px; }
 .fq + .mcopy { margin-left: 20px; }
 .fcard .fq { z-index: 1; }   /* rows sit ~24px apart, so areas meet across rows too: there the "?" wins (the copy is on top of nothing it shares) */
+/* KEYF-V7 (Tony Nov 18; brain ui-polish/hintbox/v71 .kf, PORT-ARCH row 11 "Sigma rail, no caption"; ui-v7 only): no notch, no tint. A 1px --action-edge squircle frame, the
+   sigma mark on a left rail (16px in, 16px), formulas centred in order with a small quiet arrow. Rail on both sides so a one-row card stays centred under the mark.
+   A formula wider than its row: JS (app.js keyfFit) shrinks it to 70%, then it scrolls here with an edge fade; the "?" is outside the scroller */
+.fc-sig { display: none; }
+html.ui-v7 .fcard { margin-top: var(--s5); padding: var(--s3) var(--kf-rail); border: 1px solid var(--action-edge); border-radius: 16px; background: none; }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .fcard { corner-shape: superellipse(1.52); } }
+html.ui-v7 .fc-notch { display: none; }
+html.ui-v7 .fc-sig { display: block; position: absolute; left: var(--s4); top: var(--s4); color: var(--action-on); line-height: 0; }
+html.ui-v7 .fc-sig .ico { width: 16px; height: 16px; }
+html.ui-v7 .fcard ol { margin: 0; row-gap: var(--s1); }
+html.ui-v7 .fcard .to { color: var(--action-on); opacity: .6; padding: 0; }
+html.ui-v7 .fcard .to svg { width: 14px; height: 14px; }
+html.ui-v7 .fcard .f > .fm { font-size: calc(1em * var(--kf-k, 1)); }
+html.ui-v7 .fcard .fm.kf-sx { --kf-l: 0px; --kf-r: 0px; mask-image: linear-gradient(90deg, transparent, #000 var(--kf-l), #000 calc(100% - var(--kf-r)), transparent); }
 .mcopy:is(:hover, :focus-visible) { color: var(--action); }
 .mcopy.done { color: var(--correct); }
 .mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
@@ -1592,8 +1611,11 @@ html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   
 /* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
 html.side main {
   max-width: min(100%, calc(var(--col) * 1.7)); display: grid; align-items: start;
-  grid-template-columns: calc(var(--r, .5) * (100% - var(--s6))) var(--s6) minmax(0, 1fr);   /* 32px between the halves (Tony, Oct 5: 16 read cramped) */
+  grid-template-columns: min(calc(var(--r, .5) * (100% - var(--s6))), calc(100% - var(--s6) - var(--col-min, 0px))) var(--s6) minmax(0, 1fr);   /* 32px between the halves (Tony, Oct 5: 16 read cramped) */
 }
+/* CLUCK-COL-MIN (Tony Nov 18: "limit the resize so the placeholder never wraps"): Cluck's column never goes under 20.5rem (328px), whatever the drag ratio says. Not more: at 721px the default half split is 328px, and a wider floor squeezed the left column there (tray-matrix: the copy tap area got covered).
+   Need = 307px measured ("Ask Cluck about a step" 177px at 17px + inset + "5 left" + Send); Firefox draws the face ~10% wider (~325) */
+html.side.sugar { --col-min: 20.5rem; }
 html.side.mt-r0 main { grid-template-columns: 52px var(--s6) minmax(0, 1fr); }
 /* the bar + the page sit snug in the middle of the window, up-down too (Tony, Oct 6 sketch: "snug in the center"). Auto margins
    split the spare height above the bar and below the page; a page taller than the window gets none, so it starts at the top as
