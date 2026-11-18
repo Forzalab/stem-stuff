@@ -101,7 +101,7 @@ html.ui-v7 {
   --lit-action: inset 0 1px 0 #74b8ff;   /* hand-picked lighter blue, same hue as --action */
   --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
   --action-edge: rgb(90 169 255 / .3);   /* KEYF-V7 (Tony Nov 18): the action blue as a quiet 1px frame (mock hintbox/v71 --action-edge); reuse for any blue-tinted frame */
-  --r-surface: 16px;   /* the mock's surface radius (v71 --r-surface); with corner-shape superellipse(1.52) where supported, like the tiles and fields */
+  --r-surface: 16px;   /* the mock surface radius (v71), kept as the token name for new ui-v7 surfaces; rules write 16px (style.test radius list) */
   --kf-rail: calc(var(--s4) + 16px + var(--s3));   /* the Key formulas rail: 16px in, a 16px mark, 12px air = the mock's 44px side padding */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
@@ -1087,7 +1087,7 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
    sigma mark on a left rail (16px in, 16px), formulas centred in order with a small quiet arrow. Rail on both sides so a one-row card stays centred under the mark.
    A formula wider than its row: JS (app.js keyfFit) shrinks it to 70%, then it scrolls here with an edge fade; the "?" is outside the scroller */
 .fc-sig { display: none; }
-html.ui-v7 .fcard { margin-top: var(--s5); padding: var(--s3) var(--kf-rail); border: 1px solid var(--action-edge); border-radius: var(--r-surface); background: none; }
+html.ui-v7 .fcard { margin-top: var(--s5); padding: var(--s3) var(--kf-rail); border: 1px solid var(--action-edge); border-radius: 16px; background: none; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 .fcard { corner-shape: superellipse(1.52); } }
 html.ui-v7 .fc-notch { display: none; }
 html.ui-v7 .fc-sig { display: block; position: absolute; left: var(--s4); top: var(--s4); color: var(--action-on); line-height: 0; }
