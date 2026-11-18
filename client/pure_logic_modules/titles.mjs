@@ -23,5 +23,17 @@ export function isSlugTitle(title, code) {
   if (!/[:·—]/.test(t) && words.slice(0, 2).some(w => /^[a-z]{1,2}\d+$/i.test(w))) return true;   // "Q4 ...: a human label" is a prefixed title, kept
   return false;
 }
-/* the title to show big on the card: the trimmed title, or "" for a slug / none */
-export function cardTitle(title, code) { return isSlugTitle(title, code) ? "" : String(title).trim().replace(/\s+/g, " "); }
+/* NO-MAGIC-CODE (Tony Nov 18: "no magic code in title like x3 q4, makes no sense for students"): an author's code token: exam / question / homework / chapter
+   tags (X3, Q4, Q1(a), HW11, Ch7, Ex2, WA3, WS7, PE2, D1, W2) and "#8". Known prefixes only, so v0, t2, CO2, H2O are not codes. $math$ is never looked at. */
+const CODE_TOK = /^(?:(?:q|x|ch|hw|ex|wa|ws|pe|d|w)\d+(?:-\d+)?(?:\([a-z0-9]\))?|#\d+)$/i;
+const bare = w => w.replace(/^[(\[]+|[)\]:;,.·—–-]+$/g, "");
+export const titleCodes = title => String(title ?? "").replace(/\$[^$]*\$/g, " ").split(/\s+/).filter(w => CODE_TOK.test(bare(w)) || CODE_TOK.test(w.replace(/[:;,.·—–-]+$/, "")));
+/* the title to show (card + list): "" for a slug / none; a "CODE CODE: human label" title loses its code prefix ("Q11 Q1(a): net torque about the axle"
+   -> "Net torque about the axle"); a title that still holds a code after that shows nothing */
+export function cardTitle(title, code) {
+  if (isSlugTitle(title, code)) return "";
+  let t = String(title).trim().replace(/\s+/g, " ");
+  const m = t.match(/^(.*?)\s*[:·—]\s*(.+)$/);
+  if (m && titleCodes(m[1]).length && m[1].split(" ").every(w => titleCodes(w).length)) t = m[2].charAt(0).toUpperCase() + m[2].slice(1);
+  return titleCodes(t).length ? "" : t;
+}

@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { validator, repairFaults } from "../../tests/schemas.mjs";
-import { isSlugTitle } from "../../client/pure_logic_modules/titles.mjs";
+import { isSlugTitle, titleCodes } from "../../client/pure_logic_modules/titles.mjs";
 
 // SCHEMA.md Version table, row 20261119: every problem has a human `title` (2 to 6 words, never a slug). A bank with v >= TITLE_V that breaks it FAILS;
 // an older bank (no v, 1, or a smaller date) only gets a warning on stderr, so a deploy of the existing banks never goes red for it.
@@ -14,6 +14,8 @@ const TITLE_V = 20261119;
 const titleFaults = doc => doc.problems.flatMap(p => {
   if (typeof p.title !== "string" || !p.title.trim()) return [`${p.code}: title missing`];
   const n = p.title.replace(/\$[^$]*\$/g, "M").trim().split(/\s+/).length;
+  const codes = titleCodes(p.title);
+  if (codes.length && !isSlugTitle(p.title, p.code)) return [`${p.code}: title "${p.title}" holds an author code (${codes.join(", ")}): students do not know it`];
   return isSlugTitle(p.title, p.code) ? [`${p.code}: title "${p.title}" is a slug`] : n < 2 || n > 6 ? [`${p.code}: title "${p.title}" has ${n} words (2 to 6)`] : [];
 });
 

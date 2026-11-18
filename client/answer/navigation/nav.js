@@ -31,7 +31,7 @@
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
 import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, familyOf, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight, MOCK_NIGHTS_ON } from "../../pure_logic_modules/shuffle.mjs";
 import { isBankId, bareBank } from "../../pure_logic_modules/codes.mjs";
-import { isSlugTitle } from "../../pure_logic_modules/titles.mjs";
+import { cardTitle } from "../../pure_logic_modules/titles.mjs";
 // == §bank-link ==
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
@@ -367,7 +367,8 @@ export function clip(s, n = MAX) {
 }
 export function titleOf(p) {
   if (!p) return "";
-  if (!isSlugTitle(p.title, p.code)) return clip(plain(p.title.trim().replace(/\s+/g, " ")));   // a slug title (titles.mjs) falls through to the first paragraph; $math$ reads as plain text
+  const shown = cardTitle(p.title, p.code);                                                    // titles.mjs: no slug, no author code (X3 Q4) in a title
+  if (shown) return clip(plain(shown));   // a slug title (titles.mjs) falls through to the first paragraph; $math$ reads as plain text
   const b = (p.body || []).find(x => x && x.type === "text" && x.md);
   if (!b) return "";
   const para = [];
