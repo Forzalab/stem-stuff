@@ -134,7 +134,7 @@ jobs:
           if [ -n "$RED" ]; then
             tf=false
             for J in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RED/jobs?per_page=100" --jq '.jobs[] | select(.conclusion == "failure") | .id'); do
-              gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | grep -qE '(^|[: ])FAIL [^ ]+ +[0-9.]+ s' && tf=true || true
+              curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | grep -E '(^|[: ])FAIL [^ ]+ +[0-9.]+ s' >/dev/null && tf=true || true
             done
             jq --argjson id "$RED" --argjson tf "$tf" 'map(if .id == $id then . + {test_failure: $tf} else . end)' runs.json > runs2.json && mv runs2.json runs.json
             echo "ship gate: newest main run $RED is red (test failure: $tf)"
@@ -152,11 +152,12 @@ jobs:
           # Yellow rule: if the candidate's tests.yml run passed only on attempt >= 2, find the specs that failed on attempt 1
           # (run-all.sh prints "FAIL <spec> <n> s" in the job log) and hand them to the gate with --failed-specs; the gate
           # clears the yellow only if every one is in the unexpired tests/quarantine.json. No list found = gate refuses.
+          # Job logs via curl, NOT `gh api`: gh refuses to print a body with terminal escape sequences (job logs have ANSI colour) -> "unknown".
           FAILED=""
           RUN="$(jq -r --arg s "$CANDIDATE" '[.[] | select(.head_sha == $s and .conclusion == "success" and (.run_attempt // 1) >= 2)][0].id // empty' runs.json)"
           if [ -n "$RUN" ]; then
             for J in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/attempts/1/jobs" --jq '.jobs[] | select(.conclusion == "failure") | .id'); do
-              FAILED="$FAILED $(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | sed -nE 's/^[0-9TZ:.-]* *(lane [0-9]+: *)?FAIL ([^ ]+) +[0-9.]+ s$/\2/p' | tr '\n' ' ')" || true
+              FAILED="$FAILED $(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$J/logs" | tr -d '\r' | sed -nE 's/^[0-9TZ:.-]* *(lane [0-9]+: *)?FAIL ([^ ]+) +[0-9.]+ s$/\2/p' | tr '\n' ' ')" || true
             done
             FAILED="$(echo $FAILED | tr ' ' '\n' | sort -u | paste -sd, -)"
             echo "ship gate: attempt-1 failed specs: ${FAILED:-unknown}"
