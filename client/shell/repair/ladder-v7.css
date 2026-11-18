@@ -2,7 +2,7 @@
    Everything is under html.ui-v7: flag off = no rule here applies. Loads after repair.css, welcome.css, calc-coach.css.
    STATE BY FILL (brain ui-polish/color-tokens/fable-review/REVIEW2.txt section 3, SPEC R5): no 1px edge on the card, its chips or its input, in any state.
    card = --sheet (navy-800); chip = --chip (navy-600); picked chip = --action-fill; ghost (not yet answerable) = the chip step blended into the card; locked others = the card fill, dim text;
-   the input is a well (--page + --well). The only outline left is the 2px focus ring. Warm (--help) stays only as the small accents it always was (the pill, the step numbers,
+   the input is a well (--page + --well). The only outline left is the 2px focus ring. Warm (--help) stays only as the small accents it always was (the pill,
    the Check button): CONTRAST-PORT = dark ink on orange, never light text, and no warm-brown chip on the navy card. No circles (the auto-filled step number is a rounded square). */
 html.ui-v7 .rp { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); }
 html.ui-v7 section.wl { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); padding-top: calc(var(--s5) + 10px); }
@@ -34,3 +34,23 @@ html.ui-v7 .rp :is(.rp-check, .rp-next), html.ui-v7 section.wl :is(.rp-check, .r
 
 /* a catch-all: no line of any kind inside the ladder card at rest (divider, pill, chip, dashed ghost input / Check). KaTeX draws its fraction bar / rules with borders: left alone. */
 html.ui-v7 section.wl :is(.rp-line, .rp-step, .rp-head, .rp-val-ui, .rp-why, .rp-ghost, .rp-ghost *, .rp-locked *, .rp-in, .rp-check, .rp-next, .rp-chip, .rp-skip, .nx, .nx *):not(.katex, .katex *) { border: 0; }
+
+/* LADDER-STATES (Tony Nov 18): a step wears only ink, muted, right, wrong; its chips take the main tiles' states (bento.css --mc-* tokens, i-ok / i-x glyphs).
+   Number + question = muted number, ink question (muted once done), in every state; the current step is marked by its ▸ shape, not a hue. */
+html.ui-v7 .rp .rp-step[data-state] .rp-n { color: var(--muted); }
+html.ui-v7 .rp .rp-step[data-state] .rp-n[data-auto] { background: var(--chip); }
+html.ui-v7 .rp .rp-step[data-state] .rp-label, html.ui-v7 .rp .rp-step[data-state] .rp-q { color: var(--ink); }
+html.ui-v7 .rp .rp-step[data-state="done"] .rp-label, html.ui-v7 .rp .rp-step[data-state="done"] .rp-q, html.ui-v7 .rp .rp-step .rp-ghost .rp-q { color: var(--muted); }
+html.ui-v7 .rp .rp-vg { display: inline-block; width: 1.1rem; height: 1.1rem; margin-left: var(--s2); vertical-align: -0.2em; }
+html.ui-v7 .rp .rp-x { display: none; }                                  /* the text ✗ (locks the non-welcome chip) is the cross glyph now */
+/* wrong pick = the wrong fill + the cross (stays on the chip once the step is answered); doubled class beats the hover / locked rules */
+html.ui-v7 .rp .rp-chip.rp-tried.rp-tried, html.ui-v7 section.wl .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-tried { background: var(--mc-wrong); color: var(--wrong-on); }
+/* right pick = the right fill + the tick; the other options sink (dim text on the card fill) */
+html.ui-v7 .rp .rp-locked .rp-chip.rp-picked, html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-picked { background: var(--mc-right); color: var(--correct-on); }
+html.ui-v7 .rp .rp-locked .rp-chip:not(.rp-picked):not(.rp-tried), html.ui-v7 section.wl .rp .rp-locked .rp-chip:not(.rp-picked):not(.rp-tried) { color: var(--mc-dim); }
+/* HINTCARD: the reusable hint look (tokens --hint-fill / --hint-edge, app.css). Ink text, small card, the duck in the edge hue. Other hints on the site: add the class */
+html.ui-v7 .hintcard { display: flex; align-items: flex-start; gap: var(--s2); box-sizing: border-box; margin: var(--s2) 0 0; padding: var(--s2) var(--s3);
+  border-radius: 12px; background: var(--hint-fill); color: var(--ink); }
+html.ui-v7 .hintcard[hidden] { display: none; }
+html.ui-v7 .hintcard-ico { display: block; flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--hint-edge); }
+html.ui-v7 .hintcard-t { min-width: 0; }

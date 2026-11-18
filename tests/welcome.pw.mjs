@@ -79,7 +79,10 @@ try {
       [["a", true, true], ["b", true, false], ["c", true, false]], "step one: locked, the pick lit");
     assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-val-opts .rp-chip:not(:disabled)', c => c.length) > 0, true, "step two: live");
     assert.equal(await fields("answer"), 1, "the last step keeps its preview");
-    assert.deepEqual(await tops(), t0, "a row moved");
+    /* LADDER-STATES (Tony Nov 18): the emptied hint no longer keeps its room: the rows below close up by it, none moves down, the first stays */
+    const t1 = await tops();
+    assert.equal(t1[0], t0[0], "the first row moved");
+    assert.equal(t1.every((v, i) => v <= t0[i]), true, "a row moved down");
     assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-why .rp-chip', c => c.length), 3, "one why on the fam step");
     assert.equal(await page.$$eval(".rp-why", w => w.length), 1, "only one why");
   });

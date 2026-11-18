@@ -7,7 +7,7 @@
        the value is centred (28px math / 22px text). Pick-all (.all) and the stacked-list fallback keep their row layout and get (A) only. */
 
 /* ---- (A) state by fill: every option, list or mosaic ---- */
-html.ui-v7 .choices {
+html.ui-v7 :is(.choices, .rp) {   /* .rp: the repair ladder's step chips wear the same states (LADDER-STATES) */
   --mc-right: #0c2c22;    /* REVIEW2 green-900 */
   --mc-wrong: #3e141e;    /* REVIEW2 red-900 hsl(345 52% 16%): 11.0:1 with --wrong-on */
   --mc-letter: #a7b5d2;   /* REVIEW2 grey-300: idle corner letter (8.6:1 on #0d142a) */

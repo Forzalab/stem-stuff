@@ -93,6 +93,8 @@ html.ui-v7 {
   --edge-hair-ink: rgb(255 255 255 / .09);   /* the same hairline as a colour (the code block's header split) */
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
   --wrong: #f0667a; --wrong-on: #ffc4c9; --correct-on: #b9efd8; --help: #ffa63e; --help-sheet: #16110d;
+  /* HINTCARD (Tony Nov 18): ONE pair for every hint on the site, .hintcard (ladder-v7.css): ink text in a small Cluck-tinted card, the duck in --hint-edge. Text is --ink (>= 4.5:1 on the fill) */
+  --hint-fill: color-mix(in srgb, var(--help) 14%, var(--sheet)); --hint-edge: var(--help);
   /* DEPTH 1 (Tony Nov 14, DEPTH GRILL; ui-v7 only): light from above. --lit-top = the top edge of a raised control (a hand-picked solid, not white alpha), --shadow-raise = the small contact shadow under it, --press = pressed in,
      --well = a recessed field (dark top inset). Raised controls = a solid lit top + a tight shadow below; resting cards/tiles = colour only; never a border. */
   --lit-top: inset 0 1px 0 #141d36;   /* a hand-picked SOLID navy-700 on the navy-800 face (RUI: not semi-transparent white, that greys out and reads as a border) */   /* NAVY-MIN: --card = --sheet = navy-800 (the one resting surface), --chip = navy-600 (badge slot, empty notch), --float = navy-700 (above the page only) */

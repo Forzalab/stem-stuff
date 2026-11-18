@@ -184,10 +184,21 @@
       if (st.kind === "fill") return fillTex(st, ok);
       return String(ok) + (st.unit ? " " + st.unit : "");
     }
+    function mark(id) { return `<svg class="rp-vg" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`; }   // the main tiles' glyphs (i-ok / i-x), drawn inline
+    function hintEl(text, gone) {                                                // LADDER-STATES: one .hintcard (app.css --hint-fill / --hint-edge), duck in front
+      const m = h("p", "rp-miss hintcard");
+      m.insertAdjacentHTML("afterbegin", '<svg class="hintcard-ico" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
+      m.append(h("span", "hintcard-t", text));
+      if (gone) { m.hidden = true; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");   // emptied after the right pick: no room kept (was visibility:hidden = the gap under an answered step)
+      return m;
+    }
     function chip(text, data, onTap, s, key, tried) {
       const b = h("button", "rp-chip", text);
       b.type = "button"; Object.assign(b.dataset, data);
-      if (tried.has(key) && !welcome) { b.disabled = true; b.append(h("span", "rp-x", "✗")); }
+      if (tried.has(key)) {                                                     // LADDER-STATES (Tony Nov 18): a tried-wrong chip says so in every variant (ui-v7: the wrong fill + a cross)
+        b.classList.add("rp-tried"); b.insertAdjacentHTML("beforeend", mark("i-x"));
+        if (!welcome) { b.disabled = true; b.append(h("span", "rp-x", "✗")); }   // welcome stays tappable (unfailable); the glyph text only where it locks
+      }
       b.addEventListener("click", () => onTap(s, data.why != null ? Number(data.why) : data.v));
       return b;
     }
@@ -229,7 +240,11 @@
       box.classList.add(how);
       box.setAttribute("aria-hidden", "true");
       box.querySelectorAll("button, input").forEach(c => { c.disabled = true; c.tabIndex = -1; });
-      if (picked != null) box.querySelectorAll(".rp-chip").forEach(c => c.classList.toggle("rp-picked", (c.dataset.why != null ? c.dataset.why : c.dataset.v) === String(picked)));
+      if (picked != null) box.querySelectorAll(".rp-chip").forEach(c => {
+        const on = (c.dataset.why != null ? c.dataset.why : c.dataset.v) === String(picked);
+        c.classList.toggle("rp-picked", on);
+        if (on && how === "rp-locked" && !c.querySelector(".rp-vg")) c.insertAdjacentHTML("beforeend", mark("i-ok"));   // LADDER-STATES: the right pick gets the tick
+      });
       const inp = box.querySelector(".rp-in"); if (inp && picked != null) inp.value = String(picked);
     }
     function keptEl(s) {
@@ -248,9 +263,7 @@
       body.append(val);
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
       if (s.miss && s.state !== "future") {
-        const m = h("p", "rp-miss", s.miss);
-        if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
-        body.append(m);
+        body.append(hintEl(s.miss, s.missGone));
       }
       if (s.ask) {
         const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
@@ -282,7 +295,7 @@
         if (s.ask && s.why == null) body.append(whyUi(s));
         li.append(body);
       }
-      if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
+      if (s.miss && s.state !== "future") li.append(hintEl(s.miss, false));
       return li;
     }
     function introEl() {                                                         // Cluck's line; a leading *action* is italic, the rest text
