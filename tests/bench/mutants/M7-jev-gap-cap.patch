@@ -1,0 +1,12 @@
+diff --git a/client/cluck/jev_nudges/intent.js b/client/cluck/jev_nudges/intent.js
+index df32d89..1e43d34 100644
+--- a/client/cluck/jev_nudges/intent.js
++++ b/client/cluck/jev_nudges/intent.js
+@@ -407,7 +407,6 @@
+       if (flowRun > 0 && !q.bad) return "flow";
+       if ((t - keyAt) / 1000 < NUDGE.TYPING_S) return "typing";
+       if (q.errAt && (t - q.errAt) / 1000 < NUDGE.MISS_S) return "miss";   // W96 r2: the page's own miss duck (Cluck's reply) rises then; a nudge on the miss raced it (cluck-rise 393x659)
+-      if ((t - nz.at) / 1000 < nz.gap) return "gap";
+       return "";
+     }
+     function nudges() {
