@@ -455,6 +455,13 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
   --hang: min(calc((var(--ind) + 2) * 1ch), 8ch);   /* CB-HANG-CAP (Tony Nov 16, phone: a deep continuation line wrapped into a 4-char sliver): the hang stops at 8ch */
   padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + var(--hang)); text-indent: calc(-1 * var(--hang)); }
 .cb .l::before { content: counter(ln); position: absolute; left: var(--cbx); width: var(--g); text-indent: 0; text-align: right; color: var(--muted); user-select: none; -webkit-user-select: none; }
+/* CB-LN-SMALL (Tony Nov 17: LN3, baseline): v7 phones get the numbers back, 9px dim, 1.5ch gutter (mock ln3.css). The number is an INLINE-block at the start of the
+   line (negative margin pulls it into the gutter, margin-right gives the text its --s2 back), so it shares the code's baseline by construction, wrap on or off; a wrapped
+   row keeps the hang indent (text-indent/padding of .l are untouched). Flag off: unchanged (no numbers on phones). */
+@media (max-width: 480px) {
+  html.ui-v7 .cb { --g: 1.5ch; }
+  html.ui-v7 .cb code .l::before { content: counter(ln); position: static; display: inline-block; box-sizing: border-box; width: var(--g); margin: 0 var(--s2) 0 calc(-1 * (var(--g) + var(--s2))); font-size: 9px; line-height: 1; color: var(--dim, var(--muted)); vertical-align: baseline; }
+}
 .cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
 .cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
 
@@ -1941,6 +1948,14 @@ html.ui-v7 .cb:not(.opt .cb) > .cb-hd { border-bottom: 1px solid var(--edge-hair
 .cb-wrap[aria-pressed="false"] { text-decoration-line: none; }
 .cb-wrap[aria-pressed="true"] { color: var(--ink); }
 .cb-copy .ico { width: 16px; height: 16px; }
+/* WRAP-TOGGLE (Tony Nov 17): the header's Wrap is a shadcn-style Toggle: Lucide wrap-text + label, ghost, 6px radius, 32px visual in a 44px touch target (::after), hover = muted fill, pressed = accent fill. v7 only. */
+.cb-wrap .ico { display: none; }
+html.ui-v7 .cb-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 32px; min-height: 0; padding: 0 10px; border-radius: 6px; font: var(--w-em) 13px/1 var(--mono); text-decoration: none; background: transparent; color: var(--muted); }
+html.ui-v7 .cb-wrap .ico { display: block; width: 16px; height: 16px; flex: none; }
+html.ui-v7 .cb-wrap::after { content: ""; position: absolute; inset: -6px 0; }   /* 32 + 12 = 44px hit area */
+html.ui-v7 .cb-wrap:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+html.ui-v7 .cb-wrap[aria-pressed="true"] { background: color-mix(in srgb, var(--action) 18%, transparent); color: var(--ink); }
+html.ui-v7 .cb-wrap:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 /* CB-FLOAT (Tony Nov 17, ref: a floating editor-window snippet; Refactoring UI shadows: two layers = a tight, darker one for the edge + a large soft one for
    the lift; on a near-black page they must be deep to read). Apple squircle on every v7 code block (was #q only). A choice row's block stays flat. */
 html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; border: var(--edge-hair); box-shadow: var(--shadow-1), var(--shadow-4); }   /* ICK PR-A (A1): one hairline round the block, the header split by the same line (below) */   /* STYLE §2.7 tokens: tight edge + large soft lift */
