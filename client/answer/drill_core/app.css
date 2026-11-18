@@ -966,6 +966,11 @@ html.ui-v7 .rot.stashed:not(.docked) .vid { width: 44px; height: 96px; border-ra
 html.ui-v7 .rot.stashed:not(.docked) .vid:nth-child(n + 2), html.ui-v7 .rot.stashed:not(.docked) .ctl { display: none; }
 html.ui-v7 .rot .rtab { position: relative; z-index: 1; border-radius: 0 12px 12px 0; background: linear-gradient(to right, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
 html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradient(to left, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
+/* BRAINROT-RAISE (Tony Nov 17 "a very subtle border and shadow raise for the brainrot bar. rn it covers the text of tooltip"): the stashed handle gets
+   the app's one hairline (--edge-hair) on its inner sides, never the screen-edge side; its raise cast (the tab's own) lives with the tab in qcard.css §ick7-tab
+   (STYLE §2.1/§2.7: app.css shadows are tokens, and this cast is a raw value shared with the tab) */
+html.ui-v7 .rot .rtab { border-top: var(--edge-hair); border-right: var(--edge-hair); border-bottom: var(--edge-hair); }
+html.ui-v7 .rot .rtab.r { border-right: 0; border-left: var(--edge-hair); }
 /* desktop dock (BRAINROT-B2, Tony Nov 14: "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): no box, the mosaic fills the whole notes column.
    8 tiles on a 12-col grid, gap 8: --rows rows of --R px; each tile's cells come from brainrot.js LAYOUT (--a = its grid-area), 1x1 / 2x1 / 1x2 / 2x2 interlocked, no holes. No 9:16 on any tile: every video is
    centre-cropped to its tile (cover, from the container units below). R = a unit's width x .8 (whole px, on 4); the block is taller than the window and scrolls in it (the torus). */

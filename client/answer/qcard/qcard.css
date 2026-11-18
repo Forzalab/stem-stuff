@@ -114,18 +114,17 @@ html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { fon
 html.ui-v7 #problem.qc7.qbr { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; }
 html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
-html.ui-v7 #problem.qc7.qbr > .cluckbtn { position: relative !important; top: auto !important; right: auto !important; order: 1; flex: none; float: none; margin: 0 !important; }   /* keeps cluckbtn.css's font, fill, 44 px, states */
+html.ui-v7 #problem.qc7.qbr > .cluckbtn { order: 1; flex: none; float: none; }   /* ICK E3: the top-row placement is retired (the button is the fixed edge tab, §ick7-tab); keeps cluckbtn.css's font, fill, states */
 html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 14px; }
 html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
 html.ui-v7 #problem.qc7.qbr > .qghostbox, html.ui-v7 #problem.qc7.qbr > .pcode { flex: none; }
 /* KICKER-C v2 (Tony Nov 16): button a touch bigger; its label's BASELINE sits on the code kicker's baseline (flex baseline alignment, not centre) */
 html.ui-v7 #problem.qc7.qbr { align-items: baseline; }
-html.ui-v7 #problem.qc7.qbr > .cluckbtn { padding: 14px 24px 14px 20px !important; }
 /* the kicker is a real element now (qcard.js span.qkicker, baseline-matched to the button label); the ::before kicker is off */
 html.ui-v7 #problem.qc7.qbr::before { content: none; display: none; }
 html.ui-v7 #problem.qc7.qbr { align-items: flex-start; }
 html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; align-self: flex-start; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qkicker { display: none; } html.ui-v7 #problem.qc7.qbr > .qkicker { display: block; }
+.qkicker { display: none; }   /* ICK E3 (Tony Nov 17): the kicker is gone; the old `display: block` under qbr is retired */
 /* EXPLAIN-TAG fix (CI polish '(d) pad page gap 33px'): html.mt .xb-label { display: contents } (app.css) un-hid the label in the pad split; hidden everywhere unless the v7 side case */
 #work > .x-label { display: none !important; }
 html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }
@@ -162,7 +161,7 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { padding-bottom: 3px; background-
 html.ui-v7 #problem.qc7.qbr > .cluckbtn[aria-disabled="true"] .cb-t { background-image: none; }
 @media (hover: hover) { html.ui-v7 #problem.qc7.qbr > .cluckbtn:not([aria-disabled="true"]):hover .cb-t { background-size: 100% 1.5px, 100% 1.5px; } }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn:is(.cb-sheen, .cb-shake, .cb-nod, .cb-hop) .cb-t { animation: cb-sweep 1s cubic-bezier(.2, .7, .2, 1) 1 forwards; }
-html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-duck { animation: none !important; }
+/* DUCK-DANCE (ICK E3): the duck's dance classes play on the tab too (the old kill switch would mute them); cb-sheen maps to the hop below */
 @keyframes cb-sweep { 0% { background-size: 0% 1.5px, 100% 1.5px; } 45%, 75% { background-size: 100% 1.5px, 100% 1.5px; } 100% { background-size: 0% 1.5px, 100% 1.5px; } }
 @media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { animation: none !important; } }
 /* SIZE-MATCH (Tony Nov 16 "make ask cluck and the code text look similar in size"): both were 15px 600, but the kicker is tracked CAPS (cap height on every letter), so it read
@@ -201,3 +200,54 @@ html.ui-v7.pad-off:not(.mt):not(.swap) #problem.qc7.qpin.qpinned { box-shadow: 0
 html.ui-v7.pad-off.proof-split:not(.mt):not(.swap) #freeze:has(> #freezeIn > #problem.qpin) { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--qbar, 0px) - var(--qpin, 0px) - 8px); z-index: 5; }
 /* WCAG 2.4.11 (focus not obscured): while the strip is pinned, anything scrolled or focused into view stops below it */
 html.ui-v7.pad-off:not(.mt):not(.swap):has(#problem.qpin) { scroll-padding-top: var(--qstrip, 0px); }
+
+/* == §ick7-tab == ICK E3 (Tony Nov 17): Ask Cluck = tangerine tab on the left edge, on the brainrot handle; kicker removed */
+html.ui-v7 {
+  --ick7-fill: var(--help, #ffa63e);      /* ICK 7 E3: tangerine = the app's --help token, no new colour */
+  --ick7-ink: var(--page, #02040d);       /* ICK 7 E3: the navy the duck is drawn in (--page = navy-900) */
+  --ick7-eye: var(--help-on, #ffdcc0);    /* ICK 7 E3: beak + eye, read against tangerine */
+  --ick7-w: 44px;                         /* ICK 7 E3 moved: the brainrot handle's width (app.css .rot.stashed .rtab), so both tabs share one edge line */
+  --ick7-h: 60px;                         /* ICK 7 E3: 24 duck + 18 top/bottom air: a tab, not a panel */
+  --ick7-b: 164px;                        /* ICK 7 E3 moved: the rest spot (8px above the handle at its docked bottom); qcard.js tab() retargets to the live handle */
+  --ick7-ico: 24px;                       /* ICK 7 E3: the duck at 24 with 4px of air each side */
+  --ick7-r: 12px;                         /* ICK 7 E3 moved: the handle's own radius (0 12 12 0) */
+  --ick7-z: 35;                           /* ICK 7 E3: over the card, under the toast (60) */
+}
+/* ICK 7 E3 (moved): the card's own isolation layer caps everything inside it, so the card's stacking context is lifted */
+html.ui-v7 #problem.qc7.qbr { z-index: 5; }
+/* ICK 7 E3 (moved): the tab, flush with the LEFT edge (only its two right corners are rounded, as the handle's are).
+   `> button.cluckbtn`: the app's KICKER-C link rule has the same specificity and its sheet loads after this one. */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn {
+  position: fixed !important; top: auto !important; left: 0 !important; right: auto !important; bottom: var(--ick7-b) !important;
+  display: grid; place-items: center; width: var(--ick7-w); height: var(--ick7-h); min-width: 0; min-height: 0; order: 0; flex: none; float: none;
+  margin: 0 !important; padding: 0 !important; border-radius: 0 var(--ick7-r) var(--ick7-r) 0;
+  background: var(--ick7-fill); color: var(--ick7-ink) !important; opacity: 1 !important; text-decoration: none;
+  box-shadow: 6px 0 18px -8px rgb(2 6 12 / .7) !important;   /* ICK 7 E3 (moved): the tab casts right, off the edge it hangs from */
+  z-index: var(--ick7-z);
+}
+/* ICK 7 E3: no fill/sweep layers */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn::before, html.ui-v7 #problem.qc7.qbr > button.cluckbtn::after { display: none; }
+/* ICK 7 E3: the duck alone (navy body, warm beak and eye - the icon's eye is var(--paper), re-pointed here) */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn .cb-duck { width: var(--ick7-ico); height: var(--ick7-ico); top: 0; align-self: center;
+  color: var(--ick7-ink) !important; --c2: var(--ick7-eye) !important; --paper: var(--ick7-eye); opacity: 1 !important; }
+/* ICK 7 E3: the label goes with the duck's head that the edge hides: gone visually, still the button's accessible name */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn .cb-t { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* ICK 7 E3 (moved): the open question list dims the page (z 46) and the brainrot parks its handle: the tab goes with it */
+html.ui-v7.ql-open #problem.qc7.qbr > button.cluckbtn { visibility: hidden; }
+/* ICK 7 E3: press + focus */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn:active { transform: scale(.95); }
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn:focus-visible { outline: var(--ring, 2px) solid var(--focus, #8cc2ff); outline-offset: -4px; }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > button.cluckbtn:active { transform: none; } }
+/* BRAINROT-RAISE (Tony Nov 17 "a very subtle border and shadow raise for the brainrot bar"): the same hairline the handle gets, on the tab's inner sides */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn { border-top: var(--edge-hair); border-right: var(--edge-hair); border-bottom: var(--edge-hair); }
+/* BRAINROT-RAISE (Tony Nov 17): the stashed handle's raise, the same cast as the tab above (the hairline itself is app.css, beside the handle's look) */
+html.ui-v7 .rot .rtab { box-shadow: 6px 0 18px -8px rgb(2 6 12 / .7); }
+html.ui-v7 .rot .rtab.r { box-shadow: -6px 0 18px -8px rgb(2 6 12 / .7); }
+/* DUCK-DANCE (ICK E3): the tab hides ::before/::after, so the sheen would be invisible: cb-sheen plays the duck hop instead */
+html.ui-v7 #problem.qc7.qbr > button.cluckbtn.cb-sheen .cb-duck { animation: cb-hop .5s cubic-bezier(.34, 1.56, .64, 1) 1; }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > button.cluckbtn.cb-sheen .cb-duck { animation: none; } }
+/* LOCKED Nov 17 (F1): the code kicker is removed; the card's top row is gone (the Ask Cluck button itself becomes the edge tab above) */
+html.ui-v7 #problem#problem.qc7 > .qkicker { display: none !important; }
+html.ui-v7 #problem#problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: 0; }
+html.ui-v7 #problem#problem.qc7.qbr > .blocks { margin-top: 0; }
+
