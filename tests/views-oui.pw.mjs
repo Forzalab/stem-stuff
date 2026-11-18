@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { settled } from "./lib/wait.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -132,6 +133,7 @@ try {
       if (SHOTS) await page.locator("#cluck .wtext").screenshot({ path: join(SHOTS, `views-oui-tug-${tag}.png`) });
     });
     await step(`${tag}: a Flip view: cards turn from "you did" to "the fix" by themselves, a tap turns one back, reduced motion shows both faces`, async () => {
+      await settled(page, "#cluck .vw-flip");   // the Tug step's emulateMedia replay restarted fl-turn (finite, delayed): let it end
       const tf = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].map(e => getComputedStyle(e).transform));
       assert.equal(await page.locator("#cluck .wtext .vw-flip .fl-card").count(), 2);
       await page.waitForFunction(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].every(e => /^matrix3d\(-1/.test(getComputedStyle(e).transform)), null, { timeout: 6000 });   // the beat (3 x --d-dim) + the turn
@@ -141,6 +143,7 @@ try {
       assert.deepEqual(await up(), ["b", "b"], "at rest exactly the fix face is visible");
       const c0 = page.locator("#cluck .wtext .vw-flip .fl-card").first();
       await c0.click(); await page.waitForFunction(() => getComputedStyle(document.querySelector("#cluck .vw-flip .fl-in")).transform === "none", null, { timeout: 5000 });
+      await settled(page, "#cluck .vw-flip");   // that waitForFunction watches card 1 only; card 2's own fl-turn must end too
       assert.equal((await tf())[0], "none", "a tap turns card 1 back to what you did");
       assert.deepEqual(await up(), ["a", "b"], "after a tap: card 1 shows only what you did");
       assert.ok(/^matrix3d\(-1/.test((await tf())[1]), "card 2 stays on the fix");
