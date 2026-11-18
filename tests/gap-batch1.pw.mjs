@@ -43,12 +43,12 @@ await step("B: the old star level badge is not drawn under ui-v7", async () => {
   assert.equal(d, "none");
   await c.close();
 });
-await step("C: the question menu uses the float fill, radius 16, no edge; the intro pill is hidden while it is open", async () => {
+await step("C: the question menu hangs off the code well (ICK D2: square top, r16 bottom, one 1px divider on top); the intro pill is hidden while it is open", async () => {
   const { c, p } = await open("");
   await p.click("#qlistBtn"); await p.waitForSelector("html.ql-open .qlist", { timeout: 5000 });
-  const r = await p.$eval(".qlist", e => { const s = getComputedStyle(e); return { bg: s.backgroundColor, rad: s.borderTopLeftRadius, bw: s.borderTopWidth }; });
+  const r = await p.$eval(".qlist", e => { const s = getComputedStyle(e); return { bg: s.backgroundColor, rad: s.borderTopLeftRadius, radB: s.borderBottomLeftRadius, bw: s.borderTopWidth }; });
   if (S) await p.screenshot({ path: S + "-menu-390.png" });
-  assert.equal(r.rad, "16px"); assert.equal(r.bw, "0px");
+  assert.equal(r.rad, "0px", "D2: top corners square into the well"); assert.equal(r.radB, "16px"); assert.equal(r.bw, "1px", "D2: the one divider under the well");
   const fl = await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--float").trim());
   assert.ok(fl, "--float token is set");
   const probe = await p.evaluate(() => { const e = document.querySelector("section.wl .rp-line"); return e ? getComputedStyle(e).visibility : "absent"; });

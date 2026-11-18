@@ -17,7 +17,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/navigation/nav.js` | Prev / Next, question list, TeX to plain text. Has a CODEMAP header. | question order, list, titles |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
 | `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. <= 480px: PHONE-FILL DOM half (`fillLayout`, `fitAll` font 15 -> 10px). | top bar tiles, notch render |
-| `client/answer/progbar/progbar.css` | Styles of the v9d bar, all under `html.ui-v7` (geometry from topbar-v9 fit06/MEASURE.md). | bar look, tile sizes |
+| `client/answer/progbar/progbar.css` | Styles of the v9d bar, all under `html.ui-v7` (geometry from topbar-v9 fit06/MEASURE.md); §ick14-well = the phone code bar as ONE well (upload inside, list hung off its edge, D1 fill) + bank tile centring (ICK D2). | bar look, tile sizes, the code well |
 | `client/cluck/figures/graph.js` | SVG renderer of graph blocks (cartesian, scene, circuit, network). Has a CODEMAP header. | a figure looks wrong |
 | `client/cluck/figures/figcheck.js` | Figure invariants: checks a drawn figure and picks auto hues. | figure rules, auto colours |
 | `client/cluck/figure_language/layout-core.mjs` | The streamed, constraint-checked figure language (Cluck layout core, prototype). | layout engine, figure placement rules |
