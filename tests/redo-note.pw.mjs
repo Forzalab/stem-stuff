@@ -70,7 +70,7 @@ async function toRedeem(page) {
   throw new Error("no Redeem showing within 14 Nexts");
 }
 
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { jev: true, args: ["--no-sandbox"] });
 for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 390, height: 844 }]]) {
   await step(`${w}: the first Redeem says "${NOTE}" once, on the retry tag; the second Redeem does not`, async () => {
     const phone = vp.width < 500;

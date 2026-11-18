@@ -48,7 +48,7 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
-const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
+const browser = await launchBrowser(pw, { jev: true, args: ["--no-sandbox"] });
 const VPS = { phone: { width: 390, height: 844 }, desk: { width: 1024, height: 768 } };
 const DLG = '[role="dialog"].lockhelp';
 
