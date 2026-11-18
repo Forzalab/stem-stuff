@@ -42,12 +42,12 @@
     var a = ask(); if (a) a.enter();
   }
   /* ICK3 C7 (Tony Nov 18): while a proof box is in TYPING mode the one button moves into the box, just left of the Check key (verdict-v7.css §proof-v7).
-     A phone: the proof split (html.mt + .proof-split, shell.js proofTyping). A desktop: focus in the proof field (no on-screen keyboard; focus = typing mode).
+     The phone proof split only (html.mt + .proof-split, shell.js proofTyping); a desktop keeps the button on the card (a focus-driven move there raced the brainrot player's focus steal).
      Same element, so the off/ready state, the lock note and the window.stemCluckAsk action are the edge tab's own: nothing is copied. */
   function proofBox() {
     var b = D.querySelector("#q .ff.proof");
     if (!b || !on()) return null;
-    return b.contains(D.activeElement) || H.classList.contains("mt") ? b : null;
+    return H.classList.contains("mt") && H.classList.contains("proof-split") ? b : null;
   }
   function mount() {
     var h = D.getElementById("problem");
@@ -93,8 +93,7 @@
       for (var i = 0; i < recs.length; i++) if (!btn || !btn.contains(recs[i].target)) { later(); return; }
     }).observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden"] });
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later);
-    g.addEventListener("focusin", later); g.addEventListener("focusout", later);   // ICK3 C7: desktop typing mode = focus in the proof box
-    new MutationObserver(later).observe(H, { attributes: true, attributeFilter: ["class"] });   // ...and the phone's proof split (html.mt)
+    new MutationObserver(later).observe(H, { attributes: true, attributeFilter: ["class"] });   // ICK3 C7: the phone's proof split (html.mt)
     later();
   }
   g.stemCluckBtn = { sync: function () { if (!raf) raf = requestAnimationFrame(sync); }, sheen: sheen, get el() { return btn; } };

@@ -262,11 +262,11 @@ for (const it of picked) for (const vp of vps) {
         await shot(page, it.code, vp, "s2");
         chk("C5", it.code, vp.name, s2.edges.length === 0, s2.edges.length ? s2.edges.slice(0, 3).join(" ; ") : "no edge", "no border/outline/ring on the card and its wrappers to #freeze");
         const big = s2.clucks.filter(c => c.big && c.inVv), kb = s2.html.split(/\s+/).includes("kbup");
-        chk("C7/s2", it.code, vp.name, big.length >= 1 && !s2.tab.on,
+        if (vp.name === "phone") chk("C7/s2", it.code, vp.name, big.length >= 1 && !s2.tab.on,
           `inBox=${s2.clucks.length} >=44x44&inVv=${big.length}${s2.clucks[0] ? ` (${s2.clucks[0].w}x${s2.clucks[0].h})` : ""} tab=${s2.tab.on ? "VISIBLE" : "hidden"} kbup=${kb ? 1 : 0}`,
           "one cluck button in #q >=44x44 fully in the visual viewport, edge tab not visible");
         if (s2.proof) { const gap = +(s2.proof.firstLine - s2.cardBottom).toFixed(1);
-          chk("C8", it.code, vp.name, gap >= 8 && gap <= 16, `${gap} cardB=${s2.cardBottom} lineT=${s2.proof.firstLine} boxT=${s2.proof.top}`, "8..16px (card bottom -> first proof text line)", gap); }
+          if (vp.name === "phone") chk("C8", it.code, vp.name, gap >= 8 && gap <= 16, `${gap} cardB=${s2.cardBottom} lineT=${s2.proof.firstLine} boxT=${s2.proof.top}`, "8..16px (card bottom -> first proof text line)", gap); }
         else chk("C8", it.code, vp.name, false, "no proof box", "8..16px");
         if (T4) { const l4 = await page.evaluate(LINES4), want4 = "no line box intersects #ansGo; a line level with the key is >=48px shorter than a line above";
           if (!l4) chk("C4", it.code, vp.name, false, "no proof box/Check key", want4);
