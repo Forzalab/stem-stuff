@@ -1,4 +1,4 @@
-// CLUCK-BTN smoke (Tony Nov 14): under html.ui-v7 there is ONE Ask Cluck button, top right of the question card (typed, MC, multi-part) and no other entry (no chip, no tray, no duck slot).
+// CLUCK-BTN smoke (Tony Nov 14; E3 Nov 17): under html.ui-v7 there is ONE Ask Cluck button, the tangerine tab on the left screen edge (typed, MC, multi-part) and no other entry (no chip, no tray, no duck slot).
 // Disabled = aria-disabled (not the attribute, no pointer-events:none) before the first try and with no Cluck key; hover (desktop) / tap (phone) shows a note; a wrong try unlocks it (the fill sweeps in) and a sheen plays.
 // Own serve.py, throwaway bank, a stub OpenRouter.   node tests/cluck-btn.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
 import { launchBrowser } from "./pw-browser.mjs";
@@ -78,18 +78,16 @@ const typeAnswer = async (page, v) => { await skipRetryWait(page); const f = pag
 const toastText = page => page.evaluate(() => { const t = document.getElementById("toast"); return t && t.classList.contains("on") ? t.textContent.trim() : ""; });
 const W = [390, 1366];
 try {
-  for (const [code, kind] of [["PHYS_FP2", "typed"], ["PHYS_FP3", "mc"], ["PHYS_FP4", "multi"]]) for (const w of W) await step(`${w}: ${kind}: one disabled Ask Cluck button, top right of the card, no overlap with the question, >= 44px`, async () => {
+  for (const [code, kind] of [["PHYS_FP2", "typed"], ["PHYS_FP3", "mc"], ["PHYS_FP4", "multi"]]) for (const w of W) await step(`${w}: ${kind}: one disabled Ask Cluck button, the tangerine tab on the left screen edge (ICK E3), >= 44px`, async () => {
     const page = await open2(w, code);
     try {
       const g = await geo(page);
       assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck" + "Cluck unlocks after your first try.");
       assert.equal(g.aria, "true", "aria-disabled"); assert.equal(g.dis, false, "no disabled attribute"); assert.notEqual(g.pe, "none", "no pointer-events:none");
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
-      // ROW-ALIGN B (Tony Nov 16): the button sits at the card's right; its top is near the card top OR (a taller title beside it) its bottom meets the title's last line
-      // KICKER-C (Tony Nov 16): the button sits in the kicker row, flush with the card's CONTENT box (top-right corner of the padding box)
-      assert.ok(Math.abs(g.br.r - (g.pr.r - g.padR)) < 2 && Math.abs(g.br.t - (g.pr.t + g.padT - 12)) < 2, "top right (CLUCK-LINK: the 44px tap box reaches 12px above the label line) of the card's content box: " + JSON.stringify({ b: g.br, p: g.pr, padR: g.padR, padT: g.padT }));
-      assert.equal(g.overlap, false, "the question text does not run under the button"); assert.equal(g.bw, "0px", "no border");
-      assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.equal(g.color, "rgb(169, 184, 204)", "CLUCK-GREY: disabled = the --muted token"); assert.ok(g.shadow === "none" || /0px 1px 2px/.test(g.shadow), "no raise while disabled (QCARD v3 lifts the chip with a lit edge + soft shadows: qcard.css)");
+      // ICK E3 (Tony Nov 17, supersedes KICKER-C top-right link): a 44x60 tangerine tab flush with the LEFT screen edge, fixed, stacked on the brainrot handle (qcard.css §ick7-tab)
+      assert.ok(Math.abs(g.br.l) < 1 && Math.abs(g.br.w - 44) < 1 && Math.abs(g.br.h - 60) < 1, "left-edge tab 44x60: " + JSON.stringify(g.br));
+      assert.equal(g.bg, "rgb(255, 166, 62)", "E3: tangerine = --help"); assert.notEqual(g.shadow, "none", "E3: the tab casts off the edge");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");
@@ -115,10 +113,10 @@ try {
       await typeAnswer(page, "1.636");
       await page.waitForFunction(() => document.querySelector("#cluckBtn") && !document.querySelector("#cluckBtn").hasAttribute("aria-disabled"), null, { timeout: 8000 });
       const sw = await page.evaluate(() => getComputedStyle(document.querySelector("#cluckBtn"), "::before").display);
-      assert.equal(sw, "none", "CLUCK-LINK: no fill layer (a link, not a chip)");
+      assert.equal(sw, "none", "E3: no fill / sweep layer on the tab");
       await page.waitForSelector("#cluckBtn.cb-sheen, #cluckBtn.cb-shake", { state: "attached", timeout: 4000 });   // wrong try = the sheen; the stub reply that lands next = the duck head shake (the later event wins)
       const g = await geo(page);
-      assert.equal(g.ladder, 0, "no old entry"); assert.equal(g.aria, null); assert.equal(g.bg, "rgba(0, 0, 0, 0)", "CLUCK-LINK: no fill"); assert.equal(g.shadow, "none", "CLUCK-LINK: no raise");
+      assert.equal(g.ladder, 0, "no old entry"); assert.equal(g.aria, null); assert.equal(g.bg, "rgb(255, 166, 62)", "E3: tangerine tab when ready");
       assert.equal(await page.evaluate(() => document.querySelectorAll("#q .ff .vk[role=button], #q .vdrawer, #wish .wchip, .wchip").length), 0);
       if (SHOTS) await page.screenshot({ path: join(SHOTS, "cluckbtn-unlocked-390.png") });
       await page.locator("#cluckBtn").tap();

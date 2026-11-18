@@ -175,7 +175,7 @@
      last strip)`, so it scrolls away until only the bold ask (+ the card's bottom pad) is left at the top. This measures that offset (--qpin, on <html>: the proof page pins #freeze, an
      ancestor of the card), the pinned top bar's height (--qbar) and the strip's height + the bar's (--qstrip, the page's scroll-padding-top while pinned, WCAG 2.4.11). .qpin = it engages (an ask taller than a third of the screen
      never pins), .qpinned = the strip is stuck now (it gets the bar look). A tap on the stuck strip, not on a control, scrolls back to the full question. */
-  var pinStrip = 0, pinEl = null, pinRaf = 0;
+  var pinStrip = 0, pinEl = null, pinRaf = 0, tabRaf = 0, rotWatched = null;
   /* the pinned top bar (header.top, sticky: the question bank bar on a multi-question bank) is on top of the strip's spot: the strip sticks under it (--qbar) */
   function barH() { var b = D.querySelector("header.top"), cs = b && g.getComputedStyle(b); return cs && cs.position === "sticky" ? Math.max(0, Math.round((parseFloat(cs.top) || 0) + b.offsetHeight)) : 0; }
   function pinVars() { var bar = barH(); H.style.setProperty("--qbar", bar + "px"); H.style.setProperty("--qstrip", (pinStrip + bar) + "px"); }
@@ -200,6 +200,31 @@
     if (!p || !p.classList.contains("qpinned") || e.target.closest("button, a, input, textarea, select, [role=link], [role=button]")) return;
     g.scrollTo({ top: 0, behavior: g.matchMedia && g.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
+  /* ICK E3 tab (Tony Nov 17, brain ui-polish ick-v1 R2): the Ask Cluck button is the fixed left-edge tab (qcard.css §ick7-tab); this reads the brainrot
+     handle's rect and stacks the tab 8px above it, on whichever spot the handle's own JS parked itself. The sheet's --ick7-b (164px) is the rest spot when
+     the handle is folded, parked, or absent. Geometry only: it sets one property on the button. */
+  function tab() {
+    if (!on()) return;
+    var p = D.getElementById("problem"), b = p && p.querySelector(":scope > .cluckbtn"); if (!b) return;
+    var rot = D.getElementById("rot"), live = false;
+    if (rot && !rot.classList.contains("docked") && !rot.classList.contains("parked")) {
+      var h = rot.querySelector(".rtab");
+      if (h) {
+        var r = h.getBoundingClientRect();
+        live = r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= g.innerHeight + 1 && r.left >= 0 && r.right <= g.innerWidth + 1;
+        if (live) b.style.setProperty("--ick7-b", Math.round(g.innerHeight - r.top + 8) + "px");   // the handle's top edge + the 8px gap
+      }
+    }
+    if (!live) b.style.removeProperty("--ick7-b");   // folded, parked, or no brainrot: the sheet's rest spot holds
+  }
+  function tabSoon() { if (!tabRaf) tabRaf = requestAnimationFrame(function () { tabRaf = 0; tab(); }); }
+  /* the handle mounts on idle and is re-placed by its own JS (position, fold, park): watch the mount, its size and its class */
+  function watchRot() {
+    var rot = D.getElementById("rot"); if (!rot || rot === rotWatched) return;
+    rotWatched = rot;
+    if (g.ResizeObserver) new g.ResizeObserver(tabSoon).observe(rot);
+    new MutationObserver(tabSoon).observe(rot, { attributes: true, attributeFilter: ["class", "style"] });
+  }
   function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); pinMeasure(); }); }
 
   function start() {
@@ -211,6 +236,11 @@
     if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; pinMeasure(); }); }).observe(pr); }   // a figure / font landing changes the offset
     g.addEventListener("scroll", pinSoon, { passive: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
+    /* ICK E3 tab: the same observers the mock's inject.js used (scroll, resize, #problem and #rot sizes, body + #rot class/style) */
+    new MutationObserver(function () { watchRot(); tabSoon(); }).observe(D.body, { childList: true });
+    g.addEventListener("scroll", tabSoon, { passive: true }); g.addEventListener("resize", tabSoon);
+    if (pr && g.ResizeObserver) new g.ResizeObserver(tabSoon).observe(pr);
+    watchRot(); tab(); setTimeout(tab, 700); setTimeout(tab, 2000);   // belt and braces: brainrot builds on idle
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
     later();
   }
