@@ -26,7 +26,8 @@
    reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32.
    BRAINROT-B2 (Tony, Nov 14, "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): docked v7 is now 8 videos (all 8 categories, one each) in a
    full-width interlocked bento (LAYOUT below: hero 2x2 + tall + wide + small, 12-col grid, gap 8, every video cover-cropped to its tile; app.css BRAINROT-B2 block). Lazy rule unchanged: the first 3 iframes load at once,
-   the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768. */
+   the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768.
+   ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. */
 (() => {
   /* list:start (tools/client_generators/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
   const CATS = [
@@ -86,6 +87,8 @@
   /* phones get none of it (Tony, Oct 17): no corner, no players, no request to YouTube, so nothing buffers. "Phone" is the repo's phone
      width, max-width 700px (app.js dockMQ, the same break NAV D75 "bottom bar, phones only" uses); a tablet and a desktop keep it. */
   const PHONE = matchMedia("(max-width: 700px)");
+  /* ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. The PHONE (max-width: 700px) stashed-tab rule below stays but can no longer fire (he may bring phones back). */
+  const NOROT = matchMedia("(max-width: 899.98px)");
   const v7 = () => root.classList.contains("ui-v7");                     // Tony, Nov 14: the variant B look + phones showing it live behind html.ui-v7 (fx.js sets it in <head>)
   const off = () => !!sess("stem-rot-off") || (PHONE.matches && !v7()) || slow();   // ✕ for this session, a phone (flag off only: v7 phones get the jut-out tab), or a slow link
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
@@ -368,15 +371,16 @@
   }
   /* show it only where it belongs: a sugar question with its layer, no pad page / keyboard / open code bar, not hidden this session */
   function sync() {
-    const want = !!(window.stemBrainrotWanted && window.stemBrainrotWanted()) && !off()
+    const want = !NOROT.matches && !!(window.stemBrainrotWanted && window.stemBrainrotWanted()) && !off()
       && !root.classList.contains("mt") && !root.classList.contains("swap") && !root.classList.contains("bar-open")
       && !root.classList.contains("dock-away")
       && !(root.classList.contains("dock-bottom") && document.querySelector("#q input:focus"));   // a software keyboard (app.js dockMQ: phone width or touch) only: on desktop the docked corner stays (W91, Tony Oct 26)
     if (want && !el) build();
     if (!el) return;
-    const warm = !want && !!(window.stemBrainrotWarm && window.stemBrainrotWarm()) && !off();
+    const warm = !NOROT.matches && !want && !!(window.stemBrainrotWarm && window.stemBrainrotWarm()) && !off();
     on = want;
     el.hidden = !want && !warm;                              // diet / hidden for the session: gone
+    if (NOROT.matches) for (const s of slots) { s.want = false; playing(s, false); }   // ICK5-NOROT: a desktop window dragged narrow hides the built dock and pauses its players; the iframes stay (a move reloads them)
     el.classList.toggle("parked", warm);                     // sugar, just not now (pad page, keyboard...): off screen, still buffering
     el.inert = warm; el.setAttribute("aria-hidden", String(warm));
     if (want) requestAnimationFrame(() => place(false));
@@ -384,7 +388,7 @@
   /* sugar: build the players off screen as soon as the page is idle, so the first question doesn't wait for YouTube. The preconnects
      live here (not in index.html), so a slow link never opens a connection to YouTube */
   function warmUp() {
-    if (el || !(window.stemBrainrotWarm && window.stemBrainrotWarm()) || off()) return;
+    if (NOROT.matches || el || !(window.stemBrainrotWarm && window.stemBrainrotWarm()) || off()) return;   // ICK5-NOROT: a phone builds nothing and opens no connection
     for (const href of ["https://www.youtube-nocookie.com", "https://i.ytimg.com", "https://www.youtube.com"])
       document.head.append(Object.assign(document.createElement("link"), { rel: "preconnect", href }));
     build(); sync();
@@ -399,6 +403,7 @@
   window.stemBrainrot = { sync, warmUp, sheet, fold, cats: CATS };
   addEventListener("resize", () => { if (on) place(false); });
   PHONE.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // a window dragged across the phone width: hide it, or bring it in
+  NOROT.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // ICK5-NOROT: crossing 900 live hides the dock (and pauses it) or brings it back
   document.addEventListener("focusin", () => setTimeout(sync, 0));
   document.addEventListener("focusout", () => setTimeout(sync, 0));
 })();

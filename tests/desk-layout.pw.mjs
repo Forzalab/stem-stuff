@@ -337,11 +337,11 @@ try {
     }
     {
       const { ctx, page } = await context(browser, { viewport: { width: 710, height: 900 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
-      await step(`${engine} 710x900 (not side by side, not a phone): the floating corner still shows 2 of the 6, all different`, async () => {
+      /* ICK5-NOROT (Tony Nov 18): under 900px there is no brainrot, so the 710 floating corner is retired */
+      await step(`${engine} 710x900 (not side by side, not a phone): no brainrot under 900px (ICK5-NOROT: no box, no player)`, async () => {
         await page.goto(BASE + "/#" + PLAIN);
-        await page.waitForSelector("#rot:not([hidden]):not(.docked) .vid", { timeout: 10000 }); await settled(page, "#rot");
-        const c = await page.evaluate(() => { const f = [...document.querySelectorAll("#rot iframe")]; return { n: f.length, seen: f.filter(x => x.parentElement.getClientRects().length).length, ids: new Set(f.map(x => new URL(x.src || x.dataset.src).pathname)).size }; });
-        assert.deepEqual(c, { n: 5, seen: 2, ids: 5 });
+        await page.waitForSelector("#ans", { timeout: 10000 }); await settled(page, "#rot");
+        assert.deepEqual(await page.evaluate(() => [!!document.querySelector("#rot:not([hidden])"), document.querySelectorAll("iframe").length]), [false, 0]);
       });
       await ctx.close();
     }

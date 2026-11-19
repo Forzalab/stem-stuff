@@ -1,4 +1,4 @@
-// BRAINROT-B smoke (Tony, Nov 14: "go with bento style, the O one with the expand-jut-out button on mobile as video bkg"; phones SHOW it):
+// BRAINROT-B smoke (Tony, Nov 14: "go with bento style, the O one with the expand-jut-out button on mobile as video bkg"; phones showed it until ICK5-NOROT (Nov 18: width < 900px = none)):
 // html.ui-v7 only. Phone 390x844: a stashed 44x96 tab on the edge whose background is the live first player (clipped), tap = two 84x148 players with - / x
 // ABOVE them; desktop: BRAINROT-B2 full-width bento of 8 varied tiles (hero 2x2 + tall + wide + small), a tap swaps a tile into the hero; no borders on any of it.
 // Flag off: a phone still gets none (the Oct 17 rule). Own serve.py + a one-problem sugar bank; YouTube is a blank stub (no request leaves).
@@ -34,25 +34,19 @@ async function open(vp, flag, extra = {}) {
     for (const k of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + k, "9"); } catch { /* */ } }, flag);
   const page = await c.newPage();
   await page.goto(BASE + "/#" + Q); await page.waitForSelector("#ans", { timeout: 10000 });
-  if (flag) await page.waitForFunction(() => document.querySelectorAll("#rot iframe").length >= 2, null, { timeout: 8000 });   // the dock's players build on window idle (requestIdleCallback)
-  else await page.evaluate(() => new Promise(r => (window.requestIdleCallback || (f => setTimeout(f, 0)))(r, { timeout: 3000 })));   // flag off: judge "nothing" after the page's own idle pass (bounded)
+  if (flag && vp.width >= 900) await page.waitForFunction(() => document.querySelectorAll("#rot iframe").length >= 2, null, { timeout: 8000 });   // the dock's players build on window idle (requestIdleCallback); a phone now gets none, so judge it after the idle pass
+  else await page.evaluate(() => new Promise(r => (window.requestIdleCallback || (f => setTimeout(f, 0)))(r, { timeout: 3000 })));   // flag off / phone: judge "nothing" after the page's own idle pass (bounded)
   await settled(page);   // sync() put the tab on a rAF
   return { c, page };
 }
 const rect = (page, sel) => page.$$eval(sel, es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; }));
 try {
-  await step("v7 phone 390: stashed 44x96 tab on the edge, the first live player clipped behind it; tap opens two 84x148 players with - / x above them", async () => {
+  await step("v7 phone 390: no brainrot at all (ICK5-NOROT, Tony Nov 18: phone = width < 900) - no shown #rot, no .rtab expand handle, no player", async () => {
     const { c, page } = await open({ width: 390, height: 844 }, true, { hasTouch: true, isMobile: true });
-    const st = await page.evaluate(() => { const r = document.querySelector("#rot"); return { cls: r?.className, hid: r?.hidden, n: document.querySelectorAll("#rot iframe").length }; });
-    assert.equal(st.hid, false, "shown on a phone"); assert.match(st.cls, /stashed/); assert.ok(st.n >= 2, "players are loaded");
-    const [tab] = await rect(page, "#rot .rtab"), [vid] = await rect(page, "#rot .duo:not(.dupe) .vid");
-    assert.deepEqual([tab.x, tab.w, tab.h], [0, 44, 96], "the tab juts from the edge, 44x96");
-    assert.deepEqual([Math.round(vid.x), Math.round(vid.y), vid.w, vid.h], [Math.round(tab.x), Math.round(tab.y), 44, 96], "the player is the tab's background");
-    await page.tap("#rot .rtab"); await settled(page, "#rot");
-    const vs = await rect(page, "#rot .duo:not(.dupe) .vid:nth-child(-n+2)"), cs = await rect(page, "#rot .ctl button");
-    assert.deepEqual(vs.map(v => [v.w, v.h]), [[84, 148], [84, 148]], "two 9:16 players");
-    assert.equal(cs.length, 2); assert.ok(cs.every(x => x.b <= vs[0].y + 0.5 && x.w === 44 && x.h === 44), "- and x float above the picture: " + JSON.stringify(cs));
-    assert.equal(await page.$eval("#rot .duo:not(.dupe) .vid", e => getComputedStyle(e).borderTopWidth), "0px", "no border");
+    const st = await page.evaluate(() => ({ shown: !!document.querySelector("#rot:not([hidden])"),
+      tab: [...document.querySelectorAll("#rot .rtab")].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).length,
+      frames: document.querySelectorAll("iframe").length }));
+    assert.deepEqual(st, { shown: false, tab: 0, frames: 0 }, "brainrot on a phone: " + JSON.stringify(st));
     await c.close();
   });
   for (const [W, H] of [[1366, 768], [1024, 768], [1920, 1080]]) await step(`v7 desktop ${W}x${H} (BRAINROT-B2): full-width bento of 8 (1 hero 2x2, tall, wide, small), no holes, rows on 4, zero borders; Cluck sheet still shows header + ask without page scroll; a tap swaps a tile into the hero`, async () => {

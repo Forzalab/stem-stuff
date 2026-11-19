@@ -218,27 +218,8 @@ try {
 
   await step("sugar (phone width, 390): no brainrot corner, no preconnect, no request to YouTube (Tony, Oct 17)", () => noRot("/", null, { width: 390, height: 844 }));
 
-  await step("sugar (tablet width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
-    await page.setViewportSize({ width: 710, height: 844 });
-    await page.evaluate(() => window.stemBrainrot.sync());
-    await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body && !document.getElementById("rot").hidden, null, { timeout: 4000 })
-      .catch(async () => { await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body, null, { timeout: 3000 }); });
-    await still(page, "#rot");                                           // sync() -> rAF place(): the corner sits where it put itself
-    const box = await page.$eval("#rot .duo", e => e.getBoundingClientRect().toJSON());
-    const vw = await page.evaluate(() => [innerWidth, innerHeight]);
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
-    await page.mouse.move(60, vw[1] - 60, { steps: 8 }); await page.mouse.up();
-    await page.waitForFunction(() => { const e = document.getElementById("rot"); return e && !e.classList.contains("drag") && getComputedStyle(e).transform === "none"; }, null, { timeout: 4000 });   // the drop landed: pin()'s .snap transition (.3 s) ran the FLIP offset out, so the rect below is the settled one
-    const st = await page.$eval("#rot", e => ({ b: e.style.bottom, l: e.style.left, t: e.style.top, rect: e.getBoundingClientRect().toJSON() }));
-    assert.ok(st.b.endsWith("px") && st.t === "auto" && st.l.endsWith("px"), JSON.stringify(st));
-    assert.ok(st.rect.bottom > vw[1] / 2 && st.rect.left < vw[0] / 2, "not in the bottom left: " + JSON.stringify(st.rect));
-    assert.equal(await page.evaluate(() => localStorage.getItem("stem-rot")), "bl");
-    await page.evaluate(() => window.stemBrainrot.sync()); await frames(page);   // sync() places on its own rAF
-    assert.equal(await page.$eval("#rot", e => e.style.bottom !== "auto" && e.style.left !== "auto"), true, "a re-sync moved the drop");
-    const code = await page.textContent("#pcode");                    // back to desktop + the step-off default for the steps below
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.evaluate(() => { localStorage.removeItem("stem-rot"); localStorage.removeItem("stem-rot-pick"); }); await page.reload(); await opened(page, code);
-  });
+  /* ICK5-NOROT (Tony Nov 18): under 900px there is no brainrot at all, so the old tablet-width (710) floating-corner drag step is retired with the corner */
+  await step("sugar (tablet width, 710): no brainrot corner, no preconnect, no request to YouTube (ICK5-NOROT, Tony Nov 18: width < 900)", () => noRot("/", null, { width: 710, height: 844 }));
 
   await step("sugar: a split row is a True/False question, one try, its own slip", async () => {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
@@ -758,13 +739,13 @@ try {
       assert.ok(Math.abs(b.notes - a.notes) <= 1 && Math.abs(b.ans - a.ans) <= 1, `blur moved: notes ${a.notes} -> ${b.notes}, answer ${a.ans} -> ${b.ans}`);
     } finally { await c.close(); }
   });
-  await step("W91 a 710 px touch screen (dock-bottom, software keyboard): the answer box focus still parks the corner", async () => {
+  await step("W91 a 710 px touch screen (dock-bottom): no brainrot corner to park (ICK5-NOROT, Tony Nov 18: width < 900)", async () => {
     const { c, p } = await w91({ width: 710, height: 900 }, { hasTouch: true, isMobile: true });
     try {
-      await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && !r.classList.contains("parked"); }, null, { timeout: 6000 });
-      assert.equal(await p.evaluate(() => document.documentElement.classList.contains("dock-bottom")), true, "dock-bottom");
-      await p.focus("#ans"); await settled(p, "#rot");                    // the keyboard's focusin -> sync -> place has run
-      assert.equal((await rotSnap(p)).parked, true, "the keyboard can come up: parked");
+      await p.evaluate(() => window.stemBrainrot.sync()); await frames(p);
+      assert.ok(await p.$eval("#rot", e => e.hidden).catch(() => true), "a 710 px screen shows a brainrot corner");
+      await p.focus("#ans"); await frames(p);
+      assert.ok(await p.$eval("#rot", e => e.hidden).catch(() => true), "the answer box focus brought a brainrot corner in");
     } finally { await c.close(); }
   });
   /* W101 (LEAKS L1, desktop): the code label's focus ran the dock's focusin -> barOpen(true), meant for the phone strip: bar-open parked the docked corner

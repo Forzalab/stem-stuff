@@ -1,6 +1,6 @@
-/* cluckbtn.css: the one Ask Cluck button on the question card, html.ui-v7 only (cluckbtn.js). Chip look from the glossary popover's "Ask Cluck": duck + label, --chip navy, no border, a very
-   slight raise (--shadow-raise), radius 12 (the tile family). Roomier than the popover chip: min-height 44, 16 / 20 side padding, a 12 / 16 margin. Floats right at the card's top so the question
-   text wraps beside it (the reserved space: no overlap on any question type).
+/* cluckbtn.css: the base Ask Cluck chip (duck + label, --chip navy, no border, a very slight raise --shadow-raise, radius 12 (the tile family), min-height 44), html.ui-v7 only
+   (cluckbtn.js). On a qc7 question card this chip is REPLACED by the tangerine squircle in qcard.css §ick5-tr (ICK5-CLUCK-TR), which out-specifies these rules; the base rules stay
+   for a card that is not qc7. Roomier than the popover chip: 12 / 20 side padding, a 12 / 16 margin; floats right at the card's top so the question text wraps beside it.
    Disabled (aria-disabled="true", RESEARCH option A): the --float fill and the --navy-400 label (about 4.8:1), no raise, duck at 60%; same size and radius as enabled (no layout shift).
    The enabled fill is a layer (::before) that scales in from the left, 240 ms ease-out; disabled -> enabled sweeps in, enabled -> disabled sweeps out; reduced motion = instant.
    Emphasis (CLUCK-EMPHASIS), JS-timed, once per event, none with reduced motion: .cb-sheen = blue-tinted (--action) sweep (0.9 s, the streak WAVE's Td); .cb-shake / .cb-nod = the duck svg only; .cb-hop = the duck's spring hop after the unlock sweep. Never a halo ring, never a whole-chip nudge. */

@@ -160,13 +160,13 @@ html.ui-v7.mt.proof-split #freezeIn { box-shadow: none; }
 html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; padding-bottom: 0; }   /* ICK4-FADE (Tony Nov 18 "closer to bottom"): the textarea runs to the box edge, so its fade sits on the edge (its own 72px foot still clears the keys) */
 /* C7: while typing, the ONE Ask Cluck button (cluckbtn.js moves #cluckBtn into the proof box; same element, same states, same window.stemCluckAsk
    action) sits just left of the Check key: 56x56 = the Check key (--ick12-size, --ick12-r), bottom 8 / right 72 (= the key's 8px inset + 56 + 8px gap);
-   tangerine squircle from the left-edge tab's tokens (qcard.css §ick7-tab). */
+   tangerine squircle from the §ick5-tr tokens (qcard.css), no lift. */
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox {
   position: absolute !important; top: auto !important; left: auto !important; right: 72px !important; bottom: 8px !important;
   float: none; display: grid; place-items: center;
   width: var(--ick12-size); height: var(--ick12-size); min-width: var(--ick12-size); min-height: var(--ick12-size); margin: 0 !important; padding: 0 !important;
   border: 0; border-radius: var(--ick12-r); background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
-  box-shadow: 6px 0 18px -8px rgb(2 6 12 / .7) !important; overflow: hidden; opacity: 1 !important; z-index: 3;
+  box-shadow: none !important; overflow: hidden; opacity: 1 !important; z-index: 3;
 }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::before,
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::after { display: none; }

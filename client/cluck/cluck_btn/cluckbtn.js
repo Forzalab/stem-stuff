@@ -1,7 +1,6 @@
 /* cluckbtn.js: the ONE Ask Cluck button (CLUCK-BTN, Tony Nov 14; brain ui-v7-decisions.md, RESEARCH.md option A). BEHIND html.ui-v7: flag off = this file adds nothing.
    One button at the top right of every question card (#problem: all types, multi-part and MC included). It replaces every old entry (popover chip, verdict-slot duck, strip drawer chip,
-   "Explain my mistake" chip, the "Cluck lives in Ask Cluck" toast); cluck.js draws none of them under the flag. Look: the glossary popover's chip (duck + "Ask Cluck", navy, no border,
-   a very slight raise), roomier, >= 44px, floated right so the question text wraps beside it (space reserved, no overlap).
+   "Explain my mistake" chip, the "Cluck lives in Ask Cluck" toast); cluck.js draws none of them under the flag. Look (ICK5-CLUCK-TR): a tangerine squircle, duck line icon, floated at the card's top right so the question text wraps around it (qcard.css §ick5-tr); the same element FLIPs into the phone proof box and back (mount).
    States (aria-disabled, never the disabled attribute, never pointer-events:none; RESEARCH option A #141d36 / #7a8aae, no raise):
      first = before the first try      -> "Cluck unlocks after your first try."
      off   = no key / diet / out of asks / not a Cluck question -> "Cluck isn't available here."   (hover on desktop, tap on a phone, Enter / Space: a note from the toast family)
@@ -25,7 +24,7 @@
     btn.type = "button"; btn.id = "cluckBtn"; btn.className = "cluckbtn";
     btn.setAttribute("aria-label", "Ask Cluck");                 // ICK3 C7: the proof typing slot clips the label, so the name is explicit
     btn.setAttribute("aria-describedby", "cluckWhy");
-    btn.innerHTML = '<svg class="cb-duck" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-duck"/></svg><span class="cb-t">Ask Cluck</span>';
+    btn.innerHTML = '<svg class="cb-duck" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-duck-line"/></svg><span class="cb-t">Ask Cluck</span>';
     why = D.createElement("span"); why.id = "cluckWhy"; why.className = "sr-only";
     btn.append(why);
     btn.addEventListener("click", press);
@@ -68,9 +67,19 @@
     if (!btn) build();
     var box = proofBox(), want = box || h;
     if (btn.parentNode !== want) {
+      /* ICK5-CLUCK-TR FLIP: the button morphs between the card's top right and the proof box's slot instead of teleporting: measure, move, measure, play the
+         inverse offset back to zero (240 ms). Only a move of the already-mounted button; reduced motion and a zero box (display:none, first paint) = no animation. */
+      var flip = btn.isConnected && !reduced(), r0 = flip ? btn.getBoundingClientRect() : null;
       if (box) { box.appendChild(btn); btn.classList.add("cb-inbox"); }
       else { h.insertBefore(btn, h.firstChild); btn.classList.remove("cb-inbox"); }
-    }
+      if (flip) {
+        var r1 = btn.getBoundingClientRect();
+        if (r0.width && r0.height && r1.width && r1.height) btn.animate([
+          { transformOrigin: "0 0", transform: "translate(" + (r0.left - r1.left) + "px, " + (r0.top - r1.top) + "px) scale(" + (r0.width / r1.width) + ", " + (r0.height / r1.height) + ")" },
+          { transformOrigin: "0 0", transform: "none" }
+        ], { duration: 240, easing: "cubic-bezier(.32,.72,0,1)" });
+      }
+    } else if (want === h && h.firstElementChild !== btn) h.insertBefore(btn, h.firstElementChild);   // ICK5: qcard.js ghost()/rowAlign() insert their own first child; a FLOAT only wraps from the first line, so the button goes back to the front (guarded: no DOM write when it already is)
     return btn;
   }
   function sync() {

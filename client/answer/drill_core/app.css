@@ -985,7 +985,7 @@ html.ui-v7 .rot.stashed:not(.docked) .vid:nth-child(n + 2), html.ui-v7 .rot.stas
 html.ui-v7 .rot .rtab { position: relative; z-index: 1; border-radius: 0 12px 12px 0; background: linear-gradient(to right, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
 html.ui-v7 .rot .rtab.r { border-radius: 12px 0 0 12px; background: linear-gradient(to left, color-mix(in srgb, var(--scrim) 15%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent)); }
 /* BRAINROT-RAISE (Tony Nov 17 "a very subtle border and shadow raise for the brainrot bar. rn it covers the text of tooltip"): the stashed handle gets
-   the app's one hairline (--edge-hair) on its inner sides, never the screen-edge side; its raise cast (the tab's own) lives with the tab in qcard.css §ick7-tab
+   the app's one hairline (--edge-hair) on its inner sides, never the screen-edge side; its raise cast (the tab's own) lives in qcard.css §ick5-tr
    (STYLE §2.1/§2.7: app.css shadows are tokens, and this cast is a raw value shared with the tab) */
 html.ui-v7 .rot .rtab { border-top: var(--edge-hair); border-right: var(--edge-hair); border-bottom: var(--edge-hair); }
 html.ui-v7 .rot .rtab.r { border-right: 0; border-left: var(--edge-hair); }

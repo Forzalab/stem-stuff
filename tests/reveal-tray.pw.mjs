@@ -101,6 +101,7 @@ const duck = page => page.evaluate(() => {
     drawn: !ic ? false : ic.tagName === "IMG" ? ic.complete && ic.naturalWidth > 0 : (use ? !!(ref && document.querySelector(ref)) : true) && cr >= 3, html: c.innerHTML.slice(0, 200) };
 });
 const hasDuck = (d, when) => assert.ok(d.chip && d.tag && d.vis && d.drawn && d.w >= 16 && d.h >= 16 && d.o > 0.9, `${when}: the Ask Cluck chip has no visible duck: ` + JSON.stringify(d));
+/* ICK5-NOROT (Tony Nov 18): under 900px there is no brainrot, so the "brainrot folds" step runs at >= 900 only (721 used to dock it) */
 const W = (process.env.RT_W || "393,1280,721").split(",").map(Number);
 try {
   for (const w of W) {
@@ -199,7 +200,7 @@ try {
         assert.ok(m.rows.length && m.rows.every(x => x.l >= m.av[1] + 4), "a row starts under the avatar column: " + JSON.stringify(m));
       } finally { await page.context().close(); }
     });
-    await step(`${w}: Cluck starts to generate: the brainrot folds (as its Hide link does) and the box takes the room`, async () => {
+    if (w >= 900) await step(`${w}: Cluck starts to generate: the brainrot folds (as its Hide link does) and the box takes the room`, async () => {
       const page = await open(w);
       try {
         await page.waitForSelector("#rot.docked:not(.stashed) .vid", { timeout: 8000 });
