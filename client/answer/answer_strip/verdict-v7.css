@@ -187,6 +187,43 @@ html.ui-v7 #q .ff.proof > textarea {
 html.ui-v7 #q .ff.proof > textarea.pf-t { --pf-t: 10px; }
 html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 10px; }   /* Tony Nov 18: thinner (16 -> 10) */
 
+/* == §ick4-wrap == ICK4-WRAP (Tony Nov 18, 3a "word-wrap effect for the two button ... shape-outside"): the proof text flows AROUND the keys.
+   app.js proofField(): under ui-v7 the field is .pwrap > #ans.ans[contenteditable] (a <textarea> cannot wrap around anything).
+   - .ff.proof gives its padding to .pwrap (--pw-x / --pw-b), so the float's size is plain arithmetic from the keys' 8px inset:
+       width  = 8 inset + 56 key + 8 air - --pw-x          (+ 64 with the in-box duck: 56 + 8 gap)
+       height = 8 inset + 56 key + 6 air - --pw-b
+   - .pwrap = the scroller in keyboard mode (PROOF-LOCK) + a WRAPPING flex line: the line is as tall as max(content, box), .ans stretches to it,
+     so the float's height: 100% resolves and its shape sits at the CONTENT's foot (Afif's float-bottom trick); app.js fit() then sets the
+     exact px (--wrap-f / -w / -n): 100% alone runs one line long when the notch itself makes a new line.
+   - known limit: scrolled up in keyboard mode, a middle line can pass under the keys (they sit on the box, the notch sits at the content's end). */
+html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 72px; }
+html.ui-v7.proof-split #q .ff.proof:has(> .pwrap) { --pw-x: 16px; }                       /* PROOF-AXIS: the card's text axis */
+html.ui-v7.mt.proof-split #q .ff.proof:has(> .pwrap) { --pw-t: 0px; --pw-b: 8px; }      /* C8 + ICK4-FADE: text to the box edge while typing */
+html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 136px; }                           /* duck + Check = one block */
+html.ui-v7 #q .ff.proof > .pwrap {
+  flex: 1 1 auto; min-width: 0; min-height: 10rem; display: flex; flex-wrap: wrap; align-content: stretch; box-sizing: border-box;
+  padding: var(--pw-t) var(--pw-x) var(--pw-b); cursor: text;
+  --pf-t: 0px; --pf-b: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--pf-t), #000 calc(100% - var(--pf-b)), transparent);
+          mask-image: linear-gradient(to bottom, transparent, #000 var(--pf-t), #000 calc(100% - var(--pf-b)), transparent);
+}
+html.ui-v7 #q .ff.proof > .pwrap.pf-t { --pf-t: 10px; }
+html.ui-v7 #q .ff.proof > .pwrap.pf-b { --pf-b: 10px; }
+html.ui-v7.proof-split.kbup #work > #q:focus-within .ff.proof > .pwrap { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }   /* PROOF-LOCK */
+html.ui-v7 #q .ff.proof > .pwrap > .ans {
+  flex: 1 1 100%; min-width: 0; margin: 0; padding: 0; border: 0; outline: none; background: transparent; color: var(--ink); caret-color: var(--focus);
+  font: 400 16px/22px var(--mono); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; -webkit-user-select: text; user-select: text;
+}
+@media (min-width: 900px) { html.ui-v7 #q .ff.proof > .pwrap > .ans { font-size: 17px; line-height: 24px; } }
+html.ui-v7 #q .ff.proof > .pwrap > .ans::before {
+  content: ""; float: right; pointer-events: none;   /* --wrap-*: app.js ceField fit() measures the keys; the calc()s = the same numbers before it runs */
+  width: var(--wrap-w, calc(var(--pw-keys) - var(--pw-x))); height: var(--wrap-f, 100%);
+  shape-outside: inset(calc(100% - var(--wrap-n, calc(70px - var(--pw-b)))) 0 0 0);
+}
+html.ui-v7 #q .ff.proof > .pwrap > .ans.empty::after { content: attr(data-ph); color: var(--line); pointer-events: none; }   /* the placeholder (PH-NAVY) */
+html.ui-v7 #q .ff.proof > .pwrap > .ans.empty:focus::after, html.ui-v7:is(.kb, .kbup, .mt) #q .ff.proof > .pwrap > .ans.empty::after { color: transparent; }
+html.ui-v7 #q .ff.proof.done > .pwrap > .ans { color: var(--correct); }
+
 /* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (C4a, 56px squircle) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
    app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,
    shake (bad) 120-480, hold to 900, crossfade icon -> .nf 900-1150. Percents of 1150: 120=10.43 420=36.52 480=41.74 570=49.57 900=78.26. Reduced motion: colour + full icon, then the swap at 1150. */

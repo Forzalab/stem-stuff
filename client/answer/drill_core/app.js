@@ -556,7 +556,7 @@ addEventListener("resize", () => { if (!bridge.dockMQ.matches || bridge.sideMQ.m
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
-  if (t === codeIn || !(t instanceof HTMLElement) || !t.matches("input:not([type=file]), textarea")) return;
+  if (t === codeIn || !(t instanceof HTMLElement) || !t.matches("input:not([type=file]), textarea, [contenteditable]")) return;
   const n = normalize((e.clipboardData && e.clipboardData.getData("text")) || "", knownPrefixes());   // a custom prefix only when known: "max_val" stays text
   if (!n) return;
   e.preventDefault();
@@ -1020,8 +1020,7 @@ function renderQuestion() {
     /* W107 (Tony approved, Oct 27): one tall box for the whole proof, Check in its corner (the Next slot, T17b-1); the one verdict chip
        (correct | partly there | not yet) under it after a Check; the reference proof in #preview once a sugar lockout reveals it */
     q.innerHTML = `${howLine(p)}<div class="ff proof" id="ff">
-        <textarea id="ans" class="ans" rows="8" maxlength="${PROOF_MAX}" aria-label="Your answer"${p.how ? ' aria-describedby="how"' : ""} ${INPUT_ATTRS.replace(' enterkeyhint="send"', "")}
-          placeholder="Write your answer here"></textarea>
+        ${proofField(p)}
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check proof" disabled>${icon("i-go")}</button>
       </div><div class="proof-len" id="plen" aria-live="polite" hidden></div><div class="stg" id="stgp" aria-live="off"></div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
     wireProof();
@@ -1692,10 +1691,61 @@ async function submitFF() {
 /* ---------- proof (W107): a textarea (Enter = a new line, no new key handler), Check sends it to Cluck's grader ---------- */
 const PROOF_MAX = 3000;                                    // serve.py PROOF_MAX
 const PROOF_V = { correct: ["i-ok", "correct"], partial: ["i-x", "partly there"], wrong: ["i-x", "not yet"] };   // verdict text, sr-only (ui-v7: no visible chip; Nov 8: no rubric rows)
+/* ICK4-WRAP (Tony Nov 18, 3a): under ui-v7 the proof field is a contenteditable div, not a <textarea>: a textarea cannot flow its text around
+   anything, a div can (verdict-v7.css §ick4-wrap: a float with shape-outside at the content's foot = the Check key + the in-box duck).
+   .pwrap = the scroller (keyboard mode) and the flex line that gives the float a height; #ans keeps the textarea's API through ceField(). Flag off: the textarea. */
+const proofCE = () => root.classList.contains("ui-v7");
+function proofField(p) {
+  const a = `id="ans" class="ans" aria-label="Your answer"${p.how ? ' aria-describedby="how"' : ""} ${INPUT_ATTRS.replace(' enterkeyhint="send"', "")}`;
+  return proofCE()
+    ? `<div class="pwrap"><div ${a} contenteditable="plaintext-only" role="textbox" aria-multiline="true" tabindex="0" data-ph="Write your answer here"></div></div>`
+    : `<textarea ${a} rows="8" maxlength="${PROOF_MAX}" placeholder="Write your answer here"></textarea>`;
+}
+/* the textarea API the ~30 readers use, on the div: .value (get / set), .disabled (get / set). Plain text only; maxlength by hand. */
+function ceField(el) {
+  if (el.contentEditable !== "plaintext-only") {   // an engine without plaintext-only (Firefox < 136): rich editing, pasted as text
+    el.contentEditable = "true";
+    el.addEventListener("paste", e => { const t = e.clipboardData && e.clipboardData.getData("text/plain"); if (t == null) return; e.preventDefault(); document.execCommand("insertText", false, t); });
+  }
+  const mode = el.contentEditable;
+  const read = () => { const t = (el.innerText || "").replace(/\u00a0/g, " ").replace(/\r/g, ""); return t.endsWith("\n") ? t.slice(0, -1) : t; };   // the engine keeps one filler line break at the end
+  const mark = () => el.classList.toggle("empty", !read());
+  const end = () => { try { const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch { /* not in the page */ } };
+  Object.defineProperty(el, "value", { configurable: true, get: read, set(v) { el.textContent = v == null ? "" : String(v); mark(); } });
+  Object.defineProperty(el, "disabled", { configurable: true, get: () => el.contentEditable === "false",
+    set(on) { el.contentEditable = on ? "false" : mode; if (on) { el.setAttribute("aria-disabled", "true"); el.tabIndex = -1; } else { el.removeAttribute("aria-disabled"); el.tabIndex = 0; } } });
+  /* the wrap float (verdict-v7.css §ick4-wrap): --wrap-w / --wrap-n = the notch (measured off the keys in the box), --wrap-f = the float's height.
+     height: 100% alone is one line short when the notch itself pushes a new line (the percentage is resolved before the re-wrap), so grow it to the text. */
+  const sc = el.parentElement, ff = el.closest(".ff");
+  const textH = () => { const r = document.createRange(); r.selectNodeContents(el); const b = r.getBoundingClientRect(); if (!b.height) return 0;
+    return b.bottom - el.getBoundingClientRect().top + (/\n$/.test(el.textContent) ? parseFloat(getComputedStyle(el).lineHeight) || 22 : 0); };
+  let last = "";
+  const fit = () => {
+    if (!el.isConnected) return;
+    const top = sc.scrollTop, set = (f, w, n) => { el.style.setProperty("--wrap-f", f + "px"); el.style.setProperty("--wrap-w", w + "px"); el.style.setProperty("--wrap-n", n + "px"); };
+    el.style.setProperty("--wrap-f", "0px");   // first: every read below is of this one layout (the box at its resting height)
+    const keys = [...ff.querySelectorAll(":scope > button, :scope > .nx")].map(k => k.getBoundingClientRect()).filter(r => r.width && r.height);
+    const a = el.getBoundingClientRect(), s = sc.getBoundingClientRect(), h0 = el.clientHeight;
+    const w = keys.length ? Math.max(0, Math.ceil(a.right - Math.min(...keys.map(k => k.left)) + 8)) : 0;
+    const n = keys.length ? Math.max(0, Math.ceil(s.bottom - (parseFloat(getComputedStyle(sc).paddingBottom) || 0) - Math.min(...keys.map(k => k.top)) + 6)) : 0;
+    let f = h0;
+    for (let i = 0; i < 4; i++) { set(f, w, n); const t = textH(); if (t <= f + 0.5) break; f = Math.ceil(t); }
+    if (sc.scrollTop !== top) sc.scrollTop = top;
+    last = f + "|" + w + "|" + n;
+  };
+  let raf = 0; const later = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; const was = last; fit(); if (last !== was) el.dispatchEvent(new Event("pwrap")); }); };   // never write inside an observer delivery (bug class write-inside-observer-delivery)
+  new ResizeObserver(later).observe(sc);
+  new MutationObserver(later).observe(ff, { childList: true, attributes: true, attributeFilter: ["hidden", "class"], subtree: true });   // the duck moves in / out, Check <-> Next
+  el.addEventListener("input", () => { if (read().length > PROOF_MAX) { el.textContent = read().slice(0, PROOF_MAX); if (document.activeElement === el) end(); } mark(); fit(); });
+  const setV = Object.getOwnPropertyDescriptor(el, "value").set;
+  Object.defineProperty(el, "value", { configurable: true, get: read, set(v) { setV(v); fit(); } });
+  mark(); later();
+}
 function wireProof() {
-  const inp = $("#ans"), go = $("#ansGo");
-  const fade = () => { const t = inp.scrollTop; inp.classList.toggle("pf-t", t > 1); inp.classList.toggle("pf-b", t + inp.clientHeight < inp.scrollHeight - 1); };   // ICK4-FADE: verdict-v7.css §proof-v7
-  inp.addEventListener("scroll", fade, { passive: true }); inp.addEventListener("input", fade); new ResizeObserver(fade).observe(inp);
+  const inp = $("#ans"), go = $("#ansGo"), sc = inp.closest(".pwrap") || inp;   // sc = the element that scrolls
+  if (sc !== inp) ceField(inp);
+  const fade = () => { const t = sc.scrollTop; sc.classList.toggle("pf-t", t > 1); sc.classList.toggle("pf-b", t + sc.clientHeight < sc.scrollHeight - 1); };   // ICK4-FADE: verdict-v7.css §proof-v7
+  sc.addEventListener("scroll", fade, { passive: true }); inp.addEventListener("input", fade); new ResizeObserver(fade).observe(sc);
   inp.addEventListener("input", () => {
     go.disabled = !inp.value.trim();
     proofLen(inp.value);

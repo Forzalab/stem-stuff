@@ -41,7 +41,7 @@
   var anchor = function (o) { var a = typeof o.at === 'function' ? o.at() : o.at; return a && a.isConnected && a.getClientRects().length ? a : null; };
   /* the controls it must never cover (the cluck-rise overlap rule): anything that takes a tap, and the duck's line.
      skip(e) -> true for the ones this toast may lie on (a note's own anchor, a dead kept row, the Next note's brainrot link) */
-  var LIVE = 'button, a[href], input, textarea, select, [role=button], .opt, .ck-say';
+  var LIVE = 'button, a[href], input, textarea, [contenteditable], select, [role=button], .opt, .ck-say';
   /* -> the rects of the live controls under the box. A note (nEl, 2 s) is never in the stage toast's way; a note does count the
      stage toast's close button (stacked, never on top of each other) */
   function hits(x, y, w, h, skip, note) {
