@@ -1096,7 +1096,7 @@ new ResizeObserver(() => { if (!fab.hidden) fabPlace(); }).observe(dock);       
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
-new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; drawFigures(); layoutFreeze(); } }).observe($("#blocks"));
+new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; requestAnimationFrame(() => { drawFigures(); layoutFreeze(); }); } }).observe($("#blocks"));   // RO-FIT (desk-layout@1 720): the redraw + the column fit WRITE layout; run in rAF, not in the observer's delivery. fill() writes --cl-top, #work.cl-on's height is 100dvh - cl-top - foot, and on a centred page that moves the sentinel: the write landed inside the round and resized .cl-bd in the same frame (WebKit "ResizeObserver loop completed with undelivered notifications"). The rAF's own fill() is the second pass; the settled values are unchanged
 let qW = 0;
 new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
 
