@@ -1,4 +1,4 @@
-// CLUCK-BTN smoke (Tony Nov 14; E3 Nov 17): under html.ui-v7 there is ONE Ask Cluck button, the tangerine tab on the left screen edge (typed, MC, multi-part) and no other entry (no chip, no tray, no duck slot).
+// CLUCK-BTN smoke (Tony Nov 14; E3 Nov 17; ICK5 Nov 18): under html.ui-v7 there is ONE Ask Cluck button, the tangerine squircle at the question card's top right (typed, MC, multi-part) and no other entry (no chip, no tray, no duck slot).
 // Disabled = aria-disabled (not the attribute, no pointer-events:none) before the first try and with no Cluck key; hover (desktop) / tap (phone) shows a note; a wrong try unlocks it (the fill sweeps in) and a sheen plays.
 // Own serve.py, throwaway bank, a stub OpenRouter.   node tests/cluck-btn.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
 import { launchBrowser } from "./pw-browser.mjs";
@@ -65,9 +65,10 @@ async function open(w, flag, hash = "") {
 const geo = page => page.evaluate(() => {
   const b = document.querySelector("#cluckBtn"), p = document.querySelector("#problem"), r = e => e.getBoundingClientRect();
   if (!b) return null;
-  const br = r(b), pr = r(p), cs = getComputedStyle(b), txt = []; for (const e of document.querySelectorAll("#problem .blocks")) { const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) { if (!n.textContent.trim()) continue; const g = document.createRange(); g.selectNodeContents(n); txt.push(...[...g.getClientRects()].filter(x => x.width > 2)); } }
+  const br = r(b), pr = r(p), cs = getComputedStyle(b), pcs = getComputedStyle(p), px = v => parseFloat(v) || 0, txt = []; for (const e of document.querySelectorAll("#problem .blocks")) { const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) { if (!n.textContent.trim()) continue; const g = document.createRange(); g.selectNodeContents(n); txt.push(...[...g.getClientRects()].filter(x => x.width > 2)); } }
   return { n: document.querySelectorAll("#cluckBtn").length, br: { l: br.left, r: br.right, t: br.top, b: br.bottom, w: br.width, h: br.height }, pr: { l: pr.left, r: pr.right, t: pr.top }, aria: b.getAttribute("aria-disabled"), dis: b.hasAttribute("disabled"),
-    pe: cs.pointerEvents, bg: cs.backgroundColor, color: cs.color, bw: cs.borderTopWidth, shadow: cs.boxShadow, label: b.textContent.replace(/\s+/g, " ").trim(), st: b.dataset.st,
+    pe: cs.pointerEvents, bg: cs.backgroundColor, color: cs.color, bw: cs.borderTopWidth, shadow: cs.boxShadow, label: b.textContent.replace(/\s+/g, " ").trim(), st: b.dataset.st, pos: cs.position, flt: cs.cssFloat || cs.float, parent: b.parentElement.id,
+    cb: { r: pr.right - px(pcs.paddingRight) - px(pcs.borderRightWidth), t: pr.top + px(pcs.paddingTop) + px(pcs.borderTopWidth) },
     overlap: txt.some(x => !(x.right <= br.left || x.left >= br.right || x.bottom <= br.top || x.top >= br.bottom)), vw: innerWidth, sw: document.documentElement.scrollWidth,
     ladder: [...document.querySelectorAll(".wchip, .vdrawer, .cl-cta, .vk[role=button], .vkb, .vk-duck")].length,
     padR: parseFloat(getComputedStyle(p).paddingRight) || 0, padT: parseFloat(getComputedStyle(p).paddingTop) || 0,
@@ -78,16 +79,21 @@ const typeAnswer = async (page, v) => { await skipRetryWait(page); const f = pag
 const toastText = page => page.evaluate(() => { const t = document.getElementById("toast"); return t && t.classList.contains("on") ? t.textContent.trim() : ""; });
 const W = [390, 1366];
 try {
-  for (const [code, kind] of [["PHYS_FP2", "typed"], ["PHYS_FP3", "mc"], ["PHYS_FP4", "multi"]]) for (const w of W) await step(`${w}: ${kind}: one disabled Ask Cluck button, the tangerine tab on the left screen edge (ICK E3), >= 44px`, async () => {
+  for (const [code, kind] of [["PHYS_FP2", "typed"], ["PHYS_FP3", "mc"], ["PHYS_FP4", "multi"]]) for (const w of W) await step(`${w}: ${kind}: one disabled Ask Cluck button, the tangerine squircle at the card's top right (ICK5), >= 44px`, async () => {
     const page = await open2(w, code);
     try {
       const g = await geo(page);
       assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck" + "Cluck unlocks after your first try.");
       assert.equal(g.aria, "true", "aria-disabled"); assert.equal(g.dis, false, "no disabled attribute"); assert.notEqual(g.pe, "none", "no pointer-events:none");
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
-      // ICK E3 (Tony Nov 17, supersedes KICKER-C top-right link): a 44x60 tangerine tab flush with the LEFT screen edge, fixed, stacked on the brainrot handle (qcard.css §ick7-tab)
-      assert.ok(Math.abs(g.br.l) < 1 && Math.abs(g.br.w - 44) < 1 && Math.abs(g.br.h - 60) < 1, "left-edge tab 44x60: " + JSON.stringify(g.br));
-      assert.equal(g.bg, "rgb(255, 166, 62)", "E3: tangerine = --help"); assert.notEqual(g.shadow, "none", "E3: the tab casts off the edge");
+      // ICK5-CLUCK-TR (Tony Nov 18, supersedes the ICK E3 left-edge tab): AC1 + AC2 + AC3 for this viewport
+      assert.equal(g.parent, "problem", "AC1: not a child of #problem: " + g.parent);
+      assert.notEqual(g.pos, "fixed", "AC1: still the fixed edge tab: " + g.pos);
+      assert.equal(g.flt, "right", "AC1: computed float is " + g.flt);
+      assert.ok(Math.abs(g.br.w - 44) <= .5 && Math.abs(g.br.h - 44) <= .5, "AC2: box is not 44x44: " + JSON.stringify(g.br));
+      assert.ok(Math.abs(g.br.r - g.cb.r) <= 1.5, "AC3: right edge " + g.br.r + " vs content right " + g.cb.r);
+      assert.ok(Math.abs(g.br.t - g.cb.t) <= 3, "AC3: top " + g.br.t + " vs content top " + g.cb.t);
+      assert.equal(g.bg, "rgb(255, 166, 62)", "ICK5 AC4: tangerine = --help"); assert.equal(g.shadow, "none", "ICK5 AC4: no shadow");
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");

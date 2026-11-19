@@ -1,6 +1,7 @@
-// DUCKTAB smoke (ICK-R2 E3, Tony Nov 17): under html.ui-v7 the Ask Cluck button leaves the card's top row and becomes a tangerine
-// tab fixed on the LEFT screen edge, stacked 8px above the brainrot handle (#rot .rtab); the code kicker is gone. Phone 390x844,
-// own serve.py, upload a sugar bank with a wish layer (so brainrot mounts its stashed handle).
+// DUCKTAB smoke (ICK-R2 E3, Tony Nov 17; ICK5-CLUCK-TR Nov 18): under html.ui-v7 the one Ask Cluck button is the card's top-right
+// tangerine squircle now (tests/ick5-cluck-tr.smoke.mjs pins its place and the wrap). This file keeps the pins that still hold: the code
+// kicker is gone, the accessible name is Ask Cluck, and with no ui-v7 no .cluckbtn is fixed. Phone 390x844, own serve.py, upload a sugar
+// bank with a wish layer (so brainrot mounts its stashed handle).
 //   node tests/ducktab.smoke.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -45,31 +46,11 @@ async function fresh(ui) {
   return { ctx, page };
 }
 const tabSel = "#problem.qc7.qbr > button.cluckbtn";
-const geom = page => page.evaluate(sel => {
-  const b = document.querySelector(sel); if (!b) return null;
-  const probe = document.createElement("div"); probe.style.background = "var(--help)"; document.body.appendChild(probe);
-  const want = getComputedStyle(probe).backgroundColor; probe.remove();
-  const cs = getComputedStyle(b);
-  return { pos: cs.position, left: cs.left, w: cs.width, h: cs.height, bg: cs.backgroundColor, want, bottom: cs.bottom };
-}, tabSel);
 
 let browser;
 try { browser = await launchBrowser(pw, { args: ["--no-sandbox"], motion: true }); }
 catch { browser = await launchBrowser(pw, { args: ["--no-sandbox"], motion: true, executablePath: "/opt/pw-browsers/chromium" }); }
 try {
-  await step("A: ui-v7: the Ask Cluck tab is fixed, left 0, 44x60, tangerine (--help)", async () => {
-    const { ctx, page } = await fresh(true);
-    assert.equal(await page.evaluate(() => document.documentElement.classList.contains("ui-v7")), true, "the ui-v7 flag is on");
-    await page.waitForSelector(tabSel, { timeout: 6000 });
-    const g = await geom(page);
-    assert.equal(g.pos, "fixed", "position: fixed (left edge tab)");
-    assert.equal(g.left, "0px", "flush with the left edge");
-    assert.equal(g.w, "44px", "the handle's 44px width");
-    assert.equal(g.h, "60px", "a tab, not a panel");
-    assert.equal(g.bg, g.want, `background is --help (${g.want}), got ${g.bg}`);
-    await ctx.close();
-  });
-
   await step("B: ui-v7: the code kicker (span.qkicker) is not displayed", async () => {
     const { ctx, page } = await fresh(true);
     await page.waitForSelector(tabSel, { timeout: 6000 });
@@ -84,33 +65,6 @@ try {
     assert.equal(await page.locator("#problem").getByRole("button", { name: /ask cluck/i }).count(), 1, "no Ask Cluck button by name");
     const txt = await page.locator(`${tabSel} .cb-t`).evaluate(e => e.textContent.trim());
     assert.match(txt, /ask cluck/i, "the hidden label text is the name");
-    await ctx.close();
-  });
-
-  await step("D: ui-v7: tab bottom edge = 8px above #rot .rtab (fallback: rest spot 164px)", async () => {
-    const { ctx, page } = await fresh(true);
-    await page.waitForSelector(tabSel, { timeout: 6000 });
-    let live = true;
-    try {
-      await page.waitForFunction(() => {
-        const h = document.querySelector("#rot .rtab");
-        return !!h && getComputedStyle(h).display !== "none" && h.getBoundingClientRect().height > 0;
-      }, null, { timeout: 3000 });
-    } catch { live = false; }
-    if (!live) {
-      const g = await geom(page);
-      assert.equal(await page.locator(tabSel).evaluate(b => b.style.getPropertyValue("--ick7-b")), "", "--ick7-b set with no live handle");
-      assert.equal(g.bottom, "164px", `no handle: the sheet's rest spot (bottom ${g.bottom})`);
-      console.log("     (brainrot handle never mounted in this run: asserted the 164px rest spot instead)");
-    } else {
-      await page.waitForFunction(sel => document.querySelector(sel).style.getPropertyValue("--ick7-b") !== "", tabSel, { timeout: 3000 });
-      const d = await page.evaluate(sel => {
-        const b = document.querySelector(sel), h = document.querySelector("#rot .rtab");
-        return { gap: h.getBoundingClientRect().top - b.getBoundingClientRect().bottom, prop: b.style.getPropertyValue("--ick7-b") };
-      }, tabSel);
-      assert.ok(Math.abs(d.gap - 8) <= 1, `the tab sits ${d.gap}px above the handle (spec: 8), --ick7-b=${d.prop || "unset"}`);
-      assert.notEqual(d.prop, "", "--ick7-b is set from the live handle");
-    }
     await ctx.close();
   });
 
