@@ -57,7 +57,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/shell/toast/toast.css` | Styles of the toast. | toast look |
 | `client/shell/popover.js` | The one rich-context popup. | popovers |
 | `client/cluck/jev_nudges/peek.js` | Cluck's duck + sky and the idle peek. | duck, idle peek |
-| `client/cluck/brainrot.js` | Brainrot corner (sugar mode only). | brainrot corner |
+| `client/cluck/brainrot.js` | Brainrot corner (sugar mode only); none under 900px wide, no handle (ICK5-NOROT). | brainrot corner |
 | `client/calc/coach/calc-coach.js` | Calc Coach panel. | Calc Coach |
 | `client/calc/coach/calc-coach.css` | Styles of Calc Coach. | Calc Coach look |
 | `client/calc/model_picker/calc-pick.js` | Calculator model picker. | calculator picker |
