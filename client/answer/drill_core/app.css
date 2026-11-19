@@ -93,6 +93,7 @@ html.ui-v7 {
   --r-k: 1; --r-card: calc(20px * var(--r-k)); --r-tile: calc(16px * var(--r-k)); --r-chip: calc(6px * var(--r-k));
   --lift: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* the top bar's raise (progbar.css BAR-DEPTH) as a token */
   --lift-drop: 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* ICK4-FLOAT: the cards float with the bar's drop only, no lit top (Tony Nov 14: a lit top on a resting tile reads as a border) */
+  --shadow-soft: var(--lift-drop);   /* POPOVER-V7 (Tony Nov 19): the popover floats on --lift-drop; the alias exists because style.test's shadow allowlist names --shadow-soft, not --lift-drop */
   --edge-hair: 1px solid rgb(255 255 255 / .09);   /* ICK PR-A (A1): ONE hairline, the edge of every field, input, proof box and code block */
   --edge-hair-ink: rgb(255 255 255 / .09);   /* the same hairline as a colour (the code block's header split) */
   --page: #02040d; --card: #0d142a; --sheet: #0d142a; --float: #141d36; --chip: #283352; --line: #556791;   /* NO-BORDER 1: --card lifted to OKLCH L 0.175 (page 0.110, +6.5; same hue/chroma as #060b1b, L 0.154) so the card separates with no edge */
@@ -1155,6 +1156,19 @@ html.ui-v7 .fcard .fm.kf-sx { --kf-l: 0px; --kf-r: 0px; mask-image: linear-gradi
   .pop.out { animation: pop-in 100ms ease-in reverse both; } .pop.out[data-side="top"] { animation-name: pop-up; }   /* the exit: the entrance reversed (popover.js retire) */
 }
 .pop.out { pointer-events: none; }                                                  /* a closing popover takes no taps */
+/* POPOVER-V7 (Tony Nov 19: "change this box to style match with the rest of site.. ideally floating too"; ui-v7 only). No rim: a solid --float
+   block one navy step above the card, the tile radius, floating on --lift-drop (via --shadow-soft: style.test's shadow allowlist). A doc popover is
+   Swiss type: the header keeps the Key formulas box's size and centring; symbol | meaning | unit share ONE grid with the unit column right-aligned;
+   "Use it" / "Example" are small tracked uppercase captions on their own line; the example is set in the math face. Flag off = the block above. */
+html.ui-v7 .pop { border: 0; border-radius: calc(var(--r-tile)); background: var(--float); box-shadow: var(--shadow-soft); }
+html.ui-v7 .pop[data-variant="doc"] .pop-h { --kf-l: 0px; --kf-r: 0px; font-size: calc(var(--t-md) * var(--kf-k, 1)); }
+html.ui-v7 .pop[data-variant="doc"] .pop-h.kf-sx { text-align: start; mask-image: linear-gradient(90deg, transparent, #000 var(--kf-l), #000 calc(100% - var(--kf-r)), transparent); }   /* KEYF-V7: the 70% floor is keyfFit's; past it the header scrolls under a 24px edge fade */
+html.ui-v7 .pop[data-variant="doc"] .fd-sym { grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: var(--s3); row-gap: var(--s1); align-items: baseline; }
+html.ui-v7 .pop[data-variant="doc"] .fd-sym li { display: contents; }                    /* every row on one grid: the symbol and unit columns line up */
+html.ui-v7 .pop[data-variant="doc"] .fd-u { justify-self: end; text-align: right; }
+html.ui-v7 .pop[data-variant="doc"] :is(.fd-w, .fd-x) b { display: block; margin: 0 0 var(--s1); color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); letter-spacing: .08em; text-transform: uppercase; }
+html.ui-v7 .pop[data-variant="doc"] .fd-x { font-family: KaTeX_Main, var(--font); }     /* the example is maths: the math face, not mono */
+html.ui-v7 .pop[data-variant="doc"] .fd-x b { font-family: var(--font); }
 /* Cluck the genie (docs/design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }

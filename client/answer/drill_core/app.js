@@ -1116,17 +1116,20 @@ function keyfEdges(fm) {
   fm.style.setProperty("--kf-l", sx && fm.scrollLeft > 1 ? KF_FADE : "0px");
   fm.style.setProperty("--kf-r", sx && fm.scrollLeft + fm.clientWidth < fm.scrollWidth - 1 ? KF_FADE : "0px");
 }
+function mathFit(el) {                                                              // one formula box: shrink to the 70% floor, then scroll + edge fade
+  el.style.removeProperty("--kf-k");
+  let k = 1;
+  for (let i = 0; i < 3 && el.scrollWidth > el.clientWidth + 1 && k > KF_FLOOR; i++) {   // the padding does not scale: a second pass settles it
+    k = Math.max(KF_FLOOR, k * el.clientWidth / el.scrollWidth);
+    el.style.setProperty("--kf-k", k.toFixed(3));
+  }
+  keyfEdges(el);
+}
 function keyfFit(sec) {
   if (!document.documentElement.classList.contains("ui-v7")) return;
   sec.querySelectorAll(".f .fm").forEach(fm => {
     if (!fm.offsetParent) return;                                                   // a hidden ladder row: fitted when it shows
-    fm.style.removeProperty("--kf-k");
-    let k = 1;
-    for (let i = 0; i < 3 && fm.scrollWidth > fm.clientWidth + 1 && k > KF_FLOOR; i++) {   // the padding does not scale: a second pass settles it
-      k = Math.max(KF_FLOOR, k * fm.clientWidth / fm.scrollWidth);
-      fm.style.setProperty("--kf-k", k.toFixed(3));
-    }
-    keyfEdges(fm);
+    mathFit(fm);
   });
 }
 function keyfWire(sec) {
@@ -1163,6 +1166,11 @@ function formulaCard() {
       /* a formula wider than the popover widens it, up to the viewport (past that .pop-h scrolls sideways): never cut short. Before the figure, so it draws at the final width */
       const hd = el.querySelector(".pop-h"), need = Math.ceil(hd.scrollWidth + el.offsetWidth - hd.clientWidth);
       if (need > el.offsetWidth) el.style.width = el.style.maxWidth = Math.min(need, innerWidth - 32) + "px";
+      if (document.documentElement.classList.contains("ui-v7")) {                     // POPOVER-V7: the KEYF-V7 rule reused for the header (70% floor, then side-scroll)
+        mathFit(hd); hd.addEventListener("scroll", () => keyfEdges(hd), { passive: true });
+        document.fonts?.ready.then(() => { if (hd.isConnected) mathFit(hd); });
+        if (window.ResizeObserver) { let w = 0; new ResizeObserver(() => { if (hd.clientWidth !== w) { w = hd.clientWidth; mathFit(hd); } }).observe(hd); }
+      }
       const g = fig && el.querySelector(".fd-fig");
       if (g) try { drawDocFig(g, fig); } catch (e) { console.error(e); g.textContent = fig.alt; g.classList.add("fig-off"); }
     } });
