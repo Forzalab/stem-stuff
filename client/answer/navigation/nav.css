@@ -55,6 +55,10 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
   position: relative; max-height: min(32rem, 60svh); overflow-y: auto; overscroll-behavior: contain;
   padding: var(--s2); background: var(--sheet); border-radius: 10px;
 }
+/* keyboard up with the list open (the student is typing in the code box that comes with it): the rows go, so the list is not a
+   one-row sliver under the box. The code box and its suggestions live in the dock, not here, so they stay. visibility (not
+   display) keeps the panel's scroll, so the same row is in view again when the keyboard goes down (Tony, Nov 17) */
+html.dock-bottom.ql-open.kbup .qlist { visibility: hidden; }
 /* the front bank's row over the list (nav.js): Shuffle / Skip this question */
 .qmodes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: 0 0 var(--s2); }
 .qmodes[hidden], .qmodes [hidden] { display: none; }

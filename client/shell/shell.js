@@ -197,6 +197,16 @@ function rewardTick(res, mine) {
   RW().render(n);
 }
 const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
+/* REWARD-ROW-TOAST (todo 176, Tony Nov 17): on ui-v7 the old orange drop banner (rewards/fx.js toast -> .fx-toast-host, fixed under the
+   top edge) drew over the top bar on a phone. It now rides the normal row toast (shell/toast/toast.js) like a stage toast: no `dock`,
+   because the justified phone bento fills to the foot and the row toast floats over its bottom tiles (toast.js PHONE-TOAST-FLOAT).
+   Off ui-v7, or with no stemToast, the old banner is unchanged. */
+function rwBanner(text, sub, tier) {
+  const fx = FXL();
+  if (document.documentElement.classList.contains("ui-v7") && window.stemToast)
+    window.stemToast.show({ text, sub: sub || undefined, row: true, duck: "landmark", at: () => $("#q"), until: Date.now() + 15000 });
+  else if (fx.toast) fx.toast(text, sub, tier);
+}
 async function rewardShow(mine, res) {
   const fx = FXL();
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
@@ -225,7 +235,7 @@ async function rewardShow(mine, res) {
   const line = res.drop ? res.line : res.streakNote;
   if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
   else if (line === res.streakNote && res.streak === 3 && rwTip("three", $("#rwHud .rw-star"))) { /* T37: the onboarding line says "3 cracked" itself */ }
-  else if (line && fx.toast) { hideToast(); fx.toast(line, res.drop ? res.sub || res.streakNote : null, res.drop || null); }
+  else if (line && fx.toast) { hideToast(); rwBanner(line, res.drop ? res.sub || res.streakNote : null, res.drop || null); }
   else if (!mine.prob.dead) rwTip("right", $("#rwCoin"));
 }
 /* T37 sugar onboarding (Tony, Oct 15; brain chat-redesign-2026-10-13/sugar-onboard, V1 toast trail): the HUD explains itself the first
@@ -259,7 +269,7 @@ function rwTip(beat, at) {
 /* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
 function comeback() {
   const fx = FXL();
-  if (fx.toast) { hideToast(); fx.toast("HONK HONK. Spacetime just applauded.", "Energy bounced BACK, quack!"); }
+  if (fx.toast) { hideToast(); rwBanner("HONK HONK. Spacetime just applauded.", "Energy bounced BACK, quack!"); }
   say("Comeback. Missed it before, got it now.");
 }
 
