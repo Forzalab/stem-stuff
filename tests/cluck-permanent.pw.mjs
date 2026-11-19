@@ -24,6 +24,7 @@ try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8883", BASE = `http://127.0.0.1:${PORT}`;
+/* ICK5-NOROT (Tony Nov 18): under 900px there is no brainrot, so the videos Hide toggle step runs at >= 900 only (721 has no videos row) */
 const W = (process.env.CP_W || "1280,721,393").split(",").map(Number);
 const tmp = mkdtempSync(join(tmpdir(), "cperm-")), banks = join(tmp, "banks"), SHOTS = process.argv[3] || tmp;
 mkdirSync(banks); mkdirSync(SHOTS, { recursive: true });
@@ -102,7 +103,7 @@ for (const w of W.filter(w => w >= 720)) {
     assert.ok(s.on && s.box && !s.x && s.open, "still open, no X: " + JSON.stringify(s));
     await page.context().close();
   });
-  await step(`@desk ${w}: the videos Hide toggle scales the box (+250 px at 1280, +100 at 721; videos row <= 40 px)`, async () => {
+  if (w >= 900) await step(`@desk ${w}: the videos Hide toggle scales the box (+250 px at 1280, +100 at 721; videos row <= 40 px)`, async () => {
     const page = await open(w);
     const a = await box(page);
     assert.ok(a.rot > 100, "the videos show above the box: " + JSON.stringify(a));
