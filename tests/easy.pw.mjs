@@ -50,7 +50,7 @@ writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 3, groups: 
   rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }, ...pilotSheet.groups, { name: "Buoyancy", exam: [3], rows: [BUOY] }] }));
 writeFileSync(join(BANKS, "BANK_BUO.json"), JSON.stringify({ v: 1, problems: [{ code: "CALC1_BU1", title: "Buoyancy", type: "num", body: [{ type: "text", md: "A long formula." }], answer: "4",
   saccharine: { title: "Buoyancy", part: ["BUOY", "I_SUM"] } }] }));
-/* ladder lane 3: the pilot's one-formula item (Q11 Q4e: mid pieces only) and its 4-formula item (Q11 Q5: mid pieces + 3 chain arrows) as CALC1 numerics */
+/* ladder lane 3: the pilot's one-formula item (Q11 Q4e: mid pieces only) and its 4-formula item (Q11 Q5: mid pieces; the old chain arrows are gone, KEYF-CLEAN) as CALC1 numerics */
 const lad = (code, it) => ({ code, title: it.title, type: "num", body: [{ type: "text", md: "Ladder pilot." }], answer: "4", saccharine: { title: it.title, part: it.part, ladder: it.ladder } });
 writeFileSync(join(BANKS, "BANK_LAD.json"), JSON.stringify({ v: 1, problems: [lad("CALC1_LD1", pilot.find(i => i.code === "PHYS_Z3X")), lad("CALC1_LD2", pilot.find(i => i.code === "PHYS_PGX"))] }));
 P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: "Two rows." }, { type: "text", md: "Tap a row to tick it." }],
@@ -175,7 +175,7 @@ try {
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
         frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
         tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (archive/design/mockups/formula-use.html ?v=7)
-      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(94, 120, 153) 1px", tinted: true, tex: true, old: false });
+      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 0, centred: true, frame: "rgb(94, 120, 153) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src || f.dataset.src));   // 4-6: their src waits for the row to scroll to them
     assert.equal(srcs.length, 5);
@@ -246,7 +246,7 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
   });
 
-  await step("ladder (lane 3): a ladder card starts as the big pieces; stemLadder.step() pops the middle pieces, then the arrows, one each; then it stops", async () => {
+  await step("ladder (lane 3): a ladder card starts as the big pieces; stemLadder.step() pops the middle pieces, one each; then it stops", async () => {
     await page.setViewportSize({ width: 360, height: 800 });
     const vis = sel => page.$$eval("#fcard " + sel, es => es.filter(e => !e.hidden && getComputedStyle(e).display !== "none").length);
     await page.evaluate(() => { location.hash = "CALC1_LD1"; }); await opened(page, "CALC1_LD1");
@@ -274,10 +274,10 @@ try {
     assert.equal(await page.evaluate(() => window.stemLadder.step()), false, "all out: the ladder stops");
     assert.equal(await page.evaluate(() => window.stemLadder.left()), 0);
     await page.evaluate(() => { location.hash = "CALC1_LD2"; }); await opened(page, "CALC1_LD2");
-    assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await vis("li.to"), await page.$$eval("#fcard li.to", t => t.length)], [4, 0, 0, 3], "Q11 Q5: 4 big pieces, no arrows yet");
-    for (let i = 1; i <= 6; i++) {
+    assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await vis("li.to"), await page.$$eval("#fcard li.to", t => t.length)], [4, 0, 0, 0], "Q11 Q5: 4 big pieces, no arrows");
+    for (let i = 1; i <= 3; i++) {
       assert.equal(await page.evaluate(() => window.stemLadder.step()), true, "step " + i);
-      assert.deepEqual([await vis("li.f.mid"), await vis("li.to")], [Math.min(i, 3), Math.max(0, i - 3)], "mid pieces first, then arrows, one per step");
+      assert.deepEqual([await vis("li.f.mid"), await vis("li.to")], [i, 0], "mid pieces only; the chain arrow is gone");
     }
     assert.equal(await page.evaluate(() => window.stemLadder.step()), false);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
@@ -331,7 +331,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.equal(await page.$$eval("#fcard .fq", b => b.length), 0, "rows without a doc have no ?");
-    assert.equal(await page.$$eval("#fcard li.to", t => t.length), 1, "no ladder: the arrow is drawn as before");
+    assert.equal(await page.$$eval("#fcard li.to", t => t.length), 0, "no chain arrow on a no-ladder card (KEYF-CLEAN)");
     /* orc v23 round 2: a doc popover never runs past the screen (a tall one scrolls inside), and a long formula is never cut: the popover
        widens to it up to the viewport, and past that the header scrolls sideways */
     for (const [w, h] of [[390, 844], [360, 640], [1280, 720]]) {

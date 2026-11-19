@@ -1039,24 +1039,24 @@ function renderQuestion() {
   formulaCard();
 }
 /* sugar: Key formulas (Tony, Oct 5, archive/design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
-   they get used, centred, a thin arrow between, under a "Key formulas" label notched into the box's border. Under the answer, before the hint */
-const FC_ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+   they get used, centred, under a "Key formulas" label notched into the box's border. Under the answer, before the hint. KEYF-CLEAN (Tony
+   Nov 19): the chain arrow between rows is gone ("its useless"); the rows keep their order. */
 /* The thinking ladder (SCHEMA.md "Formula ladder", Tony Oct 21): with p.ladder the card starts as the big pieces only (the part rows); S.lad pieces are out,
-   in order: the mid pieces (each pops inside its row), then the chain arrows. window.stemLadder.step() shows the next one (Jev's hit, lane 4) */
+   in order: the mid pieces (each pops inside its row). window.stemLadder.step() shows the next one (Jev's hit, lane 4). The old chain-arrow steps are
+   gone with the arrows (KEYF-CLEAN, Tony Nov 19). */
 const ladderSteps = p => {
   const ld = p.ladder, ids = (p.formulas || []).map(f => f.id);
-  if (!ld) return [...ids.slice(1).map((id, i) => ({ k: "row", id })), ...ids.slice(1).map((to, i) => ({ k: "arrow", from: ids[i], to }))];   // no ladder (every Exam 3 item): synthesized, row 1 only at first, then the rows, then the arrows, one per step
-  return [...(ld.mid || []).filter(m => ids.includes(m.of)).map((m, i) => ({ k: "mid", i, ...m })),
-    ...(ld.arrows || []).filter(a => ids.indexOf(a.to) > 0 && ids[ids.indexOf(a.to) - 1] === a.from).map(a => ({ k: "arrow", ...a }))];
+  if (!ld) return ids.slice(1).map(id => ({ k: "row", id }));   // no ladder (every Exam 3 item): row 1 only at first, then the rows, one per step
+  return (ld.mid || []).filter(m => ids.includes(m.of)).map((m, i) => ({ k: "mid", i, ...m }));
 };
 function ladderStep() {
   const sec = $("#fcard"), steps = S && sec ? ladderSteps(S.prob) : [];
   if (!steps.length || (S.lad ||= 0) >= steps.length) return false;
-  const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : st.k === "row" ? `.f[data-row="${st.id}"]` : `.to[data-to="${st.to}"]`);
+  const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : `.f[data-row="${st.id}"]`);
   sec.querySelectorAll(".f.mid.cur").forEach(m => midOpen(m, false));                 // the last piece's notes fold to its "why?"
   if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); keyfFit(sec); }
   ladClock();                                                                          // any reveal restarts the 30 s clock
-  const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to the key formulas." : st.k === "mid" ? `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.` : "A link was added between key formulas.";
+  const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to the key formulas." : `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.`;
   return true;
 }
 /* the clock (Tony, Nov 5): on the question with Cluck's sheet closed, the next piece shows 30 s after the last reveal (or after the question loaded), until all are
@@ -1145,10 +1145,10 @@ function formulaCard() {
   const sec = document.createElement("section");
   sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
   sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
-  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><span class="fc-sig" aria-hidden="true">${icon("i-sigma")}</span><ol>${fs.map((f, i) => {
-    const arrow = steps.find(x => x.k === "arrow" && x.to === f.id), rowStep = steps.find(x => x.k === "row" && x.id === f.id);
+  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
+    const rowStep = steps.find(x => x.k === "row" && x.id === f.id);
     const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
-    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"${rowStep ? ` data-row="${esc(f.id)}"${out(rowStep) ? "" : " hidden"}` : ""}><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`   /* no copy button on the card (Tony, Nov 3 18:14: "hide the copy buttons on the key formula box"); a drag still copies plain text */
+    return `<li class="f"${rowStep ? ` data-row="${esc(f.id)}"${out(rowStep) ? "" : " hidden"}` : ""}><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`   /* no copy button on the card (Tony, Nov 3 18:14: "hide the copy buttons on the key formula box"); a drag still copies plain text */
       + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
