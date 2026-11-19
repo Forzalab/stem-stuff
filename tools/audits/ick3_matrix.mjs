@@ -118,9 +118,9 @@ const MEASURE = () => {
   const clucks = q ? [...q.querySelectorAll("button, [role=button], a[href]")].filter(b => /cluck/i.test(nm(b)) && vis(b)).map(b => { const r = R(b); return { name: nm(b).slice(0, 30), ...r, big: r.w >= 44 && r.h >= 44, inVv: r.l >= -0.5 && r.r <= (vv ? vv.width : innerWidth) + 0.5 && r.t >= (vv ? vv.offsetTop : 0) - 0.5 && r.b <= (vv ? vv.offsetTop + vv.height : innerHeight) + 0.5 }; }) : [];
   const tabEl = P.querySelector(":scope > button.cluckbtn"), tabOn = vis(tabEl), tabR = tabEl ? R(tabEl) : null;
   /* C8 proof box */
-  const ta = document.querySelector("#q .ff.proof textarea") || document.querySelector("#q textarea#ans"), go = document.getElementById("ansGo");
+  const ta = document.querySelector("#q .ff.proof textarea") || document.querySelector("#q .ff.proof .ans") || document.querySelector("#q textarea#ans"), go = document.getElementById("ansGo");
   let proof = null;
-  if (ta) { const cs = getComputedStyle(ta), tr = R(ta);
+  if (ta) { const sc = ta.closest(".pwrap") || ta, cs = getComputedStyle(sc), tr = R(sc);   // ICK4-WRAP: the div scrolls inside .pwrap; the first VISIBLE line starts at the scroller's top
     proof = { top: tr.t, bottom: tr.b, firstLine: +(tr.t + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.paddingTop) || 0)).toFixed(2),
       val: ta.value.length, go: go ? R(go) : null, goVis: vis(go), font: cs.fontSize + "/" + cs.lineHeight + " w" + cs.fontWeight }; }
   return {
@@ -155,7 +155,8 @@ const LINES4 = () => {
     for (const r of rg.getClientRects()) { if (r.width < 1) continue; raw.push({ t: r.top + y0, b: r.bottom + y0, l: r.left + x0, r: r.right + x0 }); }
     m.remove();
   } else {
-    const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT), rg = document.createRange(); let n;
+    const sc = box.querySelector(".pwrap"); if (sc) sc.scrollTop = sc.scrollHeight;   // ICK4-WRAP: the typing state, the box shows its last lines
+    const w = document.createTreeWalker(box.querySelector(".ans") || box, NodeFilter.SHOW_TEXT), rg = document.createRange(); let n;
     while ((n = w.nextNode())) { if (!n.nodeValue.trim()) continue; rg.selectNodeContents(n); for (const r of rg.getClientRects()) { if (r.width < 1) continue; raw.push({ t: r.top, b: r.bottom, l: r.left, r: r.right }); } }
   }
   /* one box per visual line: cluster rects by their top */
@@ -198,7 +199,7 @@ const mutate = async (page, when) => {
   if (!MUT) return;
   if (MUT === "inline-block" && when === "s1") await page.addStyleTag({ content: "#problem .blocks code{display:inline-block;white-space:nowrap}" });
   if (MUT === "hidecard" && when === "s2") await page.evaluate(() => { const p = document.getElementById("problem"); if (p) p.style.display = "none"; });
-  if (MUT === "clear" && when === "s3") await page.evaluate(() => { const t = document.querySelector("#q textarea#ans"); if (t) t.value = ""; });
+  if (MUT === "clear" && when === "s3") await page.evaluate(() => { const t = document.querySelector("#q #ans"); if (t) t.value = ""; });
 };
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -247,7 +248,7 @@ for (const it of picked) for (const vp of vps) {
     chk("C7/s1", it.code, vp.name, s1.clucks.length === 0 && s1.tab.on, `inBox=${s1.clucks.length} tab=${s1.tab.on ? "visible" : "hidden"}`, "in-box cluck absent, edge tab visible");
     /* ---- s2 typing (proof only) ---- */
     if (it.proof) {
-      const ta = page.locator("#q .ff.proof textarea, #q textarea#ans").first();
+      const ta = page.locator("#q .ff.proof textarea, #q .ff.proof .ans, #q textarea#ans").first();
       if (!(await ta.count())) { chk("C5", it.code, vp.name, false, "no proof textarea", "proof box present"); }
       else {
         await ta.tap({ force: true }).catch(async () => { await ta.click({ force: true }); });
@@ -255,7 +256,7 @@ for (const it of picked) for (const vp of vps) {
         await ta.fill(FILLER).catch(async () => { await page.keyboard.type(FILLER, { delay: 0 }); });   // 12 lines in one input event (fast typing loses keys on a re-layout)
         await page.waitForTimeout(400);
         /* deterministic typing state: caret at the end (C4 sets the box scroll itself) */
-        await page.evaluate(() => { const t = document.querySelector("#q .ff.proof textarea"); if (t) { t.focus(); try { t.setSelectionRange(t.value.length, t.value.length); } catch { /* not a textarea */ } } });
+        await page.evaluate(() => { const t = document.querySelector("#q .ff.proof textarea, #q .ff.proof .ans"); if (t) { t.focus(); try { t.setSelectionRange(t.value.length, t.value.length); } catch { /* not a textarea */ } } });
         await page.waitForTimeout(60);
         await mutate(page, "s2");
         const s2 = await page.evaluate(MEASURE);
@@ -278,7 +279,7 @@ for (const it of picked) for (const vp of vps) {
           await page.waitForTimeout(60); const early = await cls(page);
           await page.waitForTimeout(440); const at500 = await cls(page);            // 500 ms after the viewport came back
           await mutate(page, "s3");
-          const text = await page.evaluate(() => (document.querySelector("#q textarea#ans") || {}).value || "");
+          const text = await page.evaluate(() => (document.querySelector("#q #ans") || {}).value || "");
           const before = s2.proof ? s2.proof.val : FILLER.length;
           /* reference: the same item's normal exit: a REAL click outside the proof box (no viewport change, no blur call).
              The point is scanned inside the card's visible area (never a control, never a scroll); a click that fails to leave

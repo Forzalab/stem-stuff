@@ -607,7 +607,7 @@
   document.addEventListener("copy", function (e) {
     try {
       var s = W.getSelection && W.getSelection(), b = document.getElementById("blocks"), t = e && e.target;
-      if (s && s.rangeCount && b && b.contains(s.getRangeAt(0).commonAncestorContainer) && !(t && /^(INPUT|TEXTAREA)$/.test(t.tagName))) jev.ev("_copy");
+      if (s && s.rangeCount && b && b.contains(s.getRangeAt(0).commonAncestorContainer) && !(t && (/^(INPUT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable))) jev.ev("_copy");
     } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });
   if (W.addEventListener) {                                           // blur / focus: a desktop window switch keeps the tab visible, so only they see it (jev.away times it)

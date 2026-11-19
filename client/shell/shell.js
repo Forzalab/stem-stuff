@@ -425,7 +425,7 @@ function touchesMath(r) {
 document.addEventListener("copy", e => {
   try {
     const sel = getSelection();
-    if (!sel || sel.isCollapsed || !sel.rangeCount || !e.clipboardData || /^(INPUT|TEXTAREA)$/.test(e.target?.tagName)) return;
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !e.clipboardData || /^(INPUT|TEXTAREA)$/.test(e.target?.tagName) || e.target?.closest?.("[contenteditable]")) return;
     const rs = Array.from({ length: sel.rangeCount }, (_, n) => sel.getRangeAt(n));
     if (!rs.some(touchesMath)) return;                                // no math: the browser's own copy
     const text = rs.map(selPlain).join("\n");
@@ -458,7 +458,7 @@ document.addEventListener("click", async e => {
 const freeze = $("#freeze"), freezeIn = $("#freezeIn"), more = $("#more"), sentinel = $("#sentinel");
 let tallest = 0, lastW = 0;
 const vv = window.visualViewport;
-function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")); }
+function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || a.isContentEditable || (a.tagName === "INPUT" && a.type === "text")); }   // isContentEditable: the v7 proof box (ICK4-WRAP)
 /* entry box: fixed bottom-centre on phones / touch (one thumb), top of the column on desktop (FREEZE.md) */
 const dockMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
 const sideMQ = matchMedia("(min-width: 720px)");                       // multitask: problem | pad side by side from here up (docs/design/MULTITASK.md)
@@ -527,7 +527,7 @@ function layoutDock() {
      focus blurs it; the same exit as a tap outside (mt closes, dock-away clears, text kept). State, not the kbup class edge: another pass may have
      cleared the class first (seen as a 1-in-4 miss). A desktop never shrinks (no on-screen keyboard) = focus stays typing mode. A tap on Check moves
      focus to the button first, so the textarea is not the active element then: this never blurs mid-tap (the app.css:1843 note). */
-  const kbNow = !!kb || swapNext, inProofBox = !!a && a.tagName === "TEXTAREA" && !!a.closest(".ff.proof");
+  const kbNow = !!kb || swapNext, inProofBox = !!a && (a.tagName === "TEXTAREA" || a.isContentEditable) && !!a.closest(".ff.proof");
   const rotFrame = !!a && a.tagName === "IFRAME" && !!a.closest("#rot");
   if (!inProofBox && !rotFrame) proofKb = false;
   else if (shrunk) { if (inProofBox) proofKb = true; }
@@ -746,7 +746,7 @@ padPeek.addEventListener("click", () => {
 });
 document.addEventListener("input", e => {
   if (S && S.box && e.target === S.box.el) padPeekText();
-  if (e.target.matches && e.target.matches("#main input, #main textarea")) bridge.lastEdit = e.target;
+  if (e.target.matches && e.target.matches("#main input, #main textarea, #main [contenteditable]")) bridge.lastEdit = e.target;
 });
 /* SCRATCHPAD pane: a tap on the question peek goes back to the answer, in the same tap */
 for (const ev of ["pointerdown", "mousedown"]) freeze.addEventListener(ev, e => { if (bridge.swapOn && shownPane === "scratch") e.preventDefault(); });
@@ -755,7 +755,7 @@ freeze.addEventListener("click", () => { if (bridge.swapOn && shownPane === "scr
 function backInView() {
   const el = bridge.lastEdit;
   if (!el || !el.isConnected || !mainEl.contains(el)) return;
-  requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" || el.isContentEditable ? "nearest" : "center", inline: "nearest" }); }));
 }
 
 /* == §multitask == */

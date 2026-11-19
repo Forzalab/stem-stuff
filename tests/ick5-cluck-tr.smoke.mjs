@@ -131,7 +131,7 @@ try {
   await card(ph.page, "390");
   await step("390 AC7: proof typing -> inside #q .ff.proof, cb-inbox 56x56, one animation in 50 ms, none at 600 ms", async () => {
     await go(ph.page, "PSY_T52"); const g0 = await geo(ph.page); assert.equal(g0 && g0.parent, "problem", "the button does not start on the card");
-    await sample(ph.page); await ph.page.locator("#q .ff.proof textarea").focus(); await inbox(ph.page);
+    await sample(ph.page); await ph.page.locator("#q .ff.proof .ans").focus(); await inbox(ph.page);
     let g = await geo(ph.page); assert.equal(g.inProof, true, "not inside #q .ff.proof"); assert.equal(g.inbox, true, "no cb-inbox class");
     const s = await samples(ph.page), first = s.find(x => x.inbox); assert.ok(first, "no frame saw cb-inbox");
     assert.ok(Math.max(...win(s, first.t).map(x => x.n)) >= 1, `no animation within 50 ms of the move (${JSON.stringify(win(s, first.t).slice(0, 5))})`);
@@ -143,13 +143,13 @@ try {
     await ph.page.emulateMedia({ reducedMotion: "reduce" }); await ph.page.waitForFunction(() => matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });
     await ph.page.evaluate(() => document.activeElement.blur()); await onCard(ph.page);
     await ph.page.waitForFunction(() => document.getElementById("cluckBtn").getAnimations().length === 0, null, { timeout: 3000 });
-    await sample(ph.page); await ph.page.locator("#q .ff.proof textarea").focus(); await inbox(ph.page);
+    await sample(ph.page); await ph.page.locator("#q .ff.proof .ans").focus(); await inbox(ph.page);
     const s = await samples(ph.page), first = s.find(x => x.inbox); assert.ok(first, "no frame saw cb-inbox (reduced)");
     assert.equal(Math.max(0, ...win(s, first.t).map(x => x.n)), 0, `reduced motion played an animation (${JSON.stringify(win(s, first.t).slice(0, 5))})`);
   });
   await step("390 AC8: blur -> child of #problem, 44x44, no cb-inbox, an animation on the way back", async () => {
     await ph.page.emulateMedia({ reducedMotion: "no-preference" }); await ph.page.waitForFunction(() => !matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });
-    await ph.page.locator("#q .ff.proof textarea").focus(); await inbox(ph.page);
+    await ph.page.locator("#q .ff.proof .ans").focus(); await inbox(ph.page);
     await ph.page.waitForFunction(() => document.getElementById("cluckBtn").getAnimations().length === 0, null, { timeout: 3000 });
     await sample(ph.page); await ph.page.evaluate(() => new Promise(r => requestAnimationFrame(r))); await ph.page.evaluate(() => document.activeElement.blur()); await onCard(ph.page);
     await ph.page.waitForFunction(() => { const s = window.__samples || []; return s.some((x, i) => i > 0 && s[i - 1].inbox && !x.inbox); }, null, { timeout: 2000 });
