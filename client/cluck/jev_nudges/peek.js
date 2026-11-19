@@ -9,7 +9,7 @@
 (function () {
   "use strict";
   var H = document.documentElement, side = matchMedia("(min-width: 720px)"), fine = matchMedia("(hover: hover) and (pointer: fine)");
-  var BLEED = 48;                                                          // 🔒 glow edge: the sky runs this far past its column, fading out (no hard cut)
+  var BLEED = 48;                                                          // the dawn box's side bleed: it runs this far past its column, fading out (no hard cut)
 
   /* ---------- 1. the duck + the sky ---------- */
   var box = null, onDismiss = null, onHollow = null, outT = 0;
@@ -24,7 +24,7 @@
     if (box) return box;
     box = document.createElement("div");
     box.className = "ck-rise ai-skin"; box.hidden = true;
-    box.innerHTML = '<div class="ck-sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></div>' +
+    box.innerHTML = '<div class="ck-sky" aria-hidden="true"><i class="l1"></i></div>' +
       '<p class="ck-say" aria-hidden="true"></p><button type="button" class="ck-peek"><span class="ck-duck"></span></button>' +
       '<button type="button" class="ck-hollow" aria-label="Felt hollow" hidden></button>';
     box.querySelector(".ck-peek").addEventListener("click", function () { var f = onDismiss; tel("tapped"); down(); if (f) f(); });
@@ -36,14 +36,15 @@
     addEventListener("resize", function () { if (up()) place(); });
     return box;
   }
-  /* phone: the duck at the bottom centre (no dock there in sugar), the sky across the screen; desktop: the Question column's foot, its sky */
+  /* phone: the duck at the bottom centre (no dock there in sugar), the dawn across the screen; desktop: the Question column's foot, its dawn.
+     SUNRISE-PORT: the one dawn layer keeps the old sky box (column + BLEED), so --sun-x is relative to that box and always sits under the duck. */
   function place() {
     var W = H.clientWidth, q = side.matches && document.getElementById("freeze"), r = q && !q.hidden ? q.getBoundingClientRect() : null;
     var x0 = r ? r.left : 0, w = r ? r.width : W, cx = x0 + w / 2;
     box.style.setProperty("--cx", cx + "px");
     box.style.setProperty("--sky-x", (x0 - BLEED) + "px");
     box.style.setProperty("--sky-w", (w + 2 * BLEED) + "px");
-    box.style.setProperty("--sun-x", (cx - x0 + BLEED) + "px");           // the sun core under the duck, always
+    box.style.setProperty("--sun-x", (cx - x0 + BLEED) + "px");           // the dawn core under the duck, always
   }
   function up() { return !!box && !box.hidden && !box.classList.contains("out"); }
   function rise(o) {

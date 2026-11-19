@@ -119,11 +119,11 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", WI
     assert.equal(await up(page), true, "the peek at 3 min");
     await settle(page);
     const L = await look(page);
-    assert.ok(Math.abs(L.sunX - L.cx) < 1, `sun core under the duck (${L.sunX} vs ${L.cx})`);
+    assert.ok(Math.abs(L.sunX - L.cx) < 1, `dawn core under the duck (${L.sunX} vs ${L.cx})`);
     if (name === "phone") assert.ok(Math.abs(L.cx - L.W / 2) < 1, "phone: the duck at the bottom centre");
     else {
       assert.ok(Math.abs(L.cx - L.col.cx) < 1, "desktop: the duck at the Question column's foot");
-      assert.ok(Math.abs(L.sky.l - (L.col.l - 48)) < 1 && Math.abs(L.sky.r - (L.col.r + 48)) < 1, "desktop: the sky = the column + a soft bleed");
+      assert.ok(Math.abs(L.sky.l - (L.col.l - 48)) < 1 && Math.abs(L.sky.r - (L.col.r + 48)) < 1, "desktop: the dawn = the column + a soft bleed");
     }
     assert.ok(L.duck.b <= vp.height + 1 && L.duck.w >= 44 && L.duck.h >= 44, "a 44px+ target on screen");
     assert.equal(L.say, "Cluck is here if you get stuck.");
@@ -132,14 +132,14 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", WI
     assert.equal(L.label, "Dismiss Cluck");
     assert.deepEqual(L.over, [], "the duck and its line rest on no control");
     assert.ok(L.scrollW <= L.W, "no sideways scroll");
-    assert.deepEqual(L.skyOp, [1, 1, 1], "sunrise done");
+    assert.deepEqual(L.skyOp, [1], "dawn done");
     if (rm) {
       assert.equal(L.duckTf, "none", "reduce: the duck never moves");
-      assert.deepEqual(L.skyTf, ["none", "none", "none"], "reduce: the sky never moves");
+      assert.deepEqual(L.skyTf, ["none"], "reduce: the dawn never moves");
       assert.equal(L.duckOp, 1, "reduce: up = full opacity");
     } else {
       assert.match(L.duckTf, /matrix\(1, 0, 0, 1, 0, 0\)|none/, "motion: the duck is all the way up");
-      assert.ok(L.skyTf.every(t => /matrix\(1, 0, 0, 1, 0, -(4|8|14)\)/.test(t)), `motion: the sky layers rose 4 / 8 / 14px (${L.skyTf})`);
+      assert.match(L.skyTf[0], /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/, `motion: the dawn is at rest (${L.skyTf})`);
     }
     await page.screenshot({ path: join(tmp, `${tag.replace(" ", "-")}-up.png`) });
     assert.deepEqual(page.errs, [], "no console errors");
