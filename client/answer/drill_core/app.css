@@ -58,6 +58,12 @@
   --goldify: hue-rotate(-34deg) saturate(1.1);
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
+  /* SUNRISE-PORT (Tony Nov 14 "go", Nov 19): the blue-white dawn sampled from 05_set_done.png (DESIGN.md §2; the full ramp is kept so the
+     gradient can be retuned without inventing a value). Tokens only: the one glow layer and the duck grade read these; no raw value below. */
+  --dawn-core: #5471ae; --dawn-2: #445d95; --dawn-3: #334979; --dawn-4: #263860; --dawn-5: #1a294b;
+  --dawn-6: #111d3a; --dawn-7: #0b152e; --dawn-8: #060e24; --dawn-9: #040a1e; --dawn-10: #02081a; --dawn-11: #020718;
+  --navy-100: #f0f5fc;   /* the say line's text (SUNRISE-TEXT c); its own sampled value, not --ink */
+  --say-glass: rgb(2 4 13 / .4); --say-edge: rgb(255 255 255 / .12);   /* the say glass pill: 40% navy fill + 1px inset rim (c) */
   --c1: #92c0ff; --c1-hi: #c9e0ff; --c2: #ffb86b; --c3: #ff8fc8; --grid: #394a61;   /* figures only: --c1 is the locked force blue and --grid the decorative grid; neither follows --action / --line (a theme can retune those) */
   /* the codeblock's syntax colour (T43, Tony Oct 18): Tokyo Night (enkia/tokyo-night-vscode-theme, MIT). On the --page well:
      kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
@@ -107,7 +113,6 @@ html.ui-v7 {
   --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
   --action-edge: rgb(90 169 255 / .3);   /* KEYF-V7 (Tony Nov 18): the action blue as a quiet 1px frame (mock hintbox/v71 --action-edge); reuse for any blue-tinted frame */
   --r-surface: 16px;   /* the mock surface radius (v71), kept as the token name for new ui-v7 surfaces; rules write 16px (style.test radius list) */
-  --kf-rail: calc(var(--s4) + 16px + var(--s3));   /* the Key formulas rail: 16px in, a 16px mark, 12px air = the mock's 44px side padding */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
 }
@@ -1050,8 +1055,6 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 .fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
 .fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: .5em var(--s1); margin-block: -.5em; }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped. The .5em above and below holds a \frac / \tfrac12 / \sqrt that rises or drops past the 1.4 line (overflow-x: auto makes y clip too: the ½ in K = ½mv² lost its bottom, todo 115, Oct 29); the -.5em margin gives it back, so the rows sit where they did */
 .fcard .fm .katex { white-space: nowrap; }
-.fcard .to { color: var(--action); opacity: .7; line-height: 1; padding: var(--s1) 0; }
-.fcard .to svg { display: block; width: 16px; height: 16px; }
 /* thinking ladder + "?" docs (Tony, Oct 21; SCHEMA.md "Formula ladder"): a formula row is the math + a small "?"; the "?" opens the sheet's doc for it
    right under the row (static, no AI). Middle pieces pop inside the card, smaller, one per Jev hit. [hidden] must win over the display rules below */
 .fcard .f { display: flex; align-items: center; gap: var(--s2); }
@@ -1073,7 +1076,7 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 .fh-more::after { content: ""; position: absolute; inset: -11px -6px; }            /* a bigger tap target round a small word, like .fq */
 .fh-more[aria-expanded="true"] { color: var(--ink); }
 .fh-more:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.fcard :is(.f, .to, .fhs, .fh-more)[hidden] { display: none; }
+.fcard :is(.f, .fhs, .fh-more)[hidden] { display: none; }
 /* the "?" is small and quiet (Tony, Oct 23: "too big"): a 16px muted ring, blue on hover/focus/open; the 44px tap area is its ::after */
 .fq { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 1px solid currentColor; border-radius: 50%;
   background: transparent; color: var(--muted); font: inherit; font-size: 0.6875rem; font-weight: var(--w-em); line-height: 1; cursor: pointer; }
@@ -1090,18 +1093,21 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
 .mcopy::after { content: ""; position: absolute; inset: -14px; }
 .fq + .mcopy { margin-left: 20px; }
 .fcard .fq { z-index: 1; }   /* rows sit ~24px apart, so areas meet across rows too: there the "?" wins (the copy is on top of nothing it shares) */
-/* KEYF-V7 (Tony Nov 18; brain ui-polish/hintbox/v71 .kf, PORT-ARCH row 11 "Sigma rail, no caption"; ui-v7 only): no notch, no tint. A 1px --action-edge squircle frame, the
-   sigma mark on a left rail (16px in, 16px), formulas centred in order with a small quiet arrow. Rail on both sides so a one-row card stays centred under the mark.
+/* KEYF-V7 (Tony Nov 18; brain ui-polish/hintbox/v71 .kf, PORT-ARCH row 11; ui-v7 only): no notch, no tint. A 1px --action-edge squircle frame,
+   the formulas centred in order. KEYF-CLEAN (Tony Nov 19: "w/o the light blue sigma. instead .. a background sigma similar to the duck pls. also
+   remove the chain arrow"): the sigma rail and the chain arrow are gone; the sigma is now a BACKGROUND watermark in the card's bottom-right
+   corner, the verdict tile's duck-silhouette idiom: same hue (--action-on), low opacity, mask of the sprite path, clipped by the card
+   (overflow: hidden), pointer-events none and aria-hidden (it is a ::after). Text over it stays --ink (>= 4.5:1); it never reads louder
+   than the formulas.
    A formula wider than its row: JS (app.js keyfFit) shrinks it to 70%, then it scrolls here with an edge fade; the "?" is outside the scroller */
-.fc-sig { display: none; }
-html.ui-v7 .fcard { margin-top: var(--s5); padding: var(--s3) var(--kf-rail); border: 1px solid var(--action-edge); border-radius: 16px; background: none; }
+html.ui-v7 .fcard { margin-top: var(--s5); padding: var(--s3) var(--s4); border: 1px solid var(--action-edge); border-radius: 16px; background: none; overflow: hidden; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 .fcard { corner-shape: superellipse(1.52); } }
 html.ui-v7 .fc-notch { display: none; }
-html.ui-v7 .fc-sig { display: block; position: absolute; left: var(--s4); top: var(--s4); color: var(--action-on); line-height: 0; }
-html.ui-v7 .fc-sig .ico { width: 16px; height: 16px; }
+html.ui-v7 .fcard::after { content: ""; position: absolute; right: calc(-1 * var(--s3)); bottom: calc(-1 * var(--s4)); width: 120px; height: 120px;
+  background: var(--action-on); opacity: .08; pointer-events: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 5H6l6 7-6 7h12' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 5H6l6 7-6 7h12' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
 html.ui-v7 .fcard ol { margin: 0; row-gap: var(--s1); }
-html.ui-v7 .fcard .to { color: var(--action-on); opacity: .6; padding: 0; }
-html.ui-v7 .fcard .to svg { width: 14px; height: 14px; }
 html.ui-v7 .fcard .f > .fm { font-size: calc(1em * var(--kf-k, 1)); }
 html.ui-v7 .fcard .fm.kf-sx { --kf-l: 0px; --kf-r: 0px; mask-image: linear-gradient(90deg, transparent, #000 var(--kf-l), #000 calc(100% - var(--kf-r)), transparent); }
 .mcopy:is(:hover, :focus-visible) { color: var(--action); }
@@ -1761,37 +1767,50 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
 
 /* == §duck == */
-/* ---------- Cluck's duck + sky (peek.js window.stemDuck; T45 idle peek, docs/design/IDLE-PEEK.md) ----------
-   One duck, one sky, for every Cluck rise. V3 "sky first" (Tony, Oct 15): the sky warms slowly (0.6-4.4 s), the duck peeks, eyes only
-   (4.6 s), holds, comes up (6.2-6.8 s), then the line. Each rise replays the same run; down = duck out 300 ms, sky out 400 ms. The sun core
-   sits under the duck (--sun-x from peek.js); the sky fades out past its column's edges, never a hard cut. Colours: --help only, mixed with
-   transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
+/* ---------- Cluck's duck + dawn (peek.js window.stemDuck; T45 idle peek, docs/design/IDLE-PEEK.md) ----------
+   One duck, one dawn, for every Cluck rise. SUNRISE-PORT (Tony Nov 14 "go", Nov 19): the old warm sky is now one blue-white dawn layer,
+   fitted to 05. The duck peeks, eyes only (4.6 s), holds, comes up (6.2-6.8 s), then the line; down = duck out 300 ms, dawn out 600 ms.
+   Each rise replays the same run. The dawn core sits under the duck (--sun-x from peek.js). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
 .ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
 .ck-rise[hidden] { display: none; }
-/* the dim (Tony, todo 169): the page behind the bottom third eases darker so the sky + duck read; --scrim at an alpha only, under the sky (::before paints first). Same run + fade-out as the sky; opacity only, so reduced motion needs no variant. */
-.ck-rise::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 33.34%; pointer-events: none; opacity: 0;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--scrim) 45%, transparent)); }
-.ck-rise.on::before { animation: ck-dim var(--d-sky) both; }
-.ck-rise.out::before { opacity: 0; animation: none; transition: opacity .6s ease-in; }
-@keyframes ck-dim { 0%, 8.3% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
-html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
+/* SUNRISE-PORT (Tony Nov 14, "go" Nov 19; DESIGN.md §2/§3): ONE blue-white dawn layer replaces the three orange ember layers and the
+   old bottom scrim. Same clock as the ember (0.9 -> 6.6 s of the 10.8 s run), opacity + translateY only. The box keeps the old sky's role:
+   bottom 0, 46% high (55% >=720px), side mask 48px, one <i>; the fitted gradient is sampled from 05 and fades to transparent at the top
+   (mask on the layer), so the question and answer above stay readable. The core is pinned under the duck (--sun-x from peek.js). */
 .ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
-.ck-sky i { position: absolute; inset: 0 0 -16px; opacity: 0; }
-/* fix-sky-grain (Tony Nov 12: the sunrise arc "splits"): the l1 tail is < 1 RGB step per pixel, so 8-bit rounds it into one navy -> warm jump (an arc on OLED). A longer eased tail + a faint grain, masked to the same ellipse, breaks that jump up (dither). Grain rides l1's opacity. */
-.ck-sky .l1 { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px, radial-gradient(150% 80% at var(--sun-x, 50%) 110%, color-mix(in srgb, var(--help) 6%, transparent) 0%, color-mix(in srgb, var(--help) 2.5%, transparent) 50%, color-mix(in srgb, var(--help) 1.4%, transparent) 60%, color-mix(in srgb, var(--help) .6%, transparent) 70%, color-mix(in srgb, var(--help) .15%, transparent) 78%, transparent 86%); -webkit-mask-image: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, #000 0%, #000 50%, transparent 90%); mask-image: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, #000 0%, #000 50%, transparent 90%); }
-.ck-sky .l2 { background: radial-gradient(70% 60% at var(--sun-x, 50%) 108%, color-mix(in srgb, var(--help) 18%, transparent) 0%, color-mix(in srgb, var(--help) 7%, transparent) 45%, transparent 72%); }
-.ck-sky .l3 { background: radial-gradient(38% 30% at var(--sun-x, 50%) 104%, color-mix(in srgb, var(--help) 14%, transparent) 0%, color-mix(in srgb, var(--help) 5%, transparent) 55%, transparent 80%); }
+.ck-sky i { position: absolute; inset: 0; opacity: 0;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%);
+  background: radial-gradient(120% 100% at var(--sun-x, 50%) 100%,
+    var(--dawn-core) 0%, var(--dawn-2) 22%, var(--dawn-3) 42%, var(--dawn-4) 60%,
+    var(--dawn-5) 72%, var(--dawn-6) 82%, var(--dawn-7) 90%, var(--dawn-8) 96%, transparent 100%); }
+html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
 /* the duck: a button, a clip window; the art grows from the window's bottom edge. 44px+ target at the peek (eyes need ~42 / 52px: AMA 12) */
 .ck-peek { position: absolute; left: calc(var(--cx, 50%) - var(--dw) / 2); bottom: env(safe-area-inset-bottom, 0px); width: var(--dw); height: var(--vis);
   overflow: hidden; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
 .ck-peek:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* SUNRISE-DUCK (Tony Nov 14: g3). Flat-lit green-mallard art, own colours kept: the old hue-rotate was only for the orange duck, so it is
+   gone. The CSS grade (mock index.html ?duck=graded, html.graded block) melts the collar into the glow, shades the top with --dawn-5
+   (multiply .4, measured to keep the eye >= 3:1) and adds the periwinkle rim from below (--dawn-core, screen .8), clipped to the duck by
+   its own alpha mask. The 2px --help-sheet outline keeps the silhouette on the glow. */
 .ck-duck { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 122 / 128; transform: translateY(var(--vis));
-  background: url(../../rewards/icons/duck-ask-hmm-128.webp) center / contain no-repeat; pointer-events: none;
-  filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
-.ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s2)); transform: translateX(-50%); margin: 0;
-  color: var(--help-muted); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.3; white-space: nowrap; opacity: 0; }
+  --duck: url(../../rewards/icons/duck-g3-128.webp);
+  background: var(--duck) center / contain no-repeat; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 38%); mask-image: linear-gradient(to top, transparent 0, #000 38%);
+  filter: drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
+.ck-duck::before, .ck-duck::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  -webkit-mask: var(--duck) center / contain no-repeat; mask: var(--duck) center / contain no-repeat; }
+.ck-duck::before { background: linear-gradient(to bottom, var(--dawn-5) 0%, transparent 70%); mix-blend-mode: multiply; opacity: .4; }
+.ck-duck::after { background: radial-gradient(90% 70% at 50% 110%, var(--dawn-core) 0%, transparent 75%); mix-blend-mode: screen; opacity: .8; }
+/* SUNRISE-TEXT c (Tony Nov 14; mock say-c-390.png): a glass pill over the dawn, 15/20 600 +.01em --navy-100 on a 40% navy fill, 20px
+   backdrop blur, 16px radius, a 1px white inset rim. The full sentence stays. --cx from peek.js keeps it over the duck; `translate`
+   handles the -50% centring, so the keyframes own `transform` alone (entry 10.2 -> 10.8 s, opacity + translateY 8px -> 0). */
+.ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s3)); translate: -50% 0; margin: 0;
+  width: max-content; max-width: calc(100vw - 2 * var(--s4)); text-align: center; text-wrap: balance; white-space: nowrap; opacity: 0;
+  color: var(--navy-100); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; letter-spacing: .01em;
+  padding: var(--s2) var(--s4); border-radius: 16px; background: var(--say-glass);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5); backdrop-filter: blur(20px) saturate(1.5); box-shadow: inset 0 0 0 1px var(--say-edge); }
 /* J6 seen: the "felt hollow" tap, a 28px target (24 min) beside the duck, a hollow ring; it shows with the line (same keyframes as .ck-say) */
 .ck-hollow { position: absolute; left: calc(var(--cx, 50%) + var(--dw) / 2 + 4px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); width: 28px; height: 28px;
   padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; opacity: 0; }
@@ -1801,31 +1820,27 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
 .ck-rise.on .ck-hollow { animation: ck-say var(--d-sky) both; }
 .ck-rise.out .ck-hollow { opacity: 0; pointer-events: none; transition: opacity .45s ease-in; }
 @media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
-.ck-rise.on .l1 { animation: ck-l1 var(--d-sky) both; }
-.ck-rise.on .l2 { animation: ck-l2 var(--d-sky) both; }
-.ck-rise.on .l3 { animation: ck-l3 var(--d-sky) both; }
+.ck-rise.on .ck-sky i { animation: ck-dawn var(--d-sky) both; }
 .ck-rise.on .ck-duck { animation: ck-duck var(--d-sky) both; }
 .ck-rise.on .ck-say { animation: ck-say var(--d-sky) both; }
 .ck-rise.out .ck-sky { opacity: 0; transition: opacity .6s ease-in; }
 .ck-rise.out :is(.ck-peek, .ck-say) { opacity: 0; transition: opacity .45s ease-in; }
 .ck-rise.out .ck-peek { pointer-events: none; }
-/* 7.2 s: l1 0.6 → 3.0 → 4.4 s; l2 1.0 → 3.2 → 4.4 s; l3 2.0 → 4.4 s; the sky layers rise 4 / 8 / 14px (§2.8 cap) */
-@keyframes ck-l1 { 0%, 8.3% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 41.7% { opacity: .8; transform: translateY(-2px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-4px); } }
-@keyframes ck-l2 { 0%, 13.9% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 44.4% { opacity: .8; transform: translateY(-4px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-8px); } }
-@keyframes ck-l3 { 0%, 27.8% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-14px); } }
+/* the dawn: same clock as the ember (0.9 -> 6.6 s = 8.3% -> 61.1% of 10.8 s), opacity + translateY(28px -> 0), ease-in-out */
+@keyframes ck-dawn { 0%, 8.3% { opacity: 0; transform: translateY(28px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: none; } }
 /* the duck: peek 4.6 → 5.1 s (eyes only), hold, up 6.2 → 6.8 s; the line 6.8 → 7.1 s */
 @keyframes ck-duck { 0%, 63.9% { transform: translateY(var(--vis)); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 70.8%, 86.1% { transform: translateY(calc(var(--vis) - var(--pk))); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 94.4%, 100% { transform: translateY(0); } }
-@keyframes ck-say { 0%, 94.4% { opacity: 0; } 98.6%, 100% { opacity: 1; } }
-/* reduced motion: no movement. The same phases as opacity only: the duck at its rest place, 45% at the peek, 100% up */
+@keyframes ck-say { 0%, 94.4% { opacity: 0; transform: translateY(8px); animation-timing-function: cubic-bezier(.16, 1, .3, 1); } 98.6%, 100% { opacity: 1; transform: none; } }
+/* reduced motion: no movement. The dawn is at rest (opacity 1); the duck keeps its opacity-only phases (rest, 45% at the peek, 100% up);
+   the line and the hollow tap fade in, never rise */
 @media (prefers-reduced-motion: reduce) {
-  .ck-rise.on .l1 { animation-name: ck-rl1; } .ck-rise.on .l2 { animation-name: ck-rl2; } .ck-rise.on .l3 { animation-name: ck-rl3; }
+  .ck-rise.on .ck-sky i { animation: none; opacity: 1; }
   .ck-rise.on .ck-duck { animation-name: ck-rduck; }
   .ck-duck { transform: none; opacity: 0; }
-  .ck-sky i { transform: none; }
+  .ck-rise.on :is(.ck-say, .ck-hollow) { animation-name: ck-rsay; }
+  .ck-say, .ck-hollow { transform: none; }
 }
-@keyframes ck-rl1 { 0%, 8.3% { opacity: 0; } 41.7% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
-@keyframes ck-rl2 { 0%, 13.9% { opacity: 0; } 44.4% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
-@keyframes ck-rl3 { 0%, 27.8% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rsay { 0%, 94.4% { opacity: 0; } 98.6%, 100% { opacity: 1; } }
 @keyframes ck-rduck { 0%, 63.9% { opacity: 0; } 66.7%, 86.1% { opacity: .45; } 88.9%, 100% { opacity: 1; } }
 
 /* search mode (phones, app.js codingOn): the code field has focus -> the page behind it is hidden, not removed (no reflow, no keyboard jump); solid paper, nothing peeks under the suggestion list */
