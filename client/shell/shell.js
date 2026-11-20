@@ -544,9 +544,9 @@ function layoutDock() {
   else if (proofKb) {
     proofKb = false; if (inProofBox) a.blur();
     /* brainrot.js hands focus back to its lastFocus (= this box) when the YouTube player, loading late, steals it: that re-focus re-entered typing mode 1 run in 3
-       (ICK3 C6/C7 flake, brainrot.js:103 < window blur), whether the player took focus before or after our blur. No keyboard = focus is nowhere: a focusin
-       on <body> resets its lastFocus. */
-    document.body.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+       (ICK3 C6/C7 flake, brainrot.js:103 < window blur), whether the player took focus before or after our blur. No keyboard = focus is nowhere: forget()
+       clears its lastFocus (was a synthetic body focusin, which every other focusin listener also saw). */
+    window.stemBrainrot?.forget?.();
   }
   root.classList.toggle("kbup", kbNow);                                // keyboard up: no expand icon, no pill, no toggle (docs/design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */

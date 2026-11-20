@@ -400,7 +400,7 @@
   /* Tony, Nov 3: "when Cluck starts to generate, collapse the brainrot": app.js calls it as a Cluck stream starts. Docked (desktop) only: it
      folds as the "Hide curated brainrot" link does (the student's own fold, so nothing opens it again but that link); the box below takes the column */
   function fold() { if (!el || !on || stashed || !el.classList.contains("docked")) return; stashed = userMin = true; place(); }
-  window.stemBrainrot = { sync, warmUp, sheet, fold, cats: CATS };
+  window.stemBrainrot = { sync, warmUp, sheet, fold, cats: CATS, forget: () => { lastFocus = null; } };   // forget: shell.js NO-KB (no keyboard = focus is nowhere)
   addEventListener("resize", () => { if (on) place(false); });
   PHONE.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // a window dragged across the phone width: hide it, or bring it in
   NOROT.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // ICK5-NOROT: crossing 900 live hides the dock (and pauses it) or brings it back
