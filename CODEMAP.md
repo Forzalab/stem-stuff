@@ -1,5 +1,7 @@
 # CODEMAP
 
+> ⚠️ READ THIS FIRST. Do not explore/grep/cat the code yourself before reading this map and the target file's header. Blind exploring burns your tokens. (Hook-enforced: brain w147-guard E6.)
+
 Open this file first. Find the row for what you touch, then open only that file.
 Big files start with a CODEMAP HEADER (purpose, sections, related files). Find a section with: grep -n "== §<name> ==" <file>
 Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_checks/codemap.py fix`, then fill its rows in the same PR (rules: brain `_files/skills/codemap/SKILL.md`; CI checks this).
@@ -10,20 +12,20 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `calc.html` | The Calc Coach page. | Calc Coach page markup |
 | `privacy.html` | The privacy page. | privacy text |
 | `sw.js` | Service worker: precache list BASE, cache rules, VERSION stamp. | a new root file must work offline; cache bugs |
-| `client/answer/drill_core/app.js` | The drill: code entry, grading on device, Cluck box, scratchpad, Copy. Has a CODEMAP header. | answer flow, Cluck UI, boot order |
-| `client/cluck/cluck.js` | The Cluck genie, split out of app.js (152a; cut at the genie banner): wish render, Cluck box, replies. Reaches app.js through `bridge`. Has a CODEMAP header. | Cluck box, reply render, wish figures |
-| `client/shell/shell.js` | The shell, split out of app.js (152a; cut at the sugar-rewards banner): rewards, copy math, freeze, Swap, Multitask, resume. Reaches app.js through `bridge`. Has a CODEMAP header. | rewards, Swap, Multitask, dock layout |
-| `client/answer/drill_core/app.css` | Styles of the drill page and tokens. Has a CODEMAP header. ui-v7 radius tokens --r-card/--r-tile/--r-chip (x1.25 under corner-shape) + --lift. | colours, sizes, layout of the drill page |
-| `client/answer/navigation/nav.js` | Prev / Next, question list, TeX to plain text. Has a CODEMAP header. | question order, list, titles |
+| `client/answer/drill_core/app.js` | The drill, part 1 of 3: markdown + TeX (md, renderMath), on-device grading (check, same), code bar + suggestions (syncCode, sugShow), banks (openBank), render/load, repair ladder (repairAfterMiss), MC / freeform / multi answers (renderQuestion, submitFF, submitPart), wait timer. Has a CODEMAP header; see its section below. | answer flow, grading verdict, code entry, MC / typed / multi answer, boot order |
+| `client/cluck/cluck.js` | The Cluck genie, part 2 of 3 (split from app.js): wish stream + cache (wishFromCache, wishEl), live figures in a reply (wishFigs, viewImage), the peek (peekText), the sheet (clOpen, clDrag, phone), dismiss/back (clBack), ask field (clAsk, clSend). Reaches app.js through `bridge`. Has a CODEMAP header. | Cluck box, reply render, wish figures, the sheet, the ask field |
+| `client/shell/shell.js` | The shell, part 3 of 3 (split from app.js): sugar rewards (rewardTry, rewardGo), snack original (origRender), scratchpad + autosave (padPut, copyPad), copy math (selPlain), freeze layer + dock (layoutFreeze, layoutDock), Swap (setSwap), Multitask (applyMT, layoutMT), resume, boot. Reaches app.js through `bridge`. Has a CODEMAP header. | rewards, copy math, Swap, Multitask, dock layout, startup order |
+| `client/answer/drill_core/app.css` | Styles of the drill page: :root tokens, entry bar (.dock .code-box), one button system (.btn .btn-go), freeze layer (.freeze), question + choices (.q .opt), Cluck surfaces (.ai-box .cl), scratchpad (.work .xb), multitask (.sash .pstrip), toast (#toast), duck (.ck-duck), lock-help. Has a CODEMAP header. | colours, sizes, layout of the drill page; a button or toast look |
+| `client/answer/navigation/nav.js` | Prev / Next and the question list: ?bank= link (deepBank), titles (titleOf, plain), TeX to plain text (texText, texPlain), queue per bank (use, hop, upNext), list marks, go(), night mock (startMock), iOS back (syncBack). Has a CODEMAP header. | question order, list, titles, TeX to plain text, mock night |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
 | `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. <= 480px: PHONE-FILL DOM half (`fillLayout`, `fitAll` font 15 -> 10px). | top bar tiles, notch render |
 | `client/answer/progbar/progbar.css` | Styles of the v9d bar, all under `html.ui-v7` (geometry from topbar-v9 fit06/MEASURE.md); §ick14-well = the phone code bar as ONE well (upload inside, list hung off its edge, D1 fill) + bank tile centring (ICK D2). | bar look, tile sizes, the code well |
-| `client/cluck/figures/graph.js` | SVG renderer of graph blocks (cartesian, scene, circuit, network). Has a CODEMAP header. | a figure looks wrong |
+| `client/cluck/figures/graph.js` | SVG renderer of graph blocks, `Graph.render(el, block)`: JSON prep (prep), marks (surface, incline, poly), scene pre-pass (surfacesOf), label layout (mount, drawMarks), cartesian (cartesian, bars), circuit (circuitLayout), network (networkLayout). Has a CODEMAP header. | a figure looks wrong: a mark, axis, circuit, network or label placement |
 | `client/cluck/figures/figcheck.js` | Figure invariants: checks a drawn figure and picks auto hues. | figure rules, auto colours |
-| `client/cluck/figure_language/layout-core.mjs` | The streamed, constraint-checked figure language (Cluck layout core, prototype). | layout engine, figure placement rules |
+| `client/cluck/figure_language/layout-core.mjs` | The streamed, constraint-checked figure language (prototype): parseStatement, createSession (DAG of points + shapes, evaluate), overlap findings as pairs + push vectors (pair, check), Layer/Union, ghosts, sceneSummary for the LLM, layoutView (labels). Plain ESM, no DOM. Has a CODEMAP header. | layout engine, figure placement rules, a parse or overlap finding, label placement |
 | `client/cluck/figure_language/layout-docs.mjs` | The figure language's LLM docs (progressive disclosure) + the built-in scenes of the Figure Lab mockup. | figure language docs or lab scenes |
 | `client/cluck/figures/formula-figs.js` | Small pictures for formula-sheet rows. | formula sheet figures |
-| `client/cluck/openui_views/views.js` | OpenUI Lang renderer in the browser. | a Cluck reply view renders wrong |
+| `client/cluck/openui_views/views.js` | OpenUI Lang renderer in the browser: register / render / stream / mountView, class Session (per-statement paint + error boundary), figure drawing (drawGraph, drawGeometry), components View Head Text Table Tug Flip Graph Geometry Callout Answer Steps Hints Predict Reveal Doodle. Has a CODEMAP header. | a Cluck reply view renders wrong; add or change a view component |
 | `client/cluck/openui_views/views-lib.js` | Component list of the stem view library (from views/library.json). | add a view component |
 | `client/cluck/openui_views/views.css` | Styles of the views. | view look |
 | `client/answer/answer_strip/strip.js` | Answer strip: typed, multiple choice, pick-all, multi-part. | the answer strip |
@@ -83,16 +85,16 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/pure_logic_modules/steps.mjs` | Renumber step badges, pipe tables. | step badges |
 | `client/pure_logic_modules/suggest.mjs` | Code box suggestion list. | code box |
 | `client/pure_logic_modules/tug.mjs` | The Tug view (push-pull rope). | Tug view |
-| `server/http_server/serve.py` | The server: routes, grading, tries, LLM calls. | any server behaviour |
+| `server/http_server/serve.py` | The whole server (dispatch() shared with api/index.py): routes (/check /b /p /state /diagnose /narrate /mini /health), grading + tries (grade, same, slip_hit), modes (sugar/diet), Cluck genie / chat / NOTE streams, proof grading, incidents. Has a CODEMAP header with 15 anchors; see its section below. | any server behaviour: a route, a verdict, a Cluck prompt, an incident code |
 | `api/index.py` | Vercel entry; imports http_server/serve.py. | Vercel routing |
 | `server/accounts/acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
-| `server/cluck_reply_checks/aiw.py` | Python port of the avoid-ai-writing detector. Has a CODEMAP header. | view string lint |
+| `server/cluck_reply_checks/aiw.py` | Python port of the avoid-ai-writing detector: unicode tables, JS-regex-to-Python engine (jsre), pattern tables, masks (code / markdown), `lint_view_strings` for the gate. Mostly regex tables; must match vendored patterns.js. Has a CODEMAP header. | view string lint verdict; a regex or pattern-table bug |
 | `server/cluck_reply_checks/aiw_rewrite.py` | LLM rewrite of lint-flagged view strings. | view string rewrite |
 | `server/cluck_reply_checks/copy_gate.py` | Gate checks for student-facing words (grade level, jargon). | view copy rules |
 | `server/answer_grading/expr.py` | Expression answers: ask for the student's work after a miss. | expression answers |
 | `server/cluck_reply_checks/livefig.py` | Live figures: one fig fence per reply as data. | figures in replies |
 | `server/mini_cluck/mini.py` | Mini-Cluck server side (Socratic helper). | mini-Cluck prompts |
-| `server/cluck_reply_checks/oui.py` | OpenUI Lang 1.0 parser and validator in Python. Has a CODEMAP header. | reply view parsing |
+| `server/cluck_reply_checks/oui.py` | OpenUI Lang 1.0 parser and validator in Python (port of lang-core): lexer, statement split, Pratt expressions, builtins, schema, validate, materialize, parse + StreamParser, merge, evaluator, canon. Has a CODEMAP header. | reply view parsing, validation, streaming parse, canonical form |
 | `server/answer_grading/slips.py` | Slip families for a wrong plain-number answer. | slip hints on server |
 | `server/cluck_reply_checks/views_gate.py` | Server gate for Cluck's openui fences. | view fence gate |
 | `server/` | Python server and its data: moved from the repo root (serve, accounts, grading helpers, OpenUI parser). Covers all of server/. | server code, server layout |
@@ -135,3 +137,152 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/explain_box/explain-box.css` | Styles of the explain box. | explain box look |
 | `client/answer/explain_box/explain-box.js` | Explain box: auto-growing textarea + edit-history snapshots (docs/design/EXPLAIN-BOX.md). | the explain box |
 | `client/labs/` | Design labs: standalone `*-lab.html` pages (login, mini, popover, repair, welcome). | a lab page |
+
+## Section-level depth (big files)
+
+Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name ==' <file>` and open only that slice (line numbers are never kept). Each line: what the part holds, then when to open it.
+
+### server/http_server/serve.py
+- §bank: problems.json + banks/*.json loader, bank versions, public/hidden split (problems, banks, ladder, sheet, formulas, max_tries) — open when a question or bank does not load or a version/ladder is wrong
+- §modes: sugar vs diet mode and the sugar split of choose-all into True/False rows (mode_of, sugar, hidden, sub_problem, lookup, view, public) — open when a question shows in the wrong mode or a split row is wrong
+- §math: sympy behind a token allowlist (to_python, evaluate) — open when a symbolic answer fails to evaluate
+- §grading: number / unit / sig-fig grading, slip hints, tries store, repair_check (same, tol_of, unit_correct, slip_hit, state, mark, grade) — open when a verdict, tries count or slip hint is wrong
+- §expr-answers: W137 expression answers and L3 diagnose (expr_mode, expr_hit, expr_l3, diagnose, expr_explain_store) — open when an expression answer or /diagnose misbehaves
+- §incidents: S-XXXXX incident codes + one JSON log line (incident, log_incident, health_state, OutOfCredit) — open when adding or reading an incident code
+- §trace: per-request flight-recorder trace (set_trace, trace_id, log) — open when a trace line is missing
+- §genie: Cluck genie after a wrong answer, OpenRouter stream (explain_prompt, explain_stream, graph_json, wish_pick) — open when the genie reply or its prompt is wrong
+- §claude-pipe: Claude API path, spend and cooldown (claude_params, claude_system, claude_ok, claude_spent, ReplyCut) — open when the Claude stream, cost cap or fallback acts up
+- §prompt-v4: v4 prompt (Tony's letter as system), leak guards, figure re-ask (v4_user, v4_dynamic, leak_scan, prompt_guard, fig_spec) — open when a reply leaks the answer or a figure spec is wrong
+- §cram-day: TEMPORARY Exam 3 guidance, subject gate, v4_stream, _cluck_stream, emoji_cut — open when cram-day guidance or the stream wrapper is wrong
+- §stage-events: the wait-step lines (stage_line, _staged_relay, explain) — open when the step list shows wrong stages
+- §note-chat: NOTE call under the box and follow-up chat (note, note_block, CLUCK_CHAT, CHAT_TURNS) — open when the note or a chat turn is wrong
+- §proof: proof items W107 (proof_grade, proof_judge, proof_ladder_ok, proof_hint, chat_history, chat) — open when a proof answer is graded or hinted wrong
+- §routes: check_stream, _json, dispatch / _dispatch (/check /diagnose /narrate /mini /calc /health /b /p /state), Handler, `__main__` — open when adding or debugging a route, status code or startup
+
+### client/answer/drill_core/app.js
+- §markdown-tex: markdown + TeX render (renderMath, tok, hl, codeblock, md) — open when question text or math renders wrong
+- §grading: the one on-device grading place (frReq, net, check, staged, same, sig3, unitOk, exactInt, answerOf) — open when a verdict or sig-fig rule is wrong
+- §entry-box: code bar + upload + suggestions (isProof, oneBox, syncCode, putCode, knownCodes, sugShow, sugPick) — open when code entry or suggestions break
+- §banks: practice banks (bankChanged, leaveBank, openBank, openBankIn) — open when switching banks
+- §problem-state: load and render one problem (setBusy, getProblem, load, render, proofHome) — open when a problem loads or draws wrong
+- §twist-chip: Twist chip + its one-time toast (twistChip, twistPop, twistToast, snackChg, drawFigures) — open when the Twist chip acts up
+- §welcome-q1: the welcome Q1 (welcomeDue, welcomeLadder, welcomeQ) — open when the first-visit question is wrong
+- §repair-ladder: repair ladder after a miss (repairAfterMiss, genLadder, repairSkip, repairPick, rpUnmount) — open when ladder steps misbehave
+- §mc-arrow: MC render + the one arrow (renderQuestion, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit) — open when MC options, mid-notes or keyframes draw wrong
+- §second-try: the 10-second wait (startWait, cancelWait, waitPaint, waitSave) — open when the second-try timer breaks
+- §freeform: typed answer, same arrow (wireFF, xPreview, submitFF, proofCE, proofField, ceField) — open when a typed or proof answer box misbehaves
+- §multi: multi-part answers (wireParts, submitPart, partFeedback, settle, record, doneStore, saveDone, doneExit) — open when a multi-part item grades or saves wrong
+
+### client/cluck/cluck.js
+- §genie: wish stream, cache, element (wishLog, ckKey, ckPut, wishFromCache, wishEl, wishReset, wishNew) — open when the Cluck reply stream or cache is wrong
+- §live-figs: live figures and views in a reply (leadOut, slotsResolve, viewImage, figDrop, wishFigs, wishHTML, wishBody, wishCut) — open when a figure in a reply is missing or wrong
+- §peek: start of the steps (peekText, ctaHTML, wishPaint) — open when the peek or CTA is wrong
+- §sheet: Cluck's sheet, one home for what Cluck shows (clEl, clDrag, clPlace, clOpen, clPerm, cluckToast) — open when the sheet drags, opens or places wrong
+- §dismiss: dismiss / back of Cluck's column on desktop (hkShow, clBack, clBackSync, clAvail, clEnter, clTab) — open when Cluck's column will not close or come back
+- §ask-field: the ask field (clAskFocus, clAsk, askFit, clTry, clStatus, clHist, clSend) — open when a follow-up question is sent or shown wrong
+
+### client/shell/shell.js
+- §rewards: sugar rewards (RW, rewardOn, rwSync, rewardTry, rewardMulti, rwMastery, rewardGo) — open when coins or stars misfire
+- §snack-original: the original beside a snack (origRender, hintNudge, origOpen, origPlace, rewardShow, rwBanner, comeback) — open when the original panel or banner is wrong
+- §scratchpad-copy: scratchpad box mount (mountBox) — open when the scratchpad box does not mount
+- §scratchpad-autosave: pad store, autosave, Copy (padGet, padPut, autosave, reentry, copyText, copyPad) — open when pad text is lost or Copy output is wrong
+- §copy-math: copy math as plain text (selPlain, touchesMath, mathCopyBtn) — open when copied math is wrong
+- §freeze: the freeze layer + dock (dockRoom, barOpen, swipeTab, layoutDock, layoutFreeze, showQuestion) — open when the freeze or dock layout breaks
+- §swap: Swap panes (setSwap, applyPane, setPane, layoutSwap, swapFade) — open when Swap misbehaves
+- §multitask: Multitask (mtKind, mtRatio, applyMT, layoutMT, padRule, padFoot) — open when split layout misbehaves
+- §resume: resume — open when a reload does not restore state
+- §boot: startup order (pageState) — open when something runs in the wrong order at load
+
+### client/answer/drill_core/app.css
+- §entry-box: entry bar and dock (.top .dock .entry .code-box) — open when the code bar looks wrong
+- §one-button: the one button system (.btn .btn-go .waiting) — open when any button looks wrong
+- §main-column: main column — open when page width or spacing is wrong
+- §freeze: freeze layer (#sentinel .freeze .freeze-in .more) — open when the sticky top looks wrong
+- §question: question and choices (.q .choices .ch .opt .badge .txt) — open when the card or an option looks wrong
+- §default-cue: default cue labelled Next (.nx .nf .ch.cue) — open when the Next cue looks wrong
+- §cluck-surfaces: Cluck's surfaces (.ai-skin .ai-box .cl .cl-bar) — open when Cluck's box or sheet looks wrong
+- §scratchpad-copy: scratchpad + copy (.work .xb .xb-label .xb-save .xb-field) — open when the scratchpad looks wrong
+- §multitask: multitask (.sash .pstrip .mt-mode .pad-fab) — open when split layout looks wrong
+- §note: the toast (#toast and its states) — open when the note looks wrong
+- §duck: Cluck's duck + sky (.ck-rise .ck-sky .ck-peek .ck-duck .ck-say) — open when the duck or sky looks wrong
+- §lock-help: lock-help modal (.lockhelp .lh-col .lh-say .lh-btns) — open when the help modal looks wrong
+
+### client/answer/navigation/nav.js
+- §bank-link: ?bank= link parsing (deepBank) — open when a bank link opens the wrong bank
+- §titles: problem title as plain text (titleOf, plain, clip) — open when a title shows wrong
+- §tex-plain: TeX to grader-exact plain text (texLex, texParse, texText, texPlain) — open when copied or titled math is wrong
+- §nav-state: bank / mock / night state (init, bank, mark, pool, seqNext, front) — open when progress or the pool is wrong
+- §queue: one queue per bank (use, hop, upNext, fams) — open when question order is wrong
+- §list-marks: done marks in the list (marks, rows, showList, fit) — open when the list marks are wrong
+- §go: Prev/Next press (go) — open when a button press goes to the wrong item
+- §mock: night-before mock (startMock, endNightMock) — open when mock night misbehaves
+- §ios-back: iOS Back (backTarget, syncBack, reconcile) — open when Back leaves the page
+
+### client/cluck/figures/graph.js
+- §json-prep: JSON to drawable, expressions (numify, fnOf, prepMark, norm) — open when a graph block loads wrong
+- §marks: marks shared by scene and cartesian (the S table: surface, incline, poly, seg, arc, circle, dim, rope; LAYER) — open when one mark looks wrong
+- §scene-model: scene pre-pass (surfacesOf, inclines, forces) — open when a physics scene is placed wrong
+- §layout: draw, measure labels, place, grow padding (mount, drawMarks, axisMinOf) — open when a label overlaps or is clipped
+- §axis-cross: where axes cross (crossesOf, crossPlan) — open when an axis crosses at the wrong spot
+- §figcheck: figcheck on the final model (figModel, figFindings) — open when an invariant check flags or misses
+- §degrade: degrade + telemetry (degrade, figReport, niceStep, ticks) — open when a figure falls back or ticks are wrong
+- §cartesian: cartesian plots (cartesian, bars) — open when a plot or bar chart is wrong
+- §circuit: kind circuit (circuitLayout, place, gateBody, pinStop, circuit) — open when a circuit draws wrong
+- §network: kind network (networkLayout, network) — open when a network draws wrong
+- §entry: prep + render + export (prep, render) — open when the Graph.render entry misbehaves
+
+### client/cluck/figure_language/layout-core.mjs
+- §language: vocabulary (POINT_OPS, SHAPE_SIGS, LAYER_SIG, KINDS, TONES) — open when adding a shape or op
+- §parser: tokenizer + statement parser (tokenize, parseTokens, parseStatement, splitDone, planValue) — open when a statement will not parse
+- §geometry: polygon + point helpers (triangulate, segPoly, geomPts, sidePoint, measureOf) — open when contact or containment maths is wrong
+- §curve: Curve through named points (crBeziers, flattenCurve, taper) — open when a Curve is wrong
+- §session: createSession state, val, pointOp, named, compute, curveGeom — open when a shape lands in the wrong place
+- §layers: Layer / Union specs (layerSpec, unionSpec, meta, stepOf) — open when step layers or unions misbehave
+- §conflicts: pair + containment checks, hints, mover (pair, containment, conflictsOf, tryMover, check) — open when an overlap finding or push vector is wrong
+- §settle: DAG settle (combine, block, settle, detectCycles, validateFix, rebuild, applyFixes) — open when Fix or cycles misbehave
+- §stream: incremental input (snapshot, addText, push, end) — open when streaming input mis-parses
+- §findings: plan / pending / meta / leak findings (planOut, pendingFindings, metaFindings, applyShush, leakFindings) — open when a finding message is wrong
+- §result: result() output object — open when the output shape changes
+- §ghosts: dashed ghosts as data (paramsOf, ghostOf, ghostLine) — open when a ghost is wrong
+- §scene-summary: one line per shape for the LLM (sceneSummary, planLines, legendLines, stepLines, formatFindings) — open when the LLM-facing text is wrong
+- §view-layout: screen view + label layout (layoutView, fitView, zoomView, toScreen, remap) — open when a label placement or zoom is wrong
+
+### client/cluck/openui_views/views.js
+- §dom-helpers: register, h, fill, rich, icon, button (no innerHTML) — open when adding a DOM helper or slot fill
+- §statements: statement splitting (splitStatements, rootIds, capError) — open when streaming splits wrong or caps fire
+- §session: class Session, mountView, render, stream (paint per statement, error boundary, Reveal patch merge) — open when streaming or patching a view breaks
+- §figure-marks: graph + geometry drawing (graphModel, drawGraph, geoModel, drawGeometry, sample, chips, table) — open when a figure in a view draws wrong
+- §l0: View, Head, Text, Legend, Table, Tug, Flip, Graph, Geometry — open when one of these components is wrong
+- §l1: Callout, Answer — open when those components are wrong
+- §steps: Steps helpers (litMarks, sayMap, texHue, texNode) + Steps — open when the stepper or its lit parts are wrong
+- §hints: Hints — open when hints reveal wrong
+- §predict-reveal: Predict (posts the pick) + Reveal (patch-merged body) — open when predict or reveal misbehaves
+- §doodle: Doodle — open when the doodle draws wrong
+
+### server/cluck_reply_checks/aiw.py
+- §unicode-tables: unicode ranges as node sees them (_ranges, _complement, _bmp_class) — open when a char class differs from JS
+- §regex-engine: JS regex to Python (_Tr, RX, jsre) — open when a regex translates wrong
+- §js-helpers: JS number / string / UTF-16 helpers (js_trim, js_round, js_tofixed, cps, cp_len) — open when a count differs from JS
+- §detector: detector start, same order as the JS — open to find where detection begins
+- §normalize: tier 1 pre-pass (normalize_text, counts_as_bypass) — open when lookalike chars are mis-normalized
+- §technical-exempt: technical exempt words (features_is_noun) — open when a technical word is flagged
+- §pattern-tables: issue weights and pattern tables — open when changing a pattern; do not reorder
+- §neg-parallelism: negative parallelism issues (negative_parallelism_issues) — open when "not X but Y" flags wrong
+- §mask-code: fence / inline code / front matter masks (fence_ranges, inline_code_ranges, mask_code) — open when code is linted
+- §mask-markdown: rendered markdown mask (mask_rendered_markdown, mask_ignore_regions, mask_quoted_spans) — open when markdown or quotes are linted
+- §helpers: tokenize, count_words, get_sentences, match_patterns, build_v2_defaults — open when a count or sentence split is off
+- §gate-lint: lint_view_strings, _main — open when the gate's lint verdict is wrong
+
+### server/cluck_reply_checks/oui.py
+- §js-semantics: JS value rules (slot_id, js_number, to_number, js_str, truthy, loose_eq) — open when a value coerces differently from JS
+- §lexer: tokenizer (tokenize) — open when a token is wrong
+- §statements: statement split (auto_close, split) — open when a statement boundary is wrong
+- §expressions: Pratt expression parser (parse_expression, prefix, infix) — open when an expression parses wrong
+- §builtins: built-in functions (_filter, _sort, _sum, _round, _int_op) — open when a builtin returns the wrong value
+- §schema: library schema compile (Catalog, compile_schema, schema_default) — open when the component schema loads wrong
+- §validation: value validation (Ctx, params_signature, _leaf, _composite) — open when a valid view is rejected
+- §materialize: AST to result (_materialize_call, name_args, map_call_args) — open when call args map wrong
+- §parser: parse + StreamParser (_classify, _extract, _build, _find_fence) — open when parsing or streaming breaks
+- §merge: patch merge (merge_statements) — open when a Reveal patch merges wrong
+- §evaluator: runtime evaluator (Step, Env, get_state, _eval_args) — open when state or plans evaluate wrong
+- §canon: canonical form (bindable, env_for, resolve, summarize, canon) — open when the canonical text differs
