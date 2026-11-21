@@ -1,3 +1,25 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: views.js
+// WHAT: The vanilla OpenUI Lang renderer in the browser: register(name, fn), render, stream, mountView; one Session per mounted view; the component set (View, Head, Text, Graph, Geometry, Steps, Hints, Predict, Reveal, Doodle ...).
+// START HERE: a reply view renders wrong -> find its register("Name") in §l0, §l1, §steps, §hints, §predict-reveal; a streaming or patch bug -> §statements, §session; a figure drawing -> §figure-marks.
+// FIND A SECTION: grep -n "== §<name> ==" views.js   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §dom-helpers     register, h, fill, rich, icon, button (no innerHTML)
+//   §statements      statement splitting: splitStatements, rootIds, capError
+//   §session         class Session + mountView, render, stream (paint per completed statement, error boundary, Reveal patch merge)
+//   §figure-marks    graph and geometry drawing: graphModel, drawGraph, geoModel, drawGeometry, sample, chips, table
+//   §l0              View, Head, Text, Legend, Table, Tug, Flip, Graph, Geometry
+//   §l1              Callout, Answer and friends
+//   §steps           Steps helpers (litMarks, sayMap, texHue, texNode) + register("Steps")
+//   §hints           register("Hints")
+//   §predict-reveal  register("Predict") (posts the pick) + register("Reveal") (patch-merged body)
+//   §doodle          register("Doodle")
+// RELATED:
+//   views-lib.js    caps and component list
+//   views.css       the look (by cascade)
+//   oui.py          server parser of the same language
+//   cluck.js        mounts views in replies
+// ===== END CODEMAP HEADER =====
 // views.js: the vanilla OpenUI Lang renderer (render plan v2 §5 option A, §6.5; modeled on OpenUI's vue-lang binding).
 //   register(name, fn)          fn(props, ctx) -> Node; ctx = { doc, id, render(el), state(init), predict, patch, h, icon, rich }
 //   render(program, mount, o)   whole program -> handle
@@ -26,6 +48,7 @@ export function register(name, fn) {
 }
 export const registered = () => [...REG.keys()];
 
+// == §dom-helpers ==
 // ─── DOM helpers (no innerHTML: every string the model typed becomes a text node) ───
 const SVGNS = "http://www.w3.org/2000/svg";
 const SVG_TAGS = new Set(["svg", "g", "circle", "line", "polygon", "path", "text", "rect", "ellipse", "title"]);
@@ -69,6 +92,7 @@ function icon(doc, name, sm) {
 }
 const button = (doc, ico, label, extra = "") => h(doc, "button", { type: "button", class: `btn${extra}`, "aria-label": label }, icon(doc, ico));
 
+// == §statements ==
 // ─── statements ───
 /** Split text into completed statements (a newline at bracket depth 0, outside a string) and the unfinished rest. */
 export function splitStatements(buf) {
@@ -127,6 +151,7 @@ function capError(el) {
   return null;
 }
 
+// == §session ==
 // ─── one mounted view ───
 class Session {
   constructor(mount, o = {}) {
@@ -271,6 +296,7 @@ export async function stream(chunks, mount, o) {
   return v;
 }
 
+// == §figure-marks ==
 // ─── figure marks (DESIGN-LANGUAGE strokes; the class carries the state, views.css the look) ───
 const pairs = s => String(s || "").split(/[\s,]+/).filter(Boolean).map(t => { const i = t.lastIndexOf(":"); return [t.slice(0, i), t.slice(i + 1)]; });
 function graphModel(p) {
@@ -537,6 +563,7 @@ function table(doc, head, rows, rowClass = () => null) {
     h(doc, "tbody", null, rows.map(r => h(doc, "tr", { class: rowClass(r) }, r.map(c => h(doc, "td", null, c))))));
 }
 
+// == §l0 ==
 // ─── L0 ───
 register("View", (p, c) => c.h("div", { class: "vw-col" }, (p.children || []).map(c.render)));
 register("Head", (p, c) => c.h("div", { class: "vw-head" }, c.h("h3", { class: "vw-t" }, p.title), p.sub && c.h("p", { class: "vw-sub" }, p.sub)));
@@ -562,6 +589,7 @@ register("Geometry", (p, c) => {
   return c.h("div", { class: "vw-fig vw-geo", role: "img", "aria-label": p.alt || "figure", "data-fig-findings": "" }, svg);
 });
 
+// == §l1 ==
 // ─── L1 ───
 register("Callout", (p, c) => c.h("div", { class: "vw-callout" }, c.h("div", { class: "vw-tag" }, p.tag), c.h("p", null, c.rich(p.text))));
 register("Answer", (p, c) => c.h("p", { class: "vw-p" }, c.h("span", { class: "vw-ans" }, p.value), p.text ? " " : null, p.text ? c.rich(p.text) : null));
@@ -570,6 +598,7 @@ register("Answer", (p, c) => c.h("p", { class: "vw-p" }, c.h("span", { class: "v
     A token names a point "A", a segment "A-B" (either order) or a mark's label as written ("F", "\\theta"; $ and spaces ignored). */
 const GEO_ARGS = { seg: 2, circle: 1, right: 3, dim: 2, angle: 3, arrow: 2, label: 1, rect: 2, poly: 0 };   // point args before a mark's label (circle: its centre)
 const litNorm = x => String(x).replace(/[$\s{}]/g, "");
+// == §steps ==
 export function litMarks(marks, lit, ptNames = null) {
   const toks = String(lit || "").trim().split(/\s+/).filter(Boolean).map(litNorm);
   if (!toks.length) return null;
@@ -720,6 +749,7 @@ register("Steps", (p, c) => {
   return root;
 });
 
+// == §hints ==
 register("Hints", (p, c) => {
   const hs = p.hints || [], st = c.state(() => ({ i: 0 }));
   const text = c.h("p"), n = c.h("span", { class: "vw-n" });
@@ -732,6 +762,7 @@ register("Hints", (p, c) => {
 
 /** Predict (F5/F15): pills + pips + one filled Check. The pick goes to ctx.predict with the key ref
 // (p.answer = "key.<id>", F5); the ref is never resolved or drawn, and no answer literal ever comes as a prop. */
+// == §predict-reveal ==
 register("Predict", (p, c) => {
   const tries = p.tries || 2, struck = new Set((p.struck || []).map(String));
   const st = c.state(() => ({ pick: null, used: struck.size, wrong: new Set(struck), right: null, busy: false, verdict: null }));
@@ -800,6 +831,7 @@ const DRAW = {
   spark: d => [h(d, "circle", { class: "b o", cx: 60, cy: 50, r: 16 }),
     h(d, "path", { class: "w", d: "M60 10v14M60 76v14M20 50h14M86 50h14M32 22l10 10M78 68l10 10M88 22 78 32M42 68 32 78" })],
 };
+// == §doodle ==
 register("Doodle", (p, c) => {
   const kind = DOODLES.includes(p.kind) ? p.kind : "duck";
   return c.h("figure", { class: `vw-doodle ${kind}` },

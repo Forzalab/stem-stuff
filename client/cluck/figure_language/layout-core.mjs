@@ -1,3 +1,27 @@
+// ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+// FILE: layout-core.mjs
+// WHAT: The streamed, constraint-checked figure language (Cluck layout core, prototype): parse statements, evaluate a DAG of points and shapes, report overlaps as pairs with push vectors, lay out labels. Plain ESM, no DOM.
+// START HERE: a statement will not parse -> §parser (tokenize, parseStatement); a shape lands wrong -> §session (compute, pointOp, curveGeom); an overlap or contact finding -> §conflicts; a label placement -> §view-layout (layoutView); text fed to the LLM -> §scene-summary.
+// FIND A SECTION: grep -n "== §<name> ==" layout-core.mjs   (names below; line numbers are never kept)
+// SECTIONS (in file order):
+//   §language       the vocabulary: POINT_OPS, SHAPE_SIGS, LAYER_SIG, KINDS, TONES
+//   §parser         tokenizer + OpenUI statement parser: tokenize, parseTokens, parseStatement, splitDone, planValue
+//   §geometry       polygon + point helpers on figcheck: triangulate, segPoly, geomPts, sidePoint, measureOf
+//   §curve          Curve through named points: crBeziers, flattenCurve, taper
+//   §session        createSession start: state, fids, val, pointOp, named, compute, curveGeom
+//   §layers         Layer / Union specs: layerSpec, unionSpec, meta, stepOf
+//   §conflicts      pair + containment checks, hints, mover: pair, containment, conflictsOf, tryMover, check
+//   §settle         DAG settle: combine, block, settle, detectCycles, validateFix, rebuild, applyFixes
+//   §stream         incremental input: snapshot, addText, push, end
+//   §findings       plan / pending / meta / leak findings: planOut, pendingFindings, metaFindings, applyShush, leakFindings
+//   §result         result(): the session's output object
+//   §ghosts         dashed ghosts as data: paramsOf, ghostOf, ghostLine
+//   §scene-summary  one line per shape for the LLM: sceneSummary, planLines, legendLines, stepLines, formatFindings
+//   §view-layout    screen view + label layout: layoutView, fitView, zoomView, toScreen, remap
+// RELATED:
+//   figcheck.js     SAT collide, contactGap, autoHues (the only import)
+//   layout-docs.mjs the LLM docs + built-in lab scenes
+// ===== END CODEMAP HEADER =====
 // layout-core.mjs: the streamed, constraint-checked figure language (Cluck layout core, prototype; plan: brain
 // projects/calc/_files/cluck-stepper-2026-11-08/layout-map/MAP.md, decisions Q17-Q32 + Fable review).
 // One statement per line, OpenUI Lang shape `id = Comp(args)`. Points are computed by the renderer (Pt Mid Along Off Foot Rot
@@ -28,6 +52,7 @@ const fv = p => `(${fmt(p[0])}, ${fmt(p[1])})`;
 const fp = p => `(${r3(p[0])}, ${r3(p[1])})`;
 const finite = p => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
+// == §language ==
 // ─── the language ───
 export const POINT_OPS = { Pt: ["x", "y"], Mid: ["A", "B"], Along: ["A", "B", "t"], Off: ["P", "dx", "dy"], Foot: ["P", "A", "B"], Rot: ["O", "P", "deg"], Meet: ["A", "B", "C", "D"], Centre: ["S"], Center: ["S"], Side: ["S", "side"], Edge: ["S", "i", "t"] };
 export const SHAPE_SIGS = { Seg: "Seg(A, B, opts?)", Box: "Box(C, w, h, deg?, opts?)", Poly: "Poly([A, B, C, ...], opts?)", Circle: "Circle(O, r, opts?)", Vec: "Vec(A, B, label?, opts?)", Label: "Label(P, text, opts?)", Angle: "Angle(A, O, B, label?, opts?)", Dim: "Dim(A, B, text, opts?)", Curve: "Curve([A, B, C, ...], opts?)" };
@@ -42,6 +67,7 @@ const AREA = new Set(["Box", "Poly", "Circle"]), DECOR = new Set(["Vec", "Label"
 const FIX_TRAITS = { Pt: ["x", "y"], Box: ["w", "h", "deg"], Circle: ["r"], Seg: [], Poly: [], Vec: ["label"], Label: ["text"], Angle: ["label"], Dim: ["text"], Curve: [], Union: [] };
 const isArea = sh => AREA.has(sh.comp) || (sh.comp === "Curve" && sh.geom.area);   // a closed or wide Curve is an area; an open thin one is a line
 
+// == §parser ==
 // ─── tokenizer + parser (the OpenUI Lang statement subset: numbers, strings, refs, calls, [arrays], {objects}, + - * /) ───
 function perr(code, message) { const e = new Error(message); e.code = code; return e; }
 function tokenize(s) {
@@ -220,6 +246,7 @@ function planValue(key, text) {
   return num.length ? num : text.split(/\s*[,;]\s*/).filter(Boolean);
 }
 
+// == §geometry ==
 // ─── geometry helpers on top of figcheck ───
 const isSeg = s => s.kind === "wseg" || (s.kind === "poly" && s.pts.length === 2);
 const segPoly2 = s => ({ kind: "poly", id: s.id, pts: s.pts });
@@ -405,6 +432,7 @@ function outOf(a, b, body) {   // figcheck outOf for a bare segment (world space
   return dot(sub(centroid(body), a), n) < 0 ? mul(n, -1) : n;
 }
 
+// == §curve ==
 // ─── Curve: a smooth curve through named points (centripetal Catmull-Rom, alpha 0.5, as cubic Beziers), flattened ONCE at a
 // fixed tolerance; the same polyline is drawn and collided (research/llm-freeform-shapes.md, shortlist 1-2) ───
 export const CURVE_TOL = 0.01;                   // world units (figures are 4-10 units wide: well under a pixel at 390px)
@@ -460,6 +488,7 @@ function selfCross(pts, closed) {
   return false;
 }
 
+// == §session ==
 // ─── the session: incremental parse + DAG evaluation + checks ───
 export function createSession(opts = {}) {
   const o = { mover: false, W: 360, ...opts };
@@ -666,6 +695,7 @@ export function createSession(opts = {}) {
   }
 
   // ── Layer + Union membership (parsed from the statements' own text: they name ids, they are not values) ──
+  // == §layers ==
   const idList = a => (a && a.t === "arr" && a.items.every(x => x.t === "ref" || x.t === "str") ? a.items.map(x => x.t === "ref" ? x.id : x.v) : a && (a.t === "ref" || a.t === "str") ? [a.id ?? a.v] : null);
   const litVal = v => (v.t === "ref" ? v.id : v.t === "num" || v.t === "str" || v.t === "bool" ? v.v : v.t === "null" ? null : undefined);
   function layerSpec(st) {
@@ -715,6 +745,7 @@ export function createSession(opts = {}) {
 
   // ── checks: one pair (X later by index, Y earlier); returns a conflict {code, depth, mtv (moves X), hint} or null ──
   function headOf(v, tol) { const u = unit(sub(v.geom.b, v.geom.a)), hl = Math.min(4 * tol, 0.5 * len(sub(v.geom.b, v.geom.a))); return fcCircle(v.id + ":head", sub(v.geom.b, mul(u, hl / 2)), hl / 2); }
+  // == §conflicts ==
   function pair(X, Y, tol) {
     if (X.kind === "overlay" || Y.kind === "overlay") return null;
     if (["Label", "Angle", "Dim"].includes(X.comp) || ["Label", "Angle", "Dim"].includes(Y.comp)) return null;
@@ -842,6 +873,7 @@ export function createSession(opts = {}) {
       emit({ type: "ghost", ghost });
     }
   }
+  // == §settle ==
   function combine(d, m) {   // sum push vectors, but never double-count along the same direction
     const u = unit(m), along = dot(d, u);
     return along >= len(m) ? d : add(d, mul(u, len(m) - Math.max(0, along)));
@@ -955,6 +987,7 @@ export function createSession(opts = {}) {
     }
   }
   /** the shapes as they stand at step k: only the Fix patches of the prefix and layers 1..k apply (silent: no checks, no events) */
+  // == §stream ==
   function snapshot(k) {
     const keep = S, keepEv = events;
     S = fresh(); quiet = true;
@@ -1016,6 +1049,7 @@ export function createSession(opts = {}) {
     return ev;
   }
   /** the plan as data ({goal, anchor, layers, budget}, null when no plan line came) + its fyi checks against what was drawn */
+  // == §findings ==
   function planOut() {
     if (!plan.lines) return null;
     return { goal: plan.goal ?? null, anchor: plan.anchor ?? null, layers: plan.layers ?? null, budget: plan.budget ?? null };
@@ -1138,6 +1172,7 @@ export function createSession(opts = {}) {
     for (const d of M.layers) if (!d.err && d.title) test(d.title, d.st);   // Layer title (the engine's "Step k" default is not author text)
     return out;
   }
+  // == §result ==
   function result(opt = {}) {
     const W = opt.W || o.W, M = meta();
     const shapes = shapesEval().sort((a, b) => a.idx - b.idx);
@@ -1189,6 +1224,7 @@ export function evaluate(src, opts = {}) {
   return s.result();
 }
 
+// == §ghosts ==
 // ─── ghosts as data (text-first feedback: the LLM reads where a shape must go) ───
 function paramsOf(sh) {
   const g = sh.geom;
@@ -1209,6 +1245,7 @@ export function ghostLine(g) {
   return `${g.id}: move by ${fv(g.mtv)} -> ${where}${t.w != null ? ` (w ${t.w}, h ${t.h}, deg ${t.deg})` : t.r != null ? ` (r ${t.r})` : ""}; clears ${g.of.join(", ")}`;
 }
 
+// == §scene-summary ==
 // ─── the scene summary: one line per shape (id, kind, centre, size, angle, touching / overlapping neighbours) ───
 export function sceneSummary(res) {
   const shapes = res.shapes, tol = res.tol, lines = [];
@@ -1282,6 +1319,7 @@ export function formatFindings(findings, shushed = []) {
   return [llm.length ? "Fix these:" : "No spatial errors.", ...llm.map(one), ...(fyi.length ? ["FYI (no action needed):", ...fyi.map(one)] : []), ...(shushed.length ? ["Shushed:", ...shushed.map(s => `- ${s.fid}: ${s.reason}`)] : [])].join("\n");
 }
 
+// == §view-layout ==
 // ─── view + label layout (screen px, y down). Every label sits INSIDE its anchor or RIGHT NEXT to it without crossing a stroke, a
 // filled body or another label; else it goes to the LEGEND row under the drawing, beside a small render of its anchor (no leader
 // lines). Dim(A, B, text) places a dimension line beside AB on the outside, then the other side, then further out. Statement order wins. ───
