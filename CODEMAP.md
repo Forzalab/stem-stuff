@@ -107,6 +107,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `SCHEMA.md` | Format of problems, banks, graph blocks, ladders. | any data format |
 | `api/` | Vercel function entry. | Vercel entry |
 | `server/math_engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
+| `.claude/hooks/codemap-first.sh` | Repo CODEMAP-first gate: pipes the PreToolUse hook JSON to brain `scripts/w147-guard.sh` (E6) when present, else allows. Registered in `.claude/settings.json`. Logic lives only in the brain. | the CODEMAP-first hook, Claude Code hook setup |
 | `tools/build_and_ship/` | Build + ship the site (build_public.py, bundle.py, ship.sh, openui/). | build, deploy |
 | `tools/build_and_ship/bridge_gen.py` | Writes vercel.json bridge rules (stub rewrites + 307 redirects) from the rename map; BRIDGE, todo 167. | old URLs, vercel.json |
 | `client/shell/stale_reload.js` | BRIDGE stub (todo 167): a stale page's old .js URL reloads once after a service-worker update. | old URLs, stale pages |
