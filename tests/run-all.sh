@@ -184,6 +184,7 @@ weight() {
     retry-wait) echo 49 ;;   # local estimate: 49.0 s, STEM_TODAY=2026-10-23, shared server (not CI-measured)
     tab-countdown) echo 20 ;;   # local estimate, shares the retry-wait clock setup (not CI-measured)
     cluck-drag) echo 20 ;;   # local estimate (not CI-measured)
+    smokes) echo 60 ;;   # tests/*.smoke.mjs in turn, local 41 s for 9 (Nov 20), x1.5 for CI
     calc) echo 18 ;;   # Calc Coach smoke (calc-coach.js), own server + fixture bank, 390 only
     calc-pick) echo 8 ;;   # the calculator model picker smoke (calc-pick.js), own server, 390 only; local ~6 s
     welcome-first) echo 8 ;;   # the once-per-user welcome redirect (welcome-first.js), own server; local ~5 s
@@ -267,7 +268,7 @@ tags() {
     stages@phone|stages@desk) echo "@logic @fast-time" ;;   # 160 PR-B: the page clock is paused and moved by hand (clock.runFor)
     autosave|bank|blind|choose-all|choose-all-spam|done|easy|flight|incident|mcclick|mode-reset|nav-stable|ios-back|net-retry|next-dead|prefix) echo "@logic @real-time" ;;
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
-    guard|cluck-drag) echo "@layout @real-time" ;;   # W104 sleeping guard, own server
+    guard|cluck-drag|smokes) echo "@layout @real-time" ;;   # W104 sleeping guard, own server
     queue-walk|redo-note|next-reset|tab-countdown) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
     cluck-rise|idle-peek|nudge|seen|retry-wait) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
@@ -511,7 +512,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|brainrot-b|brainrot-torus|fport-ladder-verdict|verdict-card|cluck-btn|qcard|calc-toast|fport-hint-toast|gap-batch1|progbar-wave|cram-cta-off) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|figstream|figgap|caret|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|brainrot-b|brainrot-torus|fport-ladder-verdict|verdict-card|cluck-btn|qcard|calc-toast|fport-hint-toast|gap-batch1|progbar-wave|cram-cta-off|smokes) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       toast-gap) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" "$TMP/shots" ;;   # TOAST-GAP: own server, shots into the run TMP
       *) if srv_gate "$name"; then run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots"

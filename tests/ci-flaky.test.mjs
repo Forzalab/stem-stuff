@@ -17,7 +17,7 @@ const entry = (spec) => ({ spec, test: "*", owner: "t", reason: "#1", added: "20
 // fake spec: fails its first `failN` runs (counter file), then passes. calls = [[name, failN], ...] run in one lane process.
 function lane(calls, jailed = [], extra = {}) {
   const dir = mkdtempSync(join(tmpdir(), "flaky-"));
-  const jail = join(dir, "jail.json"); writeFileSync(jail, JSON.stringify(jailed.map(entry)));
+  const jail = join(dir, "jail.json"); writeFileSync(jail, JSON.stringify(jailed.map(n => ({ ...entry(n), expires: "2099-12-31" }))));   // real clock here (run-all reads Date.now): a fixed date became a time bomb on 2026-11-21
   const body = calls.map(([n, k]) => `run ${n} bash -c 'c=${dir}/${n}.n; i=$(cat $c 2>/dev/null || echo 0); echo $((i+1)) >$c; [ $i -ge ${k} ] || { echo "FAIL inner"; exit 1; }'`).join("\n");
   const r = spawnSync("bash", ["-c", `set -uo pipefail; export EPOCHREALTIME; TMP="$(mktemp -d)"; fails=0; free_port() { echo 54321; }\n${region}\n${body}\nexit $fails`],
     { cwd: root, encoding: "utf8", env: { ...process.env, FLAKY_FILE: join(dir, "flaky.txt"), FLAKY_JAIL: jail, ...extra } });

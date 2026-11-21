@@ -51,15 +51,15 @@ try {
     const m = await v7.page.evaluate(() => { const l = document.querySelector("#blocks .cb .l"), s = getComputedStyle(l, "::before"); return { d: s.display, va: s.verticalAlign, pos: s.position, lh: s.lineHeight, h: l.getBoundingClientRect().height }; });
     assert.deepEqual([m.d, m.va, m.pos, m.lh], ["inline-block", "baseline", "static", "9px"]);
     assert.ok(m.h < 24, `row height ${m.h}`);
-    const box = await v7.page.evaluate(() => { const l = document.querySelector("#blocks .cb .l"), r = l.getBoundingClientRect(), cb = l.closest(".cb").getBoundingClientRect(), pad = parseFloat(getComputedStyle(l).paddingLeft); return { x: cb.left, y: r.top, w: r.width, h: r.height, gut: pad }; });
+    const box = await v7.page.evaluate(() => { const l = document.querySelector("#blocks .cb .l"), r = l.getBoundingClientRect(), cb = l.closest(".cb").getBoundingClientRect(), pad = parseFloat(getComputedStyle(l).paddingLeft), g = document.createRange(); g.selectNodeContents(l); const tr = Math.max(...[...g.getClientRects()].map(q => q.right)); return { x: cb.left, y: r.top, w: r.width, h: r.height, gut: pad, txt: tr - cb.left }; });   // txt: the code text's right edge (the scan must stop there: the box edge / fade band right of it is not ink, seen since #690)
     const png = await v7.page.screenshot({ clip: { x: box.x, y: box.y, width: box.w, height: box.h } });
-    const rows = await v7.page.evaluate(async ({ b64, gut, cbx }) => {
+    const rows = await v7.page.evaluate(async ({ b64, gut, txt, cbx }) => {
       const img = new Image(); img.src = "data:image/png;base64," + b64; await img.decode();
       const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
       const d = x.getImageData(0, 0, c.width, c.height).data, bg = [d[0], d[1], d[2]];
       const low = (x0, x1) => { let lo = -1; for (let y = 0; y < c.height; y++) for (let X = x0; X < x1; X++) { const k = (y * c.width + X) * 4; if (Math.abs(d[k] - bg[0]) + Math.abs(d[k + 1] - bg[1]) + Math.abs(d[k + 2] - bg[2]) > 90) { lo = y; break; } } return lo; };
-      return { num: low(0, Math.round((gut - 4) * 2)), code: low(Math.round(gut * 2), c.width) };
-    }, { b64: png.toString("base64"), gut: box.gut, cbx: 0 });
+      return { num: low(0, Math.round((gut - 4) * 2)), code: low(Math.round(gut * 2), Math.min(c.width, Math.round(txt * 2))) };
+    }, { b64: png.toString("base64"), gut: box.gut, txt: box.txt, cbx: 0 });
     assert.ok(rows.num > 0 && rows.code > 0, `no ink found ${JSON.stringify(rows)}`);
     assert.ok(Math.abs(rows.num - rows.code) <= 2, `lowest ink row: number ${rows.num} vs code ${rows.code} (device px)`);
   });

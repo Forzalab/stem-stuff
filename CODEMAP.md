@@ -117,6 +117,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `tools/repo_checks/` | Repo checks (move_inventory, codemap, mutants). | checks, refactor |
 | `tools/repo_checks/client_paths.py` | Static path checker: dangling import/src/href/url in client files. | dangling path, checks |
 | `tests/` | All tests; run with tests/run-all.sh (--quick for the fast tier). | test or fixture |
+| `tests/smokes.pw.mjs` | CI lane that runs every `tests/*.smoke.mjs` in turn (each boots its own server). A new feature smoke joins CI just by its name. | adding a feature smoke |
 | `client/rewards/` | Coin and star fx scripts and icons. | rewards fx |
 | `client/resources/texts/` | Cluck line pools (JS data) and payload spec. | Cluck wording |
 | `shared/openui/` | OpenUI view registry, library.json, prompts. | view components |

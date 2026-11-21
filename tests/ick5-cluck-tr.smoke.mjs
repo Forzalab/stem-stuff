@@ -118,7 +118,9 @@ const sample = page => page.evaluate(() => {
     if (performance.now() - t0 < 2000) requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 });
-const samples = page => page.evaluate(() => window.__samples || []);
+/* read only once the sampler's own rAF tick has logged a cb-inbox frame: under reduced motion the move is instant, so inbox() could resolve
+   and the read land before that tick ran (AC7 reduce "no frame saw cb-inbox", ~1 run in 8) */
+const samples = async page => { await page.waitForFunction(() => (window.__samples || []).some(x => x.inbox), null, { timeout: 3000 }).catch(() => {}); return page.evaluate(() => window.__samples || []); };
 const inbox = page => page.waitForFunction(() => { const b = document.getElementById("cluckBtn"); return !!b && b.classList.contains("cb-inbox") && !!b.closest("#q .ff.proof"); }, null, { timeout: 8000 });
 const onCard = page => page.waitForFunction(() => { const b = document.getElementById("cluckBtn"); return !!b && b.parentElement && b.parentElement.id === "problem" && !b.classList.contains("cb-inbox"); }, null, { timeout: 8000 });
 const anims = page => page.evaluate(() => document.getElementById("cluckBtn").getAnimations().length);
