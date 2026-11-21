@@ -27,7 +27,7 @@
    BRAINROT-B2 (Tony, Nov 14, "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): docked v7 is now 8 videos (all 8 categories, one each) in a
    full-width interlocked bento (LAYOUT below: hero 2x2 + tall + wide + small, 12-col grid, gap 8, every video cover-cropped to its tile; app.css BRAINROT-B2 block). Lazy rule unchanged: the first 3 iframes load at once,
    the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768.
-   ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. */
+   ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. Phones stay off for good (Tony Nov 20): the phone tab above is history. */
 (() => {
   /* list:start (tools/client_generators/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
   const CATS = [
@@ -84,13 +84,11 @@
     if (m !== null) store("stem-slow", m ? "1" : "0");
     return (slowV = m !== null ? m : store("stem-slow") === "1");
   }
-  /* phones get none of it (Tony, Oct 17): no corner, no players, no request to YouTube, so nothing buffers. "Phone" is the repo's phone
-     width, max-width 700px (app.js dockMQ, the same break NAV D75 "bottom bar, phones only" uses); a tablet and a desktop keep it. */
-  const PHONE = matchMedia("(max-width: 700px)");
-  /* ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. The PHONE (max-width: 700px) stashed-tab rule below stays but can no longer fire (he may bring phones back). */
+  /* ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle (no corner, no players, no request to YouTube). Phones stay off for good
+     (Tony Nov 20): the old PHONE (max-width: 700px) stashed-tab rule is deleted. */
   const NOROT = matchMedia("(max-width: 899.98px)");
   const v7 = () => root.classList.contains("ui-v7");                     // Tony, Nov 14: the variant B look + phones showing it live behind html.ui-v7 (fx.js sets it in <head>)
-  const off = () => !!sess("stem-rot-off") || (PHONE.matches && !v7()) || slow();   // ✕ for this session, a phone (flag off only: v7 phones get the jut-out tab), or a slow link
+  const off = () => !!sess("stem-rot-off") || slow();   // ✕ for this session, or a slow link (a phone: NOROT)
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
   /* keep the page's keyboard focus (Tony, Nov 17: "block it from taking focus"): an autoplaying player focuses itself when it loads, so the
@@ -155,7 +153,7 @@
     else { watch.disconnect(); for (const s of slots) { s.want = true; playing(s, true); } }
   }
 
-  let el = null, duo = null, world = null, shelf = null, watch = null, order = [], tab = null, link = null, stashed = innerHeight < 700 || (PHONE.matches && v7()), corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, world = null, shelf = null, watch = null, order = [], tab = null, link = null, stashed = innerHeight < 700, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
@@ -339,7 +337,7 @@
     const was = el.classList.contains("docked");
     el.classList.toggle("docked", dock);
     if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin; }
-    else if (was) stashed = userMin || innerHeight < 700 || (PHONE.matches && v7());   // back to the floating corner's own rule (a short window: it would cover the page)
+    else if (was) stashed = userMin || innerHeight < 700;   // back to the floating corner's own rule (a short window: it would cover the page)
     watchPlay();
   }
   function place(animate) {
@@ -402,7 +400,6 @@
   function fold() { if (!el || !on || stashed || !el.classList.contains("docked")) return; stashed = userMin = true; place(); }
   window.stemBrainrot = { sync, warmUp, sheet, fold, cats: CATS, forget: () => { lastFocus = null; } };   // forget: shell.js NO-KB (no keyboard = focus is nowhere)
   addEventListener("resize", () => { if (on) place(false); });
-  PHONE.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // a window dragged across the phone width: hide it, or bring it in
   NOROT.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // ICK5-NOROT: crossing 900 live hides the dock (and pauses it) or brings it back
   document.addEventListener("focusin", () => setTimeout(sync, 0));
   document.addEventListener("focusout", () => setTimeout(sync, 0));
