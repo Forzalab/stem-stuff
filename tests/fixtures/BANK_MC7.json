@@ -1,0 +1,230 @@
+{
+ "v": 20261022,
+ "problems": [
+  {
+   "code": "CALC1_S601",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Option A with a few words"
+    },
+    {
+     "id": "b",
+     "md": "Option B with a few words"
+    },
+    {
+     "id": "c",
+     "md": "Option C with a few words"
+    },
+    {
+     "id": "d",
+     "md": "Option D with a few words"
+    },
+    {
+     "id": "e",
+     "md": "Option E with a few words"
+    },
+    {
+     "id": "f",
+     "md": "Option F with a few words"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Practice Exam 2, Question 1",
+    "key": "Use: d",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_S701",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Option A with a few words"
+    },
+    {
+     "id": "b",
+     "md": "Option B with a few words"
+    },
+    {
+     "id": "c",
+     "md": "Option C with a few words"
+    },
+    {
+     "id": "d",
+     "md": "Option D with a few words"
+    },
+    {
+     "id": "e",
+     "md": "Option E with a few words"
+    },
+    {
+     "id": "f",
+     "md": "Option F with a few words"
+    },
+    {
+     "id": "g",
+     "md": "Option G with a few words"
+    }
+   ],
+   "correct": "g",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Practice Exam 2, Question 2",
+    "key": "Use: g",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_S801",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pool of eight, no lock: the right one is last, so one early distractor is hidden."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Option A with a few words"
+    },
+    {
+     "id": "b",
+     "md": "Option B with a few words"
+    },
+    {
+     "id": "c",
+     "md": "Option C with a few words"
+    },
+    {
+     "id": "d",
+     "md": "Option D with a few words"
+    },
+    {
+     "id": "e",
+     "md": "Option E with a few words"
+    },
+    {
+     "id": "f",
+     "md": "Option F with a few words"
+    },
+    {
+     "id": "g",
+     "md": "Option G with a few words"
+    },
+    {
+     "id": "h",
+     "md": "Option H with a few words"
+    }
+   ],
+   "correct": "h",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Practice Exam 2, Question 3",
+    "key": "Use: h",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_S901",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pool of eight with a locked first choice: shown 7 = lock + right + 5 others (the lock is the none-of-these row, so the page gets 6 rows and pick all)."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "None of these",
+     "lock": true
+    },
+    {
+     "id": "b",
+     "md": "Option B with a few words"
+    },
+    {
+     "id": "c",
+     "md": "Option C with a few words"
+    },
+    {
+     "id": "d",
+     "md": "Option D with a few words"
+    },
+    {
+     "id": "e",
+     "md": "Option E with a few words"
+    },
+    {
+     "id": "f",
+     "md": "Option F with a few words"
+    },
+    {
+     "id": "g",
+     "md": "Option G with a few words"
+    },
+    {
+     "id": "h",
+     "md": "Option H with a few words"
+    }
+   ],
+   "correct": "h",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Practice Exam 2, Question 4",
+    "key": "Use: h",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  }
+ ]
+}

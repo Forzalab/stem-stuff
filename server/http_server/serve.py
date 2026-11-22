@@ -421,14 +421,17 @@ def banks():
     return {c: list(dict.fromkeys(codes)) for c, codes in _index()["banks"].items()}
 
 
+MAX_SHOWN = 7                                                # the one cap on mc choices on screen (A-G, keys 1-7); app.js MAX_SHOWN is the same
+
+
 def shown(p):
-    """mc: the choices on screen (up to 5): the right one(s), locked ones, then the rest, in authored order."""
+    """mc: the choices on screen (up to MAX_SHOWN): the right one(s), locked ones, then the rest, in authored order."""
     ch = p["choices"]
-    if len(ch) <= 5:
+    if len(ch) <= MAX_SHOWN:
         return list(ch)
     right = rights(p)
     keep = [c for c in ch if c["id"] in right or c.get("lock")]
-    keep += [c for c in ch if c not in keep][: max(0, 5 - len(keep))]
+    keep += [c for c in ch if c not in keep][: max(0, MAX_SHOWN - len(keep))]
     return [c for c in ch if c in keep]
 
 

@@ -1,4 +1,4 @@
-# Multiple choice (A–E) and hints
+# Multiple choice (A–G) and hints
 
 Design for the `mc` problem type and for hints on every type. Grading and hints are server-side (see `SECURITY.md`). File format: `SCHEMA.md` (one `problems.json`).
 
@@ -28,7 +28,7 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieL
   ] }
 ```
 
-- Exactly 5 shown (A–E). Authors may write 5–8 choices; the server picks the correct one + 4 distractors (PrairieLearn-style pool).
+- Up to 7 shown (A–G, keys 1–7; one cap: `MAX_SHOWN` in serve.py and app.js). Authors may write 2–8 choices; a pool of 8 hides one: the server keeps the correct one(s) and locked ones, then fills with distractors in authored order (PrairieLearn-style pool).
 - `id` is a stable lowercase id. **The correct id (`correct`) stays on the server**: `GET /p/<CODE>.json` never includes it.
 - `lock: true` pins that choice to its authored slot (for "none of these" / "DNE").
 - Single-answer only in v2. Multiple-answer is an open question (Canvas-style "exact match" would be the default).
@@ -41,7 +41,7 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieL
 
 ## 4. UI
 
-- Five full-width rows, `A`–`E` badge + rendered markdown/TeX, radio semantics (`role="radiogroup"`, arrow keys move, Space selects, `A`–`E` and `1`–`5` keys jump).
+- Up to seven full-width rows, `A`–`G` badge + rendered markdown/TeX, radio semantics (`role="radiogroup"`, arrow keys move, Space selects, `A`–`G` and `1`–`7` keys jump).
 - **One row** when it fits: 2 choices, or 3 short ones, are pills in one row with no badges. The page decides by measuring (each pill with its arrow room must not wrap or overflow); otherwise it is the stacked list above. See `design/SWAP.md`.
 - One **Check** button. Nothing is graded on click of a row. There is **no Hint button**: hints come only from wrong attempts.
 - A wrong pick is struck through and disabled, and Cluck's hint for that pick appears under the problem (duck badge, labeled with the error type, e.g. `sign`).

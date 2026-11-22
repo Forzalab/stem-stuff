@@ -982,7 +982,7 @@ function repairPick(mine, d) {
 
 /* == §mc-arrow == */
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
-const LETTERS = "ABCDE";
+const LETTERS = "ABCDEFG";
 function renderQuestion() {
   const q = $("#q"), p = S.prob;
   q.classList.remove("closed", "solved");
@@ -1193,13 +1193,14 @@ const howLine = p => {
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
-/* 5 choices shown. The server already cut them (serve.py public()); an uploaded file may have up to 8:
+const MAX_SHOWN = 7;                                           // the one cap on choices on screen (A-G, keys 1-7); serve.py MAX_SHOWN is the same
+/* Up to MAX_SHOWN choices shown. The server already cut them (serve.py public()); an uploaded file may have up to 8:
    same rule here: the right one, locked ones, then the rest, in authored order */
 function shown(p) {
   const ch = p.choices;
-  if (ch.length <= 5) return ch;
+  if (ch.length <= MAX_SHOWN) return ch;
   const keep = ch.filter(c => [].concat(p.correct).includes(c.id) || c.lock);   // pick all: correct is a list, keep every one
-  keep.push(...ch.filter(c => !keep.includes(c)).slice(0, Math.max(0, 5 - keep.length)));
+  keep.push(...ch.filter(c => !keep.includes(c)).slice(0, Math.max(0, MAX_SHOWN - keep.length)));
   return ch.filter(c => keep.includes(c));
 }
 /* One row of pills for 2 choices, or 3 short ones. Decided by measuring, not by guessing lengths: lay the row out, then for each
@@ -1306,7 +1307,7 @@ function wireMC(q) {
     else select(o.getAttribute("aria-checked") === "true" ? null : o);   // tap the selected choice again: deselect
     roving(o);
   });
-  /* pick all: arrows only move focus, Space / A-E / 1-5 toggle, Enter = Check; prove mode: X or Backspace = mark wrong.
+  /* pick all: arrows only move focus, Space / A-G / 1-7 toggle, Enter = Check; prove mode: X or Backspace = mark wrong.
      A fix box: Enter goes to the next empty box, then Check. */
   q.addEventListener("input", e => { if (e.target.closest(".fix")) { e.target.parentElement.classList.remove("bad"); syncTicks(); } });
   q.addEventListener("keydown", e => {
@@ -1326,7 +1327,7 @@ function wireMC(q) {
     else if (e.key === "Enter") { e.preventDefault(); if (many || o.getAttribute("aria-checked") === "true") submitMC(); else select(o); }
     else if (e.key === " ") { e.preventDefault(); if (many) tick(o); else select(o.getAttribute("aria-checked") === "true" ? null : o); }
     else if (many && S.prob.fix && /^(x|Backspace)$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); tick(o, "x"); }
-    else if (/^([a-e]|[1-5])$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {         // A-E or 1-5 jump to that choice
+    else if (/^([a-g]|[1-7])$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {         // A-G or 1-7 jump to that choice
       const n = opts().find(x => x.dataset.l === (/\d/.test(e.key) ? LETTERS[+e.key - 1] : e.key.toUpperCase()));
       if (n && !n.disabled) { e.preventDefault(); roving(n); n.focus(); if (many) tick(n); else select(n); }
     }
