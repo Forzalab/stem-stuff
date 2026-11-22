@@ -109,9 +109,13 @@ html.ui-v7 .choices.bento.fill .ch > .opt.opt { padding-left: max(var(--lp, 24px
 html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt { padding-top: 24px; padding-bottom: 24px; }
 /* TEXT-BELOW-LETTER (Tony Nov 21 "text looks too empty at the bottom"): the words are centred in the band UNDER the letter, not in the whole tile: top padding = the letter's bottom edge, bottom padding = 0,
    so the gap letter -> words equals the gap words -> tile bottom at every height and line count (a relative rule tied to the letter, no fixed offset). Letter bottoms: phone 12+16 = 28, desktop 18+16 = 34 (MC) / 16+20 = 36 (pick all) */
-html.ui-v7 .choices.bento.fill .ch > .opt.opt { padding-top: 28px; padding-bottom: 0; }
-html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt { padding-top: 34px; padding-bottom: 0; }
-html.ui-v7 .choices.bento.all:not(.fill) .ch > .opt.opt { padding-top: 36px; }
+/* LETTER-INK (Tony Nov 21, 2nd look "text not vertically aligned"): the band starts at the letter's INK (its baseline), not its line box: a 12-15px lowercase letter in a 16/20px line box leaves
+   --let-d (phone 2.5, desktop 3.5px, measured on pixels) of empty descent under the ink, so a band that started at the box bottom read ~2-3px low against what the eye sees. Pick-all desktop: the check square is the mark (d = 0) */
+html.ui-v7 .choices.bento.fill { --let-b: 28px; --let-d: 2.5px; }
+html.ui-v7 .choices.bento:not(.fill) { --let-b: 34px; --let-d: 3.5px; }
+html.ui-v7 .choices.bento.all:not(.fill) { --let-b: 36px; --let-d: 0px; }
+html.ui-v7 .choices.bento.fill .ch > .opt.opt { padding-top: calc(var(--let-b) - var(--let-d)); padding-bottom: 0; }
+html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt { padding-top: calc(var(--let-b) - var(--let-d)); padding-bottom: 0; }
 /* BENTO-INSET (Tony Nov 16 "more inner margin, all bento boxes"): corner letter + check sit further in, same inset on every tile (MC, pick-all, phone fill) */
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { top: 14px !important; left: 16px !important; }
 html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge { top: 12px; right: 16px; }
