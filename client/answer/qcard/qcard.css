@@ -50,7 +50,7 @@ html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]) { box-shadow: in
 html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-shadow: inset 0 1px 0 rgb(61 77 130 / .5), 0 1px 1px rgba(2, 4, 12, .15); }   /* pressed = lower elevation */
 
 /* figure, headline, text, meta: one grid edge */
-html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; }
+html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; clear: both; }   /* FIG-CLEAR: the Ask Cluck squircle floats top right (§ick5-tr); a block-level replaced svg may not overlap a float, so it dropped below the float while .fig and its absolute labels stayed at the top (svg 52px under its labels, the title over its foot). The box itself clears the float: svg, labels and the title below move together. */
 html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
 html.ui-v7 #problem.qc7 .qtext { font: var(--w-body, 400) 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }

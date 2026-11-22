@@ -1,0 +1,446 @@
+{
+ "v": 20261119,
+ "bank": "BANK_FIGC",
+ "problems": [
+  {
+   "code": "PHYS_FC1",
+   "title": "Clockwise triangular cycle: net work",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A monatomic ideal gas is taken around a clockwise cycle $ABCA$ on a $P$-$V$ diagram. State $A$ is at $V_A = 2.0\\ \\text{m}^3$, $P_A = 15\\ \\text{Pa}$; state $B$ is at $V_B = 6.0\\ \\text{m}^3$, $P_B = 35\\ \\text{Pa}$; and state $C$ is at $V_C = 6.0\\ \\text{m}^3$, $P_C = 15\\ \\text{Pa}$. Path $AB$ is a straight line, $BC$ is vertical, and $CA$ is horizontal."
+    },
+    {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "Pressure against volume: a right triangle ABCA with A at lower left, B at upper right and C below B, traced clockwise.",
+     "x": {
+      "min": 0,
+      "max": 8,
+      "label": "$V$ (m$^3$)",
+      "step": 2
+     },
+     "y": {
+      "min": 0,
+      "max": 40,
+      "label": "$P$ (Pa)",
+      "step": 10
+     },
+     "grid": false,
+     "axes": true,
+     "equal": false,
+     "marks": [
+      {
+       "mark": "seg",
+       "from": [
+        0,
+        15
+       ],
+       "to": [
+        2,
+        15
+       ],
+       "color": "muted",
+       "dash": true
+      },
+      {
+       "mark": "seg",
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        15
+       ],
+       "color": "muted",
+       "dash": true
+      },
+      {
+       "mark": "seg",
+       "from": [
+        0,
+        35
+       ],
+       "to": [
+        6,
+        35
+       ],
+       "color": "muted",
+       "dash": true
+      },
+      {
+       "mark": "seg",
+       "from": [
+        6,
+        0
+       ],
+       "to": [
+        6,
+        35
+       ],
+       "color": "muted",
+       "dash": true
+      },
+      {
+       "mark": "seg",
+       "from": [
+        2,
+        15
+       ],
+       "to": [
+        6,
+        35
+       ],
+       "color": "c1"
+      },
+      {
+       "mark": "arrow",
+       "from": [
+        3.6799999999999997,
+        23.4
+       ],
+       "to": [
+        4.4,
+        27.0
+       ],
+       "color": "c1"
+      },
+      {
+       "mark": "seg",
+       "from": [
+        6,
+        35
+       ],
+       "to": [
+        6,
+        15
+       ],
+       "color": "c1"
+      },
+      {
+       "mark": "arrow",
+       "from": [
+        6.0,
+        26.6
+       ],
+       "to": [
+        6.0,
+        23.0
+       ],
+       "color": "c1"
+      },
+      {
+       "mark": "seg",
+       "from": [
+        6,
+        15
+       ],
+       "to": [
+        2,
+        15
+       ],
+       "color": "c1"
+      },
+      {
+       "mark": "arrow",
+       "from": [
+        4.32,
+        15.0
+       ],
+       "to": [
+        3.6,
+        15.0
+       ],
+       "color": "c1"
+      },
+      {
+       "mark": "point",
+       "at": [
+        2,
+        15
+       ],
+       "color": "ink",
+       "label": "$A\\,(2.0,\\,15)$",
+       "anchor": "s"
+      },
+      {
+       "mark": "point",
+       "at": [
+        6,
+        35
+       ],
+       "color": "ink",
+       "label": "$B\\,(6.0,\\,35)$",
+       "anchor": "n"
+      },
+      {
+       "mark": "point",
+       "at": [
+        6,
+        15
+       ],
+       "color": "ink",
+       "label": "$C\\,(6.0,\\,15)$",
+       "anchor": "se"
+      }
+     ]
+    }
+   ],
+   "ask": "What is the net work done on the gas after one complete cycle ABCA, in J?",
+   "choices": [
+    {
+     "id": "a",
+     "md": "$-10.0$"
+    },
+    {
+     "id": "b",
+     "md": "$-70.0$"
+    },
+    {
+     "id": "c",
+     "md": "$80.0$"
+    },
+    {
+     "id": "d",
+     "md": "$-80.0$"
+    },
+    {
+     "id": "e",
+     "md": "$-100$"
+    },
+    {
+     "id": "f",
+     "md": "$-40.0$"
+    },
+    {
+     "id": "g",
+     "md": "$40.0$"
+    }
+   ],
+   "correct": "f",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK. That number is from the practice exam. New numbers here."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK. The height of the triangle is the pressure difference, not the pressure at B."
+    },
+    {
+     "choice": "c",
+     "error": "off-by-factor",
+     "hint": "QUACK. Check both the triangle area factor of one-half and the clockwise sign rule."
+    },
+    {
+     "choice": "d",
+     "error": "off-by-factor",
+     "hint": "QUACK. The path forms a triangle, not a rectangle. Remember the factor of one-half in triangle area."
+    },
+    {
+     "choice": "e",
+     "error": "misread",
+     "hint": "QUACK. You found only the work along segment AB. Include the return path along CA to complete the cycle."
+    },
+    {
+     "choice": "g",
+     "error": "misread",
+     "hint": "QUACK. A clockwise cycle on a pressure-volume graph gives negative work done on the gas. Check your sign."
+    }
+   ],
+   "saccharine": {
+    "title": "Clockwise triangular cycle: net work",
+    "tip": "On a $P$-$V$ diagram, the magnitude of net cycle work is the enclosed area, and a clockwise loop gives negative work on the gas.",
+    "key": "Triangle area $= \\frac{1}{2}(6.0 - 2.0)(35 - 15) = 40.0\\ \\text{J}$.\nClockwise cycle gives negative work on the gas.\nAnswer: -40.0 J",
+    "slip": {
+     "a": "Slip (misread): That number is from the practice exam. New numbers here.",
+     "b": "Slip (misread): The height of the triangle is the pressure difference, not the pressure at B.",
+     "c": "Slip (off-by-factor): Check both the triangle area factor of one-half and the clockwise sign rule.",
+     "d": "Slip (off-by-factor): The path forms a triangle, not a rectangle. Remember the factor of one-half in triangle area.",
+     "e": "Slip (misread): You found only the work along segment AB. Include the return path along CA to complete the cycle.",
+     "g": "Slip (misread): A clockwise cycle on a pressure-volume graph gives negative work done on the gas. Check your sign."
+    },
+    "hide": false
+   },
+   "noob": {
+    "tier": 2
+   },
+   "exam_q": 3
+  },
+  {
+   "code": "PHYS_FC2",
+   "title": "Spring and mass: period factor",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A mass hangs on a spring and oscillates in simple harmonic motion. The mass is then replaced by one that is $2.80$ times heavier. The same spring is used."
+    },
+    {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "Two copies of the same spring hanging from a ceiling, the left one carrying a mass m and the right one a larger block of mass 2.80 times m.",
+     "marks": [
+      {
+       "mark": "surface",
+       "from": [
+        -1,
+        5
+       ],
+       "to": [
+        8,
+        5
+       ],
+       "side": "left"
+      },
+      {
+       "mark": "spring",
+       "from": [
+        1,
+        5
+       ],
+       "to": [
+        1,
+        3.4
+       ],
+       "coils": 8,
+       "width": 0.4,
+       "color": "muted",
+       "label": "$k$",
+       "anchor": "e"
+      },
+      {
+       "mark": "body",
+       "shape": "box",
+       "at": [
+        1,
+        2.7
+       ],
+       "w": 1.9,
+       "h": 1.4,
+       "color": "c1",
+       "label": "$m$",
+       "anchor": "c"
+      },
+      {
+       "mark": "spring",
+       "from": [
+        6,
+        5
+       ],
+       "to": [
+        6,
+        2.9
+       ],
+       "coils": 8,
+       "width": 0.4,
+       "color": "muted",
+       "label": "$k$",
+       "anchor": "e"
+      },
+      {
+       "mark": "body",
+       "shape": "box",
+       "at": [
+        6,
+        2.2
+       ],
+       "w": 1.9,
+       "h": 1.4,
+       "color": "c1",
+       "label": "$2.80\\,m$",
+       "anchor": "c"
+      }
+     ]
+    }
+   ],
+   "ask": "By what factor does the period change (new period divided by old period)?",
+   "choices": [
+    {
+     "id": "a",
+     "md": "$7.84$"
+    },
+    {
+     "id": "b",
+     "md": "$2.80$"
+    },
+    {
+     "id": "c",
+     "md": "$1.67$"
+    },
+    {
+     "id": "d",
+     "md": "$0.357$"
+    },
+    {
+     "id": "e",
+     "md": "$0.128$"
+    },
+    {
+     "id": "f",
+     "md": "$1.40$"
+    },
+    {
+     "id": "g",
+     "md": "$0.598$"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "off-by-factor",
+     "hint": "QUACK. You squared where you should take a square root. The period goes as the root of the mass."
+    },
+    {
+     "choice": "b",
+     "error": "off-by-factor",
+     "hint": "QUACK. The period does not grow in step with the mass. The mass sits under a square root."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK. More mass does not shorten the period. It makes each swing slower."
+    },
+    {
+     "choice": "e",
+     "error": "misread",
+     "hint": "QUACK. Two slips: the period gets longer with more mass, and it goes with a square root, not a square."
+    },
+    {
+     "choice": "f",
+     "error": "off-by-factor",
+     "hint": "QUACK. You halved the mass factor instead of taking its square root."
+    },
+    {
+     "choice": "g",
+     "error": "misread",
+     "hint": "QUACK. You turned the ratio upside down. More mass makes the oscillation slower, so the period gets longer."
+    }
+   ],
+   "saccharine": {
+    "title": "Spring and mass: period factor",
+    "tip": "Write the period formula for the old and new mass and divide. Everything except the mass cancels.",
+    "key": "$T = 2\\pi\\sqrt{m/k}$ and $k$ is unchanged.\n$T_{new}/T_{old} = \\sqrt{2.80\\,m/m} = \\sqrt{2.80}$.\nAnswer: 1.673",
+    "slip": {
+     "a": "Slip (off-by-factor): You squared where you should take a square root. The period goes as the root of the mass.",
+     "b": "Slip (off-by-factor): The period does not grow in step with the mass. The mass sits under a square root.",
+     "d": "Slip (misread): More mass does not shorten the period. It makes each swing slower.",
+     "e": "Slip (misread): Two slips: the period gets longer with more mass, and it goes with a square root, not a square.",
+     "f": "Slip (off-by-factor): You halved the mass factor instead of taking its square root.",
+     "g": "Slip (misread): You turned the ratio upside down. More mass makes the oscillation slower, so the period gets longer."
+    },
+    "hide": false
+   },
+   "noob": {
+    "tier": 3
+   },
+   "exam_q": 15,
+   "twist": true
+  }
+ ]
+}
