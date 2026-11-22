@@ -12,5 +12,9 @@
       "Bash(pkill)",
       "Bash(pkill *)"
     ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }
