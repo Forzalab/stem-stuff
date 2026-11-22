@@ -53,9 +53,10 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
+/* TAP-SPLASH (bug log 20261121): the full-screen #splash covers every probe point until it is removed; a step that did not wait for it (the fq step) hit-tested the splash on a fast runner, CI red on PR #704. hitArea waits for it. */
 /* the 9 probe points of the 44 px square centred on the element (offsets +-21.5 px), the ones inside the window: each must hit el or a
    child of it, or (siblings: a row of chips, 8 px apart, shares the overlap of two 44 px areas) an element matching `sibs` */
-const hitArea = async (page, sel, sibs = null) => { await settled(page, sel); return page.evaluate(([sel, sibs]) => {
+const hitArea = async (page, sel, sibs = null) => { await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 15000 }); await settled(page, sel); return page.evaluate(([sel, sibs]) => {
   const el = document.querySelector(sel);
   { const q = el.getBoundingClientRect(); if (q.top < 0 || q.bottom > innerHeight) el.scrollIntoView({ block: "center", inline: "center" }); }
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, miss = [], own = [];
