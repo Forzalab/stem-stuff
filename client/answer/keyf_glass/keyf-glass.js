@@ -91,13 +91,15 @@
   var SYM = {
     sigma: { w: 268, h: 342, d: "M0 0H268V70L246 56L238 32H88L212 157L80 289H212L258 244L268 252V342H0L38 289L155 172L17 34Z" },
     pi: { w: 300, h: 262, d: "M8 74C22 30 44 12 86 12H292V66H226V192C226 214 236 222 250 222C262 222 270 214 276 200L292 208C284 246 262 262 232 262C192 262 172 240 172 196V66H120C116 150 98 214 66 254C60 262 52 262 44 262C30 262 22 254 22 242C22 232 28 226 36 218C66 186 76 132 78 66C54 66 40 76 26 96Z" },
-    bulb: { w: 220, h: 330, d: "M110 6C170 6 214 50 214 110C214 146 198 170 178 192C164 208 156 222 154 244H66C64 222 56 208 42 192C22 170 6 146 6 110C6 50 50 6 110 6ZM62 256H158C164 256 168 260 168 266C168 272 164 276 158 276H62C56 276 52 272 52 266C52 260 56 256 62 256ZM68 286H152C158 286 162 290 162 296C162 302 158 306 152 306H68C62 306 58 302 58 296C58 290 62 286 68 286ZM86 314H134C130 324 122 330 110 330C98 330 90 324 86 314Z" }
+    bulb: { w: 220, h: 330, d: "M110 6C170 6 214 50 214 110C214 146 198 170 178 192C164 208 156 222 154 244H66C64 222 56 208 42 192C22 170 6 146 6 110C6 50 50 6 110 6ZM62 256H158C164 256 168 260 168 266C168 272 164 276 158 276H62C56 276 52 272 52 266C52 260 56 256 62 256ZM68 286H152C158 286 162 290 162 296C162 302 158 306 152 306H68C62 306 58 302 58 296C58 290 62 286 68 286ZM86 314H134C130 324 122 330 110 330C98 330 90 324 86 314Z" },
+    integral: { w: 417, h: 932, d: "M0 829Q0 807 14 794Q28 780 48 780Q68 780 82 794Q96 808 96 828Q96 846 85 859Q74 872 57 875L51 877Q51 879 56 884Q60 889 63 890Q76 900 91 892Q105 886 115 862Q130 828 147 653Q160 519 177 406Q201 244 222 149Q250 16 323 1Q328 0 337 0Q381 0 404 45Q417 74 417 103Q417 125 403 138Q389 152 369 152Q349 152 335 138Q321 124 321 104Q321 86 332 73Q343 60 360 57L366 55Q366 53 362 48Q357 43 354 42Q341 32 325 41Q307 50 296 93Q287 127 271 278Q247 531 198 773Q180 863 146 902Q119 929 83 932Q44 932 22 902Q0 872 0 829Z" },
+    sqrt: { w: 781, h: 1000, d: "M762 0Q770 0 775 6Q780 11 781 18V24L548 507L313 993Q309 1000 294 1000Q285 1000 282 997L88 575L23 622Q18 622 9 614Q0 605 0 599Q0 595 32 569Q65 543 100 518Q134 492 135 491Q137 489 140 489Q147 489 152 499L325 877Q326 877 429 664Q532 451 636 235Q739 19 742 14Q749 0 762 0Z" },
+    infinity: { w: 889, h: 453, d: "M25 117Q50 65 94 32Q138 0 199 0Q285 0 364 61Q402 92 438 139L452 158L459 148Q528 49 610 16Q653 0 692 0Q725 0 755 11Q813 34 851 93Q889 152 889 228Q889 306 849 364Q809 423 746 444Q719 453 688 453Q602 453 525 392Q487 361 451 314L437 295L430 305Q361 404 279 437Q236 453 197 453Q164 453 134 442Q76 419 38 360Q0 301 0 225Q0 168 25 117ZM710 391Q774 391 813 340Q852 290 852 225Q852 151 812 98Q772 45 706 45Q651 45 602 77Q543 115 488 204L519 244Q551 285 559 295Q637 391 710 391ZM178 62Q113 62 75 112Q37 162 37 228Q37 288 66 338Q95 387 140 401Q162 409 184 409Q236 409 288 376Q346 338 401 249L370 209Q338 168 330 158Q260 74 200 64Q188 62 178 62Z" },
+    partial: { w: 524, h: 737, d: "M160 207Q141 207 128 196Q116 186 116 168Q116 158 120 145Q135 91 172 54Q208 18 259 5Q284 0 291 0H303Q336 0 342 1Q425 16 474 86Q524 155 524 258Q524 317 502 399Q450 580 360 662Q279 737 181 737Q128 737 93 718Q58 700 31 659Q9 627 2 592Q0 583 0 556Q0 524 6 500Q29 397 104 329Q172 267 238 254Q257 250 280 250Q310 250 330 257Q396 280 413 348L416 337Q436 254 436 200Q436 85 357 50Q330 39 302 39Q264 39 232 57Q200 75 181 103Q222 110 222 143Q222 170 204 188Q185 207 160 207ZM388 409Q388 304 307 288Q302 287 291 287Q243 287 206 311Q170 335 150 373Q130 407 108 494Q90 566 90 599Q90 694 190 694Q202 694 208 693Q285 680 332 603Q351 570 370 509Q388 452 388 409Z" },
+    theta: { w: 427, h: 715, d: "M284 1Q285 1 292 0Q299 0 304 0Q358 5 388 49Q427 108 427 210Q427 237 425 253Q412 386 356 502Q322 573 276 626Q231 679 187 701Q156 715 133 715H126Q82 715 53 684Q0 628 0 505Q0 457 10 404Q47 204 161 77Q222 10 284 1ZM348 139Q348 37 295 37Q262 37 227 80Q177 143 142 260Q122 323 122 334Q171 335 219 335L316 334Q321 329 334 256Q348 183 348 139ZM300 398 305 381H110L109 388Q78 512 78 573Q78 641 102 667Q113 679 131 679Q171 679 215 614Q262 545 300 398Z" },
+    delta: { w: 415, h: 727, d: "M415 55Q415 74 402 90Q388 105 367 105Q356 105 352 103Q338 98 317 80Q284 52 264 47Q260 46 252 46Q222 46 207 67Q199 78 199 89Q199 133 298 254Q333 298 349 334Q365 370 365 425Q365 523 322 607Q283 682 225 713Q196 727 169 727H162Q120 727 86 709Q48 690 24 652Q1 614 0 564Q0 536 5 511Q24 410 115 335Q155 304 216 283Q215 279 210 270Q206 262 203 255Q166 177 160 124Q159 119 159 108Q159 67 182 40Q206 12 243 2Q251 0 266 0Q283 1 334 12Q385 23 397 27Q415 35 415 55ZM76 587Q76 634 100 662Q124 690 168 690Q195 690 216 669Q242 643 261 590Q280 538 280 485Q280 451 274 422Q267 392 259 372Q251 353 233 317L223 321Q131 353 96 478Q76 546 76 587Z" }
   };
-  /* glyphs drawn as SVG <text> in the page's KaTeX fonts (already loaded); aspect = width / size, used for margins */
-  var TXT = { integral: { c: "∫", f: "KaTeX_Main", asp: 0.75, dy: 0.04 }, sqrt: { c: "√", f: "KaTeX_Main", asp: 0.85, dy: 0.05 },
-    infinity: { c: "∞", f: "KaTeX_Main", asp: 1.1, dy: 0 }, partial: { c: "∂", f: "KaTeX_Math", asp: 0.6, dy: 0.02, it: 1 },
-    theta: { c: "θ", f: "KaTeX_Math", asp: 0.55, dy: 0.02, it: 1 }, delta: { c: "δ", f: "KaTeX_Math", asp: 0.55, dy: 0.02, it: 1 } };
-  var FONT_STACK = ', "KaTeX_Main", "Times New Roman", serif';
+  /* integral, sqrt, infinity, partial, theta, delta: glyph outlines extracted once from the vendored KaTeX fonts (Main-Regular, Math-Italic), so no font or encoding can break them */
   function rng(seed) { var h = 2166136261, i; seed = String(seed); for (i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); } var a = h >>> 0;
     return function () { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   /* Fill (Tony 04:53): a jittered grid, one symbol per cell (~110-140 px), laid over ONE belt tile = card width + 2 margins, so the wrap
@@ -112,7 +114,7 @@
     for (i = 0; i < n; i++) { if (i % pool.length === 0) shuffle(pool); keys.push(pool[i % pool.length]); }
     var nb = Math.max(1, Math.round(n / 8)); S.always.forEach(function (al) { shuffle(keys.map(function (_, q) { return q; })).slice(0, nb).forEach(function (q) { keys[q] = al; bulbs[q] = 1; }); });
     keys.forEach(function (key, idx) {
-      var c = idx % cols, rw = Math.floor(idx / cols), size = (S.size_px[0] + r() * (S.size_px[1] - S.size_px[0])) * k, asp = SYM[key] ? SYM[key].w / SYM[key].h : TXT[key].asp;
+      var c = idx % cols, rw = Math.floor(idx / cols), size = (S.size_px[0] + r() * (S.size_px[1] - S.size_px[0])) * k, asp = SYM[key].w / SYM[key].h;
       out.push({ key: key, size: size, asp: asp, x: -m + (c + .5 + (r() - .5) * .5) * cw, y: (rw + .5 + (r() - .5) * .5) * ch, rot: S.rot_deg[0] + r() * (S.rot_deg[1] - S.rot_deg[0]),
         a: key === "bulb" ? Math.max(.7, S.alpha[0] + r() * (S.alpha[1] - S.alpha[0])) : S.alpha[0] + r() * (S.alpha[1] - S.alpha[0]),
         ph: [0, 1, 2, 3, 4].map(function () { return r() * TAU; }), per: 1 + (r() - .5) * .3, amp: 1 + (r() - .5) * .3,
@@ -131,12 +133,8 @@
   /* == §layers == */
   function grainURL(g) { return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="' + g.grainF + '" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>') + '")'; }
   function symNode(s, sym) {
-    var gEl = node("g", { "data-k": s.key }), fill = "rgb(255 255 255 / " + Math.min(1, sym * s.a).toFixed(3) + ")";
-    if (SYM[s.key]) { var d = SYM[s.key], sc = s.size / d.h;
-      gEl.appendChild(node("path", { fill: fill, d: d.d, transform: "scale(" + sc + ") translate(" + (-d.w / 2) + " " + (-d.h / 2) + ")" })); }
-    else { var t = TXT[s.key], el = node("text", { fill: fill, "text-anchor": "middle", "dominant-baseline": "central", x: 0, y: t.dy * s.size, "font-size": s.size,
-        "font-family": t.f + FONT_STACK, "font-style": t.it ? "italic" : "normal" }); el.textContent = t.c; gEl.appendChild(el); }
-    return gEl; }
+    var gEl = node("g", { "data-k": s.key }), fill = "rgb(255 255 255 / " + Math.min(1, sym * s.a).toFixed(3) + ")", d = SYM[s.key], sc = s.size / Math.max(d.h, d.w * .8);
+    gEl.appendChild(node("path", { fill: fill, d: d.d, transform: "scale(" + sc + ") translate(" + (-d.w / 2) + " " + (-d.h / 2) + ")" })); return gEl; }
 
   /* == §mount == */
   var RM = matchMedia("(prefers-reduced-motion: reduce)"), RT = matchMedia("(prefers-reduced-transparency: reduce)"), HC = matchMedia("(prefers-contrast: more)");
