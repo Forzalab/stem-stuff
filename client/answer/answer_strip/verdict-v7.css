@@ -253,3 +253,43 @@ html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
 /* ICK5-MONO (Tony Nov 18 "inconsistent placeholder font on proof box/input box ... should be monospace ... both placeholder and actual text typed in"):
    the short-answer input and the proof box type AND hint in the mono (was --font-input Atkinson / --font). Not the code box, not the Cluck composer. */
 html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::placeholder { font-family: var(--mono); }
+
+/* == §it14-duck == IT-14 (Tony): a duck on the verdict pill, 4 variants to compare. OFF by default: only `html.ui-v7[data-duck=a|b|c|d]` paints anything.
+   fx.js sets data-duck from ?duck=a|b|c|d (remembered in localStorage stem-duck; ?duck=off clears). Design = brain ui-polish/it14-pill/mock.html (NOTES.md).
+   The pill here = the typed judged row (.ff.ok / .ff.bad, plus the reveal pill .ff.rbox.ok) and the MC Check key -> Next (.nx.vmorph). Duck art = #i-duck as a data-URI (mask or background).
+   A corner bleed: mono duck dips off the row's bottom corner, clipped by the row (background), tilts -16deg when wrong.   B glyph swap: the duck fills the status slot (.vk), the tick / cross shrinks to an 18px badge.
+   C watermark: duck 14% in the Next face, 22% red in the wrong row.   D = B + nod x2 (right) / head-tilt and hold (wrong); reduced motion = the static pose. */
+html.ui-v7 {
+  --duck-m: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cg fill=%22%23000%22 fill-opacity=%221%22 fill-rule=%22evenodd%22%3E%3Cpath d=%22M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z M10.8 7.9a1 1 0 1 0-2 0 1 1 0 1 0 2 0z%22/%3E%3Cpath d=%22M12.8 7.8l3.4.9-3.4.9z%22/%3E%3C/g%3E%3C/svg%3E");
+  --duck-a-ok: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-4 -4 32 32%22%3E%3Cg fill=%22%234ee6af%22 fill-opacity=%220.9%22 fill-rule=%22evenodd%22%3E%3Cpath d=%22M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z M10.8 7.9a1 1 0 1 0-2 0 1 1 0 1 0 2 0z%22/%3E%3Cpath d=%22M12.8 7.8l3.4.9-3.4.9z%22/%3E%3C/g%3E%3C/svg%3E");
+  --duck-a-bad: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-4 -4 32 32%22%3E%3Cg fill=%22%23eb596e%22 fill-opacity=%220.9%22 fill-rule=%22evenodd%22 transform=%22rotate(-16 12 21)%22%3E%3Cpath d=%22M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z M10.8 7.9a1 1 0 1 0-2 0 1 1 0 1 0 2 0z%22/%3E%3Cpath d=%22M12.8 7.8l3.4.9-3.4.9z%22/%3E%3C/g%3E%3C/svg%3E");
+  --duck-c-ok: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-4 -4 32 32%22%3E%3Cg fill=%22%2301291b%22 fill-opacity=%220.14%22 fill-rule=%22evenodd%22%3E%3Cpath d=%22M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z M10.8 7.9a1 1 0 1 0-2 0 1 1 0 1 0 2 0z%22/%3E%3Cpath d=%22M12.8 7.8l3.4.9-3.4.9z%22/%3E%3C/g%3E%3C/svg%3E");
+  --duck-c-bad: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-4 -4 32 32%22%3E%3Cg fill=%22%23eb596e%22 fill-opacity=%220.22%22 fill-rule=%22evenodd%22 transform=%22rotate(-14 12 21)%22%3E%3Cpath d=%22M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z M10.8 7.9a1 1 0 1 0-2 0 1 1 0 1 0 2 0z%22/%3E%3Cpath d=%22M12.8 7.8l3.4.9-3.4.9z%22/%3E%3C/g%3E%3C/svg%3E");
+}
+/* A + C: backgrounds on the row / the Next face (clipped by their own radius; the colours are in the data-URI) */
+html.ui-v7[data-duck="a"] .ff.ok { background-image: var(--duck-a-ok); background-repeat: no-repeat; background-size: 76px; background-position: right 104px bottom -21px; }
+html.ui-v7[data-duck="a"] .ff.rbox.ok { background-position: right -8px bottom -21px; }
+html.ui-v7[data-duck="a"] .ff.bad { background-image: var(--duck-a-bad); background-repeat: no-repeat; background-size: 76px; background-position: right 40px bottom -21px; }
+html.ui-v7[data-duck="c"] .ff.bad { background-image: var(--duck-c-bad); background-repeat: no-repeat; background-size: 100px; background-position: right -14px bottom -26px; }
+html.ui-v7[data-duck="c"] #q .nx .nf { background-image: var(--duck-c-ok); background-repeat: no-repeat; background-size: 100px; background-position: right -14px bottom -26px; }
+/* B + D: the duck in the status slot (.vk), the old glyph becomes the badge */
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .ff:is(.ok, .bad) > .vk:is([data-v="i-ok"], [data-v="i-x"]) { position: absolute; right: 10px; top: 50%; width: 36px; height: 36px; margin: 0; z-index: 2; overflow: visible; }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .ff.ok:not(.rbox) > .vk[data-v="i-ok"] { right: calc(var(--nxw, 96px) + 14px); }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .ff:is(.ok, .bad) > .vk:is([data-v="i-ok"], [data-v="i-x"])::before,
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .nx.vmorph::after { content: ""; position: absolute; inset: 1px; background: currentColor; -webkit-mask: var(--duck-m) center / contain no-repeat; mask: var(--duck-m) center / contain no-repeat; transform-origin: 50% 85%; pointer-events: none; }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .ff:is(.ok, .bad) > .vk:is([data-v="i-ok"], [data-v="i-x"]) > svg { position: absolute; right: -5px; bottom: -5px; width: 18px; height: 18px; padding: 3px; box-sizing: border-box; border-radius: 9px; background: #02060c; fill: none; stroke-width: 3.2; }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .ff.bad > .vk[data-v="i-x"]::before { transform: rotate(-18deg); }
+/* the MC Check key: the duck replaces the drawn tick / cross for the flash; the tick / cross sits small in the corner */
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .nx.vmorph { position: relative; color: var(--vm-s); }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .nx.vmorph::after { inset: 8px; animation: it14-out 1150ms cubic-bezier(.4, 0, .2, 1) both; }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .nx.vmorph[data-v="bad"]::after { transform: rotate(-18deg); }
+html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .nx.vmorph .vm-ico { position: absolute; right: 6px; bottom: 6px; width: 16px; height: 16px; }
+@keyframes it14-out { 0%, 78.26% { opacity: 1; } 100% { opacity: 0; } }
+/* D: the flash. 2 nods when right, one head-tilt and hold when wrong */
+@keyframes it14-nod { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(16deg) translateY(1px); } 60% { transform: rotate(-4deg); } }
+@keyframes it14-tilt { 0% { transform: rotate(0); } 35% { transform: rotate(-24deg); } 55% { transform: rotate(-14deg); } 75% { transform: rotate(-20deg); } 100% { transform: rotate(-18deg); } }
+html.ui-v7[data-duck="d"] .ff.ok > .vk[data-v="i-ok"]::before { animation: it14-nod 900ms ease-in-out 2; }
+html.ui-v7[data-duck="d"] .ff.bad > .vk[data-v="i-x"]::before { animation: it14-tilt 900ms ease-in-out both; }
+html.ui-v7[data-duck="d"] #q .nx.vmorph[data-v="ok"]::after { animation: it14-nod 450ms ease-in-out 2, it14-out 1150ms cubic-bezier(.4, 0, .2, 1) both; }
+html.ui-v7[data-duck="d"] #q .nx.vmorph[data-v="bad"]::after { animation: it14-tilt 900ms ease-in-out both, it14-out 1150ms cubic-bezier(.4, 0, .2, 1) both; }
+@media (prefers-reduced-motion: reduce) { html.ui-v7[data-duck="d"] .vk::before, html.ui-v7:is([data-duck="b"], [data-duck="d"]) #q .nx.vmorph::after { animation: none !important; } }
