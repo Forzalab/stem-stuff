@@ -30,12 +30,12 @@
 
   /* == §config == */
   var config = {
-    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 0.5, blur: 8, mag: 1.1, k1: 0.08, magFall: 0.5,
+    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 0.5, blur: 8, mag: 1.1, k1: 0.08, magFall: 0.5, magCap: 18,
       fresnel: 0.1, tir: 0.3, vign: 0.25, tint: 0.4, tintRGB: [3, 16, 26], paint: 0.16, sym: 0.55, bright: 0.7, sat: 0.98,
       grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16 },
     motion: { mode: "conveyor", speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75 },
     symbols: { always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
-      size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.35, 1] }
+      size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.6, 1] }
   };
 
   /* == §lens == */
@@ -51,7 +51,7 @@
      Encoded like liquidglass: R,G = 128 + 127 d/max; feDisplacementMap scale = 2 max (bendScale). */
   function lensField(w0, h0, g) {
     var sc = Math.min(window.devicePixelRatio || 1, 2), w = Math.round(w0 * sc), h = Math.round(h0 * sc), hw = w0 / 2, hh = h0 / 2, r = Math.min(g.radius, hw, hh);
-    var bez = Math.max(.5, Math.min(g.bezpx, Math.min(hw, hh))), T = profileTable(g.curv, g.ior), N = T.length - 1, diag = Math.hypot(hw, hh), kM = 1 - 1 / g.mag;
+    var bez = Math.max(.5, Math.min(g.bezpx, Math.min(hw, hh) * .6)), refr = g.refr * bez / g.bezpx, /* short cards: bezel and rim bend shrink together */ T = profileTable(g.curv, g.ior), N = T.length - 1, diag = Math.hypot(hw, hh), kM = 1 - 1 / g.mag;
     var D = new Float32Array(w * h * 2), A = new Uint8ClampedArray(w * h), max = 0, i, j;
     for (j = 0; j < h; j++) for (i = 0; i < w; i++) {
       var x = (i + .5) / sc - hw, y = (j + .5) / sc - hh, qx = Math.abs(x) - (hw - r), qy = Math.abs(y) - (hh - r), ox = Math.max(qx, 0), oy = Math.max(qy, 0), c = Math.hypot(ox, oy);
@@ -59,7 +59,9 @@
       var nx, ny; if (qx > 0 && qy > 0) { nx = ox / c; ny = oy / c; } else if (qx > qy) { nx = 1; ny = 0; } else { nx = 0; ny = 1; } nx *= Math.sign(x) || 1; ny *= Math.sign(y) || 1;
       var s = Math.max(0, -dist) / bez, m = s >= 1 ? 0 : T[Math.min(N, Math.round(s * N))], rn2 = (x * x + y * y) / (diag * diag);
       var fall = 1 - g.magFall * (s < 1 ? 1 - s : 0);
-      var dx = -nx * g.refr * m - x * (kM * fall + g.k1 * rn2), dy = -ny * g.refr * m - y * (kM * fall + g.k1 * rn2);
+      var kk = kM * fall + g.k1 * rn2, mx = -x * kk, my = -y * kk, ml = Math.hypot(mx, my);   // magnifier + k1: smooth-capped (tanh) so wide cards do not blow up the chroma
+      if (ml > 1e-6 && g.magCap > 0) { var cs = g.magCap * Math.tanh(ml / g.magCap) / ml; mx *= cs; my *= cs; }
+      var dx = -nx * refr * m + mx, dy = -ny * refr * m + my;
       D[(j * w + i) * 2] = dx; D[(j * w + i) * 2 + 1] = dy; max = Math.max(max, Math.abs(dx), Math.abs(dy)); }
     var cv = document.createElement("canvas"); cv.width = w; cv.height = h; var ctx = cv.getContext("2d"), im = ctx.createImageData(w, h), px = im.data, mm = max || 1;
     for (var k = 0; k < w * h; k++) { px[k * 4] = 128 + Math.round(127 * D[k * 2] / mm); px[k * 4 + 1] = 128 + Math.round(127 * D[k * 2 + 1] / mm); px[k * 4 + 2] = 128; px[k * 4 + 3] = A[k]; }
@@ -104,7 +106,7 @@
   function pickSymbols(seed, W, H, S, m) {
     var r = rng("kg" + seed), pool = S.pool.slice(), i, j, t, TW = W + 2 * m;
     var cell = S.cell[0] + r() * (S.cell[1] - S.cell[0]), cols = Math.max(1, Math.round(TW / cell)), rows = Math.max(1, Math.round(H / cell)), cw = TW / cols, ch = H / rows;
-    var n = cols * rows, keys = [], k = Math.max(.75, Math.min(1, W / 640)), out = [], bulbs = {};
+    var n = cols * rows, keys = [], k = 1, out = [], bulbs = {};
     function shuffle(a) { for (var q = a.length - 1; q > 0; q--) { var z = Math.floor(r() * (q + 1)), tt = a[q]; a[q] = a[z]; a[z] = tt; } return a; }
     for (i = 0; i < n; i++) { if (i % pool.length === 0) shuffle(pool); keys.push(pool[i % pool.length]); }
     var nb = Math.max(1, Math.round(n / 8)); S.always.forEach(function (al) { shuffle(keys.map(function (_, q) { return q; })).slice(0, nb).forEach(function (q) { keys[q] = al; bulbs[q] = 1; }); });
@@ -176,11 +178,12 @@
       while (defs.firstChild) defs.removeChild(defs.firstChild); filterIds = [];
       lensed.style.filter = "";
       var supported = typeof SVGFEDisplacementMapElement !== "undefined";
-      if (supported) { var F = lensField(w, h, { refr: g.refr, bezpx: g.bezpx, curv: g.curv, ior: g.ior, mag: g.mag, k1: g.k1, magFall: g.magFall, radius: rad });
+      if (supported) { var F = lensField(w, h, { refr: g.refr, bezpx: g.bezpx, curv: g.curv, ior: g.ior, mag: g.mag, k1: g.k1, magFall: g.magFall, magCap: g.magCap, radius: rad });
         var id = glassFilter(defs, { refraction: Math.max(F.max, .01), chroma: g.chroma, blur: g.blur }, w, h, F.url); filterIds.push(id); lensed.style.filter = "url(#" + id + ")"; }
       else lensed.style.filter = "blur(" + g.blur + "px)";   // frost only
       // scene
-      if (!syms.length || sizeChanged) { var old = syms; var mg = S.size_px[1] * 1.4; beltM = mg; syms = pickSymbols(seed, w, h, S, mg); if (old.length && old.length === syms.length) syms.forEach(function (s, i) { s.sx = old[i].sx; s.sy = old[i].sy; s.vx = old[i].vx; s.vy = old[i].vy; s.srot = old[i].srot; s.vr = old[i].vr; s.ssc = old[i].ssc; }); }
+      if (!syms.length || sizeChanged) { var old = syms; var cell = Math.max(70, Math.min(140, Math.min(w, h) * .55)), ks = Math.min(1, cell / 125), S2 = { always: S.always, pool: S.pool, cell: [cell, cell * 1.1], rot_deg: S.rot_deg, alpha: S.alpha, size_px: [Math.max(44, S.size_px[0] * ks), Math.max(60, S.size_px[1] * ks)] };
+        var mg = S2.size_px[1] * 1.4; beltM = mg; syms = pickSymbols(seed, w, h, S2, mg); if (old.length && old.length === syms.length) syms.forEach(function (s, i) { s.sx = old[i].sx; s.sy = old[i].sy; s.vx = old[i].vx; s.vy = old[i].vy; s.srot = old[i].srot; s.vr = old[i].vr; s.ssc = old[i].ssc; }); }
       bd.style.filter = "brightness(" + g.bright + ") saturate(" + g.sat + ")";
       bd.innerHTML = '<div style="inset:0;width:100%;height:100%;opacity:' + g.paint + ';background:radial-gradient(120% 140% at 12% -10%, #334979 0%, #263860 22%, #1a294b 45%, #111d3a 72%, #0b152e 100%)"></div>';
       scene = document.createElementNS(NS, "svg"); scene.setAttribute("width", w); scene.setAttribute("height", h); scene.setAttribute("viewBox", "0 0 " + w + " " + h); bd.appendChild(scene);
