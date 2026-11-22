@@ -306,7 +306,7 @@ for (const [W, H] of SIZES) {
       await clean(`${code} idle`);
     });
   }
-  await step(`${T} mc row: 2 choices = one try (wrong locks, struck); 3 choices: keys A-E and 1-5, roving focus, wrong then right`, async () => {
+  await step(`${T} mc row: 2 choices = one try (wrong locks, struck); 3 choices: keys A-G and 1-7, roving focus, wrong then right`, async () => {
     const ids = () => page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.dataset.id));   // choices are shuffled: read the order
     const foc = () => page.evaluate(() => document.activeElement.dataset.id);
     await open("CSCI26_TF3");

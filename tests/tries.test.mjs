@@ -12,7 +12,7 @@ const src = readFileSync(new URL("../client/answer/drill_core/app.js", import.me
 const cut = (a, b) => src.slice(src.indexOf(a), src.indexOf(b));
 const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sugar"; const modeOf = () => MODE;
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}
-${cut("function shown(p) {", "/* One row of pills")}
+${cut("const MAX_SHOWN = ", "/* One row of pills")}
 return { maxTries, gradeLocal, shown, tolOf, setMode: m => { MODE = m; } };`;
 const load = (match = slipMatch, spot = slipSpot) => new Function("math", "slipMatch", "slipSpot", "familyHint", code)({ compile, evaluate, number: Number }, match, spot, familyHint);
 const { maxTries, gradeLocal, shown, tolOf, setMode } = load();
@@ -127,7 +127,7 @@ test("pick all: a false tick with no hint gets the some-taps-wrong line, nothing
 });
 test("pick all: shown() keeps every correct id and the locked ones from a pool of 8", () => {
   const p = pickAll("T_a4", { correct: ["g", "h"], choices: "abcdefgh".split("").map(id => ({ id, md: id, ...(id === "c" ? { lock: true } : {}) })) });
-  assert.deepEqual(shown(p).map(c => c.id), ["a", "b", "c", "g", "h"]);
+  assert.deepEqual(shown(p).map(c => c.id), ["a", "b", "c", "d", "e", "g", "h"]);   // cap 7: c (lock) + g, h (right) + a, b, d, e in authored order; f is hidden
 });
 
 // typed numbers right to 3 significant figures (serve.py sig3; Tony, Oct 3): correctness only

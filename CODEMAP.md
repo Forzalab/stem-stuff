@@ -129,8 +129,8 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `server/data/prompts/` | Runtime LLM system prompts. | Cluck prompt text |
 | `client/shell/blind/` | Blind-locale test data. | blind test |
 | `client/calc/` | Calc Coach json and svg. | Calc Coach data |
-| `docs/` | Notes, plans and MC.md (multiple choice A–E and hints). `docs/design/` holds the design notes and plans. | a design note, a plan, MC |
-| `docs/MC.md` | Multiple choice (A–E) and hints. | MC answers, hints |
+| `docs/` | Notes, plans and MC.md (multiple choice A–G and hints). `docs/design/` holds the design notes and plans. | a design note, a plan, MC |
+| `docs/MC.md` | Multiple choice (A–G) and hints. | MC answers, hints |
 | `archive/` | Old mockups, shots and prototype pages (`archive/design/`, `archive/try/`). Not shipped; kept for reference. | an old mockup or prototype |
 | `client/labs/views_demo/` | The views demo only (views-demo*). Old prototype pages moved to `archive/try/`. | views demo |
 | `.github/workflows/` | CI: tests.yml, box.yml (self-hosted flake hunt after a tests run: never gating), stress.yml (dispatch: one spec x n under CPU load), ship.yml (+ SHIP_MODE: auto-ship.yml, culprit.yml), prune.yml, spend.yml. | CI |
