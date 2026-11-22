@@ -900,6 +900,7 @@ async function welcomeLadder(code) {
   try { const r = await net(`repair/${code}`, { headers: { traceparent: traceparent() } }); return r.ok ? await r.json() : null; } catch { return null; }
 }
 function welcomeQ(q) {
+  fcardGlassOff();
   $("#fcard")?.remove();                                                         // the Key formulas card would answer its sheet step
   const mine = S, code = S.code;
   const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
@@ -1140,8 +1141,11 @@ function keyfWire(sec) {
   document.fonts?.ready.then(() => keyfFit(sec));
   keyfFit(sec);
 }
+let fcardGlass = null;                                                           // KEYF smoked-lens glass handle (keyf_glass/keyf-glass.js), html.ui-v7 only
+const fcardGlassOff = () => { try { fcardGlass?.destroy(); } catch (e) { console.error(e); } fcardGlass = null; };
 function formulaCard() {
   if (window.Pop && Pop.anchor()?.closest("#fcard")) Pop.close();
+  fcardGlassOff();
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
@@ -1178,6 +1182,7 @@ function formulaCard() {
   });
   $("#q").after(sec);
   keyfWire(sec);
+  if (document.documentElement.classList.contains("ui-v7")) try { fcardGlass = window.stemGlass?.mount(sec, { seed: S.code }) || null; } catch (e) { console.error(e); }   // the smoked lens behind the formulas; a missing engine = the plain card
   ladClock();                                                                    // the question loaded: the first piece's 30 s start now
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
