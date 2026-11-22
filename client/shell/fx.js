@@ -73,13 +73,6 @@
     var pref = localStorage.getItem("stem-ui");
     if (pref === "v7" || (live && pref !== "off")) H.classList.add("ui-v7");   // add only: a page (or a test) that set the class itself keeps it
   } catch (e) { if (live) H.classList.add("ui-v7"); }   // blocked storage: the host default
-  /* IT-14 duck-on-verdict-pill variants (verdict-v7.css §it14-duck): ?duck=a|b|c|d sets html[data-duck] and is remembered (localStorage stem-duck); ?duck=off clears. No param + nothing stored = today's look. */
-  try {
-    var duckQ = new URLSearchParams(location.search).get("duck");
-    if (duckQ === "off") localStorage.removeItem("stem-duck"); else if (/^[abcd]$/.test(duckQ || "")) localStorage.setItem("stem-duck", duckQ);
-    var duck = localStorage.getItem("stem-duck");
-    if (/^[abcd]$/.test(duck || "")) H.setAttribute("data-duck", duck);
-  } catch (e) { /* blocked storage: the default look */ }
   var st = { info: info, fps: null };
   W.stemFx = st;
   try { apply(latched); } catch (e) { H.classList.add("fx-dim"); }
