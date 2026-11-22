@@ -42,7 +42,7 @@
 
   function tex(s) {
     if (typeof katex === "undefined") return esc(String(s).replace(/\$/g, ""));
-    return String(s).split("$").map((t, i) => i % 2 ? katex.renderToString(t, { throwOnError: false }) : esc(t)).join("");
+    return String(s).split("$").map((t, i) => i % 2 ? katex.renderToString(((root.FigCheck && root.FigCheck.qmark) || (x => x))(t), { throwOnError: false }) : esc(t)).join("");
   }
 
 // == §json-prep ==

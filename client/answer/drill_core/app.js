@@ -26,6 +26,7 @@
    Layout decisions for the frozen problem: docs/design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 /* ./copy/payload.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { shuffled, seed } from "../../pure_logic_modules/shuffle.mjs";
+import { qmark } from "../../pure_logic_modules/texfix.mjs";
 import * as codes from "../../pure_logic_modules/codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "../../pure_logic_modules/suggest.mjs";
 import { match as slipMatch, slipSpot, familyHint } from "../../pure_logic_modules/slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
@@ -53,6 +54,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
   proofHold: { get: () => proofHold, set: v => { proofHold = v; }, enumerable: true },   // let
   swapOn: { get: () => swapOn, set: v => { swapOn = v; }, enumerable: true },   // let
 });
+if (window.FigCheck) window.FigCheck.qmark = qmark;   // graph.js (a classic script) calls it before KaTeX; a property of the existing FigCheck, so no new window name (window-surface.json)
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
 /* Vercel Web Analytics (docs/design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
@@ -172,7 +174,7 @@ const answerTex = s => math.parse(s).toTex({ parenthesis: "auto", implicit: "hid
 const textDots = s => s.indexOf("\u00b7") < 0 ? s : s.replace(/\\text\{([^{}]*\u00b7[^{}]*)\}/g, (_, t) => t.split("\u00b7").map(x => x ? `\\text{${x}}` : "").join("{\\cdot}"));
 function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
-  return katex.renderToString(textDots(src), { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
+  return katex.renderToString(qmark(textDots(src)), { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
 /* the codeblock (T43; docs/design/STYLE.md "Codeblock"): a fenced block in question or choice text. One span per real line: its number
    is a CSS counter, and a long line wraps hanging under its own indent with no number. Colour: a tiny regex highlighter (Tokyo Night,
