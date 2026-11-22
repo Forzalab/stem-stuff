@@ -1,0 +1,268 @@
+{
+ "v": 20261022,
+ "problems": [
+  {
+   "code": "CALC1_AL1",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "$-80.0$"
+    },
+    {
+     "id": "b",
+     "md": "$40.0$"
+    },
+    {
+     "id": "c",
+     "md": "$120$"
+    },
+    {
+     "id": "d",
+     "md": "$6.0$"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Align math 4",
+    "key": "Use: a",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_AL2",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "$-80.0$"
+    },
+    {
+     "id": "b",
+     "md": "$40.0$"
+    },
+    {
+     "id": "c",
+     "md": "$120$"
+    },
+    {
+     "id": "d",
+     "md": "$6.0$"
+    },
+    {
+     "id": "e",
+     "md": "$-100$"
+    },
+    {
+     "id": "f",
+     "md": "$2.5$"
+    },
+    {
+     "id": "g",
+     "md": "$0$"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Align math 7",
+    "key": "Use: a",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_AL3",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Option A with a few words"
+    },
+    {
+     "id": "b",
+     "md": "Option B with a few words"
+    },
+    {
+     "id": "c",
+     "md": "Option C is a longer option that wraps onto two lines of text here"
+    },
+    {
+     "id": "d",
+     "md": "Option D"
+    },
+    {
+     "id": "e",
+     "md": "Option E with a few words"
+    },
+    {
+     "id": "f",
+     "md": "Option F with a few words"
+    },
+    {
+     "id": "g",
+     "md": "Option G with a few words"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Align text 7",
+    "key": "Use: a",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_AL4",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Work is $-80.0$ J"
+    },
+    {
+     "id": "b",
+     "md": "Work is $40.0$ J"
+    },
+    {
+     "id": "c",
+     "md": "The gas absorbs $120$ J of heat and does $40.0$ J of work on its surroundings"
+    },
+    {
+     "id": "d",
+     "md": "Zero"
+    },
+    {
+     "id": "e",
+     "md": "$W=120$ J"
+    },
+    {
+     "id": "f",
+     "md": "Positive"
+    },
+    {
+     "id": "g",
+     "md": "None of these"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Align mixed 7",
+    "key": "Use: a",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  },
+  {
+   "code": "CALC1_AL5",
+   "type": "mc",
+   "shuffle": false,
+   "body": [
+    {
+     "type": "text",
+     "md": "Pick the one that is marked right."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Both the speed and the kinetic energy double"
+    },
+    {
+     "id": "b",
+     "md": "Only the kinetic energy quadruples, the speed doubles"
+    },
+    {
+     "id": "c",
+     "md": "The momentum is unchanged but the energy is not"
+    },
+    {
+     "id": "d",
+     "md": "Neither quantity changes during the whole motion"
+    },
+    {
+     "id": "e",
+     "md": "The net work done on the cart is exactly zero here"
+    },
+    {
+     "id": "f",
+     "md": "Speed doubles while kinetic energy grows fourfold"
+    },
+    {
+     "id": "g",
+     "md": "Kinetic energy is halved and the speed stays fixed"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "hint": "QUACK. Not b."
+    }
+   ],
+   "saccharine": {
+    "title": "Align long 7",
+    "key": "Use: a",
+    "slip": {
+     "b": "b slip"
+    }
+   }
+  }
+ ]
+}

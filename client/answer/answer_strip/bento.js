@@ -111,6 +111,24 @@
     if (u.stack) os.forEach(function (o) { mathFit(o, 0.9); });   // LONG-MATH: one per row at the smallest font and still too wide -> a last 10% squeeze, else that row scrolls (18 -> 12px was the real shrink here)
     return os.some(mathOver);
   }
+  /* TILE-CENTER-INK (Tony Nov 21): the words sit at the tile's true middle (bento.css: equal top / bottom padding); the letter keeps its corner. LETTER-CLEAR: a tile where the centred words would come within 6px of a corner mark
+     (the letter / the pick-all check; ink = DOM box inset by ~3px) AND overlap it sideways gets --lg = 2 x the shortfall, which bento.css adds to the top padding: the words move down just enough, only there. */
+  function clearLetter(g) {
+    [].forEach.call(g.querySelectorAll(".ch > .opt"), function (o) { o.style.removeProperty("--lg"); });
+    [].forEach.call(g.querySelectorAll(".ch > .opt"), function (o) {
+      var t = o.querySelector(".txt"), rg, rs, top = 1e9, left = 1e9, right = -1e9, need = 0;
+      if (!t) return;
+      rg = D.createRange(); rg.selectNodeContents(t); rs = [].filter.call(rg.getClientRects(), function (x) { return x.width > 0; });
+      if (!rs.length) return;
+      rs.forEach(function (x) { top = Math.min(top, x.top); left = Math.min(left, x.left); right = Math.max(right, x.right); });
+      [].forEach.call(o.querySelectorAll(".lt, .badge"), function (m) {
+        var r = m.getBoundingClientRect(), d = parseFloat(getComputedStyle(o).getPropertyValue("--let-d")) || 0;
+        if (!r.width || left > r.right + 6 || right < r.left - 6) return;                 // clear sideways
+        need = Math.max(need, (r.bottom - d + 6.5) - (top + 3));                          // ink gap >= 6 (+.5 slack)
+      });
+      if (need > 0) o.style.setProperty("--lg", Math.ceil(need * 2) + "px");
+    });
+  }
   function fillLayout(g, chs, R, A, stack) {
     if (mo) mo.disconnect();
     clear(g);
@@ -127,7 +145,7 @@
       if (!stack && P.k < chs.length) { fillLayout(g, chs, R, A, true); return; }             // -> one option per row (a..e stacked)
       u.stack = true; fitAll(u);                                                              // already one per row: the cut rows scroll
     }
-    u.hs = hs; u.A = A;
+    u.hs = hs; u.A = A; clearLetter(g);
     if (window.MutationObserver) { mo = mo || new MutationObserver(function () { if (cur && cur.fill && cur.g.isConnected) requestAnimationFrame(function () { fitAll(cur); }); }); mo.observe(g, { attributes: true, subtree: true, attributeFilter: ["class", "hidden", "aria-checked"] }); }
   }
   function apply() {
@@ -183,6 +201,7 @@
   }
   function guard() {
     var u = cur; if (!u || u.fill || !u.g.isConnected || u.g.dataset.bento !== "grid" || u.g.getBoundingClientRect().width < 200) return;
+    clearLetter(u.g);
     var bad = u.cells.filter(function (c) { return clipped(u.chs[c.i]); });
     if (!bad.length) return;
     if (u.stacked) {
