@@ -20,6 +20,35 @@
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
 """
+# ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
+# FILE: serve.py
+# WHAT: The whole server (stdlib http.server + dispatch() shared with api/index.py on Vercel): bank load, grading + tries, Cluck genie / chat / NOTE streams, proof grading, incidents.
+# START HERE: a route or status code -> §routes (dispatch, _dispatch, Handler); a grading verdict -> §grading (grade, same, slip_hit); a Cluck reply or prompt -> §genie, §prompt-v4; an incident code -> §incidents.
+# FIND A SECTION: grep -n "== §<name> ==" serve.py   (names below; line numbers are never kept)
+# SECTIONS (in file order):
+#   §bank           problems.json + banks/*.json loader, versions: problems, banks, ladder, sheet, formulas, max_tries
+#   §modes          sugar vs diet mode, sugar split (choose-all -> T/F rows): mode_of, sugar, hidden, sub_problem, lookup, view, public
+#   §math           sympy behind a token allowlist: to_python, evaluate
+#   §grading        number/unit/sig-fig grading, slip hints, tries store, repair_check: same, tol_of, slip_hit, state, mark, grade
+#   §expr-answers   W137 expression answers + L3 diagnose: expr_mode, expr_hit, expr_l3, diagnose, expr_explain_store
+#   §incidents      S-XXXXX incident codes + one JSON log line: incident, log_incident, health_state, OutOfCredit
+#   §trace          per-request flight-recorder trace: set_trace, trace_id, log
+#   §genie          Cluck genie after a wrong answer, OpenRouter stream: explain_prompt, explain_stream, graph_json, wish_pick
+#   §claude-pipe    Claude API path + spend/cooldown: claude_params, claude_system, claude_ok, claude_spent, ReplyCut
+#   §prompt-v4      v4 prompt (letter as system), leak guards, figure re-ask: v4_user, v4_dynamic, leak_scan, prompt_guard, fig_spec
+#   §cram-day       TEMPORARY Exam 3 per-item guidance, subject gate, v4_stream, _cluck_stream, emoji_cut
+#   §stage-events   wait-step lines for the stage list: stage_line, _staged_relay, explain
+#   §note-chat      NOTE call under the box + follow-up chat: note, note_block, CLUCK_CHAT, CHAT_TURNS
+#   §proof          proof items (W107): proof_grade, proof_judge, proof_ladder_ok, proof_hint, chat_history, chat
+#   §routes         check_stream, _json, dispatch/_dispatch (/check /diagnose /narrate /mini /calc /health /b /p /state), Handler, __main__
+# RELATED:
+#   api/index.py     Vercel entry, calls dispatch()
+#   expr.py          expression answer helpers
+#   slips.py         slip families
+#   views_gate.py    gate for Cluck openui fences
+#   livefig.py       live figures
+#   mini.py          mini-Cluck
+# ===== END CODEMAP HEADER =====
 import base64
 import datetime
 import errno
@@ -208,6 +237,7 @@ def unfold(p):
     return out
 
 
+# == §bank ==
 # ---------------- the bank: problems.json + banks/BANK_XXX.json, each re-read when it changes ----------------
 # docs/design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
@@ -420,6 +450,7 @@ def max_tries(p):
     return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
 
 
+# == §modes ==
 # ---------------- modes (docs/design/EASY.md): sugar (saccharine) is the default; diet = the original questions, the cookie stem-mode=diet ----------------
 # Code box: DIET_<code> / SUGAR_<code> (mode.mjs). "hard" is the old name of diet. D6 (Oct 7): diet/hard counts only beside the
 # flag stem-mode-v=2 (mode.mjs sets it with every mode change); an old cookie without it = sugar (mode.mjs clears it on the next load).
@@ -601,6 +632,7 @@ def public(p, sid=""):
     return out
 
 
+# == §math ==
 # ---------------- math: sympy does the math ----------------
 # sympy's parse_expr runs eval(), so text reaches it only after to_python() has allowed every token:
 # numbers, the names below, the variable, + - * / ^ ( ) and commas. Nothing else gets through.
@@ -669,6 +701,7 @@ def evaluate(src, var="x", at=None):
     return float(v)
 
 
+# == §grading ==
 # ---------------- grading ----------------
 DNE = re.compile(r"^\s*(dne|does not exist)\s*$", re.I)
 UNREADABLE = (ValueError, ArithmeticError, SyntaxError, TypeError, AttributeError, IndexError, RecursionError, MemoryError, sympy.SympifyError)
@@ -1330,6 +1363,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
     return reply(shut(out) if left() <= 0 else out)
 
 
+# == §expr-answers ==
 # ---------------- W137 expression answers (todo 137, brain _files/w137): EXPR_MODE on the allowlisted banks ----------------
 # After one wrong try on a typed num answer / num part with a `form`, the box asks for the whole working (expr.PROMPT). It is graded by
 # its value (the item's tol); a miss gets L1 (expr.l1: the tree vs `form` + the slips families) and, when L1 names no family, POST
@@ -1643,6 +1677,7 @@ def new_sid(cookie_header):
     return sid, f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
 
 
+# == §incidents ==
 # ---------------- Incidents (SCHEMA.md "Incidents", Tony Oct 19): every failure we can catch = one code + ONE JSON line in the logs ----------------
 # Server codes are "S-" + 5 chars, the page's "E-" (incident.mjs). A line holds the code, a reason tag and numbers, never student text.
 # Vercel → Logs, search the code. A Cluck failure before any text went out answers with the code in X-Incident ("S-XXXXX reason <trace id>").
@@ -1682,6 +1717,7 @@ def log(*a):
     print(line, file=sys.stderr, flush=True)   # one write: threads never interleave inside a line
 
 
+# == §trace ==
 # ---- the per-request trace (flight recorder P2): ONE JSON line per /explain | /chat request, and per slow / failed API request ----
 TRACE_PHASES = 40                            # phases kept per request (a chain of 3 models + NOTE + failures is ~8)
 TRACE_SLOW_MS = 2000                         # a non-stream API request gets its line only when slower than this or not 2xx (keeps volume tiny)
@@ -2036,6 +2072,7 @@ def claude_ready(out):
     return False
 
 
+# == §genie ==
 # ---------------- Cluck the genie (docs/design/EASY.md Phase 4): a streamed, paraphrased solution after a wrong answer, easy mode only ----------------
 # The smart part is the presolved `key` (+ `slip`, `part`) written in the brain; the model only says it in Cluck's voice.
 # OpenRouter, zero data retention: provider.zdr + data_collection deny, so a request that can't route privately fails instead.
@@ -2391,6 +2428,7 @@ def _or_stream(messages, key, max_tokens, out=None):
 
 
 
+# == §claude-pipe ==
 # ---------------- Claude API pipe (default when CLAUDE_API is set): Cluck's genie + chat streams; gate and NOTE stay on OpenRouter ----------------
 # No CLAUDE_API = the OpenRouter path above, unchanged. Any Claude trouble before the first word (error, 4xx/5xx, billing, 429/529,
 # an empty reply) falls back to OPENROUTER_MODELS with their own params; once words flow, it stays on Claude.
@@ -2677,6 +2715,7 @@ def claude_cost(used):
             + used["cache_read_input_tokens"] * pi * CACHE_READ + used["out"] * po) / 1e6
 
 
+# == §prompt-v4 ==
 # ---------------- Cluck prompt v4 (T62): Tony's letter as the system, the bench's user-turn layout, two arms, server guards ----------------
 # system = prompts/cluck-v4.txt BYTE FOR BYTE (nothing added: no bank line, no figure rule, no CLAUDE_DELTA); the same for every bank and
 # question, so it is one cache entry. Each user turn = [explain_prompt: static per question] + [XYZ note + REMINDER/REVEAL + USER QUERY: dynamic];
@@ -3566,6 +3605,7 @@ def fig_spec(code):
     return next((name for name, rx in _SPEC_RULES if re.search(rx, text)), None)
 
 
+# == §cram-day ==
 # ---------------- cram day (TEMPORARY, Tony Nov 6): per-item guidance for Exam 3 (Phys 2A), server side only ----------------
 # banks/cram/intel.json (banks/ is blocked from the web) -> one extra uncached system block per Cluck turn for the BANK_P3X items it names, plus a
 # generic "draw first, stage by stage" add-on for every PHYS_ item of the bank. Generic physics only (no exam stems, no keys). It never reaches
@@ -4063,6 +4103,7 @@ def emoji_strip(chunks):
         yield out
 
 
+# == §stage-events ==
 # ---------------- stage events (W160a, Card 109-160): the wait shows the real steps ----------------
 # Opt-in: the JSON body says "stages": true (/explain, /check on a proof item). Nothing else changes for a client that does not ask: /explain stays
 # plain text, a Check stays one JSON. Why a body flag: it works the same on serve.py and the Vercel WSGI entry (no header plumbing), and an old client
@@ -4186,6 +4227,7 @@ def explain(cookie_header, body):
     return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), sid, turn), "explain", head)
 
 
+# == §note-chat ==
 # ---------------- Cluck chat (handoff 2026-10-04): follow-up questions under the genie box, CHAT_TURNS per problem per browser ----------------
 # history[0] is the box text (Cluck's own turn); then the student and Cluck take turns; the last one is the student's.
 # The cap lives twice: the history the browser sends, and _chats (one server process; Vercel instances do not share it).
@@ -4398,6 +4440,7 @@ def note_block(n):
     return "\n\nNOTE:\n" + "\n".join(f"{k}: {n[k]}" for k in keys if n.get(k) not in (None, ""))
 
 
+# == §proof ==
 # ---------------- proof items (W107, SCHEMA.md "Proof items"; Tony Oct 27: "CASUAL proof. only need to have base and induction {assume, prove}
 # steps", feedback at Flesch-Kincaid grade 2-5) ----------------
 # POST /check {code, answer: the free-written answer} on a proof item: ONE JSON call to Cluck's grader (OpenRouter, ZDR only, like the NOTE), outside
@@ -4793,6 +4836,7 @@ def chat(cookie_header, body):
     return _relay(p, chunks, "chat", head)
 
 
+# == §routes ==
 def check_stream(cookie_header, body):
     """POST /check {..., stages: true} on a proof item: (200, headers, bytes iterator) = stage lines as the Check works, then the usual JSON on the last
     line. None for anything else (no flag, not a proof, a bad body or code): the caller then runs dispatch(), byte for byte as before."""
