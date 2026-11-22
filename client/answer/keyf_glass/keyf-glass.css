@@ -1,0 +1,31 @@
+/* keyf-glass.css: the smoked-lens glass behind the live "Key formulas" card (#fcard). Pairs with keyf-glass.js (window.stemGlass).
+   Sections: == §card == the card while glass is on; == §layers == scene / lens / tint / grain / rim.
+   Everything inside .kg is decorative (aria-hidden, no pointer events); formulas stay above it, never filtered.
+   Dynamic values (shadow, tint, grain, rim shadows, filter id) are set inline by the JS from its config. */
+
+/* == §card == */
+html:root .kg-on.kg-on { background: transparent; border-color: transparent; isolation: isolate;
+  box-shadow: 0 2px 6px rgb(0 0 0 / var(--kg-sh, .81)), 0 10px 24px rgb(0 0 0 / calc(var(--kg-sh, .81) * .7)); }
+.kg-on::after { display: none !important; }              /* the v7 decorative corner mark: the glass replaces it */
+.kg-on > :not(.kg) { position: relative; z-index: 1; }    /* formulas, "?" and ladder stay above the glass in every mode */
+
+/* == §layers == */
+.kg { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; contain: paint; }
+.kg-lensed, .kg-bd, .kg-tint, .kg-grain, .kg-hair { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; }
+.kg-lensed { z-index: 1; overflow: hidden; }
+.kg-bd { overflow: hidden; background-color: #02060c; }   /* the page colour the glass sits on: no copy of the page behind */
+.kg-bd > * { position: absolute; left: 0; top: 0; }
+.kg-bd svg { overflow: hidden; display: block; }
+.kg-tint { z-index: 1; }
+.kg-scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none; filter: blur(var(--kg-scrim-blur, 18px)); }   /* dims the scene under each formula row */
+.kg-scrim i { position: absolute; background: var(--kg-scrim, rgb(3 16 26 / .55)); border-radius: 999px; }
+.kg-grain { z-index: 2; mix-blend-mode: overlay; }
+.kg-hair { z-index: 3; }
+.kg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* == §hover == desktop flashlight proximity (JS sets --kg-h 0..1, --kg-mx/--kg-my pointer in card px, --kg-hr radius, --kg-rh per .fm; layers are always there, only opacity / mask change) */
+.kg-hover { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--kg-h, 0);
+  -webkit-mask-image: radial-gradient(circle var(--kg-hr, 260px) at var(--kg-mx, 50%) var(--kg-my, 50%), #000 0, transparent 100%);
+  mask-image: radial-gradient(circle var(--kg-hr, 260px) at var(--kg-mx, 50%) var(--kg-my, 50%), #000 0, transparent 100%); }
+.kg-scrim2 i { opacity: 0; }
+.kg-on .fm { text-shadow: 0 0 6px rgb(243 247 252 / calc(var(--kg-rh, 0) * var(--kg-glow, .12))); }
