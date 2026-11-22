@@ -34,7 +34,7 @@
       fresnel: 0.1, tir: 0.3, vign: 0.25, tint: 0.4, tintRGB: [3, 16, 26], paint: 0.16, sym: 0.55, bright: 0.7, sat: 0.98,
       grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16 },
     motion: { mode: "conveyor", speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
-    symbols: { always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
+    symbols: { scale: 1, always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
       size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.6, 1] }
   };
 
@@ -184,7 +184,7 @@
         var id = glassFilter(defs, { refraction: Math.max(F.max, .01), chroma: g.chroma, blur: g.blur }, w, h, F.url); filterIds.push(id); lensed.style.filter = "url(#" + id + ")"; }
       else lensed.style.filter = "blur(" + g.blur + "px)";   // frost only
       // scene
-      if (!syms.length || sizeChanged) { var old = syms; var cell = Math.max(70, Math.min(140, Math.min(w, h) * .55)), ks = Math.min(1, cell / 125), S2 = { always: S.always, pool: S.pool, cell: [cell, cell * 1.1], rot_deg: S.rot_deg, alpha: S.alpha, size_px: [Math.max(44, S.size_px[0] * ks), Math.max(60, S.size_px[1] * ks)] };
+      if (!syms.length || sizeChanged) { var old = syms; var sk = S.scale > 0 ? S.scale : 1, cell0 = Math.max(70, Math.min(140, Math.min(w, h) * .55)), cell = cell0 * sk, ks = Math.min(1, cell0 / 125) * sk, S2 = { always: S.always, pool: S.pool, cell: [cell, cell * 1.1], rot_deg: S.rot_deg, alpha: S.alpha, size_px: [Math.max(44, S.size_px[0] * ks), Math.max(60, S.size_px[1] * ks)] };
         var mg = S2.size_px[1] * 1.4; beltM = mg; syms = pickSymbols(seed, w, h, S2, mg); if (old.length && old.length === syms.length) syms.forEach(function (s, i) { s.sx = old[i].sx; s.sy = old[i].sy; s.vx = old[i].vx; s.vy = old[i].vy; s.srot = old[i].srot; s.vr = old[i].vr; s.ssc = old[i].ssc; }); }
       bd.style.filter = "brightness(" + g.bright + ") saturate(" + g.sat + ")";
       bd.innerHTML = '<div style="inset:0;width:100%;height:100%;opacity:' + g.paint + ';background:radial-gradient(120% 140% at 12% -10%, #334979 0%, #263860 22%, #1a294b 45%, #111d3a 72%, #0b152e 100%)"></div>';
