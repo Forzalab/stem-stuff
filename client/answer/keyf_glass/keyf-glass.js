@@ -10,7 +10,7 @@
      == §config ==   the locked look as the default config (window.stemGlass.config)
      == §lens ==     profileTable, lensField (map), bendScale, glassOn (SVG filter)
      == §symbols ==  SYM paths (pi, sigma, bulb), text glyphs, seeded pick + layout
-     == §motion ==   conveyor belt (wrap) + tiny water bob target() + spring step
+     == §motion ==   conveyor belt (wrap) + tiny water bob + slow pulse on ~1 in 3 symbols; text scrim in §layers target() + spring step
      == §layers ==   scene svg, tint, grain, rim (paint)
      == §mount ==    mount / refresh / destroy, observers, media queries, rAF loop
    Related: client/answer/keyf_glass/keyf-glass.css (structure), client/answer/drill_core/app.css (.fcard rules).
@@ -30,10 +30,10 @@
 
   /* == §config == */
   var config = {
-    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 0.5, blur: 8, mag: 1.1, k1: 0.08, magFall: 0.5, magCap: 18,
+    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 0.5, blur: 8, mag: 1.1, k1: 0.08, magFall: 0.5, magCap: 18, scrim: 0.55, scrimBlur: 18, scrimPad: 14,
       fresnel: 0.1, tir: 0.3, vign: 0.25, tint: 0.4, tintRGB: [3, 16, 26], paint: 0.16, sym: 0.55, bright: 0.7, sat: 0.98,
       grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16 },
-    motion: { mode: "conveyor", speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75 },
+    motion: { mode: "conveyor", speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
     symbols: { always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
       size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.6, 1] }
   };
@@ -104,6 +104,7 @@
      (x modulo tile width) happens fully off-card and the strip is seamless. Pool cycled in seeded order; bulb at least once per tile.
      sym = { key, size, asp, x, y, rot, a, ph[], per, amp, + spring state }. x in [-m, W+m), y in [0, H): card px (scene coords). */
   function pickSymbols(seed, W, H, S, m) {
+    var PU = config.motion.pulse;
     var r = rng("kg" + seed), pool = S.pool.slice(), i, j, t, TW = W + 2 * m;
     var cell = S.cell[0] + r() * (S.cell[1] - S.cell[0]), cols = Math.max(1, Math.round(TW / cell)), rows = Math.max(1, Math.round(H / cell)), cw = TW / cols, ch = H / rows;
     var n = cols * rows, keys = [], k = 1, out = [], bulbs = {};
@@ -115,7 +116,8 @@
       out.push({ key: key, size: size, asp: asp, x: -m + (c + .5 + (r() - .5) * .5) * cw, y: (rw + .5 + (r() - .5) * .5) * ch, rot: S.rot_deg[0] + r() * (S.rot_deg[1] - S.rot_deg[0]),
         a: key === "bulb" ? Math.max(.7, S.alpha[0] + r() * (S.alpha[1] - S.alpha[0])) : S.alpha[0] + r() * (S.alpha[1] - S.alpha[0]),
         ph: [0, 1, 2, 3, 4].map(function () { return r() * TAU; }), per: 1 + (r() - .5) * .3, amp: 1 + (r() - .5) * .3,
-        sx: 0, sy: 0, vx: 0, vy: 0, srot: 0, vr: 0, ssc: 1 }); });
+        sx: 0, sy: 0, vx: 0, vy: 0, srot: 0, vr: 0, ssc: 1,
+        pulse: r() < PU.share, pper: PU.period[0] + r() * (PU.period[1] - PU.period[0]), pph: r() * TAU }); });
     return out; }
 
   /* == §motion == */
@@ -168,9 +170,9 @@
         kg = document.createElement("div"); kg.className = "kg"; kg.setAttribute("aria-hidden", "true");
         card.insertBefore(kg, card.firstChild); card.classList.add("kg-on");
         if (getComputedStyle(card).position === "static") { card.style.position = "relative"; madeRel = true; }
-        kg.innerHTML = '<div class="kg-lensed"><div class="kg-bd"></div><div class="kg-tint"></div></div><div class="kg-grain"></div><div class="kg-hair"></div>';
+        kg.innerHTML = '<div class="kg-lensed"><div class="kg-bd"></div><div class="kg-tint"></div></div><div class="kg-scrim"></div><div class="kg-grain"></div><div class="kg-hair"></div>';
         svgDefs = document.createElementNS(NS, "svg"); svgDefs.setAttribute("class", "kg-defs"); svgDefs.setAttribute("aria-hidden", "true"); defs = document.createElementNS(NS, "defs"); svgDefs.appendChild(defs); kg.appendChild(svgDefs); }
-      var lensed = kg.querySelector(".kg-lensed"), bd = kg.querySelector(".kg-bd"), tint = kg.querySelector(".kg-tint"), grain = kg.querySelector(".kg-grain"), hair = kg.querySelector(".kg-hair");
+      var scrimEl = kg.querySelector(".kg-scrim"), lensed = kg.querySelector(".kg-lensed"), bd = kg.querySelector(".kg-bd"), tint = kg.querySelector(".kg-tint"), grain = kg.querySelector(".kg-grain"), hair = kg.querySelector(".kg-hair");
       var cr = parseFloat(getComputedStyle(card).borderTopLeftRadius); var rad = isFinite(cr) && cr > 0 ? cr : g.radius;
       var sizeChanged = w !== R.w || h !== R.h; R = { w: w, h: h };
       card.style.setProperty("--kg-sh", g.shadow);
@@ -193,15 +195,25 @@
       grain.style.opacity = g.grain; grain.style.backgroundImage = grainURL(g);
       hair.style.boxShadow = "inset 0 0 0 1px rgb(255 255 255 / " + g.hair + "), inset 0 0 " + (g.bezpx * .25) + "px rgb(255 255 255 / " + g.fresnel + "), inset 0 0 " + Math.max(2, g.bezpx * .08) + "px " + Math.max(1, g.bezpx * .03) + "px rgb(0 0 0 / " + g.tir + ")";
       hair.style.background = "radial-gradient(120% 140% at 50% 50%, transparent 55%, rgb(0 0 0 / " + g.vign + ") 100%)";
-      built = true; pose(); kick(); }
+      built = true; scrim(); pose(); kick(); }
+    /* soft text scrim: one blurred dark rounded rect per visible formula row, so the scene under the ink is dimmed (rows measured now) */
+    function scrim() {
+      var el = kg && kg.querySelector(".kg-scrim"); if (!el) return; var g = config.glass, cr = card.getBoundingClientRect(), pad = g.scrimPad, html = "";
+      if (g.scrim > 0) card.querySelectorAll("li.f").forEach(function (li) {
+        if (li.hidden || li.classList.contains("mid")) return; var fm = li.querySelector(".fm") || li, b = fm.getBoundingClientRect(); if (b.width < 2 || b.height < 2) return;
+        var kx = card.offsetWidth ? card.offsetWidth / (cr.width || 1) : 1;
+        html += '<i style="left:' + ((b.left - cr.left) * kx - pad).toFixed(1) + 'px;top:' + ((b.top - cr.top) * kx - pad * .7).toFixed(1) + 'px;width:' + (b.width * kx + 2 * pad).toFixed(1) + 'px;height:' + (b.height * kx + 1.4 * pad).toFixed(1) + 'px"></i>'; });
+      el.innerHTML = html; el.style.setProperty("--kg-scrim", "rgb(" + g.tintRGB.join(" ") + " / " + g.scrim + ")"); el.style.setProperty("--kg-scrim-blur", g.scrimBlur + "px"); }
 
     /* margin >= largest symbol, so a symbol fully leaves one edge before re-entering the opposite one */
     function margin() { var mx = 0; syms.forEach(function (q) { mx = Math.max(mx, q.size * Math.max(1, q.asp) * 1.25); }); return mx; }
     function pose() {   // write all transforms from the current sim state (static pose when motion is off)
       if (!built) return; var m = beltM, belt = config.motion.belt, mo = T, W2 = R.w + 2 * m, H2 = R.h;
+      var PU = config.motion.pulse, live = !RM.matches;
       syms.forEach(function (s, i) {
-        var px = mod(s.x + m + belt.vx * mo * config.motion.speed, W2) - m, py = belt.vy ? mod(s.y + belt.vy * mo, H2) : s.y;
-        symEls[i].setAttribute("transform", "translate(" + (px + s.sx).toFixed(2) + " " + (py + s.sy).toFixed(2) + ") rotate(" + (s.rot + s.srot).toFixed(3) + ") scale(" + s.ssc.toFixed(4) + ")"); }); }
+        var px = mod(s.x + m + belt.vx * mo * config.motion.speed, W2) - m, py = belt.vy ? mod(s.y + belt.vy * mo, H2) : s.y, pz = 0;
+        if (s.pulse && live) { pz = Math.sin(TAU * T / s.pper + s.pph); symEls[i].setAttribute("opacity", (1 + PU.alpha * pz).toFixed(3)); } else symEls[i].removeAttribute("opacity");
+        symEls[i].setAttribute("transform", "translate(" + (px + s.sx).toFixed(2) + " " + (py + s.sy).toFixed(2) + ") rotate(" + (s.rot + s.srot).toFixed(3) + ") scale(" + (s.ssc * (1 + PU.scale * pz)).toFixed(4) + ")"); }); }
     function frame(ts) {
       raf = 0; if (!animOn()) return;
       var t = ts / 1000, dt = Math.min(1 / 30, Math.max(0, t - last)); last = t; T += dt;
@@ -215,7 +227,7 @@
       syms.forEach(function (s) { s.sx = s.sy = s.vx = s.vy = s.srot = s.vr = 0; s.ssc = 1; }); T = 0; pose(); }
 
     function refresh() { if (gone) return; if (glassOff()) { teardownDom(); return; } build(); }
-    function debounced() { clearTimeout(rt); rt = setTimeout(function () { if (!gone && built && (card.clientWidth !== R.w || card.clientHeight !== R.h)) build(); else if (!built && !gone) build(); }, 120); }
+    function debounced() { clearTimeout(rt); rt = setTimeout(function () { if (!gone && built && (card.clientWidth !== R.w || card.clientHeight !== R.h)) build(); else if (!built && !gone) build(); else if (built) scrim(); }, 120); }
     function onMotion() { if (RM.matches) { if (raf) { cancelAnimationFrame(raf); raf = 0; } settle(); } else kick(); }
     function onVis() { kick(); }
     function onTransp() { refresh(); }

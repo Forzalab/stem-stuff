@@ -17,6 +17,8 @@ html:root .kg-on.kg-on { background: transparent; border-color: transparent; iso
 .kg-bd > * { position: absolute; left: 0; top: 0; }
 .kg-bd svg { overflow: hidden; display: block; }
 .kg-tint { z-index: 1; }
+.kg-scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none; filter: blur(var(--kg-scrim-blur, 18px)); }   /* dims the scene under each formula row */
+.kg-scrim i { position: absolute; background: var(--kg-scrim, rgb(3 16 26 / .55)); border-radius: 999px; }
 .kg-grain { z-index: 2; mix-blend-mode: overlay; }
 .kg-hair { z-index: 3; }
 .kg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
