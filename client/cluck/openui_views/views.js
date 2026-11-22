@@ -34,6 +34,7 @@
 // one error boundary per statement (a failed statement drops or keeps its last good node, its siblings render, spec §8.2);
 // VISUAL-FIRST (Tony 19:0x): nothing to show -> a Doodle, never a blank.
 // The component list lives in views-lib.js (P0.2 generates it); the drawings below are the only look-free code that knows it.
+import { qmark } from "../../pure_logic_modules/texfix.mjs";
 import { createParser, mergeStatements } from "../../vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
 import { parseRow, tugModel, drawTug, flipModel, drawFlip } from "../../pure_logic_modules/tug.mjs";
@@ -640,7 +641,7 @@ function texNode(doc, s, inline = false) {
   const el = h(doc, inline ? "span" : "div", { class: inline ? "vw-tex-i" : "vw-tex" });
   const K = doc.defaultView && doc.defaultView.katex;
   const trust = x => x.command === "\\htmlClass" && /^vw-sym tn-[a-z0-9]+$/.test(x.class);   // only the hue wrap texHue writes
-  try { if (K) K.render(String(s), el, { displayMode: !inline, throwOnError: false, trust, strict: false }); else el.textContent = String(s).replace(/\\htmlClass\{[^}]*\}\{([^}]*)\}/g, "$1"); } catch { el.textContent = s; }
+  try { if (K) K.render(qmark(String(s)), el, { displayMode: !inline, throwOnError: false, trust, strict: false }); else el.textContent = String(s).replace(/\\htmlClass\{[^}]*\}\{([^}]*)\}/g, "$1"); } catch { el.textContent = s; }
   return el;
 }
 /** a step caption: **bold** as rich(), plus inline $...$ math (KaTeX when the page has it) */
