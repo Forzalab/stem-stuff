@@ -22,3 +22,10 @@ html:root .kg-on.kg-on { background: transparent; border-color: transparent; iso
 .kg-grain { z-index: 2; mix-blend-mode: overlay; }
 .kg-hair { z-index: 3; }
 .kg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* == §hover == desktop flashlight proximity (JS sets --kg-h 0..1, --kg-mx/--kg-my pointer in card px, --kg-hr radius, --kg-rh per .fm; layers are always there, only opacity / mask change) */
+.kg-hover { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--kg-h, 0);
+  -webkit-mask-image: radial-gradient(circle var(--kg-hr, 260px) at var(--kg-mx, 50%) var(--kg-my, 50%), #000 0, transparent 100%);
+  mask-image: radial-gradient(circle var(--kg-hr, 260px) at var(--kg-mx, 50%) var(--kg-my, 50%), #000 0, transparent 100%); }
+.kg-scrim2 i { opacity: 0; }
+.kg-on .fm { text-shadow: 0 0 6px rgb(243 247 252 / calc(var(--kg-rh, 0) * var(--kg-glow, .12))); }

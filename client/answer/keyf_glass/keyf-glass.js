@@ -13,6 +13,7 @@
      == §motion ==   conveyor belt (wrap) + tiny water bob + slow pulse on ~1 in 3 symbols; text scrim in §layers target() + spring step
      == §layers ==   scene svg, tint, grain, rim (paint)
      == §mount ==    mount / refresh / destroy, observers, media queries, rAF loop
+     == §hover ==    desktop-only pointer proximity (frost + tint + scrim + ink glow via --kg-h), inside mount()
    Related: client/answer/keyf_glass/keyf-glass.css (structure), client/answer/drill_core/app.css (.fcard rules).
    The lens recipe (profileTable / lensField rim / bendScale / glassOn) is derived from liquidglass:
      MIT License. Copyright (c) 2026 gentpan, https://github.com/gentpan/liquidglass (commit d5db099).
@@ -30,12 +31,13 @@
 
   /* == §config == */
   var config = {
-    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 0.5, blur: 8, mag: 1.1, k1: 0.08, magFall: 0.5, magCap: 18, scrim: 0.55, scrimBlur: 18, scrimPad: 14,
-      fresnel: 0.1, tir: 0.3, vign: 0.25, tint: 0.4, tintRGB: [3, 16, 26], paint: 0.16, sym: 0.55, bright: 0.7, sat: 0.98,
-      grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16 },
-    motion: { mode: "conveyor", speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
-    symbols: { scale: 1, always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
-      size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.6, 1] }
+    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 1.2, blur: 9.7, mag: 1.12, k1: 0.08, magFall: 0.5, magCap: 18, scrim: 0.55, scrimBlur: 18, scrimPad: 14,
+      fresnel: 0.1, tir: 0.35, vign: 0.25, tint: 0.4, tintRGB: [3, 16, 26], paint: 0.16, sym: 0.51, bright: 0.7, sat: 0.98,
+      grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16,
+      hover: { dist: 220, radius: 260, blur: 2.5, tint: 0.08, scrim: 0.12, glow: 0.12 } },   /* desktop pointer proximity, very subtle */
+    motion: { mode: "conveyor", fps: 12, speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
+    symbols: { scale: 0, scaleAuto: { wide: 2, narrow: 1.5, at: 700 }, always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
+      size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.35, 1] }
   };
 
   /* == §lens == */
@@ -137,8 +139,8 @@
     gEl.appendChild(node("path", { fill: fill, d: d.d, transform: "scale(" + sc + ") translate(" + (-d.w / 2) + " " + (-d.h / 2) + ")" })); return gEl; }
 
   /* == §mount == */
-  var RM = matchMedia("(prefers-reduced-motion: reduce)"), RT = matchMedia("(prefers-reduced-transparency: reduce)"), HC = matchMedia("(prefers-contrast: more)");
-  var cards = new WeakMap();
+  var RM = matchMedia("(prefers-reduced-motion: reduce)"), RT = matchMedia("(prefers-reduced-transparency: reduce)"), HC = matchMedia("(prefers-contrast: more)"), HOV = matchMedia("(hover: hover) and (pointer: fine)");
+  var cards = new WeakMap(), STATS = { mapMs: 0, mountMs: 0 };
   function onMQ(mq, fn) { if (mq.addEventListener) mq.addEventListener("change", fn); else if (mq.addListener) mq.addListener(fn); }
   function offMQ(mq, fn) { if (mq.removeEventListener) mq.removeEventListener("change", fn); else if (mq.removeListener) mq.removeListener(fn); }
 
@@ -147,7 +149,7 @@
     var have = cards.get(card); if (have) { have.refresh(); return have.handle; }
     var seed = (opts && opts.seed != null) ? opts.seed : (location.hash || "kg");
     var kg = null, defs = null, svgDefs = null, scene = null, symEls = [], syms = [], filterIds = [], ro = null, io = null, rt = 0, raf = 0, visible = true;
-    var R = { w: 0, h: 0 }, beltM = 0, T = 0, last = 0, built = false, gone = false, madeRel = false;
+    var R = { w: 0, h: 0 }, beltM = 0, T = 0, last = 0, lastRun = 0, built = false, gone = false, madeRel = false;
 
     function glassOff() { return RT.matches || HC.matches; }
     function animOn() { return built && !RM.matches && !document.hidden && visible && !gone; }
@@ -156,7 +158,7 @@
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
       if (kg && kg.parentNode) kg.parentNode.removeChild(kg);
       kg = defs = svgDefs = scene = null; symEls = []; syms = []; filterIds = [];
-      card.classList.remove("kg-on"); card.style.removeProperty("--kg-sh");
+      card.classList.remove("kg-on"); card.style.removeProperty("--kg-sh"); clearRows(); rowsC = []; ["--kg-h", "--kg-mx", "--kg-my", "--kg-hr"].forEach(function (k) { card.style.removeProperty(k); }); if (hbound) unbindHover();
       if (madeRel) { card.style.position = ""; madeRel = false; }
       built = false; R = { w: 0, h: 0 }; }
 
@@ -168,7 +170,7 @@
         kg = document.createElement("div"); kg.className = "kg"; kg.setAttribute("aria-hidden", "true");
         card.insertBefore(kg, card.firstChild); card.classList.add("kg-on");
         if (getComputedStyle(card).position === "static") { card.style.position = "relative"; madeRel = true; }
-        kg.innerHTML = '<div class="kg-lensed"><div class="kg-bd"></div><div class="kg-tint"></div></div><div class="kg-scrim"></div><div class="kg-grain"></div><div class="kg-hair"></div>';
+        kg.innerHTML = '<div class="kg-lensed"><div class="kg-bd"></div><div class="kg-tint"></div></div><div class="kg-hover"></div><div class="kg-scrim"></div><div class="kg-scrim kg-scrim2"></div><div class="kg-grain"></div><div class="kg-hair"></div>';
         svgDefs = document.createElementNS(NS, "svg"); svgDefs.setAttribute("class", "kg-defs"); svgDefs.setAttribute("aria-hidden", "true"); defs = document.createElementNS(NS, "defs"); svgDefs.appendChild(defs); kg.appendChild(svgDefs); }
       var scrimEl = kg.querySelector(".kg-scrim"), lensed = kg.querySelector(".kg-lensed"), bd = kg.querySelector(".kg-bd"), tint = kg.querySelector(".kg-tint"), grain = kg.querySelector(".kg-grain"), hair = kg.querySelector(".kg-hair");
       var cr = parseFloat(getComputedStyle(card).borderTopLeftRadius); var rad = isFinite(cr) && cr > 0 ? cr : g.radius;
@@ -178,11 +180,11 @@
       while (defs.firstChild) defs.removeChild(defs.firstChild); filterIds = [];
       lensed.style.filter = "";
       var supported = typeof SVGFEDisplacementMapElement !== "undefined";
-      if (supported) { var F = lensField(w, h, { refr: g.refr, bezpx: g.bezpx, curv: g.curv, ior: g.ior, mag: g.mag, k1: g.k1, magFall: g.magFall, magCap: g.magCap, radius: rad });
-        var id = glassFilter(defs, { refraction: Math.max(F.max, .01), chroma: g.chroma, blur: g.blur }, w, h, F.url); filterIds.push(id); lensed.style.filter = "url(#" + id + ")"; }
+      if (supported) { var t0 = performance.now(), F = lensField(w, h, { refr: g.refr, bezpx: g.bezpx, curv: g.curv, ior: g.ior, mag: g.mag, k1: g.k1, magFall: g.magFall, magCap: g.magCap, radius: rad });
+        var id = glassFilter(defs, { refraction: Math.max(F.max, .01), chroma: lp ? 0 : g.chroma, blur: g.blur }, w, h, F.url); filterIds.push(id); lensed.style.filter = "url(#" + id + ")"; STATS.mapMs = +(performance.now() - t0).toFixed(1); }
       else lensed.style.filter = "blur(" + g.blur + "px)";   // frost only
       // scene
-      if (!syms.length || sizeChanged) { var old = syms; var sk = S.scale > 0 ? S.scale : 1, cell0 = Math.max(70, Math.min(140, Math.min(w, h) * .55)), cell = cell0 * sk, ks = Math.min(1, cell0 / 125) * sk, S2 = { always: S.always, pool: S.pool, cell: [cell, cell * 1.1], rot_deg: S.rot_deg, alpha: S.alpha, size_px: [Math.max(44, S.size_px[0] * ks), Math.max(60, S.size_px[1] * ks)] };
+      if (!syms.length || sizeChanged) { var old = syms; var sk = S.scale > 0 ? S.scale : (w > S.scaleAuto.at ? S.scaleAuto.wide : S.scaleAuto.narrow), cell0 = Math.max(70, Math.min(140, Math.min(w, h) * .55)), cell = cell0 * sk, ks = Math.min(1, cell0 / 125) * sk, S2 = { always: S.always, pool: S.pool, cell: [cell, cell * 1.1], rot_deg: S.rot_deg, alpha: S.alpha, size_px: [Math.max(44, S.size_px[0] * ks), Math.max(60, S.size_px[1] * ks)] };
         var mg = S2.size_px[1] * 1.4; beltM = mg; syms = pickSymbols(seed, w, h, S2, mg); if (old.length && old.length === syms.length) syms.forEach(function (s, i) { s.sx = old[i].sx; s.sy = old[i].sy; s.vx = old[i].vx; s.vy = old[i].vy; s.srot = old[i].srot; s.vr = old[i].vr; s.ssc = old[i].ssc; }); }
       bd.style.filter = "brightness(" + g.bright + ") saturate(" + g.sat + ")";
       bd.innerHTML = '<div style="inset:0;width:100%;height:100%;opacity:' + g.paint + ';background:radial-gradient(120% 140% at 12% -10%, #334979 0%, #263860 22%, #1a294b 45%, #111d3a 72%, #0b152e 100%)"></div>';
@@ -193,15 +195,19 @@
       grain.style.opacity = g.grain; grain.style.backgroundImage = grainURL(g);
       hair.style.boxShadow = "inset 0 0 0 1px rgb(255 255 255 / " + g.hair + "), inset 0 0 " + (g.bezpx * .25) + "px rgb(255 255 255 / " + g.fresnel + "), inset 0 0 " + Math.max(2, g.bezpx * .08) + "px " + Math.max(1, g.bezpx * .03) + "px rgb(0 0 0 / " + g.tir + ")";
       hair.style.background = "radial-gradient(120% 140% at 50% 50%, transparent 55%, rgb(0 0 0 / " + g.vign + ") 100%)";
-      built = true; scrim(); pose(); kick(); }
+      var hv = kg.querySelector(".kg-hover"); hv.style.background = "rgb(" + g.tintRGB.join(" ") + " / " + g.hover.tint + ")";
+      hv.style.webkitBackdropFilter = hv.style.backdropFilter = "blur(" + g.hover.blur + "px)"; card.style.setProperty("--kg-glow", g.hover.glow);
+      built = true; scrim(); pose(); kick(); prox(); }
     /* soft text scrim: one blurred dark rounded rect per visible formula row, so the scene under the ink is dimmed (rows measured now) */
     function scrim() {
-      var el = kg && kg.querySelector(".kg-scrim"); if (!el) return; var g = config.glass, cr = card.getBoundingClientRect(), pad = g.scrimPad, html = "";
+      var el = kg && kg.querySelector(".kg-scrim"), el2 = kg && kg.querySelector(".kg-scrim2"); if (!el) return; var g = config.glass, cr = card.getBoundingClientRect(), pad = g.scrimPad, html = "", rows = [];
       if (g.scrim > 0) card.querySelectorAll("li.f").forEach(function (li) {
         if (li.hidden || li.classList.contains("mid")) return; var fm = li.querySelector(".fm") || li, b = fm.getBoundingClientRect(); if (b.width < 2 || b.height < 2) return;
         var kx = card.offsetWidth ? card.offsetWidth / (cr.width || 1) : 1;
+        rows.push({ fm: fm, x: (b.left - cr.left) * kx, y: (b.top - cr.top) * kx, w: b.width * kx, h: b.height * kx });
         html += '<i style="left:' + ((b.left - cr.left) * kx - pad).toFixed(1) + 'px;top:' + ((b.top - cr.top) * kx - pad * .7).toFixed(1) + 'px;width:' + (b.width * kx + 2 * pad).toFixed(1) + 'px;height:' + (b.height * kx + 1.4 * pad).toFixed(1) + 'px"></i>'; });
-      el.innerHTML = html; el.style.setProperty("--kg-scrim", "rgb(" + g.tintRGB.join(" ") + " / " + g.scrim + ")"); el.style.setProperty("--kg-scrim-blur", g.scrimBlur + "px"); }
+      [el, el2].forEach(function (e, i) { if (!e) return; e.innerHTML = html; e.style.setProperty("--kg-scrim", "rgb(" + g.tintRGB.join(" ") + " / " + (i ? g.hover.scrim : g.scrim) + ")"); e.style.setProperty("--kg-scrim-blur", g.scrimBlur + "px"); });
+      clearRows(); rowsC = rows; rowsC.forEach(function (q, i) { q.i2 = el2 && el2.children[i]; }); hkick(); }
 
     /* margin >= largest symbol, so a symbol fully leaves one edge before re-entering the opposite one */
     function margin() { var mx = 0; syms.forEach(function (q) { mx = Math.max(mx, q.size * Math.max(1, q.asp) * 1.25); }); return mx; }
@@ -212,9 +218,16 @@
         var px = mod(s.x + m + belt.vx * mo * config.motion.speed, W2) - m, py = belt.vy ? mod(s.y + belt.vy * mo, H2) : s.y, pz = 0;
         if (s.pulse && live) { pz = Math.sin(TAU * T / s.pper + s.pph); symEls[i].setAttribute("opacity", (1 + PU.alpha * pz).toFixed(3)); } else symEls[i].removeAttribute("opacity");
         symEls[i].setAttribute("transform", "translate(" + (px + s.sx).toFixed(2) + " " + (py + s.sy).toFixed(2) + ") rotate(" + (s.rot + s.srot).toFixed(3) + ") scale(" + (s.ssc * (1 + PU.scale * pz)).toFixed(4) + ")"); }); }
+    /* The belt moves ~3 px/s, so the scene is stepped at mo.fps (12; 6 in low power) instead of every display frame: each step re-runs the
+       displacement filter, which is the costly part. Low power = <= 2 cores / <= 2 GB, or measured slow steps: also 1 chroma pass instead of 3. */
+    var lp = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) || (navigator.deviceMemory && navigator.deviceMemory <= 2), slowN = 0, slowSum = 0;
     function frame(ts) {
       raf = 0; if (!animOn()) return;
-      var t = ts / 1000, dt = Math.min(1 / 30, Math.max(0, t - last)); last = t; T += dt;
+      var mo0 = config.motion, iv = 1000 / (lp ? mo0.fps / 2 : mo0.fps);
+      if (ts - last * 1000 < iv - 5) { raf = requestAnimationFrame(frame); return; }
+      var t = ts / 1000, dt = Math.min(.15, Math.max(0, t - last)); if (!lastRun) dt = Math.min(dt, 1 / 30); lastRun = t;
+      if (!lp && dt > 0) { slowN++; slowSum += dt; if (slowN >= 24) { if (slowSum / slowN > 2.2 * iv / 1000) { lp = true; build(); } slowN = slowSum = 0; } }
+      last = t; T += dt;
       var mo = config.motion, K = mo.springK, C = 2 * mo.zeta * Math.sqrt(K);
       syms.forEach(function (s) { var tg = target(s, T, mo, s.x);
         s.vx += (-K * (s.sx - tg.x) - C * s.vx) * dt; s.sx += s.vx * dt; s.vy += (-K * (s.sy - tg.y) - C * s.vy) * dt; s.sy += s.vy * dt;
@@ -224,6 +237,40 @@
     function settle() {   // reduced motion: static pose (no drift, no bob)
       syms.forEach(function (s) { s.sx = s.sy = s.vx = s.vy = s.srot = s.vr = 0; s.ssc = 1; }); T = 0; pose(); }
 
+    /* == §hover == desktop-only flashlight proximity. t = 1 - clamp(dist(pointer, card) / hover.dist); pointer position and t are smoothed
+       (critically damped, ~250 ms; reduced motion = no easing). Per frame (only while moving) it writes on the card: --kg-h (t), --kg-mx/--kg-my (pointer in
+       card px). The css masks .kg-hover (backdrop blur copy + extra tint, opacity t) with a radial gradient of hover.radius at the pointer, so near parts
+       get more of it. Each formula row also gets its own t * falloff(distance(pointer, row box), radius): --kg-rh on the .fm (ink glow) and the opacity of
+       its extra scrim blob (.kg-scrim2 i). No lens-map work. */
+    var pt = { x: -1e4, y: -1e4, on: false }, hs = { t: 0, tv: 0, x: 0, xv: 0, y: 0, yv: 0, init: false }, rowsC = [], hraf = 0, hlast = 0, hbound = false;
+    function hoverOK() { return HOV.matches && !glassOff(); }
+    function damp(c, v, tg, dt) { var w = 16, a = w * w * (tg - c) - 2 * w * v; v += a * dt; return [c + v * dt, v]; }
+    function clearRows() { rowsC.forEach(function (q) { q.fm.style.removeProperty("--kg-rh"); if (q.i2) q.i2.style.opacity = ""; }); }
+    function htick(ts) {
+      hraf = 0; if (gone || !built) return;
+      var g = config.glass.hover, r = card.getBoundingClientRect(), dx = Math.max(r.left - pt.x, 0, pt.x - r.right), dy = Math.max(r.top - pt.y, 0, pt.y - r.bottom);
+      var tg = pt.on ? 1 - Math.min(1, Math.max(0, Math.hypot(dx, dy) / g.dist)) : 0, dt = Math.min(.05, Math.max(0, (ts - hlast) / 1000)); hlast = ts;
+      if (!hs.init) { hs.x = pt.x; hs.y = pt.y; hs.init = true; }
+      if (RM.matches) { hs.t = tg; hs.x = pt.x; hs.y = pt.y; hs.tv = hs.xv = hs.yv = 0; }
+      else { var q = damp(hs.t, hs.tv, tg, dt); hs.t = Math.min(1, Math.max(0, q[0])); hs.tv = q[1]; q = damp(hs.x, hs.xv, pt.x, dt); hs.x = q[0]; hs.xv = q[1]; q = damp(hs.y, hs.yv, pt.y, dt); hs.y = q[0]; hs.yv = q[1]; }
+      var mx = hs.x - r.left, my = hs.y - r.top, R = g.radius, st = card.style;
+      st.setProperty("--kg-h", hs.t < .002 ? "0" : hs.t.toFixed(3)); st.setProperty("--kg-mx", mx.toFixed(1) + "px"); st.setProperty("--kg-my", my.toFixed(1) + "px"); st.setProperty("--kg-hr", R + "px");
+      rowsC.forEach(function (q) {
+        var ex = Math.max(q.x - mx, 0, mx - q.x - q.w), ey = Math.max(q.y - my, 0, my - q.y - q.h), u = 1 - Math.min(1, Math.hypot(ex, ey) / R), f = hs.t * u * u * (3 - 2 * u), fs = f < .002 ? "0" : f.toFixed(3);
+        q.fm.style.setProperty("--kg-rh", fs); if (q.i2) q.i2.style.opacity = fs; });
+      var still = Math.abs(tg - hs.t) < .002 && Math.abs(hs.tv) < .01 && Math.abs(pt.x - hs.x) < .3 && Math.abs(pt.y - hs.y) < .3 && Math.abs(hs.xv) < .5 && Math.abs(hs.yv) < .5;
+      if (!still) hraf = requestAnimationFrame(htick); else { hs.tv = hs.xv = hs.yv = 0; }
+    }
+    function hkick() { if (!hraf && hoverOK()) { hlast = performance.now(); hraf = requestAnimationFrame(htick); } }
+    function onPtr(e) { if (e.pointerType && e.pointerType !== "mouse" && e.pointerType !== "pen") return; pt.x = e.clientX; pt.y = e.clientY; pt.on = true; hkick(); }
+    function onLeave() { pt.on = false; hkick(); }
+    function prox() {
+      if (!hoverOK()) { if (hbound) unbindHover(); hs.t = hs.tv = 0; clearRows(); ["--kg-h", "--kg-mx", "--kg-my", "--kg-hr"].forEach(function (k) { card.style.removeProperty(k); }); return; }
+      if (!hbound) { window.addEventListener("pointermove", onPtr, { passive: true }); document.documentElement.addEventListener("mouseleave", onLeave); window.addEventListener("blur", onLeave); hbound = true; }
+      hkick(); }
+    function unbindHover() { window.removeEventListener("pointermove", onPtr); document.documentElement.removeEventListener("mouseleave", onLeave); window.removeEventListener("blur", onLeave); hbound = false; if (hraf) { cancelAnimationFrame(hraf); hraf = 0; } }
+    function onHov() { prox(); }
+
     function refresh() { if (gone) return; if (glassOff()) { teardownDom(); return; } build(); }
     function debounced() { clearTimeout(rt); rt = setTimeout(function () { if (!gone && built && (card.clientWidth !== R.w || card.clientHeight !== R.h)) build(); else if (!built && !gone) build(); else if (built) scrim(); }, 120); }
     function onMotion() { if (RM.matches) { if (raf) { cancelAnimationFrame(raf); raf = 0; } settle(); } else kick(); }
@@ -232,20 +279,20 @@
     function destroy() {
       if (gone) return; gone = true; clearTimeout(rt);
       if (ro) ro.disconnect(); if (io) io.disconnect(); ro = io = null;
-      document.removeEventListener("visibilitychange", onVis); offMQ(RM, onMotion); offMQ(RT, onTransp); offMQ(HC, onTransp);
+      document.removeEventListener("visibilitychange", onVis); offMQ(HOV, onHov); unbindHover(); clearRows(); ["--kg-h", "--kg-mx", "--kg-my", "--kg-hr", "--kg-glow"].forEach(function (k) { card.style.removeProperty(k); }); offMQ(RM, onMotion); offMQ(RT, onTransp); offMQ(HC, onTransp);
       teardownDom(); cards.delete(card); }
     var handle = { refresh: refresh, destroy: destroy };
     cards.set(card, { refresh: refresh, handle: handle });
 
-    document.addEventListener("visibilitychange", onVis); onMQ(RM, onMotion); onMQ(RT, onTransp); onMQ(HC, onTransp);
+    document.addEventListener("visibilitychange", onVis); onMQ(RM, onMotion); onMQ(HOV, onHov); onMQ(RT, onTransp); onMQ(HC, onTransp);
     if (typeof ResizeObserver !== "undefined") { ro = new ResizeObserver(debounced); ro.observe(card); }
     if (typeof IntersectionObserver !== "undefined") { io = new IntersectionObserver(function (es) { var e = es[es.length - 1]; visible = !!(e && e.isIntersecting); kick(); }); io.observe(card); }
     if (RM.matches) { /* static pose from the start */ }
-    build();
+    var tm = performance.now(); build(); STATS.mountMs = +(performance.now() - tm).toFixed(1);
     if (document.fonts && document.fonts.load) {   // glyph text needs the KaTeX fonts: redraw the scene once they are in (map is unchanged)
       Promise.all(["20px KaTeX_Main", "italic 20px KaTeX_Math"].map(function (f) { return document.fonts.load(f, "∫θ"); })).then(function () { if (!gone && built) { /* text re-rasterises by itself */ pose(); } }, function () {}); }
     return handle;
   }
 
-  window.stemGlass = { mount: mount, config: config };
+  window.stemGlass = { mount: mount, config: config, stats: STATS };
 })();
