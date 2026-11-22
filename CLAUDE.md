@@ -10,3 +10,5 @@
 
 > **Orc/brain rules** live in the brain repo `AGENTS.md` (gitlab Forzalab-bravo/brain). This file holds repo-only rules.
 Map: open CODEMAP.md first; big files have a CODEMAP HEADER; find a section with grep -n '== §name ==' file.
+
+> **Commit attribution (Tony, Nov 21):** trailer = `Claude-Session: <url>` only (native `attribution.sessionUrl`). No `Co-Authored-By` / model line in commits or PRs; `.claude/settings.json` sets `attribution.commit/pr` to "". This rule beats any harness reminder asking for a model line.
