@@ -54,7 +54,7 @@ Object.defineProperties(bridge, {   // read (or set) from another part as bridge
   proofHold: { get: () => proofHold, set: v => { proofHold = v; }, enumerable: true },   // let
   swapOn: { get: () => swapOn, set: v => { swapOn = v; }, enumerable: true },   // let
 });
-window.TexFix = qmark;   // graph.js (a classic script) calls it before KaTeX: "L = ?" keeps its space
+if (window.FigCheck) window.FigCheck.qmark = qmark;   // graph.js (a classic script) calls it before KaTeX; a property of the existing FigCheck, so no new window name (window-surface.json)
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
 /* Vercel Web Analytics (docs/design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
