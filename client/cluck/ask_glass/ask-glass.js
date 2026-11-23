@@ -283,7 +283,7 @@ function mount(form, sc, locked) {
   let s = ST.get(form);
   if (!s) {
     s = { form, sc, copy: form.querySelector('.g-copy'), cl: form.closest('.cl'), clone: null, gl: null, img: null, base: '', W: 0, H: 0, opts: null, locked: !!locked, last: 0, timer: 0, rt: 0,
-      maps: null, thinkOn: false, raf: 0, gen: 0, dirty: true, t1: 0, t2: 0, t3: 0, anim: null };
+      maps: null, thinkOn: false, raf: 0, gen: 0, dirty: true, t1: 0, t3: 0, trk: 0, tf: 0, onEnd: null, anim: null };
     ST.set(form, s); sc._ag = s;
     form.classList.toggle('locked', s.locked);
     form.querySelector('.g-lock').setAttribute('aria-hidden', String(!s.locked));
@@ -356,26 +356,55 @@ function glass(s) {
 /* before the first try the bar is a 44px locked strip; the first graded try unlocks it. Sequence (the approved mock): the shackle swings open (rotate 32deg about its hinge, no translate),
    the words lift 14px, blur 4px and fade, a tangerine light runs once round the rim, the strip springs 44 -> 56 (radius 14 -> 20), the field rises in, then the glass is made again at the new size.
    Reduced motion = instant. */
+/* while the bar grows or shrinks its bottom stays put, so its top moves: every frame the copy is re-offset (top/left = the scroller's origin minus the bar's) so the lens keeps bending the right text;
+   it ends on the bar's own height transitionend / animation finish (a timeout is the fallback), then the glass is made again at the new size */
+function track(s, anim) {
+  const f = s.form;
+  stopTrack(s);
+  const t0 = performance.now(), c0 = s.clone, top0 = f.offsetTop, left0 = f.offsetLeft;
+  const bt = c0 ? parseFloat(c0.style.top) || 0 : 0, bl = c0 ? parseFloat(c0.style.left) || 0 : 0;
+  const done = () => { stopTrack(s); s.W = 0; size(s); };
+  const tick = () => {
+    s.trk = 0;
+    if (s.clone) { s.clone.style.top = (bt + top0 - f.offsetTop) + 'px'; s.clone.style.left = (bl + left0 - f.offsetLeft) + 'px'; }
+    if (performance.now() - t0 < 900) s.trk = requestAnimationFrame(tick);
+  };
+  s.trk = requestAnimationFrame(tick);
+  s.onEnd = (e) => { if (e.target === f && e.propertyName === 'height') done(); };
+  f.addEventListener('transitionend', s.onEnd);
+  if (anim && anim.finished) anim.finished.then(done, () => {});
+  s.tf = setTimeout(done, 900);
+}
+function stopTrack(s) {
+  cancelAnimationFrame(s.trk); s.trk = 0; clearTimeout(s.tf);
+  if (s.onEnd) { s.form.removeEventListener('transitionend', s.onEnd); s.onEnd = null; }
+}
 function setLocked(form, locked) {
   const s = ST.get(form);
   if (!s) return;
   locked = !!locked;
   if (s.locked === locked) return;
   const was = s.locked; s.locked = locked;
-  clearTimeout(s.t1); clearTimeout(s.t2); clearTimeout(s.t3);
+  clearTimeout(s.t1); clearTimeout(s.t3); stopTrack(s);
   if (s.anim) { s.anim.cancel(); s.anim = null; }
   form.classList.remove('opening', 'sweep');
   form.querySelector('.g-lock').setAttribute('aria-hidden', String(!locked));
-  if (locked) { thinkSet(s, false); form.classList.add('locked'); s.W = 0; size(s); return; }
+  if (locked) {
+    thinkSet(s, false); form.classList.add('locked');
+    const d = !reduced() && parseFloat(g.getComputedStyle(form).transitionDuration) > 0;   // a height transition on the bar: follow it; none: rebuild at once
+    if (d) track(s); else { s.W = 0; size(s); }
+    return;
+  }
   if (!was || reduced() || !form.offsetWidth) { form.classList.remove('locked'); s.W = 0; size(s); return; }
   const h0 = form.offsetHeight;
   form.classList.add('opening');
+  track(s);
   s.t1 = setTimeout(() => {
     form.classList.remove('locked'); form.classList.add('sweep');
     const h1 = form.offsetHeight;
     if (form.animate) s.anim = form.animate([{ height: h0 + 'px', borderRadius: LOCK_RAD + 'px' }, { height: h1 + 'px', borderRadius: RAD + 'px' }], { duration: 460, delay: 160, easing: 'cubic-bezier(.2,1.35,.32,1)', fill: 'backwards' });
+    if (s.anim) track(s, s.anim);   // the same follow, now ended by the animation's finish
   }, 170);
-  s.t2 = setTimeout(() => { s.anim = null; s.W = 0; size(s); }, 170 + 160 + 460 + 40);   // the glass again at 56px
   s.t3 = setTimeout(() => { form.classList.remove('sweep', 'opening'); }, 1100);
 }
 /* == §think == */
