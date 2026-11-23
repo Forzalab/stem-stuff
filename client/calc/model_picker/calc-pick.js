@@ -153,4 +153,7 @@
   }
   g.stemCalcPick = { open: function () { return open(); }, close: close, get: get, onChange: onChange,
     models: MODELS, get up() { return !!el; } };
+  /* quiet reconcile at load (never opens anything): the server's per-sid copy fills a wiped cache, a cached pick the server lacks goes up. Automated
+     browsers skip the /calc read unless window.__calcPickSync is true. */
+  if (!navigator.webdriver || g.__calcPickSync === true) sync();
 })();
