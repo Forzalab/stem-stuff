@@ -243,6 +243,7 @@ weight() {
     calc-toast) echo 30 ;;   # CALC-TOAST: calc card -> toast (ui-v7), own server (estimate until CI timing)
     cram-cta-off) echo 15 ;;   # CRAM-CTA-OFF, own server
     toast-gap) echo 25 ;;   # DUCK-V8-TOAST / TOAST-GAP: row toast geometry at 390 + 1366 + flag-off, own server (estimate until CI timing)
+    toast-outside) echo 20 ;;   # BUG-TOAST-DISMISS: tap outside closes card + note, own server (estimate until CI timing)
     fport-hint-toast) echo 20 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     gap-batch1) echo 20 ;;   # GAP-BATCH1 (ui-v7) smoke: star hidden, qlist float, miss hint float, own server
     fport-ladder-verdict) echo 30 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
@@ -319,6 +320,7 @@ tags() {
     calc-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     cram-cta-off) echo "@layout @real-time" ;;   # CRAM-CTA-OFF, own server
     toast-gap) echo "@layout @real-time" ;;   # TOAST-GAP, own server
+    toast-outside) echo "@real-time" ;;   # BUG-TOAST-DISMISS, own server
     fport-hint-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     gap-batch1) echo "@layout @real-time" ;;   # GAP-BATCH1 ui-v7 smoke, own server
     wide-content) echo "@layout @real-time" ;;   # WIDE-CONTENT, own server
@@ -517,6 +519,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
       bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|livefig|figstream|figgap|caret|codeblock|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|mc-hint-fold|brainrot-b|brainrot-torus|fport-ladder-verdict|verdict-card|cluck-btn|qcard|calc-toast|fport-hint-toast|gap-batch1|progbar-wave|cram-cta-off|smokes) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|livefig|codeblock|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       toast-gap) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" "$TMP/shots" ;;   # TOAST-GAP: own server, shots into the run TMP
+      toast-outside) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;;   # BUG-TOAST-DISMISS: own server
       *) if srv_gate "$name"; then run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots"
          else echo "FAIL $name 0.0 s"; echo "     shared server dead (see SERVER DEAD above)"; fails=$((fails + 1)); fi ;;
     esac
