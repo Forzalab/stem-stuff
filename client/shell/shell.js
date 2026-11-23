@@ -783,7 +783,7 @@ let mtMem = {};
 try { mtMem = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { mtMem = {}; }
 const mtKind = () => sideMQ.matches ? "desk" : "phone";
 const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r) ? b : a);
-const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                                 // phone: a big pad
+const mtDef = k => k === "phone" ? 1 / 3 : 2 / 3;                                 // phone: a big pad. desktop: question + answer 2 : brainrot + Cluck 1 (Tony, Nov 22)
 function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
