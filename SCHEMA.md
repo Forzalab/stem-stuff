@@ -49,6 +49,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `20261022` | `form` on every `num` item and every `num` part (and the slip gate, design/HANDOFF-slips-v2.md rule 7) | `python3 tools/slips.py --strict` | `2026-11-05` |
 | `20261118` | `ask` on every problem: `body` = the situation only, `ask` = the question only (no bunching either way). Checker-only for now: `serve.CUTOFF` / `SUNSET` stay on the `20261022` row, so no bank is dropped or bannered for this row. | `python3 tools/bank_tools/bankcheck.py` (B-ASK) | none yet |
 | `20261119` | a human `title` on every problem: 2 to 6 words, `$math$` allowed, not a slug (see the `title` row). Older banks only warn (stderr), so no deploy goes red for them. | `node tools/bank_tools/schema-check.mjs` | none yet |
+| `20261123` | a `starter` on every problem (see the `starter` row): the one chip Cluck shows before the first try. Older banks only warn (stderr), so no deploy goes red for them. | `node tools/bank_tools/schema-check.mjs` | none yet |
 
 ## Content rule (Tony, standing)
 - MINIMAL. Textbook language. State the givens and the ask, nothing else.
@@ -68,6 +69,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 |---|---|---|---|
 | `code` | all | `CALC1_K4M` | yes |
 | `title` | all, required from `v` 20261119 | a HUMAN title, 2 to 6 words (≤ 60 chars), `$math$` allowed, never the answer, never a slug, and NO author code anywhere in it (exam / question / homework / chapter tags such as `X3`, `Q4`, `Q1(a)`, `HW11 #8`, `Ch7`: a student does not know them; `titleCodes` in `titles.mjs`). The app drops a `CODE: label` prefix when it shows an old title, and shows no title when a code is left. The card shows it big; the question list shows it as plain text. Good: `Rectangle: $I_x, I_y, I_z$`, `Ferris wheel: halfway point`, `Spring stretch under load`. Bad (slugs): `X3 Q4 twin rectangle Ix Iy Iz`, `ch7_card_1`, `Ch7 card 1`, `Title`, `Q4`. No title, or a slug-like one, shows NO big title (client/pure_logic_modules/titles.mjs `isSlugTitle`); the list then uses the first sentence of the question | yes |
+| `starter` | all but parts, required from `v` 20261123 | ONE chip text shown in the Cluck box before the student's first try: a question in the student's voice, specific to THIS item, 3 to 9 words (≤ 60 chars). Good: `Why does the torque use sin here?`. Never a number from the answer, a choice letter or value (`(b)`, `choice b`), the answer, or a formula that solves it (schema-check.mjs fails a leak). Tapping it sends the text as a chat question with `starter: true`; the server answers live and does NOT count it against CHAT_TURNS (serve.py `note-chat`), only when it is the first chat turn and no try is recorded. Not on `parts` | yes |
 | `tag` | all, optional | the physics idea the item drills, one of `momentum`, `energy`, `forces`, `signs`, `circular`, `rotation`, `units`: pops pick their lines by it (Tony #29.4). Not `topic`, which names the bank `topics` entry whose `tol` the item inherits | yes |
 | `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own · `proof` a free-written answer (a definition, a proof), graded by Cluck against a reference (see "Proof items") | yes |
 | `body` | all | array of blocks, stacked top to bottom in any order and repeatable | yes |
@@ -640,6 +642,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "minLength": 1,
           "maxLength": 60,
           "description": "Human title, 2 to 6 words, $math$ allowed, never a slug or the answer. Required from v 20261119 (schema-check.mjs, not this schema: older banks must still validate)."
+        },
+        "starter": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "The one starter chip, 3 to 9 words, a question in the student's voice, no answer leak. Required from v 20261123 (schema-check.mjs, not this schema: older banks must still validate)."
         },
         "type": {
           "enum": [

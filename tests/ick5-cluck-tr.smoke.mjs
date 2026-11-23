@@ -75,11 +75,11 @@ async function card(page, vp) {
   await step(`${vp} AC4: tangerine both states, no shadow, no top border, four equal corners`, async () => {
     const check = (s, when) => { assert.equal(s.bg, TANGERINE, `${when}: background ${s.bg}`); assert.equal(s.shadow, "none", `${when}: box-shadow ${s.shadow}`);
       assert.equal(s.btw, 0, `${when}: border-top-width ${s.btw}`); assert.ok(s.rad.every(x => x > 0 && near(x, s.rad[0], .01)), `${when}: radii ${s.rad.join(" ")}`); };
-    await settled(page, "#cluckBtn"); const a = await look(page); assert.equal(a.aria, "true", "the long item did not start disabled"); check(a, "aria-disabled=true");
-    /* uploaded code is unknown to the server: Cluck's prefetch fails, real state stays "first"; synth ready (data-st + no aria-disabled) */
+    await settled(page, "#cluckBtn"); const a = await look(page); assert.equal(a.aria, null, "Nov 22: ready before the first try (no first state)"); check(a, "ready");
+    /* synth off (data-st + aria-disabled) keeps the same tangerine look */
     const was = await page.evaluate(() => { const b = document.getElementById("cluckBtn"); return { st: b.dataset.st, ad: b.getAttribute("aria-disabled") }; });
-    await page.evaluate(() => { const b = document.getElementById("cluckBtn"); b.dataset.st = "ready"; b.removeAttribute("aria-disabled"); });
-    try { await settled(page, "#cluckBtn"); check(await look(page), "ready"); }
+    await page.evaluate(() => { const b = document.getElementById("cluckBtn"); b.dataset.st = "off"; b.setAttribute("aria-disabled", "true"); });
+    try { await settled(page, "#cluckBtn"); check(await look(page), "aria-disabled=true"); }
     finally { await page.evaluate(w => { const b = document.getElementById("cluckBtn"); if (w.st === undefined) delete b.dataset.st; else b.dataset.st = w.st;
       if (w.ad === null) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled", w.ad); }, was); }
   });

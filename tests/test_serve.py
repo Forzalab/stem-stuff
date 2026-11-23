@@ -1679,6 +1679,7 @@ class Explain(unittest.TestCase):
             json.dump({"v": 1, "problems": [p]}, f)
         serve._asked.clear()
         serve._chats.clear()
+        serve._starters.clear()
 
     def tearDown(self):
         self.srv.shutdown()
@@ -1860,6 +1861,54 @@ class Explain(unittest.TestCase):
         self.assertEqual(head["Content-Type"], "application/json")
         self.assertEqual(self.chat(1)[0], 429)                                          # a short history can't reset the count
         self.assertEqual(self.chat(1, cookie="sid=" + "d" * 32)[0], 200)                # another browser: its own 5
+
+    def test_starter_chip_is_served_and_its_first_ask_is_free(self):
+        """SCHEMA.md `starter` (v 20261123): public() serves it; /chat with `starter: true` + the item's starter text as the first question,
+        before any try, is not counted in CHAT_TURNS (once per browser and item); every other case counts as usual"""
+        path = os.path.join(serve.BANKS, "BANK_XP12.json")
+        with open(path) as f:
+            doc = json.load(f)
+        doc["problems"][0]["starter"] = "Why does the sign flip here?"
+        with open(path, "w") as f:
+            json.dump(doc, f)
+        os.utime(path, (time.time() + 20, time.time() + 20))             # a new mtime: the bank reloads
+        p = serve.problems()["CALC1_XP1"]
+        self.assertEqual(serve.public(p)["starter"], "Why does the sign flip here?")
+        self.assertNotIn("starter", serve.public({k: v for k, v in p.items() if k != "starter"}))
+        sid, k = "sid=" + "f" * 32, ("f" * 32, "CALC1_XP1")
+
+        def go(text, history_len=2, **over):
+            h = [{"role": "assistant", "content": self.BOX}, {"role": "user", "content": text}]
+            if history_len == 4:
+                h = h[:2] + [{"role": "assistant", "content": "Because."}, {"role": "user", "content": text}]
+            status, _, chunks = serve.chat(sid, json.dumps({"code": "CALC1_XP1", "answer": "a", "history": h, **over}).encode())
+            b"".join(chunks)
+            return status
+        self.assertEqual(go("Why does the sign flip here?"), 200)                      # no flag: counts
+        self.assertEqual(serve._chats[k], 1)
+        serve._chats.clear()
+        self.assertEqual(go("Why does the sign flip here?", starter=True), 200)         # the free ask
+        self.assertEqual((serve._chats.get(k, 0), k in serve._starters), (0, True))
+        self.assertEqual(go("Why does the sign flip here?", starter=True), 200)         # a second time: counts
+        self.assertEqual(serve._chats[k], 1)
+        serve._chats.clear()
+        serve._starters.clear()
+        self.assertEqual(go("Another question?", starter=True), 200)                    # text is not the starter: flag ignored
+        self.assertEqual(serve._chats[k], 1)
+        serve._chats.clear()
+        self.assertEqual(go("Why does the sign flip here?", history_len=4, starter=True), 200)   # not the first turn
+        self.assertEqual(serve._chats[k], 1)
+        serve._chats.clear()
+        self.assertEqual(go("Why does the sign flip here?", starter="yes"), 200)        # only a real true
+        self.assertEqual(serve._chats[k], 1)
+        serve._chats.clear()
+        old = serve.state
+        serve.state = lambda p, sid, reveal=False: {"wrong": 1, "done": False, "gen": 1}   # a try is recorded
+        try:
+            self.assertEqual(go("Why does the sign flip here?", starter=True), 200)
+        finally:
+            serve.state = old
+        self.assertEqual(serve._chats[k], 1)
 
     def test_note_off_topic_gets_a_quack_and_spends_the_turn(self):
         self.verdict = json.dumps(dict(self.NOTE, on_topic=False))

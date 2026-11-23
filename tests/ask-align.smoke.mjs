@@ -30,6 +30,7 @@ async function step(name, fn) {
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const TA = "#cluck .ask textarea", SEND = "#cluck .ask .send";
 const nap = (page, ms = 250) => page.waitForTimeout(ms);
+const live = page => page.evaluate(sel => { const t = document.querySelector(sel); return !!t && !t.disabled && t.getClientRects().length > 0; }, TA);   // the field is open to type in (not a locked strip, not gone)
 
 // a desktop page with Cluck's idle box open, or a phone page after one wrong answer. o: dsf, motion (real motion on), fontDelay (ms to hold the webfonts)
 async function open(vp, o = {}) {
@@ -53,12 +54,13 @@ async function open(vp, o = {}) {
   await fc.setFiles({ name: "ask.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
   await page.waitForFunction(() => (document.querySelector("#pcode")?.textContent || "") === "PSY_T61" && !document.querySelector("#freeze").hidden, null, { timeout: 8000 });
   await settled(page);
-  if (phone) {   // a phone has no idle box: a wrong answer makes the sheet + its ask field
-    await page.click("#ans"); await page.keyboard.type("7"); await page.keyboard.press("Enter");
-    await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 10000 }); await page.waitForTimeout(1000);
-    await page.evaluate(() => window.stemClOpen("explain", null));
-  } else await page.click("#cluckBtn", { force: true });
+  /* a wrong answer makes the sheet + its ask field. Nov 22 (the glass Ask bar): before the first try the field is a locked strip on desktop too, so every page lands one wrong try first */
+  await page.click("#ans"); await page.keyboard.type("7"); await page.keyboard.press("Enter");
+  await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 10000 }); await page.waitForTimeout(1000);
+  if (phone) await page.evaluate(() => window.stemClOpen("explain", null));
+  else await page.click("#cluckBtn", { force: true });
   await page.waitForSelector(TA, { state: "visible", timeout: 8000 });
+  await page.waitForFunction(sel => { const t = document.querySelector(sel); return !!t && !t.disabled; }, TA, { timeout: 10000 });
   await settled(page, "#cluck");
   return { ctx, page };
 }
@@ -176,9 +178,9 @@ const growth = async (page, what) => { await put(page, MULTI); const g = await g
   });
   await step("14 next question, then back", async () => {
     await page.evaluate(() => { location.hash = "#PSY_T62"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PSY_T62", null, { timeout: 8000 }); await nap(page, 700);
-    const a = await page.locator(TA).isVisible().catch(() => false) ? await chk(page, "T62") : "T62: no field (idle box not rebuilt): n/a";
+    const a = await live(page) ? await chk(page, "T62") : "T62: no open field (before the first try the glass bar is a locked strip): n/a";
     await page.evaluate(() => { location.hash = "#PSY_T61"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PSY_T61", null, { timeout: 8000 }); await nap(page, 700);
-    return a + " || " + await chk(page, "back T61");
+    return a + " || " + (await live(page) ? await chk(page, "back T61") : "T61: no open field on return: n/a");
   });
   await ctx.close();
 }
@@ -191,7 +193,7 @@ const growth = async (page, what) => { await put(page, MULTI); const g = await g
     page.mode = "ok"; for (let i = 0; i < 6 && await page.locator(TA).isVisible().catch(() => false); i++) await send(page, "q" + i);   // run the turns out (0 left)
     await page.evaluate(() => { location.hash = "#PSY_T62"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PSY_T62", null, { timeout: 8000 }); await nap(page, 900);
     await page.waitForSelector(TA, { state: "visible", timeout: 5000 }).catch(() => {});
-    return a + " || next question (re-enabled): " + (await page.locator(TA).isVisible().catch(() => false) ? await chk(page, "re-enabled") : "no field");
+    return a + " || next question (locked until its first try): " + (await live(page) ? await chk(page, "re-enabled") : "locked strip");
   });
   await ctx.close();
 }

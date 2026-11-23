@@ -1,0 +1,104 @@
+/* ask-glass.css: the R3 glass Ask bar of Cluck's sheet, all under html.ui-v7 (flag off = today's footer field). Script: ask-glass.js; markup: cluck.js clAsk (the .ask form gets class ag).
+   Geometry: the footer floats over the reply (12px in, 12px up, 56px, radius 20, desktop width cap 560px); the reply scrolls under it (bottom padding = bar + inset + 16px).
+   Layers inside the form (z): .g-copy 0 (the aria-hidden synced copy of the reply, the one SVG-filtered node) · .g-tint 1 · .g-rim 2 · .g-haze 2 (thinking glow + bleed) · .g-lock 3 · field / counter / send 3 · .g-sweep + .g-think 4 (rings).
+   States: .locked (before the first try: a 44px calm-glass strip, radius 14, lock + "Available after your first try.") · .opening / .sweep (the unlock, JS-timed) · .think (Cluck streams: ring, glow, light) ·
+   .ag-solid (html.fx-dim, reduced transparency: a solid warm fill) · .ag-frost (the lens failed, or a phone sheet drag: the R3 frost, blur 16 + saturate 1.5 over rgb(34 27 21/.42)).
+   Perf rules (measured 60fps in the mock): the ring is a conic gradient on a ROTATING SQUARE child under a static xor mask; glow + bleed are static box-shadows on one layer breathing by OPACITY only;
+   no gradient angle is animated, no filter / blur / blend sits on a parent of a moving child. Reduced motion = everything static. */
+html.ui-v7 .cl > .cl-ft {
+  position: absolute; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 3; max-width: 560px; margin-inline: auto; padding: 0;
+}
+html.ui-v7 .cl > .cl-bd { padding-bottom: calc(56px + 12px + 16px + env(safe-area-inset-bottom, 0px)); }   /* the reply scrolls under the bar and still ends above it */
+html.ui-v7 .cl > .cl-bd.below { --fb: calc(56px + 2.5rem + 12px); }                                          /* the text dims as it nears the bar */
+html.ui-v7 .cl > .cl-ft .done-row { padding: 16px 18px; border-radius: 20px; background: var(--ai-tint, #221c16); }
+
+/* ---- the bar ---- */
+html.ui-v7 .cl-ft .ask.ag {
+  --ask-r: 20px; --ag-ink: #f3eee9; --ag-dim: rgb(243 238 233 / .56);
+  position: relative; isolation: isolate; overflow: visible; display: flex; align-items: flex-end; gap: 8px; min-height: 56px; padding: 6px 6px 6px 18px;
+  border: 0; border-radius: 20px; background: none; box-shadow: 0 10px 28px rgb(0 0 0 / .45);
+}
+html.ui-v7 .cl-ft .ask.ag::before, html.ui-v7 .cl-ft .ask.ag::after { content: none; animation: none; }   /* the old rotating rim (app.css wbusy / wrun) is replaced by .g-think */
+html.ui-v7 .cl-ft .ask.ag.locked { align-items: center; height: 44px; min-height: 44px; padding: 0; border-radius: 14px; }
+html.ui-v7 .ask.ag > .g-copy { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; background: var(--sheet, #17130f); will-change: transform; pointer-events: none; }
+html.ui-v7 .ask.ag .ag-clone { position: absolute; margin: 0; height: auto; min-height: 0; flex: none; overflow: visible; -webkit-mask-image: none; mask-image: none; transition: none; will-change: transform; pointer-events: none; user-select: none; -webkit-user-select: none; }
+html.ui-v7 .ask.ag > .g-tint { position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: rgb(34 27 21 / .46); transition: background .4s; pointer-events: none; }
+html.ui-v7 .ask.ag.locked > .g-tint { background: rgb(30 24 19 / .66); }
+html.ui-v7 .ask.ag > .g-rim { position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 240 225 / .10), inset 0 1px 0 rgb(255 245 235 / .10); pointer-events: none; }
+html.ui-v7 .ask.ag:focus-within > .g-rim { box-shadow: inset 0 0 0 1px rgb(255 240 225 / .26), inset 0 1px 0 rgb(255 245 235 / .14); }
+html.ui-v7 .cl-ft .ask.ag:focus-within { box-shadow: 0 10px 28px rgb(0 0 0 / .45); }
+html.ui-v7 .cl-ft .ask.ag:not(.locked):focus-within { outline: 2px solid var(--help); outline-offset: 2px; }
+html.ui-v7 .ask.ag > :is(.g-sweep, .g-think) .spin { position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; will-change: transform; }
+
+/* ---- the field, the counter, the send button (nested 44x44, radius 14) ---- */
+html.ui-v7 .ask.ag > :is(.ff, .left, .send) { position: relative; z-index: 3; transition: opacity .3s ease .42s, transform .42s cubic-bezier(.2, 1.2, .3, 1) .42s; will-change: transform; }   /* stays on its own layer: no re-raster (1px text drift) at the end of the rise-in */
+html.ui-v7 .ask.ag.locked > :is(.ff, .left, .send) { opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .15s, transform .15s; }
+html.ui-v7 .ask.ag > .ff { flex: 1; min-width: 0; }
+html.ui-v7 .ask.ag > .left { flex: none; width: 0; margin-left: -8px; overflow: hidden; white-space: nowrap; }   /* "N left" stays for screen readers; the bar is not a counter */
+html.ui-v7 .cl-ft .ask.ag .ff textarea { background: none; color: var(--ag-ink); caret-color: var(--help); font-size: 1.0625rem; text-shadow: 0 1px 2px rgb(0 0 0 / .5); }
+html.ui-v7 .cl-ft .ask.ag .ff textarea::placeholder { color: var(--ag-dim); opacity: 1; }
+html.ui-v7 .cl-ft .ask.ag > .send {
+  width: 44px; height: 44px; border: 0; border-radius: 14px; background: transparent; box-shadow: none; color: var(--ag-dim); overflow: hidden; padding: 0; opacity: 1;
+  transition: color .2s .05s, opacity .3s ease .42s, transform .42s cubic-bezier(.2, 1.2, .3, 1) .42s;
+}
+html.ui-v7 .cl-ft .ask.ag > .send:disabled { opacity: 1; filter: none; cursor: default; }
+html.ui-v7 .cl-ft .ask.ag > .send::after { content: ""; position: absolute; inset: 0; background: var(--help); clip-path: circle(0% at 50% 50%); transition: clip-path .38s cubic-bezier(.3, 1.25, .45, 1); }   /* idle: no fill, no border; active: a tangerine circle grows from the centre */
+html.ui-v7 .cl-ft .ask.ag > .send.on { color: var(--help-ink); }
+html.ui-v7 .cl-ft .ask.ag > .send.on::after { clip-path: circle(72% at 50% 50%); }
+html.ui-v7 .cl-ft .ask.ag > .send .ico { position: relative; z-index: 1; width: 22px; height: 22px; transition: transform .38s cubic-bezier(.3, 1.25, .45, 1); }
+html.ui-v7 .cl-ft .ask.ag > .send.on .ico { transform: translateY(-1px) scale(1.05); }
+html.ui-v7 .cl-ft .ask.ag > .send .ico path { stroke: currentColor; stroke-width: 2.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+html.ui-v7 .cl-ft .ask.ag.locked > .send { opacity: 0; transform: translateY(8px); transition: opacity .15s, transform .15s; }
+html.ui-v7 .cl-ft .ask.ag > .send:focus-visible { outline: 2px solid var(--help); outline-offset: 2px; }
+
+/* ---- the locked strip: a lock + words on calm glass ---- */
+html.ui-v7 .ask.ag > .g-lock { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--ag-dim, rgb(243 238 233 / .56)); font-size: .9rem; pointer-events: none; transition: opacity .2s ease .1s; }
+html.ui-v7 .ask.ag:not(.locked) > .g-lock { opacity: 0; }
+html.ui-v7 .g-lock svg { width: 18px; height: 18px; flex: none; overflow: visible; color: #f3eee9; opacity: .56; }
+html.ui-v7 .g-lock svg :is(path, rect) { stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+html.ui-v7 .g-lock .shk { transform-origin: 16px 10.5px; transition: transform .22s cubic-bezier(.3, 1.6, .5, 1); }
+html.ui-v7 .ask.ag.opening .g-lock .shk { transform: rotate(32deg); }   /* the shackle swings open about its hinge: rotate only, no translate */
+html.ui-v7 .g-lock .txt { display: inline-block; transition: transform .32s cubic-bezier(.5, 0, .75, 0) .14s, opacity .28s ease .14s, filter .28s ease .14s; }
+html.ui-v7 .ask.ag.opening .g-lock .txt { transform: translateY(-14px); opacity: 0; filter: blur(4px); }
+/* the unlock light: a tangerine arc runs once round the rim (a rotating square under the static ring mask, 0.9s) */
+html.ui-v7 .ask.ag > .g-sweep, html.ui-v7 .ask.ag > .g-think {
+  position: absolute; inset: -1px; z-index: 4; border-radius: inherit; padding: 1.5px; overflow: hidden; pointer-events: none; opacity: 0;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+html.ui-v7 .ask.ag > .g-sweep .spin { background: conic-gradient(from 0deg, transparent 0 70%, rgb(255 166 62 / 0) 72%, #ffa63e 86%, #fff3e0 90%, transparent 94%); }
+html.ui-v7 .ask.ag.sweep > .g-sweep { animation: ag-sweep .9s cubic-bezier(.45, 0, .2, 1) .08s both; }
+html.ui-v7 .ask.ag.sweep > .g-sweep .spin { animation: ag-sweep-spin .9s cubic-bezier(.45, 0, .2, 1) .08s both; }
+@keyframes ag-sweep { 0% { opacity: 0; } 12% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ag-sweep-spin { from { rotate: -90deg; } to { rotate: 270deg; } }
+
+/* ---- thinking (Cluck streams): ring + glow + bleed on the compositor; the glass light is ask-glass.js §think ---- */
+html.ui-v7 .ask.ag > .g-think { inset: -.75px; padding: .75px; transition: opacity .5s; }
+html.ui-v7 .ask.ag.think > .g-think { opacity: .9; }
+html.ui-v7 .ask.ag > .g-think .spin { background: conic-gradient(#ff7a1a, #ffa63e 14%, #ff5e7a 28%, #ffc04d 42%, #ff8a3d 58%, #d07bff 70%, #ff6a3d 82%, #ff7a1a); animation: ag-spin 7s linear infinite; animation-play-state: paused; }
+html.ui-v7 .ask.ag.think > .g-think .spin { animation-play-state: running; }
+@keyframes ag-spin { to { rotate: 360deg; } }
+html.ui-v7 .ask.ag > .g-haze {
+  position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .6s;
+  box-shadow: inset 0 0 6px 0 rgb(255 140 50 / .55), inset 0 0 1.5px 0 rgb(255 190 120 / .6), 0 0 10px 1px rgb(255 122 26 / .38), 0 0 3px 0 rgb(255 94 122 / .3);
+}
+html.ui-v7 .ask.ag.think > .g-haze { animation: ag-breathe 3.6s ease-in-out infinite; }
+@keyframes ag-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }   /* opacity only */
+
+/* ---- fallbacks ---- */
+html.ui-v7 .ask.ag:is(.ag-solid, .ag-frost) > .g-copy { display: none; }
+html.ui-v7 .ask.ag.ag-solid > .g-tint { background: var(--ai-tint, #221c16); }
+html.ui-v7 .ask.ag.ag-frost, html.ui-v7 .cl[data-state="dragging"] .ask.ag:not(.ag-solid), html.ui-v7 .cl[data-state="moving"] .ask.ag:not(.ag-solid) { -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5); }
+html.ui-v7 .ask.ag.ag-frost > .g-tint, html.ui-v7 .cl[data-state="dragging"] .ask.ag:not(.ag-solid) > .g-tint, html.ui-v7 .cl[data-state="moving"] .ask.ag:not(.ag-solid) > .g-tint { background: rgb(34 27 21 / .42); }
+html.ui-v7 .cl[data-state="dragging"] .ask.ag > .g-copy, html.ui-v7 .cl[data-state="moving"] .ask.ag > .g-copy { display: none; }   /* a phone sheet drag: the bar is pinned to the visible bottom and never moves, so its copy would drift: frost until it settles */
+html.ui-v7 .ask.ag.ag-frost.locked > .g-tint { background: rgb(30 24 19 / .66); }
+html.fx-dim.ui-v7 .ask.ag > .g-copy { display: none; }
+@media (prefers-reduced-transparency: reduce) { html.ui-v7 .ask.ag > .g-copy { display: none; } html.ui-v7 .ask.ag > .g-tint { background: var(--ai-tint, #221c16); } }
+@media (prefers-reduced-motion: reduce) {
+  html.ui-v7 .ask.ag, html.ui-v7 .ask.ag *, html.ui-v7 .ask.ag > :is(.ff, .left, .send), html.ui-v7 .g-lock .txt, html.ui-v7 .g-lock .shk { transition: none !important; animation: none !important; }
+  html.ui-v7 .ask.ag.think > .g-haze { opacity: .8; }
+}
+
+/* ---- the starter chip: one bank-authored question, its first ask is free ---- */
+html.ui-v7 .cl-starter.has-free { display: inline-flex; align-items: center; gap: 8px; height: auto; max-width: 100%; padding: 10px 14px; border: 0; border-radius: 12px; background: rgb(255 166 62 / .14); color: var(--help-on); font-weight: 600; font-size: .92rem; line-height: 1.25; text-align: left; }
+html.ui-v7 .cl-starter.has-free:hover { background: rgb(255 166 62 / .22); }
+html.ui-v7 .cl-starter .free { flex: none; padding: 3px 5px; border-radius: 5px; background: var(--help); color: var(--help-ink); font-weight: 800; font-size: .66rem; line-height: 1; letter-spacing: .06em; text-transform: uppercase; }
