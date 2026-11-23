@@ -23,7 +23,7 @@ html.ui-v7 .ff.rbox.ok { background: var(--mc-right); }
 html.ui-v7 #q .ff.bad .btn-go { background: var(--wrong-deep); box-shadow: var(--shadow-raise); border: 0; border-radius: 12px; }
 html.ui-v7 .ff.rbox.ok .vk { width: 44px; height: 44px; align-self: center; border-radius: 12px; background: var(--correct-deep); box-shadow: var(--shadow-raise); }
 /* the orange corner dot on the judged row (app.css "Cluck has help here", an indicator, not a button) stays; under ui-v7 it is a small rounded square (no circles) with no outline ring */
-html.ui-v7 :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after { border-radius: 3px !important; outline: 0 !important; }
+html.ui-v7 :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after { border-radius: 3px !important; outline: 0 !important; content: none !important; }   /* Tony Nov 23: drop the DOT-1 help dot on v7 */
 /* the retry-wait countdown (app.css .btn-go.waiting::before, a conic sweep that read as a wedge): kept as a cue, calmer. The X slot is a solid --wrong-deep; the countdown is a thin
    bottom bar inside the slot that fills left to right over the same 10 s wait, no border, token colours; the X glyph dims while it runs. */
 @keyframes vd-wait { from { transform: scaleX(0); } to { transform: scaleX(1); } }
