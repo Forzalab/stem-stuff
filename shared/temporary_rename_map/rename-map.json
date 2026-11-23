@@ -1410,8 +1410,15 @@
   },
   {
    "old": "tug.mjs",
-   "new": "client/pure_logic_modules/tug.mjs",
+   "new": "client/pure_logic_modules/flip.mjs",
    "pr": "B",
+   "ship": "yes",
+   "bridge": true
+  },
+  {
+   "old": "client/pure_logic_modules/tug.mjs",
+   "new": "client/pure_logic_modules/flip.mjs",
+   "pr": "TUG",
    "ship": "yes",
    "bridge": true
   },

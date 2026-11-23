@@ -32,7 +32,7 @@ const PROG = 'root = View([ramp])\nramp = Geometry("A 0,0; B 4,0; C 4,2.3; P 2,1
 const OUI = "```openui\n" + PROG + "\n```";
 let REPLY = ["POOF! A wish is a wish.\n", "The push pays for three things at once: heat, height and the spring.\n\n", "Here is the ramp:\n",
   OUI.slice(0, 50), "HOLD", OUI.slice(50) + "\n", "\n\n1. The push — work in\n- $W = 48$ J\n", "---\n", "$$W = 48\\ \\text{J}$$\n", "So the answer is close, **try once more**."];
-/* TUG-VIEW.md: a Tug + a Flip in one fence (plain text in a view, no $) */
+/* a legacy Tug (now a plain Table fallback) + a Flip in one fence (plain text in a view, no $) */
 const TUGPROG = 'root = View([t, f])\nt = Tug(["push | up the ramp | up 3 | The push is the work in.", "drag | friction | down 2"], "W", "Two pulls on the work.")\nf = Flip([["sign", "friction adds", "friction takes away"], ["start", "no heat", "heat too"]])';
 const TUGREPLY = ["POOF! A wish is a wish.\n", "Here are the pulls:\n", "```openui\n" + TUGPROG + "\n```\n", "\n\nSo the answer is close, **try once more**."];
 let gate = null;
@@ -107,33 +107,23 @@ try {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: w < 500, isMobile: w < 500, serviceWorkers: "block" });
     await ctx.addInitScript(init);
     const page = await ctx.newPage(); const errs = []; page.on("pageerror", e => errs.push(e.message));
-    await step(`${tag}: a Tug view draws (sky up bar, orange down bar, ? knot), a tap selects a row, the other bars go to layer 3, reduced motion draws no animation`, async () => {
+    await step(`${tag}: a legacy Tug view renders as a plain Table (what | move | direction | why), no raw program`, async () => {
       await wish(page); await done(page);
-      await page.waitForSelector("#cluck .wtext .vw-tug", { timeout: 5000 });
+      await page.waitForSelector("#cluck .wtext .vw-tb", { timeout: 5000 });
       assert.doesNotMatch(await wtext(page), /```|Tug\(|root =/, "no raw program");
-      const g = await page.evaluate(() => { const w = document.querySelector("#cluck .wtext"), bars = [...w.querySelectorAll(".vw-tug .tg-bar")];
-        return { tugs: w.querySelectorAll(".vw-tug").length, rows: w.querySelectorAll(".vw-tug .tg-pull").length, bars: bars.map(b => (b.classList.contains("tn-sky") ? "sky" : b.classList.contains("tn-orange") ? "orange" : "?") + b.textContent),
-          knot: w.querySelector(".vw-tug .tg-net")?.textContent, sw: w.scrollWidth, cw: w.clientWidth, delay: bars.map(b => getComputedStyle(b).animationDelay) }; });
-      assert.deepEqual([g.tugs, g.rows, g.bars, g.knot], [1, 2, ["sky▲", "orange▼"], "?"], JSON.stringify(g));
+      const g = await page.evaluate(() => {
+        const w = document.querySelector("#cluck .wtext"), t = w.querySelector(".vw-tb");
+        return { n: w.querySelectorAll(".vw-tb").length, head: [...t.querySelectorAll("thead th")].map(x => x.textContent),
+          rows: [...t.querySelectorAll("tbody tr")].map(r => [...r.children].map(c => c.textContent)), sw: w.scrollWidth, cw: w.clientWidth };
+      });
+      assert.deepEqual([g.n, g.head, g.rows], [1, ["what", "move", "direction", "why"],
+        [["push", "up the ramp", "up 3", "The push is the work in."], ["drag", "friction", "down 2", ""]]], JSON.stringify(g));
       assert.ok(g.sw <= g.cw + 1, `no sideways scroll in the reply: ${g.sw} > ${g.cw}`);
-      assert.deepEqual(g.delay, ["0s", "0.12s"], "bars draw one row after another (--i x --d-fast): " + g.delay);
-      const rows = page.locator("#cluck .wtext .vw-tug .tg-pull");
-      assert.ok((await rows.nth(0).boundingBox()).height >= 44, "a row is a 44px tap target");
-      await rows.nth(0).click();
-      assert.equal(await rows.nth(0).evaluate(r => r.classList.contains("on")), true, "row 1 is on");
-      assert.equal(await page.locator("#cluck .wtext .vw-tug .tg-pull:nth-of-type(2) .tg-bar.ly3, #cluck .wtext .vw-tug .tg-bar.ly3").count(), 1, "the other bar went to layer 3");
-      assert.equal(await rows.nth(0).locator(".tg-why").isVisible(), true, "its why line shows");
-      assert.equal(await rows.nth(1).locator(".tg-why").count(), 0);
-      await rows.nth(0).click();
-      assert.equal(await page.locator("#cluck .wtext .vw-tug .on, #cluck .wtext .vw-tug .ly3").count(), 0, "a second tap clears it");
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll("#cluck .vw-tug .tg-bar")].map(b => getComputedStyle(b).animationName)), ["none", "none"], "reduced motion: no animation");
-      await page.emulateMedia({ reducedMotion: "no-preference" });
       assert.deepEqual(errs, []);
       if (SHOTS) await page.locator("#cluck .wtext").screenshot({ path: join(SHOTS, `views-oui-tug-${tag}.png`) });
     });
     await step(`${tag}: a Flip view: cards turn from "you did" to "the fix" by themselves, a tap turns one back, reduced motion shows both faces`, async () => {
-      await settled(page, "#cluck .vw-flip");   // the Tug step's emulateMedia replay restarted fl-turn (finite, delayed): let it end
+      await settled(page, "#cluck .vw-flip");   // let the arrival flip (finite, delayed) end before reading transforms
       const tf = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].map(e => getComputedStyle(e).transform));
       assert.equal(await page.locator("#cluck .wtext .vw-flip .fl-card").count(), 2);
       await page.waitForFunction(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].every(e => /^matrix3d\(-1/.test(getComputedStyle(e).transform)), null, { timeout: 6000 });   // the beat (3 x --d-dim) + the turn

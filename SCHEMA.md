@@ -396,7 +396,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Recipe | Stages | Length | Components |
 |---|---|---|---|
 | hint-line | pre, wrong | S | Hints |
-| misconception | wrong | S | Callout, Chips, Tug, Flip |
+| misconception | wrong | S | Callout, Chips, Table, Flip |
 | predict-reveal | pre, wrong, post | S | Predict, Reveal, Callout |
 | steps | wrong, post | M | Steps, Step, Graph, Legend, Table |
 | twin-compare | pre, wrong, post | M | Compare, Steps, Step, Graph, Legend |
