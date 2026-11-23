@@ -28,7 +28,7 @@ let fails = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
 const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, flag) {
-  const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "no-preference" });
+  const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "reduce" });   // reduce: the idle drift (brainrot.js DRIFT) rests, so tiles hold still between measuring and wheeling
   await c.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-welcome-BANK_DSK", "1"); if (f) localStorage.setItem("stem-ui", "v7");
     for (const k of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + k, "9"); } catch { /* */ } }, flag);
