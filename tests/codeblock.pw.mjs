@@ -26,7 +26,7 @@ const CODE = [
   "    if (i % 2 == 0) continue;",
   "    s += i * i;  // odd squares only: $i^2$",
   "  }",
-  "  std::cout << \"s = \" << s << \" (odd squares)\" << std::endl;",
+  "  std::cout << \"s = \" << s << \" (odd squares, added up one by one in the loop above)\" << std::endl << std::flush << \"done\";",   // ~115 chars: ~1.8x the 1280 box (~62 chars of 16px mono), so it wraps whatever the page's type step is
   "}",
 ].join("\n");
 const P = [{ code: "CSCI26_CB1", type: "mc", body: [{ type: "text", md: "What does the program print for $s$?\n\n```cpp\n" + CODE + "\n```" }],

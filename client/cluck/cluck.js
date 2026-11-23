@@ -976,6 +976,7 @@ function clAsk(build) {
       e.preventDefault(); if (!f.querySelector(".send").disabled) f.requestSubmit();
     });
     inp.addEventListener("input", () => askFit(inp));
+    if (window.ResizeObserver) { let w0 = 0; new ResizeObserver(() => { const w = inp.clientWidth; if (w && w !== w0) { w0 = w; askFit(inp); } }).observe(inp); }   // ASK-ALIGN: a width change (window, sash, column back, late webfont) rewraps the text, so the height is refit; width only, so askFit's own height change cannot loop
   }
   const ready = wishTyped(w) && !w.busy;
   ft.querySelector(".left").textContent = `${left} left`;
@@ -989,6 +990,7 @@ function clAsk(build) {
 }
 /* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
 function askFit(ta) {
+  if (!ta.value) { ta.style.height = ""; ta.style.overflowY = "hidden"; return; }   // empty: the CSS one line (ASK-ALIGN). scrollHeight would count a wrapped placeholder (a narrow column for a moment) and keep the field tall
   ta.style.height = "auto";
   const h = ta.scrollHeight, max = parseFloat(getComputedStyle(ta).maxHeight) || Infinity;
   ta.style.height = Math.min(h, max) + "px";

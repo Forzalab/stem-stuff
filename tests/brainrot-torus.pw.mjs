@@ -28,7 +28,7 @@ let fails = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
 const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, flag) {
-  const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "no-preference" });
+  const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "reduce" });   // reduce: the idle drift (brainrot.js DRIFT) rests, so tiles hold still between measuring and wheeling
   await c.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-welcome-BANK_DSK", "1"); if (f) localStorage.setItem("stem-ui", "v7");
     for (const k of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + k, "9"); } catch { /* */ } }, flag);
@@ -40,12 +40,14 @@ async function open(vp, flag) {
 }
 const box = (page, sel) => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
 try {
-  await step("v7 desktop 1366x768: the dock is <= 40% of the notes column; Cluck's header and ask field are on screen", async () => {
+  await step("v7 desktop 1366x768: the dock is <= 40% x --rot-dock-k of the notes column; Cluck's header and ask field are on screen", async () => {
     const { c, page } = await open({ width: 1366, height: 768 }, true);
     await page.waitForSelector("#rot.docked .vid");
     const shelf = await box(page, "#rot .shelf"), col = await box(page, "#work"), ask = await box(page, "#work .cl-ft .ask"), cl = await box(page, "#work .cl");
-    assert.ok(shelf.h <= 0.4 * col.h + 1, `dock ${shelf.h}px is more than 40% of the column ${col.h}px`);
-    assert.ok(shelf.h >= 180 - 1, `dock ${shelf.h}px under its 180px floor`);
+    const k = +await page.$eval("#rot", e => getComputedStyle(e).getPropertyValue("--rot-dock-k"));   // the dock's scale knob (app.css DOCK-SMALLER): window = 40% x k, floor 180 x k
+    assert.ok(k > 0 && k < 1, `--rot-dock-k is a shrink factor: ${k}`);
+    assert.ok(shelf.h <= 0.4 * k * col.h + 1, `dock ${shelf.h}px is more than 40% x ${k} of the column ${col.h}px`);
+    assert.ok(shelf.h >= 180 * k - 1, `dock ${shelf.h}px under its ${180 * k}px floor`);
     assert.ok(cl.y >= shelf.b - 1, "the Cluck sheet starts under the dock");
     assert.ok(cl.y >= 0 && ask.y >= 0 && ask.b <= 768, `Cluck header and ask field on screen: sheet top ${cl.y}, ask ${ask.y}..${ask.b}`);
     assert.ok(await page.$eval("#work .cl-ft .ask", e => { const r = e.getBoundingClientRect(); const f = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!f && (f === e || e.contains(f)); }), "the ask field is not covered");

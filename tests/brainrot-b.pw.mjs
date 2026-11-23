@@ -28,7 +28,7 @@ let fails = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); } }
 const b = await launchBrowser(pw, { args: ["--no-sandbox"] });
 async function open(vp, flag, extra = {}) {
-  const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "no-preference", ...extra });
+  const c = await b.newContext({ viewport: vp, serviceWorkers: "block", reducedMotion: "reduce", ...extra });   // reduce: the idle drift (brainrot.js DRIFT) rests, so the mosaic measures from its rest position
   await c.route(/youtube|ytimg|googlevideo/, r => r.fulfill({ contentType: "text/html", body: "<!doctype html><body style='margin:0;background:#234'></body>" }));
   await c.addInitScript(f => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-welcome-BANK_DSK", "1"); if (f) localStorage.setItem("stem-ui", "v7");
     for (const k of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + k, "9"); } catch { /* */ } }, flag);
@@ -75,7 +75,8 @@ try {
     const sh = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight, cl: document.querySelector("#work .cl").getBoundingClientRect().top, ask: document.querySelector("#work .cl-ft .ask").getBoundingClientRect().bottom }));
     const gap = await page.evaluate(() => ({ main: document.querySelector("#main").getBoundingClientRect().top, work: document.querySelector("#work").getBoundingClientRect(), dock: document.querySelector("#rot .shelf").getBoundingClientRect().height }));
     assert.ok(gap.main <= 80 && gap.work.top <= 104, "TOP-GAP: no empty band under the top bar (the idle HUD takes no room): " + JSON.stringify([gap.main, gap.work.top]));
-    assert.ok(gap.dock <= gap.work.height * .4 + 1 && gap.dock >= gap.work.height * .3 || gap.dock === 360, `the dock is ~40% of the column: ${gap.dock} of ${gap.work.height}`);
+    const k = +await page.$eval("#rot", e => getComputedStyle(e).getPropertyValue("--rot-dock-k"));   // app.css DOCK-SMALLER: the window is 40% x k of the column, clamped to [180k, 360k]
+    assert.ok(k > 0 && k < 1 && gap.dock <= gap.work.height * .4 * k + 1 && (gap.dock >= gap.work.height * .3 * k || Math.abs(gap.dock - 360 * k) < 1), `the dock is ~40% x ${k} of the column: ${gap.dock} of ${gap.work.height}`);
     assert.ok(sh.sh <= sh.ih && sh.ask <= sh.ih && sh.cl < sh.ask - 100, "Cluck's sheet fits: " + JSON.stringify(sh));
     const frames = await page.$$eval("#rot iframe", es => es.map(e => e.src)), before = vs[3];
     /* the dock is a capped window onto a torus, so tile 4 may be out of it: wheel the world until some copy of tile k=3 shows (centre inside the window), then tap THAT copy (original or .dupe) */

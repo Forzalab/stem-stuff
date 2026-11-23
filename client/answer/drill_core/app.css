@@ -998,8 +998,8 @@ html.ui-v7 .rot .rtab.r { border-right: 0; border-left: var(--edge-hair); }
 /* desktop dock (BRAINROT-B2, Tony Nov 14: "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): no box, the mosaic fills the whole notes column.
    8 tiles on a 12-col grid, gap 8: --rows rows of --R px; each tile's cells come from brainrot.js LAYOUT (--a = its grid-area), 1x1 / 2x1 / 1x2 / 2x2 interlocked, no holes. No 9:16 on any tile: every video is
    centre-cropped to its tile (cover, from the container units below). R = a unit's width x .8 (whole px, on 4); the block is taller than the window and scrolls in it (the torus). */
-/* the dock is a window onto the mosaic, 40% of the notes column (about: column top 100 + foot 48 = 148px, the TOP-GAP band gone; 180px at least, 360px at most). The Cluck sheet takes the rest */
-html.ui-v7 .rot.docked { --rot-dock-h: clamp(180px, calc((100dvh - 148px) * .4), 360px); }
+/* the dock is a window onto the mosaic, 40% x --rot-dock-k (.62) of the notes column (about: column top 100 + foot 48 = 148px, the TOP-GAP band gone; 180px at least, 360px at most). The Cluck sheet takes the rest */
+html.ui-v7 .rot.docked { --rot-dock-k: .62; --rot-dock-h: clamp(calc(180px * var(--rot-dock-k)), calc((100dvh - 148px) * .4 * var(--rot-dock-k)), calc(360px * var(--rot-dock-k))); }   /* DOCK-SMALLER (Tony Nov 22, "on desktop, scale down size of brainrot"): --rot-dock-k = .62 scales the window (floor, fraction, ceiling) and the unit height --R together: ~38% less tall, Cluck gets the rest */
 /* the torus (BRAINROT torus, Tony Nov 15): the window is fixed-height, the mosaic inside it is a 2 x 2 world of the same block (duo + three copies), moved by a transform.
    The mask is a subtle fade at its top and bottom edge */
 html.ui-v7 .rot.docked .shelf { height: var(--rot-dock-h); overflow: hidden; overflow: clip; position: relative;   /* clip: nothing may scroll the window (scrollIntoView) */ touch-action: none; overscroll-behavior: contain;
@@ -1010,7 +1010,7 @@ html.ui-v7 .rot:not(.docked) .dupe { display: none; }   /* the copies are for th
 html.ui-v7.side #work.cl-on .rot.docked .vid { height: auto; }
 html.ui-v7 .rot.docked .shelf { container-type: inline-size; }
 html.ui-v7 .rot.docked .shelf .fade { display: none; }
-html.ui-v7 .rot.docked .duo { --R: max(48px, round(down, (100cqw - var(--s5)) / 4 * .8, 4px));
+html.ui-v7 .rot.docked .duo { --R: max(32px, round(down, (100cqw - var(--s5)) / 4 * .8 * var(--rot-dock-k, 1), 4px));
   container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: var(--s2);
   width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; scroll-snap-type: none; }
 html.ui-v7 .rot.docked.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; display: block; }   /* folded: still playing, out of sight (as flag off) */
@@ -1355,7 +1355,7 @@ button.cl-st-b:focus-visible { outline: var(--ring) solid var(--focus); outline-
   --pv: calc((var(--btn) - 1.4em) / 2);                                  /* one line = the old field's --btn height */
   flex: 1 1 auto; display: block; width: 100%; min-width: 0; box-sizing: border-box; height: var(--btn); max-height: min(calc(7em + var(--btn)), 40vh);   /* 6 lines of 1.4em */
   margin: 0; padding: var(--pv) var(--s2) var(--pv) 0; border: 0; background: transparent; resize: none; overflow-x: hidden; overflow-y: hidden;
-  font-family: var(--font-input); font-size: var(--t-md); font-weight: var(--w-body); line-height: 1.4; color: var(--ai-text); caret-color: var(--focus);
+  font-family: var(--font-input); font-size: max(1rem, var(--t-sm)); font-weight: var(--w-body); line-height: 1.4; color: var(--ai-text); caret-color: var(--focus);
   white-space: pre-wrap; overflow-wrap: anywhere; transition: none; }
 .ask .ff textarea:focus { outline: none; }
 .ask .ff textarea::placeholder { color: var(--help-muted); opacity: 1; }
@@ -1369,11 +1369,15 @@ button.cl-st-b:focus-visible { outline: var(--ring) solid var(--focus); outline-
 .cl-ft .ask { padding: var(--s2) var(--s2) var(--s2) var(--cl-in); --ask-r: 0px; border-radius: calc(var(--ask-r)); }
 html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radius: var(--ask-r); border-bottom-right-radius: var(--ask-r); }
 .cl-ft .ask .send { width: 44px; height: 44px; background: var(--ai-ct); color: var(--help-on); }
+.cl-ft .ask { --ask-h: 44px; }                                          /* ASK-ALIGN (Tony, Nov 22): the one-line field is the send button's height, so caret / placeholder / counter / button share one centre */
+.cl-ft .ask .ff { min-height: var(--ask-h); }
+.cl-ft .ask .ff textarea { --pv: calc((var(--ask-h) - 1.4em) / 2); height: var(--ask-h); max-height: min(calc(7em + var(--ask-h)), 40vh); }   /* the cap stays 6 lines of 1.4em (one line = --ask-h) */
+.cl-ft .ask .left { line-height: var(--ask-h); }
 .cl-ft .ask .send .ico { width: 22px; height: 22px; }
 .cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
 .cl .done-row p { margin: 0; color: var(--help-muted); font-size: var(--t-sm); }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
-.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
+.wtext { font-size: var(--t-sm); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
 .wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
 .wtext .wcode { font-family: var(--mono); font-size: .9em; background: var(--help-fill); color: var(--help-on); padding: 0 var(--s1); border-radius: 4px; }   /* `code` in Cluck's reply */
@@ -1386,9 +1390,9 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
-.wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
+.wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-xs); }
 .wtext .wtbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }   /* a GFM pipe table in a reply: the .vw-tb look (views.css); y hidden, the cell padding keeps KaTeX ink inside */
-.wtext .wtbl table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); line-height: var(--lh-ui); font-variant-numeric: tabular-nums; }
+.wtext .wtbl table { width: 100%; border-collapse: collapse; font-size: var(--t-xs); line-height: var(--lh-ui); font-variant-numeric: tabular-nums; }
 .wtext .wtbl th { padding: var(--s1) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--edge); color: var(--muted); font-weight: var(--w-em); text-align: left; }
 .wtext .wtbl td { padding: var(--s2) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--line); vertical-align: top; min-width: 4ch; }
 .wtext .wtbl tr:last-child td { border-bottom: 0; }
@@ -1873,7 +1877,7 @@ html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dv
 /* BIG PLAN V2: the permanent box's idle starters (app chrome, like .wchip; Tony Nov 2) and the no-key / done note. A starter is a quiet outlined pill in the help colours, wraps, min tap size */
 .cl-starters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
 .cl-starters[hidden], .cl-note[hidden] { display: none; }
-.cl-starter { cursor: pointer; box-sizing: border-box; min-height: 36px; padding: 0 var(--s3); border: var(--bw) solid var(--help-line); border-radius: 16px; background: var(--help-fill); color: var(--help); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); text-align: left; -webkit-tap-highlight-color: transparent; }
+.cl-starter { cursor: pointer; box-sizing: border-box; min-height: 36px; padding: 0 var(--s3); border: var(--bw) solid var(--help-line); border-radius: 16px; background: var(--help-fill); color: var(--help); font: inherit; font-size: max(.875rem, var(--t-xs)); font-weight: var(--w-em); text-align: left; -webkit-tap-highlight-color: transparent; }
 .cl-starter:hover { border-color: var(--help); }
 .cl-starter:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cl-note { margin: var(--s4) 0 0; color: var(--help-muted); font-size: var(--t-md); line-height: 1.5; }
