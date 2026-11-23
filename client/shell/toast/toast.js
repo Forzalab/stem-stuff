@@ -226,12 +226,21 @@
     if (e.key === 'Escape' && cur && el && el.classList.contains('on') && el.contains(d.activeElement)) { hide(); e.stopImmediatePropagation(); }
   }, true);
   /* a tap outside an open toast closes it (phone: no Escape, no hover). Capture phase, never preventDefault / stopPropagation: the tap
-     still reaches the page. A pointerdown within 300 ms of the toast opening is the gesture that opened it (cluckbtn tell(), the twist chip): ignored. */
-  var openAt = 0, nOpenAt = 0;
+     still reaches the page. A pointerdown within 300 ms of the toast opening is the gesture that opened it (cluckbtn tell(), the twist chip): ignored.
+     The same 300 ms looks forward too: the tap may be opening another toast (Next's note), so the close waits it out and steps aside if one
+     opens (a stacked stage toast stays up beside the new note). */
+  var openAt = 0, nOpenAt = 0, pdAt = 0, closeT = 0;
   d.addEventListener('pointerdown', function (e) {
     var t = Date.now(), n = e.target;
-    if (cur && el && el.classList.contains('on') && !el.classList.contains('out') && t - openAt > 300 && !el.contains(n)) hide(false, 'dismissed');
-    if (nCur && nEl && nEl.classList.contains('on') && t - nOpenAt > 300 && !nEl.contains(n)) noteHide();
+    var c = cur && el && el.classList.contains('on') && !el.classList.contains('out') && t - openAt > 300 && !el.contains(n);
+    var k = nCur && nEl && nEl.classList.contains('on') && t - nOpenAt > 300 && !nEl.contains(n);
+    if (!c && !k) return;
+    clearTimeout(closeT); pdAt = t;
+    closeT = setTimeout(function () {
+      if (openAt > pdAt || nOpenAt > pdAt) return;                    // this gesture opened a toast/note: it keeps the one already up
+      if (c && cur && el && el.classList.contains('on') && !el.classList.contains('out')) hide(false, 'dismissed');
+      if (k && nCur && nEl && nEl.classList.contains('on')) noteHide();
+    }, 300);
   }, true);
   /* ---------- notes (todo 112, Tony's picks Oct 28; W102 PLAN option A): the old #toast's kinds on this component ----------
      A note is a short line about one thing on screen, with a caret on it: the Scratchpad tip (A: above the button, caret down), the
