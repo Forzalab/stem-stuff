@@ -103,7 +103,7 @@ async function card(page, vp) {
     const m = await measure(); assert.ok(m, "no text block in #problem .blocks"); assert.ok(m.chars >= 400, `text block only ${m.chars} chars`); assert.ok(m.lines.length >= 3, `only ${m.lines.length} line boxes`);
     const over = m.lines.filter(l => l.b > m.btn.t + .5 && l.t < m.btn.b - .5), bad = over.filter(l => l.r > m.btn.l + .5);
     assert.equal(bad.length, 0, `${bad.length}/${over.length} line boxes overlap the button: ${JSON.stringify(bad.slice(0, 2))}`);
-    assert.ok(m.lines.some(l => l.t >= m.btn.b - .5 && l.r > m.btn.l), "no line box below the button reaches back under it");
+    assert.ok(m.lines.some(l => l.t >= m.btn.b - .5 && l.r > m.btn.l), "no line box below the button reaches back under it: " + JSON.stringify({ vp: JSON.stringify(page.viewportSize()), btn: m.btn, lines: m.lines.map(l => [l.l, l.r, l.t, l.b].map(Math.round)) }));
     const probe = await page.addStyleTag({ content: "#cluckBtn{position:absolute!important;float:none!important;top:20px!important;right:16px!important;left:auto!important;bottom:auto!important;margin:0!important}" });
     try { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); const p = await measure();
       assert.ok(p.lines.some(l => l.b > p.btn.t + .5 && l.t < p.btn.b - .5 && l.r > p.btn.l + .5), "counter-example: absolute top-right did NOT overlap (this check would not catch it)"); }
