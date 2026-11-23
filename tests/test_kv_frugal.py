@@ -52,7 +52,8 @@ class FakeKV:
     [[cmd, ...], ...] = many commands in one round trip. Meters every call; window() gives one request's share."""
     def __init__(self):
         self.db, self.lock = {}, threading.Lock()
-        self.calls = []                       # one row per round trip: {cmds: [names], up: request bytes, down: reply bytes}
+        self.expires = {}                     # key -> TTL seconds (the last EXPIRE / PEXPIRE seen)
+        self.calls = []                       # one row per round trip: {cmds: [names], keys: [first arg], up: request bytes, down: reply bytes}
         self.llm, self.stray = [], []         # the tutor turn's stubbed model calls; URLs nobody should have called
 
     # ---- redis ----
@@ -71,6 +72,7 @@ class FakeKV:
         if op == "EXISTS":
             return sum(k in db for k in a)
         if op in ("EXPIRE", "PEXPIRE"):
+            self.expires[a[0]] = int(a[1])
             return int(a[0] in db)
         if op == "INCR":
             db[a[0]] = str(int(db.get(a[0], 0)) + 1)
@@ -110,7 +112,8 @@ class FakeKV:
                     cmds, out = body, json.dumps([{"result": self.run(c)} for c in body]).encode()
                 else:
                     cmds, out = [body], json.dumps({"result": self.run(body)}).encode()
-                self.calls.append({"cmds": [str(c[0]).upper() for c in cmds], "up": len(data), "down": len(out)})
+                self.calls.append({"cmds": [str(c[0]).upper() for c in cmds], "keys": [str(c[1]) for c in cmds if len(c) > 1],
+                                   "up": len(data), "down": len(out)})
             return Resp(out)
         if "anthropic.com" in url or "openrouter.ai" in url:
             return Resp(self.model(url, json.loads(data)))
@@ -136,17 +139,23 @@ class FakeKV:
     # ---- the meter ----
     @contextlib.contextmanager
     def window(self):
-        """the KV traffic of the block: {trips, cmds, up, down, by: {command: count}} (filled when the block ends)"""
+        """the KV traffic of the block: {trips, cmds, up, down, by: {command: count}, keys, written, expired}
+        written = keys an HSET/HDEL touched; expired = keys an EXPIRE/PEXPIRE touched (same window)"""
         w, at = {}, len(self.calls)
         try:
             yield w
         finally:
             rows = self.calls[at:]
-            by = {}
+            by, written, expired = {}, set(), set()
             for r in rows:
-                for c in r["cmds"]:
+                for c, key in zip(r["cmds"], r["keys"]):
                     by[c] = by.get(c, 0) + 1
-            w.update(trips=len(rows), cmds=sum(len(r["cmds"]) for r in rows), up=sum(r["up"] for r in rows), down=sum(r["down"] for r in rows), by=by)
+                    if c in ("HSET", "HDEL"):
+                        written.add(key)
+                    elif c in ("EXPIRE", "PEXPIRE"):
+                        expired.add(key)
+            w.update(trips=len(rows), cmds=sum(len(r["cmds"]) for r in rows), up=sum(r["up"] for r in rows), down=sum(r["down"] for r in rows),
+                     by=by, keys=[k for r in rows for k in r["keys"]], written=written, expired=expired, rows=rows)
 
 
 def seed(kv, codes):
@@ -169,7 +178,9 @@ def problem(i):
 
 
 class KvFrugal(unittest.TestCase):
-    """bank open -> /p -> /state -> /check (wrong, right) -> /state -> one tutor turn -> bank reopen, for a 1-problem and a 64-problem bank"""
+    """bank open -> /p -> /state -> /check (wrong, right) -> /state -> one tutor turn -> bank reopen, for a 1-problem and a 64-problem bank.
+    The flag-off class pins today's blob traffic; KvFrugalHash runs the SAME flow with STEM_TRIES_HASH=1 and pins the hash traffic."""
+    HASH = False
     COUNTS = {}                               # bank size -> [(route label, window)]: what slice 2 will assert on
 
     def setUp(self):
@@ -179,7 +190,8 @@ class KvFrugal(unittest.TestCase):
             with open(os.path.join(banks, f"BANK_KV{n}.json"), "w") as f:
                 json.dump({"v": serve.CUTOFF, "problems": [problem(i) for i in range(1, n + 1)]}, f)
         self.blob = seed(self.kv, [problem(i)["code"] for i in range(1, max(SIZES) + 1)])
-        env = {"CLAUDE_API": "sk-ant-test", "OPENROUTER_API_KEY": "sk-or-test", "CLUCK_SUBJECT": "0", "CLUCK_ARM": "claude", "STEM_FRONT": ""}
+        env = {"CLAUDE_API": "sk-ant-test", "OPENROUTER_API_KEY": "sk-or-test", "CLUCK_SUBJECT": "0", "CLUCK_ARM": "claude", "STEM_FRONT": "",
+               "VERCEL_ENV": "", "STEM_TRIES_HASH": "1" if self.HASH else ""}
         self.ps = [mock.patch.dict(os.environ, env), mock.patch.object(serve, "BANKS", banks), mock.patch.object(serve, "KV", (KV_URL, "t")),
                    mock.patch.object(serve.urllib.request, "urlopen", self.kv.urlopen)]
         for p in self.ps:
@@ -200,8 +212,26 @@ class KvFrugal(unittest.TestCase):
             res = serve.dispatch(method, path, cookie, json.dumps(body).encode() if body is not None else b"")
         self.assertIsNotNone(res, path)
         self.rows.append((label, w))
+        self.request_ok(w)
         self.assertNotIn("Set-Cookie", res[1], "the test's cookie id was not taken")
         return res[0], json.loads(res[2])
+
+    def request_ok(self, w):
+        """the flag's per-request budget: flag OFF = the old blob, untouched; flag ON = no whole-blob GET, at most one
+        store load (HGETALL), and every key an HSET/HDEL writes carries an EXPIRE in the same request."""
+        if self.HASH:
+            self.assertNotIn(serve.KV_KEY, w["keys"], "the whole tries blob was read with the flag on")
+            self.assertLessEqual(w["by"].get("HGETALL", 0), 1, "more than one store load in one request")
+            self.assertLessEqual(w["written"], w["expired"], f"a written key has no expiry: {w['written'] - w['expired']}")
+            for r in w["rows"]:
+                if "HSET" in r["cmds"]:
+                    self.assertIn("EXPIRE", r["cmds"], "HSET and EXPIRE left in separate round trips")
+        else:
+            self.assertEqual(w["by"].get("HGETALL", 0), 0, "flag off must not use the hash store")
+            self.assertEqual(w["by"].get("HSET", 0), 0, "flag off must not use the hash store")
+
+    def one_read(self, w, why):
+        self.assertEqual(w["by"].get("HGETALL" if self.HASH else "GET", 0), 1, why)
 
     def flow(self, n):
         self.rows = KvFrugal.COUNTS[n] = []
@@ -209,7 +239,7 @@ class KvFrugal(unittest.TestCase):
         codes = [f"KVF_Q{i:02d}" for i in range(1, n + 1)]
 
         st, b = self.call(f"GET /b ({n} problems, fresh)", "GET", f"/b/{bank}.json", cookie=cookie)
-        self.assertEqual(self.rows[-1][1]["by"].get("GET"), 1, "a bank open reads the tries blob once")
+        self.one_read(self.rows[-1][1], "a bank open reads the student's tries once")
         self.assertEqual((st, b["code"], [p["code"] for p in b["problems"]], b["marks"], b["at"]), (200, bank, codes, {}, None))
         self.assertNotIn("answer", b["problems"][0])
         self.assertNotIn("saccharine", b["problems"][0])
@@ -217,12 +247,20 @@ class KvFrugal(unittest.TestCase):
         st, p = self.call("GET /p", "GET", f"/p/{first}.json", cookie=cookie)
         self.assertEqual((st, p["code"], p["type"]), (200, first, "num"))
         self.assertNotIn("answer", p)
+        if self.HASH:
+            h = self.kv.db[serve.tries_key(cookie[4:])]
+            self.assertEqual((h.get("_bank"), h.get("at:" + bank)), (bank, first), "the place is _bank + at:<bank>")
+            self.assertEqual((self.rows[-1][1]["by"].get("HSET"), self.rows[-1][1]["by"].get("EXPIRE")), (1, 1), "one HSET + one EXPIRE")
 
         st, s = self.call("GET /state (untried)", "GET", f"/state/{first}", cookie=cookie)
         self.assertEqual((st, s["wrong"], s["done"]), (200, 0, False))
 
         st, v = self.call("POST /check (wrong)", "POST", "/check", {"code": first, "answer": "5"}, cookie)
         self.assertEqual((st, v["verdict"]), (200, "wrong"))
+        if self.HASH:
+            h = self.kv.db[serve.tries_key(cookie[4:])]
+            self.assertIn(first, h, "one field per problem")
+            self.assertIn("_gen", h)
         st, s = self.call("GET /state (1 wrong)", "GET", f"/state/{first}", cookie=cookie)
         self.assertEqual((st, s["wrong"], s["done"]), (200, 1, False))
 
@@ -230,6 +268,7 @@ class KvFrugal(unittest.TestCase):
             st, head, chunks = serve.STREAMS["/explain"](cookie, json.dumps({"code": first, "answer": "5"}).encode())
             text = b"".join(chunks).decode()
         self.rows.append(("POST /explain (1 turn)", w))
+        self.request_ok(w)
         self.assertEqual(st, 200)
         self.assertTrue(text.strip())
         self.assertNotIn("Cluck stopped early", text)
@@ -241,18 +280,26 @@ class KvFrugal(unittest.TestCase):
         self.assertEqual((st, s["wrong"], s["done"]), (200, 1, True))
 
         st, b = self.call(f"GET /b ({n} problems, again)", "GET", f"/b/{bank}.json", cookie=cookie)
-        self.assertEqual(self.rows[-1][1]["by"].get("GET"), 1, "a bank reopen reads the tries blob once")
+        self.one_read(self.rows[-1][1], "a bank reopen reads the student's tries once")
         self.assertEqual((st, b["marks"], b["at"]), (200, {first: {"x": 1, "done": "correct"}}, first))
         st, b = self.call("GET /b/last", "GET", "/b/last.json", cookie=cookie)
         self.assertEqual((st, b["code"], len(b["problems"])), (200, bank, n))
 
         self.assertEqual(self.kv.stray, [], "a request left for the network")
-        mine = [k for k in json.loads(self.kv.db[serve.KV_KEY])["tries"] if k.startswith(cookie[4:])]
-        self.assertEqual(len(mine), 1, "the try was saved to the fake KV")
+        if self.HASH:
+            h = self.kv.db.get(serve.tries_key(cookie[4:]), {})
+            tries = {f for f in h if not f.startswith(("_", "at:", "c:"))}
+            self.assertEqual(tries, {first}, "the try was saved to the student's hash")
+            self.assertIn("_gen", h)
+            self.assertEqual(self.kv.expires.get(serve.tries_key(cookie[4:])), serve.TRIES_LIFETIME, "the hash carries the 120-day life")
+        else:
+            mine = [k for k in json.loads(self.kv.db[serve.KV_KEY])["tries"] if k.startswith(cookie[4:])]
+            self.assertEqual(len(mine), 1, "the try was saved to the fake KV")
         self.report(n)
 
     def report(self, n):
-        out = [f"\nKV-FRUGAL counts: BANK_KV{n} ({n} problems); seeded tries blob {self.blob} bytes ({OTHERS} other browsers). No budget asserted yet.",
+        flag = "flag ON (tries hash)" if self.HASH else "flag OFF (tries blob)"
+        out = [f"\nKV-FRUGAL counts: BANK_KV{n} ({n} problems), {flag}; seeded tries blob {self.blob} bytes ({OTHERS} other browsers). No budget asserted yet.",
                f"  {'request':<34}{'trips':>6}{'cmds':>6}{'up B':>10}{'down B':>11}  commands"]
         for label, w in self.rows:
             by = " ".join(f"{k}x{v}" for k, v in sorted(w["by"].items()))
@@ -265,6 +312,112 @@ class KvFrugal(unittest.TestCase):
     def test_bank_of_64(self):
         self.flow(64)
 
+    def test_view_only_leaves_no_record(self):
+        """a brand-new id that only views (/b/last, /p, /state) writes nothing: no student hash is created"""
+        if not self.HASH:
+            self.skipTest("the blob path still records the last bank")
+        self.rows = []
+        sid = fake_sid("viewer")
+        cookie = "sid=" + sid
+        st, b = self.call("GET /b/last (fresh)", "GET", "/b/last.json", cookie=cookie)
+        self.assertIsNone(b)
+        st, _ = self.call("GET /p", "GET", "/p/KVF_Q01.json", cookie=cookie)
+        self.assertEqual(st, 200)
+        st, s = self.call("GET /state", "GET", "/state/KVF_Q01", cookie=cookie)
+        self.assertEqual((st, s["wrong"], s["done"]), (200, 0, False))
+        self.assertEqual([label for label, w in self.rows if w["written"]], [], "a view-only visit wrote a key")
+        self.assertNotIn(serve.tries_key(sid), self.kv.db)
+
+    def test_preview_namespace_and_short_life(self):
+        """VERCEL_ENV=preview: its own key prefix and the 1-day constant, never the prod key"""
+        if not self.HASH:
+            self.skipTest("the blob path has no prefix")
+        sid = fake_sid("preview")
+        cookie, self.rows = "sid=" + sid, []
+        with mock.patch.dict(os.environ, {"VERCEL_ENV": "preview"}):
+            st, b = self.call("GET /b (preview)", "GET", "/b/BANK_KV1.json", cookie=cookie)
+        self.assertEqual(st, 200)
+        self.assertIn(serve.PREVIEW_PREFIX + serve.TRIES_KEY + sid, self.kv.db)
+        self.assertNotIn(serve.TRIES_KEY + sid, self.kv.db, "a preview wrote the prod key")
+        self.assertEqual(self.kv.expires[serve.PREVIEW_PREFIX + serve.TRIES_KEY + sid], serve.PREVIEW_LIFETIME)
+
+    def test_hash_store_parts_gen_and_rounds(self):
+        """the store itself: a multi gets one field per part, gen stays above every saved entry, and a new round drops older ones"""
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid = fake_sid("store")
+        st = serve.TriesStore()
+        st.entry_new((sid, "KVF_M1", 0))["wrong"].append(("num", "5"))
+        st.entry_new((sid, "KVF_M1", 1))
+        st.put((sid, "KVF_M1", 0))
+        st.save()
+        st2 = serve.TriesStore()
+        st2.load(sid)
+        self.assertEqual(st2.get((sid, "KVF_M1", 0))["wrong"], [("num", "5")])
+        self.assertFalse(st2.get((sid, "KVF_M1", 1))["done"])
+        r1 = st2.round(sid, 1)
+        st2.entry_new((r1, "KVF_M2"))["done"] = True
+        st2.put((r1, "KVF_M2"))
+        st2.save()
+        st3 = serve.TriesStore()
+        r2 = st3.round(sid, 2)
+        st3.entry_new((r2, "KVF_M3"))
+        st3.save()
+        st4 = serve.TriesStore()
+        st4.load(sid)
+        self.assertIsNone(st4.get((r1, "KVF_M2")), "the older redo round stayed")
+        self.assertGreater(st4.entry_new((sid, "KVF_M4"))["gen"], st4.get((r2, "KVF_M3"))["gen"])
+
+    def test_state_flag_off_reads_under_the_lock(self):
+        if self.HASH:
+            self.skipTest("the blob path only")
+        seen = []
+
+        class Spy(dict):
+            def get(self, k, d=None):
+                seen.append(serve._tries_lock.locked())
+                return dict.get(self, k, d)
+        serve.state(problem(1), fake_sid("lock"), snap=(Spy(), 0))
+        self.assertEqual(seen, [True], "state() read the blob without _tries_lock")
+
+    def test_store_load_survives_bad_kv_and_bad_rows(self):
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid = fake_sid("bad")
+        good = [1, 2, "x", 4]
+        self.kv.db[serve.tries_key(sid)] = {"_gen": "oops", "c:A": json.dumps([good, [1], "no", ["s", 1, 2, 3]]), "c:B": json.dumps([[1]]),
+                                            "KVF_Q01": json.dumps({"wrong": [], "done": False, "gen": 7})}
+        st = serve.TriesStore()
+        st.load(sid)
+        self.assertEqual(st.fields["c:A"], [good])
+        self.assertNotIn("c:B", st.fields)
+        self.assertEqual(st.gen, 7)
+        with mock.patch.object(serve, "_kv", side_effect=OSError("down")):
+            st2 = serve.TriesStore()
+            st2.load(sid)                                    # never raises
+        self.assertEqual((st2.fields, st2.gen), ({}, 0))
+
+    def test_expr_seen_orders_by_gen(self):
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid = fake_sid("seen")
+        st = serve.TriesStore()
+        st.load(sid)
+        for c, g in (("KVF_Q05", 3), ("KVF_Q02", 1), ("KVF_Q09", 2)):
+            st.fields[c] = {"wrong": [], "done": False, "gen": g}
+        self.assertEqual([c for c, _ in serve.expr_seen(sid, "KVF_Q99", store=st)], ["KVF_Q02", "KVF_Q09", "KVF_Q05"])
+
+    def test_save_logs_a_pipeline_item_error(self):
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        st = serve.TriesStore()
+        st.entry_new((fake_sid("err"), "KVF_Q01"))
+        logs = []
+        with mock.patch.object(serve, "_kv_pipeline", return_value=[{"error": "WRONGTYPE"}, {"result": 1}]), \
+                mock.patch.object(serve, "log", lambda *a: logs.append(a)):
+            st.save()
+        self.assertTrue(any(a and a[0] == "tries not saved to KV:" for a in logs))
+
     def test_pipeline_is_one_round_trip(self):
         """the meter itself: a pipelined POST counts 1 round trip and its commands (what slice 2 will move to)"""
         req = lambda path, body: serve.urllib.request.Request(KV_URL + path, data=json.dumps(body).encode(), method="POST")   # noqa: E731
@@ -275,6 +428,11 @@ class KvFrugal(unittest.TestCase):
         self.assertEqual((w["trips"], w["cmds"], w["by"]), (2, 5, {"SET": 1, "GET": 2, "HSET": 1, "HGET": 1}))
         self.assertGreater(w["up"], 0)
         self.assertGreater(w["down"], 0)
+
+
+class KvFrugalHash(KvFrugal):
+    """KV-FRUGAL slice 3: the same flow with STEM_TRIES_HASH=1, against the fake KV's HSET / HGETALL / EXPIRE / pipeline support"""
+    HASH = True
 
 
 if __name__ == "__main__":

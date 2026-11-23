@@ -30,6 +30,7 @@
 #   §modes          sugar vs diet mode, sugar split (choose-all -> T/F rows): mode_of, sugar, hidden, sub_problem, lookup, view, public
 #   §math           sympy behind a token allowlist: to_python, evaluate
 #   §grading        number/unit/sig-fig grading, slip hints, tries store, repair_check: same, tol_of, slip_hit, state, mark, grade
+#   §tries-store    KV-FRUGAL slice 3: one HASH per browser behind STEM_TRIES_HASH (default off), TTLs + preview prefix: tries_hash_on, TriesStore
 #   §expr-answers   W137 expression answers + L3 diagnose: expr_mode, expr_hit, expr_l3, diagnose, expr_explain_store
 #   §incidents      S-XXXXX incident codes + one JSON log line: incident, log_incident, health_state, OutOfCredit
 #   §trace          per-request flight-recorder trace: set_trace, trace_id, log
@@ -997,34 +998,42 @@ def _entry(key):
     return st
 
 
-def state(p, sid, reveal=False, snap=None):
+def state(p, sid, reveal=False, snap=None, store=None):
     """{wrong, done, gen} for one browser and problem ({parts: [...]} for a multi). No entry: nothing tried yet, gen = the
     one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again).
-    snap = (tries, gen): a caller that already read the store once (bank_payload) shares it instead of re-reading per item."""
+    snap = (tries, gen): a caller that already read the store once (bank_payload) shares it instead of re-reading per item.
+    store = a TriesStore the route already made (the flag on): one load for the whole request."""
+    if store is None:
+        store = _new_store()
+    def one(key):
+        st = tries.get(key)
+        if st is None:
+            return {"wrong": 0, "done": False, "gen": gen + 1}
+        o = {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
+        if reveal and not st["done"] and len(st["wrong"]) >= max_tries(p):
+            o["correct"] = answer_of(p["parts"][key[2]] if p["type"] == "multi" else p)
+        return o
+    def build():
+        if p["type"] == "multi":
+            return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
+        return one((sid, p["code"]))
+    if store is not None:
+        store.load(sid)
+        tries, gen = store, store.gen
+        return build()
     with _tries_lock:
         if snap is None:
             _load_tries()
             tries, gen = _tries, _gen["n"]
         else:
             tries, gen = snap
-
-        def one(key):
-            st = tries.get(key)
-            if st is None:
-                return {"wrong": 0, "done": False, "gen": gen + 1}
-            o = {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
-            if reveal and not st["done"] and len(st["wrong"]) >= max_tries(p):
-                o["correct"] = answer_of(p["parts"][key[2]] if p["type"] == "multi" else p)
-            return o
-        if p["type"] == "multi":
-            return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
-        return one((sid, p["code"]))
+        return build()
 
 
-def mark(p, sid, snap=None):
+def mark(p, sid, snap=None, store=None):
     """The list mark for one problem, as app.js wrapRec() builds it: {x: wrong tries, done: open|correct|out}; None if untried.
-    snap = (tries, gen): pass it when many marks share one store read (bank_payload)."""
-    st = state(p, sid, snap=snap)
+    snap = (tries, gen): pass it when many marks share one store read (bank_payload). store = the route's TriesStore."""
+    st = state(p, sid, snap=snap, store=store)
     us = st["parts"] if "parts" in st else [st]
     ds = ["correct" if u["done"] else "out" if u["wrong"] >= max_tries(p) else "open" for u in us]
     x = sum(u["wrong"] for u in us)
@@ -1062,18 +1071,29 @@ def front():
     return code, os.environ.get("STEM_FRONT_TITLE") or (FRONT[1] if code == FRONT[0] else code)
 
 
-def bank_payload(code, sid, mode="sugar"):
+def bank_payload(code, sid, mode="sugar", store=None):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (docs/design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
-    from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one."""
+    from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one.
+    store = the route's TriesStore (the flag on): one load for the marks and the place. A brand-new id that only views
+    (GET /b/last) gets no record; an explicit bank open still remembers the place."""
     all_banks = banks()
-    with _tries_lock:
-        _load_tries()
-        snap = (dict(_tries), _gen["n"])         # ONE read for this reply: every mark below shares it (KV-FRUGAL)
+    wanted, store = code, store if store is not None else _new_store()
+    if store is not None:
+        store.load(sid)
         if code == "last":
-            code = _last.get(sid, {}).get("bank") or front()[0]   # a new browser: the front bank (None when STEM_FRONT="")
+            code = store.bank() or front()[0]                     # a new browser: the front bank (None when STEM_FRONT="")
             if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
                 code = front()[0]                # a former front's returner: the current front (its tries and "at" stay as they were)
+        snap = None
+    else:
+        with _tries_lock:
+            _load_tries()
+            snap = (dict(_tries), _gen["n"])     # ONE read for this reply: every mark below shares it (KV-FRUGAL)
+            if code == "last":
+                code = _last.get(sid, {}).get("bank") or front()[0]   # a new browser: the front bank (None when STEM_FRONT="")
+                if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
+                    code = front()[0]            # a former front's returner: the current front (its tries and "at" stay as they were)
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
@@ -1089,13 +1109,19 @@ def bank_payload(code, sid, mode="sugar"):
         before = sugar(p).get("before") if mode == "sugar" and sugar(p).get("snack") else None
         ps += [(view(sub_problem(p, r), mode), None) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [(view(p, mode), before)]
     ps = snacks_placed(ps)
-    marks = {p["code"]: m for p in ps for m in [mark(p, sid, snap)] if m}
-    with _tries_lock:
-        me = _last.setdefault(sid, {"bank": None, "at": {}})
-        at = me["at"].get(code)
-        if me["bank"] != code:
-            me["bank"] = code
-            _save_tries()
+    marks = {p["code"]: m for p in ps for m in [mark(p, sid, snap, store=store)] if m}
+    if store is not None:
+        at = store.at(code)
+        if (wanted != "last" or store.fields) and store.bank() != code:   # no record for a new id that only views
+            store.place(code)
+            store.save()
+    else:
+        with _tries_lock:
+            me = _last.setdefault(sid, {"bank": None, "at": {}})
+            at = me["at"].get(code)
+            if me["bank"] != code:
+                me["bank"] = code
+                _save_tries()
     live = {p["code"] for p in ps}
     out = {"code": code, "problems": [public(p, sid) for p in ps], "marks": marks, "at": at if at in live else None}
     gap = _index()["gaps"].get(code)
@@ -1111,6 +1137,16 @@ def bank_payload(code, sid, mode="sugar"):
 
 def seen(code, sid):
     """GET /p/<code>.json: when code is in this browser's last bank, remember it as the place to reopen that bank."""
+    store = _new_store()
+    if store is not None:
+        store.load(sid)
+        bank_ = store.bank()
+        if not bank_ or store.at(bank_) == code:
+            return
+        if code in banks().get(bank_, []):
+            store.place(bank_, code)             # _bank + at:<bank>, one multi-field HSET
+            store.save()
+        return
     with _tries_lock:
         _load_tries()
         me = _last.get(sid)
@@ -1135,9 +1171,14 @@ def _ladder(p, sid):
     rp = (t or {}).get("repair")
     if not isinstance(rp, dict) or not rp.get("steps") or p.get("type") == "proof" or (t or {}).get("type") == "proof":
         return 404, {"error": "no repair"}      # a proof never serves an authored ladder: no slip family blanks its steps, so they carry the answers
-    with _tries_lock:
-        _load_tries()
-        missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
+    store = _new_store()
+    if store is not None:
+        store.load(sid)
+        missed = {k[1] for k, st in store.entries() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
+    else:
+        with _tries_lock:
+            _load_tries()
+            missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
     if p["code"] not in missed and not (p.get("welcome") is True and t is p):
         return 403, {"error": "no wrong try yet"}
     return t, rp, missed
@@ -1255,6 +1296,17 @@ def grade(p, sid, body, reveal=False, on=stage_off):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}
     if p["type"] == "proof":                 # W107: Cluck's grader is a network call, so it runs outside the tries lock
         return proof_grade(p, sid, body, rnd, reveal, on)
+    store = _new_store()
+    if store is not None:
+        sid = store.round(sid, rnd)
+        key = (sid, p["code"], idx) if multi else (sid, p["code"])
+        st = store.entry_new(key)
+        out = _grade(p, st, body, multi, idx, reveal)
+        out["gen"] = st["gen"]
+        if out["verdict"] in ("correct", "wrong"):
+            store.put(key)
+            store.save()
+        return out
     with _tries_lock:
         _load_tries()
         sid = _round_sid(sid, rnd)
@@ -1372,6 +1424,210 @@ def _grade(p, st, body, multi, idx, reveal=False):
     return reply(shut(out) if left() <= 0 else out)
 
 
+# == §tries-store ==
+# ---------------- KV-FRUGAL slice 3: one HASH per browser behind STEM_TRIES_HASH (default off: the blob above) ----------------
+# t:<sid> fields:
+#   <CODE> / <CODE> <part>  one problem's {"wrong", "done", "gen"}; a redo round tags them "r<N> <CODE>", all in the same hash
+#   _gen                    this browser's last gen (the client compares it: a hand reset must read as newer)
+#   _bank                   this browser's last bank; at:<BANK> = its place in that bank
+#   c:<CODE>                this problem's Cluck turn rows (slice 4 moves them to their own keys)
+# Every write is ONE multi-field HSET + EXPIRE in ONE /pipeline call (2 commands, 1 round trip). Preview deploys
+# (VERCEL_ENV=preview) write their own namespace with a 1-day life, so agent / bench runs never touch student keys.
+# One load per request: the route entry makes the TriesStore and passes it down; nothing here is a module global.
+TRIES_HASH_ENV = "STEM_TRIES_HASH"        # one env var, default off ("1" = the hash store); the blob path stays byte for byte
+TRIES_LIFETIME = 120 * 24 * 60 * 60       # 120 days, prod: tries + place (Tony, Nov 23)
+PREVIEW_LIFETIME = 24 * 60 * 60           # 1 day, preview (Tony, Nov 23): disposable keys
+PREVIEW_PREFIX = "preview:"               # preview's own keyspace
+TRIES_KEY = "t:"                          # prod: t:<sid>
+KV_PIPE_TIMEOUT = 5
+
+
+def tries_hash_on():
+    return os.environ.get(TRIES_HASH_ENV, "").strip() == "1"
+
+
+def tries_prefix():
+    """empty in prod, PREVIEW_PREFIX on a Vercel preview deploy"""
+    return PREVIEW_PREFIX if os.environ.get("VERCEL_ENV", "").strip().lower() == "preview" else ""
+
+
+def tries_lifetime():
+    return PREVIEW_LIFETIME if tries_prefix() else TRIES_LIFETIME
+
+
+def tries_key(sid):
+    return f"{tries_prefix()}{TRIES_KEY}{_base_sid(sid)}"
+
+
+def _base_sid(sid):
+    """a redo round's sid (sid:r<N>) keeps its own field tag in the same browser hash"""
+    head, sep, tail = str(sid).rpartition(":r")
+    return head if sep and tail.isdigit() else str(sid)
+
+
+def _tries_field(key):
+    """(sid, code[, part]) -> the hash field: "CODE" / "CODE 0"; a round's sid:r2 -> "r2 CODE" """
+    base = _base_sid(key[0])
+    tag = key[0][len(base) + 1:]
+    return (f"{tag} " if tag else "") + " ".join(map(str, key[1:]))
+
+
+def _tries_field_key(base, field):
+    """the inverse of _tries_field: "r2 CODE 0" -> (base:r2, CODE, 0)"""
+    bits = field.split(" ")
+    sid = base
+    if bits and bits[0].startswith("r") and bits[0][1:].isdigit():
+        sid, bits = base + ":" + bits[0], bits[1:]
+    return (sid, bits[0]) if len(bits) == 1 else (sid, bits[0], int(bits[1]))
+
+
+def _kv_pipeline(*cmds):
+    """one /pipeline round trip on the Upstash REST API (the same seam the fake KV meters)"""
+    req = urllib.request.Request(KV[0].rstrip("/") + "/pipeline", data=json.dumps(cmds).encode(), method="POST",
+                                 headers={"Authorization": "Bearer " + KV[1], "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=KV_PIPE_TIMEOUT) as r:
+        return json.load(r)
+
+
+def _new_store():
+    """the per-request store when the flag is on, else None (the old blob path, untouched)"""
+    return TriesStore() if all(KV) and tries_hash_on() else None
+
+
+class TriesStore:
+    """One browser's tries HASH, read once (HGETALL) and written once per request. Callers pass one instance down a route.
+    A read that changes nothing writes nothing; a new id that only views gets no record."""
+
+    def __init__(self):
+        self.sid = None
+        self.fields = None                   # field -> decoded value; None until the one load
+        self.gen = 0                         # this browser's last gen
+        self.dirty = {}                      # field -> value to HSET (all fields in ONE HSET)
+        self.dels = []                       # fields to HDEL (an older redo round)
+
+    # ---- read ----
+    def load(self, sid):
+        if self.fields is not None:
+            return
+        self.sid = _base_sid(sid)
+        self.fields = {}
+        try:
+            raw = _kv("HGETALL", tries_key(self.sid)) or []
+        except (OSError, ValueError) as e:
+            log("tries not read from KV:", e)
+            return
+        for name, val in zip(raw[0::2], raw[1::2]):
+            if name == "_gen":
+                try:
+                    self.gen = int(val or 0)
+                except (ValueError, TypeError):
+                    pass
+            elif name == "_bank" or name.startswith("at:"):
+                self.fields[name] = val
+            elif name.startswith("c:"):
+                try:
+                    rows = json.loads(val)
+                except (ValueError, TypeError):
+                    continue
+                if isinstance(rows, list):
+                    rows = [r for r in rows if isinstance(r, list) and len(r) in (4, 5) and isinstance(r[0], int) and isinstance(r[2], str)]
+                    if rows:
+                        self.fields[name] = rows
+            else:
+                try:
+                    st = json.loads(val)
+                    self.fields[name] = {"wrong": [_tup(w) for w in st.get("wrong", [])], "done": bool(st.get("done")), "gen": int(st.get("gen", 0))}
+                except (ValueError, TypeError, AttributeError):
+                    pass
+        self.gen = max([self.gen, *(st["gen"] for name, st in self.fields.items() if not name.startswith(("_", "at:", "c:")))])
+
+    def get(self, key):
+        """the try entry of (sid, code[, part]), or None (a read: never creates the record)"""
+        self.load(key[0])
+        return self.fields.get(_tries_field(key))
+
+    def entries(self):
+        """[(key, entry)] of the loaded hash: every problem field, base and redo rounds, metadata left out"""
+        return [(_tries_field_key(self.sid, name), st) for name, st in (self.fields or {}).items() if not name.startswith(("_", "at:", "c:"))]
+
+    def bank(self):
+        return self.fields.get("_bank")
+
+    def at(self, bank):
+        return self.fields.get(f"at:{bank}")
+
+    def turns(self, key):
+        self.load(key[0])
+        return self.fields.get("c:" + key[1])
+
+    # ---- write (deferred to ONE pipeline) ----
+    def entry_new(self, key):
+        """the entry of key, created in memory (and given the next gen) when missing"""
+        self.load(key[0])
+        name = _tries_field(key)
+        st = self.fields.get(name)
+        if st is None:
+            self.gen += 1
+            st = {"wrong": [], "done": False, "gen": self.gen}
+            self.fields[name] = st
+            self.dirty[name] = st
+            self.dirty["_gen"] = self.gen
+        return st
+
+    def put(self, key):
+        """mark an existing entry for the one write"""
+        name = _tries_field(key)
+        if name in self.fields:
+            self.dirty[name] = self.fields[name]
+
+    def place(self, bank, code=None):
+        """_bank and (when known) at:<bank>, both fields in ONE HSET"""
+        self.fields["_bank"] = bank
+        self.dirty["_bank"] = bank
+        if code is not None:
+            self.fields[f"at:{bank}"] = code
+            self.dirty[f"at:{bank}"] = code
+
+    def turns_put(self, key, rows):
+        name = "c:" + key[1]
+        self.fields[name] = rows
+        self.dirty[name] = rows
+
+    def round(self, sid, rnd):
+        """the redo-round sid, dropping every other round's fields (the hash twin of _round_sid); rnd None = the base sid"""
+        if rnd is None:
+            return sid
+        self.load(sid)
+        keep = f"r{rnd}"
+        for name in [n for n in self.fields if n.split(" ", 1)[0].startswith("r") and n.split(" ", 1)[0][1:].isdigit() and n.split(" ", 1)[0] != keep]:
+            del self.fields[name]
+            self.dirty.pop(name, None)
+            self.dels.append(name)
+        return f"{sid}:r{rnd}"
+
+    def save(self):
+        """every dirty field in ONE multi-field HSET, + EXPIRE, in ONE pipeline; a failed write is logged, as before"""
+        if not self.dirty and not self.dels:
+            return
+        key = tries_key(self.sid)
+        cmds = [["HDEL", key, *self.dels]] if self.dels else []
+        if self.dirty:
+            hset = ["HSET", key]
+            for name, val in self.dirty.items():
+                hset += [name, val if isinstance(val, str) else json.dumps(val, ensure_ascii=False, separators=(",", ":"))]
+            cmds.append(hset)
+        cmds.append(["EXPIRE", key, tries_lifetime()])          # every written key has an expiry
+        try:
+            res = _kv_pipeline(*cmds)
+            for item in res if isinstance(res, list) else []:
+                if isinstance(item, dict) and item.get("error"):
+                    log("tries not saved to KV:", item["error"])
+                    break
+        except (OSError, ValueError) as e:
+            log("tries not saved to KV:", e)
+        self.dirty, self.dels = {}, []
+
+
 # == §expr-answers ==
 # ---------------- W137 expression answers (todo 137, brain _files/w137): EXPR_MODE on the allowlisted banks ----------------
 # After one wrong try on a typed num answer / num part with a `form`, the box asks for the whole working (expr.PROMPT). It is graded by
@@ -1445,11 +1701,14 @@ def expr_hit(p, u, idx, text, tree, sig):
     return out
 
 
-def expr_seen(sid, code):
+def expr_seen(sid, code, store=None):
     """the items this browser tried this session, oldest first (server-side; never the model's guess): [(code, title)]"""
-    with _tries_lock:
-        _load_tries()
-        codes = [k[1] for k in _tries if k[0] == sid and k[1] != code]
+    if store is not None:
+        codes = [k[1] for k, _ in sorted(store.entries(), key=lambda e: e[1]["gen"]) if k[0] == sid and k[1] != code]
+    else:
+        with _tries_lock:
+            _load_tries()
+            codes = [k[1] for k in _tries if k[0] == sid and k[1] != code]
     out = []
     for c in codes:
         if c not in [x for x, _ in out]:
@@ -1584,9 +1843,10 @@ def expr_family(f):
     return "new:" + slug if slug else None
 
 
-def diagnose(p, sid, b):
+def diagnose(p, sid, b, store=None):
     """POST /diagnose {code, part?, expr, round?}: the L3 read of a working this browser already got graded wrong (the tries record proves
     it, so this is no free probe). (status, {source, family, off, msg, budget?}). Counts against Cluck's hourly cap; cached."""
+    store = store if store is not None else _new_store()
     multi = p["type"] == "multi"
     idx = b.get("part") if multi else None
     if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
@@ -1600,11 +1860,16 @@ def diagnose(p, sid, b):
     except expr.ExprError:
         return 400, {"error": "unparsed"}
     rnd = b.get("round")
-    with _tries_lock:
-        _load_tries()
-        rs = _round_sid(sid, rnd) if isinstance(rnd, int) and not isinstance(rnd, bool) and 0 < rnd < 2 ** 31 else sid
-        st = _tries.get((rs, p["code"], idx) if multi else (rs, p["code"]))
+    if store is not None:
+        rs = store.round(sid, rnd) if isinstance(rnd, int) and not isinstance(rnd, bool) and 0 < rnd < 2 ** 31 else sid
+        st = store.get((rs, p["code"], idx) if multi else (rs, p["code"]))
         tried = bool(st) and any(isinstance(x, float) and same(val, x, u.get("tol", 1e-6)) for x in st["wrong"])
+    else:
+        with _tries_lock:
+            _load_tries()
+            rs = _round_sid(sid, rnd) if isinstance(rnd, int) and not isinstance(rnd, bool) and 0 < rnd < 2 ** 31 else sid
+            st = _tries.get((rs, p["code"], idx) if multi else (rs, p["code"]))
+            tried = bool(st) and any(isinstance(x, float) and same(val, x, u.get("tol", 1e-6)) for x in st["wrong"])
     if not tried:
         return 403, {"error": "not a graded try"}
     r = expr.l1(text, u["form"], bank_g(p))
@@ -1612,7 +1877,7 @@ def diagnose(p, sid, b):
     hit = _dx_get(key)
     if hit:
         return 200, dict(hit, cached=True)
-    seen_ = expr_seen(sid, p["code"])
+    seen_ = expr_seen(sid, p["code"], store=store)
     where = expr_where(p, u, seen_)
     nudge = {"source": "L1", "off": None, "msg": expr.NUDGE}
     if not explain_allowed(sid, False):
@@ -2362,9 +2627,9 @@ def system_for(base, p):
     return base + "\n" + "Audience: " + aud.strip() + " Plain everyday words; explain a subject word the first time."
 
 
-def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
+def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None, store=None):
     """yields text chunks (Claude: the editor's rewrite in one piece; OpenRouter: streamed), markdown stripped. Raises OSError on a dead
-    connection. The NOTE call goes first, capped at NOTE_EXPLAIN_S (a pick has no gate to wait for)."""
+    connection. The NOTE call goes first, capped at NOTE_EXPLAIN_S (a pick has no gate to wait for). store = the request's TriesStore."""
     out = set()                                              # this request's out-of-credit providers (the NOTE's key is the chain's)
     on = on or stage_off
     on("note", "start")
@@ -2373,10 +2638,10 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
         xyz = xyz_block(n)
-        rows = cluck_noted(p, sid, turn[0], xyz)
+        rows = cluck_noted(p, sid, turn[0], xyz, store=store)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
         locked = any(row_locked(r) for r in rows if r[0] == turn[0])
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=turn_closed((sid, p["code"])), facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=turn_closed((sid, p["code"]), store=store), facts=leak_facts(p, pick_done(p, units_done(p, sid, store=store), answer)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
@@ -2850,23 +3115,23 @@ def v4_chat_turns(p, pick, history, rows):
     return out
 
 
-def tries_out(p, sid):
+def tries_out(p, sid, store=None):
     """the item is closed for this browser, so REVEAL may say yes: its tries are used up (sugar: state() carries `correct` once a unit is shut
     out) OR it is solved (`done`; C, Tony Oct 21: a correct pick reveals); a multi: every part done or out, at least one"""
-    st = state(p, sid, reveal=True)
+    st = state(p, sid, reveal=True, store=store)
     us = st["parts"] if "parts" in st else [st]
     return all(u["done"] or "correct" in u for u in us) and any(u["done"] or "correct" in u for u in us)
 
 
-def units_done(p, sid):
+def units_done(p, sid, store=None):
     """[done] per unit for this browser: one flag for a single item, one per part for a multi (leak_facts skips a solved part's answer)"""
-    st = state(p, sid)
+    st = state(p, sid, store=store)
     return [u["done"] for u in (st["parts"] if "parts" in st else [st])]
 
 
-def item_solved(p, sid):
+def item_solved(p, sid, store=None):
     """this browser solved the item (RESULT: correct): a single item `done`; a multi: every part done"""
-    us = units_done(p, sid)
+    us = units_done(p, sid, store=store)
     return bool(us) and all(us)
 
 
@@ -2880,21 +3145,35 @@ def row_locked(r):
     return bool(r) and len(r) > 4 and bool(r[4])
 
 
-def turn_closed(key):
+def turn_closed(key, store=None):
     """the newest Cluck turn row of this (sid, code) was sent on a solved or locked item: its answer may be said"""
+    if store is not None:
+        rows = store.turns(key) or []
+        r = rows[-1] if rows else None
+        return row_solved(r) or row_locked(r)
     with _tries_lock:
         r = (_cluck_turns.get(key) or [None])[-1]
     return row_solved(r) or row_locked(r)
 
 
-def cluck_begin(p, sid, pick):
+def cluck_begin(p, sid, pick, store=None):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
     counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
     used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved)."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
-    out, solved = tries_out(p, sid), item_solved(p, sid) or (p.get("type") != "multi" and pick_ok(p, pick) is True)   # W110: the server's own grade, no KV
+    out = tries_out(p, sid, store=store)
+    solved = item_solved(p, sid, store=store) or (p.get("type") != "multi" and pick_ok(p, pick) is True)   # W110: the server's own grade, no KV
     key = (sid, p["code"])
+    if store is not None:
+        rows = store.turns(key) or []
+        n = (rows[-1][0] + 1) if rows else 1
+        reveal = out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3)
+        rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))
+        del rows[:-CLUCK_KEEP]
+        store.turns_put(key, rows)
+        store.save()
+        return n, reveal
     with _tries_lock:
         _load_tries()
         rows = _cluck_turns.setdefault(key, [])
@@ -2906,8 +3185,17 @@ def cluck_begin(p, sid, pick):
     return n, reveal
 
 
-def cluck_noted(p, sid, n, xyz):
+def cluck_noted(p, sid, n, xyz, store=None):
     """the NOTE block this turn was sent with, kept for the byte-for-byte replay; returns the stored rows (newest last)"""
+    if store is not None:
+        key = (sid, p["code"])
+        rows = store.turns(key) or []
+        for r in rows:
+            if r[0] == n:
+                r[2] = xyz
+        store.turns_put(key, rows)
+        store.save()
+        return [list(r) for r in rows]
     with _tries_lock:
         _load_tries()
         rows = _cluck_turns.setdefault((sid, p["code"]), [])
@@ -4229,10 +4517,11 @@ def explain(cookie_header, body):
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
     pick = wish_pick(p, b)
-    turn = cluck_begin(p, sid, pick)
+    store = _new_store()
+    turn = cluck_begin(p, sid, pick, store=store)
     if b.get("stages") is True:
-        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), sid, turn, on), "explain")
-    return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), sid, turn), "explain", head)
+        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), sid, turn, on, store=store), "explain")
+    return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), sid, turn, store=store), "explain", head)
 
 
 # == §note-chat ==
@@ -4723,18 +5012,50 @@ def _proof_sig(text):
     return "proof:" + hashlib.sha256(squash(text).encode()).hexdigest()[:20]
 
 
+def _proof_record(p, st, text, reveal, g):
+    """the record step of a proof try, shared by the blob and hash stores: (pre-reply, reply, ladder to store)"""
+    pre = _proof_pre(p, st, text, reveal)                    # another tab may have used the tries meanwhile
+    if pre:
+        return pre, None, None
+    put = None
+    if g["verdict"] == "correct":
+        st["done"] = True
+        res = {"verdict": "correct", "grade": "correct", "triesLeft": max_tries(p) - len(st["wrong"])}
+        log(f"proof {p['code']}: correct")
+    else:
+        st["wrong"].append(_proof_sig(text))
+        hint, src = proof_hint(p, g["hint"])
+        res = {"verdict": "wrong", "grade": g["verdict"], "triesLeft": max_tries(p) - len(st["wrong"]), "hint": hint}   # partial still spends the try
+        lad = proof_ladder_ok(g.get("ladder"), p["proof"]) if proof_ladder_on() else []
+        put = (len(st["wrong"]), lad) if lad else None
+        if res["triesLeft"] <= 0 and reveal:
+            res["correct"] = answer_of(p)
+        log(f"proof {p['code']}: {g['verdict']} hint={src}")   # a grade and a source, no free text
+    res["gen"] = st["gen"]
+    return None, res, put
+
+
 def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
     """grade() for a proof item: {verdict, grade?, triesLeft, gen, hint?, repeat?, correct? (sugar lockout), why? + inc? (busy)}"""
     text = body.get("answer")
     on("read", "start")
-    with _tries_lock:
-        _load_tries()
-        k = (_round_sid(sid, rnd), p["code"])
-        st = _entry(k)
+    store = _new_store()
+    if store is not None:
+        k = (store.round(sid, rnd), p["code"])
+        st = store.entry_new(k)
         pre = _proof_pre(p, st, text, reveal)
         if pre:
             return dict(pre, gen=st["gen"])
         left, gen = max_tries(p) - len(st["wrong"]), st["gen"]
+    else:
+        with _tries_lock:
+            _load_tries()
+            k = (_round_sid(sid, rnd), p["code"])
+            st = _entry(k)
+            pre = _proof_pre(p, st, text, reveal)
+            if pre:
+                return dict(pre, gen=st["gen"])
+            left, gen = max_tries(p) - len(st["wrong"]), st["gen"]
     key = os.environ.get("OPENROUTER_API_KEY", "")
 
     def busy(why, inc=None):
@@ -4751,29 +5072,24 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
         why = "budget" if is_budget(e) else "upstream"
         return busy(why, incident("proof", "budget_cap" if why == "budget" else "upstream", provider="openrouter",
                                   err=type(e).__name__, ms=(time.time() - t0) * 1000, q=p["code"], status=getattr(e, "code", None)))
-    put = None
     on("record", "start")
-    with _tries_lock:
-        _load_tries()
-        st = _entry(k)
-        pre = _proof_pre(p, st, text, reveal)                # another tab may have used the tries meanwhile
+    if store is not None:
+        store = _new_store() or store                        # re-read: another tab may have spent a try while the grader ran
+        k = (store.round(sid, rnd), p["code"])
+        st = store.entry_new(k)
+        pre, res, put = _proof_record(p, st, text, reveal, g)
         if pre:
             return dict(pre, gen=st["gen"])
-        if g["verdict"] == "correct":
-            st["done"] = True
-            res = {"verdict": "correct", "grade": "correct", "triesLeft": max_tries(p) - len(st["wrong"])}
-            log(f"proof {p['code']}: correct")
-        else:
-            st["wrong"].append(_proof_sig(text))
-            hint, src = proof_hint(p, g["hint"])
-            res = {"verdict": "wrong", "grade": g["verdict"], "triesLeft": max_tries(p) - len(st["wrong"]), "hint": hint}   # partial still spends the try
-            lad = proof_ladder_ok(g.get("ladder"), p["proof"]) if proof_ladder_on() else []
-            put = (len(st["wrong"]), lad) if lad else None
-            if res["triesLeft"] <= 0 and reveal:
-                res["correct"] = answer_of(p)
-            log(f"proof {p['code']}: {g['verdict']} hint={src}")   # a grade and a source, no free text
-        res["gen"] = st["gen"]
-        _save_tries()
+        store.put(k)
+        store.save()
+    else:
+        with _tries_lock:
+            _load_tries()
+            st = _entry(k)
+            pre, res, put = _proof_record(p, st, text, reveal, g)
+            if pre:
+                return dict(pre, gen=st["gen"])
+            _save_tries()
     if put:                                                  # the keys go to KV outside the lock; a failed store = no ladder (the Cluck message stays)
         att, lad = put
         try:
@@ -4845,7 +5161,8 @@ def chat(cookie_header, body):
                 _chats[k] -= 1
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
     pick = wish_pick(p, b)
-    turn = cluck_begin(p, sid, pick)              # T62: this browser's turn on the item (REVEAL: yes from the 3rd)
+    store = _new_store()
+    turn = cluck_begin(p, sid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd)
     def chunks():
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
         out = set()
@@ -4858,8 +5175,8 @@ def chat(cookie_header, body):
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
         v4 = None
         if v4_on():
-            rows = cluck_noted(p, sid, turn[0], xyz_block(n))
-            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=turn_closed((sid, p["code"])), free=no_attempt(pick), facts=leak_facts(p, pick_done(p, units_done(p, sid), pick)), code=p["code"], arm=cluck_arm(sid),
+            rows = cluck_noted(p, sid, turn[0], xyz_block(n), store=store)
+            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=turn_closed((sid, p["code"]), store=store), free=no_attempt(pick), facts=leak_facts(p, pick_done(p, units_done(p, sid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
