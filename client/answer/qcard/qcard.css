@@ -55,6 +55,9 @@ html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qf
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
 html.ui-v7 #problem.qc7 .qtext { font: var(--w-body, 400) 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: 17px; line-height: 24px; } }
+/* Q-TEXT-WIDE (Tony Nov 22): on wide desktop the figure labels (.lbl = --t-sm, up to 19px) read bigger than the 17px body. Body + bold ask = 1.2 x the label token
+   (floor 17px): 2133 wide -> ~22.8 vs 19, 1280 -> ~19 vs 16. Phone (<= 480) is untouched; the media starts at 900 like the rule above. */
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: max(17px, calc(var(--t-sm, .9375rem) * 1.2)); } }
 html.ui-v7 #problem.qc7 .qtext > * { margin: 0 0 8px; max-width: 64ch; }
 html.ui-v7 #problem.qc7 .qtext > :last-child { margin-bottom: 0; }
 html.ui-v7 #problem.qc7 .qtext p, html.ui-v7 #problem.qc7 .qtext ul, html.ui-v7 #problem.qc7 .qtext ol { margin: 0 0 8px; max-width: none; }
