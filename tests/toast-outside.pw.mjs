@@ -35,33 +35,35 @@ const cardOn = () => p.evaluate(() => !!document.querySelector(".stoast.on:not(.
 const noteOn = () => p.evaluate(() => !!document.querySelector("#toast.on"));
 const openCard = () => p.evaluate(() => { window.stemToast.clear(); window.stemToast.show({ text: "Outside tap card", at: () => document.querySelector("#q"), ms: 60000 }); });
 const openNote = () => p.evaluate(() => { window.stemToast.noteHide(); return window.stemToast.note({ text: "Outside tap note", at: document.querySelector("#q"), ms: 60000, loose: true }); });
-const wait = ms => p.waitForTimeout(ms);
+// past(ms): the page clock passes ms. Needed only where the 300 ms opening-gesture guard or a "stays open" window is the thing under test.
+const past = ms => p.waitForFunction(t => Date.now() >= t, Date.now() + ms);
+const closed = sel => p.waitForFunction(q => !document.querySelector(q), sel, { timeout: 3000 }).then(() => true, () => false);
 const tapOut = () => p.touchscreen.tap(2, 2);   // a bare corner, far from either toast
 await step("a card closes on a tap outside it", async () => {
-  await openCard(); await p.waitForSelector(".stoast.on"); await wait(500);
-  await tapOut(); await wait(700);
-  assert.equal(await cardOn(), false, "card still open");
+  await openCard(); await p.waitForSelector(".stoast.on"); await past(400);
+  await tapOut();
+  assert.ok(await closed(".stoast.on"), "card still open");
 });
 await step("a note closes on a tap outside it", async () => {
-  assert.ok(await openNote(), "note did not place"); await wait(500);
-  await tapOut(); await wait(300);
-  assert.equal(await noteOn(), false, "note still open");
+  assert.ok(await openNote(), "note did not place"); await past(400);
+  await tapOut();
+  assert.ok(await closed("#toast.on"), "note still open");
 });
 await step("a tap inside the card does not close it", async () => {
-  await openCard(); await p.waitForSelector(".stoast.on"); await wait(500);
+  await openCard(); await p.waitForSelector(".stoast.on"); await past(400);
   const b = await p.evaluate(() => { const r = document.querySelector(".stoast-t").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
-  await p.touchscreen.tap(b[0], b[1]); await wait(300);
+  await p.touchscreen.tap(b[0], b[1]); await past(300);
   assert.equal(await cardOn(), true, "card closed by an inside tap");
 });
 await step("the pointerdown of the opening gesture does not close a card / note", async () => {
   await p.evaluate(() => { window.stemToast.clear(); window.stemToast.noteHide(); });
-  await wait(400);
+  await closed(".stoast.on"); await closed("#toast.on");
   await p.evaluate(() => {
     document.addEventListener("pointerdown", () => { window.stemToast.show({ text: "Opened by tap", at: () => document.querySelector("#q"), ms: 60000 }); window.stemToast.note({ text: "Note by tap", at: document.querySelector("#q"), ms: 60000, loose: true }); }, { once: true });
   });
-  await tapOut(); await wait(100);
+  await tapOut(); await p.waitForSelector(".stoast.on");
   await p.evaluate(() => document.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })));   // a trailing pointerdown of the same gesture
-  await wait(500);
+  await past(250);
   assert.equal(await cardOn(), true, "card closed by its opening gesture");
   assert.equal(await noteOn(), true, "note closed by its opening gesture");
 });
