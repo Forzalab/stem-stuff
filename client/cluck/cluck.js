@@ -120,7 +120,7 @@ function wishOnWrong() {
      number) restarts the stream with the latest try, so the box never keeps explaining the first one (C4a, "stream every miss") */
   if (wish && wish.code === S.code && !wish.idle && !(wish.started && wish.key && wish.key !== ckKey(wish.code, askTry()))) { wishPaint(); window.stemCluckBtn?.sheen("wrong"); return; }
   const w = wishNew();
-  /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18). */
+  /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18):
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
   const auto = () => { if (bridge.sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ENTRY, true); };
   if (wishFromCache(w)) { wishPaint(); window.stemCluckBtn?.sheen("wrong"); auto(); return; }   // a reply we already have: no call
