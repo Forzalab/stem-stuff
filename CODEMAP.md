@@ -152,6 +152,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §modes: sugar vs diet mode and the sugar split of choose-all into True/False rows (mode_of, sugar, hidden, sub_problem, lookup, view, public) — open when a question shows in the wrong mode or a split row is wrong
 - §math: sympy behind a token allowlist (to_python, evaluate) — open when a symbolic answer fails to evaluate
 - §grading: number / unit / sig-fig grading, slip hints, tries store, repair_check (same, tol_of, unit_correct, slip_hit, state, mark, grade) — open when a verdict, tries count or slip hint is wrong
+- §tries-store: KV-FRUGAL slice 3 per-browser tries HASH behind `STEM_TRIES_HASH` (default off), 120-day / preview 1-day TTLs, preview key prefix, the per-request `TriesStore` (tries_hash_on, TriesStore) — open when the flag, a key, a TTL or KV traffic is wrong
 - §expr-answers: W137 expression answers and L3 diagnose (expr_mode, expr_hit, expr_l3, diagnose, expr_explain_store) — open when an expression answer or /diagnose misbehaves
 - §incidents: S-XXXXX incident codes + one JSON log line (incident, log_incident, health_state, OutOfCredit) — open when adding or reading an incident code
 - §trace: per-request flight-recorder trace (set_trace, trace_id, log) — open when a trace line is missing
