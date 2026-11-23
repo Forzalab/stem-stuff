@@ -27,6 +27,7 @@
    BRAINROT-B2 (Tony, Nov 14, "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): docked v7 is now 8 videos (all 8 categories, one each) in a
    full-width interlocked bento (LAYOUT below: hero 2x2 + tall + wide + small, 12-col grid, gap 8, every video cover-cropped to its tile; app.css BRAINROT-B2 block). Lazy rule unchanged: the first 3 iframes load at once,
    the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768.
+   DRIFT (Tony Nov 22, "the bento brainrot doesn't scroll automatically"): idle, the docked v7 torus creeps up 24 px/s by itself; it rests on hover, drag, focus, a hidden tab, stash, and prefers-reduced-motion (driftGo below).
    ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. Phones stay off for good (Tony Nov 20): the phone tab above is history. */
 (() => {
   /* list:start (tools/client_generators/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
@@ -267,8 +268,26 @@
   }
   function nudge(dx, dy) { mv.x += dx; mv.y += dy; if (!mv.raf) mv.raf = requestAnimationFrame(paint); }
   function stopCoast() { cancelAnimationFrame(mv.coast); mv.coast = 0; mv.vx = mv.vy = 0; }
-  function coast() { mv.vx *= .92; mv.vy *= .92; nudge(mv.vx, mv.vy); mv.coast = Math.abs(mv.vx) + Math.abs(mv.vy) > .3 ? requestAnimationFrame(coast) : 0; }
+  function coast() { mv.vx *= .92; mv.vy *= .92; nudge(mv.vx, mv.vy); mv.coast = Math.abs(mv.vx) + Math.abs(mv.vy) > .3 ? requestAnimationFrame(coast) : (driftGo(), 0); }
+  /* the drift (Tony, Nov 22: "the bento brainrot doesn't scroll automatically"): idle, the world creeps up by itself, DRIFT px a second, so the torus
+     shows every tile without a wheel. It rests while the pointer is over the dock, a pointer drag or a coast is on, focus is inside it, the tab is
+     hidden, the dock is stashed / parked / not the v7 dock, and for good under prefers-reduced-motion. place() / the events below restart it. */
+  const DRIFT = 24; let driftRaf = 0, driftT = 0, over = false;
+  const drifting = () => torus() && on && !stashed && !el.hidden && !el.classList.contains("parked") && !RM.matches && !document.hidden && !over
+    && !mv.drag && !mv.coast && !el.contains(document.activeElement);
+  function driftStep(t) {
+    driftRaf = 0;
+    if (!drifting()) { driftT = 0; return; }
+    if (driftT) nudge(0, Math.min(t - driftT, 100) * DRIFT / 1000);   // a long gap (a throttled frame) never jumps
+    driftT = t; driftRaf = requestAnimationFrame(driftStep);
+  }
+  function driftGo() { if (!driftRaf && drifting()) { driftT = 0; driftRaf = requestAnimationFrame(driftStep); } }
   function torusInput() {
+    shelf.addEventListener("pointerenter", () => { over = true; });
+    shelf.addEventListener("pointerleave", () => { over = false; driftGo(); });
+    el.addEventListener("focusout", () => setTimeout(driftGo, 0));
+    document.addEventListener("visibilitychange", driftGo);
+    RM.addEventListener("change", driftGo);
     shelf.addEventListener("wheel", e => {
       if (!torus()) return;
       e.preventDefault(); stopCoast();
@@ -347,7 +366,7 @@
       el.classList.toggle("stashed", stashed);
       link.dataset.act = stashed ? "open" : "min"; link.setAttribute("aria-expanded", String(!stashed));
       link.textContent = (stashed ? "Show" : "Hide") + " curated brainrot";
-      tiles();
+      tiles(); driftGo();
       window.stemLayout?.();                                 // the notes under it re-fill now, before paint: the column keeps its height (W129 L4: no re-centred page)
       return;
     }
