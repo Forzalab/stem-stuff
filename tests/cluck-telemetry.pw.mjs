@@ -64,6 +64,11 @@ await step("a still tap on the question text is a dead_tap (travel_px 0); a 40 p
   const d = (await evs("dead_tap"))[0]; assert.equal(d.travel_px, 0);
 });
 
+await step("a wrong pick: Cluck's chip is the entry (no duck); the background explain starts", async () => {
+  await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
+  await page.waitForFunction(() => window.__drill.state.tries.length >= 1, null, { timeout: 8000 });
+});
+
 await step("the background explain ends: cluck_reply has ok, chars, timings, plain text", async () => {
   await wait("cluck_reply");
   const p = (await evs("cluck_reply"))[0];
