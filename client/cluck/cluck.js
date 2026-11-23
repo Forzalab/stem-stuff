@@ -976,6 +976,7 @@ function clAsk(build) {
       e.preventDefault(); if (!f.querySelector(".send").disabled) f.requestSubmit();
     });
     inp.addEventListener("input", () => askFit(inp));
+    if (window.ResizeObserver) { let w0 = 0; new ResizeObserver(() => { const w = inp.clientWidth; if (w && w !== w0) { w0 = w; askFit(inp); } }).observe(inp); }   // ASK-ALIGN: a width change (window, sash, column back, late webfont) rewraps the text, so the height is refit; width only, so askFit's own height change cannot loop
   }
   const ready = wishTyped(w) && !w.busy;
   ft.querySelector(".left").textContent = `${left} left`;
