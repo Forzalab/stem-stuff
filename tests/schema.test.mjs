@@ -635,9 +635,37 @@ test("schema: vary overlays on an mc item", () => {
     const w = run(tmp);
     assert.equal(w.status, 0, "a warning, never a fail");
     assert.match(w.stderr, /BANK_UNL: warn: 2 num without a unit: PHYS_UNA, PHYS_UNB\.A/);
-    assert.equal(run(fileURLToPath(file)).stderr, "", "the W132a fixture sets every unit");
+    assert.doesNotMatch(run(fileURLToPath(file)).stderr, /num without a unit/, "the W132a fixture sets every unit");
   });
 }
+
+// starter chip (SCHEMA.md Version table, row 20261123): a bank with v >= 20261123 needs a starter on every problem (3 to 9 words, <= 60 chars, no leak); older banks only warn
+test("starter (v 20261123): schema-check fails a missing / long / short / leaking starter and passes a good one; an older bank only warns", () => {
+  const fx = JSON.parse(readFileSync(new URL("./fixtures/unit-twist.json", import.meta.url), "utf8"));
+  const mc = fx.problems.find(q => q.type === "mc"), key = mc.choices.find(c => c.id === mc.correct).md.replace(/\$/g, "");
+  const dir = mkdtempSync(join(tmpdir(), "stc-"));
+  const run = (v, starter, name = "BANK_STC") => {
+    const b = structuredClone(fx); b.v = v;
+    b.problems = b.problems.map(q => ({ ...q, title: q.title || "Unit and twist item", starter: q === b.problems.find(r => r.type === "mc") ? starter : "Why does this step work here?" }));
+    if (starter === undefined) delete b.problems.find(q => q.type === "mc").starter;
+    const f = join(dir, `${name}.json`);
+    writeFileSync(f, JSON.stringify(b));
+    return spawnSync("node", [fileURLToPath(new URL("../tools/bank_tools/schema-check.mjs", import.meta.url)), f], { encoding: "utf8" });
+  };
+  const V = 20261123;
+  assert.equal(run(V, "Why does this step work here?").status, 0, "a good starter passes");
+  for (const [why, s] of [["missing", undefined], ["2 words", "Why though?"], ["10 words", "Why does this one step work the way it does here?"],
+    ["over 60 chars", "Why does everything in this very long question depend so heavily on the setup?"],
+    ["a choice letter", "Is it (b) or something else?"], ["a choice letter, spelled", "Why is choice c right?"],
+    ["the answer value", `Why is it ${key} here?`]]) {
+    const r = run(V, s);
+    assert.equal(r.status, 1, `${why}: ${r.stdout}`);
+    assert.match(r.stdout, /starter/, why);
+  }
+  const old = run(V - 4, undefined);
+  assert.equal(old.status, 0, "an older bank never fails on a starter");
+  assert.match(old.stderr, /warn: \d+ starter\(s\) missing or bad/);
+});
 
 // the proof type (W107, SCHEMA.md "Proof items"): a whole induction proof, graded by Cluck against the reference; the key block never leaves the server
 test("proof: the fixture validates; it needs proof + how; hint optional; no answer keys of the other types", () => {

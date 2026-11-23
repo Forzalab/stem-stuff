@@ -1,6 +1,7 @@
 // The SCHEMA.md "problems" schema on bank files, then the repair / welcome / twin gate (repairFaults): tools/build_and_ship/ship.sh's gate runs it on every bank it deploys.
 // usage: node tools/bank_tools/schema-check.mjs [--repair] BANK_X.json ...   prints "BANK_X: <first errors>" per failing file; exit 1 if any fails.
 // Titles: a bank with v >= 20261119 must have a human title on every problem (error); older banks warn only (SCHEMA.md Version table).
+// Starters: a bank with v >= 20261123 must have a `starter` chip on every problem, no answer leak (error); older banks warn only.
 // --repair: the front-door bank's need (exactly one welcome item, repair on its templates); without it a bank with none of those fields passes.
 // Needs tests/node_modules (cd tests && npm ci): ajv, through tests/schemas.mjs.
 import { readFileSync } from "node:fs";
@@ -19,6 +20,29 @@ const titleFaults = doc => doc.problems.flatMap(p => {
   return isSlugTitle(p.title, p.code) ? [`${p.code}: title "${p.title}" is a slug`] : n < 2 || n > 6 ? [`${p.code}: title "${p.title}" has ${n} words (2 to 6)`] : [];
 });
 
+// SCHEMA.md Version table, row 20261123: every problem has a `starter` chip (3 to 9 words, <= 60 chars, a question in the student's voice) that never leaks the answer.
+// A bank with v >= STARTER_V that breaks it FAILS; an older bank only warns on stderr. (A formula that solves the item cannot be checked by machine: review it.)
+const STARTER_V = 20261123;
+const nums = t => (String(t).replace(/\\[a-z]+/gi, " ").match(/\d+(?:\.\d+)?/g) || []).map(Number);   // every number in a text, TeX commands dropped
+const plainOf = t => String(t).replace(/[$\\{}\s]+/g, " ").trim().toLowerCase();
+const starterFaults = doc => doc.problems.flatMap(p => {
+  const s = p.starter, at = `${p.code}: starter`;
+  if (typeof s !== "string" || !s.trim()) return [`${at} missing`];
+  const n = s.replace(/\$[^$]*\$/g, "M").trim().split(/\s+/).length;
+  if (n < 3 || n > 9) return [`${at} "${s}" has ${n} words (3 to 9)`];
+  if (s.length > 60) return [`${at} "${s}" is ${s.length} chars (max 60)`];
+  if (/\(\s*[a-g]\s*\)/i.test(s) || /\b(?:choice|option|answer|pick)\s+\(?[a-g]\b/i.test(s)) return [`${at} "${s}" names a choice letter`];
+  const keys = [].concat(p.correct ?? []), keyed = (p.choices || []).filter(c => keys.includes(c.id)).map(c => c.md);
+  const ans = [...keyed, ...(typeof p.answer === "string" ? [p.answer] : []), ...(p.parts || []).flatMap(q => typeof q.answer === "string" ? [q.answer] : [])];
+  const have = new Set(nums(s));
+  for (const a of ans) {
+    if (nums(a).some(x => have.has(x))) return [`${at} "${s}" holds a number of the answer (${a})`];
+    const t = plainOf(a);
+    if (t.length >= 3 && !/^[\d\s.,+\-=]+$/.test(t) && plainOf(s).includes(t)) return [`${at} "${s}" holds the answer text (${a})`];
+  }
+  return [];
+});
+
 const validate = validator("problems"), N = 3, args = process.argv.slice(2), need = args.includes("--repair");
 let bad = 0;
 for (const f of args.filter(a => a !== "--repair")) {
@@ -31,6 +55,11 @@ for (const f of args.filter(a => a !== "--repair")) {
       const tf = titleFaults(doc);
       if (doc.v >= TITLE_V) errs.push(...tf);
       else if (tf.length) console.error(`${basename(f, ".json")}: warn: ${tf.length} title(s) not human (v < ${TITLE_V}, not failing): ${tf.slice(0, 3).join("; ")}${tf.length > 3 ? " ..." : ""}`);
+    }
+    if (!errs.length) {
+      const sf = starterFaults(doc);
+      if (doc.v >= STARTER_V) errs.push(...sf);
+      else if (sf.length) console.error(`${basename(f, ".json")}: warn: ${sf.length} starter(s) missing or bad (v < ${STARTER_V}, not failing): ${sf.slice(0, 3).join("; ")}${sf.length > 3 ? " ..." : ""}`);
     }
     if (errs.length) why = errs.slice(0, N).join("; ") + (errs.length > N ? ` (+${errs.length - N} more)` : "");
     if (!why) {   // W132 lint: a num item / num part with no `unit` key warns (stderr), never fails; "" = unitless on purpose
