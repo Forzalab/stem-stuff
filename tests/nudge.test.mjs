@@ -1,5 +1,5 @@
 // J5 Cluck nudge, Tier 0 (intent.js + copy/nudge-lines.js; brain cluck-nudge.md 🔒): the shared budget, the caps, the dismiss back-off,
-// no nudge in F flow / while typing / hidden, the seam to peek.js (stemDuck.say), and the authored lines (≤ 8 words, no emotion named,
+// no nudge in F flow / while typing / hidden, and the authored lines (≤ 8 words, no emotion named,
 // 0 findings from the vendored aiw detector, tests/vendor/aiw, MIT, run as data).
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -147,19 +147,6 @@ test("Q: the first item with no pick, or an item left unsolved before; pagehide 
   k.at(180).ev("pick", { verdict: "correct" }); assert.equal(k.leave(), false, "solved: no leave");
 });
 
-test("wiring: ?jev=1 → stemDuck.say gets a pool line; away → the gap doubles; pagehide stores stem-jev-q", () => {
-  const calls = [];
-  const duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const { win, timers, clock, listeners, store } = load({ search: "?jev=1", duck, rand: () => 0 });
-  win.stemT("q_open", { code: "A" });
-  clock.t = 91000; timers[0]();
-  assert.equal(calls.length, 1); assert.ok(LINES.S2.includes(calls[0][0]));
-  calls[0][1].onAway();
-  assert.equal(win.stemJev().nudge.gap, 180);
-  listeners.pagehide();
-  assert.equal(JSON.parse(store["stem-jev-q"]).A, 1);
-});
-
 test("?jev=0 / DNT / GPC / stem-t-off: the peek is never asked", () => {
   const calls = [], duck = { say: () => { calls.push(1); return true; } };
   for (const o of [{ search: "?jev=0" }, { search: "?jev=1", tele: { optedOut: () => true, userOff: () => false } },
@@ -287,20 +274,5 @@ test("hold: the peek busy still pops the piece; no piece and no peek = nothing c
   const b = holder({ say: () => false, steps: [] });
   b.at(0).ev("q_open", { code: "A" }); b.ev("_hold", { choice: "B" }); b.tick(21);
   assert.equal(b.h().n, 0);
-});
-
-test("hold: the page wrapper reads #q's aria-checked (MutationObserver) and steps window.stemLadder", () => {
-  const calls = [], duck = { say: line => { calls.push(line); return true; } };
-  let fire = null, sel = null, mids = 0;
-  const MO = function (f) { this.observe = (el, o) => { assert.deepEqual([...o.attributeFilter], ["aria-checked"]); fire = f; }; };
-  const doc = { MO, documentElement: {}, querySelector: q => q === "#q .opt[aria-checked=true]" ? sel : null,
-    querySelectorAll: q => ({ length: q === "#fcard li.mid:not([hidden])" ? mids : 0 }) };
-  const { win, timers, clock } = load({ search: "?jev=1", duck, rand: () => 0.99, doc });
-  win.stemLadder = { step: () => { mids++; return true; } };
-  win.stemT("q_open", { code: "A" });
-  sel = { getAttribute: k => k === "data-id" ? "C" : null }; fire();
-  clock.t = 21000; timers[0]();
-  assert.equal(mids, 1); assert.equal(calls.length, 1); assert.ok(LINES.hold_mid.includes(calls[0]));
-  assert.deepEqual({ ...win.stemJev().hold }, { code: "A", n: 1 });
 });
 

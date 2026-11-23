@@ -1,1 +1,1 @@
-Jev nudges: intent.js, lockhelp.js, peek.js. Moved here by layout B (167 ticket 09).
+Jev nudges: intent.js, lockhelp.js. Moved here by layout B (167 ticket 09).

@@ -15,7 +15,7 @@ const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), ".."), PORT = +(process.argv[2] || 8847), BASE = `http://127.0.0.1:${PORT}`;
 const TRIES = join(mkdtempSync(join(tmpdir(), "ick5tr-")), "tries.json");
-const LONG = "A cart rolls down a straight ramp with a steady acceleration. The ramp is 3.5 meters long and the cart starts from rest at the top. A student times the cart with a phone and writes the time on a sticky note. Another student measures the length of the ramp with a metal tape and records it twice. The two students then compare their numbers and argue about which measurement is more trustworthy. Before they answer, decide which quantity is the dependent one and which is the independent one, then explain how repeating each measurement would change the uncertainty in the final result.";
+const LONG = "A cart rolls down a straight ramp with a steady acceleration. The ramp is 3.5 meters long and the cart starts from rest at the top. A student times the cart with a phone and writes the time on a sticky note. Another student measures the length of the ramp with a metal tape and records it twice. The two students then compare their numbers and argue about which measurement is more trustworthy. Before they answer, decide which quantity is the dependent one and which is the independent one, then explain how repeating each measurement would change the uncertainty in the final result. Finally, say which assumption you would check first if the measured time disagreed with the prediction, and why that one matters most.";
 if (LONG.length < 400) throw new Error("ICK5 AC6 body is under 400 chars");
 const FILE = { v: 1, problems: [
   { code: "PSY_T51", type: "num", answer: "42", tol: 0.01, wish: true, how: "Number only.", body: [{ type: "text", md: LONG }] },
@@ -98,12 +98,12 @@ async function card(page, vp) {
       for (let n; (n = w.nextNode());) { if (!n.nodeValue || !n.nodeValue.trim()) continue; rg.selectNodeContents(n);
         for (const x of rg.getClientRects()) if (x.width > 1 && x.height > 1) lines.push({ l: x.left, r: x.right, t: x.top, b: x.bottom }); }
       const br = b.getBoundingClientRect();
-      return { chars: (el.textContent || "").trim().length, btn: { l: br.left, t: br.top, b: br.bottom }, lines };
+      return { chars: (el.textContent || "").trim().length, btn: { l: br.left, t: br.top, b: br.bottom, gap: parseFloat(getComputedStyle(b).marginLeft) || 0 }, lines };
     });
     const m = await measure(); assert.ok(m, "no text block in #problem .blocks"); assert.ok(m.chars >= 400, `text block only ${m.chars} chars`); assert.ok(m.lines.length >= 3, `only ${m.lines.length} line boxes`);
     const over = m.lines.filter(l => l.b > m.btn.t + .5 && l.t < m.btn.b - .5), bad = over.filter(l => l.r > m.btn.l + .5);
     assert.equal(bad.length, 0, `${bad.length}/${over.length} line boxes overlap the button: ${JSON.stringify(bad.slice(0, 2))}`);
-    assert.ok(m.lines.some(l => l.t >= m.btn.b - .5 && l.r > m.btn.l), "no line box below the button reaches back under it");
+    assert.ok(m.lines.some(l => l.t >= m.btn.b - .5 && l.r > m.btn.l - m.btn.gap + .5), "no line box below the button reaches past the float column (btn.l - gap), i.e. back under it: " + JSON.stringify({ vp: JSON.stringify(page.viewportSize()), btn: m.btn, lines: m.lines.map(l => [l.l, l.r, l.t, l.b].map(Math.round)) }));
     const probe = await page.addStyleTag({ content: "#cluckBtn{position:absolute!important;float:none!important;top:20px!important;right:16px!important;left:auto!important;bottom:auto!important;margin:0!important}" });
     try { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); const p = await measure();
       assert.ok(p.lines.some(l => l.b > p.btn.t + .5 && l.t < p.btn.b - .5 && l.r > p.btn.l + .5), "counter-example: absolute top-right did NOT overlap (this check would not catch it)"); }

@@ -1,12 +1,11 @@
 // W3 (Nov 5): Cluck / repair / rewards polish. One serve.py, a stub OpenRouter, a throwaway bank. 390 phone + 1280 desk.
-//   (1 and 4: phone only; desktop sugar keeps Cluck open as a permanent box: no close, no peek)
+//   (1: phone only; desktop sugar keeps Cluck open as a permanent box: no close)
 //   1  closing Cluck's sheet unmounts the repair box (#rpHost); the first time ever a note says where Cluck went (flag stem-ob-cluck)
 //   2  a right main answer unmounts the repair box
 //   3  a repair "Final answer" chip graded right picks and checks the same option in the main box
-//   4  the 2nd "?" tap on a question: the duck peeks "stuck? ask me"; a tap on it opens Cluck (never auto)
 //   5  the key-formulas ladder reveals its next piece every 30 s (visible time, sheet closed)
 //   7  a swipe up on the reward banner hides it; a tap still opens its popover; the next question brings it back
-//   node tests/w3.pw.mjs <port> [only: 1,2,3,4,5,7]
+//   node tests/w3.pw.mjs <port> [only: 1,2,3,5,7]
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
@@ -123,19 +122,6 @@ for (const [tag, vp] of VPS) {
     await page.waitForFunction(() => window.__drill.state.tries.length === 2 && window.__drill.state.tries.at(-1).v === "correct", null, { timeout: 5000 });
     assert.equal(await page.evaluate(() => window.__drill.state.tries.at(-1).c), "b");
     assert.equal(await page.locator('.opt[data-id="b"].right').count(), 1, "the main box shows 1.80 J right");
-    await page.context().close();
-  });
-  if (ONLY.includes("4") && tag === "390") await step(`${tag} 4: the 2nd "?" tap: the duck peeks "stuck? ask me"; its tap opens Cluck`, async () => {
-    const page = await open(vp, "CALC1_W3N1");
-    await miss(page); await replied(page); await page.waitForTimeout(1200);       // keep: app timer the wrong-answer peek rises at 700 ms (peek.js WRONG_MS); the first input below puts it away
-    await page.click("#fcard .fq");
-    await page.waitForTimeout(800);                                                 // keep: app timer the 2nd-tap peek window (one tap must not show "stuck? ask me")
-    assert.ok(!(await page.evaluate(() => /stuck\? ask me/.test(document.querySelector(".ck-say")?.textContent || "") && window.stemDuck.up)), "one tap: no such peek");
-    await page.click("#fcard .fq");
-    await page.waitForFunction(() => window.stemDuck.up && /stuck\? ask me/.test(document.querySelector(".ck-say")?.textContent || ""), null, { timeout: 3000 });
-    assert.equal(await page.evaluate(() => window.stemCluckOpen()), false, "never auto-open");
-    await page.click(".ck-peek", { force: true });
-    await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
     await page.context().close();
   });
   if (ONLY.includes("5")) await step(`${tag} 5: the ladder reveals one piece every 30 s; a hidden tab or an open sheet pauses it`, async () => {

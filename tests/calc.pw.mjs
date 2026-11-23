@@ -84,10 +84,6 @@ try {
     assert.equal(await page.$("#problem .cc-strip, #problem .cc-x"), null);
     const sz = await page.$$eval("#problem .cc-row .cc-cta", e => e.map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
     assert.equal(sz[0][0], sz[1][0], "equal widths"); assert.ok(sz[0][1] >= 44 && sz[1][1] >= 44, "44px tall");
-    await page.waitForFunction(() => !!(window.stemCram && window.stemCram.on()), null, { timeout: 5000 });   // the cram read is in: peek.js's toast is the one today, so Calc Coach arms none
-    const tk = () => page.evaluate(() => Object.keys(localStorage).filter(k => /^stem-calc-toast-/.test(k)));
-    assert.equal(await page.evaluate(() => !!(window.stemCram && window.stemCram.on())), true, "cram day on");
-    assert.equal((await tk()).length, 0, "cram day: peek.js's toast is the one; Calc Coach adds no second toast");
     await page.click("#problem .cc-cta-hm"); await page.waitForSelector(".cc-ov .cc-deck"); await page.keyboard.press("Escape");
     await page.reload(); await anyUp(page); await page.waitForSelector("#problem .cc-cta-calc");
     await page.waitForTimeout(1500); assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false, "no second toast the same day");   // keep: app timer __ccToastMs 300 ms toast delay (proves no second toast fires)

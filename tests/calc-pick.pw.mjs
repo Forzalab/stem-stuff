@@ -1,6 +1,6 @@
-// Smoke: the calculator model picker (calc-pick.js, Tony Nov 6). A fresh device sees it once after the splash; a chip pick is saved per sid on the
-// server (GET / POST /calc) and survives a reload and a wiped cache; Skip is kept. Automated browsers skip the auto-show, so this spec turns it on
-// with window.__calcPickAuto.   node tests/calc-pick.pw.mjs <port> [shots dir]
+// Smoke: the calculator model picker (calc-pick.js, Tony Nov 6). It never opens on its own: only a calculator tip (Calc Coach opened with no model) opens it. A chip pick is saved per sid on the
+// server (GET / POST /calc) and survives a reload and a wiped cache; Skip is kept. Automated browsers skip the /calc read, so this spec turns it on
+// with window.__calcPickSync.   node tests/calc-pick.pw.mjs <port> [shots dir]
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -28,21 +28,34 @@ async function step(name, fn) {
 }
 const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });
 const DLG = '[role="dialog"].cpick';
-// the picker is done deciding once the pick is stored: auto() reads the server/cache and any saved value (a model, or "skip") stops the popup
+// the picker is done deciding once the pick is stored: the load-time sync reads the server/cache and any saved value (a model, or "skip") stops the popup
 const settled = async page => {
   await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 8000 });
   await page.waitForFunction(() => { try { return localStorage.getItem("stem-calc-model") !== null; } catch { return false; } }, null, { timeout: 5000 });
 };
-async function ctxPage(state) {
+async function ctxPage(state, shown = true) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, serviceWorkers: "block", storageState: state });
-  await ctx.addInitScript(() => { window.__calcPickAuto = true; window.__cpEv = []; addEventListener("stem-calc-model", e => window.__cpEv.push(e.detail)); });
+  if (shown) await ctx.addInitScript(() => document.addEventListener("readystatechange", () => document.documentElement.classList.add("cc-calc-on"), { once: true }));   // Calc is hidden for now (calc-coach.js hidden()): the class is its one switch
+  await ctx.addInitScript(() => { window.__calcPickSync = true; window.__cpEv = []; addEventListener("stem-calc-model", e => window.__cpEv.push(e.detail)); });
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
   return { ctx, page };
 }
 
-await step("fresh device: shows; a chip pick is saved on the server per sid, fires the event, survives a reload and a wiped cache", async () => {
+await step("Calc hidden (no cc-calc-on): no popup on load, and neither the tip nor the picker opens", async () => {
+  const { ctx, page } = await ctxPage(undefined, false);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => { window.CalcCoach.open({ from: "chip" }); window.stemCalcPick.open(); });
+  assert.equal(await page.locator(DLG + ", .cc-ov, .cc-row, .cc-welcome").count(), 0, "no calc UI anywhere");
+  await ctx.close();
+});
+
+const tip = page => page.evaluate(() => window.CalcCoach.open({ from: "chip" }));   // the tip way: Calc Coach with no model picks the calculator first
+await step("fresh device: no popup on load, the tip opens it; a chip pick is saved on the server per sid, fires the event, survives a reload and a wiped cache", async () => {
   const { ctx, page } = await ctxPage();
+  await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 8000 }); await page.waitForLoadState("networkidle");   // the /calc read is done: a boot-time auto-show would be up by now
+  assert.equal(await page.locator(DLG).count(), 0, "fresh device: no popup on its own");
+  await tip(page);
   await page.waitForSelector(DLG, { timeout: 8000 });
   assert.match(await page.locator(DLG + " .lh-say").textContent(), /^Which calculator do you have\?/);
   await page.screenshot({ path: join(SHOTS, "calc-pick-1-step1.png") });
@@ -66,6 +79,7 @@ await step("fresh device: shows; a chip pick is saved on the server per sid, fir
   assert.equal(await b.page.evaluate(() => window.stemCalcPick.get()), "ti-30xs-multiview");
   await b.ctx.close();
   const c = await ctxPage();   // another sid sees nothing
+  await c.page.waitForFunction(() => !!window.CalcCoach); await tip(c.page);
   await c.page.waitForSelector(DLG, { timeout: 8000 });
   assert.equal(await c.page.evaluate(async () => (await (await fetch("calc")).json()).model), null);
   await c.page.locator(DLG + " .cp-skip").click();   // Skip is kept

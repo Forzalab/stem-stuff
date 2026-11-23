@@ -1,5 +1,5 @@
 /* pops.js: when Cluck may crack a humor pop (brain design-round-66 DESIGN-v3 §6; Tony #25.3: 1 per 5 correct; #8: none right after a
-   miss). Pure: sets window.stemPops, no DOM, no storage, no timers; the caller (app.js, F2) shows the line via stemDuck.say once the
+   miss). Pure: sets window.stemPops, no DOM, no storage, no timers; the caller (app.js, F2) shows the line once the
    correct banner settles or on Next. Lines: copy/pops.js (window.__stemPopLines).
    create({lines, every}) → {answer(ev)}; ev = {correct, tags, ctx}. Every `every`th (5, TUNABLE) clean correct is a pop slot. A correct
    right after a wrong try is not clean and does not count. Answers in a `repair` / `mini` / `welcome` ctx never pop and do not count.

@@ -1042,8 +1042,8 @@ def snacks_placed(items):
     return out
 
 
-FRONT = ("BANK_P3X", "Exam 3")   # the front bank (DESIGN-v3 §1): what "/" opens on a fresh browser, and its bar title. The one source:
-                                 # its payload says "front" (bank_payload), nav.js reads that. Phys 2A Exam 3 main bank (Tony, Oct 26), not BANK_P3Q
+FRONT = ("BANK_P4X", "Exam 4")   # the front bank (DESIGN-v3 §1): what "/" opens on a fresh browser, and its bar title. The one source:
+                                 # its payload says "front" (bank_payload), nav.js reads that. Phys 2A Exam 4 main bank (Tony Nov 23: was BANK_P3X "Exam 3", Oct 26), not BANK_P3Q; BANK_P3X is NOT in FORMER_FRONTS on purpose: its students keep their saved bank
 FORMER_FRONTS = {"BANK_P2X"}     # Tony, Oct 26 ("send returners to exam 3"): a browser whose last bank is one of these reopens "/" on the
                                  # front; a link or typed code still opens it (bank_payload "last" only)
 
@@ -1371,7 +1371,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
 # After one wrong try on a typed num answer / num part with a `form`, the box asks for the whole working (expr.PROMPT). It is graded by
 # its value (the item's tol); a miss gets L1 (expr.l1: the tree vs `form` + the slips families) and, when L1 names no family, POST
 # /diagnose asks Sonnet (L3, TUTOR-LITE prompt, diagnosis JSON v1.1). Off (the default) = the old box, byte for byte.
-EXPR_BANKS_DEFAULT = ("BANK_P3X", "BANK_P3Q")
+EXPR_BANKS_DEFAULT = ("BANK_P3X", "BANK_P4X", "BANK_P3Q")
 EXPR_CONF = 0.6                              # an L3 read below this: the plain nudge
 EXPR_LEARN_KEY = "stem:expr:learn"           # Upstash list: {ts_day, item, expr_norm, diagnosis}; no device / session id (GRILL round 3)
 EXPR_LEARN_MAX = 5000
@@ -3613,7 +3613,6 @@ def fig_spec(code):
 # banks/cram/intel.json (banks/ is blocked from the web) -> one extra uncached system block per Cluck turn for the BANK_P3X items it names, plus a
 # generic "draw first, stage by stage" add-on for every PHYS_ item of the bank. Generic physics only (no exam stems, no keys). It never reaches
 # the client, and the answer guards are untouched (REVEAL: no still holds the final number back). Ends CRAM_UNTIL; CRAM_INTEL=0 turns it off early.
-# peek.js has the same instant for the cram-day idle peek and toast (tests/test_cram.py checks they match).
 CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
 CRAM_BANK = "BANK_P3X"
 CRAM_REVEAL_TURN = 7                         # REVEAL: yes from this Cluck turn on a cram item (3 elsewhere)

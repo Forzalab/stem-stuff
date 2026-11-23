@@ -19,8 +19,8 @@
    "xmark <choice>" (the student's own X in prove mode), "kept n=<n>" / "kepttap <choice>" (sugar kept rows), q_open's " w=<stem words> ch=<choices>". telemetry.js drops the "_"-names they ride on.
    An open away episode (window blur or tab hide) pauses S2; back after >= 5 s = a fresh step (a shorter blur only paused), back after
    >= AWAY_STALL_S (30 s, W96 / Tony #40 b) = the away time COUNTS toward S2 depth, checked at the return (before any input resets it).
-   J5 Cluck nudge, Tier 0 (brain cluck-nudge.md): S2 at depth ≥ 2, S6 and Q may each pick `cluck_say` = Cluck's peek (peek.js
-   stemDuck.say, the one seam) carrying one line from copy/nudge-lines.js. On-device only, no LLM, no student turn used.
+   J5 Cluck nudge, Tier 0 (brain cluck-nudge.md): S2 at depth ≥ 2, S6 and Q may each pick `cluck_say` = Cluck's peek (the duck + its
+   page seam were removed Nov 23, so no line shows; the engine is kept) carrying one line from copy/nudge-lines.js. On-device only, no LLM, no student turn used.
      budget  one shared budget: P_ONE = the fire chance when one trigger is on; with k of the 3 on, each live state rolls p_k once per
              item so that P(any | all k fire) = P_ONE × share(k); share(3) = SHARE_ALL = 0.85 (ours, J3 tunes), share(1) = 1, linear between
      caps    max 1 per item · ≥ GAP_S (90 s; W96 180→90) since the last one · never in F flow (a run alive, no wrong pick on this item) · never while
@@ -32,7 +32,7 @@
    (the decision tree below; its wrong-pick and item-end branches are log only; trap_beaten reads the `families` the server sends with a right pick); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
    hidden) + MAX per session, a QUIET roll (silence is a valid pick; W96 / Tony #40 a: a COMEBACK, a right pick after >= 1 miss on the
    item, skips it and the typing, item and gap caps, keeps 1 per item + MAX; Cluck asked on it = a nod, no words: comeback()), a kind (nod = the duck rises, no words · short · full), a line by the
-   error family of the last wrong pick. ev("pick") returns { kind, line, delay } for the page to show; peek.js stemDuck.say carries it.
+   error family of the last wrong pick. ev("pick") returns { kind, line, delay } for the page to show; nothing shows it now (duck removed).
    Ladder lane 4, held pick (🔒 Tony Oct 21, brain feedback-specs-2026-10-21 B): a choice selected, not checked, no input for 1×p75 of this
    item's steps (< 4 samples: HOLD.FALLBACK_S) → one hold nudge = the next ladder piece (app.js window.stemLadder.step()) + one breadcrumb
    line (copy/nudge-lines.js hold_mid | hold_arrow | hold_end: what the ladder just did, never right vs wrong; the page can't tell). HOLD.CAP
@@ -521,18 +521,11 @@
   function seenOff() {
     try { return sessOff || localStorage.getItem(SOFF) === "1" || sessionStorage.getItem(SSES) === "1"; } catch (e) { return sessOff; }
   }
-  /* a "felt hollow" tap: this session off now; HOLLOW_N of them within the first HOLLOW_OF fires: off for good. { f: fires, h: hollows } */
-  function hollow() {
-    sessOff = true;
-    try { sessionStorage.setItem(SSES, "1"); } catch (e) { /* memory flag holds */ }
-    var h = get(SH); h.h = (h.h || 0) + 1; put(SH, h);
-    if (h.h >= SEEN.HOLLOW_N && (h.f || 0) <= SEEN.HOLLOW_OF) { try { localStorage.setItem(SOFF, "1"); } catch (e) { /* blocked */ } }
-  }
   /* JEV-DET 2 ONE DICE SEAM: every Jev roll reads dice(). A spec pins one roll (__stemJevRand / __stemHelpRand, read lazily) or seeds the
      whole scenario (__stemDice, tests/pw-browser.mjs jev: <seed>); else Math.random */
   var dice = function (pin) { var f = typeof W[pin] === "function" ? W[pin] : typeof W.__stemDice === "function" ? W.__stemDice : Math.random; return f(); };
   var save = function () { put(HK, hist); }, sid = "s" + Math.random().toString(36).slice(2, 8);
-  /* J5, the one seam to the peek (peek.js stemDuck.say): Jev decides, the peek only shows the line and tells back how it went */
+  /* J5/J6 nudge lines: the duck that showed them is gone (Tony Nov 23), so the page gives Jev no `say`: nudges and seen peeks stay unshown. Help modal still works. */
   var jev = create(function () { return performance.now(); }, hist, {
     lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: sid,
     title: function (code) { var b = W.stemBank, p = b && b.get && b.get(code); return p && typeof p.title === "string" ? p.title : ""; },
@@ -567,24 +560,8 @@
         } catch (e) { /* never break the app */ }
       }
       info.delay ? setTimeout(go, info.delay) : go();
-    },
-    say: function (line, state) {
-      var d = W.stemDuck;
-      var ok = !!(d && d.say && d.say(line, { onTap: function () { jev.nudgeEnd(true); }, onAway: function () { jev.nudgeEnd(false); } }));
-      if (ok && state === "S6" && W.stemCluckBtn) { try { W.stemCluckBtn.sheen("jev-s6"); } catch (e) { /* */ } }   // S6 help avoidance ("Ask anytime"): Cluck's one button sheens (v7)
-      return ok;
     }
   });
-  /* J6: the green row has settled; show it after r.delay, unless the page moved on (another item, or switched off meanwhile) */
-  function seenShow(r, code) {
-    setTimeout(function () {
-      try {
-        var d = W.stemDuck;
-        if (jev.state().code !== code || seenOff() || !(d && d.say)) return;
-        if (d.say(r.line, { nod: r.kind === "nod", onHollow: hollow })) { var h = get(SH); h.f = (h.f || 0) + 1; put(SH, h); }
-      } catch (e) { /* never break the app */ }
-    }, r.delay);
-  }
   var old = W.stemT, heldId = "";
   /* the lines to PostHog: one "jev_item" per taken item, through telemetry.js's stemT (its gates + strip rules; a no-op without a key) */
   function ship(all) {
@@ -595,7 +572,6 @@
       var r = jev.ev(name, props);
       if (name === "q_open") { ship(false); heldId = ""; }               // the item before it ended; a new item holds nothing yet
       if (name === "pick") save();
-      if (r && r.kind) seenShow(r, jev.state().code);
     } catch (e) { /* never break the app */ }
     return old && old(name, props);
   };

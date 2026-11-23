@@ -1,5 +1,5 @@
 /* F1 Cluck pops (brain design-round-66 DESIGN-v3 §6, v2 §D copy; Tony #25.3): the humor lines pops.js may show after a clean correct
-   answer, through stemDuck.say. Data only; pops.js reads window.__stemPopLines, nothing else does.
+   answer. Data only; pops.js reads window.__stemPopLines, nothing else does.
    Rules for every line (tests/pops.test.mjs checks them): school-safe, text only, one physics `tag` (no "*" generic fallback); the line
    shown must match the finished item's tags, no match = no pop. `slang: true` marks a line whose joke is slang, not physics: ≤ 1 in 10.
    Cut by Tony #25.3: v2 line 7 (`units` "units checked first = sigma behaviour") and line 12 (`*` "bet. two more and we touch grass"). */

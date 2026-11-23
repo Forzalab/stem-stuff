@@ -654,7 +654,9 @@ function init() {
   prev.addEventListener("click", () => go(-1));
   mix.addEventListener("click", () => { const st = Q(); st.mix = !st.mix; save(); update(cur); });   // the student switches the order (Tony #3)
   skip.addEventListener("click", () => { skipAhead(Q()); save(); go(1); });                           // strong starters: a tier up, and on
-  next.addEventListener("click", () => go(1));
+  const goNext = () => go(1);                                        // the ONE Next action: the bar's button and the cue Next in the card (app.js nextBtn, ui-v7) both run it
+  next.addEventListener("click", goNext);
+  window.stemNavNext = goNext;
 // == §mock ==
   /* MOCK_NIGHTS_ON false: a mock a night started (its key stored) is done; a ?mock=1 mock (no key) goes on */
   function endNightMock() {

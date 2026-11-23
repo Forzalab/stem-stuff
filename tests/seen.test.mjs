@@ -274,59 +274,6 @@ test("dump: the ring is JSONL of every log line (sid, item, code, line), pick li
   assert.ok(j.dump().split("\n").length <= 2000, "capped");
 });
 
-/* ---- wiring: ?jev=1 → intent.js → stemDuck.say, the off switches, the hollow tap ---- */
-const wired = (extra = {}) => {
-  const calls = [], duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const L = load({ search: "?jev=1", duck, rand: script(0.9, 0.5, 0, 0), bank: { get: () => ({ title: "T" }) }, ...extra });
-  const pick = (t, ch, v, error) => { L.clock.t = t * 1000; L.win.stemT("pick", { code: "A", choice: ch, verdict: v, error }); };
-  L.win.stemT("q_open", { code: "A" });
-  pick(10, "A", "wrong", "negation"); pick(20, "B", "wrong", "sign"); pick(30, "C", "correct");
-  return { ...L, calls };
-};
-test("wiring: an earned item → after the delay stemDuck.say gets the family line + onHollow, no onAway (neutral)", () => {
-  const w = wired();
-  assert.equal(w.calls.length, 0); assert.equal(w.later.length, 1);
-  assert.ok(w.later[0][1] >= 600 && w.later[0][1] <= 1800);
-  w.later[0][0]();
-  assert.equal(w.calls.length, 1); assert.equal(w.calls[0][0], LINES.fam.sign[0].text);
-  assert.equal(typeof w.calls[0][1].onHollow, "function"); assert.equal(w.calls[0][1].onAway, undefined); assert.equal(w.calls[0][1].nod, false);
-  assert.equal(JSON.parse(w.store["stem-seen-h"]).f, 1, "fires counted");
-  assert.match(w.win.stemJev.dump(), /seen {2}earned short sgn-1/);
-});
-test("wiring: the page moved on before the delay → nothing shows", () => {
-  const w = wired();
-  w.win.stemT("q_open", { code: "B" });
-  w.later[0][0]();
-  assert.equal(w.calls.length, 0);
-});
-test("wiring: a hollow tap → this session off now; 2 hollows in the first 5 fires → off for good", () => {
-  const store = {};
-  const w1 = wired({ store }); w1.later[0][0](); w1.calls[0][1].onHollow();
-  assert.equal(w1.sess["stem-seen-s"], "1"); assert.equal(store["stem-seen-off"], undefined);
-  assert.equal(JSON.parse(store["stem-seen-h"]).h, 1);
-  // the same session, a later earned item: nothing
-  w1.later.length = 0; w1.clock.t = 400000; w1.win.stemT("q_open", { code: "Q" });
-  [10, 20].forEach(s => { w1.clock.t = (400 + s) * 1000; w1.win.stemT("pick", { code: "Q", verdict: "wrong", choice: "A" + s }); });
-  w1.clock.t = 430000; w1.win.stemT("pick", { code: "Q", verdict: "correct", choice: "Z" });
-  w1.later.forEach(([f]) => f()); assert.equal(w1.calls.length, 1, "session off: no more");
-  const w2 = wired({ store }); w2.later[0][0](); w2.calls[0][1].onHollow();   // a new session (own sessionStorage), same device
-  assert.equal(store["stem-seen-off"], "1"); assert.equal(JSON.parse(store["stem-seen-h"]).h, 2);
-  const w3 = wired({ store });
-  assert.equal(w3.later.length, 0, "stem-seen-off: nothing is even scheduled");
-});
-test("wiring: 2 hollows spread past the first 5 fires do not switch it off for good", () => {
-  const store = { "stem-seen-h": JSON.stringify({ f: 9, h: 1 }) };
-  const w = wired({ store }); w.later[0][0](); w.calls[0][1].onHollow();
-  assert.equal(store["stem-seen-off"], undefined);
-});
-test("wiring: a nod → say(\"\", { nod: true })", () => {
-  const calls = [], duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const L = load({ search: "?jev=1", duck, rand: script(0.9, 0.1, 0, 0) });
-  L.win.stemT("q_open", { code: "A" });
-  [[10, "A", "wrong"], [20, "B", "wrong"], [30, "C", "correct"]].forEach(([t, c, v]) => { L.clock.t = t * 1000; L.win.stemT("pick", { code: "A", choice: c, verdict: v }); });
-  L.later[0][0]();
-  assert.equal(calls[0][0], ""); assert.equal(calls[0][1].nod, true);
-});
 test("?jev=0 / DNT / stem-t-off: the seen moments are inert (no stemJev, the peek is never asked)", () => {
   const calls = [], duck = { say: () => { calls.push(1); return true; } };
   for (const o of [{ search: "?jev=0" }, { search: "?jev=1", tele: { optedOut: () => true, userOff: () => false } },

@@ -1,4 +1,4 @@
-// cluck_ask / cluck_reply / cluck_rise / dead_tap (travel rule) reach telemetry. Own serve.py + a stub OpenRouter + a stub PostHog (index.html gets a fake key).
+// cluck_ask / cluck_reply / dead_tap (travel rule) reach telemetry. Own serve.py + a stub OpenRouter + a stub PostHog (index.html gets a fake key).
 //   node tests/cluck-telemetry.pw.mjs <port>
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
@@ -64,16 +64,9 @@ await step("a still tap on the question text is a dead_tap (travel_px 0); a 40 p
   const d = (await evs("dead_tap"))[0]; assert.equal(d.travel_px, 0);
 });
 
-await step("wrong pick: the rise is shown, then dismissed (cluck_rise)", async () => {
+await step("a wrong pick: Cluck's chip is the entry (no duck); the background explain starts", async () => {
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
-  await page.waitForFunction(() => window.stemDuck.up, null, { timeout: 8000 });
-  await wait("cluck_rise");
-  await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 8000, polling: 100 });
-  await page.touchscreen.tap(20, 300);          // any other input puts it away
-  await wait("cluck_rise", 2);
-  const r = await evs("cluck_rise");
-  assert.equal(r[0].phase, "shown"); assert.equal(r[0].trigger, "wrong"); assert.match(r[0].item, /^CALC1_CT/); assert.equal(r[0].code, "BANK_CTL");
-  assert.equal(r[1].phase, "dismissed"); assert.ok(r[1].shown_ms >= 0);
+  await page.waitForFunction(() => window.__drill.state.tries.length >= 1, null, { timeout: 8000 });
 });
 
 await step("the background explain ends: cluck_reply has ok, chars, timings, plain text", async () => {
