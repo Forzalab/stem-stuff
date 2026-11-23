@@ -8,7 +8,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 
 | path | owns | open when you touch |
 |---|---|---|
-| `index.html` | The drill page: loads ~40 scripts and styles, plus ES modules. | adding or removing a script or css tag; page markup |
+| `index.html` | The drill page: loads ~40 scripts and styles, plus ES modules. The launch splash (#splash) is a generated skeleton between the `SK:` markers: regenerate with tools/build_and_ship/splash_skeleton.mjs, never hand-edit. | adding or removing a script or css tag; page markup |
 | `calc.html` | The Calc Coach page. | Calc Coach page markup |
 | `privacy.html` | The privacy page. | privacy text |
 | `sw.js` | Service worker: precache list BASE, cache rules, VERSION stamp. | a new root file must work offline; cache bugs |
@@ -112,6 +112,8 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `server/math_engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
 | `.claude/hooks/codemap-first.sh` | Repo CODEMAP-first gate: pipes the PreToolUse hook JSON to brain `scripts/w147-guard.sh` (E6) when present, else allows. Registered in `.claude/settings.json`. Logic lives only in the brain. | the CODEMAP-first hook, Claude Code hook setup |
 | `tools/build_and_ship/` | Build + ship the site (build_public.py, bundle.py, ship.sh, openui/). | build, deploy |
+| `tools/build_and_ship/splash_skeleton.mjs` | SKELETON-SPLASH generator: measures the real v7 page per bucket (phone 390, tablet 768, desk 1280, desk+brainrot) with the vendored auto-skeleton core and rewrites the launch splash in index.html between the SK markers (static blocks + CSS); also writes splash_skeleton.layouts.json. Run when the card / bar / tile CSS changes. | the launch splash look, its buckets, its colours |
+| `client/vendor/auto-skeleton.js` | auto-skeleton core 0.1.1 @419cfad (MIT), build-time only: measure() + renderSkeleton() used by splash_skeleton.mjs; not loaded by the page. Do not edit. | never, unless re-vendoring |
 | `tools/build_and_ship/bridge_gen.py` | Writes vercel.json bridge rules (stub rewrites + 307 redirects) from the rename map; BRIDGE, todo 167. | old URLs, vercel.json |
 | `client/shell/stale_reload.js` | BRIDGE stub (todo 167): a stale page's old .js URL reloads once after a service-worker update. | old URLs, stale pages |
 | `tools/operations/` | Workflow + incident scripts (CI train batch.sh/ci-*.mjs, spend, prune). | CI, ops |

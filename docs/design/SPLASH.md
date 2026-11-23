@@ -23,3 +23,6 @@ All inline in `index.html`: the CSS in the head, the markup and a small script a
 - `noscript`: hidden.
 
 Tony (Sep 29): the page must be whole when the splash goes, never the empty entry state first. So it waits for the `#CODE` problem too (above). The 4 s cap still wins on a slow network.
+
+## Skeleton splash (SKELETON-SPLASH, Nov 22)
+The dotted-curve mark is replaced by a skeleton of the real v7 page: boxes measured by the vendored auto-skeleton core, static markup in `#splash` (bucket by width: phone / tablet / desk), 2 s dim sweep (rest #141d36, peak #29385e, card #0d142a, Cluck pane its own brown with warm bars), reduced motion = static. Timing unchanged (>= 300 ms, cap 4 s, 200 ms fade). Regenerate: `node tools/build_and_ship/splash_skeleton.mjs <server url>`.
