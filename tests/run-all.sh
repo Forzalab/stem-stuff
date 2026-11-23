@@ -320,7 +320,7 @@ tags() {
     calc-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     cram-cta-off) echo "@layout @real-time" ;;   # CRAM-CTA-OFF, own server
     toast-gap) echo "@layout @real-time" ;;   # TOAST-GAP, own server
-    toast-outside) echo "@real-time" ;;   # BUG-TOAST-DISMISS, own server
+    toast-outside) echo "@layout @real-time" ;;   # BUG-TOAST-DISMISS, own server
     fport-hint-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     gap-batch1) echo "@layout @real-time" ;;   # GAP-BATCH1 ui-v7 smoke, own server
     wide-content) echo "@layout @real-time" ;;   # WIDE-CONTENT, own server
