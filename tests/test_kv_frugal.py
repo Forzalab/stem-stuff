@@ -209,6 +209,7 @@ class KvFrugal(unittest.TestCase):
         codes = [f"KVF_Q{i:02d}" for i in range(1, n + 1)]
 
         st, b = self.call(f"GET /b ({n} problems, fresh)", "GET", f"/b/{bank}.json", cookie=cookie)
+        self.assertEqual(self.rows[-1][1]["by"].get("GET"), 1, "a bank open reads the tries blob once")
         self.assertEqual((st, b["code"], [p["code"] for p in b["problems"]], b["marks"], b["at"]), (200, bank, codes, {}, None))
         self.assertNotIn("answer", b["problems"][0])
         self.assertNotIn("saccharine", b["problems"][0])
@@ -240,6 +241,7 @@ class KvFrugal(unittest.TestCase):
         self.assertEqual((st, s["wrong"], s["done"]), (200, 1, True))
 
         st, b = self.call(f"GET /b ({n} problems, again)", "GET", f"/b/{bank}.json", cookie=cookie)
+        self.assertEqual(self.rows[-1][1]["by"].get("GET"), 1, "a bank reopen reads the tries blob once")
         self.assertEqual((st, b["marks"], b["at"]), (200, {first: {"x": 1, "done": "correct"}}, first))
         st, b = self.call("GET /b/last", "GET", "/b/last.json", cookie=cookie)
         self.assertEqual((st, b["code"], len(b["problems"])), (200, bank, n))
