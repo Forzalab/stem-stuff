@@ -61,6 +61,20 @@ for (const [tag, vp] of [["1280", { width: 1280, height: 800 }], ["390", { width
     const g = await geo(page); await crop("typed");
     assert.ok(Math.abs(g.line - g.btn) <= 2, `line ${g.line.toFixed(1)} vs button ${g.btn.toFixed(1)} (field ${g.h}px)`);
   });
+  await step(`${tag}: after one reply landed ("4 left"), the EMPTY field is one line again, centred on the send button`, async () => {
+    await page.route("**/chat", r => r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "Quack. Because six times seven is forty-two.\n" }));
+    await page.fill("#cluck .ask textarea", "why is it 42?"); await page.dispatchEvent("#cluck .ask textarea", "input");
+    await page.click("#cluck .ask .send");
+    await page.waitForFunction(() => /left/.test(document.querySelector("#cluck .ask .left")?.textContent || "") && !document.querySelector("#cluck .wbusy") && !document.querySelector("#cluck .wcaret") && (document.querySelector("#cluck .ask textarea")?.value === ""), null, { timeout: 10000 });
+    await page.waitForTimeout(800);
+    // the photo's state (Tony, ~2133px wide): askFit ran on the empty field while the column was momentarily narrow, so the placeholder wrapped
+    // to two lines and the inline height stayed. Re-create it: shrink the footer, fire the input event, give the width back.
+    await page.evaluate(() => { const ft = document.querySelector("#cluck .cl-ft"), ta = ft.querySelector("textarea"); const w = ft.style.width; ft.style.width = "150px"; ta.dispatchEvent(new Event("input")); ft.style.width = w; });
+    await page.waitForTimeout(100);
+    const g = await geo(page); await crop("after-reply");
+    assert.ok(g.h <= 50, `field ${g.h}px tall after a reply (one line = 44)`);
+    assert.ok(Math.abs(g.line - g.btn) <= 2, `line ${g.line.toFixed(1)} vs button ${g.btn.toFixed(1)} (field ${g.h}px)`);
+  });
   await step(`${tag}: a long text still grows the field (askFit)`, async () => {
     const h0 = (await geo(page)).h;
     await page.fill("#cluck .ask textarea", Array(6).fill("a long line of words to wrap the field").join("\n")); await page.dispatchEvent("#cluck .ask textarea", "input");
