@@ -6,7 +6,7 @@
      == §engine ==   liquidglass optics, copied verbatim (DEFAULTS, profileTable, renderLensMap, bendScale) + glassOn (returns { img, destroy })
      == §bar ==      the bar's params (PAR, LOCKP), the layers markup (html), the aria-hidden synced copy of the reply (clone + scroll sync + MutationObserver)
      == §lock ==     setLocked: the locked strip and its unlock sequence (shackle, text lift, rim light, 44 -> 56 spring)
-     == §think ==    while Cluck streams: 120 lens maps built in <= 8 ms chunks, the clock swaps the feImage href (the compositor-only rim + glow live in ask-glass.css)
+     == §think ==    while Cluck streams: 120 (72 on gecko) lens maps built in <= 8 ms chunks, the clock swaps pre-built filter clones (the compositor-only rim + glow live in ask-glass.css)
      == §flip ==     iMessage send morph: the typed text box flies to the new student bubble (WAAPI, ~420 ms critically damped)
    Related: client/cluck/ask_glass/ask-glass.css (layers, strip, send button, thinking, fallbacks), client/cluck/cluck.js §ask-field (clAsk, clLockSync, clSend),
    client/shell/fx.js (html.fx-dim gate), client/answer/keyf_glass/keyf-glass.js (a different glass: a static scene on the Key formulas card; same MIT lens recipe, kept apart).
@@ -260,7 +260,7 @@ function glassOn(el, opts = {}) {
   f.appendChild(node('feComposite', { in: last, in2: 'lensShape', operator: 'in' }));
   defs.appendChild(f);
   el.style.filter = `url(#${f.id})`;
-  return { img, destroy() { f.remove(); el.style.filter = ''; } };
+  return { img, destroy() { if (f.parentNode) f.parentNode.querySelectorAll('[id^="' + f.id + '_"]').forEach((c) => c.remove()); f.remove(); el.style.filter = ''; } };   // also drops the thinking light's pre-built clones (id + '_k')
 }
 
 /* == §bar == */
@@ -379,8 +379,8 @@ function setLocked(form, locked) {
   s.t3 = setTimeout(() => { form.classList.remove('sweep', 'opening'); }, 1100);
 }
 /* == §think == */
-/* While Cluck streams a reply the bar's glass light orbits: 120 lens maps (light angle -25 + k*3 deg, specular 1, width 5.5) are built in <= 8 ms chunks per frame, and the clock (4.3 s per
-   revolution) swaps the feImage href. The ring (a rotating square under a static mask), the glow and the bleed are CSS compositor layers (ask-glass.css): no gradient angle is animated. */
+/* While Cluck streams a reply the bar's glass light orbits: 120 lens maps (72 on gecko; light angle -25 + k*360/N deg, specular 1, width 5.5) are built in <= 8 ms chunks per frame, each into its own
+   clone of the base <filter> (feImage href set once, never swapped: gecko re-decodes the PNG on every swap), and the clock (4.3 s per revolution) only sets the copy's style.filter to a clone. The ring (a rotating square under a static mask), the glow and the bleed are CSS compositor layers (ask-glass.css): no gradient angle is animated. */
 const setMap = (img, url) => { img.setAttribute('href', url); img.setAttributeNS(XLINK, 'xlink:href', url); };
 function thinkSet(s, on) {
   on = !!on && !s.locked;
@@ -388,15 +388,21 @@ function thinkSet(s, on) {
   s.thinkOn = on; s.form.classList.toggle('think', on);
   cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen);
   if (!s.img) return;                                     // no lens (solid, frost, hidden): the CSS light is all there is
-  if (!on) { if (s.base) setMap(s.img, s.base); return; }
-  const N = 120, REV = 4300, scale = Math.min(g.devicePixelRatio || 1, 2), calm = reduced();
+  const fb = s.img.parentNode, bid = fb.id, drop = () => { (s.fids || []).forEach((id) => { const c = document.getElementById(id); if (c) c.remove(); }); s.fids = []; };
+  drop();
+  if (!on) { if (s.copy) s.copy.style.filter = `url(#${bid})`; return; }
+  const N = engine === 'gecko' ? 72 : 120, REV = 4300, scale = Math.min(g.devicePixelRatio || 1, 2), calm = reduced();
   const o = Object.assign({}, s.opts, { x: 0, y: 0, width: s.W, height: s.H, specular: 1, specularWidth: 5.5 });
-  const maps = s.maps = [], img = s.img, total = calm ? 1 : N;
+  const maps = s.maps = [], img = s.img, total = calm ? 1 : N, el = s.copy;
   const build = () => {
     const t0 = performance.now();
-    while (maps.length < total && performance.now() - t0 < 8) maps.push(renderLensMap(Object.assign({}, o, { lightAngle: -25 + maps.length * 360 / N }), scale).canvas.toDataURL('image/png'));
+    while (maps.length < total && performance.now() - t0 < 8) {
+      const k = maps.length, c = fb.cloneNode(true), ci = c.querySelector('feImage');
+      c.id = bid + '_' + k; setMap(ci, renderLensMap(Object.assign({}, o, { lightAngle: -25 + k * 360 / N }), scale).canvas.toDataURL('image/png'));
+      fb.parentNode.appendChild(c); s.fids.push(c.id); maps.push(c.id);
+    }
     if (maps.length < total) s.gen = requestAnimationFrame(build);
-    else if (calm) setMap(img, maps[0]);                 // reduced motion: one static lit map, no loop
+    else if (calm) el.style.filter = `url(#${maps[0]})`;   // reduced motion: one static lit clone, no loop
   };
   build();
   if (calm) return;
@@ -404,7 +410,7 @@ function thinkSet(s, on) {
   const step = (t) => {
     if (!s.form.isConnected || s.img !== img) return;
     const n = maps.length;
-    if (n) { const k = Math.floor(((t - t0) / REV) * N) % N, i = k < n ? k : n - 1; if (i !== last) { setMap(img, maps[i]); last = i; } }
+    if (n) { const k = Math.floor(((t - t0) / REV) * N) % N, i = k < n ? k : n - 1; if (i !== last) { el.style.filter = `url(#${maps[i]})`; last = i; } }
     s.raf = requestAnimationFrame(step);
   };
   s.raf = requestAnimationFrame(step);
