@@ -130,7 +130,7 @@
   }
 
   function open(o) {
-    if (el) return false;
+    if (el || (g.CalcCoach && g.CalcCoach.hidden && g.CalcCoach.hidden())) return false;   // Calc is hidden for now (calc-coach.js CALC_HIDDEN)
     prevFocus = d.activeElement;
     el = d.createElement("div");
     el.className = "cpick"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "cpSay");

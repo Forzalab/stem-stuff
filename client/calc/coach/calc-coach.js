@@ -12,6 +12,10 @@
   var d = g.document;
   var EXAM_END = Date.parse('2026-11-10T08:00:00Z');   // 2026-11-09T23:59 America/Los_Angeles is the last minute of the exam-day copy
   var FLAGS = { get hailMary() { return !CRAM || CRAM.enabled !== false; } };   // read-only view of the ONE cram flag (calc/cram.json top-level `enabled`); it replaces the old hard-coded hailMary switch. Temporary content, reusable skeleton
+  /* HIDDEN (Tony Nov 23, "rn, hide the calc"; it gets redesigned later): the ONE switch is html.cc-calc-on (calc-coach.css hides the chip the same way). Without
+     it no Calc Coach entry exists in the app: no chip, strip, toast, welcome card, Cluck link, auto-offer, overlay or picker. The code stays.
+     UNHIDE: add class cc-calc-on to <html> (one line; specs do it in an init script) and delete the 2 CSS lines marked "Undo". */
+  var hidden = function () { return !d.documentElement.classList.contains('cc-calc-on'); };
   var KEY_MODEL = 'stem-calc-model', KEY_STRIP = 'stem-calc-strip', KEY_TOAST = 'stem-calc-toast-';
   var COPY = {
     exam: { title: 'Stuck? Click here for TI/Casio tricks.',
@@ -217,6 +221,7 @@
 
   /* the overlay: dark, over the bars (60), under the splash (100) */
   function open(o) {
+    if (hidden()) return;
     o = o || {};
     if (!model() && g.stemCalcPick && g.stemCalcPick.open && !o.force) { g.stemCalcPick.open(); return; }   // no calculator yet: the picker first
     if (ov) close();
@@ -346,6 +351,7 @@
     return root;
   }
   function openCram(bank, from) {
+    if (hidden()) return Promise.resolve();
     return loadCram().then(function () {
       var e = cramFor(bank); if (!e) return;
       tel('hail_mary', { phase: 'open', from: from || 'chip' });
@@ -423,6 +429,7 @@
     }, g.__ccV7Ms == null ? 1500 : g.__ccV7Ms);
   }
   function welcomeCard(host) {
+    if (hidden()) return;
     if (!host || host.querySelector('.cc-welcome')) return;
     if (d.documentElement.classList.contains('ui-v7')) { v7Toast(); return; }   // ui-v7 (Tony Nov 14): the card is ONE compact toast that opens the keys directly
     var p = promo(), c = h('aside', 'cc-welcome'); c.setAttribute('aria-label', 'Calc Coach');
@@ -439,6 +446,7 @@
   var itemT = 0, toastT = 0, offered = {}, offers = 0, wrongs = {}, finished = {}, curItem = null;
   var busyUI = function () { return !!(d.querySelector('.cc-ov') || (g.stemLockHelp && g.stemLockHelp.up) || (g.stemCluckOpen && g.stemCluckOpen()) || (g.stemCalcPick && g.stemCalcPick.up) || d.querySelector('.fx-ov')); };
   function offer(why) {
+    if (hidden()) return;
     why = why === 'miss2' || why === 'time3m' ? why : null;
     var code = curItem;
     if (!code || offered[code] || offers >= 3 || finished[code] || curBank !== 'BANK_P3X' || !cramFor(curBank) || !g.stemToast || busyUI() || d.visibilityState === 'hidden') return false;
@@ -459,6 +467,7 @@
   /* each item: the persistent Calc chip + hail-mary slot (top of the question card, out of the way of the toast and the foot); on BANK_P3X in exam time the
      cram strip (dismissable) and, after 45 s on the item, the once-a-day toast */
   function onItem(bank) {
+    if (hidden()) return;
     var pr = d.getElementById('problem'); if (!pr) return;
     curBank = bank; clearTimeout(itemT); clearTimeout(toastT);
     var pc = d.getElementById('pcode'); curItem = pc ? pc.textContent : null;
@@ -480,6 +489,7 @@
   }
   /* Cluck's app chrome (not the reply): a link under his text, next to .cl-verify, and the second slot */
   function chrome(el) {
+    if (hidden()) return;
     var pane = el.querySelector('#clTabEP'); if (!pane || pane.querySelector('.cc-cl')) return;
     var r = h('div', 'cc-cl'); r.append(linkEl('Calc Coach: the keys for your calculator', 'cc-link', function () { open({ from: 'cluck' }); }));
     var slot = h('span', 'cc-slot'); slot.setAttribute('data-slot', 'hailmary'); slot.hidden = true; r.append(slot);
@@ -487,7 +497,7 @@
   }
 
   var api = { open: open, close: close, mount: mount, load: load, setData: setData, build: build, validate: validate, shownSteps: shownSteps, model: model,
-    promo: promo, plain: plain, offer: offer, routineDeck: routineDeck, stripKeys: stripKeys, OFFER: OFFER, openCram: openCram, cramFor: cramFor, loadCram: loadCram, buildCram: buildCram, welcomeCard: welcomeCard, onItem: onItem, chrome: chrome, FLAGS: FLAGS, EXAM_END: EXAM_END, COPY: COPY, reduced: reduced };
+    promo: promo, plain: plain, offer: offer, routineDeck: routineDeck, stripKeys: stripKeys, OFFER: OFFER, openCram: openCram, cramFor: cramFor, loadCram: loadCram, buildCram: buildCram, welcomeCard: welcomeCard, onItem: onItem, chrome: chrome, hidden: hidden, FLAGS: FLAGS, EXAM_END: EXAM_END, COPY: COPY, reduced: reduced };
   g.CalcCoach = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

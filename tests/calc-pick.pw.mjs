@@ -33,13 +33,22 @@ const settled = async page => {
   await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 8000 });
   await page.waitForFunction(() => { try { return localStorage.getItem("stem-calc-model") !== null; } catch { return false; } }, null, { timeout: 5000 });
 };
-async function ctxPage(state) {
+async function ctxPage(state, shown = true) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, serviceWorkers: "block", storageState: state });
+  if (shown) await ctx.addInitScript(() => document.addEventListener("readystatechange", () => document.documentElement.classList.add("cc-calc-on"), { once: true }));   // Calc is hidden for now (calc-coach.js hidden()): the class is its one switch
   await ctx.addInitScript(() => { window.__calcPickSync = true; window.__cpEv = []; addEventListener("stem-calc-model", e => window.__cpEv.push(e.detail)); });
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
   return { ctx, page };
 }
+
+await step("Calc hidden (no cc-calc-on): no popup on load, and neither the tip nor the picker opens", async () => {
+  const { ctx, page } = await ctxPage(undefined, false);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => { window.CalcCoach.open({ from: "chip" }); window.stemCalcPick.open(); });
+  assert.equal(await page.locator(DLG + ", .cc-ov, .cc-row, .cc-welcome").count(), 0, "no calc UI anywhere");
+  await ctx.close();
+});
 
 const tip = page => page.evaluate(() => window.CalcCoach.open({ from: "chip" }));   // the tip way: Calc Coach with no model picks the calculator first
 await step("fresh device: no popup on load, the tip opens it; a chip pick is saved on the server per sid, fires the event, survives a reload and a wiped cache", async () => {
