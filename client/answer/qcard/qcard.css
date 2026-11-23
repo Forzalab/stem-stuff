@@ -277,3 +277,11 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
 }
 
+
+/* == §fig-top == FIG-TOP (Tony Nov 23, prototype qfig-margin, the -40% pick): a card whose FIRST block is a figure. The float Ask Cluck button (§ick5-tr: 44px + 8px margin, under the
+   26px phone top pad) pushed the figure's box 52px down, so the figure began 78px under the card top. Here the button leaves the flow (absolute, same top / right, same size, z-index 3) and
+   the figure gets a 21px lead: card top -> figure 78 -> 47px (-40%). The ghost numeral (absolute, behind) and the left edge (--qc-pad) are untouched. Phone only: desktop keeps its float. */
+@media (max-width: 899px) {
+  html.ui-v7 #problem.qc7.qbr:has(> .blocks > .fig:first-child) > button.cluckbtn { float: none !important; position: absolute; top: var(--qpt, var(--qpad)); right: var(--qpad); margin: 0 !important; }
+  html.ui-v7 #problem.qc7.qbr > .blocks > .fig:first-child { margin-top: 21px; }
+}
