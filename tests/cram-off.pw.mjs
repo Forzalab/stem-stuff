@@ -71,16 +71,6 @@ try {
     assert.equal(await page.evaluate(() => window.CalcCoach.cramFor("BANK_P3X")), null);
     assert.deepEqual(page.errs, []); await ctx.close();
   });
-  await step("peek keeps the normal cadence: no cram toast, stemCram.on false", async () => {
-    const { ctx, page } = await newPage();
-    await page.goto(BASE + "/#PHYS_PA1"); await up(page);
-    await page.waitForTimeout(1000);                                // keep: the one-time cram.json read resolves; networkidle does not re-arm after load
-    assert.equal(await page.evaluate(() => !!(window.stemCram && window.stemCram.on() === false)), true, "normal timings");
-    await page.waitForTimeout(3000);                                // keep: app timer peek.js's 2.5 s cram-toast delay (no cram toast may fire)
-    assert.equal(await page.evaluate(() => localStorage.getItem("stem-cram-toast")), null);
-    assert.equal(await page.evaluate(() => [...document.querySelectorAll(".stoast")].some(e => e.offsetParent && getComputedStyle(e).visibility !== "hidden")), false);
-    assert.deepEqual(page.errs, []); await ctx.close();
-  });
 } finally { await browser.close(); srv.kill(); }
 if (failures) { console.log(failures + " failed"); process.exit(1); }
 console.log("all ok");

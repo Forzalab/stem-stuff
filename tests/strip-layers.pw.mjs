@@ -260,24 +260,6 @@ await step("right answer: focus put on the verdict icon inside doneExit's beat s
   await pg.ctx.close();
 });
 
-/* the status nudge: the sunrise duck is not an action. A tap only dismisses it; Ask Cluck in the drawer is the action */
-await step("duck: a tap on the sunrise duck only dismisses it (Cluck stays closed, no callback); Jev's away path runs", async () => {
-  const pg = await pageFor(browser, 390, 844);
-  await pg.evaluate(() => { window.__tap = 0; window.__away = 0; document.documentElement.classList.add("sugar"); });
-  const rose = await pg.evaluate(() => window.stemDuck.say("Need a hand?", { onTap: () => { window.__tap++; }, onAway: () => { window.__away++; } }));
-  assert.equal(rose, true, "the duck did not rise");
-  await pg.waitForTimeout(SETTLE);
-  assert.equal(await pg.evaluate(() => window.stemDuck.up), true);
-  const label = await pg.getAttribute(".ck-peek", "aria-label");
-  assert.match(label, /dismiss/i, "the only action is dismiss, say so: " + label);
-  await pg.click(".ck-peek"); await pg.waitForTimeout(SETTLE + 400);
-  assert.equal(await pg.evaluate(() => window.stemDuck.up), false, "the tap must dismiss the duck");
-  assert.equal(await pg.evaluate(() => window.stemCluckOpen()), false, "the duck must not open Cluck");
-  assert.equal(await pg.evaluate(() => window.__tap), 0, "the duck must not run the action callback");
-  assert.equal(await pg.evaluate(() => window.__away), 1, "a dismissal is the 'put away' path (Jev backs off)");
-  await pg.ctx.close();
-});
-
 /* Cluck's reply already streaming (the auto ask went out): GENMISS (Tony, Nov 3, "a tray with the cluck button ONLY"): the tray carries Ask Cluck, no hint-card peek / "okay, but how?" */
 await step("Cluck's reply already streaming: the tray's Ask Cluck is the only Cluck entry (no peek), no page error", async () => {
   const pg = await pageFor(browser, 390, 844, { stream: true });

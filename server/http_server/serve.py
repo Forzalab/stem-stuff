@@ -3613,7 +3613,6 @@ def fig_spec(code):
 # banks/cram/intel.json (banks/ is blocked from the web) -> one extra uncached system block per Cluck turn for the BANK_P3X items it names, plus a
 # generic "draw first, stage by stage" add-on for every PHYS_ item of the bank. Generic physics only (no exam stems, no keys). It never reaches
 # the client, and the answer guards are untouched (REVEAL: no still holds the final number back). Ends CRAM_UNTIL; CRAM_INTEL=0 turns it off early.
-# peek.js has the same instant for the cram-day idle peek and toast (tests/test_cram.py checks they match).
 CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
 CRAM_BANK = "BANK_P3X"
 CRAM_REVEAL_TURN = 7                         # REVEAL: yes from this Cluck turn on a cram item (3 elsewhere)

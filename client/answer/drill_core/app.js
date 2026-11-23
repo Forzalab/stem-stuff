@@ -1223,7 +1223,6 @@ function formulaCard() {
     const w = e.target.closest(".fh-more");
     if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
-    if ((S.fqTaps = (S.fqTaps || 0) + 1) >= 2 && !S.fqPeek && window.stemDuck?.say?.("stuck? ask me", { onOpen: () => window.stemIdleTap() })) { S.fqPeek = true; window.stemCluckBtn?.sheen("jev-stuck"); }   // the 2nd "?" tap on a question: the duck peeks (once); a tap on it opens Cluck, never auto
     const f = S.prob.formulas[b.dataset.i];
     Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => {
       const fig = window.FormulaFigs?.[f.id];
@@ -1959,7 +1958,6 @@ function record(a, r) {
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
   bridge.rewardTry(a, r);
-  if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
   if (r.verdict === "wrong") startWait();                                                                                       // the second try costs 10 s (sugar, 2-try items: startWait gates)
 }
 

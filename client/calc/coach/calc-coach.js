@@ -414,7 +414,7 @@
      toast queue: one at a time, `until` drops it rather than let it hold the line behind another toast. */
   function v7Toast() {
     var key = KEY_TOAST + 'v7-' + day();
-    if (!g.stemToast || ls(key) === '1' || diet() || (g.stemCram && g.stemCram.on && g.stemCram.on())) return;
+    if (!g.stemToast || ls(key) === '1' || diet()) return;
     ls(key, '1');
     setTimeout(function () {                                                 // after the first layout settles (the side column / ladder move once at load: a toast placed in the old layout would be hidden by its own follow check)
       var pick = !model();                                                   // no calculator yet: the button says so (open() then opens the picker)
@@ -471,7 +471,7 @@
     if (bank !== 'BANK_P3X') return;
     var me = curItem;
     itemT = setTimeout(function () { if (curItem === me) offer('time3m'); }, g.__ccOfferMs || 180000);
-    if (p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast && !(g.stemCram && g.stemCram.on && g.stemCram.on()))   // cram day: peek.js's own once-a-day toast is the one (never two promos back to back)
+    if (p.exam && ls(KEY_TOAST + day()) !== '1' && g.stemToast)
       toastT = setTimeout(function () {
         if (curItem !== me || busyUI() || ls(KEY_TOAST + day()) === '1') return;
         ls(KEY_TOAST + day(), '1');                                          // asked for once a day; `until` drops it rather than let it hold the queue

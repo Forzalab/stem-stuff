@@ -5,13 +5,12 @@
    SAVE: the server keeps it per sid, like quiz progress (GET / POST /calc, acct.get_calc / put_calc: it follows an account login). localStorage
    "stem-calc-model" (the model id; "skip" = Skip) is only the fast cache: on load the server's answer wins, and a cached pick the server lacks is sent up.
    A pick fires the window CustomEvent "stem-calc-model" { detail: { id, brand, name } } and onChange(fn) listeners (Skip fires nothing). Esc closes it:
-   on the auto-show it counts as Skip for this session only (sessionStorage "stem-calc-model-later"), so it comes back on the next visit.
-   Auto-show (index.html calls auto() once): nothing saved (cache or server), after the splash, never over the lock-help modal. Automated browsers
-   (navigator.webdriver: every tests/*.pw.mjs) skip the auto-show and the /calc read unless the URL has ?calcpick=1 or window.__calcPickAuto is true.
-   window.stemCalcPick = { open(), close(), get(), onChange(fn), auto(), models, up }. get() = the saved model id ("other" included) or null. */
+   OPENS ONLY FROM A CALCULATOR TIP (Tony Nov 23): calc-coach.js calls open() (Calc Coach opened with no model picked, its "Pick my calculator" button). It never
+   opens by itself (no boot / first-visit auto-show).
+   window.stemCalcPick = { open(), close(), get(), onChange(fn), models, up }. get() = the saved model id ("other" included) or null. */
 (function () {
   "use strict";
-  var KEY = "stem-calc-model", LATER = "stem-calc-model-later", EV = "stem-calc-model", g = window, d = document;
+  var KEY = "stem-calc-model", EV = "stem-calc-model", g = window, d = document;
   var ART = "client/rewards/icons/duck-calm-nod-128.webp";   // the lock-help art (lockhelp.js LOCKHELP_ART)
   var BRANDS = { ti: "Texas Instruments", casio: "Casio" };
   var MODELS = {   // [id, name, quick-pick chip]; chips in order of how many students own them (Amazon sales trackers, retailer best-seller tags; Nov 2026)
@@ -19,7 +18,7 @@
       ["ti-30xiis", "TI-30XIIS"], ["ti-83-plus", "TI-83 Plus"], ["ti-nspire-cx", "TI-Nspire CX"]],
     casio: [["fx-300es-plus", "fx-300ES PLUS", 1], ["fx-991ex", "fx-991EX", 1], ["fx-115es-plus", "fx-115ES PLUS", 1], ["fx-991cw", "fx-991CW"]]
   };
-  var mem = null, el = null, prevFocus = null, auto0 = false, subs = [];
+  var mem = null, el = null, prevFocus = null, subs = [];
 
   function load() { try { return localStorage.getItem(KEY); } catch (e) { return mem; } }
   function cache(v) { mem = v; try { localStorage.setItem(KEY, v); } catch (e) { /* session only */ } }
@@ -44,7 +43,7 @@
     return null;
   }
   function onChange(fn) { if (typeof fn === "function") subs.push(fn); return function () { subs = subs.filter(function (f) { return f !== fn; }); }; }
-  var tel = function (phase, x) { try { var o = { phase: phase, auto: auto0 }; for (var k in x) o[k] = x[k]; g.stemT && g.stemT('calc_pick', o); } catch (e) { /* never the page's problem */ } };   // ids only: no free text (the search box is never sent)
+  var tel = function (phase, x) { try { var o = { phase: phase }; for (var k in x) o[k] = x[k]; g.stemT && g.stemT('calc_pick', o); } catch (e) { /* never the page's problem */ } };   // ids only: no free text (the search box is never sent)
   function pick(id, brand) {
     tel('model', { model: id, brand: (find(id) || {}).brand || brand || null });
     var m = find(id) || { id: id, brand: brand || null, name: "Other / not sure" };
@@ -53,12 +52,11 @@
     subs.forEach(function (f) { try { f(id, m); } catch (e) { /* a listener's bug is its own */ } });
   }
   function skip() { tel('skip'); save("skip"); close(); }
-  function later() { tel('later'); try { sessionStorage.setItem(LATER, "1"); } catch (e) { /* */ } close(); }
 
   function focusables() { return el ? [].slice.call(el.querySelectorAll("button, input")).filter(function (x) { return !x.disabled && x.offsetParent !== null; }) : []; }
   function keys(e) {
     if (!el) return;
-    if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); if (auto0) later(); else close(); return; }
+    if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close(); return; }
     if (e.key !== "Tab") return;
     var f = focusables(), first = f[0], last = f[f.length - 1];
     if (!f.length) return;
@@ -133,7 +131,6 @@
 
   function open(o) {
     if (el) return false;
-    auto0 = !!(o && o.auto);
     prevFocus = d.activeElement;
     el = d.createElement("div");
     el.className = "cpick"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "cpSay");
@@ -143,8 +140,7 @@
     d.documentElement.classList.add("cp-on");
     tel('shown');
     d.addEventListener("keydown", keys, true);
-    try { g.stemDuck && g.stemDuck.down && g.stemDuck.down(); } catch (e) { /* */ }
-    step1();
+      step1();
     return true;
   }
   function close() {
@@ -155,21 +151,6 @@
     if (prevFocus && prevFocus.focus && d.contains(prevFocus)) try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* */ }
     prevFocus = null;
   }
-  function auto() {
-    var force = /[?&]calcpick=1\b/.test(location.search) || g.__calcPickAuto === true;
-    if (navigator.webdriver && !force) return;
-    sync().then(function (v) {
-      if (v) return;
-      try { if (sessionStorage.getItem(LATER)) return; } catch (e) { /* */ }
-      var tries = 0;
-      (function wait() {   // after the splash and the first problem; never over the lock-help modal (10 s cap)
-        if (load() || el) return;
-        var busy = d.getElementById("splash") || (g.stemLockHelp && g.stemLockHelp.up);
-        if (busy && tries++ < 50) { setTimeout(wait, 200); return; }
-        if (!busy) open({ auto: true });
-      })();
-    });
-  }
-  g.stemCalcPick = { open: function () { return open(); }, close: close, get: get, onChange: onChange, auto: auto,
+  g.stemCalcPick = { open: function () { return open(); }, close: close, get: get, onChange: onChange,
     models: MODELS, get up() { return !!el; } };
 })();

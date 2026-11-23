@@ -69,7 +69,6 @@
     document.body.appendChild(el);
     document.documentElement.classList.add("lh-on");
     document.addEventListener("keydown", trap, true);
-    try { g.stemDuck && g.stemDuck.down && g.stemDuck.down(); } catch (e) { /* */ }
     el.querySelector(".lh-go").focus({ preventScroll: true });
     if (phase === "shown") count(true);
     tel(phase, o);

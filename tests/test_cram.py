@@ -186,29 +186,5 @@ class Cram(unittest.TestCase):
         self.assertNotIn("sin(theta)", json.dumps(res, default=str))
 
 
-class ClientWindow(unittest.TestCase):
-    """peek.js carries the same instant and the same bank for the idle peek and the toast"""
-    src = open(os.path.join(ROOT, "client", "cluck", "jev_nudges", "peek.js"), encoding="utf-8").read()
-
-    def test_same_instant_and_bank(self):
-        m = re.search(r'CRAM_UNTIL = Date\.parse\("([^"]+)"\)', self.src)
-        self.assertTrue(m)
-        t = datetime.datetime.fromisoformat(m.group(1).replace("Z", "+00:00"))
-        self.assertEqual(t, serve.CRAM_UNTIL.astimezone(datetime.timezone.utc))
-        self.assertIn('CRAM_BANK = "%s"' % serve.CRAM_BANK, self.src)
-
-    def test_trigger_is_gated_by_the_window_and_the_bank(self):
-        self.assertIn("window.stemBank.code === CRAM_BANK", self.src)
-        self.assertIn("(now == null ? Date.now() : now) <= CRAM_UNTIL", self.src)
-        self.assertIn("return cramOn() ? CRAM_IDLE : IDLE;", self.src)
-        self.assertIn("var IDLE = [180000, 600000]", self.src, "the normal timings stay")
-
-    def test_toast_once_a_day_dismissable_and_windowed(self):
-        self.assertIn("stem-cram-toast", self.src)
-        self.assertIn("cramSeen()", self.src)
-        self.assertIn("window.stemToast.show", self.src)   # the existing toast primitive (has its own close button)
-        self.assertIn("QUACK", self.src)
-
-
 if __name__ == "__main__":
     unittest.main()

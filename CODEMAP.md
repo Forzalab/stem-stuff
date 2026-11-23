@@ -15,7 +15,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/drill_core/app.js` | The drill, part 1 of 3: markdown + TeX (md, renderMath), on-device grading (check, same), code bar + suggestions (syncCode, sugShow), banks (openBank), render/load, repair ladder (repairAfterMiss), MC / freeform / multi answers (renderQuestion, submitFF, submitPart), wait timer. Has a CODEMAP header; see its section below. | answer flow, grading verdict, code entry, MC / typed / multi answer, boot order |
 | `client/cluck/cluck.js` | The Cluck genie, part 2 of 3 (split from app.js): wish stream + cache (wishFromCache, wishEl), live figures in a reply (wishFigs, viewImage), the peek (peekText), the sheet (clOpen, clDrag, phone), dismiss/back (clBack), ask field (clAsk, clSend). Reaches app.js through `bridge`. Has a CODEMAP header. | Cluck box, reply render, wish figures, the sheet, the ask field |
 | `client/shell/shell.js` | The shell, part 3 of 3 (split from app.js): sugar rewards (rewardTry, rewardGo), snack original (origRender), scratchpad + autosave (padPut, copyPad), copy math (selPlain), freeze layer + dock (layoutFreeze, layoutDock), Swap (setSwap), Multitask (applyMT, layoutMT), resume, boot. Reaches app.js through `bridge`. Has a CODEMAP header. | rewards, copy math, Swap, Multitask, dock layout, startup order |
-| `client/answer/drill_core/app.css` | Styles of the drill page: :root tokens, entry bar (.dock .code-box), one button system (.btn .btn-go), freeze layer (.freeze), question + choices (.q .opt), Cluck surfaces (.ai-box .cl), scratchpad (.work .xb), multitask (.sash .pstrip), toast (#toast), duck (.ck-duck), lock-help. Has a CODEMAP header. | colours, sizes, layout of the drill page; a button or toast look |
+| `client/answer/drill_core/app.css` | Styles of the drill page: :root tokens, entry bar (.dock .code-box), one button system (.btn .btn-go), freeze layer (.freeze), question + choices (.q .opt), Cluck surfaces (.ai-box .cl), scratchpad (.work .xb), multitask (.sash .pstrip), toast (#toast), lock-help. Has a CODEMAP header. | colours, sizes, layout of the drill page; a button or toast look |
 | `client/answer/navigation/nav.js` | Prev / Next and the question list: ?bank= link (deepBank), titles (titleOf, plain), TeX to plain text (texText, texPlain), queue per bank (use, hop, upNext), list marks, go(), night mock (startMock), iOS back (syncBack). Has a CODEMAP header. | question order, list, titles, TeX to plain text, mock night |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
 | `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. <= 480px: PHONE-FILL DOM half (`fillLayout`, `fitAll` font 15 -> 10px). | top bar tiles, notch render |
@@ -60,7 +60,6 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/shell/toast/toast.js` | The one toast component (window.stemToast). | toasts and notes |
 | `client/shell/toast/toast.css` | Styles of the toast. | toast look |
 | `client/shell/popover.js` | The one rich-context popup. | popovers |
-| `client/cluck/jev_nudges/peek.js` | Cluck's duck + sky and the idle peek. | duck, idle peek |
 | `client/cluck/brainrot.js` | Brainrot corner (sugar mode only); none under 900px wide, no handle (ICK5-NOROT). | brainrot corner |
 | `client/calc/coach/calc-coach.js` | Calc Coach panel. | Calc Coach |
 | `client/calc/coach/calc-coach.css` | Styles of Calc Coach. | Calc Coach look |
@@ -210,7 +209,6 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §scratchpad-copy: scratchpad + copy (.work .xb .xb-label .xb-save .xb-field) — open when the scratchpad looks wrong
 - §multitask: multitask (.sash .pstrip .mt-mode .pad-fab) — open when split layout looks wrong
 - §note: the toast (#toast and its states) — open when the note looks wrong
-- §duck: Cluck's duck + sky (.ck-rise .ck-sky .ck-peek .ck-duck .ck-say) — open when the duck or sky looks wrong
 - §lock-help: lock-help modal (.lockhelp .lh-col .lh-say .lh-btns) — open when the help modal looks wrong
 
 ### client/answer/navigation/nav.js
