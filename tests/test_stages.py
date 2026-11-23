@@ -47,7 +47,7 @@ class ExplainStages(unittest.TestCase):
             yield "POOF! "
             yield "Your pick: sign."
         p = dict(code="X_1", type="mc")
-        for name, fn in (("_wish_problem", lambda c, b: p), ("wish_pick", lambda p, b: "a"), ("cluck_begin", lambda *a: None), ("explain_allowed", lambda *a: True),
+        for name, fn in (("_wish_problem", lambda c, b: p), ("wish_pick", lambda p, b: "a"), ("cluck_begin", lambda *a, store=None: None), ("explain_allowed", lambda *a: True),
                          ("note_within", note), ("_cluck_stream", cluck), ("explain_prompt", lambda p, a: "q"), ("system_for", lambda *a: "s"),
                          ("fig_ctx", lambda *a, **k: None)):
             m = unittest.mock.patch.object(serve, name, fn)
