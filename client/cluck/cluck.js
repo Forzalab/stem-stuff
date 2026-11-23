@@ -106,7 +106,7 @@ function wishReset() {
   window.stemCluckBtn?.sync();
 }
 function wishNew(ex) {                                                       // a real wish; the idle one it replaces hands over its spent questions (the server counts per question)
-  const spent = wish && wish.idle && wish.code === S.code ? wish.chat.filter(t => t.role === "user").length + (wish.spent || 0) : 0;
+  const spent = wish && wish.idle && wish.code === S.code ? wish.chat.filter(t => t.role === "user").length + (wish.spent || 0) - (wish.free || 0) : 0;   // free: the starter chip's one ask is not counted (the server does not count it either)
   if (wish && wish.ctl) wish.ctl.abort();
   if (wish && wish.idle && cl) { cl.el.querySelector(".cl-thread").innerHTML = ""; cl.el.querySelector(".wtext").innerHTML = ""; cl.el.querySelector("#clTabEP .cl-quack")?.remove(); }
   return (wish = Object.assign(newWish(), { spent }, ex));
@@ -522,7 +522,7 @@ function wishPaint() {
   el.classList.remove("gone");
   if (!w || w.idle || [404, 503].includes(w.failed)) {                    // (the idle wish is the box's own opener: nothing on the page yet)
     el.hidden = true;
-    if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (bridge.origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
+    if (w && cl && cl.open && cl.tab === "explain" && !w.off && !(V7() && w.idle)) { if (bridge.origEl) clTab("steps", false); else clClose(); }   // (v7: the idle wish on a phone sheet is the pre-try box: the opener, the starter chip, the locked strip; it stays) the auto-open found nothing to explain (a press: the sheet says Cluck is off)
     clBackSync(); window.stemCluckBtn?.sync(); return;
   }
   const perm = clPerm();                                                   // V2: the permanent box is never "the way back": the chip stays (the strip tray's Ask Cluck, the verdict's See steps)
@@ -718,7 +718,7 @@ function clOpen(tab, from, auto) {                                        // aut
   clEl(); const rise = !cl.open; if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
   cl.perm = clPerm();
-  if (cl.perm && !S.finished && S.prob.wish && !cluckOff && !S.prob.original && (!wish || wish.code !== S.code)) wish = idleWish();   // V2: before any miss the box holds the opener + starters, not a blank
+  if ((cl.perm || (V7() && !S.tries.length)) && !S.finished && S.prob.wish && !cluckOff && !S.prob.original && (!wish || wish.code !== S.code)) wish = idleWish();   // V2: before any miss the box holds the opener + starters, not a blank. v7: a phone sheet opened before the first try holds them too (the starter chip + the locked strip)
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clTop(); if (rise) cl.sheetIn?.(); clAsk(true); clTab(tab, !auto); bridge.padRule();
   bridge.layoutFreeze();
@@ -827,15 +827,23 @@ function clBack() {
 /* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
-/* CLUCK-BTN (Tony Nov 14): the one Ask Cluck button (cluck_btn/cluckbtn.js) asks this file two things. state(): "first" = before the first try, "off" = no key / diet / out of asks /
-   not a Cluck question, "ready". enter(): what a press on the old chip did (ask, reopen, Compare, close, or the permanent box's ask field) */
+/* CLUCK-BTN (Tony Nov 14): the one Ask Cluck button (cluck_btn/cluckbtn.js) asks this file two things. state(): "off" = no key / diet / out of asks /
+   not a Cluck question, else "ready" (Nov 22: there is no "first" state any more: before the first try a press opens Cluck on the starter chip and the locked strip).
+   enter(): what a press on the old chip did (ask, reopen, Compare, close, or the permanent box's ask field) */
 function clAvail() {
   if (!S || S.wl || mockHold() || modeOf() !== "sugar" || !S.prob.wish || cluckOff) return "off";
   if (wish && wish.code === S.code && (wish.out || [404, 503].includes(wish.failed))) return "off";
-  return !S.finished && !S.tries.length ? "first" : "ready";
+  return "ready";
 }
+const clPreTry = () => !!S && !S.finished && !S.tries.length;               // before the first graded try: nothing to explain yet, no /explain call
 function clEnter() {
   if (clAvail() !== "ready") return false;
+  if (V7() && clPreTry()) {                                                  // the box holds Cluck's opener, the starter chip and the locked strip; the chip takes focus (the field is locked)
+    if (!cl || !cl.open) clOpen("explain", ENTRY);
+    else if (clGone && bridge.sideMQ.matches) clGoneSet(false);
+    const chip = cl && cl.el.querySelector(".cl-starter"); if (chip && chip.getClientRects().length) chip.focus({ preventScroll: true });
+    return true;
+  }
   if (!wish || wish.code !== S.code || wish.idle) { wishNew({ started: false }); wishFromCache(wish); wishPaint(); }
   const w = wish;
   w.tapped = true;
@@ -942,13 +950,19 @@ function clMore(late) {
    A question with no Cluck key: the note instead (CL_COPY.nokey). Right on the first try, no steps asked yet: the note points at the duck chip */
 function clIdleSync() {
   if (!cl) return;
-  const st = cl.el.querySelector(".cl-starters"), nt = cl.el.querySelector(".cl-note"), w = wish, perm = cl.open && cl.perm && !!S;
+  const st = cl.el.querySelector(".cl-starters"), nt = cl.el.querySelector(".cl-note"), w = wish, perm = cl.open && (cl.perm || (V7() && !!w && w.idle)) && !!S;   // v7: a phone sheet on the idle wish (before the first try) is a home for the chip too
   const idle = perm && !!w && w.idle && w.code === S.code && !w.chat.length && !w.busy && !w.out && CHAT_TURNS - (w.spent || 0) > 0;
   st.hidden = !idle;
+  /* the bank's own `starter` (served by /p and /b): ONE chip, "Free" tag, its first ask is not counted (serve.py starter_free). No starter, or a try already made: the three generic chips */
+  const own = V7() && clPreTry() && typeof S?.prob?.starter === "string" && S.prob.starter.trim() ? S.prob.starter.trim() : "";
+  const key = S ? `${S.code}|${own}` : "";
+  if (idle && st.dataset.k !== key) st.textContent = "";                     // a new question, or the first try landed: the chips are redrawn
   if (idle && !st.firstChild) {
-    for (const t of CL_COPY.starters) {
-      const b = document.createElement("button"); b.type = "button"; b.className = "cl-starter"; b.textContent = t;
-      b.addEventListener("click", () => { if (wish && wish.idle && !wish.busy) clSend(t); });
+    st.dataset.k = key;
+    for (const t of own ? [own] : CL_COPY.starters) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "cl-starter";
+      if (own) { b.classList.add("has-free"); b.innerHTML = '<span class="free">Free</span>'; b.append(document.createTextNode(t)); } else b.textContent = t;
+      b.addEventListener("click", () => { if (wish && wish.idle && !wish.busy) clSend(t, { starter: !!own, from: V7() ? window.stemAskGlass?.snap(b) : undefined }); });
       st.append(b);
     }
   }
@@ -965,29 +979,41 @@ function clAsk(build) {
   const ft = cl.el.querySelector(".cl-fi"), w = wish;
   cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
   if (!w) { ft.innerHTML = ""; return; }
-  const left = w.out ? 0 : CHAT_TURNS - (w.spent || 0) - w.chat.filter(t => t.role === "user").length;   // spent: the starters asked before the miss
+  const left = w.out ? 0 : CHAT_TURNS - (w.spent || 0) - w.chat.filter(t => t.role === "user").length + (w.free || 0);   // spent: the starters asked before the miss; free: the starter chip's ask is not counted
   if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>Classic Cluck, wound down at ${CHAT_TURNS}. On to the next one.</p></div>`; return; }
+  const ag = V7() ? window.stemAskGlass : null, lk = !!ag && clPreTry();       // v7: the R3 glass bar (ask_glass/ask-glass.js); before the first try it is a locked strip
   if (build || !ft.querySelector(".ask")) {
-    ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
+    ft.innerHTML = `<form class="ask${ag ? " ag" : ""}">${ag ? ag.html() : ""}<label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${ag ? '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>' : icon("i-send")}</button></form>`;
     const f = ft.querySelector(".ask"), inp = f.querySelector("textarea");   // inp: the typed fields' Enter (STYLE.md §5 list), no new shortcut
-    f.addEventListener("submit", e => { e.preventDefault(); const m = inp.value.trim(); if (m) { inp.value = ""; askFit(inp); clSend(m); } });
+    f.addEventListener("submit", e => { e.preventDefault(); const m = inp.value.trim(); if (m && !inp.disabled) { const from = ag?.textRect(inp); inp.value = ""; askFit(inp); sendOn(f); clSend(m, { from }); } });
     inp.addEventListener("keydown", e => {                                  // Enter sends (as the old one-line field did); Shift+Enter is a new line; never mid-IME
       if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
       e.preventDefault(); if (!f.querySelector(".send").disabled) f.requestSubmit();
     });
-    inp.addEventListener("input", () => askFit(inp));
+    inp.addEventListener("input", () => { askFit(inp); sendOn(f); });
     if (window.ResizeObserver) { let w0 = 0; new ResizeObserver(() => { const w = inp.clientWidth; if (w && w !== w0) { w0 = w; askFit(inp); } }).observe(inp); }   // ASK-ALIGN: a width change (window, sash, column back, late webfont) rewraps the text, so the height is refit; width only, so askFit's own height change cannot loop
   }
   const ready = wishTyped(w) && !w.busy;
   ft.querySelector(".left").textContent = `${left} left`;
-  ft.querySelector("textarea").disabled = !wishTyped(w);
-  ft.querySelector(".send").disabled = !ready;
-  if (cl.wantAsk && cl.open && wishTyped(w)) {                              // the manual open's focus, now that the field takes it; not if the student moved on
+  ft.querySelector("textarea").disabled = lk || !wishTyped(w);               // locked: not focusable
+  ft.querySelector(".send").disabled = lk || !ready;
+  if (ag) { const f = ft.querySelector(".ask"), sc = cl.el.querySelector(".cl-bd"); ag.mount(f, sc, lk); ag.setLocked(f, lk); sendOn(f); }
+  if (cl.wantAsk && cl.open && wishTyped(w) && !lk) {                              // the manual open's focus, now that the field takes it; not if the student moved on
     cl.wantAsk = false;
     const a = document.activeElement;
     if (!a || a === document.body || (a.matches(".cl-x") && cl.el.contains(a))) ft.querySelector("textarea").focus({ preventScroll: true });
   }
 }
+const sendOn = f => { const t = f.querySelector("textarea"), b = f.querySelector(".send"); if (t && b) b.classList.toggle("on", !!t.value.trim() && !b.disabled); };   // v7 send button: the tangerine circle grows from the centre while there is text to send
+/* v7: the first graded try lands (S.tries is already pushed when app.js fires drill:answer): the locked strip opens (ask-glass.js setLocked) and the field enables once Cluck's text is typed */
+function clLockSync() {
+  if (!cl || !V7() || !window.stemAskGlass) return;
+  const f = cl.el.querySelector(".cl-fi .ask.ag"); if (!f) return;
+  const lk = clPreTry(), t = f.querySelector("textarea"), b = f.querySelector(".send");
+  t.disabled = lk || !wish || !wishTyped(wish); b.disabled = lk || !wish || !wishTyped(wish) || wish.busy;
+  window.stemAskGlass.setLocked(f, lk); sendOn(f); clIdleSync();
+}
+addEventListener("drill:answer", () => queueMicrotask(clLockSync));
 /* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
 function askFit(ta) {
   if (!ta.value) { ta.style.height = ""; ta.style.overflowY = "hidden"; return; }   // empty: the CSS one line (ASK-ALIGN). scrollHeight would count a wrapped placeholder (a narrow column for a moment) and keep the field tall
@@ -1101,7 +1127,7 @@ async function clCompare(w) {
   else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Oh duck, Cluck is tired! Come back later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
   w.busy = false; clAsk();
 }
-async function clSend(msg) {
+async function clSend(msg, o = {}) {                                      // o.starter: the bank's starter chip (POST /chat {starter:true}: its one ask is free); o.from: the v7 send morph's first box (ask-glass.js flip)
   const w = wish, t = askTry();
   if (!w || w.busy || !wishTyped(w)) return;
   const th = cl.el.querySelector(".cl-thread");
@@ -1109,9 +1135,10 @@ async function clSend(msg) {
   const box = document.createElement("div"); box.className = "msg"; box.innerHTML = clWho(false) + `<div class="wtext wreply"></div>`;
   const re = box.lastChild;
   th.append(me, box);
-  w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
+  w.chat.push({ role: "user", content: msg }); w.busy = true; if (o.starter) w.free = 1; clAsk();
   window.stemT?.("cluck_ask", { kind: "ask", ...ckTel(), item: w.code, text: msg });   // telemetry: the student's typed question (telemetry.js scrubs it)
   re.scrollIntoView({ block: "nearest" });
+  if (o.from) window.stemAskGlass?.flip(o.from, me.lastChild);                      // v7: the typed text's box (or the chip) flies to the new bubble
   w.ctl = w.ctl || new AbortController();
   let text = "", err = "", inc = null, r = null, bytes = 0, ftok = null;
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
@@ -1119,7 +1146,7 @@ async function clSend(msg) {
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}) }) });
     fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });
@@ -1141,7 +1168,7 @@ async function clSend(msg) {
   if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
   w.busy = false;
   if (err) {
-    w.chat.pop();                                                          // not answered: it does not count
+    w.chat.pop(); if (o.starter) w.free = 0;                               // not answered: it does not count
     if (err === "limit") { w.out = true; box.remove(); }
     else re.innerHTML = wishHTML(err === "hourly" ? "Oh duck, Cluck is tired! Come back later." : "Oops, didn't load. Ask again?") + incHTML(inc);
   } else { w.chat.push({ role: "assistant", content: slotsResolve(text) }); say(speakable(stripFigs(text))); }

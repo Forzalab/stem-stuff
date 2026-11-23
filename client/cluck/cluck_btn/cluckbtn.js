@@ -2,9 +2,9 @@
    One button at the top right of every question card (#problem: all types, multi-part and MC included). It replaces every old entry (popover chip, verdict-slot duck, strip drawer chip,
    "Explain my mistake" chip, the "Cluck lives in Ask Cluck" toast); cluck.js draws none of them under the flag. Look (ICK5-CLUCK-TR): a tangerine squircle, duck line icon, floated at the card's top right so the question text wraps around it (qcard.css §ick5-tr); the same element FLIPs into the phone proof box and back (mount).
    States (aria-disabled, never the disabled attribute, never pointer-events:none; RESEARCH option A #141d36 / #7a8aae, no raise):
-     first = before the first try      -> "Cluck unlocks after your first try."
      off   = no key / diet / out of asks / not a Cluck question -> "Cluck isn't available here."   (hover on desktop, tap on a phone, Enter / Space: a note from the toast family)
-     ready = a press does what the old chip did (cluck.js window.stemCluckAsk.enter)
+     ready = a press does what the old chip did (cluck.js window.stemCluckAsk.enter). Before the first try too (Nov 22: the old "first" state, its badge and its note are gone):
+             the press opens Cluck on the starter chip and the locked strip (desktop: the always-open box takes the focus; phone: the sheet opens)
    disabled -> ready: the fill sweeps in left to right, 240 ms ease-out (a scaleX layer); reduced motion = instant (cluckbtn.css).
    Emphasis (CLUCK-EMPHASIS): window.stemCluckBtn.sheen(why) plays once, whenever something happens where an old entry used to appear:
      reply (Cluck's reply finished, sheet closed) = duck HEAD SHAKE · right (steps unlocked) = duck NOD · every other = blue-tinted (--action) SHEEN: wrong (a wrong try unlocked Cluck), out (out of tries, app.js cueChip) ·
@@ -13,7 +13,7 @@
 (function (g) {
   "use strict";
   var D = g.document, H = D.documentElement, btn = null, why = null, raf = 0, enabledAt = 0, sheenT = 0, endT = 0;
-  var MSG = { first: "Cluck unlocks after your first try.", off: "Cluck isn't available here." };
+  var MSG = { off: "Cluck isn't available here." };
   var on = function () { return H.classList.contains("ui-v7"); };
   var reduced = function () { try { return g.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
   var ask = function () { return g.stemCluckAsk || null; };
