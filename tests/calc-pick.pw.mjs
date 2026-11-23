@@ -44,7 +44,7 @@ async function ctxPage(state) {
 const tip = page => page.evaluate(() => window.CalcCoach.open({ from: "chip" }));   // the tip way: Calc Coach with no model picks the calculator first
 await step("fresh device: no popup on load, the tip opens it; a chip pick is saved on the server per sid, fires the event, survives a reload and a wiped cache", async () => {
   const { ctx, page } = await ctxPage();
-  await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 8000 }); await page.waitForTimeout(1500);   // keep: any boot-time auto-show would land by now
+  await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 8000 }); await page.waitForLoadState("networkidle");   // the /calc read is done: a boot-time auto-show would be up by now
   assert.equal(await page.locator(DLG).count(), 0, "fresh device: no popup on its own");
   await tip(page);
   await page.waitForSelector(DLG, { timeout: 8000 });
