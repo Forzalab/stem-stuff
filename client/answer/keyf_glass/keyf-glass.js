@@ -34,7 +34,7 @@
     glass: { refr: 135, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 1.2, blur: 9.7, mag: 1.12, k1: 0.08, magFall: 0.5, magCap: 18, scrim: 0.38, scrimBlur: 10, scrimPad: 6,
       fresnel: 0.1, tir: 0.35, vign: 0.25, tint: 0.4, tintRGB: [4, 18, 40], paint: 0.16, sym: 0.51, bright: 0.7, sat: 0.98,
       grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16,
-      hover: { dist: 240, radius: 300, blur: 5, tint: 0.16, scrim: 0.2, glow: 0.3 } },   /* desktop pointer proximity, clearly visible */
+      hover: { dist: 240, radius: 300, blur: 6, tint: 0.2, scrim: 0.22, glow: 0.45, sheen: [120, 170, 255, 0.2] } },   /* desktop pointer proximity, clearly visible */
     motion: { mode: "conveyor", fps: 20, speed: 1, belt: { vx: -6, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
     symbols: { scale: 0, scaleAuto: { wide: 2, narrow: 1.5, at: 700 }, always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
       size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.35, 1] }
@@ -174,17 +174,18 @@
         svgDefs = document.createElementNS(NS, "svg"); svgDefs.setAttribute("class", "kg-defs"); svgDefs.setAttribute("aria-hidden", "true"); defs = document.createElementNS(NS, "defs"); svgDefs.appendChild(defs); kg.appendChild(svgDefs); }
       var scrimEl = kg.querySelector(".kg-scrim"), lensed = kg.querySelector(".kg-lensed"), bd = kg.querySelector(".kg-bd"), tint = kg.querySelector(".kg-tint"), grain = kg.querySelector(".kg-grain"), hair = kg.querySelector(".kg-hair");
       var cr = parseFloat(getComputedStyle(card).borderTopLeftRadius); var rad = isFinite(cr) && cr > 0 ? cr : g.radius;
-      var sizeChanged = w !== R.w || h !== R.h; R = { w: w, h: h };
+      var short = h < 160, blurPx = short ? g.blur * .55 : g.blur; var sizeChanged = w !== R.w || h !== R.h; R = { w: w, h: h };
       card.style.setProperty("--kg-sh", g.shadow);
       // lens map: only regenerated here (init / resize); new filter id each time, old one removed
       while (defs.firstChild) defs.removeChild(defs.firstChild); filterIds = [];
       lensed.style.filter = "";
       var supported = typeof SVGFEDisplacementMapElement !== "undefined";
       if (supported) { var t0 = performance.now(), F = lensField(w, h, { refr: g.refr, bezpx: g.bezpx, curv: g.curv, ior: g.ior, mag: g.mag, k1: g.k1, magFall: g.magFall, magCap: g.magCap, radius: rad });
-        var id = glassFilter(defs, { refraction: Math.max(F.max, .01), chroma: lp ? 0 : g.chroma, blur: g.blur }, w, h, F.url); filterIds.push(id); lensed.style.filter = "url(#" + id + ")"; STATS.mapMs = +(performance.now() - t0).toFixed(1); }
-      else lensed.style.filter = "blur(" + g.blur + "px)";   // frost only
+        var id = glassFilter(defs, { refraction: Math.max(F.max, .01), chroma: lp ? 0 : g.chroma, blur: blurPx }, w, h, F.url); filterIds.push(id); lensed.style.filter = "url(#" + id + ")"; STATS.mapMs = +(performance.now() - t0).toFixed(1); }
+      else lensed.style.filter = "blur(" + blurPx + "px)";   // frost only
       // scene
       if (!syms.length || sizeChanged) { var old = syms; var sk = S.scale > 0 ? S.scale : (w > S.scaleAuto.at ? S.scaleAuto.wide : S.scaleAuto.narrow), cell0 = Math.max(70, Math.min(140, Math.min(w, h) * .55)), cell = cell0 * sk, ks = Math.min(1, cell0 / 125) * sk, S2 = { always: S.always, pool: S.pool, cell: [cell, cell * 1.1], rot_deg: S.rot_deg, alpha: S.alpha, size_px: [Math.max(44, S.size_px[0] * ks), Math.max(60, S.size_px[1] * ks)] };
+        if (short) { S2.size_px = [h * .7, h * .9]; S2.cell = [h * 1.5, h * 1.65]; S2.alpha = [Math.max(.5, S.alpha[0]), Math.max(.5, S.alpha[1])]; }   /* short card (< 160 px): whole glyphs, 0.7-0.9 x card height, alpha floor .5 */
         var mg = S2.size_px[1] * 1.4; beltM = mg; syms = pickSymbols(seed, w, h, S2, mg); if (old.length && old.length === syms.length) syms.forEach(function (s, i) { s.sx = old[i].sx; s.sy = old[i].sy; s.vx = old[i].vx; s.vy = old[i].vy; s.srot = old[i].srot; s.vr = old[i].vr; s.ssc = old[i].ssc; }); }
       bd.style.filter = "brightness(" + g.bright + ") saturate(" + g.sat + ")";
       bd.innerHTML = '<div style="inset:0;width:100%;height:100%;opacity:' + g.paint + ';background:radial-gradient(120% 140% at 12% -10%, #334979 0%, #263860 22%, #1a294b 45%, #111d3a 72%, #0b152e 100%)"></div>';
@@ -195,7 +196,7 @@
       grain.style.opacity = g.grain; grain.style.backgroundImage = grainURL(g);
       hair.style.boxShadow = "inset 0 0 0 1px rgb(255 255 255 / " + g.hair + "), inset 0 0 " + (g.bezpx * .25) + "px rgb(255 255 255 / " + g.fresnel + "), inset 0 0 " + Math.max(2, g.bezpx * .08) + "px " + Math.max(1, g.bezpx * .03) + "px rgb(0 0 0 / " + g.tir + ")";
       hair.style.background = "radial-gradient(120% 140% at 50% 50%, transparent 55%, rgb(0 0 0 / " + g.vign + ") 100%)";
-      var hv = kg.querySelector(".kg-hover"); hv.style.background = "rgb(" + g.tintRGB.join(" ") + " / " + g.hover.tint + ")";
+      var hv = kg.querySelector(".kg-hover"), sh = g.hover.sheen; hv.style.background = "radial-gradient(ellipse 70% 120% at var(--kg-mx, 50%) var(--kg-my, 50%), rgb(" + sh[0] + " " + sh[1] + " " + sh[2] + " / " + sh[3] + ") 0, rgb(" + sh[0] + " " + sh[1] + " " + sh[2] + " / " + (sh[3] * .35).toFixed(3) + ") 60%, transparent 100%), rgb(" + g.tintRGB.join(" ") + " / " + g.hover.tint + ")";
       hv.style.webkitBackdropFilter = hv.style.backdropFilter = "blur(" + g.hover.blur + "px)"; card.style.setProperty("--kg-glow", g.hover.glow);
       built = true; scrim(); pose(); kick(); prox(); }
     /* soft text scrim: one blurred dark rounded rect per visible formula row, so the scene under the ink is dimmed (rows measured now) */
