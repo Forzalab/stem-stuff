@@ -30,7 +30,7 @@
 #   §modes          sugar vs diet mode, sugar split (choose-all -> T/F rows): mode_of, sugar, hidden, sub_problem, lookup, view, public
 #   §math           sympy behind a token allowlist: to_python, evaluate
 #   §grading        number/unit/sig-fig grading, slip hints, tries store, repair_check: same, tol_of, slip_hit, state, mark, grade
-#   §tries-store    KV-FRUGAL slice 3: one HASH per browser behind STEM_TRIES_HASH (default off), TTLs + preview prefix: tries_hash_on, TriesStore
+#   §tries-store    KV-FRUGAL slice 3+4: one HASH per browser + one turn key per (browser, code) behind STEM_TRIES_HASH (default off), TTLs + preview prefix: tries_hash_on, TriesStore, turns_read, turns_write
 #   §expr-answers   W137 expression answers + L3 diagnose: expr_mode, expr_hit, expr_l3, diagnose, expr_explain_store
 #   §incidents      S-XXXXX incident codes + one JSON log line: incident, log_incident, health_state, OutOfCredit
 #   §trace          per-request flight-recorder trace: set_trace, trace_id, log
@@ -1425,20 +1425,24 @@ def _grade(p, st, body, multi, idx, reveal=False):
 
 
 # == §tries-store ==
-# ---------------- KV-FRUGAL slice 3: one HASH per browser behind STEM_TRIES_HASH (default off: the blob above) ----------------
+# ---------------- KV-FRUGAL slice 3+4: one HASH per browser + one turn key per (browser, code), behind STEM_TRIES_HASH (default off) ----------------
 # t:<sid> fields:
 #   <CODE> / <CODE> <part>  one problem's {"wrong", "done", "gen"}; a redo round tags them "r<N> <CODE>", all in the same hash
 #   _gen                    this browser's last gen (the client compares it: a hand reset must read as newer)
 #   _bank                   this browser's last bank; at:<BANK> = its place in that bank
-#   c:<CODE>                this problem's Cluck turn rows (slice 4 moves them to their own keys)
-# Every write is ONE multi-field HSET + EXPIRE in ONE /pipeline call (2 commands, 1 round trip). Preview deploys
-# (VERCEL_ENV=preview) write their own namespace with a 1-day life, so agent / bench runs never touch student keys.
-# One load per request: the route entry makes the TriesStore and passes it down; nothing here is a module global.
+#   c:<CODE>                OLD (slice 3) Cluck turn rows: slice 4 moved them to turns:<sid>:<CODE>; a load ignores them here
+# Every hash write is ONE multi-field HSET + EXPIRE in ONE /pipeline call (2 commands, 1 round trip). A Cluck turn list
+# lives in its own JSON string key (slice 4), written with one SET key val EX <ttl>: a tutor turn = 2 small writes (begin,
+# noted). Preview deploys (VERCEL_ENV=preview) write their own namespace with a 1-day life, so agent / bench runs never
+# touch student keys. One hash load per request: the route entry makes the TriesStore and passes it down; nothing here is
+# a module global.
 TRIES_HASH_ENV = "STEM_TRIES_HASH"        # one env var, default off ("1" = the hash store); the blob path stays byte for byte
 TRIES_LIFETIME = 120 * 24 * 60 * 60       # 120 days, prod: tries + place (Tony, Nov 23)
+TURNS_TTL_S = 14 * 86400                  # 14 days, prod: one Cluck turn key (Tony, Nov 23)
 PREVIEW_LIFETIME = 24 * 60 * 60           # 1 day, preview (Tony, Nov 23): disposable keys
 PREVIEW_PREFIX = "preview:"               # preview's own keyspace
 TRIES_KEY = "t:"                          # prod: t:<sid>
+TURNS_KEY = "turns:"                      # prod: turns:<sid>:<CODE>
 KV_PIPE_TIMEOUT = 5
 
 
@@ -1455,8 +1459,17 @@ def tries_lifetime():
     return PREVIEW_LIFETIME if tries_prefix() else TRIES_LIFETIME
 
 
+def turns_lifetime():
+    """14 days in prod; a preview keeps KVF-3's 1-day life (tries_lifetime: one preview check for both kinds of key)"""
+    return min(TURNS_TTL_S, tries_lifetime())
+
+
 def tries_key(sid):
     return f"{tries_prefix()}{TRIES_KEY}{_base_sid(sid)}"
+
+
+def turns_key(sid, code):
+    return f"{tries_prefix()}{TURNS_KEY}{_base_sid(sid)}:{code}"
 
 
 def _base_sid(sid):
@@ -1487,6 +1500,40 @@ def _kv_pipeline(*cmds):
                                  headers={"Authorization": "Bearer " + KV[1], "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=KV_PIPE_TIMEOUT) as r:
         return json.load(r)
+
+
+def _turns_rows(raw):
+    """the stored turn rows, validated like the blob loader (len in (4, 5), int n, str xyz): bad rows dropped, ONE log line"""
+    try:
+        rows = json.loads(raw) if raw else []
+    except (ValueError, TypeError):
+        log("turns not read from KV: bad JSON")
+        return []
+    if not isinstance(rows, list):
+        log("turns not read from KV: not a row list")
+        return []
+    good = [r for r in rows if isinstance(r, list) and len(r) in (4, 5) and isinstance(r[0], int) and isinstance(r[2], str)]
+    if len(good) != len(rows):
+        log("turns rows dropped:", len(rows) - len(good), "of", len(rows))
+    return good
+
+
+def turns_read(sid, code):
+    """this (browser, code)'s Cluck turn rows from their own key: [] on a miss; a KV error is logged, never a 500"""
+    try:
+        raw = _kv("GET", turns_key(sid, code))
+    except (OSError, ValueError) as e:
+        log("turns not read from KV:", e)
+        return []
+    return _turns_rows(raw)
+
+
+def turns_write(sid, code, rows):
+    """the whole turn list in ONE SET key val EX <ttl>; a failed write is logged, as the store's save is"""
+    try:
+        _kv("SET", turns_key(sid, code), json.dumps(rows, ensure_ascii=False, separators=(",", ":")), "EX", turns_lifetime())
+    except (OSError, ValueError) as e:
+        log("turns not saved to KV:", e)
 
 
 def _new_store():
@@ -1525,14 +1572,7 @@ class TriesStore:
             elif name == "_bank" or name.startswith("at:"):
                 self.fields[name] = val
             elif name.startswith("c:"):
-                try:
-                    rows = json.loads(val)
-                except (ValueError, TypeError):
-                    continue
-                if isinstance(rows, list):
-                    rows = [r for r in rows if isinstance(r, list) and len(r) in (4, 5) and isinstance(r[0], int) and isinstance(r[2], str)]
-                    if rows:
-                        self.fields[name] = rows
+                continue                     # slice 3's turn rows moved to their own key: an old one is ignored, KVF-5 migrates it
             else:
                 try:
                     st = json.loads(val)
@@ -1555,10 +1595,6 @@ class TriesStore:
 
     def at(self, bank):
         return self.fields.get(f"at:{bank}")
-
-    def turns(self, key):
-        self.load(key[0])
-        return self.fields.get("c:" + key[1])
 
     # ---- write (deferred to ONE pipeline) ----
     def entry_new(self, key):
@@ -1587,11 +1623,6 @@ class TriesStore:
         if code is not None:
             self.fields[f"at:{bank}"] = code
             self.dirty[f"at:{bank}"] = code
-
-    def turns_put(self, key, rows):
-        name = "c:" + key[1]
-        self.fields[name] = rows
-        self.dirty[name] = rows
 
     def round(self, sid, rnd):
         """the redo-round sid, dropping every other round's fields (the hash twin of _round_sid); rnd None = the base sid"""
@@ -3148,7 +3179,7 @@ def row_locked(r):
 def turn_closed(key, store=None):
     """the newest Cluck turn row of this (sid, code) was sent on a solved or locked item: its answer may be said"""
     if store is not None:
-        rows = store.turns(key) or []
+        rows = turns_read(key[0], key[1])
         r = rows[-1] if rows else None
         return row_solved(r) or row_locked(r)
     with _tries_lock:
@@ -3158,7 +3189,7 @@ def turn_closed(key, store=None):
 
 def cluck_begin(p, sid, pick, store=None):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
-    counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
+    counted server-side (its own turn key with the hash store, the tries blob otherwise; a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
     used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved)."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
@@ -3166,13 +3197,12 @@ def cluck_begin(p, sid, pick, store=None):
     solved = item_solved(p, sid, store=store) or (p.get("type") != "multi" and pick_ok(p, pick) is True)   # W110: the server's own grade, no KV
     key = (sid, p["code"])
     if store is not None:
-        rows = store.turns(key) or []
+        rows = turns_read(sid, p["code"])
         n = (rows[-1][0] + 1) if rows else 1
         reveal = out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3)
         rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))
         del rows[:-CLUCK_KEEP]
-        store.turns_put(key, rows)
-        store.save()
+        turns_write(sid, p["code"], rows)
         return n, reveal
     with _tries_lock:
         _load_tries()
@@ -3188,13 +3218,14 @@ def cluck_begin(p, sid, pick, store=None):
 def cluck_noted(p, sid, n, xyz, store=None):
     """the NOTE block this turn was sent with, kept for the byte-for-byte replay; returns the stored rows (newest last)"""
     if store is not None:
-        key = (sid, p["code"])
-        rows = store.turns(key) or []
+        rows = turns_read(sid, p["code"])
+        changed = False
         for r in rows:
-            if r[0] == n:
+            if r[0] == n and r[2] != xyz:        # r1 nit 10: no write when the turn did not change
                 r[2] = xyz
-        store.turns_put(key, rows)
-        store.save()
+                changed = True
+        if changed:
+            turns_write(sid, p["code"], rows)
         return [list(r) for r in rows]
     with _tries_lock:
         _load_tries()
