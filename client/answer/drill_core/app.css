@@ -1371,7 +1371,7 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .cl-ft .ask .send { width: 44px; height: 44px; background: var(--ai-ct); color: var(--help-on); }
 .cl-ft .ask { --ask-h: 44px; }                                          /* ASK-ALIGN (Tony, Nov 22): the one-line field is the send button's height, so caret / placeholder / counter / button share one centre */
 .cl-ft .ask .ff { min-height: var(--ask-h); }
-.cl-ft .ask .ff textarea { --pv: calc((var(--ask-h) - 1.4em) / 2); height: var(--ask-h); }
+.cl-ft .ask .ff textarea { --pv: calc((var(--ask-h) - 1.4em) / 2); height: var(--ask-h); max-height: min(calc(7em + var(--ask-h)), 40vh); }   /* the cap stays 6 lines of 1.4em (one line = --ask-h) */
 .cl-ft .ask .left { line-height: var(--ask-h); }
 .cl-ft .ask .send .ico { width: 22px; height: 22px; }
 .cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
