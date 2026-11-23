@@ -2,7 +2,7 @@
 //   open    open from page load, no click: #work.cl-on #cluck is visible, videos above, the box below
 //   no X    the X is not shown; Escape leaves it open and sets no html.cl-gone; the sash dragged to the right edge does not dismiss it
 //   miss    a wrong answer streams into the open box with no click on anything
-//   height  the brainrot "Hide" toggle: the box grows (>= 250 px) and the videos row shrinks to its label row (<= 40 px)
+//   height  the brainrot "Hide" toggle: the box grows (>= 0.8 x the freed videos height) and the videos row shrinks to its label row (<= 40 px)
 //   next    the next question has the box open again (empty), still no X
 //   guard   phone sugar (393): no box on load, the X shows once opened, Escape and the X close it; desktop diet: no box
 // CP_W=1280,721 (desk) or 393 (phone); default all. run-all splits them: cluck-permanent@desk, cluck-permanent@phone. Own serve.py + a stub OpenRouter.
@@ -103,14 +103,14 @@ for (const w of W.filter(w => w >= 720)) {
     assert.ok(s.on && s.box && !s.x && s.open, "still open, no X: " + JSON.stringify(s));
     await page.context().close();
   });
-  if (w >= 900) await step(`@desk ${w}: the videos Hide toggle scales the box (+250 px at 1280, +100 at 721; videos row <= 40 px)`, async () => {
+  if (w >= 900) await step(`@desk ${w}: the videos Hide toggle scales the box (>= 0.8 x the freed videos height; videos row <= 40 px)`, async () => {
     const page = await open(w);
     const a = await box(page);
     assert.ok(a.rot > 100, "the videos show above the box: " + JSON.stringify(a));
     await page.evaluate(() => { const l = [...document.querySelectorAll("#rot button, #rot a")].find(e => /hide/i.test(e.textContent)); l.click(); });
     await settled(page, "#work");
     const b = await box(page);
-    assert.ok(b.h - a.h >= (w >= 1000 ? 250 : 100), `box grows: ${a.h} -> ${b.h}`);
+    assert.ok(b.h - a.h >= 0.8 * (a.rot - b.rot), `box takes the freed video height (>= 0.8 x ${Math.round(a.rot - b.rot)}): ${a.h} -> ${b.h}`);   // not a fixed px: the videos' height follows the column width (2:1 default, Tony Nov 22)
     assert.ok(b.rot >= 0 && b.rot <= 40, `videos row folds: ${b.rot}`);
     await page.context().close();
   });
