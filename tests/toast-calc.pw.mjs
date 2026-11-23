@@ -34,6 +34,7 @@ try {
     const name = `${w}: the stage toast lies on no card of the question column`;
     try {
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
+      await ctx.addInitScript(() => document.addEventListener("readystatechange", () => document.documentElement.classList.add("cc-calc-on"), { once: true }));   // Calc is hidden for now (calc-coach.js hidden()); this spec checks its cards
       await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9");
         const t0 = Date.now(); window.__tc = []; setInterval(() => {
           const cw = document.querySelector("#q .cc-welcome");                // a tall stem (live: PHYS_MC4): the card's top at the foot's edge, 90px above the viewport foot
