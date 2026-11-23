@@ -997,16 +997,21 @@ def _entry(key):
     return st
 
 
-def state(p, sid, reveal=False):
+def state(p, sid, reveal=False, snap=None):
     """{wrong, done, gen} for one browser and problem ({parts: [...]} for a multi). No entry: nothing tried yet, gen = the
-    one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again)."""
+    one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again).
+    snap = (tries, gen): a caller that already read the store once (bank_payload) shares it instead of re-reading per item."""
     with _tries_lock:
-        _load_tries()
+        if snap is None:
+            _load_tries()
+            tries, gen = _tries, _gen["n"]
+        else:
+            tries, gen = snap
 
         def one(key):
-            st = _tries.get(key)
+            st = tries.get(key)
             if st is None:
-                return {"wrong": 0, "done": False, "gen": _gen["n"] + 1}
+                return {"wrong": 0, "done": False, "gen": gen + 1}
             o = {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
             if reveal and not st["done"] and len(st["wrong"]) >= max_tries(p):
                 o["correct"] = answer_of(p["parts"][key[2]] if p["type"] == "multi" else p)
@@ -1016,9 +1021,10 @@ def state(p, sid, reveal=False):
         return one((sid, p["code"]))
 
 
-def mark(p, sid):
-    """The list mark for one problem, as app.js wrapRec() builds it: {x: wrong tries, done: open|correct|out}; None if untried."""
-    st = state(p, sid)
+def mark(p, sid, snap=None):
+    """The list mark for one problem, as app.js wrapRec() builds it: {x: wrong tries, done: open|correct|out}; None if untried.
+    snap = (tries, gen): pass it when many marks share one store read (bank_payload)."""
+    st = state(p, sid, snap=snap)
     us = st["parts"] if "parts" in st else [st]
     ds = ["correct" if u["done"] else "out" if u["wrong"] >= max_tries(p) else "open" for u in us]
     x = sum(u["wrong"] for u in us)
@@ -1061,12 +1067,13 @@ def bank_payload(code, sid, mode="sugar"):
     Opening a bank makes it this browser's last one (docs/design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
     from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one."""
     all_banks = banks()
-    if code == "last":
-        with _tries_lock:
-            _load_tries()
+    with _tries_lock:
+        _load_tries()
+        snap = (dict(_tries), _gen["n"])         # ONE read for this reply: every mark below shares it (KV-FRUGAL)
+        if code == "last":
             code = _last.get(sid, {}).get("bank") or front()[0]   # a new browser: the front bank (None when STEM_FRONT="")
-        if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
-            code = front()[0]                    # a former front's returner: the current front (its tries and "at" stay as they were)
+            if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
+                code = front()[0]                # a former front's returner: the current front (its tries and "at" stay as they were)
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
@@ -1082,9 +1089,8 @@ def bank_payload(code, sid, mode="sugar"):
         before = sugar(p).get("before") if mode == "sugar" and sugar(p).get("snack") else None
         ps += [(view(sub_problem(p, r), mode), None) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [(view(p, mode), before)]
     ps = snacks_placed(ps)
-    marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
+    marks = {p["code"]: m for p in ps for m in [mark(p, sid, snap)] if m}
     with _tries_lock:
-        _load_tries()
         me = _last.setdefault(sid, {"bank": None, "at": {}})
         at = me["at"].get(code)
         if me["bank"] != code:
