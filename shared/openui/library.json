@@ -150,7 +150,7 @@
         ]
       },
       "Tug": {
-        "description": "A push-pull rope: one row per factor, \"label | move | up|down|same [size 1-9]\"; the bar pulls right (up) or left (down); size is the bar's relative length; of = the thing pulled; net is the end knot (post only)",
+        "description": "DEPRECATED: the Tug view is gone and renders as a plain Table; use Table with columns what | move | direction | why instead",
         "type": "object",
         "properties": {
           "rows": {
@@ -752,7 +752,7 @@
     },
     "Tug": {
       "signature": "Tug(rows: string[], of?: string, alt?: string, net?: string)",
-      "description": "A push-pull rope: one row per factor, \"label | move | up|down|same [size 1-9]\"; the bar pulls right (up) or left (down); size is the bar's relative length; of = the thing pulled; net is the end knot (post only)",
+      "description": "DEPRECATED: the Tug view is gone and renders as a plain Table; use Table with columns what | move | direction | why instead",
       "layer": "L1",
       "kind": "interaction",
       "props": {

@@ -22,7 +22,7 @@ import { quack } from "../pure_logic_modules/quack.mjs";
 import { clampPos, dimAt, progress, radiusAt, snapTo } from "../pure_logic_modules/sheet.mjs";
 import { speakable } from "../pure_logic_modules/speak.mjs";
 import { pipeHold, pipeTable, renumberSteps } from "../pure_logic_modules/steps.mjs";
-import { flipHTML, flipModel, tableShape, tugFromTable, tugHTML } from "../pure_logic_modules/tug.mjs";
+import { flipHTML, flipModel, tableShape } from "../pure_logic_modules/flip.mjs";
 import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mockHold, noteAt, painting, rboxSync, renderMath, reqInc, rpUnmount, say, toast, waitReduced, xInc } from "../answer/drill_core/app.js";
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
@@ -391,8 +391,7 @@ function wishHTML(t, ended) {
     if (tb) {
       flush(); i = tb.next - 1;
       const row = (r, tag) => `<tr>${r.map(c => `<${tag}>${wishLine(c)}</${tag}>`).join("")}</tr>`;
-      if (tableShape(tb.head, tb.rows) === "tug") { put(`<div class="wl wtug">${tugHTML(tugFromTable(tb.head, tb.rows), wishLine)}</div>`); continue; }   // cause -> up/down rows: a Tug (tug.mjs)
-      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (tug.mjs)
+      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (flip.mjs)
       put(`<div class="wl wtbl"><table><thead>${row(tb.head, "th")}</thead><tbody>${tb.rows.map(r => row(r, "td")).join("")}</tbody></table></div>`);
       continue;
     }

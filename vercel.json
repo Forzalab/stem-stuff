@@ -413,6 +413,10 @@
       "destination": "/client/shell/stale_reload.js"
     },
     {
+      "source": "/client/pure_logic_modules/tug.mjs",
+      "destination": "/client/shell/stale_reload.js"
+    },
+    {
       "source": "/vendor/:f(.*\\.m?js)",
       "destination": "/client/shell/stale_reload.js"
     },

@@ -31,6 +31,15 @@ test("library: views-lib.js loads views/library.json, the one source (no hand-ke
   assert.doesNotMatch(src, /\bLOCAL\b|type: "(string|array|integer)"/, "views-lib.js holds no component data of its own");
 });
 
+test("Tug: a legacy Tug statement renders as a plain Table (what | move | direction | why), never an error", () => {
+  const m = mount();
+  const v = render('root = View([t])\nt = Tug(["V | box squeezed | up 3 | Smaller box.", "T | gas cooled | down 2"])', m);
+  assert.deepEqual(v.errors, []);
+  assert.deepEqual(all(m, n => n.tagName === "TH").map(n => n.textContent), ["what", "move", "direction", "why"]);
+  assert.deepEqual(all(m, n => n.tagName === "TR" && n.parentNode?.tagName === "TBODY").map(tr => tr.children.map(td => td.textContent)),
+    [["V", "box squeezed", "up 3", "Smaller box."], ["T", "gas cooled", "down 2", ""]]);
+});
+
 test("render: the demo programs draw with no errors, slots in the root's order", () => {
   for (const [name, src, ids] of [["P10", P10, ["head", "legend", "walk"]], ["P11", P11, ["hints", "pick", "rv"]], ["P2", P2, ["head", "order", "why"]]]) {
     const m = mount();
