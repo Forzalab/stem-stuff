@@ -4,7 +4,7 @@
    Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, no lift. Echo animates on prev/next (transform + opacity only). */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
-html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 16px; --qc-pad: 16px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 20px; --qc-pad: 20px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
 html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pad: 16px; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 22px; --qc-pad: 32px; --qnum: 156px; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
@@ -187,7 +187,7 @@ html.ui-v7 #problem.qc7.qbr .qghost { filter: none; }   /* GHOST-FLAT (Nov 17 "f
 @media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7.qbr .qghost { filter: none; } }
 /* PHONE-TOP-AIR (Tony Nov 16 "on phone, top margin add more, it looks too cramped"): the kicker row sat 24 px under the card's top edge, the same as the side insets;
    the top gets 32 px (desktop's --qpad), sides and bottom stay 24. The ghost and the fold read --qpad, so they keep their own geometry. */
-@media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { --qpt: 22px; padding-top: var(--qpt); } }
+@media (max-width: 899px) { html.ui-v7:not(.mt):not(.swap) #problem.qc7.qbr { --qpt: 26px; padding-top: var(--qpt); } }
 /* FONT-SPLIT (see app.css): the card's text face follows --font (Atkinson Hyperlegible Next); only the headline keeps the grotesk (G Schibsted) */
 html.ui-v7 #problem.qc7 { --qfont: var(--font); }
 html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child, html.ui-v7 #problem.qc7 :is(.qhead, .ptitle) { font-family: "G Schibsted", var(--font-title) !important; }
@@ -277,3 +277,11 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
 }
 
+
+/* == §fig-top == FIG-TOP (Tony Nov 23, prototype qfig-margin, the -40% pick): a card whose FIRST block is a figure. The float Ask Cluck button (§ick5-tr: 44px + 8px margin, under the
+   26px phone top pad) pushed the figure's box 52px down, so the figure began 78px under the card top. Here the button leaves the flow (absolute, same top / right, same size, z-index 3) and
+   the figure gets a 21px lead: card top -> figure 78 -> 47px (-40%). The ghost numeral (absolute, behind) and the left edge (--qc-pad) are untouched. Phone only: desktop keeps its float. */
+@media (max-width: 899px) {
+  html.ui-v7 #problem.qc7.qbr:has(> .blocks > .fig:first-child) > button.cluckbtn { float: none !important; position: absolute; top: var(--qpt, var(--qpad)); right: var(--qpad); margin: 0 !important; }
+  html.ui-v7 #problem.qc7.qbr > .blocks > .fig:first-child { margin-top: 21px; }
+}

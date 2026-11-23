@@ -1127,19 +1127,79 @@ function mathFit(el) {                                                          
   }
   keyfEdges(el);
 }
+/* KEYF-FIT (Tony Nov 22; ui-v7, wider than a phone, a card with no ladder pieces): "Balanced rows" (brain ui-polish/keyf-v16 _lib.js layout8) as flow, not
+   absolute: top-level formulas (the "?" counts as part of its formula) are cut into the fewest rows that fit the column, the rows as equal in width as can be
+   (min sum of squared distance to the mean row; a formula wider than half the column stands alone); each row's gaps are equal (outer ones too). The card
+   hugs its widest row (min(column, widest row + the card's padding)): sec.style.width + .kf-fit; ol.kf-rows turns the stacked column into wrapping rows whose
+   margins fill the row to the pixel, so the browser breaks exactly where this did. A ladder card (any .mid piece, notes need a stable width) and a phone
+   (<= 480px) keep the stacked, full-width card. keyf-glass follows through its own ResizeObserver on the card */
+const KF_GAP = 24, KF_PHONE = "(max-width: 480px)";
+function keyfRows(ol, lis) {
+  const col = ol.clientWidth, f = lis.map(li => li.getBoundingClientRect().width), n = f.length;
+  const need = (i, j) => { let t = 0; for (let k = i; k < j; k++) t += f[k]; return j - i === 1 ? t : t + (j - i + 1) * KF_GAP; };   // one formula: no gap; more: equal gaps incl. both outer ones
+  const rows = []; let seg = [];
+  const flush = () => {
+    if (!seg.length) return;
+    const a = seg[0], m = seg.length;
+    for (let R = 1; R <= m; R++) {                                                   // fewest rows first; among them the most equal widths
+      const memo = new Map(), tot = need(a, a + m), mean = tot / R;
+      const go = (i, r) => {
+        const key = i * 64 + r; if (memo.has(key)) return memo.get(key);
+        let best = null;
+        if (r === 1) { const s = need(a + i, a + m); if (s <= col + .5) best = { c: (s - mean) ** 2, cuts: [] }; }
+        else for (let j = i + 1; j <= m - r + 1; j++) { const s = need(a + i, a + j); if (s > col + .5) break; const rest = go(j, r - 1); if (!rest) continue; const c = (s - mean) ** 2 + rest.c; if (!best || c < best.c) best = { c, cuts: [j, ...rest.cuts] }; }
+        memo.set(key, best); return best;
+      };
+      const res = go(0, R);
+      if (res) { const cuts = [0, ...res.cuts, m]; for (let k = 0; k < cuts.length - 1; k++) rows.push([a + cuts[k], a + cuts[k + 1]]); seg = []; return; }
+    }
+    seg.forEach((_, k) => rows.push([a + k, a + k + 1])); seg = [];                  // unreachable (a lone formula always fits, mathFit shrank it); stack them
+  };
+  for (let i = 0; i < n; i++) { if (f[i] > col / 2) { flush(); rows.push([i, i + 1]); } else seg.push(i); }
+  flush();
+  return { rows, need, f, col };
+}
+function keyfLayout(sec) {
+  const ol = sec.querySelector("ol");
+  if (matchMedia(KF_PHONE).matches || ol.querySelector(":scope > .f.mid")) return;
+  const lis = [...ol.querySelectorAll(":scope > .f:not([hidden])")];
+  if (!lis.length || !ol.clientWidth) return;
+  const { rows, need, f, col } = keyfRows(ol, lis);
+  const wide = Math.min(col, Math.ceil(Math.max(...rows.map(([i, j]) => need(i, j)))) + 1);   // the widest row + 1px: sub-pixel safe
+  const cs = getComputedStyle(sec), pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth || 0) + parseFloat(cs.borderRightWidth || 0);
+  sec.style.width = (wide + pad) + "px"; sec.classList.add("kf-fit"); ol.classList.add("kf-rows");
+  rows.forEach(([i, j]) => {
+    if (j - i === 1) { lis[i].classList.add("kf-solo"); return; }
+    let t = 0; for (let k = i; k < j; k++) t += f[k];
+    const g = Math.floor(100 * (wide - t) / (j - i + 1)) / 100;                      // equal gaps, floored: the row never overfills, so the next formula wraps
+    for (let k = i; k < j; k++) lis[k].style.marginLeft = g + "px";
+    lis[j - 1].style.marginRight = g + "px";
+  });
+}
 function keyfFit(sec) {
   if (!document.documentElement.classList.contains("ui-v7")) return;
+  if (sec.isConnected && !sec.offsetWidth) return;                                  // hidden (a right answer hides the recap): fitted when it shows
+  const ol = sec.querySelector("ol");
+  if (ol) {                                                                          // measure at the full column, as today
+    ol.classList.remove("kf-rows"); sec.classList.remove("kf-fit"); sec.style.removeProperty("width");
+    ol.querySelectorAll(":scope > .f").forEach(li => { li.style.removeProperty("margin-left"); li.style.removeProperty("margin-right"); li.classList.remove("kf-solo"); });
+  }
   sec.querySelectorAll(".f .fm").forEach(fm => {
     if (!fm.offsetParent) return;                                                   // a hidden ladder row: fitted when it shows
     mathFit(fm);
   });
+  if (ol) keyfLayout(sec);
 }
 function keyfWire(sec) {
   sec.querySelectorAll(".fm").forEach(fm => fm.addEventListener("scroll", () => keyfEdges(fm), { passive: true }));
-  let w = 0;
-  if (window.ResizeObserver) new ResizeObserver(() => { if (sec.clientWidth !== w) { w = sec.clientWidth; keyfFit(sec); } }).observe(sec);
-  document.fonts?.ready.then(() => keyfFit(sec));
-  keyfFit(sec);
+  let w = 0, pw = 0;
+  const fit = () => { keyfFit(sec); w = sec.clientWidth; pw = sec.parentElement?.clientWidth || 0; };
+  if (window.ResizeObserver) {                                                       // the card AND its column: a hugging card no longer changes when the column does
+    const ro = new ResizeObserver(() => { if (sec.clientWidth !== w || (sec.parentElement?.clientWidth || 0) !== pw) fit(); });
+    ro.observe(sec); if (sec.parentElement) ro.observe(sec.parentElement);
+  }
+  document.fonts?.ready.then(fit);
+  fit();
 }
 let fcardGlass = null;                                                           // KEYF smoked-lens glass handle (keyf_glass/keyf-glass.js), html.ui-v7 only
 const fcardGlassOff = () => { try { fcardGlass?.destroy(); } catch (e) { console.error(e); } fcardGlass = null; };
@@ -1163,7 +1223,6 @@ function formulaCard() {
     const w = e.target.closest(".fh-more");
     if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
-    if ((S.fqTaps = (S.fqTaps || 0) + 1) >= 2 && !S.fqPeek && window.stemDuck?.say?.("stuck? ask me", { onOpen: () => window.stemIdleTap() })) { S.fqPeek = true; window.stemCluckBtn?.sheen("jev-stuck"); }   // the 2nd "?" tap on a question: the duck peeks (once); a tap on it opens Cluck, never auto
     const f = S.prob.formulas[b.dataset.i];
     Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => {
       const fig = window.FormulaFigs?.[f.id];
@@ -1899,7 +1958,6 @@ function record(a, r) {
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
   bridge.rewardTry(a, r);
-  if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
   if (r.verdict === "wrong") startWait();                                                                                       // the second try costs 10 s (sugar, 2-try items: startWait gates)
 }
 
@@ -2132,6 +2190,7 @@ function nextBtn() {                                                            
   }
   b.addEventListener("click", e => {
     e.stopPropagation();
+    if (document.documentElement.classList.contains("ui-v7") && window.stemNavNext) { window.stemNavNext(); return; }   // ui-v7: the exact action of the top bar's Next (nav.js goNext), no detour through #qnext's state
     const n = $("#qnext");
     if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No more questions, no more eggs." } })); return; }
     n.click();
@@ -2277,6 +2336,15 @@ function nodGate() {
   return yes;
 }
 function nodMiss() { const st = nodGet() || { day: ptDay(), n: 0, last: false }; st.miss = true; try { localStorage.setItem("stem-nod", JSON.stringify(st)); } catch { /* blocked */ } }
+/* MC-HINT-FOLD (Tony Nov 23, option A): the hint keeps its place under the tiles (option B was measured: moving it above
+   shifted every tile down 72 px and the phone fill then re-laid its rows). On a short phone screen the hint can land under
+   the fold, so a miss brings it in with the least scroll; no smooth scroll under prefers-reduced-motion (cluck.js's rule). */
+function hintFold(el) {
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  if (r.top >= 0 && r.bottom <= innerHeight) return;
+  el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: bridge.reduceMQ?.matches ? "auto" : "smooth" });
+}
 function feedback(r, typed) {
   if (r.verdict === "correct") rpUnmount();                                  // right: the repair box has done its job
   const fb = $("#fb");
@@ -2314,7 +2382,7 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   bridge.layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); }   // no ladder: each wrong try shows the next formula row, then the arrows
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); hintFold(inRow ? chk.querySelector(".cluck") : fb.querySelector(".cluck")); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 

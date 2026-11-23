@@ -8,14 +8,14 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 
 | path | owns | open when you touch |
 |---|---|---|
-| `index.html` | The drill page: loads ~40 scripts and styles, plus ES modules. | adding or removing a script or css tag; page markup |
+| `index.html` | The drill page: loads ~40 scripts and styles, plus ES modules. The launch splash (#splash) is a generated skeleton between the `SK:` markers: regenerate with tools/build_and_ship/splash_skeleton.mjs, never hand-edit. | adding or removing a script or css tag; page markup |
 | `calc.html` | The Calc Coach page. | Calc Coach page markup |
 | `privacy.html` | The privacy page. | privacy text |
 | `sw.js` | Service worker: precache list BASE, cache rules, VERSION stamp. | a new root file must work offline; cache bugs |
 | `client/answer/drill_core/app.js` | The drill, part 1 of 3: markdown + TeX (md, renderMath), on-device grading (check, same), code bar + suggestions (syncCode, sugShow), banks (openBank), render/load, repair ladder (repairAfterMiss), MC / freeform / multi answers (renderQuestion, submitFF, submitPart), wait timer. Has a CODEMAP header; see its section below. | answer flow, grading verdict, code entry, MC / typed / multi answer, boot order |
 | `client/cluck/cluck.js` | The Cluck genie, part 2 of 3 (split from app.js): wish stream + cache (wishFromCache, wishEl), live figures in a reply (wishFigs, viewImage), the peek (peekText), the sheet (clOpen, clDrag, phone), dismiss/back (clBack), ask field (clAsk, clSend). Reaches app.js through `bridge`. Has a CODEMAP header. | Cluck box, reply render, wish figures, the sheet, the ask field |
 | `client/shell/shell.js` | The shell, part 3 of 3 (split from app.js): sugar rewards (rewardTry, rewardGo), snack original (origRender), scratchpad + autosave (padPut, copyPad), copy math (selPlain), freeze layer + dock (layoutFreeze, layoutDock), Swap (setSwap), Multitask (applyMT, layoutMT), resume, boot. Reaches app.js through `bridge`. Has a CODEMAP header. | rewards, copy math, Swap, Multitask, dock layout, startup order |
-| `client/answer/drill_core/app.css` | Styles of the drill page: :root tokens, entry bar (.dock .code-box), one button system (.btn .btn-go), freeze layer (.freeze), question + choices (.q .opt), Cluck surfaces (.ai-box .cl), scratchpad (.work .xb), multitask (.sash .pstrip), toast (#toast), duck (.ck-duck), lock-help. Has a CODEMAP header. | colours, sizes, layout of the drill page; a button or toast look |
+| `client/answer/drill_core/app.css` | Styles of the drill page: :root tokens, entry bar (.dock .code-box), one button system (.btn .btn-go), freeze layer (.freeze), question + choices (.q .opt), Cluck surfaces (.ai-box .cl), scratchpad (.work .xb), multitask (.sash .pstrip), toast (#toast), lock-help. Has a CODEMAP header. | colours, sizes, layout of the drill page; a button or toast look |
 | `client/answer/navigation/nav.js` | Prev / Next and the question list: ?bank= link (deepBank), titles (titleOf, plain), TeX to plain text (texText, texPlain), queue per bank (use, hop, upNext), list marks, go(), night mock (startMock), iOS back (syncBack). Has a CODEMAP header. | question order, list, titles, TeX to plain text, mock night |
 | `client/answer/navigation/nav.css` | Styles of the nav and list. | nav look |
 | `client/answer/progbar/progbar.js` | The v9d top bar DOM behind `html.ui-v7` (P5): re-parents the nav buttons into list / notch / nav tiles, draws the 7 notches from `stem-pb:<bank>`. Inert with the flag off. <= 480px: PHONE-FILL DOM half (`fillLayout`, `fitAll` font 15 -> 10px). | top bar tiles, notch render |
@@ -25,7 +25,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/cluck/figure_language/layout-core.mjs` | The streamed, constraint-checked figure language (prototype): parseStatement, createSession (DAG of points + shapes, evaluate), overlap findings as pairs + push vectors (pair, check), Layer/Union, ghosts, sceneSummary for the LLM, layoutView (labels). Plain ESM, no DOM. Has a CODEMAP header. | layout engine, figure placement rules, a parse or overlap finding, label placement |
 | `client/cluck/figure_language/layout-docs.mjs` | The figure language's LLM docs (progressive disclosure) + the built-in scenes of the Figure Lab mockup. | figure language docs or lab scenes |
 | `client/cluck/figures/formula-figs.js` | Small pictures for formula-sheet rows. | formula sheet figures |
-| `client/cluck/openui_views/views.js` | OpenUI Lang renderer in the browser: register / render / stream / mountView, class Session (per-statement paint + error boundary), figure drawing (drawGraph, drawGeometry), components View Head Text Table Tug Flip Graph Geometry Callout Answer Steps Hints Predict Reveal Doodle. Has a CODEMAP header. | a Cluck reply view renders wrong; add or change a view component |
+| `client/cluck/openui_views/views.js` | OpenUI Lang renderer in the browser: register / render / stream / mountView, class Session (per-statement paint + error boundary), figure drawing (drawGraph, drawGeometry), components View Head Text Table (Tug -> Table fallback) Flip Graph Geometry Callout Answer Steps Hints Predict Reveal Doodle. Has a CODEMAP header. | a Cluck reply view renders wrong; add or change a view component |
 | `client/cluck/openui_views/views-lib.js` | Component list of the stem view library (from views/library.json). | add a view component |
 | `client/cluck/openui_views/views.css` | Styles of the views. | view look |
 | `client/answer/answer_strip/strip.js` | Answer strip: typed, multiple choice, pick-all, multi-part. | the answer strip |
@@ -62,7 +62,6 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/shell/toast/toast.js` | The one toast component (window.stemToast). | toasts and notes |
 | `client/shell/toast/toast.css` | Styles of the toast. | toast look |
 | `client/shell/popover.js` | The one rich-context popup. | popovers |
-| `client/cluck/jev_nudges/peek.js` | Cluck's duck + sky and the idle peek. | duck, idle peek |
 | `client/cluck/brainrot.js` | Brainrot corner (sugar mode only); none under 900px wide, no handle (ICK5-NOROT). | brainrot corner |
 | `client/calc/coach/calc-coach.js` | Calc Coach panel. | Calc Coach |
 | `client/calc/coach/calc-coach.css` | Styles of Calc Coach. | Calc Coach look |
@@ -89,7 +88,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/pure_logic_modules/speak.mjs` | Cluck text as words for voiceover. | voiceover |
 | `client/pure_logic_modules/steps.mjs` | Renumber step badges, pipe tables. | step badges |
 | `client/pure_logic_modules/suggest.mjs` | Code box suggestion list. | code box |
-| `client/pure_logic_modules/tug.mjs` | The Tug view (push-pull rope). | Tug view |
+| `client/pure_logic_modules/flip.mjs` | The Flip view (what you did vs the fix cards). | Flip view |
 | `server/http_server/serve.py` | The whole server (dispatch() shared with api/index.py): routes (/check /b /p /state /diagnose /narrate /mini /health), grading + tries (grade, same, slip_hit), modes (sugar/diet), Cluck genie / chat / NOTE streams, proof grading, incidents. Has a CODEMAP header with 15 anchors; see its section below. | any server behaviour: a route, a verdict, a Cluck prompt, an incident code |
 | `api/index.py` | Vercel entry; imports http_server/serve.py. | Vercel routing |
 | `server/accounts/acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
@@ -114,6 +113,8 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `server/math_engine/` | Python math tools (graph, symbolic) used by serve.py. | symbolic math |
 | `.claude/hooks/codemap-first.sh` | Repo CODEMAP-first gate: pipes the PreToolUse hook JSON to brain `scripts/w147-guard.sh` (E6) when present, else allows. Registered in `.claude/settings.json`. Logic lives only in the brain. | the CODEMAP-first hook, Claude Code hook setup |
 | `tools/build_and_ship/` | Build + ship the site (build_public.py, bundle.py, ship.sh, openui/). | build, deploy |
+| `tools/build_and_ship/splash_skeleton.mjs` | SKELETON-SPLASH generator: measures the real v7 page per bucket (phone 390, tablet 768, desk 1280, desk+brainrot) with the vendored auto-skeleton core and rewrites the launch splash in index.html between the SK markers (static blocks + CSS); also writes splash_skeleton.layouts.json. Run when the card / bar / tile CSS changes. | the launch splash look, its buckets, its colours |
+| `client/vendor/auto-skeleton.js` | auto-skeleton core 0.1.1 @419cfad (MIT), build-time only: measure() + renderSkeleton() used by splash_skeleton.mjs; not loaded by the page. Do not edit. | never, unless re-vendoring |
 | `tools/build_and_ship/bridge_gen.py` | Writes vercel.json bridge rules (stub rewrites + 307 redirects) from the rename map; BRIDGE, todo 167. | old URLs, vercel.json |
 | `client/shell/stale_reload.js` | BRIDGE stub (todo 167): a stale page's old .js URL reloads once after a service-worker update. | old URLs, stale pages |
 | `tools/operations/` | Workflow + incident scripts (CI train batch.sh/ci-*.mjs, spend, prune). | CI, ops |
@@ -174,7 +175,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §twist-chip: Twist chip + its one-time toast (twistChip, twistPop, twistToast, snackChg, drawFigures) — open when the Twist chip acts up
 - §welcome-q1: the welcome Q1 (welcomeDue, welcomeLadder, welcomeQ) — open when the first-visit question is wrong
 - §repair-ladder: repair ladder after a miss (repairAfterMiss, genLadder, repairSkip, repairPick, rpUnmount) — open when ladder steps misbehave
-- §mc-arrow: MC render + the one arrow (renderQuestion, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit) — open when MC options, mid-notes or keyframes draw wrong
+- §mc-arrow: MC render + the one arrow (renderQuestion, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit, keyfLayout, keyfRows) — open when MC options, mid-notes, keyframes or the Key formulas card fit and balanced rows draw wrong
 - §second-try: the 10-second wait (startWait, cancelWait, waitPaint, waitSave) — open when the second-try timer breaks
 - §freeform: typed answer, same arrow (wireFF, xPreview, submitFF, proofCE, proofField, ceField) — open when a typed or proof answer box misbehaves
 - §multi: multi-part answers (wireParts, submitPart, partFeedback, settle, record, doneStore, saveDone, doneExit) — open when a multi-part item grades or saves wrong
@@ -210,7 +211,6 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §scratchpad-copy: scratchpad + copy (.work .xb .xb-label .xb-save .xb-field) — open when the scratchpad looks wrong
 - §multitask: multitask (.sash .pstrip .mt-mode .pad-fab) — open when split layout looks wrong
 - §note: the toast (#toast and its states) — open when the note looks wrong
-- §duck: Cluck's duck + sky (.ck-rise .ck-sky .ck-peek .ck-duck .ck-say) — open when the duck or sky looks wrong
 - §lock-help: lock-help modal (.lockhelp .lh-col .lh-say .lh-btns) — open when the help modal looks wrong
 
 ### client/answer/navigation/nav.js
@@ -258,7 +258,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §statements: statement splitting (splitStatements, rootIds, capError) — open when streaming splits wrong or caps fire
 - §session: class Session, mountView, render, stream (paint per statement, error boundary, Reveal patch merge) — open when streaming or patching a view breaks
 - §figure-marks: graph + geometry drawing (graphModel, drawGraph, geoModel, drawGeometry, sample, chips, table) — open when a figure in a view draws wrong
-- §l0: View, Head, Text, Legend, Table, Tug, Flip, Graph, Geometry — open when one of these components is wrong
+- §l0: View, Head, Text, Legend, Table (Tug -> Table fallback), Flip, Graph, Geometry — open when one of these components is wrong
 - §l1: Callout, Answer — open when those components are wrong
 - §steps: Steps helpers (litMarks, sayMap, texHue, texNode) + Steps — open when the stepper or its lit parts are wrong
 - §hints: Hints — open when hints reveal wrong

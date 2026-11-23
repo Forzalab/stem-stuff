@@ -1,6 +1,6 @@
 /* ===== CODEMAP HEADER (comment only, no logic). Map of all files: CODEMAP.md at the repo root. =====
 /*   FILE: app.css */
-/*   WHAT: Styles of the drill page: tokens (:root), entry box, one button system, freeze layer, question, Cluck's surfaces, note, duck, lock-help. */
+/*   WHAT: Styles of the drill page: tokens (:root), entry box, one button system, freeze layer, question, Cluck's surfaces, note, lock-help. */
 /*   START HERE: colours and tokens: the :root block at the top (no anchor); entry bar -> §entry-box; a button -> §one-button; the freeze layer -> §freeze; Cluck's look -> §cluck-surfaces; the note -> §note. */
 /*   FIND A SECTION: grep -n "== §<name> ==" app.css   (names below; line numbers are never kept) */
 /*   SECTIONS (in file order): */
@@ -14,7 +14,6 @@
 /*     §scratchpad-copy scratchpad + copy */
 /*     §multitask       multitask */
 /*     §note            the note (#toast) */
-/*     §duck            Cluck's duck + sky */
 /*     §lock-help       LOCK-HELP modal */
 /*   RELATED: */
 /*     app.js       the markup and classes it toggles */
@@ -1111,7 +1110,14 @@ html.ui-v7 .fcard::after { content: ""; position: absolute; right: 0; bottom: 0;
   background: var(--action-on); opacity: .12; pointer-events: none;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 78.81 100'%3E%3Cpath d='M3.4 0.0C8.7 -0.1 14.1 0.0 19.5 0.0L68.1 0.0C70.3 0.0 73.9 -0.4 76.0 0.1C76.0 0.1 78.6 1.4 78.6 1.5C79.1 2.5 78.8 11.7 78.8 12.9C78.8 14.3 79.4 17.2 78.0 18.1C77.2 18.6 76.3 18.4 76.0 18.4C71.6 18.4 73.4 11.3 68.6 9.6C65.9 8.7 61.6 9.2 58.7 9.2L30.9 9.2C30.4 9.2 28.7 9.0 28.4 9.4C28.2 9.8 29.4 11.7 29.7 12.1C31.4 14.5 33.5 16.7 35.6 18.8C42.0 25.5 49.0 31.7 55.7 38.1C57.0 39.4 62.0 43.7 61.8 45.4C61.6 47.0 56.0 52.3 54.6 53.6C47.8 60.5 40.6 67.1 33.9 74.1C31.8 76.4 29.5 78.8 27.7 81.3C27.3 81.9 26.0 83.4 26.2 84.1C26.4 84.6 29.7 84.4 30.3 84.4L57.5 84.4C61.5 84.4 65.0 84.6 67.2 83.8C69.9 82.9 71.5 80.6 72.7 78.1C73.6 76.5 74.4 74.4 76.6 74.7C79.1 75.0 78.8 77.8 78.8 79.7L78.8 94.0C78.8 95.7 79.3 98.2 77.7 99.4C76.1 100.6 67.0 100.0 64.5 100.0L6.6 100.0C4.7 100.0 -0.5 100.5 0.1 97.2C0.6 94.9 6.5 88.9 8.4 86.9C16.2 78.5 24.7 70.6 32.9 62.5C35.9 59.7 38.8 56.9 41.6 53.9C42.5 53.1 44.3 51.7 44.2 50.4C44.1 48.3 37.2 41.6 35.5 39.9C26.6 30.7 17.1 22.2 8.1 13.1C5.4 10.5 2.1 7.7 0.3 4.5C-0.9 2.2 1.2 0.1 3.4 0.0Z' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 78.81 100'%3E%3Cpath d='M3.4 0.0C8.7 -0.1 14.1 0.0 19.5 0.0L68.1 0.0C70.3 0.0 73.9 -0.4 76.0 0.1C76.0 0.1 78.6 1.4 78.6 1.5C79.1 2.5 78.8 11.7 78.8 12.9C78.8 14.3 79.4 17.2 78.0 18.1C77.2 18.6 76.3 18.4 76.0 18.4C71.6 18.4 73.4 11.3 68.6 9.6C65.9 8.7 61.6 9.2 58.7 9.2L30.9 9.2C30.4 9.2 28.7 9.0 28.4 9.4C28.2 9.8 29.4 11.7 29.7 12.1C31.4 14.5 33.5 16.7 35.6 18.8C42.0 25.5 49.0 31.7 55.7 38.1C57.0 39.4 62.0 43.7 61.8 45.4C61.6 47.0 56.0 52.3 54.6 53.6C47.8 60.5 40.6 67.1 33.9 74.1C31.8 76.4 29.5 78.8 27.7 81.3C27.3 81.9 26.0 83.4 26.2 84.1C26.4 84.6 29.7 84.4 30.3 84.4L57.5 84.4C61.5 84.4 65.0 84.6 67.2 83.8C69.9 82.9 71.5 80.6 72.7 78.1C73.6 76.5 74.4 74.4 76.6 74.7C79.1 75.0 78.8 77.8 78.8 79.7L78.8 94.0C78.8 95.7 79.3 98.2 77.7 99.4C76.1 100.6 67.0 100.0 64.5 100.0L6.6 100.0C4.7 100.0 -0.5 100.5 0.1 97.2C0.6 94.9 6.5 88.9 8.4 86.9C16.2 78.5 24.7 70.6 32.9 62.5C35.9 59.7 38.8 56.9 41.6 53.9C42.5 53.1 44.3 51.7 44.2 50.4C44.1 48.3 37.2 41.6 35.5 39.9C26.6 30.7 17.1 22.2 8.1 13.1C5.4 10.5 2.1 7.7 0.3 4.5C-0.9 2.2 1.2 0.1 3.4 0.0Z' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat; }
-html.ui-v7 .fcard ol { position: relative; z-index: 1; margin: 0; row-gap: var(--s1); }
+html.ui-v7 .fcard ol { position: relative; z-index: 1; margin: 0; row-gap: var(--s1); display: flex; flex-direction: column; align-items: center; }   /* flex, not grid: app.js keyfLayout can turn it into wrapping rows (.kf-rows) */
+/* KEYF-FIT (Tony Nov 22; app.js keyfLayout): the card hugs its content (inline width = widest row + padding, never past the column) and the formulas sit in balanced rows.
+   Each row's margins fill it to the pixel, so the wrap breaks exactly where JS cut; a formula standing alone takes the whole line and centres itself (its auto margins) */
+html.ui-v7 .fcard.kf-fit { margin-inline: auto; max-width: 100%; }
+html.swap-problem.ui-v7 .fcard.kf-fit { align-self: center; }                     /* swap-problem's own margin shorthand wins over the auto margins: centre as a flex item */
+html.ui-v7 .fcard ol.kf-rows { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; }
+html.ui-v7 .fcard ol.kf-rows > .f { flex: 0 0 auto; }
+html.ui-v7 .fcard ol.kf-rows > .f.kf-solo { flex-basis: 100%; }
 html.ui-v7 .fcard.kg-on { background: transparent; }                    /* KEYF smoked lens: the glass (.kg, keyf_glass/) paints the card; border-radius + overflow stay so it clips to the card */
 html.ui-v7 .fcard.kg-on::after { content: none; }                  /* the decorative art gives way to the glass */
 html.ui-v7 .fcard .f > .fm { font-size: calc(1em * var(--kf-k, 1)); }
@@ -1397,7 +1403,7 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .wtext .wtbl th { padding: var(--s1) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--edge); color: var(--muted); font-weight: var(--w-em); text-align: left; }
 .wtext .wtbl td { padding: var(--s2) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--line); vertical-align: top; min-width: 4ch; }
 .wtext .wtbl tr:last-child td { border-bottom: 0; }
-.wtext .wtug, .wtext .wflip { max-width: none; }   /* a Tug (tug.mjs, styled in views.css) takes the full width */
+.wtext .wflip { max-width: none; }   /* a Flip (flip.mjs, styled in views.css) takes the full width */
 .wtext b { font-weight: var(--w-em); color: var(--ai-text); }
 .wtext .wmath { margin: 20px 0; text-align: center; overflow-x: auto; overflow-y: hidden; }   /* NO NESTED BOX (Tony, Oct 13): no well, no padding; V3: 20 around an equation */
 .wtext .weq + .weq { margin-top: 12px; }                                   /* V3: 12 between stacked equations */
@@ -1776,82 +1782,6 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
 
-/* == §duck == */
-/* ---------- Cluck's duck + dawn (peek.js window.stemDuck; T45 idle peek, docs/design/IDLE-PEEK.md) ----------
-   One duck, one dawn, for every Cluck rise. SUNRISE-PORT (Tony Nov 14 "go", Nov 19): the old warm sky is now one blue-white dawn layer,
-   fitted to 05. The duck peeks, eyes only (4.6 s), holds, comes up (6.2-6.8 s), then the line; down = duck out 300 ms, dawn out 600 ms.
-   Each rise replays the same run. The dawn core sits under the duck (--sun-x from peek.js). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
-.ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
-.ck-rise[hidden] { display: none; }
-/* SUNRISE-PORT (Tony Nov 14, "go" Nov 19; DESIGN.md §2/§3): ONE blue-white dawn layer replaces the three orange ember layers and the
-   old bottom scrim. Same clock as the ember (0.9 -> 6.6 s of the 10.8 s run), opacity + translateY only. The box keeps the old sky's role:
-   bottom 0, 46% high (55% >=720px), side mask 48px, one <i>; the fitted gradient is sampled from 05 and fades to transparent at the top
-   (mask on the layer), so the question and answer above stay readable. The core is pinned under the duck (--sun-x from peek.js). */
-.ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
-  mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
-.ck-sky i { position: absolute; inset: 0; opacity: 0;
-  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%);
-  background: radial-gradient(120% 100% at var(--sun-x, 50%) 100%,
-    var(--dawn-core) 0%, var(--dawn-2) 22%, var(--dawn-3) 42%, var(--dawn-4) 60%,
-    var(--dawn-5) 72%, var(--dawn-6) 82%, var(--dawn-7) 90%, var(--dawn-8) 96%, transparent 100%); }
-html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
-/* the duck: a button, a clip window; the art grows from the window's bottom edge. 44px+ target at the peek (eyes need ~42 / 52px: AMA 12) */
-.ck-peek { position: absolute; left: calc(var(--cx, 50%) - var(--dw) / 2); bottom: env(safe-area-inset-bottom, 0px); width: var(--dw); height: var(--vis);
-  overflow: hidden; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
-.ck-peek:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-/* SUNRISE-DUCK (Tony Nov 14: g3). Flat-lit green-mallard art, own colours kept: the old hue-rotate was only for the orange duck, so it is
-   gone. The CSS grade (mock index.html ?duck=graded, html.graded block) melts the collar into the glow, shades the top with --dawn-5
-   (multiply .4, measured to keep the eye >= 3:1) and adds the periwinkle rim from below (--dawn-core, screen .8), clipped to the duck by
-   its own alpha mask. The 2px --help-sheet outline keeps the silhouette on the glow. */
-.ck-duck { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 122 / 128; transform: translateY(var(--vis));
-  --duck: url(../../rewards/icons/duck-g3-128.webp);
-  background: var(--duck) center / contain no-repeat; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 38%); mask-image: linear-gradient(to top, transparent 0, #000 38%);
-  filter: drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
-.ck-duck::before, .ck-duck::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-  -webkit-mask: var(--duck) center / contain no-repeat; mask: var(--duck) center / contain no-repeat; }
-.ck-duck::before { background: linear-gradient(to bottom, var(--dawn-5) 0%, transparent 70%); mix-blend-mode: multiply; opacity: .4; }
-.ck-duck::after { background: radial-gradient(90% 70% at 50% 110%, var(--dawn-core) 0%, transparent 75%); mix-blend-mode: screen; opacity: .8; }
-/* SUNRISE-TEXT c (Tony Nov 14; mock say-c-390.png): a glass pill over the dawn, 15/20 600 +.01em --navy-100 on a 40% navy fill, 20px
-   backdrop blur, 16px radius, a 1px white inset rim. The full sentence stays. --cx from peek.js keeps it over the duck; `translate`
-   handles the -50% centring, so the keyframes own `transform` alone (entry 10.2 -> 10.8 s, opacity + translateY 8px -> 0). */
-.ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s3)); translate: -50% 0; margin: 0;
-  width: max-content; max-width: calc(100vw - 2 * var(--s4)); text-align: center; text-wrap: balance; white-space: nowrap; opacity: 0;
-  color: var(--navy-100); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 20px; letter-spacing: .01em;
-  padding: var(--s2) var(--s4); border-radius: 16px; background: var(--say-glass);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5); backdrop-filter: blur(20px) saturate(1.5); box-shadow: inset 0 0 0 1px var(--say-edge); }
-/* J6 seen: the "felt hollow" tap, a 28px target (24 min) beside the duck, a hollow ring; it shows with the line (same keyframes as .ck-say) */
-.ck-hollow { position: absolute; left: calc(var(--cx, 50%) + var(--dw) / 2 + 4px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); width: 28px; height: 28px;
-  padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; opacity: 0; }
-.ck-hollow[hidden] { display: none; }
-.ck-hollow::before { content: ""; position: absolute; inset: 8px; border: var(--bw) solid var(--help-muted); border-radius: 50%; }
-.ck-hollow:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.ck-rise.on .ck-hollow { animation: ck-say var(--d-sky) both; }
-.ck-rise.out .ck-hollow { opacity: 0; pointer-events: none; transition: opacity .45s ease-in; }
-@media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
-.ck-rise.on .ck-sky i { animation: ck-dawn var(--d-sky) both; }
-.ck-rise.on .ck-duck { animation: ck-duck var(--d-sky) both; }
-.ck-rise.on .ck-say { animation: ck-say var(--d-sky) both; }
-.ck-rise.out .ck-sky { opacity: 0; transition: opacity .6s ease-in; }
-.ck-rise.out :is(.ck-peek, .ck-say) { opacity: 0; transition: opacity .45s ease-in; }
-.ck-rise.out .ck-peek { pointer-events: none; }
-/* the dawn: same clock as the ember (0.9 -> 6.6 s = 8.3% -> 61.1% of 10.8 s), opacity + translateY(28px -> 0), ease-in-out */
-@keyframes ck-dawn { 0%, 8.3% { opacity: 0; transform: translateY(28px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: none; } }
-/* the duck: peek 4.6 → 5.1 s (eyes only), hold, up 6.2 → 6.8 s; the line 6.8 → 7.1 s */
-@keyframes ck-duck { 0%, 63.9% { transform: translateY(var(--vis)); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 70.8%, 86.1% { transform: translateY(calc(var(--vis) - var(--pk))); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 94.4%, 100% { transform: translateY(0); } }
-@keyframes ck-say { 0%, 94.4% { opacity: 0; transform: translateY(8px); animation-timing-function: cubic-bezier(.16, 1, .3, 1); } 98.6%, 100% { opacity: 1; transform: none; } }
-/* reduced motion: no movement. The dawn is at rest (opacity 1); the duck keeps its opacity-only phases (rest, 45% at the peek, 100% up);
-   the line and the hollow tap fade in, never rise */
-@media (prefers-reduced-motion: reduce) {
-  .ck-rise.on .ck-sky i { animation: none; opacity: 1; }
-  .ck-rise.on .ck-duck { animation-name: ck-rduck; }
-  .ck-duck { transform: none; opacity: 0; }
-  .ck-rise.on :is(.ck-say, .ck-hollow) { animation-name: ck-rsay; }
-  .ck-say, .ck-hollow { transform: none; }
-}
-@keyframes ck-rsay { 0%, 94.4% { opacity: 0; } 98.6%, 100% { opacity: 1; } }
-@keyframes ck-rduck { 0%, 63.9% { opacity: 0; } 66.7%, 86.1% { opacity: .45; } 88.9%, 100% { opacity: 1; } }
 
 /* search mode (phones, app.js codingOn): the code field has focus -> the page behind it is hidden, not removed (no reflow, no keyboard jump); solid paper, nothing peeks under the suggestion list */
 html.coding.dock-bottom:not(.start) body { background: var(--paper); }

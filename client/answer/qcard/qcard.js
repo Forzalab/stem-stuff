@@ -230,15 +230,61 @@
     var h1 = p.offsetHeight; p.style.minHeight = "0"; var h0 = p.offsetHeight; p.style.minHeight = "";
     if (h1 - h0 >= 1) b.style.marginTop = (h1 - h0) + "px";
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); }); }
+
+  /* FIG-CLEAR (Tony Nov 23; qcard.css §fig-top): a phone card whose first block is a figure pulls it up under the Ask Cluck button. If the figure's INK (not its svg canvas) comes
+     within CLEAR px of the button, the figure's margin-top grows by just the push that keeps CLEAR px between them; no hit = the CSS 21px stays. The button never moves.
+     figPush is pure (rects {l,t,r,b}), testable on its own (tests/figclear.test.mjs). */
+  var CLEAR = 12;
+  function figPush(ink, btn, clear) {
+    if (!ink || !btn) return 0;
+    var c = clear == null ? CLEAR : clear;
+    var hit = ink.l < btn.r + c && ink.r > btn.l - c && ink.t < btn.b + c && ink.b > btn.t - c;
+    return hit ? Math.max(0, Math.ceil(btn.b + c - ink.t)) : 0;
+  }
+  /* the union of the drawn marks and labels in page px: getBBox mapped through getScreenCTM; the full-canvas background rect, defs and hidden marks are not ink */
+  function inkBox(svg) {
+    var vb = svg.viewBox && svg.viewBox.baseVal, u = null;
+    svg.querySelectorAll("path, line, polyline, polygon, circle, ellipse, rect, text, image, use").forEach(function (e) {
+      if (e.closest("defs, marker, clipPath, mask, pattern, [hidden]")) return;
+      var bb, m;
+      try { bb = e.getBBox(); m = e.getScreenCTM(); } catch (x) { return; }
+      if (!bb || !m || (!bb.width && !bb.height)) return;
+      if (vb && vb.width && e.tagName === "rect" && bb.width >= vb.width - 1 && bb.height >= vb.height - 1) return;
+      var cs = g.getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden" || +cs.opacity === 0) return;
+      [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]].forEach(function (c) {
+        var x = m.a * c[0] + m.c * c[1] + m.e, y = m.b * c[0] + m.d * c[1] + m.f;
+        u = u ? { l: Math.min(u.l, x), t: Math.min(u.t, y), r: Math.max(u.r, x), b: Math.max(u.b, y) } : { l: x, t: y, r: x, b: y };
+      });
+    });
+    return u;
+  }
+  function figClear() {
+    var p = D.getElementById("problem"), f = p && p.querySelector(":scope > .blocks > .fig:first-child"); if (!f) return;
+    var phone = g.matchMedia && g.matchMedia("(max-width: 899px)").matches;
+    var btn = p.querySelector(":scope > button.cluckbtn"), svg = f.querySelector("svg");
+    var applies = on() && phone && p.classList.contains("qbr") && btn && svg;
+    var push = 0;
+    if (applies) {
+      if (f.style.marginTop) f.style.marginTop = "";                       // measure from the CSS state (21px), then write once
+      var r = btn.getBoundingClientRect(), ink = inkBox(svg);
+      push = figPush(ink, { l: r.left, t: r.top, r: r.right, b: r.bottom }, CLEAR);
+    }
+    if (!applies) { f.style.marginTop = ""; return; }
+    if (push) f.style.marginTop = "calc(21px + " + push + "px)";
+  }
+  var figRaf = 0;
+  function figSoon() { if (!figRaf) figRaf = requestAnimationFrame(function () { figRaf = 0; figClear(); }); }
+  g.stemFigClear = { push: figPush, ink: inkBox, run: figClear };
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); figSoon(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
     if (!blocks) return;
     new MutationObserver(later).observe(blocks, { childList: true });
+    new MutationObserver(figSoon).observe(blocks, { childList: true, subtree: true });   // the figure draws after the card builds
     var pr = D.getElementById("problem");
     if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });
-    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); }); }).observe(pr); }   // a figure / font landing changes the offset
+    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); figSoon(); }); }).observe(pr); }   // a figure / font landing changes the offset
     g.addEventListener("scroll", pinSoon, { passive: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);

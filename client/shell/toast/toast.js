@@ -1,7 +1,7 @@
 /* toast.js: the one toast component (docs/design/TOAST.md round 5; Tony #38 pick d1, shadcn / Sonner style). Sets window.stemToast.
    d1: no icon; the words and a progress bar share one left edge; a close button centred on the right; the bar ends in an 8px finish dot.
    Anchored in the question area (Tony: "I'm looking at the question first"), never in the top bar: 12px under its anchor, and it
-   scrolls with it. It never covers a live control (W88 r4, cluck-rise): it shows only when it fits between the pinned bar and the
+   scrolls with it. It never covers a live control (W88 r4): it shows only when it fits between the pinned bar and the
    viewport's foot under its anchor and covers no live control (no clamping to the foot, where the duck, the
    Scratchpad button and the dock live; never on Check / Next / a choice), else it waits
    until the student scrolls there; it steps aside while Cluck's duck is up or Cluck is open. A toast with `until` (a time stamp) that
@@ -22,8 +22,8 @@
   var X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   var reduced = function () { try { return g.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
   var busy = function () { return d.documentElement.classList.contains('fx-busy') || !!d.querySelector('.fx-ov'); };
-  /* Cluck's duck (peek.js window.stemDuck) or Cluck himself (app.js window.stemCluckModal) owns the moment: the toast yields */
-  var yields = function () { try { return !!(g.stemDuck && g.stemDuck.up) || !!(g.stemLockHelp && g.stemLockHelp.up) || !!(g.stemCluckModal && g.stemCluckModal()); } catch (e) { return false; } };
+  /* Cluck himself (app.js window.stemCluckModal) or the lock-help modal owns the moment: the toast yields */
+  var yields = function () { try { return !!(g.stemLockHelp && g.stemLockHelp.up) || !!(g.stemCluckModal && g.stemCluckModal()); } catch (e) { return false; } };
 
   function mount() {
     if (el && el.isConnected) return el;
@@ -39,9 +39,9 @@
     return el;
   }
   var anchor = function (o) { var a = typeof o.at === 'function' ? o.at() : o.at; return a && a.isConnected && a.getClientRects().length ? a : null; };
-  /* the controls it must never cover (the cluck-rise overlap rule): anything that takes a tap, and the duck's line.
+  /* the controls it must never cover (the overlap rule): anything that takes a tap.
      skip(e) -> true for the ones this toast may lie on (a note's own anchor, a dead kept row, the Next note's brainrot link) */
-  var LIVE = 'button, a[href], input, textarea, [contenteditable], select, [role=button], .opt, .ck-say';
+  var LIVE = 'button, a[href], input, textarea, [contenteditable], select, [role=button], .opt';
   /* -> the rects of the live controls under the box. A note (nEl, 2 s) is never in the stage toast's way; a note does count the
      stage toast's close button (stacked, never on top of each other) */
   function hits(x, y, w, h, skip, note) {

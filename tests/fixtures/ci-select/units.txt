@@ -18,7 +18,6 @@ cluck-lost
 cluck-more
 cluck-permanent@desk
 cluck-permanent@phone
-cluck-rise
 cluck-telemetry
 cluck-v2@desk
 cluck-v2@phone
@@ -48,7 +47,6 @@ flow
 font
 geomarks
 guard
-idle-peek
 incident
 ios-back
 katex-wrap

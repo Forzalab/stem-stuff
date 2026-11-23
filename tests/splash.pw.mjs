@@ -50,9 +50,10 @@ await step("visible on first paint, before app.css arrives", async () => {
   await ctx.route("**/app.css", async r => { await new Promise(x => setTimeout(x, 1500)); r.continue(); });
   await page.goto(BASE + "/", { waitUntil: "commit" });
   await up(page);
-  const box = await page.evaluate(() => { const b = document.querySelector("#splash svg").getBoundingClientRect(); return [b.width, b.height, b.x + b.width / 2, b.y + b.height / 2]; });
-  assert.deepEqual(box.slice(0, 2), [64, 64]);
-  assert.ok(Math.abs(box[2] - 195) < 1 && Math.abs(box[3] - 422) < 1, "not centred: " + box);
+  // SKELETON-SPLASH: the splash is a measured skeleton of the page (static markup, bucket picked by CSS): blocks, role=status, no mark
+  const sk = await page.evaluate(() => { const e = [...document.querySelectorAll("#splash .sk")].find(x => getComputedStyle(x).display !== "none"); return e && { n: e.children.length, b: e.dataset.b, role: e.getAttribute("role"), busy: e.getAttribute("aria-busy"), h: e.getBoundingClientRect().height }; });
+  assert.ok(sk && sk.n > 8, "no skeleton blocks: " + JSON.stringify(sk));
+  assert.equal(sk.b, "phone"); assert.equal(sk.role, "status"); assert.equal(sk.busy, "true"); assert.ok(sk.h >= 800, "skeleton not full height: " + sk.h);
   await page.waitForFunction(() => performance.getEntriesByName("first-paint").length > 0, null, { timeout: 5000 });
   await gone(page, 8000);
   const t = await page.evaluate(() => ({ paint: performance.getEntriesByName("first-paint")[0].startTime, css: performance.getEntriesByType("resource").find(r => /app\.css/.test(r.name)).responseEnd }));
@@ -92,26 +93,21 @@ for (const [how, handler] of [["aborted", r => r.abort()], ["hung", () => {}]]) 
   });
 }
 
-await step("reduced motion: static mark, no animation, no fade", async () => {
+await step("reduced motion: static skeleton, no animation, no fade", async () => {
   const ctx = await fresh({ reducedMotion: "reduce" }), page = await ctx.newPage();
   await ctx.addInitScript(watch);
   await page.goto(BASE + "/", { waitUntil: "commit" });
-  const r = await during(page, () => {
-    const c = getComputedStyle(document.querySelector(".sp-curve")), d = getComputedStyle(document.querySelector(".sp-dot"));
-    return { anims: document.getAnimations().length, c: c.animationName, d: d.animationName, off: c.strokeDashoffset, tr: getComputedStyle(document.getElementById("splash")).transitionDuration };
-  });
-  assert.equal(r.anims, 0); assert.equal(r.c, "none"); assert.equal(r.d, "none");
-  assert.ok(parseFloat(r.off) === 0, "curve not fully drawn: " + r.off);
-  assert.equal(r.tr, "0s");
+  const r = await during(page, () => ({ anims: document.getAnimations().length, tr: getComputedStyle(document.getElementById("splash")).transitionDuration, blocks: document.querySelectorAll("#splash .sk:not([style*=none]) > div").length }));
+  assert.equal(r.anims, 0); assert.ok(r.blocks > 8, "static blocks missing"); assert.equal(r.tr, "0s");
   await gone(page, 4000);
   const s = await page.evaluate(() => window.__sp);
   assert.equal(s.out, 0, "reduced motion should not fade");
   await ctx.close();
-  // control: with motion the mark is animated
+  // control: with motion the sweep is animated
   const ctx2 = await fresh(), p2 = await ctx2.newPage();
   await p2.goto(BASE + "/", { waitUntil: "commit" });
   await up(p2);
-  assert.ok(await p2.evaluate(() => document.getAnimations().length) >= 2, "no animation with motion on");
+  assert.ok(await p2.evaluate(() => document.getAnimations().length) >= 2, "no sweep animation with motion on");
   await ctx2.close();
 });
 

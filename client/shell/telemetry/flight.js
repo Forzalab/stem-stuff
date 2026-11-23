@@ -124,7 +124,7 @@
     for (var i = 0; i < OURS.length; i++) if (t.indexOf(OURS[i]) === 0) return OURS[i];
     return t.length;
   }
-  var BOXES = ["#qnext", "#mcGo", "#ansGo", "#wish", "#cluck", "#scratch", "#padFab", "#freeze", "#entry", "#updateBar", ".ck-peek", ".wretry"];
+  var BOXES = ["#qnext", "#mcGo", "#ansGo", "#wish", "#cluck", "#scratch", "#padFab", "#freeze", "#entry", "#updateBar", ".wretry"];
   function boxes() {
     var out = [], vw = W.innerWidth, vh = W.innerHeight;
     for (var i = 0; i < BOXES.length; i++) {
@@ -148,7 +148,7 @@
         anim: D.getAnimations ? D.getAnimations().length : null, active: label(D.activeElement), sw: sw ? (sw.controller ? "ctl" : "noctl") : "nosw",
         said: { toast: ours(D.getElementById("toast")), entry: ours(D.getElementById("entryMsg")), wl: ours(D.querySelector("#cluck .wl")) },
         bar: !!D.getElementById("updateBar"), fx: !!D.querySelector(".fx-ov"), retry: !!D.querySelector("#retryLoad:not([hidden])"),
-        duck: W.stemDuck ? !!W.stemDuck.up : null, boxes: boxes(),
+        boxes: boxes(),
       };
     } catch (x) { return { err: blank(x && x.message) }; }
   }

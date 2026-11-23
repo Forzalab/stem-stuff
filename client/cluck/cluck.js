@@ -13,7 +13,6 @@
 // RELATED:
 //   app.js       part 1: owns the drill; bridge.<name> from there
 //   shell.js     part 3
-//   peek.js      Cluck's duck and sky
 //   views.js     OpenUI Lang renderer
 // ===== END CODEMAP HEADER =====
 /* split-app.mjs (W152): part 2 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
@@ -23,7 +22,7 @@ import { quack } from "../pure_logic_modules/quack.mjs";
 import { clampPos, dimAt, progress, radiusAt, snapTo } from "../pure_logic_modules/sheet.mjs";
 import { speakable } from "../pure_logic_modules/speak.mjs";
 import { pipeHold, pipeTable, renumberSteps } from "../pure_logic_modules/steps.mjs";
-import { flipHTML, flipModel, tableShape, tugFromTable, tugHTML } from "../pure_logic_modules/tug.mjs";
+import { flipHTML, flipModel, tableShape } from "../pure_logic_modules/flip.mjs";
 import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mockHold, noteAt, painting, rboxSync, renderMath, reqInc, rpUnmount, say, toast, waitReduced, xInc } from "../answer/drill_core/app.js";
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
@@ -121,7 +120,7 @@ function wishOnWrong() {
      number) restarts the stream with the latest try, so the box never keeps explaining the first one (C4a, "stream every miss") */
   if (wish && wish.code === S.code && !wish.idle && !(wish.started && wish.key && wish.key !== ckKey(wish.code, askTry()))) { wishPaint(); window.stemCluckBtn?.sheen("wrong"); return; }
   const w = wishNew();
-  /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
+  /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18):
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
   const auto = () => { if (bridge.sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ENTRY, true); };
   if (wishFromCache(w)) { wishPaint(); window.stemCluckBtn?.sheen("wrong"); auto(); return; }   // a reply we already have: no call
@@ -392,8 +391,7 @@ function wishHTML(t, ended) {
     if (tb) {
       flush(); i = tb.next - 1;
       const row = (r, tag) => `<tr>${r.map(c => `<${tag}>${wishLine(c)}</${tag}>`).join("")}</tr>`;
-      if (tableShape(tb.head, tb.rows) === "tug") { put(`<div class="wl wtug">${tugHTML(tugFromTable(tb.head, tb.rows), wishLine)}</div>`); continue; }   // cause -> up/down rows: a Tug (tug.mjs)
-      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (tug.mjs)
+      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (flip.mjs)
       put(`<div class="wl wtbl"><table><thead>${row(tb.head, "th")}</thead><tbody>${tb.rows.map(r => row(r, "td")).join("")}</tbody></table></div>`);
       continue;
     }
@@ -824,7 +822,7 @@ function clBack() {
   clGoneSet(false);
   if (said || bridge.origEl) clOpen(said ? "explain" : "steps", "#clBack");
 }
-/* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
+/* stemIdleTap (the Ask Cluck path, once the duck's tap): opens Cluck with no new AI call
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 /* CLUCK-BTN (Tony Nov 14): the one Ask Cluck button (cluck_btn/cluckbtn.js) asks this file two things. state(): "off" = no key / diet / out of asks /

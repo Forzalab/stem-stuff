@@ -37,7 +37,6 @@ const ptDate = (y, m, d) => `${y}-${String(m).padStart(2, "0")}-${String(d).padS
 const SOURCES = [
   ["server/http_server/serve.py", 3534, /^CRAM_UNTIL = datetime\.datetime\((\d+), (\d+), (\d+), \d+, \d+, tzinfo=PT\)/, (m) => ptDate(m[1], m[2], m[3])],
   ["client/calc/cram.json", 9, /"until":\s*"([^"]+)"/, (m) => utcToPT(m[1])],
-  ["client/cluck/jev_nudges/peek.js", 91, /var CRAM_UNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
   ["client/calc/coach/calc-coach.js", 13, /var EXAM_END = Date\.parse\('([^']+)'\)/, (m) => utcToPT(m[1])],
   ["client/shell/welcome/welcome-first.js", 9, /\bUNTIL = Date\.parse\("([^"]+)"\)/, (m) => utcToPT(m[1])],
 ];

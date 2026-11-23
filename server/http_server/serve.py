@@ -997,16 +997,21 @@ def _entry(key):
     return st
 
 
-def state(p, sid, reveal=False):
+def state(p, sid, reveal=False, snap=None):
     """{wrong, done, gen} for one browser and problem ({parts: [...]} for a multi). No entry: nothing tried yet, gen = the
-    one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again)."""
+    one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again).
+    snap = (tries, gen): a caller that already read the store once (bank_payload) shares it instead of re-reading per item."""
     with _tries_lock:
-        _load_tries()
+        if snap is None:
+            _load_tries()
+            tries, gen = _tries, _gen["n"]
+        else:
+            tries, gen = snap
 
         def one(key):
-            st = _tries.get(key)
+            st = tries.get(key)
             if st is None:
-                return {"wrong": 0, "done": False, "gen": _gen["n"] + 1}
+                return {"wrong": 0, "done": False, "gen": gen + 1}
             o = {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
             if reveal and not st["done"] and len(st["wrong"]) >= max_tries(p):
                 o["correct"] = answer_of(p["parts"][key[2]] if p["type"] == "multi" else p)
@@ -1016,9 +1021,10 @@ def state(p, sid, reveal=False):
         return one((sid, p["code"]))
 
 
-def mark(p, sid):
-    """The list mark for one problem, as app.js wrapRec() builds it: {x: wrong tries, done: open|correct|out}; None if untried."""
-    st = state(p, sid)
+def mark(p, sid, snap=None):
+    """The list mark for one problem, as app.js wrapRec() builds it: {x: wrong tries, done: open|correct|out}; None if untried.
+    snap = (tries, gen): pass it when many marks share one store read (bank_payload)."""
+    st = state(p, sid, snap=snap)
     us = st["parts"] if "parts" in st else [st]
     ds = ["correct" if u["done"] else "out" if u["wrong"] >= max_tries(p) else "open" for u in us]
     x = sum(u["wrong"] for u in us)
@@ -1042,8 +1048,8 @@ def snacks_placed(items):
     return out
 
 
-FRONT = ("BANK_P3X", "Exam 3")   # the front bank (DESIGN-v3 §1): what "/" opens on a fresh browser, and its bar title. The one source:
-                                 # its payload says "front" (bank_payload), nav.js reads that. Phys 2A Exam 3 main bank (Tony, Oct 26), not BANK_P3Q
+FRONT = ("BANK_P4X", "Exam 4")   # the front bank (DESIGN-v3 §1): what "/" opens on a fresh browser, and its bar title. The one source:
+                                 # its payload says "front" (bank_payload), nav.js reads that. Phys 2A Exam 4 main bank (Tony Nov 23: was BANK_P3X "Exam 3", Oct 26), not BANK_P3Q; BANK_P3X is NOT in FORMER_FRONTS on purpose: its students keep their saved bank
 FORMER_FRONTS = {"BANK_P2X"}     # Tony, Oct 26 ("send returners to exam 3"): a browser whose last bank is one of these reopens "/" on the
                                  # front; a link or typed code still opens it (bank_payload "last" only)
 
@@ -1061,12 +1067,13 @@ def bank_payload(code, sid, mode="sugar"):
     Opening a bank makes it this browser's last one (docs/design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
     from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one."""
     all_banks = banks()
-    if code == "last":
-        with _tries_lock:
-            _load_tries()
+    with _tries_lock:
+        _load_tries()
+        snap = (dict(_tries), _gen["n"])         # ONE read for this reply: every mark below shares it (KV-FRUGAL)
+        if code == "last":
             code = _last.get(sid, {}).get("bank") or front()[0]   # a new browser: the front bank (None when STEM_FRONT="")
-        if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
-            code = front()[0]                    # a former front's returner: the current front (its tries and "at" stay as they were)
+            if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
+                code = front()[0]                # a former front's returner: the current front (its tries and "at" stay as they were)
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
@@ -1082,9 +1089,8 @@ def bank_payload(code, sid, mode="sugar"):
         before = sugar(p).get("before") if mode == "sugar" and sugar(p).get("snack") else None
         ps += [(view(sub_problem(p, r), mode), None) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [(view(p, mode), before)]
     ps = snacks_placed(ps)
-    marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
+    marks = {p["code"]: m for p in ps for m in [mark(p, sid, snap)] if m}
     with _tries_lock:
-        _load_tries()
         me = _last.setdefault(sid, {"bank": None, "at": {}})
         at = me["at"].get(code)
         if me["bank"] != code:
@@ -1371,7 +1377,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
 # After one wrong try on a typed num answer / num part with a `form`, the box asks for the whole working (expr.PROMPT). It is graded by
 # its value (the item's tol); a miss gets L1 (expr.l1: the tree vs `form` + the slips families) and, when L1 names no family, POST
 # /diagnose asks Sonnet (L3, TUTOR-LITE prompt, diagnosis JSON v1.1). Off (the default) = the old box, byte for byte.
-EXPR_BANKS_DEFAULT = ("BANK_P3X", "BANK_P3Q")
+EXPR_BANKS_DEFAULT = ("BANK_P3X", "BANK_P4X", "BANK_P3Q")
 EXPR_CONF = 0.6                              # an L3 read below this: the plain nudge
 EXPR_LEARN_KEY = "stem:expr:learn"           # Upstash list: {ts_day, item, expr_norm, diagnosis}; no device / session id (GRILL round 3)
 EXPR_LEARN_MAX = 5000
@@ -3613,7 +3619,6 @@ def fig_spec(code):
 # banks/cram/intel.json (banks/ is blocked from the web) -> one extra uncached system block per Cluck turn for the BANK_P3X items it names, plus a
 # generic "draw first, stage by stage" add-on for every PHYS_ item of the bank. Generic physics only (no exam stems, no keys). It never reaches
 # the client, and the answer guards are untouched (REVEAL: no still holds the final number back). Ends CRAM_UNTIL; CRAM_INTEL=0 turns it off early.
-# peek.js has the same instant for the cram-day idle peek and toast (tests/test_cram.py checks they match).
 CRAM_UNTIL = datetime.datetime(2026, 11, 9, 23, 59, tzinfo=PT)
 CRAM_BANK = "BANK_P3X"
 CRAM_REVEAL_TURN = 7                         # REVEAL: yes from this Cluck turn on a cram item (3 elsewhere)
