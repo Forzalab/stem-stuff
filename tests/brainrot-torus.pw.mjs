@@ -40,12 +40,14 @@ async function open(vp, flag) {
 }
 const box = (page, sel) => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom, r: r.right }; });
 try {
-  await step("v7 desktop 1366x768: the dock is <= 40% of the notes column; Cluck's header and ask field are on screen", async () => {
+  await step("v7 desktop 1366x768: the dock is <= 40% x --rot-dock-k of the notes column; Cluck's header and ask field are on screen", async () => {
     const { c, page } = await open({ width: 1366, height: 768 }, true);
     await page.waitForSelector("#rot.docked .vid");
     const shelf = await box(page, "#rot .shelf"), col = await box(page, "#work"), ask = await box(page, "#work .cl-ft .ask"), cl = await box(page, "#work .cl");
-    assert.ok(shelf.h <= 0.4 * col.h + 1, `dock ${shelf.h}px is more than 40% of the column ${col.h}px`);
-    assert.ok(shelf.h >= 180 - 1, `dock ${shelf.h}px under its 180px floor`);
+    const k = +await page.$eval("#rot", e => getComputedStyle(e).getPropertyValue("--rot-dock-k"));   // the dock's scale knob (app.css DOCK-SMALLER): window = 40% x k, floor 180 x k
+    assert.ok(k > 0 && k < 1, `--rot-dock-k is a shrink factor: ${k}`);
+    assert.ok(shelf.h <= 0.4 * k * col.h + 1, `dock ${shelf.h}px is more than 40% x ${k} of the column ${col.h}px`);
+    assert.ok(shelf.h >= 180 * k - 1, `dock ${shelf.h}px under its ${180 * k}px floor`);
     assert.ok(cl.y >= shelf.b - 1, "the Cluck sheet starts under the dock");
     assert.ok(cl.y >= 0 && ask.y >= 0 && ask.b <= 768, `Cluck header and ask field on screen: sheet top ${cl.y}, ask ${ask.y}..${ask.b}`);
     assert.ok(await page.$eval("#work .cl-ft .ask", e => { const r = e.getBoundingClientRect(); const f = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!f && (f === e || e.contains(f)); }), "the ask field is not covered");

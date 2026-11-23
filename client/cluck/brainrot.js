@@ -26,7 +26,7 @@
    reload, no ytimg request, and it really plays); tap = expands the corner. Sugar mode only, as before. Zero borders, radii 16 / 12, gaps on 4 8 12 16 24 32.
    BRAINROT-B2 (Tony, Nov 14, "too compact?? add more videos, vary their layout bento size"; "you are allowed to CROP the video ... its bkg"): docked v7 is now 8 videos (all 8 categories, one each) in a
    full-width interlocked bento (LAYOUT below: hero 2x2 + tall + wide + small, 12-col grid, gap 8, every video cover-cropped to its tile; app.css BRAINROT-B2 block). Lazy rule unchanged: the first 3 iframes load at once,
-   the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: --hmax = min(60dvh, 100dvh - 28rem), Cluck sheet keeps its header + ask at 768.
+   the rest only when their tile is >= 10% in view. A tap swaps the hero and the tapped tile's grid cells (CSS custom property only, no iframe move). Height budget: window = 40% of the column x --rot-dock-k (.62, Nov 22 "scale down size of brainrot" on desktop), tile unit --R x the same k, Cluck sheet keeps its header + ask at 768.
    DRIFT (Tony Nov 22, "the bento brainrot doesn't scroll automatically"): idle, the docked v7 torus creeps up 24 px/s by itself; it rests on hover, drag, focus, a hidden tab, stash, and prefers-reduced-motion (driftGo below).
    ICK5-NOROT (Tony Nov 18): width < 900px = none of it, no handle. Phones stay off for good (Tony Nov 20): the phone tab above is history. */
 (() => {
