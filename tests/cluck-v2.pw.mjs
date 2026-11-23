@@ -95,7 +95,7 @@ for (const w of W.filter(w => w >= 720)) {
   await step(`@desk ${w}: idle box = one line + 3 starter chips, "5 left", before any miss`, async () => {
     const page = await open(w);
     const t = await boxText(page);
-    assert.match(t, /Ask me anything about this question/, "the one-line opener: " + t);
+    assert.match(t, /QUACKK QUACK QUACK\. quack\./, "the one-line opener: " + t);
     const chips = await page.$$eval("#cluck .cl-starters .cl-starter", els => els.filter(e => e.getClientRects().length).map(e => e.textContent));
     assert.deepEqual(chips, ["What is this asking?", "Which formula fits?", "Check my setup"], "the 3 starters");
     assert.match(t, /5 left/, "the budget shows: " + t);

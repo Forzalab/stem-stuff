@@ -59,7 +59,7 @@ const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-P
 /* BIG PLAN V2 (Tony, Nov 2 23:01): every line of the permanent box that is not Cluck's own reply lives here. COPY-PENDING: Tony vets all of it (the no-key
    note is meant to read like a good fun 404 page). The three starters are app chrome (like .wchip): a tap sends its text through the ask field's pipe (clSend) */
 const CL_COPY = {
-  idle: "Ask me anything about this question. If you miss, I'll explain what went wrong.",
+  idle: "QUACKK QUACK QUACK. quack.",
   starters: ["What is this asking?", "Which formula fits?", "Check my setup"],
   nokey: "404: Cluck not found. This one hatched without a duck, so he's off paddling somewhere else. The question is all yours. You've got this!",
   done: "Want my steps? Tap the duck chip under your answer.",
