@@ -237,18 +237,20 @@ function glassOn(el, opts = {}) {
   const W = el.offsetWidth, H = el.offsetHeight; p.width = W; p.height = H; p.x = 0; p.y = 0;
   const dpr = window.devicePixelRatio || 1, scale = Math.min(dpr, 2);
   const url = renderLensMap(p, scale).canvas.toDataURL('image/png');
-  const f = node('filter', { id: `hg${++uid}`, filterUnits: 'objectBoundingBox', x: 0, y: 0, width: 1, height: 1, primitiveUnits: 'objectBoundingBox', 'color-interpolation-filters': 'sRGB' });
+  const { scale: k, kx, ky } = bendScale(p.refraction, W, H);
+  /* one filter from the lens map: chroma > 0 = 3 displacement passes (fringe), 0 = one pass */
+  const mk = (id, chroma) => {
+  const f = node('filter', { id, filterUnits: 'objectBoundingBox', x: 0, y: 0, width: 1, height: 1, primitiveUnits: 'objectBoundingBox', 'color-interpolation-filters': 'sRGB' });
   f.appendChild(node('feFlood', { 'flood-color': 'rgb(128,128,128)', result: 'neutral' }));
   const img = node('feImage', { preserveAspectRatio: 'none', result: 'lensShape', x: 0, y: 0, width: 1, height: 1 });
   img.setAttribute('href', url); img.setAttributeNS(XLINK, 'xlink:href', url); f.appendChild(img);
   f.appendChild(node('feComposite', { in: 'lensShape', in2: 'neutral', operator: 'over', result: 'map' }));
-  const { scale: k, kx, ky } = bendScale(p.refraction, W, H);
   let bend = 'map';
   if (engine === 'webkit') { f.appendChild(node('feColorMatrix', { in: 'map', type: 'matrix', result: 'bend', values: `${kx} 0 0 0 ${(1 - kx) / 2}  0 ${ky} 0 0 ${(1 - ky) / 2}  0 0 1 0 0  0 0 0 1 0` })); bend = 'bend'; }
   let src = 'SourceGraphic';
   if (p.blur > 0) { f.appendChild(node('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: `${p.blur / W} ${p.blur / H}`, result: 'frosted' })); src = 'frosted'; }
-  if (p.chroma > 0) {
-    CH.forEach((values, i) => { f.appendChild(node('feDisplacementMap', { in: src, in2: bend, xChannelSelector: 'R', yChannelSelector: 'G', scale: k * (1 + (p.chroma * i) / 2) })); f.appendChild(node('feColorMatrix', { type: 'matrix', values, result: `ch${i}` })); });
+  if (chroma > 0) {
+    CH.forEach((values, i) => { f.appendChild(node('feDisplacementMap', { in: src, in2: bend, xChannelSelector: 'R', yChannelSelector: 'G', scale: k * (1 + (chroma * i) / 2) })); f.appendChild(node('feColorMatrix', { type: 'matrix', values, result: `ch${i}` })); });
     f.appendChild(node('feComposite', { in: 'ch0', in2: 'ch1', operator: 'arithmetic', k1: 0, k2: 1, k3: 1, k4: 0, result: 'rg' }));
     f.appendChild(node('feComposite', { in: 'rg', in2: 'ch2', operator: 'arithmetic', k1: 0, k2: 1, k3: 1, k4: 0, result: 'refracted' }));
   } else f.appendChild(node('feDisplacementMap', { in: src, in2: bend, xChannelSelector: 'R', yChannelSelector: 'G', scale: k, result: 'refracted' }));
@@ -259,8 +261,11 @@ function glassOn(el, opts = {}) {
   }
   f.appendChild(node('feComposite', { in: last, in2: 'lensShape', operator: 'in' }));
   defs.appendChild(f);
+  return { f, img };
+  };
+  const rest = mk(`hg${++uid}`, p.chroma), mot = p.chroma > 0 ? mk(rest.f.id + '_m', 0) : null, f = rest.f;   // motion = same map and size, one displacement pass
   el.style.filter = `url(#${f.id})`;
-  return { img, destroy() { if (f.parentNode) f.parentNode.querySelectorAll('[id^="' + f.id + '_"]').forEach((c) => c.remove()); f.remove(); el.style.filter = ''; } };   // also drops the thinking light's pre-built clones (id + '_k')
+  return { img: rest.img, mid: mot ? mot.f.id : null, destroy() { if (f.parentNode) f.parentNode.querySelectorAll('[id^="' + f.id + '_"]').forEach((c) => c.remove()); f.remove(); el.style.filter = ''; } };   // destroy also drops the motion filter (id + '_m') and the thinking light's clones (id + '_k')   // also drops the thinking light's pre-built clones (id + '_k')
 }
 
 /* == §bar == */
@@ -297,7 +302,13 @@ function mount(form, sc, locked) {
 /* one scroll listener and one MutationObserver per scroller (the reply container .cl-bd); they talk to its current bar */
 function attach(sc) {
   if (sc._agOn) return; sc._agOn = true;
-  sc.addEventListener('scroll', () => { const s = sc._ag; if (s && s.clone) s.clone.style.transform = 'translate3d(0,' + (-sc.scrollTop) + 'px,0)'; }, { passive: true });   // the copy follows the scroll: one transform write, no layout read of the copy
+  sc.addEventListener('scroll', () => {
+    const s = sc._ag; if (!s) return;
+    if (s.clone) s.clone.style.transform = 'translate3d(0,' + (-sc.scrollTop) + 'px,0)';   // the copy follows the scroll: one transform write, no layout read of the copy
+    if (!s.gl || !s.gl.mid || s.thinkOn) return;   // adaptive chroma: while scrolling the copy wears the 1-pass motion filter; ~150 ms after the last scroll event the fringe comes back (thinking already uses 1-pass clones)
+    if (!s.mv) { s.mv = true; s.copy.style.filter = 'url(#' + s.gl.mid + ')'; }
+    clearTimeout(s.mt); s.mt = setTimeout(() => { s.mt = 0; s.mv = false; if (s.gl && !s.thinkOn) s.copy.style.filter = 'url(#' + s.img.parentNode.id + ')'; }, 150);
+  }, { passive: true });
   new MutationObserver(() => { const s = sc._ag; if (s && s.form.isConnected) later(s); }).observe(sc, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'hidden'] });
 }
 const thinking = (s) => !s.locked && !!s.cl && (s.cl.classList.contains('wbusy') || !!s.cl.querySelector('.wtext.wrun'));
@@ -339,6 +350,7 @@ function size(s) {
 function glass(s) {
   const f = s.form;
   if (!solid() && (!s.copy || !s.copy.offsetWidth || !s.copy.offsetHeight)) return;   // the copy is not laid out (display:none during a sheet drag, a hidden sheet): keep what there is, the next size() comes back
+  clearTimeout(s.mt); s.mt = 0; s.mv = false;
   if (s.gl) { s.gl.destroy(); s.gl = null; s.img = null; }
   s.bad = false;
   s.maps = null; cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen);
@@ -417,7 +429,7 @@ function thinkSet(s, on) {
   s.thinkOn = on; s.form.classList.toggle('think', on);
   cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen);
   if (!s.img) return;                                     // no lens (solid, frost, hidden): the CSS light is all there is
-  const fb = s.img.parentNode, bid = fb.id, drop = () => { (s.fids || []).forEach((id) => { const c = document.getElementById(id); if (c) c.remove(); }); s.fids = []; };
+  const rb = s.img.parentNode, bid = rb.id, fb = (s.gl && s.gl.mid && document.getElementById(s.gl.mid)) || rb, drop = () => { (s.fids || []).forEach((id) => { const c = document.getElementById(id); if (c) c.remove(); }); s.fids = []; };
   drop();
   if (!on) { if (s.copy) s.copy.style.filter = `url(#${bid})`; return; }
   const N = engine === 'gecko' ? 72 : 120, REV = 4300, scale = Math.min(g.devicePixelRatio || 1, 2), calm = reduced();
