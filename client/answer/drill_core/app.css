@@ -1793,12 +1793,12 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
    old bottom scrim. Same clock as the ember (0.9 -> 6.6 s of the 10.8 s run), opacity + translateY only. The box keeps the old sky's role:
    bottom 0, 46% high (55% >=720px), side mask 48px, one <i>; the fitted gradient is sampled from 05 and fades to transparent at the top
    (mask on the layer), so the question and answer above stay readable. The core is pinned under the duck (--sun-x from peek.js). */
-.ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
+.ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 28%; overflow: hidden; opacity: .55;   /* Tony Nov 23: shorter, rounder, see-through */
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 .ck-sky i { position: absolute; inset: 0; opacity: 0;
   -webkit-mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 100%);
-  background: radial-gradient(120% 100% at var(--sun-x, 50%) 100%,
+  background: radial-gradient(circle min(46vw, 260px) at var(--sun-x, 50%) 100%,
     var(--dawn-core) 0%, var(--dawn-2) 22%, var(--dawn-3) 42%, var(--dawn-4) 60%,
     var(--dawn-5) 72%, var(--dawn-6) 82%, var(--dawn-7) 90%, var(--dawn-8) 96%, transparent 100%); }
 html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
@@ -1835,7 +1835,7 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
 .ck-hollow:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ck-rise.on .ck-hollow { animation: ck-say var(--d-sky) both; }
 .ck-rise.out .ck-hollow { opacity: 0; pointer-events: none; transition: opacity .45s ease-in; }
-@media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
+@media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 32%; } }
 .ck-rise.on .ck-sky i { animation: ck-dawn var(--d-sky) both; }
 .ck-rise.on .ck-duck { animation: ck-duck var(--d-sky) both; }
 .ck-rise.on .ck-say { animation: ck-say var(--d-sky) both; }
