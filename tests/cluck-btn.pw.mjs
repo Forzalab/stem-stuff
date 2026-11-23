@@ -1,5 +1,5 @@
 // CLUCK-BTN smoke (Tony Nov 14; E3 Nov 17; ICK5 Nov 18): under html.ui-v7 there is ONE Ask Cluck button, the tangerine squircle at the question card's top right (typed, MC, multi-part) and no other entry (no chip, no tray, no duck slot).
-// Disabled = aria-disabled (not the attribute, no pointer-events:none) before the first try and with no Cluck key; hover (desktop) / tap (phone) shows a note; a wrong try unlocks it (the fill sweeps in) and a sheen plays.
+// Disabled = aria-disabled (not the attribute, no pointer-events:none) only with no Cluck key (off). Nov 22: before the first try it is READY (no "first" state, no note): a press opens Cluck on the starter chip + the locked strip; a wrong try plays the sheen.
 // Own serve.py, throwaway bank, a stub OpenRouter.   node tests/cluck-btn.pw.mjs [port]   (SHOTS=<dir> saves screenshots)
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
@@ -79,12 +79,12 @@ const typeAnswer = async (page, v) => { await skipRetryWait(page); const f = pag
 const toastText = page => page.evaluate(() => { const t = document.getElementById("toast"); return t && t.classList.contains("on") ? t.textContent.trim() : ""; });
 const W = [390, 1366];
 try {
-  for (const [code, kind] of [["PHYS_FP2", "typed"], ["PHYS_FP3", "mc"], ["PHYS_FP4", "multi"]]) for (const w of W) await step(`${w}: ${kind}: one disabled Ask Cluck button, the tangerine squircle at the card's top right (ICK5), >= 44px`, async () => {
+  for (const [code, kind] of [["PHYS_FP2", "typed"], ["PHYS_FP3", "mc"], ["PHYS_FP4", "multi"]]) for (const w of W) await step(`${w}: ${kind}: one ready Ask Cluck button (no first state), the tangerine squircle at the card's top right (ICK5), >= 44px`, async () => {
     const page = await open2(w, code);
     try {
       const g = await geo(page);
-      assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck" + "Available after your first try.");
-      assert.equal(g.aria, "true", "aria-disabled"); assert.equal(g.dis, false, "no disabled attribute"); assert.notEqual(g.pe, "none", "no pointer-events:none");
+      assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck", "Nov 22: no 'first' note any more");
+      assert.equal(g.aria, null, "ready before a try: no aria-disabled"); assert.notEqual(g.st, "first", "no first state"); assert.equal(g.dis, false, "no disabled attribute"); assert.notEqual(g.pe, "none", "no pointer-events:none");
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
       // ICK5-CLUCK-TR (Tony Nov 18, supersedes the ICK E3 left-edge tab): AC1 + AC2 + AC3 for this viewport
       assert.equal(g.parent, "problem", "AC1: not a child of #problem: " + g.parent);
@@ -99,19 +99,24 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
-  await step("1366: disabled: hover shows 'Available after your first try.'; a click does not open Cluck", async () => {
+  await step("1366: before a try: hover shows no note; a press focuses the open box (the starter chip + the locked strip), no /explain", async () => {
     const page = await open2(1366, "PHYS_FP2");
     try {
-      await page.hover("#cluckBtn");
-      await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Available after your first try."; }, null, { timeout: 5000 });
-      assert.equal(await toastText(page), "Available after your first try.");
-      await page.click("#cluckBtn", { force: true }); await page.waitForTimeout(300); // keep: observation window, a disabled click must change nothing
-      assert.equal(await page.evaluate(() => { const c = document.querySelector("#cluck"); return !!c && !c.hidden && c.getClientRects().length > 0 && !c.closest("[hidden]") && document.body.classList.contains("x") ; }), false);
+      await page.hover("#cluckBtn"); await page.waitForTimeout(300); // keep: observation window, no note may appear
+      assert.equal(await toastText(page), "", "no 'first try' note");
+      await page.click("#cluckBtn");
+      await page.waitForSelector("#cluck .cl-ft .ask.locked", { state: "visible", timeout: 8000 });
+      assert.equal(await page.evaluate(() => document.querySelector("#cluck .ask .g-lock .txt")?.textContent), "Available after your first try.");
+      assert.equal(await page.evaluate(() => document.querySelector("#cluck .ask textarea").disabled), true, "the locked field is disabled");
     } finally { await page.context().close(); }
   });
-  await step("390: disabled: a tap shows the note (phone)", async () => {
+  await step("390: before a try: a tap opens the sheet on the locked strip (phone)", async () => {
     const page = await open2(390, "PHYS_FP2");
-    try { await page.locator("#cluckBtn").tap({ force: true }); await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Available after your first try."; }, null, { timeout: 5000 }); assert.equal(await toastText(page), "Available after your first try."); } finally { await page.context().close(); }
+    try { await page.locator("#cluckBtn").tap(); await page.waitForSelector("#cluck .cl-ft .ask.locked", { state: "visible", timeout: 8000 }); assert.equal(await toastText(page), "", "no note"); } finally { await page.context().close(); }
+  });
+  await step("390: (old) first-state note is gone", async () => {
+    const page = await open2(390, "PHYS_FP2");
+    try { assert.equal(await page.evaluate(() => document.querySelector("#cluckWhy")?.textContent || ""), ""); assert.equal(await toastText(page), ""); } finally { await page.context().close(); }
   });
   await step("390: flag on: a wrong try unlocks it (fill sweeps in, 150-300 ms), the sheen plays, no chip / tray / slot duck anywhere; a press opens Cluck", async () => {
     const page = await open2(390, "PHYS_FP2");

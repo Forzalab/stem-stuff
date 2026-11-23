@@ -50,6 +50,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <script src="client/cluck/jev_nudges/intent.js" defer></script><!-- Jev log + rule counters + nudges, on for all (?jev=0 = off on this device); after telemetry.js: it wraps window.stemT -->
 <script src="client/shell/toast/toast.js" defer></script><!-- the one toast (docs/design/TOAST.md round 5): the stage lines + the notes (todo 112); before app.js, which shows the notes, and engine.js, which shows the stage lines -->
 <script src="client/resources/texts/stage-lines.js" defer></script><script src="client/shell/stages/stages.js" defer></script><!-- 160 PR-B: the stage rows (words + tracker); before app.js, which reads window.Stages -->
+<script src="client/cluck/ask_glass/ask-glass.js" defer></script><!-- window.stemAskGlass (the R3 glass Ask bar of Cluck: liquidglass lens, locked strip, thinking light): classic deferred script, inert unless html.ui-v7; cluck.js calls it -->
 <script src="client/answer/keyf_glass/keyf-glass.js" defer></script><!-- window.stemGlass (KEYF smoked lens): classic deferred script runs before the module app.js, which mounts it -->
 <script type="module" src="client/answer/drill_core/app.js"></script>
 <script type="module" src="client/cluck/cluck.js"></script><script type="module" src="client/shell/shell.js"></script><!-- W152: app.js split in 3 (tools/client_generators/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->
@@ -115,6 +116,7 @@ html { background: #02060c; color: #f3f7fc; }   /* --page, --ink */
 <link rel="stylesheet" href="client/cluck/cluck_btn/cluckbtn.css">
 <link rel="stylesheet" href="client/answer/qcard/qcard.css"><!-- QCARD-SWISS v2, html.ui-v7 only: after app.css + cluckbtn.css (later wins) --><!-- the one Ask Cluck button on the question card, html.ui-v7 only (CLUCK-BTN) -->
 <link rel="stylesheet" href="client/answer/navigation/nav.css">
+<link rel="stylesheet" href="client/cluck/ask_glass/ask-glass.css"><!-- the R3 glass Ask bar of Cluck (html.ui-v7 only): after app.css, which owns .cl-ft / .ask -->
 <link rel="stylesheet" href="client/answer/keyf_glass/keyf-glass.css"><!-- KEYF smoked-lens glass on the Key formulas card (html.ui-v7, .fcard.kg-on): after app.css -->
 <link rel="stylesheet" href="client/answer/progbar/progbar.css"><!-- the v9d bar, all under html.ui-v7: after nav.css (same specificity ladder, later wins) -->
 <link rel="stylesheet" href="client/vendor/fonts/press-start-2p.css">

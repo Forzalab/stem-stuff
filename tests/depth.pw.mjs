@@ -140,16 +140,23 @@ await step("flag on: the proof box .xb is a recessed well, its edge gated on 3:1
   assert.equal(g.bw, r >= 3 ? "0px" : "1px", "no edge only when the field reaches 3:1; else the 1px edge is kept");
   await c.close();
 });
-await step("flag on: Cluck box has no lit top; the input is a recessed well with a flat send", async () => {
+await step("flag on: Cluck box has no lit top; the ask field is the floating glass bar (outer drop shadow, glass layer) with a flat send", async () => {
   const [c, p] = await open("on", "BANK_DP1", 1280, 800, 1, "CALC1_DP01");   // desk sugar: the Cluck box is a permanent column box (cluck-permanent.pw.mjs)
   const cl = await css(p, "#cluck.cl, .cl");
   assert.ok(cl, "the Cluck box is shown");
   assert.doesNotMatch(cl.shadow, LIT, "no lit top on the Cluck box: " + cl.shadow);
-  const ask = await css(p, "#cluck .ask, .cl .ask");
-  assert.ok(ask, "the Cluck input is shown");
-  assert.match(ask.shadow, WELL, "the recessed well: " + ask.shadow);
-  const send = await css(p, "#cluck .ask .send, .cl .ask .send");
-  assert.ok(send.shadow === "none" || !/0px 1px 2px/.test(send.shadow), "NAVY-MIN: the send is flat, no raise shadow: " + send.shadow);
+  /* html.ui-v7: the ask field is the R3 glass Ask bar (client/cluck/ask_glass/), floating: an outer drop shadow, a glass layer, no recessed well (Tony Nov 22, CLUCK-PRETRY) */
+  const ask = await css(p, "#cluck .ask.ag, .cl .ask.ag");
+  assert.ok(ask, "the glass Ask bar is shown");
+  assert.doesNotMatch(ask.shadow, /inset/, "the floating bar has no inset (well) shadow: " + ask.shadow);
+  assert.match(ask.shadow, /\d+px \d+px \d+px 0px(?!.*inset)|^rgba?\([^)]*\) \d+px \d+px \d+px/, "the bar has an outer drop shadow: " + ask.shadow);
+  const glass = await p.evaluate(() => { const b = [...document.querySelectorAll(".cl .ask.ag")].find(x => x.getClientRects().length > 0); return b ? { layers: !!(b.querySelector(":scope > .g-copy") && b.querySelector(":scope > .g-tint")) } : null; });
+  assert.ok(glass && glass.layers, "the bar carries its glass layers (.g-copy + .g-tint)");
+  const send = await p.evaluate(() => { const e = [...document.querySelectorAll(".cl .ask.ag > .send")].find(x => x.getClientRects().length > 0); if (!e) return null; const cs = getComputedStyle(e); return { shadow: cs.boxShadow, img: cs.backgroundImage, bw: cs.borderTopWidth, bs: cs.borderTopStyle }; });
+  assert.ok(send, "the send button is shown");
+  assert.equal(send.shadow, "none", "the send is flat at idle, no raised or inset shadow: " + send.shadow);
+  assert.equal(send.img, "none", "the send has no gradient at idle: " + send.img);
+  assert.ok(send.bw === "0px" || send.bs === "none", "the send has no border at idle: " + send.bw + " " + send.bs);
   await c.close();
 });
 await step("flag off: no depth shadow on any of these surfaces (byte-identical to main)", async () => {
