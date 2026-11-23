@@ -774,16 +774,16 @@ function backInView() {
    the gap, the pad below. The tile's q | a switch: q = the problem only, a = the answer control only (round 3b). It opens on q with a big
    pad (1/3). Anchors 1/2, 1/3 and the smallest tile; drag snaps, tap = next. Exits: Back (a pushed history entry), tapping the problem
    (caret into the answer), the collapse icon in the pad's top-right. The keyboard going down never closes it.
-   Desktop (>= 720px): side by side, always: problem + answer left, pad right. Anchors strip (52px), 1/3, 1/2, 2/3.
+   Desktop (>= 720px): side by side, always: problem + answer left, pad right. Anchors strip (52px), 1/3, 1/2, 3/5.
    Memory: per device (localStorage, every access in try/catch). */
 const sash = $("#sash"), mtMode = $("#mtMode"), mtExp = $("#mtExp"), pstrip = $("#pstrip");
-const ANCH = { phone: [0, 1 / 3, 1 / 2], desk: [0, 1 / 3, 1 / 2, 2 / 3] };
-const ANAME = r => r < 0.4 ? "one third" : r < 0.6 ? "half" : "two thirds";
+const ANCH = { phone: [0, 1 / 3, 1 / 2], desk: [0, 1 / 3, 1 / 2, 3 / 5] };
+const ANAME = r => r < 0.4 ? "one third" : r < 0.55 ? "half" : "three fifths";
 let mtMem = {};
 try { mtMem = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { mtMem = {}; }
 const mtKind = () => sideMQ.matches ? "desk" : "phone";
 const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r) ? b : a);
-const mtDef = k => k === "phone" ? 1 / 3 : 2 / 3;                                 // phone: a big pad. desktop: question + answer 2 : brainrot + Cluck 1 (Tony, Nov 22)
+const mtDef = k => k === "phone" ? 1 / 3 : 3 / 5;                                 // phone: a big pad. desktop: question + answer 3 : brainrot + Cluck 2 (Tony, Nov 22 21:08; was 2:1)
 function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
