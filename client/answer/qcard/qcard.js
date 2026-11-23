@@ -91,6 +91,37 @@
     clearTimeout(animT); animT = setTimeout(function () { box.classList.remove("qanim"); }, 620);
   }
 
+  /* == §ghost-glass == the glass under the numeral (qcard.css §ghost-glass): one static SVG filter (lit rim, dark inner edge, grain), made once; one blurred scrim pill per text line */
+  function glassDefs() {
+    if (D.getElementById("qg-glass")) return;
+    var NS = "http://www.w3.org/2000/svg", svg = D.createElementNS(NS, "svg"), f = D.createElementNS(NS, "filter");
+    svg.setAttribute("aria-hidden", "true"); svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden"; f.setAttribute("id", "qg-glass");
+    ["x", "y"].forEach(function (a) { f.setAttribute(a, "-8%"); }); ["width", "height"].forEach(function (a) { f.setAttribute(a, "116%"); }); f.setAttribute("color-interpolation-filters", "sRGB");
+    f.innerHTML = '<feGaussianBlur in="SourceAlpha" stdDeviation="6" result="h"/><feSpecularLighting in="h" surfaceScale="5" specularConstant=".7" specularExponent="20" lighting-color="#d6e4ff" result="sp"><feDistantLight azimuth="235" elevation="38"/></feSpecularLighting>'
+      + '<feComposite in="sp" in2="SourceAlpha" operator="in" result="spIn"/><feMorphology in="SourceAlpha" operator="erode" radius="2.5" result="er"/><feGaussianBlur in="er" stdDeviation="5" result="erb"/>'
+      + '<feComposite in="SourceAlpha" in2="erb" operator="out" result="edge"/><feFlood flood-color="rgb(2,6,18)" flood-opacity=".45"/><feComposite in2="edge" operator="in" result="edgeDark"/>'
+      + '<feTurbulence type="fractalNoise" baseFrequency="1.7" numOctaves="2" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .32 0 0 -.128" result="gr"/>'
+      + '<feComposite in="gr" in2="SourceAlpha" operator="in" result="grIn"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="edgeDark"/><feMergeNode in="grIn"/><feMergeNode in="spIn"/></feMerge>';
+    svg.appendChild(f); D.body.appendChild(svg);
+  }
+  function scrims() {
+    var p = D.getElementById("problem"), sl = p && p.querySelector(":scope > .qscrim");
+    if (!p || !on() || !p.classList.contains("qbr")) { if (sl) sl.remove(); return; }
+    glassDefs();
+    if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(sl, gb ? gb.nextSibling : p.firstChild); }
+    var cr = p.getBoundingClientRect(), pad = 9, html = "";
+    p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
+      var rg = D.createRange(), rows = []; rg.selectNodeContents(e);
+      [].slice.call(rg.getClientRects()).forEach(function (q) {
+        if (q.width < 2) return;
+        var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
+        if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+      });
+      rows.forEach(function (b) { html += '<i style="left:' + (b.left - cr.left - pad).toFixed(1) + 'px;top:' + (b.top - cr.top - pad * .7).toFixed(1) + 'px;width:' + (b.right - b.left + 2 * pad).toFixed(1) + 'px;height:' + (b.bottom - b.top + 1.4 * pad).toFixed(1) + 'px"></i>'; });
+    });
+    if (sl.innerHTML !== html) sl.innerHTML = html;
+  }
+
   function exam() { var n = D.getElementById("qlistName"); return n ? n.textContent.trim() : ""; }
   function span(cls, txt) { var e = D.createElement("span"); e.className = cls; e.textContent = txt; return e; }
   function meta(m) {
@@ -230,7 +261,7 @@
     var h1 = p.offsetHeight; p.style.minHeight = "0"; var h0 = p.offsetHeight; p.style.minHeight = "";
     if (h1 - h0 >= 1) b.style.marginTop = (h1 - h0) + "px";
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); }); }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); scrims(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
@@ -238,7 +269,7 @@
     new MutationObserver(later).observe(blocks, { childList: true });
     var pr = D.getElementById("problem");
     if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });
-    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); }); }).observe(pr); }   // a figure / font landing changes the offset
+    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); scrims(); }); }).observe(pr); }   // a figure / font landing changes the offset
     g.addEventListener("scroll", pinSoon, { passive: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);

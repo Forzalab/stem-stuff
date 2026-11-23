@@ -277,3 +277,17 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
 }
 
+/* == §ghost-glass == GHOST-G3-GLASS (Tony Nov 23, mock variant C "rim + scrim"): the ghost numeral is a glass slab: a gradient body painted through the glyph (background-clip: text),
+   ONE static SVG filter (#qg-glass, qcard.js glassDefs: lit rim + eroded dark inner edge + grain = the KEYF rim recipe) and a faint diagonal sheen layered in the body. A static blurred
+   scrim (.qscrim, one pill per text line, qcard.js scrims) dims it under the words so text over the numeral keeps >= 4.5:1. Softer mask fade than the flat numeral had.
+   Compositor-only: nothing animates here (the echo .qanim stays transform / opacity), no filter on a parent of a moving child, no backdrop-filter. */
+html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); }
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: 1; color: transparent; -webkit-background-clip: text; background-clip: text; filter: url(#qg-glass);
+  background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .10) 46%, transparent 62%), linear-gradient(160deg, rgb(112 138 214 / .32), rgb(52 74 140 / .18)); }
+html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(8px); border-radius: inherit; overflow: hidden; }
+html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .85); border-radius: 999px; }
+@media (prefers-reduced-transparency: reduce) {
+  html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: .08; color: #5b6a9a; -webkit-background-clip: border-box; background-clip: border-box; background-image: none; filter: none; }
+  html.ui-v7 #problem.qc7 > .qscrim { display: none; }
+}
+
