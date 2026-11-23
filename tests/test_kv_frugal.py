@@ -368,6 +368,56 @@ class KvFrugal(unittest.TestCase):
         self.assertIsNone(st4.get((r1, "KVF_M2")), "the older redo round stayed")
         self.assertGreater(st4.entry_new((sid, "KVF_M4"))["gen"], st4.get((r2, "KVF_M3"))["gen"])
 
+    def test_state_flag_off_reads_under_the_lock(self):
+        if self.HASH:
+            self.skipTest("the blob path only")
+        seen = []
+
+        class Spy(dict):
+            def get(self, k, d=None):
+                seen.append(serve._tries_lock.locked())
+                return dict.get(self, k, d)
+        serve.state(problem(1), fake_sid("lock"), snap=(Spy(), 0))
+        self.assertEqual(seen, [True], "state() read the blob without _tries_lock")
+
+    def test_store_load_survives_bad_kv_and_bad_rows(self):
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid = fake_sid("bad")
+        good = [1, 2, "x", 4]
+        self.kv.db[serve.tries_key(sid)] = {"_gen": "oops", "c:A": json.dumps([good, [1], "no", ["s", 1, 2, 3]]), "c:B": json.dumps([[1]]),
+                                            "KVF_Q01": json.dumps({"wrong": [], "done": False, "gen": 7})}
+        st = serve.TriesStore()
+        st.load(sid)
+        self.assertEqual(st.fields["c:A"], [good])
+        self.assertNotIn("c:B", st.fields)
+        self.assertEqual(st.gen, 7)
+        with mock.patch.object(serve, "_kv", side_effect=OSError("down")):
+            st2 = serve.TriesStore()
+            st2.load(sid)                                    # never raises
+        self.assertEqual((st2.fields, st2.gen), ({}, 0))
+
+    def test_expr_seen_orders_by_gen(self):
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid = fake_sid("seen")
+        st = serve.TriesStore()
+        st.load(sid)
+        for c, g in (("KVF_Q05", 3), ("KVF_Q02", 1), ("KVF_Q09", 2)):
+            st.fields[c] = {"wrong": [], "done": False, "gen": g}
+        self.assertEqual([c for c, _ in serve.expr_seen(sid, "KVF_Q99", store=st)], ["KVF_Q02", "KVF_Q09", "KVF_Q05"])
+
+    def test_save_logs_a_pipeline_item_error(self):
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        st = serve.TriesStore()
+        st.entry_new((fake_sid("err"), "KVF_Q01"))
+        logs = []
+        with mock.patch.object(serve, "_kv_pipeline", return_value=[{"error": "WRONGTYPE"}, {"result": 1}]), \
+                mock.patch.object(serve, "log", lambda *a: logs.append(a)):
+            st.save()
+        self.assertTrue(any(a and a[0] == "tries not saved to KV:" for a in logs))
+
     def test_pipeline_is_one_round_trip(self):
         """the meter itself: a pipelined POST counts 1 round trip and its commands (what slice 2 will move to)"""
         req = lambda path, body: serve.urllib.request.Request(KV_URL + path, data=json.dumps(body).encode(), method="POST")   # noqa: E731

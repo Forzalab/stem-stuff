@@ -1005,17 +1005,6 @@ def state(p, sid, reveal=False, snap=None, store=None):
     store = a TriesStore the route already made (the flag on): one load for the whole request."""
     if store is None:
         store = _new_store()
-    if store is not None:
-        store.load(sid)
-        tries, gen = store, store.gen
-    else:
-        with _tries_lock:
-            if snap is None:
-                _load_tries()
-                tries, gen = _tries, _gen["n"]
-            else:
-                tries, gen = snap
-
     def one(key):
         st = tries.get(key)
         if st is None:
@@ -1024,9 +1013,21 @@ def state(p, sid, reveal=False, snap=None, store=None):
         if reveal and not st["done"] and len(st["wrong"]) >= max_tries(p):
             o["correct"] = answer_of(p["parts"][key[2]] if p["type"] == "multi" else p)
         return o
-    if p["type"] == "multi":
-        return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
-    return one((sid, p["code"]))
+    def build():
+        if p["type"] == "multi":
+            return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
+        return one((sid, p["code"]))
+    if store is not None:
+        store.load(sid)
+        tries, gen = store, store.gen
+        return build()
+    with _tries_lock:
+        if snap is None:
+            _load_tries()
+            tries, gen = _tries, _gen["n"]
+        else:
+            tries, gen = snap
+        return build()
 
 
 def mark(p, sid, snap=None, store=None):
@@ -1509,18 +1510,29 @@ class TriesStore:
         if self.fields is not None:
             return
         self.sid = _base_sid(sid)
-        raw = _kv("HGETALL", tries_key(self.sid)) or []
         self.fields = {}
+        try:
+            raw = _kv("HGETALL", tries_key(self.sid)) or []
+        except (OSError, ValueError) as e:
+            log("tries not read from KV:", e)
+            return
         for name, val in zip(raw[0::2], raw[1::2]):
             if name == "_gen":
-                self.gen = int(val or 0)
+                try:
+                    self.gen = int(val or 0)
+                except (ValueError, TypeError):
+                    pass
             elif name == "_bank" or name.startswith("at:"):
                 self.fields[name] = val
             elif name.startswith("c:"):
                 try:
-                    self.fields[name] = json.loads(val)
+                    rows = json.loads(val)
                 except (ValueError, TypeError):
-                    pass
+                    continue
+                if isinstance(rows, list):
+                    rows = [r for r in rows if isinstance(r, list) and len(r) in (4, 5) and isinstance(r[0], int) and isinstance(r[2], str)]
+                    if rows:
+                        self.fields[name] = rows
             else:
                 try:
                     st = json.loads(val)
@@ -1606,7 +1618,11 @@ class TriesStore:
             cmds.append(hset)
         cmds.append(["EXPIRE", key, tries_lifetime()])          # every written key has an expiry
         try:
-            _kv_pipeline(*cmds)
+            res = _kv_pipeline(*cmds)
+            for item in res if isinstance(res, list) else []:
+                if isinstance(item, dict) and item.get("error"):
+                    log("tries not saved to KV:", item["error"])
+                    break
         except (OSError, ValueError) as e:
             log("tries not saved to KV:", e)
         self.dirty, self.dels = {}, []
@@ -1688,7 +1704,7 @@ def expr_hit(p, u, idx, text, tree, sig):
 def expr_seen(sid, code, store=None):
     """the items this browser tried this session, oldest first (server-side; never the model's guess): [(code, title)]"""
     if store is not None:
-        codes = [k[1] for k, _ in store.entries() if k[0] == sid and k[1] != code]
+        codes = [k[1] for k, _ in sorted(store.entries(), key=lambda e: e[1]["gen"]) if k[0] == sid and k[1] != code]
     else:
         with _tries_lock:
             _load_tries()
@@ -5057,6 +5073,8 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
                                   err=type(e).__name__, ms=(time.time() - t0) * 1000, q=p["code"], status=getattr(e, "code", None)))
     on("record", "start")
     if store is not None:
+        store = _new_store() or store                        # re-read: another tab may have spent a try while the grader ran
+        k = (store.round(sid, rnd), p["code"])
         st = store.entry_new(k)
         pre, res, put = _proof_record(p, st, text, reveal, g)
         if pre:
