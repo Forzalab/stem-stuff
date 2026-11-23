@@ -174,7 +174,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §twist-chip: Twist chip + its one-time toast (twistChip, twistPop, twistToast, snackChg, drawFigures) — open when the Twist chip acts up
 - §welcome-q1: the welcome Q1 (welcomeDue, welcomeLadder, welcomeQ) — open when the first-visit question is wrong
 - §repair-ladder: repair ladder after a miss (repairAfterMiss, genLadder, repairSkip, repairPick, rpUnmount) — open when ladder steps misbehave
-- §mc-arrow: MC render + the one arrow (renderQuestion, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit) — open when MC options, mid-notes or keyframes draw wrong
+- §mc-arrow: MC render + the one arrow (renderQuestion, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit, keyfLayout, keyfRows) — open when MC options, mid-notes, keyframes or the Key formulas card fit and balanced rows draw wrong
 - §second-try: the 10-second wait (startWait, cancelWait, waitPaint, waitSave) — open when the second-try timer breaks
 - §freeform: typed answer, same arrow (wireFF, xPreview, submitFF, proofCE, proofField, ceField) — open when a typed or proof answer box misbehaves
 - §multi: multi-part answers (wireParts, submitPart, partFeedback, settle, record, doneStore, saveDone, doneExit) — open when a multi-part item grades or saves wrong
