@@ -235,6 +235,7 @@ weight() {
     progbar-wave) echo 30 ;;
     depth) echo 25 ;;   # DEPTH 1 ui-v7 light-from-above: lit tops, well + gate, own server (estimate until CI timing)   # PROGBAR P5 v9d bar DOM/CSS behind html.ui-v7: flag off untouched, flag on geometry + states, own server (estimate until CI timing)
     mc-bento) echo 35 ;;   # MC-BENTO ui-v7 mosaic layout + state by fill, no borders; flag off unchanged, own server (estimate until CI timing)
+    mc-hint-fold) echo 10 ;;   # MC-HINT-FOLD (Nov 23): a wrong 7-option MC tap at 390x844 scrolls the trap hint into view; own server
     toast-calc) echo 35 ;;   # BUG-TOAST-CALC: toast rect vs #q cards at 1280 + 390, own server (estimate until CI timing)
     cluck-btn) echo 45 ;;   # CLUCK-BTN (ui-v7) smoke, own server (estimate until CI timing)
     qcard) echo 30 ;;   # QCARD-SWISS v2 (ui-v7) smoke, own server (estimate until CI timing)
@@ -313,6 +314,7 @@ tags() {
     progbar-wave) echo "@layout @real-time" ;;
     depth) echo "@layout @real-time" ;;   # DEPTH 1 depth shadows + 3:1 field gate, own server   # PROGBAR P5 bar geometry at 360 / 390 / 1280, own server
     mc-bento) echo "@layout @real-time" ;;   # MC-BENTO layout spans at 768+ widths + PHONE-FILL justified rows at 390 / 360, own server
+    mc-hint-fold) echo "@layout @real-time" ;;   # MC-HINT-FOLD: the trap hint under the tiles, scrolled into view at 390x844
     toast-calc) echo "@layout @real-time" ;;   # BUG-TOAST-CALC, own server
     calc-toast) echo "@layout @real-time" ;;   # ui-v7 smoke, own server
     cram-cta-off) echo "@layout @real-time" ;;   # CRAM-CTA-OFF, own server
@@ -512,7 +514,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|livefig|figstream|figgap|caret|codeblock|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|brainrot-b|brainrot-torus|fport-ladder-verdict|verdict-card|cluck-btn|qcard|calc-toast|fport-hint-toast|gap-batch1|progbar-wave|cram-cta-off|smokes) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|calc|choose-all|done|katex-wrap|update|nav-stable|ios-back|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|livefig|figstream|figgap|caret|codeblock|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|proof-ladder|proof-kb|stages|copy-math|why-chip|repair-gap|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|progbar-baseline|progbar-bar|depth|toast-calc|shotqa|expr|units|twist|fcard-clip|reveal-box|guard|strip-layers|strip-layers-mc|dot1|cluck-permanent|cluck-v2|ladder-ui|reveal-tray|reveal-duck|fcard-reveal|ladderwire|tray-matrix|tray-anchor|cluck-lost|cluck-history|cluck-telemetry|lockhelp|calc-pick|welcome-first|net-retry|tap-targets|w3|wide-content|mc-bento|mc-hint-fold|brainrot-b|brainrot-torus|fport-ladder-verdict|verdict-card|cluck-btn|qcard|calc-toast|fport-hint-toast|gap-batch1|progbar-wave|cram-cta-off|smokes) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|livefig|codeblock|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       toast-gap) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" "$TMP/shots" ;;   # TOAST-GAP: own server, shots into the run TMP
       *) if srv_gate "$name"; then run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots"
