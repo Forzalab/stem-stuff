@@ -1,6 +1,6 @@
 /* qcard.js: QCARD-SWISS v3, the question card redesign. BEHIND html.ui-v7 (fx.js, ?ui=v7). Flag off = this file touches nothing and the card is the one app.js draws.
    Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered), top to bottom on ONE card background:
-   - GHOST: the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
+   - GHOST (GHOST-G3-GLASS: smoked-lens glass glyph + .qscrim text scrim; glassOff() = the flat numeral): the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
    - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
      kept bold); no fold and no inner scroller (ICK PR-A: the card is as tall as its text and the page scrolls), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
    - ASK-PIN (ICK PR-A, F1): on a long card the page scrolls it away until only its last strip, the bold ask, is left; that strip stays pinned at the top, a tap on it scrolls back to the full question.
@@ -68,6 +68,50 @@
     var m = cv.measureText(num.charAt(0));
     gh.style.setProperty("--lsb", (-m.actualBoundingBoxLeft).toFixed(2) + "px");
   }
+  /* GHOST-G3-GLASS (Tony Nov 23, variant C "rim + scrim", mock-measured 10.6:1 text on numeral at 390): the ghost numeral is a smoked-lens glass glyph (qcard.css §ghost-glass:
+     gradient body clipped to the glyph + ONE static SVG filter = lit bevel rim, dark inner edge, grain; no displacement, no chroma, no per-frame work) and a KEYF text scrim
+     (one blurred dark pill per text line, .qscrim) keeps every text line over it >= 4.5:1. Numbers are the mock's variant C. KEYF look = keyf-glass.js (same smoked-lens family,
+     same reduced-transparency / more-contrast fallbacks); its mount() paints a whole-card lens scene, so it is NOT mounted here. */
+  var NS = "http://www.w3.org/2000/svg";
+  function glassOff() { var m = g.matchMedia; return !!(m && (m("(prefers-reduced-transparency: reduce)").matches || m("(prefers-contrast: more)").matches)); }
+  function svgEl(n, a, kids) { var e = D.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); (kids || []).forEach(function (c) { e.appendChild(c); }); return e; }
+  function glassDefs() {
+    if (D.getElementById("qgdefs")) return;
+    var C = { b: 6, s: 5, k: 1.1, e: 20, light: "#d6e4ff", edgeA: .45, er: 5, grain: .16 };   // variant C of the mock
+    var f = svgEl("filter", { id: "qgC", x: "-8%", y: "-8%", width: "116%", height: "116%", "color-interpolation-filters": "sRGB" });
+    f.appendChild(svgEl("feGaussianBlur", { "in": "SourceAlpha", stdDeviation: C.b, result: "h" }));
+    f.appendChild(svgEl("feSpecularLighting", { "in": "h", surfaceScale: C.s, specularConstant: C.k, specularExponent: C.e, "lighting-color": C.light, result: "sp" }, [svgEl("feDistantLight", { azimuth: 235, elevation: 38 })]));
+    f.appendChild(svgEl("feComposite", { "in": "sp", in2: "SourceAlpha", operator: "in", result: "spIn" }));
+    f.appendChild(svgEl("feMorphology", { "in": "SourceAlpha", operator: "erode", radius: C.er * .5, result: "er" }));
+    f.appendChild(svgEl("feGaussianBlur", { "in": "er", stdDeviation: C.er, result: "erb" }));
+    f.appendChild(svgEl("feComposite", { "in": "SourceAlpha", in2: "erb", operator: "out", result: "edge" }));
+    f.appendChild(svgEl("feFlood", { "flood-color": "rgb(2,6,18)", "flood-opacity": C.edgeA }));
+    f.appendChild(svgEl("feComposite", { in2: "edge", operator: "in", result: "edgeDark" }));
+    f.appendChild(svgEl("feTurbulence", { type: "fractalNoise", baseFrequency: 1.7, numOctaves: 2, stitchTiles: "stitch", result: "n" }));
+    f.appendChild(svgEl("feColorMatrix", { "in": "n", type: "matrix", values: "0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  " + C.grain * 2 + " 0 0 0 " + (-C.grain * .8), result: "gr" }));
+    f.appendChild(svgEl("feComposite", { "in": "gr", in2: "SourceAlpha", operator: "in", result: "grIn" }));
+    f.appendChild(svgEl("feMerge", {}, ["SourceGraphic", "edgeDark", "grIn", "spIn"].map(function (r) { return svgEl("feMergeNode", { "in": r }); })));
+    var s = svgEl("svg", { id: "qgdefs", "aria-hidden": "true", width: "0", height: "0", focusable: "false" }, [svgEl("defs", {}, [f])]);
+    s.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+    D.body.appendChild(s);
+  }
+  /* the KEYF text scrim: one blurred dark pill per rendered text LINE of the headline / setup / ask (pad 6, blur 10 in qcard.css); removed when the glass is off */
+  function scrim() {
+    var p = D.getElementById("problem"), box = p && p.querySelector(":scope > .qghostbox"), sl = p && p.querySelector(":scope > .qscrim");
+    if (!p || !on() || !box || !box.classList.contains("qg")) { if (sl) sl.remove(); return; }
+    if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); box.parentNode.insertBefore(sl, box.nextSibling); }
+    var cr = p.getBoundingClientRect(), pad = 6, html = "";
+    p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
+      var rg = D.createRange(); rg.selectNodeContents(e); var rows = [];
+      Array.prototype.slice.call(rg.getClientRects()).forEach(function (q) {
+        if (q.width < 2) return;
+        var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
+        if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+      });
+      rows.forEach(function (b) { html += '<i style="left:' + (b.left - cr.left - pad).toFixed(1) + 'px;top:' + (b.top - cr.top - pad * .7).toFixed(1) + 'px;width:' + (b.right - b.left + 2 * pad).toFixed(1) + 'px;height:' + (b.bottom - b.top + 1.4 * pad).toFixed(1) + 'px"></i>'; });
+    });
+    if (sl.innerHTML !== html) sl.innerHTML = html;
+  }
   function ghost(p) {
     var box = p.querySelector(":scope > .qghostbox");
     if (!box) {
@@ -76,6 +120,7 @@
       for (var k = 0; k < 6; k++) { var i = D.createElement("i"); i.style.setProperty("--k", k); gh.appendChild(i); }
       box.appendChild(gh); p.insertBefore(box, p.firstChild);
     }
+    var glass = !glassOff(); if (glass) glassDefs(); box.classList.toggle("qg", glass);   // GHOST-G3-GLASS; off = the flat 8 % numeral, no scrim
     p.classList.toggle("qbr", !/(^|[?&])qcecho=tl(&|$)/.test(g.location.search));   // prototype: the echo trail at the bottom-right (qcard.css)
     var num = number(), cur = box.firstChild, was = cur.getAttribute("data-n");
     inkLeft(cur, num);
@@ -113,6 +158,8 @@
     if (!on()) {
       p.classList.remove("qc7");
       var b0 = p.querySelector(":scope > .qghostbox"); if (b0) b0.remove();
+      var s0 = p.querySelector(":scope > .qscrim"); if (s0) s0.remove();
+      var d0 = D.getElementById("qgdefs"); if (d0) d0.remove();
       return;
     }
     if (!blocks.children.length) return;
@@ -230,7 +277,7 @@
     var h1 = p.offsetHeight; p.style.minHeight = "0"; var h0 = p.offsetHeight; p.style.minHeight = "";
     if (h1 - h0 >= 1) b.style.marginTop = (h1 - h0) + "px";
   }
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); }); }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); scrim(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
@@ -238,7 +285,7 @@
     new MutationObserver(later).observe(blocks, { childList: true });
     var pr = D.getElementById("problem");
     if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });
-    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); }); }).observe(pr); }   // a figure / font landing changes the offset
+    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); scrim(); }); }).observe(pr); }   // a figure / font landing changes the offset
     g.addEventListener("scroll", pinSoon, { passive: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
