@@ -83,7 +83,7 @@ try {
     const page = await open2(w, code);
     try {
       const g = await geo(page);
-      assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck" + "Answer once to unlock Cluck.");
+      assert.ok(g, "the button exists"); assert.equal(g.n, 1); assert.equal(g.label, "Ask Cluck" + "Available after your first try.");
       assert.equal(g.aria, "true", "aria-disabled"); assert.equal(g.dis, false, "no disabled attribute"); assert.notEqual(g.pe, "none", "no pointer-events:none");
       assert.ok(g.br.h >= 44 && g.br.w >= 44, "tap target: " + JSON.stringify(g.br));
       // ICK5-CLUCK-TR (Tony Nov 18, supersedes the ICK E3 left-edge tab): AC1 + AC2 + AC3 for this viewport
@@ -99,19 +99,19 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
-  await step("1366: disabled: hover shows 'Answer once to unlock Cluck.'; a click does not open Cluck", async () => {
+  await step("1366: disabled: hover shows 'Available after your first try.'; a click does not open Cluck", async () => {
     const page = await open2(1366, "PHYS_FP2");
     try {
       await page.hover("#cluckBtn");
-      await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Answer once to unlock Cluck."; }, null, { timeout: 5000 });
-      assert.equal(await toastText(page), "Answer once to unlock Cluck.");
+      await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Available after your first try."; }, null, { timeout: 5000 });
+      assert.equal(await toastText(page), "Available after your first try.");
       await page.click("#cluckBtn", { force: true }); await page.waitForTimeout(300); // keep: observation window, a disabled click must change nothing
       assert.equal(await page.evaluate(() => { const c = document.querySelector("#cluck"); return !!c && !c.hidden && c.getClientRects().length > 0 && !c.closest("[hidden]") && document.body.classList.contains("x") ; }), false);
     } finally { await page.context().close(); }
   });
   await step("390: disabled: a tap shows the note (phone)", async () => {
     const page = await open2(390, "PHYS_FP2");
-    try { await page.locator("#cluckBtn").tap({ force: true }); await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Answer once to unlock Cluck."; }, null, { timeout: 5000 }); assert.equal(await toastText(page), "Answer once to unlock Cluck."); } finally { await page.context().close(); }
+    try { await page.locator("#cluckBtn").tap({ force: true }); await page.waitForFunction(() => { const t = document.getElementById("toast"); return !!t && t.classList.contains("on") && t.textContent.trim() === "Available after your first try."; }, null, { timeout: 5000 }); assert.equal(await toastText(page), "Available after your first try."); } finally { await page.context().close(); }
   });
   await step("390: flag on: a wrong try unlocks it (fill sweeps in, 150-300 ms), the sheen plays, no chip / tray / slot duck anywhere; a press opens Cluck", async () => {
     const page = await open2(390, "PHYS_FP2");

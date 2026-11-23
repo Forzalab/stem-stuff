@@ -2,7 +2,7 @@
    One button at the top right of every question card (#problem: all types, multi-part and MC included). It replaces every old entry (popover chip, verdict-slot duck, strip drawer chip,
    "Explain my mistake" chip, the "Cluck lives in Ask Cluck" toast); cluck.js draws none of them under the flag. Look (ICK5-CLUCK-TR): a tangerine squircle, duck line icon, floated at the card's top right so the question text wraps around it (qcard.css §ick5-tr); the same element FLIPs into the phone proof box and back (mount).
    States (aria-disabled, never the disabled attribute, never pointer-events:none; RESEARCH option A #141d36 / #7a8aae, no raise):
-     first = before the first try      -> "Answer once to unlock Cluck."
+     first = before the first try      -> "Available after your first try."
      off   = no key / diet / out of asks / not a Cluck question -> "Cluck isn't available here."   (hover on desktop, tap on a phone, Enter / Space: a note from the toast family)
      ready = a press does what the old chip did (cluck.js window.stemCluckAsk.enter)
    disabled -> ready: the fill sweeps in left to right, 240 ms ease-out (a scaleX layer); reduced motion = instant (cluckbtn.css).
@@ -13,7 +13,7 @@
 (function (g) {
   "use strict";
   var D = g.document, H = D.documentElement, btn = null, why = null, raf = 0, enabledAt = 0, sheenT = 0, endT = 0;
-  var MSG = { first: "Answer once to unlock Cluck.", off: "Cluck isn't available here." };
+  var MSG = { first: "Available after your first try.", off: "Cluck isn't available here." };
   var on = function () { return H.classList.contains("ui-v7"); };
   var reduced = function () { try { return g.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
   var ask = function () { return g.stemCluckAsk || null; };
