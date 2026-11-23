@@ -2190,6 +2190,7 @@ function nextBtn() {                                                            
   }
   b.addEventListener("click", e => {
     e.stopPropagation();
+    if (document.documentElement.classList.contains("ui-v7") && window.stemNavNext) { window.stemNavNext(); return; }   // ui-v7: the exact action of the top bar's Next (nav.js goNext), no detour through #qnext's state
     const n = $("#qnext");
     if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No more questions, no more eggs." } })); return; }
     n.click();
