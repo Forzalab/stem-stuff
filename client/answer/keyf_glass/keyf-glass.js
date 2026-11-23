@@ -31,11 +31,11 @@
 
   /* == §config == */
   var config = {
-    glass: { refr: 66, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 1.2, blur: 9.7, mag: 1.12, k1: 0.08, magFall: 0.5, magCap: 18, scrim: 0.55, scrimBlur: 18, scrimPad: 14,
-      fresnel: 0.1, tir: 0.35, vign: 0.25, tint: 0.4, tintRGB: [3, 16, 26], paint: 0.16, sym: 0.51, bright: 0.7, sat: 0.98,
+    glass: { refr: 135, bezpx: 122, curv: 8.1, ior: 2.89, chroma: 1.2, blur: 9.7, mag: 1.12, k1: 0.08, magFall: 0.5, magCap: 18, scrim: 0.38, scrimBlur: 10, scrimPad: 6,
+      fresnel: 0.1, tir: 0.35, vign: 0.25, tint: 0.4, tintRGB: [4, 18, 40], paint: 0.16, sym: 0.51, bright: 0.7, sat: 0.98,
       grain: 0.53, grainF: 1.72, hair: 0.04, shadow: 0.81, radius: 16,
-      hover: { dist: 220, radius: 260, blur: 2.5, tint: 0.08, scrim: 0.12, glow: 0.12 } },   /* desktop pointer proximity, very subtle */
-    motion: { mode: "conveyor", fps: 12, speed: 1, belt: { vx: -3, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
+      hover: { dist: 240, radius: 300, blur: 5, tint: 0.16, scrim: 0.2, glow: 0.3 } },   /* desktop pointer proximity, clearly visible */
+    motion: { mode: "conveyor", fps: 20, speed: 1, belt: { vx: -6, vy: 0 }, ampX: 0, ampY: 1.5, rotA: 0.3, breathe: 0.6, current: 0, springK: 8, zeta: 0.75, pulse: { share: 0.33, alpha: 0.12, scale: 0.02, period: [9, 15] } },
     symbols: { scale: 0, scaleAuto: { wide: 2, narrow: 1.5, at: 700 }, always: ["bulb"], pool: ["pi", "sigma", "integral", "sqrt", "infinity", "partial", "theta", "delta"], cell: [110, 140],
       size_px: [70, 130], rot_deg: [-25, 25], alpha: [0.35, 1] }
   };
@@ -218,7 +218,7 @@
         var px = mod(s.x + m + belt.vx * mo * config.motion.speed, W2) - m, py = belt.vy ? mod(s.y + belt.vy * mo, H2) : s.y, pz = 0;
         if (s.pulse && live) { pz = Math.sin(TAU * T / s.pper + s.pph); symEls[i].setAttribute("opacity", (1 + PU.alpha * pz).toFixed(3)); } else symEls[i].removeAttribute("opacity");
         symEls[i].setAttribute("transform", "translate(" + (px + s.sx).toFixed(2) + " " + (py + s.sy).toFixed(2) + ") rotate(" + (s.rot + s.srot).toFixed(3) + ") scale(" + (s.ssc * (1 + PU.scale * pz)).toFixed(4) + ")"); }); }
-    /* The belt moves ~3 px/s, so the scene is stepped at mo.fps (12; 6 in low power) instead of every display frame: each step re-runs the
+    /* The belt moves ~6 px/s, so the scene is stepped at mo.fps (20; 6 in low power) instead of every display frame: each step re-runs the
        displacement filter, which is the costly part. Low power = <= 2 cores / <= 2 GB, or measured slow steps: also 1 chroma pass instead of 3. */
     var lp = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) || (navigator.deviceMemory && navigator.deviceMemory <= 2), slowN = 0, slowSum = 0;
     function frame(ts) {
