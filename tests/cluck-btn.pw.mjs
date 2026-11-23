@@ -106,7 +106,7 @@ try {
       assert.equal(await toastText(page), "", "no 'first try' note");
       await page.click("#cluckBtn");
       await page.waitForSelector("#cluck .cl-ft .ask.locked", { state: "visible", timeout: 8000 });
-      assert.equal(await page.evaluate(() => document.querySelector("#cluck .ask .g-lock .txt")?.textContent), "Available after first try.");
+      assert.equal(await page.evaluate(() => document.querySelector("#cluck .ask .g-lock .txt")?.textContent), "Available after your first try.");
       assert.equal(await page.evaluate(() => document.querySelector("#cluck .ask textarea").disabled), true, "the locked field is disabled");
     } finally { await page.context().close(); }
   });

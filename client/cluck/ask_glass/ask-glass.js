@@ -282,7 +282,7 @@ const ST = new WeakMap();   // form -> state
 const LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4.5" y="10.5" width="15" height="10.5" rx="3"/><path d="M12 14.6v2.4"/><path class="shk" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';   // Lucide lock, altered (ISC): narrower body, rx 3, short shackle, slot
 function html() {
   return '<div class="g-haze"></div><div class="g-copy" aria-hidden="true"></div><div class="g-tint"></div><div class="g-rim"></div><div class="g-sweep"><i class="spin"></i></div><div class="g-think"><i class="spin"></i></div>'
-    + '<div class="g-lock" role="note">' + LOCK_SVG + '<span class="txt">Available after first try.</span></div>';
+    + '<div class="g-lock" role="note">' + LOCK_SVG + '<span class="txt">Available after your first try.</span></div>';
 }
 function mount(form, sc, locked) {
   let s = ST.get(form);

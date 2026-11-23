@@ -1,5 +1,5 @@
 // ASK-GLASS smoke (Nov 22): Cluck's ask field as the R3 glass Ask bar, plus the pre-try rules, under html.ui-v7, at 390 and 1280:
-//   (i)   before a try the Ask Cluck button has no data-st="first" and no aria-disabled (no note); the box shows the locked strip "Available after first try." (44px, input disabled)
+//   (i)   before a try the Ask Cluck button has no data-st="first" and no aria-disabled (no note); the box shows the locked strip "Available after your first try." (44px, input disabled)
 //   (ii)  a bank item with `starter` shows ONE chip (the "Free" tag + its text) that sends POST /chat {starter:true} with history length 2, last entry = the text; no /explain before a try;
 //         an item without `starter` keeps the 3 generic chips
 //   (iii) after a graded try the bar is 56px (radius 20, desktop width <= 560) and the input is enabled
@@ -82,12 +82,12 @@ for (const w of [390, 1280]) {
       assert.notEqual(b.st, "first", "data-st is still 'first'"); assert.equal(b.st, "ready"); assert.equal(b.aria, null, "aria-disabled before a try");
     } finally { await page.context().close(); }
   });
-  await step(`${w} (i): no note; a press opens the box on the locked strip "Available after first try." (44px, input disabled), no /explain`, async () => {
+  await step(`${w} (i): no note; a press opens the box on the locked strip "Available after your first try." (44px, input disabled), no /explain`, async () => {
     const page = await open(w);
     try {
       const b = await btn(page); assert.equal(b.why, "", "a note: " + b.why); assert.equal(b.label, "Ask Cluck");
       await page.click("#cluckBtn"); await page.waitForSelector(FORM, { state: "visible", timeout: 8000 }); await settled(page, "#cluck");
-      const f = await form(page); assert.ok(f.locked, "the bar is not locked"); assert.equal(f.txt, "Available after first try.");
+      const f = await form(page); assert.ok(f.locked, "the bar is not locked"); assert.equal(f.txt, "Available after your first try.");
       assert.ok(Math.abs(f.h - 44) <= 1.5, "strip height " + f.h); assert.ok(Math.abs(f.rad - 14) <= .5, "strip radius " + f.rad); assert.equal(f.disabled, true, "the field is not disabled");
       assert.equal(await page.evaluate(sel => { const t = document.querySelector(sel); t.focus(); return document.activeElement === t; }, TA), false, "the locked field took focus");
       assert.equal(page.explains, 0, "an /explain call before a try");

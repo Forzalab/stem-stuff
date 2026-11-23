@@ -1,7 +1,7 @@
 /* ask-glass.css: the R3 glass Ask bar of Cluck's sheet, all under html.ui-v7 (flag off = today's footer field). Script: ask-glass.js; markup: cluck.js clAsk (the .ask form gets class ag).
    Geometry: the footer floats over the reply (12px in, 12px up, 56px, radius 20, desktop width cap 560px); the reply scrolls under it (bottom padding = bar + inset + 16px).
    Layers inside the form (z): .g-copy 0 (the aria-hidden synced copy of the reply, the one SVG-filtered node) · .g-tint 1 · .g-rim 2 · .g-haze 2 (thinking glow + bleed) · .g-lock 3 · field / counter / send 3 · .g-sweep + .g-think 4 (rings).
-   States: .locked (before the first try: a 44px calm-glass strip, radius 14, lock + "Available after first try.") · .opening / .sweep (the unlock, JS-timed) · .think (Cluck streams: ring, glow, light) ·
+   States: .locked (before the first try: a 44px calm-glass strip, radius 14, lock + "Available after your first try.") · .opening / .sweep (the unlock, JS-timed) · .think (Cluck streams: ring, glow, light) ·
    .ag-solid (html.fx-dim, reduced transparency: a solid warm fill) · .ag-frost (the lens failed, or a phone sheet drag: the R3 frost, blur 16 + saturate 1.5 over rgb(34 27 21/.42)).
    Perf rules (measured 60fps in the mock): the ring is a conic gradient on a ROTATING SQUARE child under a static xor mask; glow + bleed are static box-shadows on one layer breathing by OPACITY only;
    no gradient angle is animated, no filter / blur / blend sits on a parent of a moving child. Reduced motion = everything static. */
