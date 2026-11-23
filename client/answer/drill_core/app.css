@@ -73,6 +73,7 @@
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
   --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
+  --t-reply: 1rem;   /* Cluck's reply text (.wtext), 16px on phone and desktop (Tony Nov 23, 4px-step value); not tied to --t-sm */
   --lh: 1.41; --lh-ui: 1.33; --lh-title: 1.25; --lh-xs: 1.38;
   /* KaTeX at x-height parity with the text face: Atkinson .496 / KaTeX_Main .431 = 1.15em (measured); SF ~.52 -> 1.2em (provisional:
      measure on a device, then pin). It replaces the stacked 1.08 / 1.1 multipliers. No font-size-adjust: every `font:` shorthand resets it */
@@ -1377,8 +1378,7 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
 .cl .done-row p { margin: 0; color: var(--help-muted); font-size: var(--t-sm); }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
-.wtext { font-size: var(--t-sm); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
-@media (max-width: 480px) { #cluck .wtext { font-size: 1rem; } }   /* PHONE-REPLY (Tony, Nov 23): the sheet's reply read small at 390 (15px -> 16px); list, math and code are em-based and scale with it. Desktop keeps --t-sm */
+.wtext { font-size: var(--t-reply); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
 .wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
 .wtext .wcode { font-family: var(--mono); font-size: .9em; background: var(--help-fill); color: var(--help-on); padding: 0 var(--s1); border-radius: 4px; }   /* `code` in Cluck's reply */
