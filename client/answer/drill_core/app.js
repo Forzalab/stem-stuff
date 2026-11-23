@@ -2336,6 +2336,15 @@ function nodGate() {
   return yes;
 }
 function nodMiss() { const st = nodGet() || { day: ptDay(), n: 0, last: false }; st.miss = true; try { localStorage.setItem("stem-nod", JSON.stringify(st)); } catch { /* blocked */ } }
+/* MC-HINT-FOLD (Tony Nov 23, option A): the hint keeps its place under the tiles (option B was measured: moving it above
+   shifted every tile down 72 px and the phone fill then re-laid its rows). On a short phone screen the hint can land under
+   the fold, so a miss brings it in with the least scroll; no smooth scroll under prefers-reduced-motion (cluck.js's rule). */
+function hintFold(el) {
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  if (r.top >= 0 && r.bottom <= innerHeight) return;
+  el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: bridge.reduceMQ?.matches ? "auto" : "smooth" });
+}
 function feedback(r, typed) {
   if (r.verdict === "correct") rpUnmount();                                  // right: the repair box has done its job
   const fb = $("#fb");
@@ -2373,7 +2382,7 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   bridge.layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); }   // no ladder: each wrong try shows the next formula row, then the arrows
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); hintFold(inRow ? chk.querySelector(".cluck") : fb.querySelector(".cluck")); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 
