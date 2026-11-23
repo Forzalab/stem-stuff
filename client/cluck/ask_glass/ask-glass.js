@@ -338,18 +338,50 @@ function rebuild(s) {
   s.copy.replaceChildren(c); s.clone = c;
 }
 /* the bar's size changed (window, sheet, a growing field, the unlock): the lens map is cut to the box, so it is made again */
-function size(s) {
+function size(s, fade) {
   const f = s.form;
   if (!f.isConnected) return;
   const w = f.offsetWidth, h = f.offsetHeight;
   if (!w) { thinkSet(s, false); return; }   // hidden (sheet closed): the light stops; it starts again with the next size
+  if (fade && s.gl && !s.bad && !solid() && !reduced() && fadeGlass(s)) { thinkSet(s, thinking(s)); return; }
   rebuild(s);
   if (w !== s.W || h !== s.H || (!s.gl && !s.bad && !solid())) glass(s);
   thinkSet(s, thinking(s));
 }
+/* the unlock's lens rebuild: the new glass is made on a second copy (opacity 0, right after the old one) and fades in over 240 ms, so the locked optics (refraction 10, no chroma) do not snap to the ready ones in one frame.
+   The old copy + its filters go on the new copy's own opacity transitionend (2 s timeout fallback: slow phones stretch the fade). Returns false = nothing changed, take the instant path. */
+function fadeGlass(s) {
+  const old = s.copy, oldGl = s.gl, oldClone = s.clone;
+  if (!old || !old.isConnected || !old.offsetWidth) return false;
+  const nc = old.cloneNode(false);
+  nc.style.filter = ''; nc.style.opacity = '0'; nc.style.transition = 'none';
+  old.after(nc); s.copy = nc; s.gl = null;
+  rebuild(s);
+  glass(s);
+  if (!s.gl) {   // not laid out: back to the old copy (the next size() comes back); the lens failed (frost): the old lens goes too
+    nc.remove(); s.copy = old; s.clone = oldClone;
+    if (s.bad) oldGl.destroy(); else s.gl = oldGl;
+    return false;
+  }
+  const fx = s.fx = { old, oldGl, nc, r1: 0, r2: 0, to: 0, end: null };
+  fx.end = (e) => { if (e.target === nc && e.propertyName === 'opacity') endFade(s); };
+  nc.addEventListener('transitionend', fx.end);
+  fx.to = setTimeout(() => endFade(s), 2000);
+  fx.r1 = requestAnimationFrame(() => { fx.r2 = requestAnimationFrame(() => { nc.style.transition = 'opacity 240ms ease-out'; nc.style.opacity = '1'; }); });   // two rAFs: the 0 is painted first
+  return true;
+}
+function endFade(s) {
+  const fx = s.fx; if (!fx) return;
+  s.fx = null;
+  cancelAnimationFrame(fx.r1); cancelAnimationFrame(fx.r2); clearTimeout(fx.to);
+  fx.nc.removeEventListener('transitionend', fx.end);
+  fx.nc.style.transition = ''; fx.nc.style.opacity = '';
+  fx.oldGl.destroy(); fx.old.remove();   // the old copy's lens + its motion and thinking clones go with it
+}
 function glass(s) {
   const f = s.form;
   if (!solid() && (!s.copy || !s.copy.offsetWidth || !s.copy.offsetHeight)) return;   // the copy is not laid out (display:none during a sheet drag, a hidden sheet): keep what there is, the next size() comes back
+  endFade(s);   // any other rebuild (resize, reply) is the instant path: settle a running fade first
   clearTimeout(s.mt); s.mt = 0; s.mv = false;
   if (s.gl) { s.gl.destroy(); s.gl = null; s.img = null; }
   s.bad = false;
@@ -370,12 +402,12 @@ function glass(s) {
    Reduced motion = instant. */
 /* while the bar grows or shrinks its bottom stays put, so its top moves: every frame the copy is re-offset (top/left = the scroller's origin minus the bar's) so the lens keeps bending the right text;
    it ends on the bar's own height transitionend / animation finish (a timeout is the fallback), then the glass is made again at the new size */
-function track(s, anim) {
+function track(s, anim, fade) {
   const f = s.form;
   stopTrack(s);
   const t0 = performance.now(), c0 = s.clone, top0 = f.offsetTop, left0 = f.offsetLeft;
   const bt = c0 ? parseFloat(c0.style.top) || 0 : 0, bl = c0 ? parseFloat(c0.style.left) || 0 : 0;
-  const done = () => { stopTrack(s); s.W = 0; size(s); };
+  const done = () => { stopTrack(s); s.W = 0; size(s, fade); };
   const tick = () => {
     s.trk = 0;
     if (s.clone) { s.clone.style.top = (bt + top0 - f.offsetTop) + 'px'; s.clone.style.left = (bl + left0 - f.offsetLeft) + 'px'; }
@@ -415,7 +447,7 @@ function setLocked(form, locked) {
     form.classList.remove('locked'); form.classList.add('sweep');
     const h1 = form.offsetHeight;
     if (form.animate) s.anim = form.animate([{ height: h0 + 'px', borderRadius: LOCK_RAD + 'px' }, { height: h1 + 'px', borderRadius: RAD + 'px' }], { duration: 460, delay: 160, easing: 'cubic-bezier(.2,1.35,.32,1)', fill: 'backwards' });
-    if (s.anim) track(s, s.anim);   // the same follow, now ended by the animation's finish
+    if (s.anim) track(s, s.anim, true);   // the same follow, now ended by the animation's finish
   }, 170);
   s.t3 = setTimeout(() => { form.classList.remove('sweep', 'opening'); }, 1100);
 }

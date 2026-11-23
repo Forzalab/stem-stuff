@@ -31,7 +31,7 @@ html.ui-v7 .cl-ft .ask.ag:not(.locked):focus-within { outline: 2px solid var(--h
 html.ui-v7 .ask.ag > :is(.g-sweep, .g-think) .spin { position: absolute; left: 50%; top: 50%; width: 150%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; will-change: transform; }
 
 /* ---- the field, the counter, the send button (nested 44x44, radius 14) ---- */
-html.ui-v7 .ask.ag > :is(.ff, .left, .send) { position: relative; z-index: 3; transition: opacity .3s ease .42s, transform .42s cubic-bezier(.2, 1.2, .3, 1) .42s; }
+html.ui-v7 .ask.ag > :is(.ff, .left, .send) { position: relative; z-index: 3; transition: opacity .3s ease .42s, transform .42s cubic-bezier(.2, 1.2, .3, 1) .42s; will-change: transform; }   /* stays on its own layer: no re-raster (1px text drift) at the end of the rise-in */
 html.ui-v7 .ask.ag.locked > :is(.ff, .left, .send) { opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .15s, transform .15s; }
 html.ui-v7 .ask.ag > .ff { flex: 1; min-width: 0; }
 html.ui-v7 .ask.ag > .left { flex: none; width: 0; margin-left: -8px; overflow: hidden; white-space: nowrap; }   /* "N left" stays for screen readers; the bar is not a counter */
