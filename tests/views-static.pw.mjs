@@ -125,10 +125,11 @@ try {
     await page.click("#cluck .wview .vw-foot button:nth-child(2)");
     assert.match(await page.textContent("#cluck .wview .vw-cap"), /Friction/);
     await page.mouse.move(0, 0);                                         // not hovered: the resting look
-    const look = await page.$eval("#cluck .wview .vw-foot button:nth-child(2)", b => { const c = getComputedStyle(b), r = getComputedStyle(document.querySelector("#cluck"));
+    const look = await page.$eval("#cluck .wview .vw-foot", f => { const r = getComputedStyle(document.querySelector("#cluck"));
       const hex = v => v.trim().replace(/^#(..)(..)(..)$/, (m, x, y, z) => `rgb(${[x, y, z].map(h => parseInt(h, 16)).join(", ")})`);
-      return [c.color === hex(r.getPropertyValue("--help")), c.borderTopColor === hex(r.getPropertyValue("--help-line")), c.backgroundColor]; });
-    assert.deepEqual(look, [true, true, "rgba(0, 0, 0, 0)"], "W113 vet: Back / Next in the chat's --help family, no navy fill");
+      const [back, next] = [...f.querySelectorAll("button")].map(b => getComputedStyle(b));
+      return [back.backgroundColor !== "rgba(0, 0, 0, 0)", back.borderTopColor === "rgba(0, 0, 0, 0)", next.backgroundColor === hex(r.getPropertyValue("--action"))]; });
+    assert.deepEqual(look, [true, true, true], "W113 vet: Back a solid quiet fill, Next the solid --action fill, neither edged");
     assert.deepEqual(page.errs, []);
     await page.context().close();
   });

@@ -652,7 +652,7 @@ const capNodes = (c, s) => String(s ?? "").split(/\$([^$]+)\$/).flatMap((t, i) =
 /** Steps (F14 + stepper Nov 8, iteration 2): ONE anchor figure drawn once (Graph marks per step, or a Geometry whose parts each step lights,
     hides or relabels: structure fixed, no redraw = no whiplash; a Doodle stays). Top row: pips (Predict's .vw-pips, the only counter; the
     count is aria + a screen-reader .vw-n) and Show all (every step formula). Then the figure, a bold title (no number), the caption (aria-live),
-    the formula (symbols in the figure's hues), Back (ghost) / Next (filled) far apart (←/→ while the footer has focus). A Geometry anchor drops
+    the formula (symbols in the figure's hues), Back / Next as solid fills (no edge; see views.css), far apart (←/→ while the footer has focus). A Geometry anchor drops
     its point names and gives every labelled mark its own hue; an unlit part takes its layer-3 shade (never opacity). The last step, the first
     time: a bubbling "vw-steps-end" (the app's cheer). Back/Next never call the model. */
 register("Steps", (p, c) => {
