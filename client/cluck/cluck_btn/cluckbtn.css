@@ -2,6 +2,7 @@
    (cluckbtn.js). On a qc7 question card this chip is REPLACED by the tangerine squircle in qcard.css §ick5-tr (ICK5-CLUCK-TR), which out-specifies these rules; the base rules stay
    for a card that is not qc7. Roomier than the popover chip: 12 / 20 side padding, a 12 / 16 margin; floats right at the card's top so the question text wraps beside it.
    Disabled (aria-disabled="true", RESEARCH option A): the --float fill and the --navy-400 label (about 4.8:1), no raise, duck at 60%; same size and radius as enabled (no layout shift).
+   Disabled on a qc7 card = slate, by re-pointing --ick7-fill / --ick7-ink on the button (qcard.css §ick5-tr still paints; .cb-inbox reads the same tokens); unlock = 240 ms ease-out, none with reduced motion.
    The enabled fill is a layer (::before) that scales in from the left, 240 ms ease-out; disabled -> enabled sweeps in, enabled -> disabled sweeps out; reduced motion = instant.
    Emphasis (CLUCK-EMPHASIS), JS-timed, once per event, none with reduced motion: .cb-sheen = blue-tinted (--action) sweep (0.9 s, the streak WAVE's Td); .cb-shake / .cb-nod = the duck svg only; .cb-hop = the duck's spring hop after the unlock sweep. Never a halo ring, never a whole-chip nudge. */
 html.ui-v7 #problem { display: flow-root; }
@@ -11,12 +12,16 @@ html.ui-v7 .cluckbtn {
   min-width: 44px; min-height: 44px; margin: 2px 0 24px 16px; padding: 12px 22px 12px 18px; border: 0; border-radius: 12px;
   background: var(--cb-off); color: var(--cb-off-ink); font-family: inherit; font-weight: 600; font-size: var(--t-sm, .9375rem); line-height: 1.15; text-align: left; white-space: nowrap;
   cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: none;
-  transition: color 240ms ease-out, box-shadow 240ms ease-out, transform 90ms ease-out;
+  transition: color 240ms ease-out, background-color 240ms ease-out, box-shadow 240ms ease-out, transform 90ms ease-out;
 }
+/* CLUCK-BTN-DISABLED (Tony Nov 23, option A): qcard.css §ick5-tr paints the squircle from --ick7-fill / --ick7-ink with !important; do not fight it. Disabled re-points
+   those tokens ON the button (a declaration on the element beats the inherited token), so the same qcard rules paint the --chip slate and the dim duck; ready is untouched.
+   The phone proof box's .cb-inbox reads the same tokens (verdict-v7.css), so it takes the same slate. */
+html.ui-v7 .cluckbtn[aria-disabled="true"] { --ick7-fill: var(--chip, #283352); --ick7-ink: var(--cb-off-ink, #7a8aae); }
 html.ui-v7 .cluckbtn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cb-fill); transform: scaleX(0); transform-origin: left center; transition: transform 240ms ease-out; }
 html.ui-v7 .cluckbtn:not([aria-disabled="true"]) { color: var(--ink); box-shadow: var(--shadow-raise); }
 html.ui-v7 .cluckbtn:not([aria-disabled="true"])::before { transform: scaleX(1); }
-html.ui-v7 .cluckbtn .cb-duck { flex: none; width: 24px; height: 24px; color: var(--help, #ffa63e); --c2: var(--help-on, #ffdcc0); transition: opacity 240ms ease-out; }
+html.ui-v7 .cluckbtn .cb-duck { flex: none; width: 24px; height: 24px; color: var(--help, #ffa63e); --c2: var(--help-on, #ffdcc0); transition: opacity 240ms ease-out, color 240ms ease-out; }
 html.ui-v7 .cluckbtn[aria-disabled="true"] .cb-duck { opacity: .6; }
 html.ui-v7 .cluckbtn[aria-disabled="true"]:focus-visible, html.ui-v7 .cluckbtn:focus-visible { outline: var(--ring, 2px) solid var(--focus, #8cc2ff); outline-offset: 2px; }
 @media (hover: hover) { html.ui-v7 .cluckbtn[aria-disabled="true"] { cursor: not-allowed; } html.ui-v7 .cluckbtn:not([aria-disabled="true"]):hover::before { filter: brightness(1.12); } }

@@ -15,7 +15,8 @@
    the bar's fill (0..1); at = the anchor element or a function returning it.
    The short toast (W133, todo 133: the twist toast): bar: false = no progress bar (a line, not a count); action: { label, run } = one
    outlined .btn under the words (never .btn-go), a tap runs it and closes the toast; clear = a selector of boxes it must never lie on
-   although they take no tap (the twist toast: the answer area #q, the ladder in it, Next); onshow() = called once it is on screen. */
+   although they take no tap (the twist toast: the answer area #q, the ladder in it, Next); onshow() = called once it is on screen.
+   A float toast yields at once (the X's close): a pointerdown in a `clear` box, or a page scroll over 8 px since it showed. */
 (function (g) {
   'use strict';
   var d = g.document, el = null, q = [], cur = null, timer = 0, left = 0, since = 0, raf = 0, wait = 0, nEl = null;
@@ -70,6 +71,27 @@
   /* desktop = the side layout (question column left, Explain + Notes right) on a screen tall enough for a foot; a landscape phone
      (844x390) is side too but has no foot to spare, so it stays a phone here */
   var desk = function () { var vv = g.visualViewport; return d.documentElement.classList.contains('side') && (vv ? vv.height : innerHeight) >= 500; };
+  /* PHONE-TOAST-FLOAT: a float toast is the one that may lie over the answer tiles, so it yields on the student's own gesture:
+     a pointerdown in one of its `clear` boxes (capture only: the tap still reaches the tile) or a page scroll over 8 px since it showed.
+     The listeners live only while that toast is up (fltSync from place(), fltOff from hide()/done()): no leak across toasts. */
+  var fltOn = false, fltY = 0;
+  function fltTap(e) {
+    if (!cur || !el || el.dataset.side !== 'float' || !cur.clear) return;
+    var cs = d.querySelectorAll(cur.clear);
+    for (var i = 0; i < cs.length; i++) if (cs[i].contains(e.target)) { hide(false, 'dismissed'); return; }
+  }
+  function fltScroll() {
+    if (!cur || !el || el.dataset.side !== 'float') { fltOff(); return; }
+    if (Math.abs((g.scrollY || g.pageYOffset || 0) - fltY) > 8) hide(false, 'dismissed');
+  }
+  function fltOff() { if (!fltOn) return; fltOn = false; d.removeEventListener('pointerdown', fltTap, true); g.removeEventListener('scroll', fltScroll); }
+  function fltSync() {
+    if (!cur || !el || el.dataset.side !== 'float') { fltOff(); return; }
+    if (fltOn) return;
+    fltOn = true; fltY = g.scrollY || g.pageYOffset || 0;
+    d.addEventListener('pointerdown', fltTap, true);
+    g.addEventListener('scroll', fltScroll, { passive: true });
+  }
   /* -> true when it has a place, on screen, under the pinned bar, over no live control.
      Phone: 12px under its anchor; it scrolls with its anchor. Never over the anchor: that is the problem the student reads first (a
      short landscape phone, 844x390, put it on the question's own words), so with no room under it, it waits for a scroll (W88 r4).
@@ -95,6 +117,7 @@
       if (y < barB + 8 || (sides[i] !== 'float' && (y + h > bottom || covers(x, y, w, h)))) continue;
       el.style.left = x + 'px'; el.style.top = y + 'px';               // whole px: the words stay on the pixel grid
       el.dataset.side = sides[i];
+      fltSync();                                                       // PHONE-TOAST-FLOAT: only the float listens for its yield
       return true;
     }
     return false;
@@ -211,9 +234,10 @@
   }
   /* o.cls (calc toast, ui-v7): adds a scoped class stoast-c-<cls> (reset each toast) so a feature can style its own toast without editing toast.css. */
   function clsPut(o) { el.className = el.className.replace(/\s*stoast-c-\S+/g, '') + (o.cls ? ' stoast-c-' + o.cls : ''); }
-  function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
+  function done() { if (!el) return; fltOff(); el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
   function hide(quiet, why) {
     clearTimeout(timer); left = 0;
+    fltOff();
     if (!cur || !el) return;
     if (cur.onend && why) { var oe = cur.onend; cur.onend = null; try { oe(why); } catch (e) { /* the caller's */ } }   // onend('dismissed' | 'expired'), once
     if (quiet || busy() || reduced() || !el.classList.contains('on')) { done(); return; }
@@ -363,6 +387,6 @@
 
   /* hide(): the one on screen goes now (the next queued one follows); clear(): it and the queue.
      note / noteAt / noteHide / notePlace: the notes (above); config({ foot }): the px the page's foot keeps (app.js: the dock) */
-  g.stemToast = { show: show, hide: function () { clearTimeout(timer); left = 0; if (el && cur) done(); }, clear: function () { q.length = 0; clearTimeout(timer); left = 0; if (el && cur) done(); }, place: place,
+  g.stemToast = { show: show, hide: function () { clearTimeout(timer); left = 0; if (el && cur) done(); }, clear: function () { q.length = 0; clearTimeout(timer); left = 0; if (el && cur) done(); }, place: place, desk: desk,
     note: note, noteAt: noteAt, noteHide: noteHide, notePlace: noteFollow, config: function (c) { if (c && typeof c.foot === 'function') footRoom = c.foot; } };
 })(window);
