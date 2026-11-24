@@ -390,7 +390,8 @@ jobs:
           ROLLBACK="$(grep '^rollback=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
           HARD="$(grep '^hard=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
           if [ -n "$ROLLBACK" ]; then
-            gh workflow run ship.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=rollback -f target="$ROLLBACK"
+            # BUG-SHIP-ORDER: bad = the red run's head sha, so the rollback job skips when live already moved PAST it
+            gh workflow run ship.yml --repo "$GITHUB_REPOSITORY" --ref main -f mode=rollback -f target="$ROLLBACK" -f bad="${{ github.event.workflow_run.head_sha || github.sha }}"
             K="$(git rev-list --first-parent --count "$ROLLBACK..$GITHUB_SHA")"
             echo "confirmed red covers $K merge(s) since $ROLLBACK"
             if [ "$K" -gt 1 ]; then gh workflow run culprit.yml --repo "$GITHUB_REPOSITORY" --ref main -f from="$ROLLBACK" -f to="$GITHUB_SHA" -f specs="$HARD"; fi
