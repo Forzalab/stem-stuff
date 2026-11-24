@@ -606,6 +606,10 @@ function clEl() {
 function clDrag(el) {
   const root = document.documentElement, grab = el.querySelector(".cl-grab"), bar = el.querySelector(".cl-bar"), bd = el.querySelector(".cl-bd");
   let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null, laid = false;
+  /* CLUCK-SHEET-LAG: innerHeight right after a style write forces a full style recalc of the sheet, so it is read once (vhSync: at a drag / rise / leave start, and on resize), never per move.
+     --rr / --pp are inherited: each write restyles the subtree, so a write happens only when the string changed (put, last). */
+  let vh = innerHeight; const vhSync = () => { vh = innerHeight; }; addEventListener("resize", vhSync);
+  const wrote = {}, put = (k, v) => { if (wrote[k] !== v) { wrote[k] = v; el.style.setProperty(k, v); } }, unput = k => { wrote[k] = undefined; el.style.removeProperty(k); };
   const phone = () => !bridge.sideMQ.matches, ft = el.querySelector(".cl-ft");
   /* Tony, Nov 12 drag lag: --cl-top used to move every frame above the dock, so the browser laid the whole sheet out per frame. lay(true) lays the
      sheet out once at full height (top 0), the body held at its docked height; from then on only transform moves the sheet and the footer
@@ -619,18 +623,18 @@ function clDrag(el) {
     const L = laid || full ? 0 : peek, dy = pos - L;                       // the layout top the sheet sits at: 0 (full, or laid out at full) or the dock
     el.style.transform = dy ? `translateY(${dy}px)` : "";
     ft.style.transform = laid ? `translateY(${-Math.min(pos, peek)}px)` : "";   // the footer: pinned to the screen bottom above the dock, with the sheet below it
-    el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
-    el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
-    cl.dim?.style.setProperty("--da", dimAt(pos, peek, innerHeight));     // on the dim itself: a var on <html> restyles the whole page every frame (drag lag, Tony Nov 12)
+    put("--rr", radiusAt(pos, peek, r0) + "px");
+    put("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
+    cl.dim?.style.setProperty("--da", dimAt(pos, peek, vh));     // on the dim itself: a var on <html> restyles the whole page every frame (drag lag, Tony Nov 12)
   };
   const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
   const settle = to => {
-    if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
+    if (to >= vh) { cl.sheetReset(); clClose(); return; }
     full = to === 0; pos = to; lay(false);                                  // the normal layout again: --cl-top is written here, at rest only
     el.style.transform = ""; ft.style.transform = "";
     el.style.setProperty("--cl-top", (full ? 0 : peek) + "px");
     if (full) paint(true);
-    else { el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da"); }
+    else { unput("--rr"); unput("--pp"); cl.dim?.style.removeProperty("--da"); }
     state(full ? "full" : "peek");
   };
   const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34 with momentum / 39 without), the mock's; reduced motion: an instant snap
@@ -642,7 +646,7 @@ function clDrag(el) {
       let dt = Math.min(0.032, (now - last) / 1000); last = now;
       while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - c * vel) * h; pos += vel * h; dt -= h; }
       if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
-      if (to >= innerHeight && pos >= innerHeight - 1) { settle(to); return; }   // leaving (UIP5): gone once the top edge is off screen, no wait for the spring's tail
+      if (to >= vh && pos >= vh - 1) { settle(to); return; }   // leaving (UIP5): gone once the top edge is off screen, no wait for the spring's tail
       if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
       paint(); raf = requestAnimationFrame(step);
     };
@@ -650,28 +654,28 @@ function clDrag(el) {
   };
   cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
     cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
-    lay(false); el.style.transform = ""; ft.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); cl.dim?.style.removeProperty("--da");
+    lay(false); el.style.transform = ""; ft.style.transform = ""; unput("--rr"); unput("--pp"); cl.dim?.style.removeProperty("--da");
     grab.setAttribute("aria-label", "Expand Cluck to full screen");
   };
   /* UIP5 (Tony Q5 "rise"): the phone sheet rises from the bottom edge by its own spring and leaves down the same path; a drag catches it (begin cancels the frame) */
   const dock = () => { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; };
-  cl.sheetIn = () => { if (!phone() || bridge.reduceMQ.matches) return; dock(); pos = innerHeight; paint(); go(peek); };
-  cl.sheetOut = () => { if (full) { if (pos > innerHeight - 1) return; } else { if (el.dataset.state !== "moving") { dock(); pos = peek; } } go(innerHeight); };
+  cl.sheetIn = () => { if (!phone() || bridge.reduceMQ.matches) return; vhSync(); dock(); pos = vh; paint(); go(peek); };
+  cl.sheetOut = () => { vhSync(); if (full) { if (pos > vh - 1) return; } else { if (el.dataset.state !== "moving") { dock(); pos = peek; } } go(vh); };
   const begin = y => {                                                      // a press became a drag
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(raf); vhSync();
     if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
     lay(true); paint();                                                     // the drag's layout, once; from here --cl-top is not written until settle
     d = { y0: y, p0: pos, full, s: [[performance.now(), y]] }; root.classList.add("cl-drag"); el.dataset.state = "dragging";
   };
-  const track = y => { pos = clampPos(d.p0 + y - d.y0, innerHeight); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };
+  const track = y => { pos = clampPos(d.p0 + y - d.y0, vh); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };
   const end = () => {
     const was = d; d = null; root.classList.remove("cl-drag"); if (!was) return;
     /* UIP6: honest release speed. Only samples from the last 100 ms count; a finger that paused > 80 ms before lifting releases at v = 0 (no stale fling) */
     const [t1, y1] = was.s.at(-1), [t0, y0] = was.s.find(([t]) => t1 - t <= 100) || was.s.at(-1);
     const v = performance.now() - t1 > 80 ? 0 : Math.max(-3000, Math.min(3000, t1 > t0 ? (y1 - y0) / (t1 - t0) * 1000 : 0));
-    go(snapTo(pos, peek, innerHeight, v, was.full), v);
+    go(snapTo(pos, peek, vh, v, was.full), v);
   };
-  const toggle = () => { if (!full) begin(0); d = null; root.classList.remove("cl-drag"); go(full ? peek : 0); };   // a tap / Enter on the grab
+  const toggle = () => { vhSync(); if (!full) begin(0); d = null; root.classList.remove("cl-drag"); go(full ? peek : 0); };   // a tap / Enter on the grab
   /* the grab + header: pointer events; a press is a drag only after 6px, so a tap still presses X (or toggles from the grab) */
   let p = null;
   const down = e => { if (!phone() || e.button > 0 || e.target.closest(".cl-x")) return; p = { id: e.pointerId, y: e.clientY, grab: !!e.target.closest(".cl-grab"), on: false }; };

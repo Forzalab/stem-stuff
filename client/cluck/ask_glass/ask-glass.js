@@ -300,13 +300,13 @@ function mount(form, sc, locked) {
   let s = ST.get(form);
   if (!s) {
     s = { form, sc, copy: form.querySelector('.g-copy'), cl: form.closest('.cl'), clone: null, gl: null, img: null, base: '', W: 0, H: 0, opts: null, locked: !!locked, last: 0, timer: 0, rt: 0,
-      maps: null, thinkOn: false, raf: 0, gen: 0, clock: 0, mi: 0, dirty: true, t1: 0, t3: 0, trk: 0, tf: 0, onEnd: null, anim: null };
+      maps: null, thinkOn: false, raf: 0, gen: 0, clock: 0, mi: 0, dirty: true, chk: false, sig: '', t1: 0, t3: 0, trk: 0, tf: 0, onEnd: null, anim: null };
     ST.set(form, s); sc._ag = s;
     form.classList.toggle('locked', s.locked);
     form.querySelector('.g-lock').setAttribute('aria-hidden', String(!s.locked));
     attach(sc);
     if (g.ResizeObserver) { s.ro = new ResizeObserver(() => { clearTimeout(s.rt); s.rt = setTimeout(() => size(s), 150); }); s.ro.observe(form); s.ro.observe(sc); }
-    if (s.cl) { s.mo = new MutationObserver(() => later(s)); s.mo.observe(s.cl, { attributes: true, attributeFilter: ['class', 'data-state'] }); }
+    if (s.cl) { s.mo = new MutationObserver(() => later(s, true)); s.mo.observe(s.cl, { attributes: true, attributeFilter: ['class', 'data-state'] }); }
     size(s);
   } else { s.sc = sc; sc._ag = s; }
   return s;
@@ -326,8 +326,10 @@ function attach(sc) {
 }
 const thinking = (s) => !s.locked && !!s.cl && (s.cl.classList.contains('wbusy') || !!s.cl.querySelector('.wtext.wrun'));
 /* rebuild the copy at most every ~120 ms while Cluck streams (40 ms otherwise); the filter stays on .g-copy, so a new copy needs no new lens */
-function later(s) {
-  s.dirty = true;
+/* CLUCK-SHEET-LAG: a class / data-state change on .cl (a drag or settle) is not a content change: it only asks for a cheap check (stateOnly -> s.chk), and the copy is rebuilt
+   only when the reply changed (s.dirty, set by the content observer) or the measured box moved (sigOf != s.sig). Before, every drag end cloned the whole reply for nothing. */
+function later(s, stateOnly) {
+  if (stateOnly) s.chk = true; else s.dirty = true;
   if (s.timer) return;
   s.timer = setTimeout(() => { s.timer = 0; run(s); }, Math.max(0, (s.thinkOn ? 120 : 40) - (performance.now() - s.last)));
 }
@@ -336,8 +338,20 @@ function run(s) {
   s.last = performance.now();
   if (!s.form.isConnected || moving(s)) return;   // a phone sheet drag or rise: the bar shows the frost until the sheet settles (ask-glass.css); the settle (data-state) brings the next run
   thinkSet(s, thinking(s));
-  if (s.dirty) { s.dirty = false; size(s); }
+  if (s.dirty) { s.dirty = false; s.chk = false; size(s); }
+  else if (s.chk) {
+    s.chk = false;
+    if (sigOf(s) !== s.sig) size(s);
+    else if (s.clone) s.clone.style.transform = 'translate3d(0,' + (-s.sc.scrollTop) + 'px,0)';   // same box, same reply: show the copy again, scroll-synced
+  }
 }
+/* what the copy's layout depends on besides the reply: where the scroller sits in the bar, its width, the bar's size */
+const sigOf = (s) => {
+  const f = s.form, sc = s.sc;
+  if (!f.isConnected || !f.offsetWidth || !s.copy) return s.sig;   // not laid out: nothing to compare, keep the old copy
+  const fr = f.getBoundingClientRect(), br = sc.getBoundingClientRect();
+  return (br.left - fr.left) + ',' + (br.top - fr.top) + ',' + sc.clientWidth + ',' + f.offsetWidth + ',' + f.offsetHeight;
+};
 function rebuild(s) {
   const f = s.form, sc = s.sc;
   if (!f.isConnected || !f.offsetWidth || !s.copy) return;
@@ -348,7 +362,7 @@ function rebuild(s) {
   c.querySelectorAll('video, audio, iframe, script').forEach((e) => e.remove());
   c.querySelectorAll('a, button, input, textarea, select, [tabindex]').forEach((e) => e.setAttribute('tabindex', '-1'));
   c.style.cssText = 'left:' + (br.left - fr.left) + 'px;top:' + (br.top - fr.top) + 'px;width:' + sc.clientWidth + 'px;transform:translate3d(0,' + (-sc.scrollTop) + 'px,0)';   // laid out where the real text is, so the lens bends what is behind the bar
-  s.copy.replaceChildren(c); s.clone = c;
+  s.copy.replaceChildren(c); s.clone = c; s.sig = sigOf(s);
 }
 /* the bar's size changed (window, sheet, a growing field, the unlock): the lens map is cut to the box, so it is made again */
 function size(s, fade) {
