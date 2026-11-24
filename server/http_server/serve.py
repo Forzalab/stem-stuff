@@ -1428,7 +1428,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
 # ---------------- KV-FRUGAL slice 3+4: one HASH per browser + one turn key per (browser, code), behind STEM_TRIES_HASH (default off) ----------------
 # t:<sid> fields:
 #   <CODE> / <CODE> <part>  one problem's {"wrong", "done", "gen"}; a redo round tags them "r<N> <CODE>", all in the same hash
-#   _gen                    this browser's last gen (the client compares it: a hand reset must read as newer)
+#   _gen                    this browser's last gen (the client compares it: a hand reset must read as newer); seeded from the clock when absent
 #   _bank                   this browser's last bank; at:<BANK> = its place in that bank
 #   c:<CODE>                OLD (slice 3) Cluck turn rows: slice 4 moved them to turns:<sid>:<CODE>; a load ignores them here
 # Every hash write is ONE multi-field HSET + EXPIRE in ONE /pipeline call (2 commands, 1 round trip). A Cluck turn list
@@ -1444,6 +1444,12 @@ PREVIEW_PREFIX = "preview:"               # preview's own keyspace
 TRIES_KEY = "t:"                          # prod: t:<sid>
 TURNS_KEY = "turns:"                      # prod: turns:<sid>:<CODE>
 KV_PIPE_TIMEOUT = 5
+_now = time.time                          # the clock seam: the _gen floor reads it (tests pin it)
+
+
+def gen_floor():
+    """the gen a hash with no _gen starts at: seconds, above any counted (blob) gen and never backwards across a reset"""
+    return int(_now())
 
 
 def tries_hash_on():
@@ -1558,13 +1564,16 @@ class TriesStore:
             return
         self.sid = _base_sid(sid)
         self.fields = {}
+        seeded = False
         try:
             raw = _kv("HGETALL", tries_key(self.sid)) or []
         except (OSError, ValueError) as e:
             log("tries not read from KV:", e)
+            self.gen = gen_floor()           # unread is not empty: still start at the clock, never below a reset
             return
         for name, val in zip(raw[0::2], raw[1::2]):
             if name == "_gen":
+                seeded = True
                 try:
                     self.gen = int(val or 0)
                 except (ValueError, TypeError):
@@ -1579,6 +1588,8 @@ class TriesStore:
                     self.fields[name] = {"wrong": [_tup(w) for w in st.get("wrong", [])], "done": bool(st.get("done")), "gen": int(st.get("gen", 0))}
                 except (ValueError, TypeError, AttributeError):
                     pass
+        if not seeded:
+            self.gen = max(self.gen, gen_floor())      # fresh / hand-reset hash: above any gen its client cached
         self.gen = max([self.gen, *(st["gen"] for name, st in self.fields.items() if not name.startswith(("_", "at:", "c:")))])
 
     def get(self, key):
