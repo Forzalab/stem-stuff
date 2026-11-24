@@ -42,7 +42,7 @@ test("promo: exam-day copy until 2026-11-09T23:59 Los Angeles, neutral after; on
   try {
     assert.equal(CC.EXAM_END, Date.parse("2026-11-10T08:00:00Z"));
     Date.now = () => Date.parse("2026-11-10T07:59:59Z"); assert.equal(CC.promo().exam, true);
-    assert.match(CC.promo().title, /^Stuck\? Click here for TI\/Casio tricks\.$/);
+    assert.match(CC.promo().title, /^Stuck\? Click for TI\/Casio tricks\.$/);
     Date.now = () => Date.parse("2026-11-10T08:00:00Z"); const p = CC.promo();
     assert.equal(p.exam, false); assert.doesNotMatch(p.title + p.body, /exam day|QUACK/i);
   } finally { Date.now = real; }

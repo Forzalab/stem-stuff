@@ -80,7 +80,7 @@ nothing ticked = neither, both ticked = both.
 - tries are TWO, not the 2-choice ONE (2 rows make 4 answers: `serve.py max_tries`, `app.js maxTries`, `mode.mjs view`);
 - sugar never hides it for its key (`hidden()`: the None-key prune is for locked None rows);
 - its repair answer step (one tap) offers one chip per set: Neither / A only / B only / Both (`repair.js gridOpts`; `"none"` = the empty set in `/repair/<code>/check`, shown as "Neither");
-- with no `how`, the page writes "Tick correct options. There might be none, some, or all of them." (both modes).
+- with no `how`, the page writes "Tick the correct options. There may be none, some, or all." (both modes).
 
 Grading, hints and kept rows are the §3 rules unchanged: an empty tick on a non-empty key is a `miss`; a ticked false row is struck with its `wrong` hint. Every other choose-all keeps the rules above.
 
