@@ -375,6 +375,19 @@ class KvFrugal(unittest.TestCase):
         self.assertEqual([(r["cmds"], r["keys"]) for r in w["rows"] if serve.KV_KEY in r["keys"]], today, "the blob path's traffic changed")
         self.assertEqual([k for k in w["keys"] if serve.TURNS_KEY in k], [], "the blob path touched a turn key")
 
+    def test_flag_off_ignores_the_clock_floor(self):
+        """KV-FRUGAL 5b: flag off never reads the clock floor: the blob counter is the gen, and the traffic is still GET + SET"""
+        if self.HASH:
+            self.skipTest("the blob path only")
+        sid, self.rows = fake_sid("blob-floor"), []
+        cookie = "sid=" + sid
+        blob_gen = json.loads(self.kv.db[serve.KV_KEY])["gen"]
+        with mock.patch.object(serve, "_now", lambda: 1_700_000_000):
+            st, v = self.call("POST /check (blob, pinned clock)", "POST", "/check", {"code": "KVF_Q01", "answer": "5"}, cookie)
+        self.assertEqual((st, v["verdict"]), (200, "wrong"))
+        self.assertEqual(v["gen"], blob_gen + 1, "the blob counter took the clock floor")
+        self.assertEqual([r["cmds"] for r in self.rows[-1][1]["rows"]], [["GET"], ["SET"]], "the blob path's traffic changed")
+
     def test_preview_turn_key_and_short_life(self):
         """VERCEL_ENV=preview: the turn key takes the preview prefix and KVF-3's 1-day life, never the prod key"""
         if not self.HASH:
@@ -452,6 +465,53 @@ class KvFrugal(unittest.TestCase):
         self.assertIsNone(st4.get((r1, "KVF_M2")), "the older redo round stayed")
         self.assertGreater(st4.entry_new((sid, "KVF_M4"))["gen"], st4.get((r2, "KVF_M3"))["gen"])
 
+    def test_gen_floor_on_fresh_hash(self):
+        """r1 finding 7: a hash with no _gen starts at the clock, so a stuck client's cached gen (1000) reads as older"""
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid, self.rows = fake_sid("floor-fresh"), []
+        cookie, t = "sid=" + sid, 1_700_000_000
+        with mock.patch.object(serve, "_now", lambda: t):
+            st, v = self.call("POST /check (fresh hash)", "POST", "/check", {"code": "KVF_Q01", "answer": "5"}, cookie)
+            self.assertEqual((st, v["verdict"]), (200, "wrong"))
+            h = self.kv.db[serve.tries_key(sid)]
+            self.assertEqual((h["_gen"], json.loads(h["KVF_Q01"])["gen"], v["gen"]), (str(t + 1), t + 1, t + 1))
+            st, s = self.call("GET /state (fresh hash)", "GET", "/state/KVF_Q01", cookie=cookie)
+        self.assertEqual(st, 200)
+        self.assertGreater(s["gen"], 1000, "a cached gen of 1000 must read as older than this server's")
+
+    def test_hash_with_gen_keeps_counting(self):
+        """a hash that has _gen keeps today's behaviour exactly: no floor, the next entry is _gen + 1"""
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid, self.rows = fake_sid("floor-present"), []
+        cookie = "sid=" + sid
+        self.kv.db[serve.tries_key(sid)] = {"_gen": "5"}
+        with mock.patch.object(serve, "_now", lambda: 1_700_000_000):
+            st, v = self.call("POST /check (_gen=5)", "POST", "/check", {"code": "KVF_Q01", "answer": "5"}, cookie)
+        self.assertEqual((st, v["verdict"]), (200, "wrong"))
+        h = self.kv.db[serve.tries_key(sid)]
+        self.assertEqual((h["_gen"], json.loads(h["KVF_Q01"])["gen"], v["gen"]), ("6", 6, 6), "the clock floor leaked into a hash with _gen")
+
+    def test_hand_reset_reads_newer(self):
+        """r1 finding 7: Tony deletes t:<sid>; the next gen starts above every gen that browser ever saw"""
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid, self.rows = fake_sid("floor-reset"), []
+        cookie, t, top = "sid=" + sid, 1_700_000_000, 0
+        with mock.patch.object(serve, "_now", lambda: t):
+            for code in ("KVF_Q01", "KVF_Q02", "KVF_Q03"):
+                st, v = self.call("POST /check (before reset)", "POST", "/check", {"code": code, "answer": "5"}, cookie)
+                self.assertEqual(st, 200)
+                top = max(top, v["gen"])
+            self.assertEqual(top, t + 3)
+            del self.kv.db[serve.tries_key(sid)]              # the hand reset: Tony deletes the hash
+        with mock.patch.object(serve, "_now", lambda: t + 100):
+            st, v = self.call("POST /check (after reset)", "POST", "/check", {"code": "KVF_Q05", "answer": "5"}, cookie)
+        self.assertEqual((st, v["verdict"]), (200, "wrong"))
+        self.assertGreater(v["gen"], t + 3, "a hand reset must read as newer than the cached gen")
+        self.assertEqual(self.kv.db[serve.tries_key(sid)]["_gen"], str(t + 101))
+
     def test_state_flag_off_reads_under_the_lock(self):
         if self.HASH:
             self.skipTest("the blob path only")
@@ -476,10 +536,11 @@ class KvFrugal(unittest.TestCase):
         self.assertNotIn("c:A", st.fields, "slice 4: a c: row is old data, never loaded")
         self.assertNotIn("c:B", st.fields)
         self.assertEqual(st.gen, 7)
-        with mock.patch.object(serve, "_kv", side_effect=OSError("down")):
+        with mock.patch.object(serve, "_kv", side_effect=OSError("down")), mock.patch.object(serve, "_now", lambda: 1_700_000_000):
             st2 = serve.TriesStore()
             st2.load(sid)                                    # never raises
-        self.assertEqual((st2.fields, st2.gen), ({}, 0))
+        self.assertEqual(st2.fields, {}, "a bad read is empty, as before")
+        self.assertEqual(st2.gen, 1_700_000_000, "a bad read still starts at the clock floor")
 
     def test_expr_seen_orders_by_gen(self):
         if not self.HASH:
