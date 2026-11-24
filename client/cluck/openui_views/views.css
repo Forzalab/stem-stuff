@@ -103,7 +103,7 @@
 .vw-cap { text-wrap: pretty; min-height: calc(2 * var(--lh) * 1em); }
 .vw-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
 /* stepper (Nov 8, iteration 2): never a box (it sits on Cluck's sheet); --s4 gaps frame it. Top row: Predict's pips (the only counter) + Show all;
-   the anchor stays, parts take their layer-3 shade when unlit (never opacity), hide = gone; a bold title with no number; Back ghost, Next filled */
+   the anchor stays, parts take their layer-3 shade when unlit (never opacity), hide = gone; a bold title with no number; Back / Next filled, no edge */
 .vw-steps { position: relative; }
 .vw-steps:has(.vw-top) > * + * { margin-top: var(--s4); }
 .vw-steps > .vw-cap, .vw-steps > .vw-st + .vw-cap { margin-top: var(--s1); }
@@ -113,7 +113,22 @@
 .vw-top .vw-pips i.on { border-color: var(--muted); background: var(--muted); }
 .vw-top .vw-pips i.cur { border-color: var(--ink); background: var(--ink); }
 .vw-foot .btn { width: auto; grid-auto-flow: column; gap: var(--s2); padding: 0 var(--s4); white-space: nowrap; }
-.vw-foot .vw-back { padding-left: 0; border-color: transparent; background: none; }
+/* stepper controls (BUG-STEP-NEXT-SOLID, Tony Nov 23): SOLID, state by fill, no edge (DL "state by fill, no edges").
+   Next = the one primary fill (app.css §one-button .btn-go: --action / --field); Back + Show all = one quiet step of ink on the sheet;
+   disabled = a lower-contrast fill, never an outline; the keyboard ring stays app.css .btn:focus-visible. The #cluck alternative inside
+   :is() repeats app.css §cluck-surfaces' id so these beat its older outline rule (#cluck .vw-foot .btn) whatever the stylesheet order. */
+:is(#cluck, .vw) .vw-foot .btn.vw-next { background: var(--action); border-color: transparent; color: var(--field); }
+:is(#cluck, .vw) .vw-foot .btn.vw-next:hover:not(:disabled) { background: var(--action-on); }
+:is(#cluck, .vw) .vw-foot .btn.vw-next:active:not(:disabled) { background: color-mix(in srgb, var(--action) 84%, var(--field)); }
+:is(#cluck, .vw) .vw-foot .btn.vw-next:disabled { background: color-mix(in srgb, var(--action) 30%, var(--sheet)); color: var(--muted); opacity: 1; }
+:is(#cluck, .vw) :is(.vw-foot .btn.vw-back, .vw-top .btn.vw-all-b) { background: color-mix(in srgb, var(--ink) 10%, var(--sheet)); border-color: transparent; color: var(--ink); }
+:is(#cluck, .vw) :is(.vw-foot .btn.vw-back, .vw-top .btn.vw-all-b):hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 16%, var(--sheet)); }
+:is(#cluck, .vw) :is(.vw-foot .btn.vw-back, .vw-top .btn.vw-all-b):active:not(:disabled) { background: color-mix(in srgb, var(--ink) 22%, var(--sheet)); }
+:is(#cluck, .vw) :is(.vw-foot .btn.vw-back, .vw-top .btn.vw-all-b):disabled { background: color-mix(in srgb, var(--ink) 5%, var(--sheet)); color: var(--muted); opacity: 1; }
+/* the frontier chips: a fill step (quiet = a step of ink, current = the quiet action fill), no outline; "empty" is words only */
+.vw-front .vw-chip:not(.none) { border-color: transparent; background: color-mix(in srgb, var(--ink) 8%, var(--sheet)); }
+.vw-front .vw-chip.cur { background: var(--action-fill); color: var(--action-on); }
+.vw-front .vw-chip.none { border-color: transparent; background: none; color: var(--muted); }
 .vw-st { font-weight: var(--w-em); line-height: var(--lh-title); }
 .vw-st:empty { display: none; }
 .vw .gm-poly { fill: var(--body); stroke-width: 2; }   /* §2 outline; §6: the sheet fill covers what is behind */
