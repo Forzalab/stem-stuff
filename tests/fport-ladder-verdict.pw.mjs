@@ -142,9 +142,9 @@ try {
           return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), bg: cs.backgroundColor, color: i.color }; });
         const kids = await page.evaluate(() => [...document.querySelectorAll("#q .ff.bad *, #q .ff.rbox.cue:not(.ok) *")].filter(e => e.getClientRects().length).map(e => { const cs = getComputedStyle(e); return { c: String(e.className.baseVal ?? e.className).slice(0, 24) || e.tagName, bw: cs.borderTopWidth + cs.borderRightWidth + cs.borderBottomWidth + cs.borderLeftWidth }; }).filter(x => x.bw !== "0px0px0px0px"));
         assert.deepEqual(kids, [], "a border inside the wrong box (its X button): " + JSON.stringify(kids));
-        const slot = await page.evaluate(() => { const ff = document.querySelector("#q .ff.bad"), b = ff.querySelector(".btn-go"), cs = getComputedStyle(b), r = ff.getBoundingClientRect(), hit = document.elementFromPoint(r.right - 2, r.bottom - 2);
+        const slot = await page.evaluate(() => { const ff = document.querySelector("#q .ff.bad"), b = ff.querySelector(".vk"), cs = getComputedStyle(b), r = ff.getBoundingClientRect(), hit = document.elementFromPoint(r.right - 2, r.bottom - 2);
           return { bg: cs.backgroundColor, bw: cs.borderTopWidth, dotR: getComputedStyle(ff, "::after").borderTopLeftRadius, dotOutline: getComputedStyle(ff, "::after").outlineWidth, hit: !!hit && !!hit.closest(".ff"), hitDrawer: !!hit && !!hit.closest(".vdrawer"), shadow: getComputedStyle(ff).boxShadow }; });
-        assert.equal(slot.bg, "rgba(0, 0, 0, 0)", "the X slot is no raised tile (ui-v7: glyph only)"); assert.equal(slot.bw, "0px");
+        assert.equal(slot.bg, "rgba(0, 0, 0, 0)", "the X slot (.vk) is no raised tile (ui-v7: glyph only)"); assert.equal(slot.bw, "0px");
         assert.ok(!slot.hitDrawer, "the tray must not show in the row's rounded bottom-right corner: " + JSON.stringify(slot));
         assert.ok(slot.dotR !== "50%" && slot.dotOutline === "0px", "the Cluck dot is no circle / no ring: " + slot.dotR + " " + slot.dotOutline);
         const wait = await page.evaluate(() => { const b = document.querySelector("#q .ff.bad .btn-go"), cs = b && getComputedStyle(b, "::before"); return b && b.classList.contains("waiting") ? { bgi: cs.backgroundImage, h: cs.height, name: cs.animationName } : null; });
@@ -165,7 +165,7 @@ try {
       } finally { await page.context().close(); }
     });
   }
-  for (const w of W) await step(`${w}: flag on: right answer = green row (no border), tick slot --correct-deep, verdict line stays hidden (live region), no tray`, async () => {
+  for (const w of W) await step(`${w}: flag on: right answer = green row (no border), tick glyph (VERDICT-MARK-INERT), verdict line stays hidden (live region), no tray`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
@@ -173,7 +173,7 @@ try {
       await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await settled(page, "#q .ff.rbox.ok");
       const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
         return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height, text: getComputedStyle(ff.querySelector("input")).color }; });
-      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is glyph only, no --correct-deep tile"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
+      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is a plain glyph, no tile (VERDICT-MARK-INERT)"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
       assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
       // the correct fill is the MC bento right tile: --mc-right #0c2c22 + --correct-on text (#b9efd8), on the reveal pill and on a plain judged-right box
@@ -185,7 +185,7 @@ try {
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });
-  for (const w of W) await step(`${w}: flag on: typed answer field is a borderless inset well in idle, focus and typed (no border line, the glow on focus)`, async () => {
+  for (const w of W) await step(`${w}: flag on: typed field = Soft-lift outlined dish at idle; focus/typed stay the live inset well until IB-2`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
@@ -193,17 +193,20 @@ try {
       const read = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(ff);
         return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor }; });
       const idle = await read();
-      assert.equal(idle.bw, HAIR, "idle: the 1px hairline edge " + JSON.stringify(idle));
-      assert.ok(/rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/.test(idle.shadow) && !/0px -1px 0px 0px inset/.test(idle.shadow), "idle: the dark top inset only, the lit bottom lip is gone (ICK PR-A, ICK-R1 5a): " + idle.shadow);
+      assert.ok(idle.bw === HAIR || idle.bw === "1.5px 1.5px 1.5px 1.5px", "idle: the Soft-lift outlined field " + JSON.stringify(idle));
+      assert.match(idle.shadow, /rgba\(0, 0, 0, 0\.3\) 1px 1px 3px 0px inset/, "idle: the SOFT-LIFT §3 dish: " + idle.shadow);
+      assert.doesNotMatch(idle.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "idle: the old well is gone: " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus();
       await page.waitForFunction(() => document.activeElement === document.querySelector("#ff :is(input, textarea)"));
       const focus = await read();
-      assert.equal(focus.bw, HAIR, "focus: the same hairline " + JSON.stringify(focus));
+      assert.equal(focus.bw, HAIR, "focus: live hairline " + JSON.stringify(focus));
+      assert.match(focus.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: live inset well until IB-2: " + focus.shadow);
       assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring, the well only: " + focus.shadow);
       await page.locator("#ff :is(input, textarea)").first().fill("1.5");
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
       const typed = await read();
-      assert.equal(typed.bw, HAIR, "typed: the same hairline " + JSON.stringify(typed));
+      assert.equal(typed.bw, HAIR, "typed: live hairline " + JSON.stringify(typed));
+      assert.match(typed.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "typed: live inset well until IB-2: " + typed.shadow);
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
@@ -230,7 +233,7 @@ try {
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.636"); await f.press("Enter");
       await page.waitForSelector("#q .ff.bad .vk", { timeout: 8000 }); await settled(page, "#q #ff.ff");
       const geo = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), v = ff.querySelector(".vk"), r = ff.getBoundingClientRect(), vr = v.getBoundingClientRect();
-        const painted = [...ff.querySelectorAll("*")].filter(e => !e.closest(".vk") && e.getClientRects().length && e.getBoundingClientRect().right > r.right - 60 && getComputedStyle(e).backgroundColor !== "rgba(0, 0, 0, 0)" && e.className !== "send").map(e => String(e.className || e.tagName).slice(0, 30));
+        const painted = [...ff.querySelectorAll("*")].filter(e => !e.closest(".vk") && e.getClientRects().length && e.getBoundingClientRect().left < r.right - 2 && e.getBoundingClientRect().right > r.right - 60 && getComputedStyle(e).backgroundColor !== "rgba(0, 0, 0, 0)" && !e.classList.contains("send") && !e.classList.contains("btn-go")).map(e => String(e.className || e.tagName).slice(0, 30));
         const wb = ff.querySelector(".btn-go"), wd = wb && getComputedStyle(wb, "::before").display;
         return { dy: Math.abs((vr.top + vr.height / 2) - (r.top + r.height / 2)), right: Math.round(r.right - vr.right), painted, wd }; });
       const wrong = await geo();
@@ -296,8 +299,8 @@ try {
       const m = await page.evaluate(() => { const b = document.querySelector("#q #ff.ff .send"), ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(b), fs = getComputedStyle(ff);
         return { supports: CSS.supports("corner-shape", "superellipse(1.52)"), btn: cs.cornerShape, btnR: cs.borderTopLeftRadius, well: fs.cornerShape, wellR: fs.borderTopLeftRadius }; });
       if (m.supports) { assert.match(m.btn, /superellipse|squircle/, "button corner-shape: " + JSON.stringify(m)); assert.match(m.well, /superellipse|squircle/, "well corner-shape: " + JSON.stringify(m)); }
-      const r = m.supports ? "20px" : "16px";   // ICK4-SQUIRCLE-C (Tony Nov 18): --r-tile 16 x --r-k (1.25 under corner-shape)
-      assert.equal(m.btnR, r, JSON.stringify(m)); assert.equal(m.wellR, r, JSON.stringify(m));
+      assert.equal(m.btnR, m.supports ? "22.5px" : "18px", "SOFT-LIFT §5 key = 18 x --r-k: " + JSON.stringify(m));
+      assert.equal(m.wellR, m.supports ? "20px" : "16px", "typed/focused field keeps the live --r-tile until IB-2: " + JSON.stringify(m));
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });

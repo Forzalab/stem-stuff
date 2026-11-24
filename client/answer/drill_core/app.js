@@ -1022,7 +1022,7 @@ function renderQuestion() {
     /* one row per part: "a)", its sub-question (if it has one), its own box with its own arrow inside (the freeform pattern).
        Each part is graded alone, with its own tries and lockout (SCHEMA.md "Grading"). */
     q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
-      const l = esc(u.label || LETTERS[i].toLowerCase()), lab = root.classList.contains("ui-v7") ? l : l + ")";   // IB-1: under ui-v7 the index letter is bare ("a"); flag off keeps the live "a)" (render.pw pins it)
+      const l = esc(u.label || LETTERS[i].toLowerCase()), lab = `${l}<span class="mk-p">)</span>`;   // IB-1: ui-v7 hides .mk-p (bare "a"); flag off/late toggle keeps the live "a)" (render.pw pins it)
       return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
           <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}</button></div>
@@ -1041,11 +1041,12 @@ function renderQuestion() {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
     const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Ex: 9/2, 5e-4, sqrt(3), dne" : "";
-    const unit = root.classList.contains("ui-v7") && p.type === "num" && p.unit ? `<span class="unit" aria-hidden="true">${esc(String(p.unit)).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span>` : "";   // IB-1: the unit at the value's right (mock .unit); ui-v7 only
+    const hasUnit = typeof p.unit === "string" ? p.unit.length > 0 : typeof p.unit === "number";   // IB-1: only a string/number unit renders; an object would print [object Object]
+    const unit = root.classList.contains("ui-v7") && p.type === "num" && hasUnit ? `<span class="unit" aria-hidden="true">${esc(String(p.unit)).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span>` : "";   // IB-1: the unit at the value's right (mock .unit); ui-v7 only
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
           ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">${ph}</span>` : ""}${unit}
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${root.classList.contains("ui-v7") ? IB1_GO : icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}${IB1_GO}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }

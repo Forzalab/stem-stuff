@@ -26,7 +26,10 @@ const FILE = { v: 1, problems: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
     { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
   ] },
-  { code: "PSY_S1A", type: "num", how: "Number only.", body: T("Find the magnitude of the block's acceleration."), answer: "3.2", unit: "m/s^2" },
+  { code: "PSY_S1A", type: "num", how: "Number only.", body: T("Find the magnitude of the block's acceleration."), answer: "3.2", unit: "m/s^2", wish: true },
+  { code: "PSY_S2A", type: "num", how: "Number only.", body: T("Find the magnitude of the cart's acceleration."), answer: "3.2", unit: "m/s^2" },
+  { code: "PSY_S3A", type: "num", how: "Number only.", body: T("Find the magnitude of the sled's acceleration."), answer: "5", unit: "m/s^2" },
+  { code: "PSY_S4A", type: "num", how: "Number only.", body: T("Find the mass of the cart."), answer: "7", unit: { bad: true } },
   { code: "PSY_C1A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
     choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
     wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
@@ -105,9 +108,10 @@ const MET = () => {
     font: inp && getComputedStyle(inp).fontFamily, fsize: inp && getComputedStyle(inp).fontSize, fweight: inp && getComputedStyle(inp).fontWeight,
     unit: !!(box && box.querySelector(".unit")), unitSize: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontSize,
     unitFamily: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontFamily,
-    mk: mk ? mk.textContent : null, mkSize: mk && getComputedStyle(mk).fontSize, mkFamily: mk && getComputedStyle(mk).fontFamily,
+    mk: mk ? mk.innerText : null, mkSize: mk && getComputedStyle(mk).fontSize, mkFamily: mk && getComputedStyle(mk).fontFamily,
     prSize: pr && getComputedStyle(pr).fontSize, prLh: pr && getComputedStyle(pr).lineHeight, prMb: pr && getComputedStyle(pr).marginBottom,
     mkBase: mkB && mkB.line, prBase: prB && prB.line, mkGlyph: mkB && mkB.glyph, prGlyph: prB && prB.glyph, valueBase, maxW: cs && cs.maxWidth,
+    skin: cs && { bg: cs.backgroundColor, bw: cs.borderTopWidth, bs: cs.borderTopStyle, bc: cs.borderTopColor, sh: cs.boxShadow, r: cs.borderRadius, pr: cs.paddingRight, h: b && b.height, w: b && b.width },
     boxW: b && b.width, boxLeft: b && b.left, boxRight: b && b.right, boxTop: b && b.top,
     key: k && { w: k.width, h: k.height, left: k.left, top: k.top, right: k.right },
     mc: c && { w: c.width, h: c.height, inChk: !!mc.closest(".chk") },
@@ -115,6 +119,11 @@ const MET = () => {
   };
 };
 const near = (a, b, px = 0.6) => a != null && b != null && Math.abs(a - b) <= px;
+const skinOf = (page, sel) => page.evaluate(s => {
+  const e = document.querySelector(s); if (!e) return null;
+  const c = getComputedStyle(e), r = e.getBoundingClientRect();
+  return { bg: c.backgroundColor, bw: c.borderTopWidth, bs: c.borderTopStyle, bc: c.borderTopColor, sh: c.boxShadow, r: c.borderRadius, pr: c.paddingRight, h: r.height, w: r.width, top: r.top, left: r.left, right: r.right };
+}, sel);
 async function shot(page, name, sel) {
   if (!SHOTS) return;
   try { await page.locator(sel).first().screenshot({ path: join(SHOTS, name) }); }
@@ -144,10 +153,26 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     if (w >= 900) assert.ok(near(m.valueBase, m.prBase, 1), `value/prompt baselines ${m.valueBase} vs ${m.prBase}`);
     assert.equal(m.prSize, "17px", `prompt size ${m.prSize}`);
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
+    assert.ok(parseFloat(m.skin.pr) >= 48, `multi field right padding ${m.skin.pr} (live in-box Check room)`);
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
     assert.notEqual(hoverCol, m.edgeCol, "hover changes the edge (idle -> hover)");
+    await page.locator("#q .mparts .part:first-child input.ans").focus();
+    const focus = await page.evaluate(() => { const c = getComputedStyle(document.querySelector("#q .mparts .part:first-child .ff")); return { r: c.borderRadius, bw: c.borderTopWidth, sh: c.boxShadow }; });
+    const tile = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");
+    assert.equal(focus.r, tile, `focus keeps the live tile radius (${focus.r}, want ${tile}); IB-2 owns the lift`);
+    assert.equal(focus.bw, "1px", `focus keeps the live 1px hairline: ${JSON.stringify(focus)}`);
+    assert.match(focus.sh, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus keeps the live well shadow: " + focus.sh);
+    await page.evaluate(() => document.activeElement?.blur());
     await shot(page, `multi-${w}-app.png`, "#q");
-    return `h ${m.h} edge ${m.edgeW} gap ${m.overflow} line ${m.mkBase}/${m.prBase} glyph ${m.mkGlyph}/${m.prGlyph}${w >= 900 ? " value " + m.valueBase : ""}`;
+    const idle = m.skin;
+    await page.fill("#q .mparts .part:first-child input.ans", "17");
+    await page.press("#q .mparts .part:first-child input.ans", "Enter");
+    await page.waitForSelector("#q .mparts .part:first-child .ff.bad", { timeout: 6000 });
+    const bad = await skinOf(page, "#q .mparts .part:first-child .ff");
+    assert.notEqual(bad.bg, idle.bg, `multi wrong fill is still the idle ground (${bad.bg})`);
+    assert.ok(bad.bw === "0px" || bad.bs === "none", `multi wrong edge is still the resting 1.5px border (${bad.bw} ${bad.bs})`);
+    assert.notEqual(bad.sh, idle.sh, "multi wrong keeps the inset dish instead of the verdict raise");
+    return `h ${m.h} edge ${m.edgeW} gap ${m.overflow} line ${m.mkBase}/${m.prBase} glyph ${m.mkGlyph}/${m.prGlyph}${w >= 900 ? " value " + m.valueBase : ""} bad ${bad.bg} ${bad.bw}`;
   });
   await step(`${w}: single field at rest + key outside`, async () => {
     await go(page, "PSY_S1A");
@@ -177,6 +202,57 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await shot(page, `single-${w}-app.png`, "#q");
     return `h ${m.h} box ${m.boxW} key ${m.key.w}x${m.key.h} gap ${(m.key.left - m.boxRight).toFixed(1)}`;
   });
+  await step(`${w}: single wrong keeps the live verdict fill`, async () => {
+    await go(page, "PSY_S2A");
+    const idle = (await page.evaluate(MET)).skin;
+    await page.fill("#ans", "9.9"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff.bad", { timeout: 6000 });
+    const bad = await skinOf(page, "#q #ff.bad");
+    assert.notEqual(bad.bg, idle.bg, `single wrong fill is still the idle ground (${bad.bg})`);
+    assert.ok(bad.bw === "0px" || bad.bs === "none", `single wrong edge is still the resting 1.5px border (${bad.bw} ${bad.bs})`);
+    assert.notEqual(bad.sh, idle.sh, "single wrong keeps the inset dish instead of the verdict raise");
+    const wait = await page.evaluate(() => { const f = document.querySelector("#q #ff.bad"), g = document.querySelector("#ansGo"); return { gLeft: g.getBoundingClientRect().left, fRight: f.getBoundingClientRect().right, nx: !!f.querySelector(".nx") }; });
+    assert.ok(wait.gLeft >= wait.fRight + 10, `Check jumps inside while waiting: left ${wait.gLeft} vs field right ${wait.fRight}`);
+    assert.equal(wait.nx, false, "Next appeared inside the waiting field");
+    return `bad ${bad.bg} ${bad.bw}`;
+  });
+  await step(`${w}: reveal pill keeps its live padding and height`, async () => {
+    await go(page, "PSY_S1A");
+    await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff.rbox", { timeout: 6000 });
+    const box = await skinOf(page, "#q #ff.rbox");
+    assert.ok(parseFloat(box.pr) >= 48, `rbox padding-right ${box.pr} (want >= 48)`);
+    assert.ok(Math.abs(box.h - 60) > 1, `rbox height ${box.h} got the IB-1 60px box`);
+    if (w >= 900) assert.ok(box.w > 400.5, `rbox width ${box.w} got the 400px idle cap`);
+    return `pad ${box.pr} h ${box.h} w ${box.w}`;
+  });
+  await step(`${w}: single Next takes the outer key slot`, async () => {
+    await go(page, "PSY_S3A");
+    const idle = (await page.evaluate(MET)).skin;
+    await page.fill("#ans", "5"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff > .nx", { timeout: 6000 });
+    const ok = await skinOf(page, "#q #ff.ok");
+    assert.notEqual(ok.bg, idle.bg, `single right fill is still the idle ground (${ok.bg})`);
+    assert.ok(ok.bw === "0px" || ok.bs === "none", `single right edge is still the resting border (${ok.bw} ${ok.bs})`);
+    const g = await page.evaluate(() => {
+      const ff = document.querySelector("#q > #ff.ff"), nx = ff.querySelector(":scope > .nx");
+      const f = ff.getBoundingClientRect(), n = nx.getBoundingClientRect();
+      return { fRight: f.right, nLeft: n.left, nW: n.width, nH: n.height };
+    });
+    assert.ok(g.nLeft >= g.fRight + 10, `Next is inside the box: left ${g.nLeft} vs field right ${g.fRight}`);
+    const fit = await page.evaluate(() => { const n = document.querySelector("#q #ff > .nx .nf"); return { sw: n.scrollWidth, cw: n.clientWidth, text: n.textContent.trim() }; });
+    assert.ok(fit.sw <= fit.cw + 1, `Next label overflows its 60px slot: ${JSON.stringify(fit)}`);
+    const key = await page.evaluate(() => { const g = document.querySelector("#ansGo"), r = g.getBoundingClientRect(); return { hidden: g.hidden, display: getComputedStyle(g).display, w: r.width, h: r.height }; });
+    assert.ok(key.hidden || key.display === "none" || key.w === 0, `Check key still sits under Next: ${JSON.stringify(key)}`);
+    return `gap ${(g.nLeft - g.fRight).toFixed(1)} size ${g.nW}x${g.nH} fit ${fit.sw}/${fit.cw}`;
+  });
+  await step(`${w}: non-string unit does not print [object Object]`, async () => {
+    await go(page, "PSY_S4A");
+    const u = await page.evaluate(() => ({ unit: document.querySelector("#q .unit")?.textContent || null, text: document.querySelector("#q").textContent }));
+    assert.equal(u.unit, null, `object unit rendered: ${u.unit}`);
+    assert.ok(!u.text.includes("[object Object]"), "object unit leaked into the card");
+    return "no unit";
+  });
   await step(`${w}: MC key (#mcGo) unchanged`, async () => {
     await go(page, "PSY_C1A");
     const m = await page.evaluate(MET);
@@ -196,6 +272,11 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.os, "none", `old box has no outline (${m.os} ${m.ow})`);
     assert.ok(!near(m.h, 60, 1), `old field is --fld, not 60 (${m.h})`);
     await shot(page, "multi-390-off-app.png", "#q");
+    await page.evaluate(() => document.documentElement.classList.add("ui-v7"));
+    const late = await page.evaluate(() => ({ mk: document.querySelector(".mk").innerText, paren: getComputedStyle(document.querySelector(".mk-p")).display }));
+    assert.equal(late.mk, "a", `late ui-v7 marker ${JSON.stringify(late.mk)}`);
+    assert.equal(late.paren, "none", "late ui-v7 still shows the )");
+    await page.evaluate(() => document.documentElement.classList.remove("ui-v7"));
     return `mk ${JSON.stringify(m.mk)} h ${m.h}`;
   });
   await step("flag off 390: single unchanged", async () => {
@@ -204,6 +285,11 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.os, "none", `old box has no outline (${m.os} ${m.ow})`);
     assert.ok(!near(m.h, 60, 1), `old field is --fld, not 60 (${m.h})`);
     await shot(page, "single-390-off-app.png", "#q");
+    await page.evaluate(() => document.documentElement.classList.add("ui-v7"));
+    const late = await page.evaluate(() => ({ go: getComputedStyle(document.querySelector("#ansGo .ib1-go")).display, ico: getComputedStyle(document.querySelector("#ansGo .ico")).display }));
+    assert.equal(late.go, "block", "late ui-v7 has no outside arrow");
+    assert.equal(late.ico, "none", "late ui-v7 still shows the sprite arrow");
+    await page.evaluate(() => document.documentElement.classList.remove("ui-v7"));
     return `h ${m.h} ow ${m.ow}`;
   });
   await step("flag off 1280: single has no 400px cap", async () => {

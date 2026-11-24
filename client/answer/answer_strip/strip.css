@@ -85,47 +85,64 @@
    so no transition / animation. The mock wins over the text.
    The Check key of the single box is restyled in verdict-v7.css (it is the existing #ansGo, moved outside the box; no second element). ===== */
 
+.ff .ib1-go { display: none; }   /* flag off: the sprite i-go only; ui-v7 shows the inline 24-grid arrow */
+
 /* ground = a token scoped to these fields only. --field (18 uses in 7 files) is NOT touched. */
-html.ui-v7 #q > .ff#ff:not(.proof),
-html.ui-v7 #q .mparts .part > .ff {
+html.ui-v7 #q > .ff#ff:not(.proof, .rbox),
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) {
   --ans-field: color-mix(in oklab, var(--card) 50%, var(--page));
-  box-sizing: border-box; height: 60px; padding: 0 17.5px; gap: 8px; align-items: baseline;   /* its baseline = the value's, so the grid can put it on the prompt's line */
+  box-sizing: border-box; height: 60px; padding: 0 17.5px; gap: 8px; align-items: baseline;
+}
+/* the REST skin only. Judged (.ok/.bad), cue (out of tries) and the reveal pill (.rbox) keep the live verdict skin from verdict-v7.css:
+   fill, zero edge, raise shadow and tile radius must win there. */
+html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
+html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) {
   background: var(--ans-field);
-  border: 1.5px solid color-mix(in srgb, var(--line) 75%, transparent);   /* Chrome rounds an outline to 1px: the visible 1.5px edge is a border (mock .f) */
-  border-radius: calc(18px * var(--r-k));   /* ICK4-SQUIRCLE-C: --r-k = 1 round fallback, 1.25 under corner-shape */
-  box-shadow: inset 1px 1px 3px rgb(0 0 0 / .3), inset -1px -1px 3px rgb(255 255 255 / .042);   /* the dish: light from above, no lift */
+  border: 1.5px solid color-mix(in srgb, var(--line) 87%, transparent);   /* IB-1 edge: 87% is the least strength whose composite reaches 3:1 vs the page (75% mock value = 2.44:1) */
+  border-radius: calc(18px * var(--r-k));
+  box-shadow: inset 1px 1px 3px rgb(0 0 0 / .3), inset -1px -1px 3px rgb(255 255 255 / .042);
   transition: none;
 }
 @supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q > .ff#ff:not(.proof),
-  html.ui-v7 #q .mparts .part > .ff { corner-shape: superellipse(1.52); }
+  html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
+  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) { corner-shape: superellipse(1.52); }
 }
-/* hover = the line takes the muted tone (mock .f[data-s="hover"]); a disabled field keeps its resting line */
-html.ui-v7 #q > .ff#ff:not(.proof):not(:has(input:disabled)):hover,
-html.ui-v7 #q .mparts .part > .ff:not(:has(input:disabled)):hover { border-color: color-mix(in srgb, var(--muted) 75%, transparent); }
+/* multi keeps the live in-box room for its own Check / .vk (IB-5 moves it); a judged single keeps 48 for the in-box .vk */
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) { padding-right: calc(var(--btn) + var(--bw)); }
+html.ui-v7 #q > .ff#ff:not(.proof):is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
+/* hover = the resting edge only; judged / cue / rbox keep their own look */
+html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover,
+html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover { border-color: color-mix(in srgb, var(--muted) 75%, transparent); }
 /* disabled (a shut part / a closed question): the live .ff.shut / .q.closed opacity carries the dim; only the cursor is ours */
-html.ui-v7 #q > .ff#ff:not(.proof):has(input:disabled),
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox):has(input:disabled),
 html.ui-v7 #q .mparts .part > .ff:has(input:disabled) { cursor: not-allowed; }
-/* keyboard focus keeps the live ring (the lift itself is a later slice); a pointer focus ([data-ptr], strip.js) shows none */
-html.ui-v7 #q > .ff#ff:not(.proof):has(input:focus-visible):not([data-ptr]),
-html.ui-v7 #q .mparts .part > .ff:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; }
-
 /* the value: Atkinson Hyperlegible Next 600 28px, tabular (mock .f input). This replaces ICK5-MONO for these two inputs only.
    28 is the mock at every width: app --t-xl grows to 36 on a fine-pointer desktop, the mock does not (the mock wins). */
-html.ui-v7 #q > .ff#ff:not(.proof) > input.ans,
-html.ui-v7 #q .mparts .part > .ff > input.ans {
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > input.ans,
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > input.ans {
   height: 54px; padding: 0;
   font-family: var(--font-input); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
 }
-html.ui-v7 #q > .ff#ff:not(.proof) > input.ans::placeholder,
-html.ui-v7 #q .mparts .part > .ff > input.ans::placeholder { font-family: var(--font-input); font-weight: 400; color: transparent; }   /* the mock's field is empty: the live "Ex: ..." hint would print at 28px and swamp the box */
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > input.ans::placeholder,
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > input.ans::placeholder { font-family: var(--font-input); font-weight: 400; color: transparent; }   /* the mock's field is empty: the live "Ex: ..." hint would print at 28px and swamp the box */
 /* the unit / leading label role: Atkinson 400 17px muted (mock .unit). The app's typed single has no unit span; .lead (expr "f(x) =") is that role today. */
-html.ui-v7 #q > .ff#ff:not(.proof) > :is(.lead, .unit),
-html.ui-v7 #q .mparts .part > .ff > :is(.lead, .unit) { font: 400 17px/1 var(--font-input); color: var(--muted); }
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > :is(.lead, .unit),
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 17px/1 var(--font-input); color: var(--muted); }
 
 /* the single box leaves room for its key outside: 60 key + 12 gap = 72; desktop caps the box at 400 (Tony confirmed the cap) */
-html.ui-v7 #q > .ff#ff:not(.proof) { width: calc(100% - 72px); }
-@media (min-width: 900px) { html.ui-v7 #q > .ff#ff:not(.proof) { max-width: 400px; } }
+html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { width: calc(100% - 72px); }
+@media (min-width: 900px) { html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { max-width: 400px; } }
+/* Next takes the key's outside 60px slot on the single box (the live flow already puts rbox Next outside; this keeps the non-rbox cue there too) */
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx {
+  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
+  width: 60px; min-width: 60px; height: 60px; margin: 0; padding: 0; border-radius: calc(18px * var(--r-k));
+}
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { width: 100%; height: 100%; padding: 0 2px; gap: 2px; border-radius: calc(18px * var(--r-k)); }
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; height: 18px; }
+@supports (corner-shape: superellipse(2)) {
+  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx,
+  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { corner-shape: superellipse(1.52); }
+}
 
 /* multi-part row: 24px module (gap 24, no hairline between parts), 36px letter column + 12 gutter, baseline-aligned letter / prompt / box.
    Prompt 17/24 400, margin-bottom 12; hint 17/24, margin-top 12; the letter is bare "a" (app.js, ui-v7 only) at 40/24 in the app display face. */
@@ -141,6 +158,7 @@ html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space o
 html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
 html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: 17px; line-height: 24px; font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
+html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
 html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: 17px; line-height: 24px; }
 @media (min-width: 900px) {
   html.ui-v7 .mparts .part { grid-template-columns: 36px minmax(0, 1fr) 400px; grid-template-areas: "mk pr bx"; }
