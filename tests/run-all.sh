@@ -247,6 +247,7 @@ weight() {
     fport-hint-toast) echo 20 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
     gap-batch1) echo 20 ;;   # GAP-BATCH1 (ui-v7) smoke: star hidden, qlist float, miss hint float, own server
     fport-ladder-verdict) echo 30 ;;   # F PORT (ui-v7) smoke, own server (estimate until CI timing)
+    think-light-scroll) echo 15 ;;   # BUG-THINK-LIGHT-SCROLL: the lit lens clock through a reply scroll, own serve.py + a slow stub; local ~7 s (estimate until CI timing)
     desk-notes-off) echo 14 ;;   # W97 desktop notes box kept: diet shows, sugar hides (static html.sugar), phone keeps it, own server, local run ~14 s (estimate until CI timing)
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
     twist) echo 22 ;;   # W133 Twist chip + one-time toast + popover, 3 screens + blocked storage, own server; local run ~20 s (estimate until CI timing)
@@ -333,6 +334,7 @@ tags() {
     twist) echo "@layout @real-time" ;;   # W133 the Twist chip, its popover, the one-time toast and its cover rule (#q, Next) at 390 / 1366 / 1440
     fcard-clip) echo "@layout @real-time" ;;   # W115 todo 115: KaTeX ink vs the .fm scroll box at 4 sizes
     shotqa) echo "@layout @real-time" ;;   # W340 §0 shot gate: figures drawn, findings, angle labels, shots for the orc
+    think-light-scroll) echo "@engine @real-time" ;;   # BUG-THINK-LIGHT-SCROLL: the light through a reply scroll; iOS/WebKit stops rAF mid-scroll, so the clock is a timer
     *) echo "" ;;
   esac
 }
