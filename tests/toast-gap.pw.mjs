@@ -143,7 +143,8 @@ await step("390: a float row toast keeps a 4 px scroll and yields to 9 px (the 8
   assert.equal(await p.evaluate(() => document.querySelector(".stoast.on").dataset.side), "float", "the probe floats");
   const y0 = await p.evaluate(() => window.scrollY);
   await p.evaluate(() => window.scrollBy(0, 4));
-  await p.waitForTimeout(250);   // keep: a scroll tick's re-place
+  await p.waitForFunction(y => window.scrollY >= y + 4, y0, { timeout: 1000 });
+  await p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // a scroll tick's re-place: the event lands before the next frame
   assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on:not(.out)")), true, "4 px since it showed: still up");
   await p.evaluate(() => window.scrollBy(0, 5));   // 9 px since it showed
   await p.waitForFunction(y => window.scrollY >= y + 9, y0, { timeout: 1000 });
