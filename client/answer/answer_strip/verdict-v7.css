@@ -253,3 +253,25 @@ html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
 /* ICK5-MONO (Tony Nov 18 "inconsistent placeholder font on proof box/input box ... should be monospace ... both placeholder and actual text typed in"):
    the short-answer input and the proof box type AND hint in the mono (was --font-input Atkinson / --font). Not the code box, not the Cluck composer. */
 html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::placeholder { font-family: var(--mono); }
+
+/* == §ib1-key == IB-1 SOFT LIFT, STATIC (Tony Nov 24; SOFT-LIFT-SPEC §5; mock PICK-soft-lift.src.html): the single answer box's Check key.
+   It is the live #ansGo moved OUTSIDE its field, 12px to the right, 60x60, the same 18px squircle as the box. No second element (the proof key,
+   #ick12-key above, keeps its own place; MC's #mcGo is untouched). Icons share one 24px grid at 2.25 stroke; tick / cross stay the live vmark.
+   No motion: hover is a fill step, no transition. */
+html.ui-v7 #q > .ff#ff:not(.proof) > #ansGo {
+  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
+  width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0;
+  display: grid; place-items: center; border: 0; border-radius: calc(18px * var(--r-k));
+  background: var(--chip); color: var(--ink); box-shadow: none; transition: none;
+}
+@supports (corner-shape: superellipse(2)) { html.ui-v7 #q > .ff#ff:not(.proof) > #ansGo { corner-shape: superellipse(1.52); } }
+html.ui-v7 #q > .ff#ff:not(.proof) > #ansGo .ico { display: none; }   /* the sprite i-go is 2px / 14x14; the inline 24-grid arrow below replaces it under v7 only */
+html.ui-v7 #q > .ff#ff:not(.proof) > #ansGo .ib1-go { display: block; width: 24px; height: 24px; }
+html.ui-v7 #q > .ff#ff:not(.proof) > .vk .ico,
+html.ui-v7 #q .mparts .part > .ff > .vk .ico { width: 24px; height: 24px; stroke-width: 2.25; }   /* the live vmark tick / cross: one 24px grid (app.js IB1_V) */
+html.ui-v7 #q > .ff#ff:not(.proof) > #ansGo:is(:disabled, [aria-disabled="true"]) {
+  opacity: 1; background: var(--chip); color: var(--ink); cursor: default;   /* idle: the key rests full (mock .go); the closed row dims the whole field */
+}
+@media (hover: hover) {
+  html.ui-v7 #q > .ff#ff:not(.proof) > #ansGo:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
+}

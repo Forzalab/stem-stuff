@@ -77,8 +77,80 @@
 .vkb:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
 .vkb:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -3px; }
 /* single mc: the drawer spans its row: [Ask Cluck][^]. No Next/Skip in the tray (Tony, Nov 3 18:41; #402): the row has its own */
-  flex: 1 0 auto; box-sizing: border-box; height: var(--btn); padding: 0 var(--s3); cursor: pointer; white-space: nowrap;
-  background: transparent; color: var(--muted); border: var(--bw) solid var(--line); border-radius: 6px;
-  font: var(--w-em) var(--t-sm) / 1 var(--font);
-}
+/* (a selector-less 4-line declaration block sat here since the app.css split; CSS ignored it and it swallowed the next rule. Removed for IB-1.) */
 /* the tray MAY overlay the rows below it (Tony, Nov 3 19:31: "the tray ARE ALLOWED to overlay elements"): no room is kept under the picked row, so opening it and dismissing it reflow nothing (it sits above them, z-index above the rows) */
+
+/* ===== IB-1 SOFT LIFT, STATIC (Tony Nov 24; SOFT-LIFT-SPEC §2 §3 §5; mock PICK-soft-lift.src.html). The ONE look of both typed-answer inputs:
+   the single answer box and the multi-part row boxes. html.ui-v7 only. NO motion here: focus lift, thinking ring and verdict are later slices,
+   so no transition / animation. The mock wins over the text.
+   The Check key of the single box is restyled in verdict-v7.css (it is the existing #ansGo, moved outside the box; no second element). ===== */
+
+/* ground = a token scoped to these fields only. --field (18 uses in 7 files) is NOT touched. */
+html.ui-v7 #q > .ff#ff:not(.proof),
+html.ui-v7 #q .mparts .part > .ff {
+  --ans-field: color-mix(in oklab, var(--card) 50%, var(--page));
+  box-sizing: border-box; height: 60px; padding: 0 17.5px; gap: 8px; align-items: baseline;   /* its baseline = the value's, so the grid can put it on the prompt's line */
+  background: var(--ans-field);
+  border: 1.5px solid color-mix(in srgb, var(--line) 75%, transparent);   /* Chrome rounds an outline to 1px: the visible 1.5px edge is a border (mock .f) */
+  border-radius: calc(18px * var(--r-k));   /* ICK4-SQUIRCLE-C: --r-k = 1 round fallback, 1.25 under corner-shape */
+  box-shadow: inset 1px 1px 3px rgb(0 0 0 / .3), inset -1px -1px 3px rgb(255 255 255 / .042);   /* the dish: light from above, no lift */
+  transition: none;
+}
+@supports (corner-shape: superellipse(2)) {
+  html.ui-v7 #q > .ff#ff:not(.proof),
+  html.ui-v7 #q .mparts .part > .ff { corner-shape: superellipse(1.52); }
+}
+/* hover = the line takes the muted tone (mock .f[data-s="hover"]); a disabled field keeps its resting line */
+html.ui-v7 #q > .ff#ff:not(.proof):not(:has(input:disabled)):hover,
+html.ui-v7 #q .mparts .part > .ff:not(:has(input:disabled)):hover { border-color: color-mix(in srgb, var(--muted) 75%, transparent); }
+/* disabled (a shut part / a closed question): the live .ff.shut / .q.closed opacity carries the dim; only the cursor is ours */
+html.ui-v7 #q > .ff#ff:not(.proof):has(input:disabled),
+html.ui-v7 #q .mparts .part > .ff:has(input:disabled) { cursor: not-allowed; }
+/* keyboard focus keeps the live ring (the lift itself is a later slice); a pointer focus ([data-ptr], strip.js) shows none */
+html.ui-v7 #q > .ff#ff:not(.proof):has(input:focus-visible):not([data-ptr]),
+html.ui-v7 #q .mparts .part > .ff:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+/* the value: Atkinson Hyperlegible Next 600 28px, tabular (mock .f input). This replaces ICK5-MONO for these two inputs only.
+   28 is the mock at every width: app --t-xl grows to 36 on a fine-pointer desktop, the mock does not (the mock wins). */
+html.ui-v7 #q > .ff#ff:not(.proof) > input.ans,
+html.ui-v7 #q .mparts .part > .ff > input.ans {
+  height: 54px; padding: 0;
+  font-family: var(--font-input); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+}
+html.ui-v7 #q > .ff#ff:not(.proof) > input.ans::placeholder,
+html.ui-v7 #q .mparts .part > .ff > input.ans::placeholder { font-family: var(--font-input); font-weight: 400; color: transparent; }   /* the mock's field is empty: the live "Ex: ..." hint would print at 28px and swamp the box */
+/* the unit / leading label role: Atkinson 400 17px muted (mock .unit). The app's typed single has no unit span; .lead (expr "f(x) =") is that role today. */
+html.ui-v7 #q > .ff#ff:not(.proof) > :is(.lead, .unit),
+html.ui-v7 #q .mparts .part > .ff > :is(.lead, .unit) { font: 400 17px/1 var(--font-input); color: var(--muted); }
+
+/* the single box leaves room for its key outside: 60 key + 12 gap = 72; desktop caps the box at 400 (Tony confirmed the cap) */
+html.ui-v7 #q > .ff#ff:not(.proof) { width: calc(100% - 72px); }
+@media (min-width: 900px) { html.ui-v7 #q > .ff#ff:not(.proof) { max-width: 400px; } }
+
+/* multi-part row: 24px module (gap 24, no hairline between parts), 36px letter column + 12 gutter, baseline-aligned letter / prompt / box.
+   Prompt 17/24 400, margin-bottom 12; hint 17/24, margin-top 12; the letter is bare "a" (app.js, ui-v7 only) at 40/24 in the app display face. */
+html.ui-v7 .mparts { gap: 24px; }
+html.ui-v7 .mparts .part {
+  grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
+  column-gap: 12px; row-gap: 0; align-items: baseline;
+}
+html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx"; }
+html.ui-v7 .mparts .part.hinted { grid-template-areas: "mk pr" ". bx" ". ht"; }
+html.ui-v7 .mparts .part.nopr.hinted { grid-template-areas: "mk bx" ". ht"; }
+html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
+html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
+html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: 17px; line-height: 24px; font-weight: 400; }
+html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
+html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: 17px; line-height: 24px; }
+@media (min-width: 900px) {
+  html.ui-v7 .mparts .part { grid-template-columns: 36px minmax(0, 1fr) 400px; grid-template-areas: "mk pr bx"; }
+  /* the grid baseline is the flex box's, not the replaced input's text baseline: the value sat 4.5px low (measured
+     1280, 28/54 input vs 17/24 prompt). Lift the field so the VALUE joins the letter/prompt line; the relative top
+     moves paint only, so the grid row and the letter/prompt stay put. */
+  html.ui-v7 .mparts .part > .ff { top: -4.5px; }
+  html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx"; }
+  html.ui-v7 .mparts .part.hinted { grid-template-areas: "mk pr bx" ". ht ht"; }
+  html.ui-v7 .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
+  html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { padding-top: 0; }
+  html.ui-v7 .mparts .pr { margin: 0; }   /* letter, prompt and VALUE share one baseline: the field's own top/margin is set by the grid */
+}
