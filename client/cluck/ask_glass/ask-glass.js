@@ -485,14 +485,20 @@ function thinkSet(s, on) {
   if (maps.length) { el.style.filter = `url(#${maps[0]})`; s.mi = 0; }   // own the filter now: no flat scroll frame while the light is on
   if (calm) return;
   /* The clock is a timer, not rAF: iOS/WebKit stops requestAnimationFrame while a scroll is in flight, which froze the light until
-     the scroll ended. While the maps are still building (rAF chunks) the clock cycles through the ones that exist, so it never pins. */
-  const t0 = performance.now();
-  let id = 0;
+     the scroll ended. While the maps are still building (rAF chunks) the clock steps forward through the ones that exist, one per tick:
+     it never pins and never jumps back (a time index modulo a growing span once did); once the last map lands the 4.3 s revolution
+     carries on from where the build stopped. */
+  let id = 0, full = 0, base = 0;
   const tick = () => {
     if (!s.form.isConnected || s.img !== img) { clearInterval(id); if (s.clock === id) s.clock = 0; return; }   // detached / a new lens: the clock dies with it
     const n = maps.length;
     if (!n) return;
-    const span = n < total ? n : N, i = Math.floor(((performance.now() - t0) / REV) * N) % span;
+    let i;
+    if (n < total) i = (s.mi + 1) % n;   // still building: step to the next built map; the old time index modulo a growing span could jump backwards
+    else {
+      if (!full) { full = performance.now(); base = s.mi; }   // all maps landed: carry the 4.3 s revolution on from where the build stopped
+      i = (base + Math.floor(((performance.now() - full) / REV) * N)) % N;
+    }
     if (i !== s.mi) { el.style.filter = `url(#${maps[i]})`; s.mi = i; }
   };
   id = s.clock = setInterval(tick, 33);
