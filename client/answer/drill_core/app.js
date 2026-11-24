@@ -153,12 +153,19 @@ addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")
 addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clUserClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, docs/design/DISMISS.md)
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
+/* IB-1 (Tony Nov 24): under ui-v7 the typed tick/cross sit on the mock's ONE 24px grid, stroke 2.25 (the sprite's is 2); flag off keeps the sprite. */
+const IB1_V = {
+  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l12 12M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+/* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
+const IB1_GO = '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function vmark(box, id) {
   if (!box) return;
   let m = box.querySelector(".vk");
   if (!id) { if (m) m.remove(); return; }
   if (!m) { m = document.createElement("span"); m.className = "vk"; m.setAttribute("aria-hidden", "true"); box.append(m); }
-  m.dataset.v = id; m.innerHTML = icon(id);
+  m.dataset.v = id; m.innerHTML = root.classList.contains("ui-v7") && IB1_V[id] ? IB1_V[id] : icon(id);
 }
 /* the words the screen reader hears (the page shows only the icon) */
 const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries, fight it later."
@@ -1015,8 +1022,8 @@ function renderQuestion() {
     /* one row per part: "a)", its sub-question (if it has one), its own box with its own arrow inside (the freeform pattern).
        Each part is graded alone, with its own tries and lockout (SCHEMA.md "Grading"). */
     q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
-      const l = esc(u.label || LETTERS[i].toLowerCase());
-      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${l})</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
+      const l = esc(u.label || LETTERS[i].toLowerCase()), lab = `${l}<span class="mk-p">)</span>`;   // IB-1: ui-v7 hides .mk-p (bare "a"); flag off/late toggle keeps the live "a)" (render.pw pins it)
+      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
           <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}</button></div>
         <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
@@ -1034,10 +1041,12 @@ function renderQuestion() {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
     const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Ex: 9/2, 5e-4, sqrt(3), dne" : "";
+    const hasUnit = typeof p.unit === "string" ? p.unit.length > 0 : typeof p.unit === "number";   // IB-1: only a string/number unit renders; an object would print [object Object]
+    const unit = root.classList.contains("ui-v7") && p.type === "num" && hasUnit ? `<span class="unit" aria-hidden="true">${esc(String(p.unit)).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span>` : "";   // IB-1: the unit at the value's right (mock .unit); ui-v7 only
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
-          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">${ph}</span>` : ""}
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}</button>
+          ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">${ph}</span>` : ""}${unit}
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}${IB1_GO}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }

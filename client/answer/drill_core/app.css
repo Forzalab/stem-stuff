@@ -70,8 +70,8 @@
   --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
   --body: var(--card); --ramp: var(--card); --knock: rgb(11 20 34 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
-     · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
-  --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
+     · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2) · --t-2xl 40 the multi-part index letter (IB-1). Line height by role */
+  --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem; --t-2xl: 40px;   /* IB-1 SOFT LIFT: the multi-part index letter, its only user (mock PICK-soft-lift) */
   --t-reply: 1rem;   /* Cluck's reply text (.wtext), 16px on phone and desktop (Tony Nov 23, 4px-step value); not tied to --t-sm */
   --lh: 1.41; --lh-ui: 1.33; --lh-title: 1.25; --lh-xs: 1.38;
   /* KaTeX at x-height parity with the text face: Atkinson .496 / KaTeX_Main .431 = 1.15em (measured); SF ~.52 -> 1.2em (provisional:
