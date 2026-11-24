@@ -131,6 +131,26 @@ for (const w of [390, 1366]) {
     await ctx.close();
   });
 }
+await step("390: a float row toast keeps a 4 px scroll and yields to 9 px (the 8 px rule), same as a clear-box tap", async () => {
+  const { ctx, p } = await fresh(390, true);
+  await shown(p);
+  await p.evaluate(() => window.stemToast.clear());
+  await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
+  await p.evaluate(() => { const s = document.createElement("div"); s.style.height = "1200px"; document.body.appendChild(s); });   // room to page-scroll
+  await p.evaluate(() => window.stemToast.show({ row: true, duck: "twist", text: "Float yield probe " + "x".repeat(80), bar: false, ms: 60000, clear: "#q",
+    at: () => document.querySelector("#q") }));
+  await shown(p);
+  assert.equal(await p.evaluate(() => document.querySelector(".stoast.on").dataset.side), "float", "the probe floats");
+  const y0 = await p.evaluate(() => window.scrollY);
+  await p.evaluate(() => window.scrollBy(0, 4));
+  await p.waitForFunction(y => window.scrollY >= y + 4, y0, { timeout: 1000 });
+  await p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // a scroll tick's re-place: the event lands before the next frame
+  assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on:not(.out)")), true, "4 px since it showed: still up");
+  await p.evaluate(() => window.scrollBy(0, 5));   // 9 px since it showed
+  await p.waitForFunction(y => window.scrollY >= y + 9, y0, { timeout: 1000 });
+  await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 600 });
+  await ctx.close();
+});
 if (process.env.TILT_SHOT !== "0") {
   await step("390 + 1366 shot: the start, miss and landmark cards, plus one tilted corner-duck card (demo fixture only)", async () => {
     // DUCK-CORNER-TILT: no production card on main has a duck at its bottom-right, so the tilt is shown on a fixture card only.

@@ -832,7 +832,8 @@ matchMedia("(min-width: 720px)").addEventListener("change", () => { if (S) { pro
    shows one, else a header row of its own). A tap opens a note popover (popover.js, docs/design/POPOVER.md) with TWIST_POP. The first twist
    on this device also gets the short toast (toast.js: no bar, one action): TWIST_TOAST + "What is that?", which opens the chip's popover.
    Once per device: localStorage TWIST_KEY, set when the toast is on screen (blocked storage: no toast, never a toast every time).
-   The toast keeps off the answer area (#q: the box, the ladder, the choices) and Next, tap or no tap. No twist: no chip, no row, no toast. */
+   The toast keeps off the answer area (#q: the box, the ladder, the choices) and Next, tap or no tap. No twist: no chip, no row, no toast.
+   Phone (ui-v7 row toast, toast.js desk()): the title alone, so its 150 ms/char life stays ~2.7 s; a tap in #q or a scroll over 8 px yields the float. */
 const TWIST_TOAST = "You found a twist.", TWIST_ACT = "What is that?", TWIST_SUB = "One detail differs from the exam question.";
 const TWIST_POP = "You’ll see twists often. These twists change one detail from real exam questions, which will improve retention.";
 const TWIST_KEY = "stem-twist-seen";
@@ -861,8 +862,10 @@ function twistPop(b, toggle) {
 function twistToast() {
   const T = window.stemToast, code = S && S.code;
   if (T && S && S.prob.twist === true && root.classList.contains("ui-v7")) {   // ui-v7: no chip; the duck "twist" row toast announces every twist question, once per show (open, never a re-render)
-    T.show({ row: true, duck: "twist", text: TWIST_TOAST, sub: TWIST_SUB, bar: false, ms: 6000, until: Date.now() + 15000, clear: "#q, .nx",
-      at: () => S && S.code === code ? ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) : null });
+    const o = { row: true, duck: "twist", text: TWIST_TOAST, bar: false, ms: 6000, until: Date.now() + 15000, clear: "#q, .nx",
+      at: () => S && S.code === code ? ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) : null };
+    if (T.desk && T.desk()) o.sub = TWIST_SUB;   // PHONE-TOAST-FLOAT: the phone's row toast is the title alone (18 chars -> 2.7 s); the desk keeps the sub
+    T.show(o);
     return;
   }
   if (!T || !S || S.prob.twist !== true || twistAsked) return;
