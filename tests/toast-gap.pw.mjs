@@ -137,6 +137,7 @@ await step("390: a float row toast keeps a 4 px scroll and yields to 9 px (the 8
   await p.evaluate(() => window.stemToast.clear());
   await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
   await p.evaluate(() => { const s = document.createElement("div"); s.style.height = "1200px"; document.body.appendChild(s); });   // room to page-scroll
+  await p.evaluate(() => { document.querySelector("#q").style.minHeight = innerHeight + "px"; });   // the flow grid (mixed rows) is short: keep #q tall so the toast has no room under it and floats, as with the old tall grid
   await p.evaluate(() => window.stemToast.show({ row: true, duck: "twist", text: "Float yield probe " + "x".repeat(80), bar: false, ms: 60000, clear: "#q",
     at: () => document.querySelector("#q") }));
   await shown(p);

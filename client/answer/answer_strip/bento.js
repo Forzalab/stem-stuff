@@ -8,7 +8,7 @@
    Content only: never reads the key, the picked state or a verdict. Pick-all with fix boxes (prove mode) keeps its list. Stacked full-width rows is the fallback.
    bento4: content-driven tile shapes (hero = most content, ~60% of tiles bigger than 1x1), seeded per question (#pcode + width), render guard (a clipped tile forbids its shape,
    one re-layout, then stacked), phone unit row 88, grid padding-bottom when a fixed Check bar exists.
-   PHONE-FILL (<= 480px, bento_fill.js): MC / pick-all become JUSTIFIED ROWS that fill the whole answer area (viewport - the block's top - the Check row): linear partition by text weight,
+   (Superseded by FLOW below: apply() now only calls flowLayout; the mosaic / fill code is kept, unused.) PHONE-FILL (<= 480px, bento_fill.js): MC / pick-all become JUSTIFIED ROWS that fill the whole answer area (viewport - the block's top - the Check row): linear partition by text weight,
    widths by weight (60 grid columns), row heights stretched to the room, per-tile font fit 15 -> 10px (padding-aware: the letter-clear --lg is in the fit; rows grow to the real need, so text at any size never clips; debounced on resize); no search, no probe, no guard.
    Reads the DOM only (like strip.js); re-runs when #q gets a new question, when the width changes, and when fonts arrive. */
 (function () {
@@ -58,7 +58,7 @@
     });
   }
   function clear(g) {
-    g.classList.remove("bento");
+    g.classList.remove("bento", "flow");
     g.style.removeProperty("--bc");
     [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); unfit(o); } });
     g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento"); g.removeAttribute("data-fb");
@@ -163,6 +163,54 @@
     u.hs = hs; u.A = A; clearLetter(g); grow(u);
     if (window.MutationObserver) { mo = mo || new MutationObserver(function () { if (cur && cur.fill && cur.g.isConnected) requestAnimationFrame(function () { if (cur && cur.fill && cur.g.isConnected) refit(cur); }); }); mo.observe(g, { attributes: true, subtree: true, attributeFilter: ["class", "hidden", "aria-checked"] }); }
   }
+  /* FLOW (question #737, BANK_CEP): the answers FLOW DOWN, they are not fitted to one screen. ONE column count for the whole set, so every tile has the same width:
+     3, then 2, columns only when EVERY option's real text (measured rendered width, nowrap, at the full 16px body size) fits on one line inside that tile; else 1 column.
+     Tiles take their natural height (a row = its tallest tile), the page scrolls, nothing is clipped, no search / probe grid / guard. Content cut at the viewport bottom on first load is the scroll cue.
+     A formula wider than its tile still shrinks, then side-scrolls (mathFit). */
+  var FLOW_PAD = 104, FLOW_MINW = 96;   // words' side room: letter 46 + Check / Next / verdict reserve 58 (so a pick never re-wraps); a tile is never narrower than 96px
+  function flowCols(chs, R) {
+    var pr = D.createElement("div"), ws, C, inner;
+    pr.className = "mc-probe"; pr.setAttribute("aria-hidden", "true");
+    chs.forEach(function (c) {
+      var t = c.querySelector(".opt .txt"), cs = t && getComputedStyle(t), e = D.createElement("span");
+      e.style.cssText = "display:inline-block;white-space:nowrap;font-size:16px;line-height:22px;letter-spacing:0;font-family:" + (cs ? cs.fontFamily : "inherit") + ";font-weight:" + (cs ? cs.fontWeight : "400");
+      e.innerHTML = t ? t.innerHTML : ""; pr.appendChild(e);
+    });
+    D.body.appendChild(pr);
+    ws = [].map.call(pr.children, function (e) { return e.getBoundingClientRect().width; });
+    pr.remove();
+    for (C = 3; C > 1; C--) {
+      inner = (R - (C - 1) * GAP) / C - FLOW_PAD;
+      if ((R - (C - 1) * GAP) / C >= FLOW_MINW && ws.every(function (w) { return w <= inner - 1; })) return C;
+    }
+    return 1;
+  }
+  /* MIXED ROWS (user, Nov 24): c = widest column count whose every option fits one line; rows are split as evenly as possible (larger rows first), fewest rows on a tie, so the grid has NEVER a hole:
+     5 @ c=3 -> 3+2, 7 -> 3+2+2, 4 -> 2+2, 3 @ c=2 -> 2+1 (the lone tile spans the full width). A row of k tiles = k equal spans of a 6-column grid; k <= c, so each tile still fits its text. */
+  function flowRows(n, c) {
+    var best = null, k, rows, base, extra, r, i, sz;
+    if (c <= 1) return null;
+    for (k = 2; k <= c; k++) {
+      rows = Math.ceil(n / k); base = Math.floor(n / rows); extra = n % rows; sz = [];
+      for (i = 0; i < rows; i++) sz.push(base + (i < extra ? 1 : 0));
+      r = { sizes: sz, d: sz[0] - sz[rows - 1] };
+      if (!best || r.d < best.d || (r.d === best.d && sz.length < best.sizes.length)) best = r;
+    }
+    return best.sizes;
+  }
+  function flowLayout(g, chs, R) {
+    if (mo) mo.disconnect();
+    clear(g);
+    var C = flowCols(chs, R);
+    cur = { g: g, chs: chs, R: R, flow: true };
+    var sizes = flowRows(chs.length, C), spans = [];
+    if (sizes) sizes.forEach(function (k) { for (var j = 0; j < k; j++) spans.push(6 / k); });
+    g.classList.add("bento", "flow"); g.dataset.bento = "flow"; g.style.setProperty("--bc", sizes ? 6 : 1);
+    if (sizes) g.dataset.rows = sizes.join("+"); else delete g.dataset.rows;
+    chs.forEach(function (c, i) { c.style.gridRow = ""; c.style.gridColumn = sizes ? "span " + spans[i] : ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); unfit(o); } });
+    chs.forEach(function (c) { var o = c.querySelector(".opt"); if (o) mathFit(o, MZ_MIN); });
+    clearLetter(g);
+  }
   function apply() {
     queued = false;
     var g = D.querySelector("#q .choices");
@@ -170,24 +218,11 @@
     var chs = [].filter.call(g.children, function (c) { return c.classList.contains("ch"); });
     if (!on() || chs.length < 2 || chs.length > 8 || g.querySelector(".fix")) { if (g.dataset.bento) clear(g); key = ""; return; }   // pick-all + fix boxes (prove mode): the list stays
     var R = Math.round(g.getBoundingClientRect().width);
-    if (g.dataset.fill) R -= 6;                                    // the fill grid is 6px wider than its column (-3px margins)
-    if (R < 200) return;                                           // laid out hidden (Swap, search mode): keep the last answer
-    var fill = phone(), A = 0;
-    if (fill) {
-      var bar = D.querySelector("#q .chk"), bb = bar && bar.querySelector(".send"), top = g.getBoundingClientRect().top + (window.pageYOffset || 0);
-      A = Math.floor(svh() - top - (bar ? ((bb && bb.offsetHeight) || 48) + 10 : 0) - 8);
-      A = Math.max(A, Math.round(svh() * 0.35));                  // FILL-FLOOR (Tony Nov 16): a long card puts the grid below the first screen (A <= 0 -> 1px rows, 10px text); fill a third of a screen instead
-    }
-    var k = (fill ? "F" + Math.round(A / 8) + "|" + getComputedStyle(H).fontSize + "|" : "") + R + "|" + chs.map(function (c) { return c.dataset.id + (c.querySelector(".txt") || {}).innerHTML; }).join("|");
+        if (R < 200) return;                                           // laid out hidden (Swap, search mode): keep the last answer
+    var k = "FL|" + R + "|" + chs.map(function (c) { return c.dataset.id + (c.querySelector(".txt") || {}).innerHTML; }).join("|");
     if (k === key && g.dataset.bento) return;
     key = k;
-    if (fill) { fillLayout(g, chs, R, Math.max(A, 1)); return; }
-    if (g.dataset.fill) clear(g);
-    var tiny = R < 520 && chs.every(function (c) { var t = c.querySelector(".opt .txt"), w = 0; if (t) [].forEach.call(t.querySelectorAll(".katex"), function (k) { w += k.getBoundingClientRect().width; }); return restLen(t) <= 8 && w <= 44; }), C = colsFor(R, tiny), qid = (D.getElementById("pcode") || {}).textContent || "";
-    /* SEED-NO-WIDTH (Tony Nov 18, "jitter while I drag the resize bar"): the seed had the px width in it, so each pixel of a drag re-rolled the seeded pick
-       (50 layout flips in 76 drag steps). Now: same question + same column count = same pick (layout() adds C); it changes only when the content stops fitting */
-    cur = { g: g, chs: chs, ms: measure(chs, R, C), R: R, C: C, seed: qid + "|" + chs.map(function (c) { return (c.querySelector(".txt") || {}).textContent; }).join("|"), forbid: {}, tries: 0, stacked: false };
-    place();
+    flowLayout(g, chs, R);
   }
   /* write the placement; the guard (next frame) forbids a shape whose text is clipped and lays out once more, the 2nd failure = stacked rows */
   function place() {
