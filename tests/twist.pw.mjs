@@ -22,7 +22,7 @@ try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8857), BASE = `http://localhost:${PORT}`, SHOTS = process.env.SHOTS || "";
 const TMP = mkdtempSync(join(tmpdir(), "tw-")), BANKS = join(TMP, "banks");
-const TOAST = "You found a twist.", ACT = "What is that?";
+const TOAST = "You found a twist.", ACT = "What is that?", SUB = "One detail differs from the exam question.";
 const POP = "You’ll see twists often. These twists change one detail from real exam questions, which will improve retention.";
 const sac = title => ({ title, key: "Use: a\nAnswer: a", slip: { b: "b slip" } });
 const num = (code, title, extra = {}) => ({ code, title, type: "num", body: [{ type: "text", md: `${code}: a made-up question, type 4.` }],
@@ -34,7 +34,11 @@ writeFileSync(join(BANKS, "BANK_TW1.json"), JSON.stringify({ v: 1, problems: [
   num("PHYS_W02", "Made-up Set, Question 2"),
   { code: "PHYS_W03", title: "Made-up Set, Question 3", type: "mc", twist: true, body: [{ type: "text", md: "PHYS_W03: pick a." }],
     choices: [{ id: "a", md: "one" }, { id: "b", md: "two" }], correct: "a", saccharine: sac("Made-up Set, Question 3") },
-  num("PHYS_W04", "Made-up Set, Question 4", { twist: false })] }));
+  num("PHYS_W04", "Made-up Set, Question 4", { twist: false }),
+  { code: "PHYS_W05", title: "Made-up Set, Question 5", type: "mc", twist: true,
+    body: Array.from({ length: 4 }, (_, i) => ({ type: "text", md: `PHYS_W05: paragraph ${i + 1}, a made-up question long enough to push the phone's bottom answer tile row to the foot.` })),
+    choices: ["one, a long made-up choice that wraps", "two, a long made-up choice that wraps", "three, a long made-up choice that wraps", "four, a long made-up choice that wraps", "five, a long made-up choice that wraps"].map((md, i) => ({ id: "abcde"[i], md })),
+    correct: "a", saccharine: sac("Made-up Set, Question 5") }] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 await serverUp(BASE);
 
@@ -159,6 +163,68 @@ try {
     await go(page, "PHYS_W02"); await page.waitForTimeout(400);   // keep: app timer toast lifetime (a non-twist item shows no toast)
     assert.equal(await twistToastOn(page), false, "a non-twist item: no toast");
     await go(page, "PHYS_W03"); await waitToast(page);
+    await ctx.close();
+  });
+  /* TWIST-TOAST-PHONE (LAYOUT-PROD-SWEEP 1): a phone's ui-v7 row toast is the title alone (the existing 150 ms/char rule -> 2.7 s),
+     and the float yields at once to a tap in #q / .nx or a page scroll over 8 px. The desk keeps title + sub. */
+  const phoneV7 = async code => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/?ui=v7#${code}`); await opened(page, code);
+    return { ctx, page };
+  };
+  await step("390 ui-v7: the twist row toast is the title alone (no sub), floats, and is gone within 3.5 s", async () => {
+    const { ctx, page } = await phoneV7("PHYS_W05");
+    await waitToast(page);
+    const s = await page.evaluate(() => {
+      const e = document.querySelector(".stoast.on"), sub = e.querySelector(".stoast-s");
+      return { title: e.querySelector(".stoast-t").textContent, sub: sub && !sub.hidden ? sub.textContent : "", side: e.dataset.side };
+    });
+    const life = await page.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3500 }).then(() => true, () => false);   // old sub: 9.15 s
+    assert.deepEqual([s.title, s.sub, s.side, life], [TOAST, "", "float", true], `phone copy / side / life: ${JSON.stringify(s)} life=${life}`);
+    await ctx.close();
+  });
+  await step("390 ui-v7: a pointerdown on an answer tile yields the float toast at once, and the tile still gets the press", async () => {
+    const { ctx, page } = await phoneV7("PHYS_W05");
+    await waitToast(page);
+    const t = await page.evaluate(() => {
+      const toast = document.querySelector(".stoast.on"); if (!toast || toast.dataset.side !== "float") return null;
+      const tr = toast.getBoundingClientRect();
+      for (const o of document.querySelectorAll("#q .opt")) {
+        const r = o.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2 || r.top < 0 || r.bottom > innerHeight) continue;
+        if (Math.min(tr.right, r.right) > Math.max(tr.left, r.left) && Math.min(tr.bottom, r.bottom) > Math.max(tr.top, r.top)) continue;   // the toast is not in the way
+        window.__twistPress = 0; o.addEventListener("pointerdown", () => { window.__twistPress++; });
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }
+      return null;
+    });
+    assert.ok(t, "an answer tile clear of the float toast");
+    await page.touchscreen.tap(t.x, t.y);
+    await page.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 300 });
+    assert.equal(await page.evaluate(() => window.__twistPress), 1, "the tile under the tap got the press");
+    await ctx.close();
+  });
+  await step("390 ui-v7: a page scroll of 40 px yields the float toast", async () => {
+    const { ctx, page } = await phoneV7("PHYS_W05");
+    await waitToast(page);
+    assert.equal(await page.evaluate(() => document.querySelector(".stoast.on").dataset.side), "float");
+    await page.evaluate(() => window.scrollBy(0, 40));
+    await page.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 1000 });
+    await ctx.close();
+  });
+  await step("1280 ui-v7: the twist row toast keeps title + sub on the desk (not the float)", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: "block" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    const page = await ctx.newPage();
+    await page.goto(BASE + "/?ui=v7#PHYS_W01"); await opened(page, "PHYS_W01");
+    await waitToast(page);
+    const s = await page.evaluate(() => {
+      const e = document.querySelector(".stoast.on"), sub = e.querySelector(".stoast-s");
+      return { title: e.querySelector(".stoast-t").textContent, sub: sub && !sub.hidden ? sub.textContent : "", side: e.dataset.side };
+    });
+    assert.equal(s.title, TOAST); assert.equal(s.sub, SUB); assert.notEqual(s.side, "float", JSON.stringify(s));
     await ctx.close();
   });
   await step("blocked storage: no toast (never a toast on every twist), the chip still shows", async () => {
