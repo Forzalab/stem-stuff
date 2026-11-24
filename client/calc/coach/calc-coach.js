@@ -18,7 +18,7 @@
   var hidden = function () { return !d.documentElement.classList.contains('cc-calc-on'); };
   var KEY_MODEL = 'stem-calc-model', KEY_STRIP = 'stem-calc-strip', KEY_TOAST = 'stem-calc-toast-';
   var COPY = {
-    exam: { title: 'Stuck? Click here for TI/Casio tricks.',
+    exam: { title: 'Stuck? Click for TI/Casio tricks.',
       body: 'Type the whole equation and hit SOLVE. Store a number once and reuse it. Pick your calculator and I will show you the keys. QUACK.' },
     v7: 'Calculator moves: solve in one go, store a number.',
     plain: { title: 'Calculator moves', body: 'Two moves worth knowing: solve an equation in one go, and store a number instead of retyping it. Pick your calculator to see the keys.' }
@@ -128,7 +128,7 @@
   }
   function say(m, press) {
     var words = press.map(function (p) { var b = /^\[(.*)\]$/.exec(p); if (b) return b[1]; var r = resolve(m, p); return /^\d/.test(p) || !r.keys.length ? p.replace(/^x y z t.*/, 'the letter key') : labelOf(m, r.keys[0]); });
-    if (words.length > 8) return 'You press these keys, left to right.';
+    if (words.length > 8) return 'Press these keys from left to right.';
     return 'You press ' + words.join(', then ') + '.';
   }
   var TITLE = { R1: 'One equation, SOLVE', R2: "Store, don't retype" };
@@ -181,7 +181,7 @@
         return;
       }
       var steps = shownSteps(DATA, m, st.routine);
-      if (!steps) { root.append(h('p', 'cc-model', name)); root.append(msg('Check your manual for this one.', 'I only show steps that are verified for your model.')); root.append(btn('Back', 'cc-btn', function () { st.view = 'routine'; draw(); })); return; }
+      if (!steps) { root.append(h('p', 'cc-model', name)); root.append(msg('Check your manual for this one.', 'I only show steps verified for your model.')); root.append(btn('Back', 'cc-btn', function () { st.view = 'routine'; draw(); })); return; }
       var n = steps.length;
       if (st.i >= n) {                                            // the final card
         tel('calc_coach', { phase: 'done', routine: st.routine, model: m });

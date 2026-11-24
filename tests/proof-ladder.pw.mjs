@@ -131,7 +131,7 @@ try {
     await answer(page, "s_num", "1");
     assert.equal(await page.$("#rpHost"), null, "the ladder host stays");
     assert.equal(await page.$$eval(".rp-step", x => x.length), 0);
-    assert.match(await page.textContent("#rpGone"), /These steps expired\. Check again for new ones\./);
+    assert.match(await page.textContent("#rpGone"), /These steps expired\. Check for new ones\./);
     await ctx.close();
   });
   for (const [w, h] of [[390, 700], [360, 640]]) {
