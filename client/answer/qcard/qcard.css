@@ -1,7 +1,8 @@
 /* qcard.css: QCARD-SWISS v3 (qcard.js), html.ui-v7 ONLY. Flag off = nothing here applies.
    Owner pick V3 (Nov 15): ONE card background, top to bottom: ghost numeral (ECHO trail, 6 copies, step -12px x, fades out before the chip column), figure, topic headline,
    setup + question text (16px, 1.45 leading, flush-left, no fold and no inner scroll: the page scrolls it, the bold ask pins at the top), small meta row. Text, headline, meta share the left edge --qpad.
-   Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, no lift. Echo animates on prev/next (transform + opacity only). */
+   Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, no lift. Echo animates on prev/next (transform + opacity only).
+   §frost (Tony Nov 23): ?gv=1..5 picks one subtle frost layer between the text block and the card + ghost numeral (html[data-gv], default 3); static, not animated. */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
 html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 20px; --qc-pad: 20px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
@@ -277,7 +278,6 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
 }
 
-
 /* == §fig-top == FIG-TOP (Tony Nov 23, prototype qfig-margin, the -40% pick): a card whose FIRST block is a figure. The float Ask Cluck button (§ick5-tr: 44px + 8px margin, under the
    26px phone top pad) pushed the figure's box 52px down, so the figure began 78px under the card top. Here the button leaves the flow (absolute, same top / right, same size, z-index 3) and
    the figure gets a 21px lead: card top -> figure 78 -> 47px (-40%). The ghost numeral (absolute, behind) and the left edge (--qc-pad) are untouched. Phone only: desktop keeps its float. */
@@ -285,3 +285,46 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7 #problem.qc7.qbr:has(> .blocks > .fig:first-child) > button.cluckbtn { float: none !important; position: absolute; top: var(--qpt, var(--qpad)); right: var(--qpad); margin: 0 !important; }
   html.ui-v7 #problem.qc7.qbr > .blocks > .fig:first-child { margin-top: 21px; }
 }
+
+/* == §ghost-glass == GHOST-G3-GLASS (Tony Nov 23, mock variant C "rim + scrim"): the ghost numeral is a glass slab: a gradient body painted through the glyph (background-clip: text),
+   ONE static SVG filter (#qg-glass, qcard.js glassDefs: lit rim + eroded dark inner edge + grain = the KEYF rim recipe) and a faint diagonal sheen layered in the body. A static blurred
+   scrim (.qscrim, one pill per text line, qcard.js scrims) dims it under the words so text over the numeral keeps >= 4.5:1. Softer mask fade than the flat numeral had.
+   Compositor-only: nothing animates here (the echo .qanim stays transform / opacity), no filter on a parent of a moving child, no backdrop-filter. */
+html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); }
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: 1; color: transparent; -webkit-background-clip: text; background-clip: text; filter: url(#qg-glass);
+  background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .10) 46%, transparent 62%), linear-gradient(160deg, rgb(112 138 214 / .32), rgb(52 74 140 / .18)); }
+html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(8px); border-radius: inherit; overflow: hidden; }
+html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .85); border-radius: 999px; }
+@media (prefers-reduced-transparency: reduce) {
+  html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: .08; color: #5b6a9a; -webkit-background-clip: border-box; background-clip: border-box; background-image: none; filter: none; }
+  html.ui-v7 #problem.qc7 > .qscrim { display: none; }
+}
+
+/* == §frost == GHOST-HYBRID-FROST (Tony Nov 23): a SUBTLE frost layer between the question text and everything behind it (card + ghost numeral). ONE layer, the size of the
+   text block (qcard.js textBox), z 0 under the text (blocks z 1) and above .qghostbox; the text stays sharp on top. Variant = html[data-gv="1..5"], read once from ?gv= at boot
+   (qcard.js; no param = 3). gv3/gv5 are one static SVG displacement lens (#qg-lens, built by qcard.js from the ask-glass lens-map maths: magnify 1.04, small rim bend, 6px
+   frost inside the filter). Nothing here animates. Phone keeps ONE filtered layer: gv4's per-line pills are one masked backdrop-filter on .qscrim, never one per pill. */
+html.ui-v7 #problem.qc7 > .qfrost { position: absolute; z-index: 0; pointer-events: none; border-radius: var(--r-tile, 16px); }
+/* gv1 frost-lite: blur 4 + a 4% warm-white film */
+html.ui-v7[data-gv="1"] #problem.qc7 > .qfrost { background: rgb(255 246 232 / .04); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+/* gv2 frost-med: blur 8 + saturate 1.3, a 6% film and a 1px inner rim */
+html.ui-v7[data-gv="2"] #problem.qc7 > .qfrost { background: rgb(255 246 232 / .06); -webkit-backdrop-filter: blur(8px) saturate(1.3); backdrop-filter: blur(8px) saturate(1.3);
+  box-shadow: inset 0 0 0 1px rgb(214 228 255 / .22), inset 0 1px 0 rgb(255 255 255 / .16); }
+/* gv3 glass-lens: the static lens (blur 6 lives inside #qg-lens); a plain 6px frost is the no-SVG-filter fallback */
+html.ui-v7[data-gv="3"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+html.ui-v7[data-gv="3"][data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens); }
+/* gv4 per-line frost: the scrim pills ARE the frost (mask from qcard.js scrims) instead of dark pills; one backdrop-filter for the whole line set */
+html.ui-v7[data-gv="4"] #problem.qc7 > .qscrim { filter: none; }
+html.ui-v7[data-gv="4"] #problem.qc7 > .qscrim i { background: none; }
+html.ui-v7[data-gv="4"][data-qf4="1"] #problem.qc7 > .qscrim { background: linear-gradient(rgb(255 246 232 / .06), rgb(255 246 232 / .06)), rgb(8 18 40 / .34);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2); backdrop-filter: blur(6px) saturate(1.2); }
+/* gv5 lens + rim: gv3 and the §ghost-glass lit-rim recipe on the frost edge (specular #d6e4ff top edge, dark #020612 inner edge) */
+html.ui-v7[data-gv="5"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+html.ui-v7[data-gv="5"][data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens);
+  box-shadow: inset 0 1px 0 rgb(214 228 255 / .42), inset 0 0 0 1px rgb(214 228 255 / .14), inset 0 -1px 0 rgb(2 6 18 / .5); }
+/* no frost when transparency is reduced (solid card; the §ghost-glass rule above already flattens the numeral and drops the scrim) + the weak-device fallback */
+@media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7 > .qfrost { display: none; } }
+html.ui-v7.fx-dim #problem.qc7 > .qfrost { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.ui-v7.fx-dim[data-gv="4"] #problem.qc7 > .qscrim { background: rgb(3 14 34 / .85); -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+
