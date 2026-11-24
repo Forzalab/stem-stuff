@@ -516,17 +516,25 @@ const spring = () => {   // x(t) = 1 - (1 + wt) e^(-wt): critically damped, sett
 };
 function flip(from, bubble) {
   if (!from || !bubble || reduced() || !bubble.animate) return;
-  const to = bubble.getBoundingClientRect();
+  /* bubble = the .md text; the filled pill (.msg.me) behind it is the bubble the eye sees, so the clone flies to THAT box:
+     its fill, radius and padding are the target, and it is the node hidden for the flight (hiding the text alone left the pill
+     sitting under the letters, and the letters then snapped into the pill's padding when they landed). */
+  const pill = bubble.closest('.msg.me') || bubble;
+  const to = pill.getBoundingClientRect();
   if (!to.width || !to.height || to.bottom < 0 || to.top > g.innerHeight) return;
-  const cs = getComputedStyle(bubble), fly = D.createElement('div');
+  const cs = getComputedStyle(bubble), ps = getComputedStyle(pill), fly = D.createElement('div');
   fly.className = 'ag-fly'; fly.setAttribute('aria-hidden', 'true'); fly.textContent = bubble.textContent;
   fly.style.cssText = 'position:fixed;left:0;top:0;margin:0;z-index:70;pointer-events:none;box-sizing:border-box;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;line-height:' + cs.lineHeight + ';font-family:' + cs.fontFamily + ';font-weight:' + cs.fontWeight;
   D.body.append(fly);
-  bubble.style.visibility = 'hidden';
+  const was = pill.style.visibility;
+  pill.style.visibility = 'hidden';
   const k = (r, st) => ({ transform: 'translate(' + r.left + 'px,' + r.top + 'px)', width: r.width + 'px', height: r.height + 'px', borderRadius: st.rad, backgroundColor: st.bg, color: st.color, fontSize: st.fs, padding: st.pad });
-  const end = { rad: cs.borderTopLeftRadius, bg: cs.backgroundColor, color: cs.color, fs: cs.fontSize, pad: cs.padding };
+  const end = { rad: ps.borderTopLeftRadius, bg: ps.backgroundColor, color: cs.color, fs: cs.fontSize, pad: ps.padding };
   const a = fly.animate([k(from, from), k(to, end)], { duration: 420, easing: spring(), fill: 'both' });
-  const done = () => { fly.remove(); bubble.style.visibility = ''; };
+  /* swap on the frame AFTER the finish: the last keyframe (the pill's exact box) is painted once, then the real bubble takes over
+     in the same spot. Removing it in the finish microtask instead skipped that frame, so the last painted clone was still ~1px
+     short of the pill on WebKit and the text visibly settled into place. */
+  const done = () => requestAnimationFrame(() => { fly.remove(); pill.style.visibility = was; });
   a.finished.then(done, done);
 }
 function snap(el) {   // the first box when a chip (not the field) is the sender
