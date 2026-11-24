@@ -99,6 +99,47 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
+  await step("390 + 1280: CLUCK-BTN-DISABLED: off = the --chip slate with the #7a8aae duck (not tangerine), ready = tangerine again, 240 ms ease-out, reduced motion off", async () => {
+    for (const w of [390, 1280]) {
+      const page = await open2(w, "PHYS_FP2");
+      try {
+        const read = () => page.evaluate(() => {
+          const b = document.getElementById("cluckBtn"), d = b.querySelector(".cb-duck"), cs = getComputedStyle(b), ds = getComputedStyle(d);
+          const p = document.createElement("i"); p.style.background = "var(--chip)"; document.body.append(p);
+          const chip = getComputedStyle(p).backgroundColor; p.remove();
+          const at = (props, vals, prop) => { const i = props.split(",").map(s => s.trim()).indexOf(prop), v = vals.split(",").map(s => s.trim()); return i < 0 ? null : v[i] ?? null; };
+          return { st: b.dataset.st, aria: b.getAttribute("aria-disabled"), chip, bg: cs.backgroundColor, duck: ds.color, shadow: cs.boxShadow,
+            btn: { dur: at(cs.transitionProperty, cs.transitionDuration, "background-color"), ease: at(cs.transitionProperty, cs.transitionTimingFunction, "background-color") },
+            duckT: { dur: at(ds.transitionProperty, ds.transitionDuration, "color"), ease: at(ds.transitionProperty, ds.transitionTimingFunction, "color") },
+            raw: { btnProp: cs.transitionProperty, btnDur: cs.transitionDuration, duckProp: ds.transitionProperty, duckDur: ds.transitionDuration } };
+        });
+        let s = await read();
+        assert.equal(s.aria, null, w + ": a fresh problem is ready"); assert.equal(s.st, "ready");
+        assert.equal(s.bg, "rgb(255, 166, 62)", w + ": ready fill is tangerine (byte-identical)"); assert.equal(s.duck, "rgb(2, 4, 13)", w + ": ready duck is --page");
+        const was = await page.evaluate(() => { const b = document.getElementById("cluckBtn"); return { st: b.dataset.st, ad: b.getAttribute("aria-disabled") }; });
+        await page.evaluate(() => { const b = document.getElementById("cluckBtn"); b.dataset.st = "off"; b.setAttribute("aria-disabled", "true"); });
+        await settled(page, "#cluckBtn");
+        s = await read();
+        assert.equal(s.st, "off"); assert.equal(s.aria, "true");
+        assert.notEqual(s.bg, "rgb(255, 166, 62)", w + ": off is still tangerine (the bug)"); assert.equal(s.bg, s.chip, w + ": off fill " + s.bg + " != --chip " + s.chip);
+        assert.equal(s.duck, "rgb(122, 138, 174)", w + ": off duck is #7a8aae"); assert.equal(s.shadow, "none", w + ": off keeps no raise");
+        assert.equal(s.btn.dur, "0.24s", w + ": unlock background-color 240 ms (btn " + JSON.stringify(s.btn) + ", " + JSON.stringify(s.raw) + ")"); assert.equal(s.btn.ease, "ease-out");
+        assert.equal(s.duckT.dur, "0.24s", w + ": unlock duck colour 240 ms (duck " + JSON.stringify(s.duckT) + ", " + JSON.stringify(s.raw) + ")"); assert.equal(s.duckT.ease, "ease-out");
+        if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-off-${w}.png`) });
+        await page.evaluate(o => { const b = document.getElementById("cluckBtn"); if (o.st === undefined) delete b.dataset.st; else b.dataset.st = o.st;
+          if (o.ad === null) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled", o.ad); }, was);
+        await settled(page, "#cluckBtn");
+        s = await read();
+        assert.equal(s.aria, null, w + ": ready again"); assert.equal(s.bg, "rgb(255, 166, 62)", w + ": ready again is tangerine"); assert.equal(s.duck, "rgb(2, 4, 13)", w + ": ready duck is --page again");
+        if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-ready-${w}.png`) });
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.waitForFunction(() => matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });
+        s = await read();
+        assert.equal(s.raw.btnDur.split(",").every(v => v.trim() === "0s"), true, w + ": reduced motion switches the fill off: " + s.raw.btnDur);
+        assert.equal(s.raw.duckDur.split(",").every(v => v.trim() === "0s"), true, w + ": reduced motion switches the duck colour off: " + s.raw.duckDur);
+      } finally { await page.context().close(); }
+    }
+  });
   await step("1366: before a try: hover shows no note; a press focuses the open box (the starter chip + the locked strip), no /explain", async () => {
     const page = await open2(1366, "PHYS_FP2");
     try {
