@@ -1,6 +1,6 @@
 /* ask-glass.css: the R3 glass Ask bar of Cluck's sheet, all under html.ui-v7 (flag off = today's footer field). Script: ask-glass.js; markup: cluck.js clAsk (the .ask form gets class ag).
    Geometry: the footer floats over the reply (12px in, 12px up, 56px, radius 20, desktop width cap 560px); the reply scrolls under it (bottom padding = bar + inset + 16px).
-   Layers inside the form (z): .g-copy 0 (the aria-hidden synced copy of the reply, the one SVG-filtered node) · .g-tint 1 · .g-rim 2 · .g-haze 2 (thinking glow + bleed) · .g-lock 3 · field / counter / send 3 · .g-sweep + .g-think 4 (rings).
+   Layers inside the form (z): .g-copy 0 (the aria-hidden synced copy of the reply, the one SVG-filtered node) · .g-tint 1 · .g-rim 2 · .g-haze 2 (3.5% white resting film, no glow; thinking glow + bleed) · .g-lock 3 · field / counter / send 3 · .g-sweep + .g-think 4 (rings).
    States: .locked (before the first try: a 44px calm-glass strip, radius 14, lock + "Available after your first try.") · .opening / .sweep (the unlock, JS-timed) · .think (Cluck streams: ring, glow, light) ·
    .ag-solid (html.fx-dim, reduced transparency: a solid warm fill) · .ag-frost (the lens failed, or a phone sheet drag: the R3 frost, blur 16 + saturate 1.5 over rgb(34 27 21/.42)).
    Perf rules (measured 60fps in the mock): the ring is a conic gradient on a ROTATING SQUARE child under a static xor mask; glow + bleed are static box-shadows on one layer breathing by OPACITY only;
@@ -78,10 +78,16 @@ html.ui-v7 .ask.ag > .g-think .spin { background: conic-gradient(#ff7a1a, #ffa63
 html.ui-v7 .ask.ag.think > .g-think .spin { animation-play-state: running; }
 @keyframes ag-spin { to { rotate: 360deg; } }
 html.ui-v7 .ask.ag > .g-haze {
-  position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .6s;
-  box-shadow: inset 0 0 6px 0 rgb(255 140 50 / .55), inset 0 0 1.5px 0 rgb(255 190 120 / .6), 0 0 10px 1px rgb(255 122 26 / .38), 0 0 3px 0 rgb(255 94 122 / .3);
+  position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: 1; transition: opacity .6s;
+  background: rgb(255 245 232 / .035);   /* ASK-GLASS-TUNE: 3.5% WHITE resting film only; .think swaps it out for the orange glow */
+  box-shadow: none;                      /* at rest there is no glow: the box-shadow belongs to .think only */
 }
-html.ui-v7 .ask.ag.think > .g-haze { animation: ag-breathe 3.6s ease-in-out infinite; }
+html.ui-v7 .ask.ag.think > .g-haze {
+  background: none;
+  box-shadow: inset 0 0 6px 0 rgb(255 140 50 / .55), inset 0 0 1.5px 0 rgb(255 190 120 / .6), 0 0 10px 1px rgb(255 122 26 / .38), 0 0 3px 0 rgb(255 94 122 / .3);
+  animation: ag-glow-in .45s ease-out both, ag-breathe 3.6s ease-in-out .45s infinite;
+}
+@keyframes ag-glow-in { from { opacity: 0; } to { opacity: .55; } }   /* opacity only: the glow fades in, then ag-breathe takes over at the same .55 */
 @keyframes ag-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }   /* opacity only */
 
 /* ---- fallbacks ---- */
@@ -91,8 +97,9 @@ html.ui-v7 .ask.ag.ag-frost, html.ui-v7 .cl[data-state="dragging"] .ask.ag:not(.
 html.ui-v7 .ask.ag.ag-frost > .g-tint, html.ui-v7 .cl[data-state="dragging"] .ask.ag:not(.ag-solid) > .g-tint, html.ui-v7 .cl[data-state="moving"] .ask.ag:not(.ag-solid) > .g-tint { background: rgb(34 27 21 / .42); }
 html.ui-v7 .cl[data-state="dragging"] .ask.ag > .g-copy, html.ui-v7 .cl[data-state="moving"] .ask.ag > .g-copy { display: none; }   /* a phone sheet drag: the bar is pinned to the visible bottom and never moves, so its copy would drift: frost until it settles */
 html.ui-v7 .ask.ag.ag-frost.locked > .g-tint { background: rgb(30 24 19 / .66); }
+html.ui-v7 .ask.ag:is(.ag-solid, .ag-frost) > .g-haze, html.ui-v7 .cl[data-state="dragging"] .ask.ag > .g-haze, html.ui-v7 .cl[data-state="moving"] .ask.ag > .g-haze { background: none; }   /* fallbacks: no film over a solid / frost bar */
 html.fx-dim.ui-v7 .ask.ag > .g-copy { display: none; }
-@media (prefers-reduced-transparency: reduce) { html.ui-v7 .ask.ag > .g-copy { display: none; } html.ui-v7 .ask.ag > .g-tint { background: var(--ai-tint, #221c16); } }
+@media (prefers-reduced-transparency: reduce) { html.ui-v7 .ask.ag > .g-copy { display: none; } html.ui-v7 .ask.ag > .g-tint { background: var(--ai-tint, #221c16); } html.ui-v7 .ask.ag > .g-haze { background: none; } }
 @media (prefers-reduced-motion: reduce) {
   html.ui-v7 .ask.ag, html.ui-v7 .ask.ag *, html.ui-v7 .ask.ag > :is(.ff, .left, .send), html.ui-v7 .g-lock .txt, html.ui-v7 .g-lock .shk { transition: none !important; animation: none !important; }
   html.ui-v7 .ask.ag.think > .g-haze { opacity: .8; }
