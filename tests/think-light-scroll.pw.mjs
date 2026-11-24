@@ -103,14 +103,13 @@ await step("setup: the v7 glass bar is unlocked, lit (a lens filter) and its rep
   assert.ok(env.scrollable, "the reply body can scroll");
 });
 
-const scrollAt = (top) => page.evaluate(t => { const sc = document.querySelector("#cluck .cl-bd"); sc.scrollTop = t; sc.dispatchEvent(new Event("scroll")); }, top);
-const filterNow = () => page.evaluate(() => getComputedStyle(document.querySelector("#cluck .ask.ag > .g-copy")).filter);
 const thinkOn = () => page.evaluate(() => document.querySelector("#cluck .ask.ag").classList.contains("think"));
 
 await step("idle: a scroll while NOT thinking wears the 1-pass filter, then restores the lens", async () => {
-  await scrollAt(50);
-  await page.waitForFunction(() => /_m"?\)$/.test(getComputedStyle(document.querySelector("#cluck .ask.ag > .g-copy")).filter), null, { timeout: 1500 });
-  assert.ok(mid(await filterNow()), "the scroll path's `_m` filter shows while idle");
+  await page.waitForFunction(() => !document.querySelector("#cluck .ask.ag").classList.contains("think"), null, { timeout: 4000 });   // the step's premise: the reply finished, the light is off (a loaded runner may lag a mutation)
+  const worn = await page.evaluate(() => { const sc = document.querySelector("#cluck .cl-bd"), c = document.querySelector("#cluck .ask.ag > .g-copy");
+    sc.scrollTop = 50; sc.dispatchEvent(new Event("scroll")); return getComputedStyle(c).filter; });   // same tick: the 150 ms `_m` window can close before a poll from Node runs on a loaded runner
+  assert.ok(mid(worn), "the scroll path's `_m` filter shows while idle: " + worn);
   await page.waitForFunction(() => !/_m"?\)$/.test(getComputedStyle(document.querySelector("#cluck .ask.ag > .g-copy")).filter), null, { timeout: 2000 });
   assert.ok(!(await thinkOn()), "the light is off before the follow-up");
 });
@@ -134,11 +133,15 @@ await step("owner: thinking that starts during a scroll takes .g-copy at once (n
 await step("orbit: 600 ms of scrolling while thinking keeps the lit filter changing, never `_m`", async () => {
   const rows = await page.evaluate(async () => {
     const sc = document.querySelector("#cluck .cl-bd"), f = document.querySelector("#cluck .ask.ag"), c = f.querySelector(":scope > .g-copy");
-    const out = [], t0 = performance.now();
-    while (performance.now() - t0 < 650) {
+    const out = [], seen = new Set(), t0 = performance.now();
+    while (true) {                                  // at least 600 ms of scrolling; a loaded runner may tick the 33 ms clock slower, so keep scrolling until 4 lit maps have shown (bounded)
       sc.scrollTop = (sc.scrollTop + 80) % Math.max(1, sc.scrollHeight - sc.clientHeight);
       sc.dispatchEvent(new Event("scroll"));
-      out.push({ t: Math.round(performance.now() - t0), f: getComputedStyle(c).filter, on: f.classList.contains("think") });
+      const cur = getComputedStyle(c).filter, m = /_(\d+)"?\)$/.exec(cur);
+      if (m) seen.add(m[1]);
+      out.push({ t: Math.round(performance.now() - t0), f: cur, on: f.classList.contains("think") });
+      if (performance.now() - t0 >= 650 && seen.size >= 4) break;
+      if (performance.now() - t0 >= 4000) break;
       await new Promise(r => setTimeout(r, 40));
     }
     return out;
@@ -157,12 +160,16 @@ await step("paused rAF (iOS/WebKit scroll): the light still changes (a timer clo
     const raf = window.requestAnimationFrame.bind(window);
     let blocked = 0;
     window.requestAnimationFrame = () => { blocked++; return 0; };                  // the engine stops rAF until the scroll ends
-    const rows = [], t0 = performance.now();
+    const rows = [], seen = new Set(), t0 = performance.now();
     try {
-      while (performance.now() - t0 < 650) {
+      while (true) {                                // at least 600 ms of scrolling with rAF blocked; keep going (bounded) until 4 lit maps show on a loaded runner
         sc.scrollTop = (sc.scrollTop + 80) % Math.max(1, sc.scrollHeight - sc.clientHeight);
         sc.dispatchEvent(new Event("scroll"));
-        rows.push({ t: Math.round(performance.now() - t0), f: getComputedStyle(c).filter, on: f.classList.contains("think") });
+        const cur = getComputedStyle(c).filter, m = /_(\d+)"?\)$/.exec(cur);
+        if (m) seen.add(m[1]);
+        rows.push({ t: Math.round(performance.now() - t0), f: cur, on: f.classList.contains("think") });
+        if (performance.now() - t0 >= 650 && seen.size >= 4) break;
+        if (performance.now() - t0 >= 4000) break;
         await new Promise(r => setTimeout(r, 40));
       }
     } finally { window.requestAnimationFrame = raf; }
