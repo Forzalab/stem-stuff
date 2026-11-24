@@ -1,6 +1,7 @@
 // titles.mjs: isSlugTitle / cardTitle smoke. A slug or no title shows no big title; a human title (with $math$) stays.
 // TITLE-EXAMQ: "Q1 · " (the real practice-exam question number) is a student-facing prefix: kept by cardTitle, and the
-// rest of the title is judged on the old rules; schema-check strips it before the author-code, word and char checks.
+// rest of the title is judged on the old rules; schema-check strips it before the author-code and word checks, while the
+// schema's 60-char cap stays on the whole title string, prefix included.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -101,25 +102,27 @@ test("schema-check: a slug rest, a bare prefix and a rest code still fail", () =
   assert.equal(code.status, 1, code.stdout + code.stderr);
   assert.match(code.stdout, /holds an author code \(\(Q4\)\)/);
 });
-test("schema-check: the char caps read the rest, and the whole string stays <= 68", () => {
-  // 6 words: 10+10+10+10+10+9 + 5 spaces = 64 chars; "Q1 · " (5) makes the whole title 69 -> the schema's 68 cap
-  const rest64 = "a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(10) + " " + "f".repeat(9);
-  const overWhole = check(tinyBank("Q1 · " + rest64));
-  assert.equal(overWhole.status, 1, overWhole.stdout + overWhole.stderr);
-  assert.match(overWhole.stdout, /title must NOT have more than 68 characters/);
-  // 6 words: 10+10+10+10+10+7 + 5 spaces = 62 chars; the whole title is 67, so the rest's own 60 cap fires
-  const rest62 = "a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(10) + " " + "f".repeat(7);
-  const overRest = check(tinyBank("Q1 · " + rest62));
-  assert.equal(overRest.status, 1, overRest.stdout + overRest.stderr);
-  assert.match(overRest.stdout, /is 62 chars without the prefix \(max 60\)/);
-  assert.equal(check(tinyBank("Q1 · " + rest62.slice(0, 60))).status, 0);
-  // prefix + a 58-char rest = 63 chars whole: over the old 60-char cap on the whole string, still passes
-  const rest58 = "a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(10) + " " + "f".repeat(3);
-  assert.equal(check(tinyBank("Q1 · " + rest58)).status, 0);
-  // a no-prefix 61-char title still fails every bank, as the old schema maxLength 60 did
-  const oldLong = tinyBank("a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(10) + " " + "f".repeat(6));
+test("schema-check: the 60-char cap is the whole title, prefix included", () => {
+  // no prefix: 6 words, 61 chars -> the schema's maxLength 60 (the BANK_LONG path test_ship.py expects)
+  const long = "a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(10) + " " + "f".repeat(6);
+  assert.equal(long.length, 61);
+  const over = check(tinyBank(long));
+  assert.equal(over.status, 1, over.stdout + over.stderr);
+  assert.match(over.stdout, /\/problems\/0\/title must NOT have more than 60 characters/);
+  // the prefix counts toward the same cap: "Q1 · " (5) + a 56-char rest = 61 whole, so it fails
+  const rest56 = "a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(10) + " f";
+  assert.equal(("Q1 · " + rest56).length, 61);
+  const overPrefix = check(tinyBank("Q1 · " + rest56));
+  assert.equal(overPrefix.status, 1, overPrefix.stdout + overPrefix.stderr);
+  assert.match(overPrefix.stdout, /\/problems\/0\/title must NOT have more than 60 characters/);
+  // a prefixed title that is 60 chars whole passes (no separate cap on the rest)
+  const rest55 = "a".repeat(10) + " " + "b".repeat(10) + " " + "c".repeat(10) + " " + "d".repeat(10) + " " + "e".repeat(11);
+  assert.equal(("Q1 · " + rest55).length, 60);
+  assert.equal(check(tinyBank("Q1 · " + rest55)).status, 0);
+  // an old bank gets the same schema cap: a 61-char title still fails, as on origin/main
+  const oldLong = tinyBank(long);
   oldLong.v = 1;
   const oldRun = check(oldLong);
   assert.equal(oldRun.status, 1, oldRun.stdout + oldRun.stderr);
-  assert.match(oldRun.stdout, /is 61 chars without the prefix \(max 60\)/);
+  assert.match(oldRun.stdout, /\/problems\/0\/title must NOT have more than 60 characters/);
 });

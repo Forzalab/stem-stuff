@@ -11,8 +11,8 @@ import { isSlugTitle, titleCodes, examPrefix } from "../../client/pure_logic_mod
 
 // SCHEMA.md Version table, row 20261119: every problem has a human `title` (2 to 6 words, never a slug). A bank with v >= TITLE_V that breaks it FAILS;
 // an older bank (no v, 1, or a smaller date) only gets a warning on stderr, so a deploy of the existing banks never goes red for it.
-// TITLE-EXAMQ: the student-facing "Q1 · " practice-exam prefix is not an author code and not a word: the rules read the rest (<= 60 chars);
-// the whole string (prefix + rest) may be <= 68 chars. A title without the prefix is judged exactly as before.
+// TITLE-EXAMQ: the student-facing "Q1 · " practice-exam prefix is not an author code and not a word: these rules read the rest.
+// The schema's 60-char cap is the whole title string, prefix included. A title without the prefix is judged exactly as before.
 const TITLE_V = 20261119;
 const titleFaults = doc => doc.problems.flatMap(p => {
   if (typeof p.title !== "string" || !p.title.trim()) return [`${p.code}: title missing`];
@@ -22,13 +22,7 @@ const titleFaults = doc => doc.problems.flatMap(p => {
   if (codes.length && !isSlugTitle(p.title, p.code)) return [`${p.code}: title "${p.title}" holds an author code (${codes.join(", ")}): students do not know it`];
   if (isSlugTitle(p.title, p.code)) return [`${p.code}: title "${p.title}" is a slug`];
   if (n < 2 || n > 6) return [`${p.code}: title "${p.title}" has ${n} words (2 to 6)`];
-  if (p.title.length > 68) return [`${p.code}: title "${p.title}" is ${p.title.length} chars (max 68)`];
   return [];
-});
-// The old schema's maxLength 60 on `title` itself, now on the rest (with no prefix the rest IS the title): every bank, as before.
-const titleLenFaults = doc => doc.problems.flatMap(p => {
-  const { rest } = examPrefix(p.title);
-  return typeof p.title === "string" && rest.length > 60 ? [`${p.code}: title "${rest}" is ${rest.length} chars without the prefix (max 60)`] : [];
 });
 
 // SCHEMA.md Version table, row 20261123: every problem has a `starter` chip (3 to 9 words, <= 60 chars, a question in the student's voice) that never leaks the answer.
@@ -62,7 +56,6 @@ for (const f of args.filter(a => a !== "--repair")) {
     const doc = JSON.parse(readFileSync(f, "utf8"));
     const errs = validate(doc) ? repairFaults(doc, { need })   // the gate reads shapes the schema has vouched for
       : validate.errors.map(e => `${e.instancePath || "/"} ${e.message}${e.params?.additionalProperty ? ` (${e.params.additionalProperty})` : ""}`);
-    if (!errs.length) errs.push(...titleLenFaults(doc));   // a 60-char title cap fails every bank, as the old schema maxLength did
     if (!errs.length) {
       const tf = titleFaults(doc);
       if (doc.v >= TITLE_V) errs.push(...tf);
