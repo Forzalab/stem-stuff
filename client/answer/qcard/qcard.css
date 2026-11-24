@@ -2,6 +2,7 @@
    Owner pick V3 (Nov 15): ONE card background, top to bottom: ghost numeral (ECHO trail, 6 copies, step -12px x, fades out before the chip column), figure, topic headline,
    setup + question text (16px, 1.45 leading, flush-left, no fold and no inner scroll: the page scrolls it, the bold ask pins at the top), small meta row. Text, headline, meta share the left edge --qpad.
    Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, no lift. Echo animates on prev/next (transform + opacity only).
+   §frost (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE card (inset 0, the card's radius): a static displacement lens + frost, nothing animates.
    TITLE-EXAMQ-DIM: the headline is lower case except a bank "Q1 · " exam prefix (qcard.js .qexam), which keeps its capital Q in the dim ink with no dot drawn. */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
@@ -279,7 +280,6 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
 }
 
-
 /* == §fig-top == FIG-TOP (Tony Nov 23, prototype qfig-margin, the -40% pick): a card whose FIRST block is a figure. The float Ask Cluck button (§ick5-tr: 44px + 8px margin, under the
    26px phone top pad) pushed the figure's box 52px down, so the figure began 78px under the card top. Here the button leaves the flow (absolute, same top / right, same size, z-index 3) and
    the figure gets a 21px lead: card top -> figure 78 -> 47px (-40%). The ghost numeral (absolute, behind) and the left edge (--qc-pad) are untouched. Phone only: desktop keeps its float. */
@@ -287,3 +287,31 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
   html.ui-v7 #problem.qc7.qbr:has(> .blocks > .fig:first-child) > button.cluckbtn { float: none !important; position: absolute; top: var(--qpt, var(--qpad)); right: var(--qpad); margin: 0 !important; }
   html.ui-v7 #problem.qc7.qbr > .blocks > .fig:first-child { margin-top: 21px; }
 }
+
+/* == §ghost-glass == GHOST-G3-GLASS (Tony Nov 23, mock variant C "rim + scrim"): the ghost numeral is a glass slab: a gradient body painted through the glyph (background-clip: text),
+   ONE static SVG filter (#qg-glass, qcard.js glassDefs: lit rim + eroded dark inner edge + grain = the KEYF rim recipe) and a faint diagonal sheen layered in the body. A static blurred
+   scrim (.qscrim, one pill per text line, qcard.js scrims) dims it under the words so text over the numeral keeps >= 4.5:1. Softer mask fade than the flat numeral had.
+   GHOST-READ (Tony Nov 23, pick 3): the body one step stronger (.46 / .30, was .32 / .18) so the digits still read as a number through the §frost lens (blur 3).
+   Compositor-only: nothing animates here (the echo .qanim stays transform / opacity), no filter on a parent of a moving child, no backdrop-filter. */
+html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); }
+html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: 1; color: transparent; -webkit-background-clip: text; background-clip: text; filter: url(#qg-glass);
+  background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .12) 46%, transparent 62%), linear-gradient(160deg, rgb(120 147 226 / .46), rgb(56 80 148 / .30)); }
+html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(8px); border-radius: inherit; overflow: hidden; }
+html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .85); border-radius: 999px; }
+@media (prefers-reduced-transparency: reduce) {
+  html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: .08; color: #5b6a9a; -webkit-background-clip: border-box; background-clip: border-box; background-image: none; filter: none; }
+  html.ui-v7 #problem.qc7 > .qscrim { display: none; }
+}
+
+/* == §frost == GHOST-HYBRID-FROST (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE question card (inset 0, inherit the card's radius), between the
+   card background + ghost numeral (below) and the text (blocks z 1, above). No inner rect: the sheet IS the card. qcard.js builds the static SVG displacement lens
+   (#qg-lens, ask-glass lens-map maths: magnify 1.04, small rim bend, 3px frost inside the filter); a plain 3px blur is the no-SVG-filter fallback. Nothing animates;
+   ONE filtered layer only (phone-safe). */
+html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit;
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+html.ui-v7[data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens); }
+/* no sheet when transparency is reduced (solid card; the §ghost-glass rule above already flattens the numeral and drops the scrim) + the weak-device fallback */
+@media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7 > .qfrost { display: none; } }
+html.ui-v7.fx-dim #problem.qc7 > .qfrost { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+

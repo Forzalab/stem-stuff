@@ -4,6 +4,7 @@
    - the figure(s), then the topic headline (the sugar title, lowercase; a bank "Q1 · " exam prefix keeps its capital Q, TITLE-EXAMQ), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
      kept bold); no fold and no inner scroller (ICK PR-A: the card is as tall as its text and the page scrolls), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
    - ASK-PIN (ICK PR-A, F1): on a long card the page scrolls it away until only its last strip, the bold ask, is left; that strip stays pinned at the top, a tap on it scrolls back to the full question.
+   - FROST (§frost, Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE card (inset 0), between the card background + ghost numeral and the text.
    Source: brain ui-polish/hintbox/v71/longq (DESIGN.md), ui-v7-decisions QCARD-SWISS v3 (owner picked V3). Looks: qcard.css. */
 (function (g) {
   "use strict";
@@ -90,6 +91,138 @@
     if (g.matchMedia && g.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     box.classList.remove("qanim"); void box.offsetWidth; box.classList.add("qanim");
     clearTimeout(animT); animT = setTimeout(function () { box.classList.remove("qanim"); }, 620);
+  }
+
+  /* == §ghost-glass == the glass under the numeral (qcard.css §ghost-glass): one static SVG filter (lit rim, dark inner edge, grain), made once; one blurred scrim pill per text line */
+  function glassDefs() {
+    if (D.getElementById("qg-glass")) return;
+    var NS = "http://www.w3.org/2000/svg", svg = D.createElementNS(NS, "svg"), f = D.createElementNS(NS, "filter");
+    svg.setAttribute("aria-hidden", "true"); svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden"; f.setAttribute("id", "qg-glass");
+    ["x", "y"].forEach(function (a) { f.setAttribute(a, "-8%"); }); ["width", "height"].forEach(function (a) { f.setAttribute(a, "116%"); }); f.setAttribute("color-interpolation-filters", "sRGB");
+    f.innerHTML = '<feGaussianBlur in="SourceAlpha" stdDeviation="6" result="h"/><feSpecularLighting in="h" surfaceScale="5" specularConstant=".7" specularExponent="20" lighting-color="#d6e4ff" result="sp"><feDistantLight azimuth="235" elevation="38"/></feSpecularLighting>'
+      + '<feComposite in="sp" in2="SourceAlpha" operator="in" result="spIn"/><feMorphology in="SourceAlpha" operator="erode" radius="2.5" result="er"/><feGaussianBlur in="er" stdDeviation="5" result="erb"/>'
+      + '<feComposite in="SourceAlpha" in2="erb" operator="out" result="edge"/><feFlood flood-color="rgb(2,6,18)" flood-opacity=".45"/><feComposite in2="edge" operator="in" result="edgeDark"/>'
+      + '<feTurbulence type="fractalNoise" baseFrequency="1.7" numOctaves="2" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .32 0 0 -.128" result="gr"/>'
+      + '<feComposite in="gr" in2="SourceAlpha" operator="in" result="grIn"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="edgeDark"/><feMergeNode in="grIn"/><feMergeNode in="spIn"/></feMerge>';
+    svg.appendChild(f); D.body.appendChild(svg);
+  }
+  function scrims() {
+    var p = D.getElementById("problem"), sl = p && p.querySelector(":scope > .qscrim");
+    if (!p || !on() || !p.classList.contains("qbr")) { if (sl) sl.remove(); return; }
+    glassDefs();
+    if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(sl, gb ? gb.nextSibling : p.firstChild); }
+    var cr = p.getBoundingClientRect(), pad = 9, html = "";
+    p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
+      var rg = D.createRange(), rows = []; rg.selectNodeContents(e);
+      [].slice.call(rg.getClientRects()).forEach(function (q) {
+        if (q.width < 2) return;
+        var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
+        if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+      });
+      rows.forEach(function (b) {
+        var x = b.left - cr.left - pad, y = b.top - cr.top - pad * .7, w = b.right - b.left + 2 * pad, h = b.bottom - b.top + 1.4 * pad;
+        html += '<i style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px"></i>';
+      });
+    });
+    if (sl.innerHTML !== html) sl.innerHTML = html;
+  }
+
+  /* == §frost == GHOST-HYBRID-FROST (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE question card (inset 0, the card's radius, qcard.css §frost),
+     between the card background + ghost numeral and the text. Nothing to measure: the sheet is the card. qcard.css: a 3px frost as the no-SVG-filter fallback,
+     swapped for the static displacement lens (#qg-lens) once the map is built. Flag off = no layer. */
+  function frost() {
+    var p = D.getElementById("problem"), el = p && p.querySelector(":scope > .qfrost");
+    if (!p || !on() || !p.classList.contains("qbr")) { if (el) el.remove(); H.removeAttribute("data-qf-lens"); return; }
+    if (!el) {
+      el = D.createElement("div"); el.className = "qfrost"; el.setAttribute("aria-hidden", "true");
+      var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(el, gb ? gb.nextSibling : p.firstChild);
+    }
+    var r = p.getBoundingClientRect();
+    lens(r.width, r.height);
+  }
+  /* the lens map is liquidglass's displacement map (gentpan @ d5db099, MIT, via ask-glass.js §engine): a convex profile bend (refraction px at the rim) +
+     a radial magnify term sampling towards the centre. Static, one map per layer size; chroma and specular are off. */
+  var ENG = (function () {
+    var nav = typeof navigator === "undefined" ? null : navigator;
+    if (!nav) return "none";   // no browser (a node vm test): not blink, so no lens is ever built
+    var br = nav.userAgentData && nav.userAgentData.brands;
+    if (br && br.some(function (x) { return /Chromium/.test(x.brand); })) return "blink";
+    var ua = nav.userAgent || "";
+    if (/Firefox\//.test(ua)) return "gecko";
+    if (/AppleWebKit\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua)) return "webkit";
+    return "blink";
+  })();
+  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 3, id: "qg-lens", sig: "" };   /* blur 3 (pick 3 tune, Tony Nov 23: the numeral must read through the glass, was 6) */
+  function lensProfile(curv, ior) {
+    var N = 512, t = new Float32Array(N + 1), max = 0, i;
+    for (i = 0; i <= N; i++) {
+      var s = Math.min(i / N, 1 - 1e-6), a = Math.pow(1 - s, curv), slope = Math.pow(1 - s, curv - 1) * Math.pow(Math.max(1 - a, 1e-9), 1 / curv - 1);
+      var th = Math.atan(slope), rf = Math.asin(Math.sin(th) / ior), b = Math.tan(th - rf);
+      t[i] = b; if (b > max) max = b;
+    }
+    for (i = 0; i <= N; i++) t[i] /= max || 1; t[N] = 0;
+    return t;
+  }
+  var LPROF = lensProfile(LENS.curv, LENS.ior);
+  function lensMap(w0, h0) {
+    var w = Math.max(2, Math.round(w0)), h = Math.max(2, Math.round(h0)), sc = Math.min(1, Math.sqrt(9e4 / (w * h)));   // big layers: half-res map, stretched (the 3px frost hides it)
+    var mw = Math.max(2, Math.round(w * sc)), mh = Math.max(2, Math.round(h * sc));
+    var cv = D.createElement("canvas"); cv.width = mw; cv.height = mh;
+    var ctx = cv.getContext("2d"), im = ctx.createImageData(mw, mh), px = im.data;
+    var hw = w0 / 2, hh = h0 / 2, rad = Math.min(16, hw, hh), bez = Math.max(.5, .6 * Math.min(hw, hh));
+    var N = LPROF.length - 1, diag = Math.hypot(hw, hh), kM = 1 - 1 / LENS.mag, max = 1e-6;
+    var sx = w0 / mw, sy = h0 / mh, i, j;
+    for (j = 0; j < mh; j++) for (i = 0; i < mw; i++) {
+      var x = (i + .5) * sx - hw, y = (j + .5) * sy - hh;
+      var qx = Math.abs(x) - (hw - rad), qy = Math.abs(y) - (hh - rad), ox = Math.max(qx, 0), oy = Math.max(qy, 0), c = Math.hypot(ox, oy);
+      var dist = c + Math.min(Math.max(qx, qy), 0) - rad, alpha = Math.min(1, Math.max(0, .5 - dist / Math.max(sx, sy)));
+      if (alpha <= 0) continue;
+      var nx = 0, ny = 0;
+      if (qx > 0 && qy > 0) { nx = (ox / c) * (x < 0 ? -1 : 1); ny = (oy / c) * (y < 0 ? -1 : 1); }
+      else if (qx > qy) nx = x < 0 ? -1 : 1;
+      else ny = y < 0 ? -1 : 1;
+      var s = Math.max(0, -dist) / bez, m = s >= 1 ? 0 : LPROF[Math.min(N, Math.round(s * N))];
+      var rr = Math.hypot(x, y) || 1, mag = kM * Math.min(rr, diag);
+      var dx = LENS.refr * m * nx - mag * x / rr, dy = LENS.refr * m * ny - mag * y / rr;   // outward rim bend + inwards magnify sample
+      if (Math.abs(dx) > max) max = Math.abs(dx); if (Math.abs(dy) > max) max = Math.abs(dy);
+      var o = (j * mw + i) * 4;
+      px[o] = 128 + Math.round(127 * dx / max); px[o + 1] = 128 + Math.round(127 * dy / max); px[o + 2] = 128; px[o + 3] = Math.round(alpha * 255);
+    }
+    ctx.putImageData(im, 0, 0);
+    return { url: cv.toDataURL("image/png"), max: max };
+  }
+  function bendScale(px, w, h) {
+    if (ENG === "webkit") { var m = Math.min(w, h); return { scale: 2 * px / m, kx: m / w, ky: m / h }; }
+    if (ENG === "gecko") return { scale: 2 * px / Math.sqrt((w * w + h * h) / 2), kx: 1, ky: 1 };
+    return { scale: 2 * px / w, kx: 1, ky: 1 };
+  }
+  var lensSvg = null;
+  function lens(w, h) {
+    if (ENG !== "blink") return;   // ENGINE GUARD: an SVG filter url() in backdrop-filter is only known to render on Blink; gecko / webkit keep the plain 3px frost (qcard.css), no map, no attribute
+    var sig = Math.round(w) + "x" + Math.round(h);
+    if (sig === LENS.sig && D.getElementById(LENS.id)) { H.setAttribute("data-qf-lens", "1"); return; }
+    var map = lensMap(w, h), NS = "http://www.w3.org/2000/svg", old = D.getElementById(LENS.id);
+    if (old) old.parentNode.removeChild(old);
+    if (!lensSvg || !lensSvg.isConnected) {
+      lensSvg = D.createElementNS(NS, "svg"); lensSvg.setAttribute("aria-hidden", "true");
+      lensSvg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none"; D.body.appendChild(lensSvg);
+    }
+    var f = D.createElementNS(NS, "filter"), mk = function (n, a) { var e = D.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; };
+    f.setAttribute("id", LENS.id); f.setAttribute("filterUnits", "objectBoundingBox"); f.setAttribute("x", "0"); f.setAttribute("y", "0");
+    f.setAttribute("width", "1"); f.setAttribute("height", "1"); f.setAttribute("primitiveUnits", "objectBoundingBox"); f.setAttribute("color-interpolation-filters", "sRGB");
+    f.appendChild(mk("feFlood", { "flood-color": "rgb(128,128,128)", result: "neutral" }));
+    var img = mk("feImage", { preserveAspectRatio: "none", result: "lensShape", x: 0, y: 0, width: 1, height: 1 });
+    img.setAttribute("href", map.url); f.appendChild(img);
+    f.appendChild(mk("feComposite", { in: "lensShape", in2: "neutral", operator: "over", result: "map" }));
+    var bs = bendScale(map.max, w, h), bend = "map";
+    if (ENG === "webkit") {
+      f.appendChild(mk("feColorMatrix", { in: "map", type: "matrix", result: "bend", values: bs.kx + " 0 0 0 " + ((1 - bs.kx) / 2) + "  0 " + bs.ky + " 0 0 " + ((1 - bs.ky) / 2) + "  0 0 1 0 0  0 0 0 1 0" }));
+      bend = "bend";
+    }
+    f.appendChild(mk("feGaussianBlur", { in: "SourceGraphic", stdDeviation: (LENS.blur / w) + " " + (LENS.blur / h), result: "frosted" }));
+    f.appendChild(mk("feDisplacementMap", { in: "frosted", in2: bend, xChannelSelector: "R", yChannelSelector: "G", scale: bs.scale, result: "refracted" }));
+    f.appendChild(mk("feComposite", { in: "refracted", in2: "lensShape", operator: "in" }));
+    lensSvg.appendChild(f); LENS.sig = sig; H.setAttribute("data-qf-lens", "1");
   }
 
   function exam() { var n = D.getElementById("qlistName"); return n ? n.textContent.trim() : ""; }
@@ -247,7 +380,6 @@
     var h1 = p.offsetHeight; p.style.minHeight = "0"; var h0 = p.offsetHeight; p.style.minHeight = "";
     if (h1 - h0 >= 1) b.style.marginTop = (h1 - h0) + "px";
   }
-
   /* FIG-CLEAR (Tony Nov 23; qcard.css §fig-top): a phone card whose first block is a figure pulls it up under the Ask Cluck button. If the figure's INK (not its svg canvas) comes
      within CLEAR px of the button, the figure's margin-top grows by just the push that keeps CLEAR px between them; no hit = the CSS 21px stays. The button never moves.
      figPush is pure (rects {l,t,r,b}), testable on its own (tests/figclear.test.mjs). */
@@ -292,7 +424,7 @@
   var figRaf = 0;
   function figSoon() { if (!figRaf) figRaf = requestAnimationFrame(function () { figRaf = 0; figClear(); }); }
   g.stemFigClear = { push: figPush, ink: inkBox, run: figClear };
-  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); figSoon(); }); }
+  function later() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; build(); rowAlign(); anchor(); pinMeasure(); shortText(); figSoon(); scrims(); frost(); }); }
 
   function start() {
     var blocks = D.getElementById("blocks");
@@ -301,7 +433,7 @@
     new MutationObserver(figSoon).observe(blocks, { childList: true, subtree: true });   // the figure draws after the card builds
     var pr = D.getElementById("problem");
     if (pr) new MutationObserver(function () { requestAnimationFrame(rowAlign); }).observe(pr, { childList: true });
-    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); figSoon(); }); }).observe(pr); }   // a figure / font landing changes the offset
+    if (pr) { pr.addEventListener("click", pinTap); if (g.ResizeObserver) new g.ResizeObserver(function () { if (!pinRaf) pinRaf = requestAnimationFrame(function () { pinRaf = 0; anchor(); pinMeasure(); figSoon(); scrims(); frost(); }); }).observe(pr); }   // a figure / font landing changes the offset
     g.addEventListener("scroll", pinSoon, { passive: true });   // the Ask Cluck button lands after build (cluckbtn.js)
     g.addEventListener("drill:problem", later); g.addEventListener("drill:bank", later); g.addEventListener("resize", function () { if (on()) later(); });
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
