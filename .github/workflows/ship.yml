@@ -34,6 +34,11 @@ on:
         type: string
         default: ""
         required: false
+      bad:
+        description: "rollback only: the red run's head sha (tests.yml passes it). Live already past it = skip: a newer commit replaced it"
+        type: string
+        default: ""
+        required: false
       dry_run:
         description: "rollback only: print the plan (target + vercel rollback or redeploy) and stop"
         type: boolean
@@ -54,7 +59,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
-      skip: ${{ steps.gate.outputs.skip }}
+      skip: ${{ steps.gate.outputs.skip || steps.order.outputs.refuse }}   # a backward-refused live ship deploys nothing, so lkg must not move
       needs_postdeploy: ${{ steps.gate.outputs.needs_postdeploy }}
       sha: ${{ steps.sha.outputs.sha }}
       smoke_red: ${{ steps.post.outputs.smoke_red }}
@@ -172,9 +177,22 @@ jobs:
             exit 0
           fi
           exit "$rc"
+      # BUG-SHIP-ORDER: a late finisher used to overwrite a NEWER live commit; a target older than live is a green skip, not a red job.
+      # Same version.json read as "already live"; no live sha = fail open (ship-order.sh prints why).
+      - name: live order (never go backward)
+        id: order
+        if: inputs.mode == 'live' && steps.gate.outputs.skip != 'true' && steps.live.outputs.already != 'true'
+        env:
+          SHA: ${{ steps.sha.outputs.sha }}
+        run: |
+          live="$(curl -fsS --max-time 15 -H 'Cache-Control: no-cache' "https://stem-stuff.vercel.app/version.json?t=$(date +%s)" | jq -r '.sha // empty' || true)"
+          rc=0
+          tools/operations/ship-order.sh "$SHA" "$live" || rc=$?
+          if [ "$rc" -eq 3 ]; then echo "refuse=true" >> "$GITHUB_OUTPUT"; fi
+          exit 0
       - name: tools/build_and_ship/ship.sh
         id: sh
-        if: steps.gate.outputs.skip != 'true' && steps.live.outputs.already != 'true'
+        if: steps.gate.outputs.skip != 'true' && steps.live.outputs.already != 'true' && steps.order.outputs.refuse != 'true'
         env:
           MODE: ${{ inputs.mode }}
           SHIP_PINS: ${{ inputs.pins || vars.SHIP_PINS }}
@@ -251,6 +269,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           TARGET: ${{ inputs.target }}
+          BAD: ${{ inputs.bad }}
         run: |
           [ -n "$TARGET" ] || TARGET="$(git rev-parse 'refs/tags/lkg^{commit}' 2>/dev/null || true)"
           [ -n "$TARGET" ] || { echo "::error::no rollback target: pass target, or tag a last-known-good (git tag lkg <sha>)"; exit 1; }
@@ -258,6 +277,17 @@ jobs:
           echo "lkg=$TARGET" >> "$GITHUB_OUTPUT"
           curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/deployments?app=stem-stuff&target=production&state=READY&limit=10&slug=forzalabs-projects" \
             | jq '[.deployments[] | {id: .uid, url: ("https://" + .url), sha: (.meta.shipSha // null)}]' > deploys.json
+          # BUG-SHIP-ORDER: rollback may go backward only while live IS the red sha; live past it means a newer commit replaced it.
+          LIVE="$(jq -r '.[0].sha // empty' deploys.json)"
+          if [ -n "$BAD" ]; then
+            rc=0
+            tools/operations/ship-order.sh "$BAD" "$LIVE" || rc=$?
+            if [ "$rc" -eq 3 ]; then
+              echo "::notice::rollback skipped: live ${LIVE:-unknown} is newer than the red $BAD (a newer commit already replaced it)"
+              echo "action=none" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           node tools/operations/ci-ship.mjs rollback-plan --lkg "$TARGET" --deploys deploys.json
       - name: dry run
         if: inputs.dry_run
