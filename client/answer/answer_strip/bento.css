@@ -120,3 +120,25 @@ html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge { top: 12px; right: 16p
 /* LETTER-SIZE (Tony Nov 16 "bigger corner letter, looks off with the checkbox"): the letter matches the check's row: phone 14 px on the 16 px check row, desktop 15 px on the 20 px row */
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { font-size: 14px !important; line-height: 16px !important; height: 16px !important; top: 12px !important; font-weight: 600; }
 html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt .lt, html.ui-v7 .choices.bento.all:not(.fill) .ch > .opt.opt .lt { font-size: 15px; line-height: 20px; height: 20px; top: 16px; font-weight: 600; }
+
+/* ---- (D) FLOW (question #737, BANK_CEP; bento.js flowLayout): the answers flow DOWN and the page scrolls. 1 column, or 2 / 3 EQUAL columns when every option measured one line at 16px (--bc, bento.js flowCols);
+   every tile has its natural height (a row = its tallest tile), the text is the question body's size (16/22), left-aligned after the letter, never clipped. Beats sections B / C (.bento.flow, not .fill, no data-k look). ---- */
+html.ui-v7 .choices.bento.flow { grid-template-columns: repeat(var(--bc, 1), minmax(0, 1fr)); grid-auto-rows: auto; gap: 8px; margin: 0; padding-bottom: var(--bar-pad, 0px); }
+html.ui-v7 .choices.bento.flow .ch { display: grid; min-width: 0; padding: 0; }
+html.ui-v7 .choices.bento.flow .ch > .opt.opt {
+  display: block; position: relative; height: auto; min-height: 52px; overflow: visible; box-sizing: border-box; text-align: start; border-radius: 14px;
+  padding: calc(14px + var(--lg, 0px)) 20px 14px 46px;
+}
+html.ui-v7 .choices.bento.flow.all .ch > .opt.opt { padding-right: 46px; }
+html.ui-v7 .choices.bento.flow .opt .txt, html.ui-v7 .choices.bento.flow .opt[data-k] .txt { display: block; text-align: start; font-size: 16px; line-height: 22px; font-weight: var(--w); letter-spacing: 0; }
+html.ui-v7 .choices.bento.flow .opt[data-x] .txt { text-align: start; }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .lt { left: 16px !important; top: 14px !important; height: 22px !important; font-size: 14px !important; line-height: 22px !important; }
+html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .badge { right: 16px; left: auto; top: 16px; width: 18px; height: 18px; }
+/* Check / Next / verdict mark: centred at the tile's right edge, the words keep clear of them (padding), the tile never changes height */
+html.ui-v7 .choices.bento.flow .ch > .send { right: 6px; top: 50%; margin: -22px 0 0; }
+html.ui-v7 .choices.bento.flow .ch > .nx { right: 6px; top: 50%; bottom: auto; margin: -22px 0 0; width: 44px; }
+html.ui-v7 .choices.bento.flow .ch > .nx .nf { padding: 0; }
+html.ui-v7 .choices.bento.flow .ch > .nx .nf > span { display: none; }
+html.ui-v7 .choices.bento.flow .ch .vg, html.ui-v7 .choices.bento.flow .ch.cue .vg { right: 16px; top: 50%; margin-top: -9px; }
+html.ui-v7 .choices.bento.flow .ch:has(> .send:not([hidden])) > .opt.opt, html.ui-v7 .choices.bento.flow .ch.cue > .opt.opt { padding: calc(14px + var(--lg, 0px)) 58px 14px 46px; }
+html.ui-v7 .choices.bento.flow .ch:has(> .vg) > .opt.opt { padding-right: 40px; }

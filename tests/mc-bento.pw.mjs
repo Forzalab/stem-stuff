@@ -75,26 +75,6 @@ const look = (p, sel) => p.evaluate(s => {
 const boxes = p => p.evaluate(() => [...document.querySelectorAll("#q .ch")].map(e => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; }));
 const rgb = h => { const n = parseInt(h.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
 
-for (const W of (process.env.WIDTHS ? process.env.WIDTHS.split(",").map(Number) : [768, 1024, 1366, 1920])) {
-  await step(`flag on @${W}: layout is a mosaic (fraction 2 rows tall, all tiles inside the group, no overflow)`, async () => {
-    const [c, p] = await open("on", "CALC1_MB01", W, W >= 1000 ? 800 : 844);
-    assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid");
-    const b = await boxes(p), g = await p.evaluate(() => { const r = document.querySelector("#q .choices").getBoundingClientRect(); return { x: r.x, r: r.right, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }; });
-    assert.equal(b.length, 5);
-    const tall = b.filter(x => x.h > 150);
-    assert.ok(tall.length >= 1, "a 2-unit tile exists (the fraction): " + JSON.stringify(b));
-    const U = parseFloat(await p.evaluate(() => document.querySelector("#q .choices").style.getPropertyValue("--bu")));
-    assert.ok(Math.abs(b[2].h - (2 * U + 8)) <= 2 || b[2].h >= 2 * U, `C (the fraction) is >= 2 units (${2 * U + 8}px): ` + b[2].h);
-    for (const x of b) assert.ok(x.x >= g.x - 1 && x.x + x.w <= g.r + 1, "tile inside the group: " + JSON.stringify(x));
-    assert.ok(new Set(b.map(x => x.y)).size >= 2 && b.some((x, i) => i && x.y < b[i - 1].y + b[i - 1].h && x.x > b[i - 1].x) || true);
-    assert.ok(g.sw <= g.cw, `no horizontal page scroll (${g.sw} > ${g.cw})`);
-    const ov = await p.evaluate(() => [...document.querySelectorAll("#q .opt")].filter(o => o.scrollWidth > o.clientWidth + 1).length);
-    assert.equal(ov, 0, "no option content overflows its tile");
-    assert.ok(b.every(x => x.w >= 44 && x.h >= 44), "tap targets >= 44: " + JSON.stringify(b));
-    await shot(p, `on-${W}-idle`);
-    await c.close();
-  });
-}
 await step("flag on: idle / hover / picked have no border, no outline, no lit top; fills = REVIEW2 steps", async () => {
   const [c, p] = await open("on", "CALC1_MB01");
   const A = "#q .opt[data-id='a']", B = "#q .opt[data-id='b']";
@@ -136,34 +116,6 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   await shot(p, "on-390-right");
   await c.close();
 });
-await step("flag on: sentence options are bento tiles too (wrapped, no holes, no overflow, still no border)", async () => {
-  for (const W of [768, 1366]) {
-    const [c, p] = await open("on", "CALC1_MB02", W, W >= 1000 ? 800 : 844);
-    assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid");
-    const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height - (parseFloat(getComputedStyle(g).paddingBottom) || 0) + 8) / (parseFloat(g.style.getPropertyValue("--bu")) + 8)), occ = new Set(); let dup = 0;
-      for (const e of g.children) { const m = e.style.gridColumn.match(/(\d+) \/ span (\d+)/), q = e.style.gridRow.match(/(\d+) \/ span (\d+)/);
-        for (let y = +q[1]; y < +q[1] + +q[2]; y++) for (let x = +m[1]; x < +m[1] + +m[2]; x++) { const k = x + "," + y; if (occ.has(k)) dup++; occ.add(k); } }
-      return { C, rows, filled: occ.size, dup, ovf: [...g.querySelectorAll(".opt")].filter(o => o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1).length, sw: document.documentElement.scrollWidth <= document.documentElement.clientWidth }; });
-    assert.equal(r.dup, 0, "no overlap"); assert.equal(r.filled, r.C * r.rows, "no holes " + JSON.stringify(r)); assert.equal(r.ovf, 0, "no overflow"); assert.ok(r.sw, "no h-scroll");
-    assert.equal((await look(p, "#q .opt[data-id='a']")).bw, "0px 0px 0px 0px");
-    await shot(p, `on-${W}-sentences`);
-    await c.close();
-  }
-});
-await step("flag on: pick-all (choose-all) is a bento too: grid, no holes, tickable, letter + square mark", async () => {
-  for (const W of [768, 1366]) {
-    const [c, p] = await open("on", "CALC1_MB03", W, W >= 1000 ? 800 : 844);
-    const r = await p.evaluate(() => { const g = document.querySelector("#q .choices"), C = +getComputedStyle(g).getPropertyValue("--bc"), rows = Math.round((g.getBoundingClientRect().height - (parseFloat(getComputedStyle(g).paddingBottom) || 0) + 8) / (parseFloat(g.style.getPropertyValue("--bu")) + 8)), occ = new Set();
-      for (const e of g.children) { const m = e.style.gridColumn.match(/(\d+) \/ span (\d+)/), q = e.style.gridRow.match(/(\d+) \/ span (\d+)/); for (let y = +q[1]; y < +q[1] + +q[2]; y++) for (let x = +m[1]; x < +m[1] + +m[2]; x++) occ.add(x + "," + y); }
-      return { all: g.classList.contains("all"), bento: g.dataset.bento, C, rows, filled: occ.size, ovf: [...g.querySelectorAll(".opt")].filter(o => o.scrollHeight > o.clientHeight + 1 || o.scrollWidth > o.clientWidth + 1).length }; });
-    assert.ok(r.all && r.bento === "grid", JSON.stringify(r)); assert.equal(r.filled, r.C * r.rows, "no holes " + JSON.stringify(r)); assert.equal(r.ovf, 0);
-    await p.click("#q .opt[data-id='a']"); await bgIs(p, "#q .opt[data-id='a']", rgb("#102542"));
-    assert.equal(await p.getAttribute("#q .opt[data-id='a']", "aria-checked"), "true");
-    assert.equal((await look(p, "#q .opt[data-id='a']")).bg, rgb("#102542"), "ticked = picked fill");
-    await shot(p, `on-${W}-pickall`);
-    await c.close();
-  }
-});
 await step("flag off: no mosaic, today's 1px --line edge, no change", async () => {
   const [c, p] = await open("off", "CALC1_MB01");
   assert.equal(await p.evaluate(() => document.querySelector("#q .choices").classList.contains("bento")), false);
@@ -175,52 +127,35 @@ await step("flag off: no mosaic, today's 1px --line edge, no change", async () =
   assert.equal((await look(p, "#q .opt[data-id='b']")).bw, "1px 1px 1px 1px", "flag off picked keeps its edge");
   await c.close();
 });
-/* ---- PHONE-FILL: <= 480px, MC / pick-all answers are justified rows that fill the answer area ---- */
-const fillMeasure = p => p.evaluate(() => {
-  const g = document.querySelector("#q .choices"), r = g.getBoundingClientRect(), os = [...g.querySelectorAll(".opt")], chk = document.querySelector("#q .chk"), cr = chk && chk.getBoundingClientRect();
-  const ys = os.map(o => o.getBoundingClientRect());
-  const order = ys.map((b, i) => [Math.round(b.top / 4), b.left, i]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
-  return { fill: g.dataset.fill || "", bottom: r.bottom, ih: innerHeight, chkTop: cr ? cr.top : null, chkBottom: cr ? cr.bottom : null, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
-    ovf: os.filter(o => { const t = o.querySelector(".txt"), tr = t.getBoundingClientRect(), b = o.getBoundingClientRect(); return tr.height > b.height - 11.5 || o.scrollWidth > o.clientWidth + 1 || t.scrollWidth > t.clientWidth + 1; }).length,
-    small: ys.filter(b => b.width < 44 || b.height < 44).length, inorder: order.every((v, i) => v === i), n: os.length, fs: os.map(o => parseFloat(getComputedStyle(o.querySelector(".txt")).fontSize)) };
+/* FLOW (question #737): answers flow down, one column count per set (1, or 2 / 3 only when every option measures one line at 16px), equal widths, natural heights, never clipped */
+const flowMeasure = p => p.evaluate(() => {
+  const g = document.querySelector("#q .choices"), os = [...g.querySelectorAll(".opt")], rs = os.map(o => o.getBoundingClientRect()), body = document.querySelector("#problem .blocks");
+  return { mode: g.dataset.bento, fill: g.dataset.fill || "", cols: +getComputedStyle(g).getPropertyValue("--bc"), ws: [...new Set(rs.map(r => Math.round(r.width)))], xs: [...new Set(rs.map(r => Math.round(r.left)))].length,
+    fs: [...new Set(os.map(o => getComputedStyle(o.querySelector(".txt")).fontSize))], bodyFs: body ? getComputedStyle(body).fontSize : "16px", sw: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    clip: os.filter(o => { const t = o.querySelector(".txt"), tr = t.getBoundingClientRect(), b = o.getBoundingClientRect(); return tr.bottom > b.bottom - 2 || tr.top < b.top || o.scrollHeight > o.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1; }).length,
+    inorder: rs.every((r, i) => !i || r.top > rs[i - 1].top - 2), small: rs.filter(r => r.width < 44 || r.height < 44).length };
 });
-await step("phone fill: justified rows fill the area (no empty band), no overflow, tap >= 44, reading order, no h-scroll (single, sentences, pick-all)", async () => {
-  for (const [W, H] of [[390, 844], [360, 740]]) for (const code of ["CALC1_MB01", "CALC1_MB02", "CALC1_MB03", "CALC1_MB04"]) {
-    const [c, p] = await open("on", code, W, H);
-    const m = await fillMeasure(p);
-    assert.ok(m.fill, `${W} ${code}: fill layout on`);
-    if (m.chkTop == null) assert.ok(Math.abs(m.bottom - (m.ih - 8)) <= 2, `${W} ${code}: last row bottom ${m.bottom} within 2px of the area bottom ${m.ih - 8}`);
-    else assert.ok(m.chkTop - m.bottom <= 12 && m.chkBottom <= m.ih, `${W} ${code}: block reaches the Check row (${m.bottom} -> ${m.chkTop}), Check inside the viewport (${m.chkBottom} <= ${m.ih})`);
-    assert.equal(m.ovf, 0, `${W} ${code}: no tile overflow`); assert.equal(m.small, 0, `${W} ${code}: tap >= 44`); assert.ok(m.inorder, `${W} ${code}: reading order A,B,C`); assert.ok(m.sw <= m.cw, "no h-scroll");
-    assert.ok(m.fs.every(f => f >= 10 && f <= 15 || m.fs.length), `${W} ${code}: font ` + m.fs);
-    await shot(p, `fill-${W}-${code}`);
+for (const [W, H] of [[390, 844], [360, 740], [768, 844], [1366, 800]]) for (const code of ["CALC1_MB01", "CALC1_MB02", "CALC1_MB03", "CALC1_MB04"]) {
+  await step(`flow @${W} ${code}: equal widths, one column count, 16px text, no clipping, no h-scroll`, async () => {
+    const [c, p] = await open("on", code, W, H), m = await flowMeasure(p);
+    assert.equal(m.mode, "flow"); assert.equal(m.fill, "");
+    assert.equal(m.ws.length, 1, "every tile the same width: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
+    assert.equal(m.xs, m.cols, "tiles sit in exactly --bc columns: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["16px"], "choice text = question body size: " + JSON.stringify(m));
+    assert.equal(m.clip, 0, "nothing clipped: " + JSON.stringify(m)); assert.ok(m.sw, "no h-scroll"); assert.equal(m.small, 0, "tap >= 44");
+    if (code === "CALC1_MB02" || code === "CALC1_MB03") assert.equal(m.cols, W >= 1366 ? m.cols : 1, "long sentences stack (1 column) when they do not fit one line");
+    await shot(p, `flow-${W}-${code}`);
     await c.close();
-  }
-});
-await step("phone fill: a picked tile keeps its text clear of the Check arrow; scrolling it into view clears the top bar", async () => {
-  const [c, p] = await open("on", "CALC1_MB02", 360, 740);
-  await p.click("#q .opt[data-id='c']");
-  await p.waitForSelector("#q .ch:has(.opt[data-id='c']) .send", { state: "visible", timeout: 5000 });   // the Check arrow is the picked state's signal
-  await settled(p);
-  assert.equal(await p.getAttribute("#q .opt[data-id='c']", "aria-checked"), "true");
-  const m = await fillMeasure(p); assert.equal(m.ovf, 0, "no overflow with the arrow shown");
-  const hit = await p.evaluate(() => {
-    const s = document.querySelector("#q .ch:has(.opt[data-id='c']) .send");
-    document.body.style.minHeight = "2600px"; scrollTo(0, 185); s.scrollIntoView({ block: "start" });
-    const r = s.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return { top: r.top, ok: e === s || s.contains(e), t: e && (e.className || e.tagName) };
   });
-  assert.ok(hit.ok && hit.top >= 68, "Check arrow below the top bar and hit-testable: " + JSON.stringify(hit));
+}
+await step("flow: short answers share columns (2+), sentences stack to 1; a picked tile keeps its text clear of the Check arrow", async () => {
+  const [c1, p1] = await open("on", "CALC1_MB01", 390, 844); assert.ok((await flowMeasure(p1)).cols >= 2, "short tokens flow in 2+ equal columns"); await c1.close();
+  const [c, p] = await open("on", "CALC1_MB02", 360, 740);
+  assert.equal((await flowMeasure(p)).cols, 1);
+  await p.click("#q .opt[data-id='c']");
+  await p.waitForSelector("#q .ch:has(.opt[data-id='c']) .send", { state: "visible", timeout: 5000 });
+  assert.equal(await p.getAttribute("#q .opt[data-id='c']", "aria-checked"), "true");
+  assert.equal((await flowMeasure(p)).clip, 0, "no clipping with the arrow shown");
   await c.close();
-});
-await step("phone fill: font shrinks to fit a long option; rows grow (the page scrolls) instead of clipping when the area is too small", async () => {
-  const [c, p] = await open("on", "CALC1_MB02", 360, 400);
-  const m = await fillMeasure(p);
-  assert.equal(m.ovf, 0, "nothing clipped"); assert.ok(m.fs.some(f => f < 15), "a long sentence shrank below 15px: " + m.fs); assert.ok(m.fs.every(f => f >= 10), "never below 10px: " + m.fs);
-  await c.close();
-});
-await step("tablet / desktop keep the bento engine: no fill class at 768 / 1024", async () => {
-  for (const W of [768, 1024]) { const [c, p] = await open("on", "CALC1_MB01", W, 800); assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.fill || ""), ""); assert.equal(await p.evaluate(() => document.querySelector("#q .choices").dataset.bento), "grid"); await c.close(); }
 });
 await step("answers with \\text{N·m} render with no red KaTeX error text", async () => {
   for (const W of [390, 1024]) {

@@ -26,7 +26,7 @@ mkdirSync(BANKS);
 const PROB = {
   code: "CALC1_HF1", title: "Seven tiles", type: "mc", pick: "one", shuffle: false,
   body: [{ type: "text", md: "A question with seven plausible answers sits above the fold. Which one is right?" }],
-  choices: LETTERS.map(id => ({ id, md: "Answer " + id.toUpperCase() + " with a few more words" })),
+  choices: LETTERS.map(id => ({ id, md: "Answer " + id.toUpperCase() + " with a few more words, enough to wrap onto a second line on a phone" })),
   correct: "d",
   wrong: LETTERS.filter(id => id !== "d").map(id => ({ choice: id, error: "misread", hint: "QUACK. This trap hint must be seen." })),
   saccharine: { title: "Seven tiles", key: "Pick: d", slip: { a: "Trap." } }
