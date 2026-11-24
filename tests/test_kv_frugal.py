@@ -63,7 +63,12 @@ class FakeKV:
         if op == "GET":
             return db.get(a[0])
         if op == "SET":
-            db[a[0]] = a[1]                   # EX / PX: no clock here, a key lives for the test
+            db[a[0]] = a[1]                   # EX / PX: record the TTL; a key lives for the test (no clock here)
+            flags = [str(x).upper() for x in cmd[3:]]
+            if "EX" in flags:
+                self.expires[a[0]] = int(cmd[3 + flags.index("EX") + 1])
+            elif "PX" in flags:
+                self.expires[a[0]] = int(cmd[3 + flags.index("PX") + 1]) // 1000
             return "OK"
         if op == "MGET":
             return [db.get(k) for k in a]
@@ -261,6 +266,7 @@ class KvFrugal(unittest.TestCase):
             h = self.kv.db[serve.tries_key(cookie[4:])]
             self.assertIn(first, h, "one field per problem")
             self.assertIn("_gen", h)
+            self.assertNotIn(serve.turns_key(cookie[4:], first), self.kv.db, "a check wrote a turn key")
         st, s = self.call("GET /state (1 wrong)", "GET", f"/state/{first}", cookie=cookie)
         self.assertEqual((st, s["wrong"], s["done"]), (200, 1, False))
 
@@ -273,6 +279,17 @@ class KvFrugal(unittest.TestCase):
         self.assertTrue(text.strip())
         self.assertNotIn("Cluck stopped early", text)
         self.assertIn(("claude", "stream"), self.kv.llm)
+        if self.HASH:
+            tk = serve.turns_key(cookie[4:], first)
+            self.assertIn(tk, self.kv.db, "a Cluck turn got its own key")
+            rows = json.loads(self.kv.db[tk])
+            self.assertEqual((rows[0][0], rows[0][3], rows[0][2].endswith("</XYZ>")), (1, "5", True), "begin + note in one key")
+            self.assertEqual(self.kv.expires.get(tk), serve.TURNS_TTL_S, "the prod turn key carries the 14-day life")
+            cmds = [r["cmds"] for r in w["rows"] if tk in r["keys"]]
+            self.assertEqual(cmds.count(["SET"]), 2, "a tutor turn = 2 small writes")
+            self.assertEqual(cmds, [["GET"], ["SET"], ["GET"], ["SET"], ["GET"]], "the turn key is read only where turns are needed")
+            h = self.kv.db.get(serve.tries_key(cookie[4:]), {})
+            self.assertFalse([f for f in h if f.startswith("c:")], "the tries hash got a c: field")
 
         st, v = self.call("POST /check (right)", "POST", "/check", {"code": first, "answer": "2"}, cookie)
         self.assertEqual((st, v["verdict"]), (200, "correct"))
@@ -341,6 +358,73 @@ class KvFrugal(unittest.TestCase):
         self.assertNotIn(serve.TRIES_KEY + sid, self.kv.db, "a preview wrote the prod key")
         self.assertEqual(self.kv.expires[serve.PREVIEW_PREFIX + serve.TRIES_KEY + sid], serve.PREVIEW_LIFETIME)
 
+    def test_flag_off_check_and_turn_keep_today_s_blob_traffic(self):
+        """KV-FRUGAL slice 4: flag off, one check + one Cluck turn = today's tries traffic (GET/SET on the one blob, no turn key)"""
+        if self.HASH:
+            self.skipTest("the blob path only")
+        cookie = "sid=" + fake_sid("blob-traffic")
+        with self.kv.window() as w:
+            st, head, raw = serve.dispatch("POST", "/check", cookie, json.dumps({"code": "KVF_Q01", "answer": "5"}).encode())
+            turn, thead, chunks = serve.STREAMS["/explain"](cookie, json.dumps({"code": "KVF_Q01", "answer": "5"}).encode())
+            text = b"".join(chunks).decode()
+        self.assertEqual((st, json.loads(raw)["verdict"], turn), (200, "wrong", 200))
+        self.assertTrue(text.strip())
+        today = [(["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]),
+                 (["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]),
+                 (["GET"], [serve.KV_KEY])]
+        self.assertEqual([(r["cmds"], r["keys"]) for r in w["rows"] if serve.KV_KEY in r["keys"]], today, "the blob path's traffic changed")
+        self.assertEqual([k for k in w["keys"] if serve.TURNS_KEY in k], [], "the blob path touched a turn key")
+
+    def test_preview_turn_key_and_short_life(self):
+        """VERCEL_ENV=preview: the turn key takes the preview prefix and KVF-3's 1-day life, never the prod key"""
+        if not self.HASH:
+            self.skipTest("the turn key only exists with the flag on")
+        sid = fake_sid("preview-turn")
+        cookie = "sid=" + sid
+        with mock.patch.dict(os.environ, {"VERCEL_ENV": "preview"}):
+            st, head, chunks = serve.STREAMS["/explain"](cookie, json.dumps({"code": "KVF_Q01", "answer": "5"}).encode())
+            text = b"".join(chunks).decode()
+        self.assertEqual(st, 200)
+        self.assertTrue(text.strip())
+        key = serve.PREVIEW_PREFIX + serve.TURNS_KEY + sid + ":KVF_Q01"
+        self.assertIn(key, self.kv.db)
+        self.assertNotIn(serve.TURNS_KEY + sid + ":KVF_Q01", self.kv.db, "a preview wrote the prod turn key")
+        self.assertEqual(self.kv.expires.get(key), serve.PREVIEW_LIFETIME)
+
+    def test_store_load_ignores_old_turn_fields(self):
+        """r1 finding 8: HGETALL no longer returns c: rows, even when an old hash still carries them"""
+        if not self.HASH:
+            self.skipTest("the store only exists with the flag on")
+        sid = fake_sid("old-turns")
+        self.kv.db[serve.tries_key(sid)] = {"c:KVF_Q01": json.dumps([[1, 0, "x", "5"]]),
+                                            "KVF_Q02": json.dumps({"wrong": [], "done": False, "gen": 2})}
+        st = serve.TriesStore()
+        st.load(sid)
+        self.assertNotIn("c:KVF_Q01", st.fields)
+        self.assertEqual([k for k, _ in st.entries()], [(sid, "KVF_Q02")])
+
+    def test_turn_rows_are_validated_and_logged(self):
+        """a turn key is read like the blob loader: bad rows dropped with ONE log line, never a raise"""
+        if not self.HASH:
+            self.skipTest("the turn key only exists with the flag on")
+        good, lock = [1, 0, "x", "5"], [2, 1, "y", "5", True]
+        logs = []
+        raw = json.dumps([good, [1], "no", ["s", 1, 2, 3], lock])
+        with mock.patch.object(serve, "_kv", lambda *c: raw), mock.patch.object(serve, "log", lambda *a: logs.append(a)):
+            rows = serve.turns_read(fake_sid("rows"), "KVF_Q01")
+        self.assertEqual(rows, [good, lock])
+        self.assertEqual(len(logs), 1, "bad rows are dropped with one log line")
+
+    def test_turn_kv_errors_are_logged_not_raised(self):
+        """a dead KV on the turn GET or SET logs and carries on, as the store load/save do"""
+        if not self.HASH:
+            self.skipTest("the turn key only exists with the flag on")
+        logs = []
+        with mock.patch.object(serve, "_kv", side_effect=OSError("down")), mock.patch.object(serve, "log", lambda *a: logs.append(a)):
+            self.assertEqual(serve.turns_read(fake_sid("turn-down"), "KVF_Q01"), [])
+            serve.turns_write(fake_sid("turn-down"), "KVF_Q01", [[1, 0, "", "5"]])
+        self.assertEqual(len(logs), 2, "a failed turn GET and SET each log once")
+
     def test_hash_store_parts_gen_and_rounds(self):
         """the store itself: a multi gets one field per part, gen stays above every saved entry, and a new round drops older ones"""
         if not self.HASH:
@@ -389,7 +473,7 @@ class KvFrugal(unittest.TestCase):
                                             "KVF_Q01": json.dumps({"wrong": [], "done": False, "gen": 7})}
         st = serve.TriesStore()
         st.load(sid)
-        self.assertEqual(st.fields["c:A"], [good])
+        self.assertNotIn("c:A", st.fields, "slice 4: a c: row is old data, never loaded")
         self.assertNotIn("c:B", st.fields)
         self.assertEqual(st.gen, 7)
         with mock.patch.object(serve, "_kv", side_effect=OSError("down")):
