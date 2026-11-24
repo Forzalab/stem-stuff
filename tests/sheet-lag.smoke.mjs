@@ -108,6 +108,17 @@ await step("sheet drag: innerHeight once, no equal --rr/--pp rewrite, no copy re
   });
   assert.ok(cp.has && cp.shown, "the copy is shown again after the drag: " + JSON.stringify(cp));
   assert.equal(cp.tf, `translate3d(0px, ${-cp.st}px, 0px)`, "the copy is scroll-synced: " + JSON.stringify(cp));
+  // c: a restyle that changes the reply's scrollHeight (child padding here) with NO DOM mutation, then the .cl state flips: the copy rebuilds
+  const sh = await page.evaluate(async () => {
+    const sc = document.querySelector("#cluck .cl-bd"), cl = document.getElementById("cluck"), h0 = sc.scrollHeight;
+    window.__sl.clones = 0; for (const c of sc.children) c.style.paddingBottom = "900px";
+    const h1 = sc.scrollHeight; cl.dataset.state = "moving"; await new Promise(r => setTimeout(r, 0)); cl.dataset.state = "peek";
+    return { h0, h1 };
+  });
+  assert.notEqual(sh.h0, sh.h1, "the restyle must change scrollHeight: " + JSON.stringify(sh));
+  await page.waitForFunction(() => window.__sl.clones >= 1, null, { timeout: 3000 }).catch(() => { throw new Error("a reflow without a DOM mutation did not rebuild the copy"); });
+  await page.evaluate(() => { [...document.querySelector("#cluck .cl-bd").children].forEach(c => { c.style.paddingBottom = ""; }); });
+  await ticks(page);
   // c: a changed reply rebuilds
   await page.evaluate(() => { window.__sl.clones = 0; const sc = document.querySelector("#cluck .cl-bd"); const p = document.createElement("p"); p.textContent = "A new line in the reply."; sc.appendChild(p); });
   await page.waitForFunction(() => window.__sl.clones >= 1, null, { timeout: 3000 }).catch(() => { throw new Error("a changed reply did not rebuild the copy"); });

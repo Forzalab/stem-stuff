@@ -350,7 +350,7 @@ const sigOf = (s) => {
   const f = s.form, sc = s.sc;
   if (!f.isConnected || !f.offsetWidth || !s.copy) return s.sig;   // not laid out: nothing to compare, keep the old copy
   const fr = f.getBoundingClientRect(), br = sc.getBoundingClientRect();
-  return (br.left - fr.left) + ',' + (br.top - fr.top) + ',' + sc.clientWidth + ',' + f.offsetWidth + ',' + f.offsetHeight;
+  return (br.left - fr.left) + ',' + (br.top - fr.top) + ',' + sc.clientWidth + ',' + sc.scrollHeight + ',' + f.offsetWidth + ',' + f.offsetHeight;   // scrollHeight: a restyle (class on .cl) can reflow the reply with no DOM mutation and no box move
 };
 function rebuild(s) {
   const f = s.form, sc = s.sc;
