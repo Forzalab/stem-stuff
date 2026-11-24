@@ -7,17 +7,22 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { validator, repairFaults } from "../../tests/schemas.mjs";
-import { isSlugTitle, titleCodes } from "../../client/pure_logic_modules/titles.mjs";
+import { isSlugTitle, titleCodes, examPrefix } from "../../client/pure_logic_modules/titles.mjs";
 
 // SCHEMA.md Version table, row 20261119: every problem has a human `title` (2 to 6 words, never a slug). A bank with v >= TITLE_V that breaks it FAILS;
 // an older bank (no v, 1, or a smaller date) only gets a warning on stderr, so a deploy of the existing banks never goes red for it.
+// TITLE-EXAMQ: the student-facing "Q1 · " practice-exam prefix is not an author code and not a word: these rules read the rest.
+// The schema's 60-char cap is the whole title string, prefix included. A title without the prefix is judged exactly as before.
 const TITLE_V = 20261119;
 const titleFaults = doc => doc.problems.flatMap(p => {
   if (typeof p.title !== "string" || !p.title.trim()) return [`${p.code}: title missing`];
-  const n = p.title.replace(/\$[^$]*\$/g, "M").trim().split(/\s+/).length;
-  const codes = titleCodes(p.title);
+  const { rest } = examPrefix(p.title);
+  const n = rest.replace(/\$[^$]*\$/g, "M").trim().split(/\s+/).length;
+  const codes = titleCodes(rest);
   if (codes.length && !isSlugTitle(p.title, p.code)) return [`${p.code}: title "${p.title}" holds an author code (${codes.join(", ")}): students do not know it`];
-  return isSlugTitle(p.title, p.code) ? [`${p.code}: title "${p.title}" is a slug`] : n < 2 || n > 6 ? [`${p.code}: title "${p.title}" has ${n} words (2 to 6)`] : [];
+  if (isSlugTitle(p.title, p.code)) return [`${p.code}: title "${p.title}" is a slug`];
+  if (n < 2 || n > 6) return [`${p.code}: title "${p.title}" has ${n} words (2 to 6)`];
+  return [];
 });
 
 // SCHEMA.md Version table, row 20261123: every problem has a `starter` chip (3 to 9 words, <= 60 chars, a question in the student's voice) that never leaks the answer.
