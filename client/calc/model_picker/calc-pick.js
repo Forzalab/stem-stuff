@@ -73,7 +73,7 @@
   function node(tag, cls, text) { var x = d.createElement(tag); x.className = cls; if (text) x.textContent = text; return x; }
 
   function step1() {
-    el.querySelector(".lh-say").textContent = "Which calculator do you have? I will show you the fastest keys.";
+    el.querySelector(".lh-say").textContent = "Which calculator do you have? I'll show you the fastest keys.";
     el.querySelector(".lh-col").classList.remove("cp-s2");
     var row = node("div", "cp-brands");
     Object.keys(BRANDS).forEach(function (b) { row.appendChild(btn("btn btn-label cp-brand", BRANDS[b], function () { step2(b); })); });
