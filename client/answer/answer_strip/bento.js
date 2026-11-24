@@ -9,7 +9,7 @@
    bento4: content-driven tile shapes (hero = most content, ~60% of tiles bigger than 1x1), seeded per question (#pcode + width), render guard (a clipped tile forbids its shape,
    one re-layout, then stacked), phone unit row 88, grid padding-bottom when a fixed Check bar exists.
    PHONE-FILL (<= 480px, bento_fill.js): MC / pick-all become JUSTIFIED ROWS that fill the whole answer area (viewport - the block's top - the Check row): linear partition by text weight,
-   widths by weight (60 grid columns), row heights stretched to the room, per-tile font fit 15 -> 10px (measured once per layout, debounced on resize); no search, no probe, no guard.
+   widths by weight (60 grid columns), row heights stretched to the room, per-tile font fit 15 -> 10px (padding-aware: the letter-clear --lg is in the fit; rows grow to the real need, so text at any size never clips; debounced on resize); no search, no probe, no guard.
    Reads the DOM only (like strip.js); re-runs when #q gets a new question, when the width changes, and when fonts arrive. */
 (function () {
   "use strict";
@@ -89,15 +89,18 @@
     return restLen(t) + Math.round(w / 8) + 2;
   }
   function rowH(u, rows) { return rows.map(function (r) { return Math.max.apply(null, r.map(function (i) { return u.chs[i].getBoundingClientRect().height; })); }); }
+  /* PAD-AWARE: the room for the words is the tile's real content box (its computed padding, which includes the letter-clear --lg), not a fixed 11.5px */
+  function padV(o) { var cs = getComputedStyle(o); return (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0); }
   function over(o) {
-    var t = o.querySelector(".txt"), r = o.getBoundingClientRect(), tr = t.getBoundingClientRect();
-    return tr.height > r.height - 11.5 || t.scrollWidth > t.clientWidth + 1 || o.scrollWidth > o.clientWidth + 1;
+    var t = o.querySelector(".txt"), tr = t.getBoundingClientRect();
+    return tr.height > o.clientHeight - padV(o) + 0.5 || t.scrollWidth > t.clientWidth + 1 || o.scrollWidth > o.clientWidth + 1;
   }
   /* fitty-style: every tile 15px, those that overflow step down by .5 to 10px; all reads, then all writes, <= 11 passes (once per layout / state change) */
   function fitAll(u) {
     var os = u.chs.map(function (c) { return c.querySelector(".opt"); }), fs = os.map(function () { return Fill.FS_MAX; }), live = os.map(function () { return true; });
     os.forEach(function (o) { o.style.setProperty("--fs", Fill.FS_MAX + "px"); o.removeAttribute("data-brk"); unfit(o); });
     for (var pass = 0; pass < 12; pass++) {
+      clearLetter(u.g);                                              // --lg first: the fit must see the padding the tile will really wear
       var bad = []; os.forEach(function (o, i) { if (live[i] && over(o)) bad.push(i); });
       if (!bad.length) break;
       bad.forEach(function (i) {
@@ -129,6 +132,18 @@
       if (need > 0) o.style.setProperty("--lg", Math.ceil(need * 2) + "px");
     });
   }
+  /* GROW-TO-FIT: a row is never shorter than its tallest tile's real need (words + the tile's own padding). The planned heights (u.hs) are only the floor, so text at any size
+     (system text size, a late font, the Check arrow narrowing a tile) makes the row taller and the page scrolls; nothing is clipped. Recomputed from u.hs each time, so a row shrinks back. */
+  function grow(u) {
+    if (!u.hs) return;
+    var hs = u.hs.map(function (h, ri) {
+      var need = Math.max.apply(null, u.rows[ri].map(function (i) { var o = u.chs[i].querySelector(".opt"), t = o.querySelector(".txt"); return Math.ceil(t.getBoundingClientRect().height + padV(o)); }));
+      return Math.max(h, need);
+    });
+    var css = hs.map(function (h) { return h.toFixed(2) + "px"; }).join(" ");
+    if (u.g.style.gridTemplateRows !== css) u.g.style.gridTemplateRows = css;
+  }
+  function refit(u) { var m = fitAll(u); clearLetter(u.g); grow(u); return m; }
   function fillLayout(g, chs, R, A, stack) {
     if (mo) mo.disconnect();
     clear(g);
@@ -145,8 +160,8 @@
       if (!stack && P.k < chs.length) { fillLayout(g, chs, R, A, true); return; }             // -> one option per row (a..e stacked)
       u.stack = true; fitAll(u);                                                              // already one per row: the cut rows scroll
     }
-    u.hs = hs; u.A = A; clearLetter(g);
-    if (window.MutationObserver) { mo = mo || new MutationObserver(function () { if (cur && cur.fill && cur.g.isConnected) requestAnimationFrame(function () { fitAll(cur); }); }); mo.observe(g, { attributes: true, subtree: true, attributeFilter: ["class", "hidden", "aria-checked"] }); }
+    u.hs = hs; u.A = A; clearLetter(g); grow(u);
+    if (window.MutationObserver) { mo = mo || new MutationObserver(function () { if (cur && cur.fill && cur.g.isConnected) requestAnimationFrame(function () { if (cur && cur.fill && cur.g.isConnected) refit(cur); }); }); mo.observe(g, { attributes: true, subtree: true, attributeFilter: ["class", "hidden", "aria-checked"] }); }
   }
   function apply() {
     queued = false;
@@ -163,7 +178,7 @@
       A = Math.floor(svh() - top - (bar ? ((bb && bb.offsetHeight) || 48) + 10 : 0) - 8);
       A = Math.max(A, Math.round(svh() * 0.35));                  // FILL-FLOOR (Tony Nov 16): a long card puts the grid below the first screen (A <= 0 -> 1px rows, 10px text); fill a third of a screen instead
     }
-    var k = (fill ? "F" + Math.round(A / 8) + "|" : "") + R + "|" + chs.map(function (c) { return c.dataset.id + (c.querySelector(".txt") || {}).innerHTML; }).join("|");
+    var k = (fill ? "F" + Math.round(A / 8) + "|" + getComputedStyle(H).fontSize + "|" : "") + R + "|" + chs.map(function (c) { return c.dataset.id + (c.querySelector(".txt") || {}).innerHTML; }).join("|");
     if (k === key && g.dataset.bento) return;
     key = k;
     if (fill) { fillLayout(g, chs, R, Math.max(A, 1)); return; }
