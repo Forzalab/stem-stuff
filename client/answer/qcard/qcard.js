@@ -143,9 +143,11 @@
   /* the lens map is liquidglass's displacement map (gentpan @ d5db099, MIT, via ask-glass.js §engine): a convex profile bend (refraction px at the rim) +
      a radial magnify term sampling towards the centre. Static, one map per layer size; chroma and specular are off. */
   var ENG = (function () {
-    var br = navigator.userAgentData && navigator.userAgentData.brands;
+    var nav = typeof navigator === "undefined" ? null : navigator;
+    if (!nav) return "none";   // no browser (a node vm test): not blink, so no lens is ever built
+    var br = nav.userAgentData && nav.userAgentData.brands;
     if (br && br.some(function (x) { return /Chromium/.test(x.brand); })) return "blink";
-    var ua = navigator.userAgent;
+    var ua = nav.userAgent || "";
     if (/Firefox\//.test(ua)) return "gecko";
     if (/AppleWebKit\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua)) return "webkit";
     return "blink";
