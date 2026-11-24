@@ -288,7 +288,7 @@ function mount(form, sc, locked) {
   let s = ST.get(form);
   if (!s) {
     s = { form, sc, copy: form.querySelector('.g-copy'), cl: form.closest('.cl'), clone: null, gl: null, img: null, base: '', W: 0, H: 0, opts: null, locked: !!locked, last: 0, timer: 0, rt: 0,
-      maps: null, thinkOn: false, raf: 0, gen: 0, dirty: true, t1: 0, t3: 0, trk: 0, tf: 0, onEnd: null, anim: null };
+      maps: null, thinkOn: false, raf: 0, gen: 0, clock: 0, mi: 0, dirty: true, t1: 0, t3: 0, trk: 0, tf: 0, onEnd: null, anim: null };
     ST.set(form, s); sc._ag = s;
     form.classList.toggle('locked', s.locked);
     form.querySelector('.g-lock').setAttribute('aria-hidden', String(!s.locked));
@@ -305,7 +305,8 @@ function attach(sc) {
   sc.addEventListener('scroll', () => {
     const s = sc._ag; if (!s) return;
     if (s.clone) s.clone.style.transform = 'translate3d(0,' + (-sc.scrollTop) + 'px,0)';   // the copy follows the scroll: one transform write, no layout read of the copy
-    if (!s.gl || !s.gl.mid || s.thinkOn) return;   // adaptive chroma: while scrolling the copy wears the 1-pass motion filter; ~150 ms after the last scroll event the fringe comes back (thinking already uses 1-pass clones)
+    if (s.thinkOn) { clearTimeout(s.mt); s.mt = 0; s.mv = false; return; }   // thinking owns .g-copy's filter: the scroll path never writes it (and a leftover 1-pass restore cannot land later)
+    if (!s.gl || !s.gl.mid) return;   // adaptive chroma: while scrolling the copy wears the 1-pass motion filter; ~150 ms after the last scroll event the fringe comes back
     if (!s.mv) { s.mv = true; s.copy.style.filter = 'url(#' + s.gl.mid + ')'; }
     clearTimeout(s.mt); s.mt = setTimeout(() => { s.mt = 0; s.mv = false; if (s.gl && !s.thinkOn) s.copy.style.filter = 'url(#' + s.img.parentNode.id + ')'; }, 150);
   }, { passive: true });
@@ -385,7 +386,7 @@ function glass(s) {
   clearTimeout(s.mt); s.mt = 0; s.mv = false;
   if (s.gl) { s.gl.destroy(); s.gl = null; s.img = null; }
   s.bad = false;
-  s.maps = null; cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen);
+  s.maps = null; cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen); clearInterval(s.clock); s.clock = 0;
   const was = s.thinkOn; s.thinkOn = false;
   f.classList.toggle('ag-solid', solid());
   if (solid() || !s.copy || !f.offsetWidth) { s.W = f.offsetWidth; s.H = f.offsetHeight; return; }
@@ -453,13 +454,16 @@ function setLocked(form, locked) {
 }
 /* == §think == */
 /* While Cluck streams a reply the bar's glass light orbits: 120 lens maps (72 on gecko; light angle -25 + k*360/N deg, specular 1, width 5.5) are built in <= 8 ms chunks per frame, each into its own
-   clone of the base <filter> (feImage href set once, never swapped: gecko re-decodes the PNG on every swap), and the clock (4.3 s per revolution) only sets the copy's style.filter to a clone. The ring (a rotating square under a static mask), the glow and the bleed are CSS compositor layers (ask-glass.css): no gradient angle is animated. */
+   clone of the base <filter> (feImage href set once, never swapped: gecko re-decodes the PNG on every swap), and the clock (4.3 s per revolution) only sets the copy's style.filter to a clone.
+   The clock is a 33 ms timer, not rAF: iOS/WebKit stops requestAnimationFrame while a scroll is in flight. The ring (a rotating square under a static mask), the glow and the bleed are CSS
+   compositor layers (ask-glass.css): no gradient angle is animated. */
 const setMap = (img, url) => { img.setAttribute('href', url); img.setAttributeNS(XLINK, 'xlink:href', url); };
 function thinkSet(s, on) {
   on = !!on && !s.locked;
+  if (on) { clearTimeout(s.mt); s.mt = 0; s.mv = false; }   // thinking owns .g-copy: a scroll's 1-pass filter and its 150 ms restore never outlive the light
   if (on === s.thinkOn && on === s.form.classList.contains('think')) return;
   s.thinkOn = on; s.form.classList.toggle('think', on);
-  cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen);
+  cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen); clearInterval(s.clock); s.clock = 0;
   if (!s.img) return;                                     // no lens (solid, frost, hidden): the CSS light is all there is
   const rb = s.img.parentNode, bid = rb.id, fb = (s.gl && s.gl.mid && document.getElementById(s.gl.mid)) || rb, drop = () => { (s.fids || []).forEach((id) => { const c = document.getElementById(id); if (c) c.remove(); }); s.fids = []; };
   drop();
@@ -478,15 +482,20 @@ function thinkSet(s, on) {
     else if (calm) el.style.filter = `url(#${maps[0]})`;   // reduced motion: one static lit clone, no loop
   };
   build();
+  if (maps.length) { el.style.filter = `url(#${maps[0]})`; s.mi = 0; }   // own the filter now: no flat scroll frame while the light is on
   if (calm) return;
-  let last = -1; const t0 = performance.now();
-  const step = (t) => {
-    if (!s.form.isConnected || s.img !== img) return;
+  /* The clock is a timer, not rAF: iOS/WebKit stops requestAnimationFrame while a scroll is in flight, which froze the light until
+     the scroll ended. While the maps are still building (rAF chunks) the clock cycles through the ones that exist, so it never pins. */
+  const t0 = performance.now();
+  let id = 0;
+  const tick = () => {
+    if (!s.form.isConnected || s.img !== img) { clearInterval(id); if (s.clock === id) s.clock = 0; return; }   // detached / a new lens: the clock dies with it
     const n = maps.length;
-    if (n) { const k = Math.floor(((t - t0) / REV) * N) % N, i = k < n ? k : n - 1; if (i !== last) { el.style.filter = `url(#${maps[i]})`; last = i; } }
-    s.raf = requestAnimationFrame(step);
+    if (!n) return;
+    const span = n < total ? n : N, i = Math.floor(((performance.now() - t0) / REV) * N) % span;
+    if (i !== s.mi) { el.style.filter = `url(#${maps[i]})`; s.mi = i; }
   };
-  s.raf = requestAnimationFrame(step);
+  id = s.clock = setInterval(tick, 33);
 }
 /* == §flip == */
 /* iMessage send: the typed text's box (textRect) flies to the new student bubble. One fixed element moves by transform while its size, radius, colours, font size and padding interpolate on a
