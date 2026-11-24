@@ -195,6 +195,7 @@
   }
   var lensSvg = null;
   function lens(w, h) {
+    if (ENG !== "blink") return;   // ENGINE GUARD: an SVG filter url() in backdrop-filter is only known to render on Blink; gecko / webkit keep the plain 3px frost (qcard.css), no map, no attribute
     var sig = Math.round(w) + "x" + Math.round(h);
     if (sig === LENS.sig && D.getElementById(LENS.id)) { H.setAttribute("data-qf-lens", "1"); return; }
     var map = lensMap(w, h), NS = "http://www.w3.org/2000/svg", old = D.getElementById(LENS.id);

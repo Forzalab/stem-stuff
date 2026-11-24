@@ -24,8 +24,9 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 const browser = await launchBrowser(pw);
 let fails = 0;
-async function fresh(ui, vp, q) {
-  const phone = vp.width < 500, ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", deviceScaleFactor: 1 });
+async function fresh(ui, vp, q, ua) {
+  const phone = vp.width < 500, ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", deviceScaleFactor: 1, ...(ua ? { userAgent: ua } : {}) });
+  if (ua) await ctx.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => undefined, configurable: true }); } catch (e) {} });
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
   const page = await ctx.newPage(); await page.goto(`${BASE}/${ui ? "?ui=v7" + (q || "") : ""}`);
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
@@ -98,6 +99,15 @@ await step("?gv= is ignored (one look only)", async () => {
     layers: [...document.querySelectorAll("#problem *")].filter(e => { const f = getComputedStyle(e).backdropFilter; return f && f !== "none"; }).length }));
   assert.equal(r.gv, false, "?gv=4 must not set html[data-gv]"); assert.ok(r.frost, "the one sheet still renders"); assert.equal(r.layers, 1, "still one filtered layer");
   await ctx.close();
+});
+await step("engine guard: Firefox UA gets the plain 3px frost, no lens (SVG backdrop-filter is Blink-only)", async () => {
+  const FF = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
+  const { ctx, page } = await fresh(true, { width: 390, height: 844 }, "", FF);
+  const r = await page.evaluate(() => { const q = document.querySelector("#problem > .qfrost");
+    return { uad: navigator.userAgentData, ua: navigator.userAgent, attr: document.documentElement.hasAttribute("data-qf-lens"), lens: !!document.getElementById("qg-lens"), frost: !!q, bf: q ? getComputedStyle(q).backdropFilter : "" }; });
+  assert.ok(/Firefox\//.test(r.ua) && r.uad === undefined, "test setup: Firefox UA, no userAgentData");
+  assert.ok(r.frost, "the frost sheet still renders"); assert.equal(r.attr, false, "data-qf-lens is absent"); assert.equal(r.lens, false, "no #qg-lens filter");
+  assert.equal(r.bf, "blur(3px)", "plain 3px frost: " + r.bf); await ctx.close();
 });
 await step("flag off: no glass", async () => {
   const { ctx, page } = await fresh(false, { width: 390, height: 844 });
