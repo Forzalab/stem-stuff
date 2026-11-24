@@ -25,7 +25,10 @@ const long = { code: "PHYS_QL2", title: "Hydraulic lift", type: "num", answer: "
 mkdirSync(BANKS);
 const filler = Array.from({ length: 26 }, (_, i) => { const n = i + 3, c = "PHYS_F" + String(n).padStart(2, "0");
   return { code: c, title: "Filler " + n, type: "num", answer: "1", tol: 0.01, unit: "", how: "Number only.", wrong: [{ value: "2", error: "off", hint: "QUACK. No." }], body: [{ type: "text", md: "Filler question " + n + "?" }], saccharine: { title: "Filler " + n, key: "Answer: 1" } }; });
-writeFileSync(join(BANKS, "BANK_QCS.json"), JSON.stringify({ v: 1, problems: [short, long, ...filler] }));
+/* TITLE-EXAMQ: appended LAST so the filler question numbers above stay 3..28 (the stable-layout step walks up to q28) */
+const examq = { code: "PHYS_QE3", title: "Q1 · Net torque about the axle", type: "num", answer: "2", tol: 0.01, unit: "", how: "Number only.",
+  wrong: [{ value: "3", error: "off", hint: "QUACK. Recheck." }], body: [{ type: "text", md: "A wrench turns a bolt. What is the net torque about the axle?" }], saccharine: { title: "Q1 · Net torque about the axle", key: "Answer: 2" } };
+writeFileSync(join(BANKS, "BANK_QCS.json"), JSON.stringify({ v: 1, problems: [short, long, ...filler, examq] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_QCS", STEM_FRONT_TITLE: "Exam 3",
   STEM_TODAY: "2026-11-03", STEM_TRIES: join(TMP, "tries.json"), CLAUDE_API: "" }, stdio: "ignore" });
 await serverUp(BASE);
@@ -142,6 +145,49 @@ try {
         assert.ok(Math.abs(edges[0].textR - t0) <= 1, "symmetric inner padding: right margin = left");
       } finally { await page.context().close(); }
     }
+  });
+  await step("exam-question prefix (TITLE-EXAMQ-DIM): the big title keeps a capital Q on the student's 'Q1 · ' prefix, dim (#7a8aae) and dot-free, one word space before the rest; the human rest stays lower case; a title without the prefix is unchanged", async () => {
+    const page = await open(390, "v7", "PHYS_QE3");   // qcecho=tl is the layout whose headline is lower-cased (qcard.css .qhead)
+    try {
+      await page.waitForFunction(() => { const h = document.querySelector(".qhead"); return h && h.querySelector(".qexam .sr-only"); }, null, { timeout: 5000 });
+      const t = await page.evaluate(() => {
+        const h = document.querySelector(".qhead"), s = h.querySelector(".qexam"), hid = s.querySelector(".sr-only");
+        const cs = getComputedStyle(s), hr = hid && hid.getBoundingClientRect(), sr = s.getBoundingClientRect();
+        const tn = s.nextSibling; let glyph = null;
+        if (tn && tn.nodeType === 3 && tn.nodeValue.length) { const rg = document.createRange(); rg.setStart(tn, 0); rg.setEnd(tn, 1); glyph = rg.getBoundingClientRect(); }
+        return { inner: h.innerText, text: h.textContent, n: h.querySelectorAll(".qexam").length, span: s.textContent, tf: cs.textTransform, restTf: getComputedStyle(h).textTransform,
+          color: cs.color, nowrap: cs.whiteSpace, svg: h.querySelectorAll("svg").length, lead: s.firstChild && s.firstChild.nodeValue,
+          hidW: hr ? hr.width : null, hidH: hr ? hr.height : null, hidTx: hid && hid.textContent,
+          gap: glyph ? glyph.left - sr.right : null, fs: parseFloat(getComputedStyle(h).fontSize), bg: getComputedStyle(document.querySelector("#problem")).backgroundColor };
+      });
+      const lum = c => { const m = c.match(/[\d.]+/g).map(Number), v = m.slice(0, 3).map(x => { x /= 255; return x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4; }); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; };
+      const ratio = (lum(t.color) + .05) / (lum(t.bg) + .05);
+      assert.equal(t.span, "Q1 · ", "the prefix span holds exactly the exam prefix");
+      assert.equal(t.tf, "none", "the prefix span is not transformed");
+      assert.equal(t.restTf, "lowercase", "the human rest keeps the card's lower-case look");
+      assert.equal(t.color, "rgb(122, 138, 174)", "the prefix is the dim ink #7a8aae: " + t.color);
+      assert.ok(ratio >= 3, `the dim prefix on the card reads >= 3:1 (large bold): ${ratio.toFixed(2)}:1 on ${t.bg}`);
+      assert.equal(t.lead, "Q1", "the visible prefix is 'Q1' only: no dot");
+      assert.equal(t.svg, 0, "nothing is drawn in the dot's place");
+      assert.equal(t.nowrap, "nowrap", "the exam number never breaks");
+      assert.equal(t.hidTx, " · ", "the typed dot stays in the DOM for screen readers and copy");
+      assert.ok(t.hidW !== null && t.hidW <= 1 && t.hidH <= 1, "the hidden dot takes no visible box: " + t.hidW + "x" + t.hidH);
+      assert.ok(t.gap !== null && t.gap >= t.fs * .2 && t.gap <= t.fs * .4, `one word space between the prefix and the first title glyph: ${t.gap}px at ${t.fs}px`);
+      assert.match(t.inner, /^Q1\b/, "visible title starts with a capital Q: " + t.inner);
+      assert.equal(t.inner.replace(/\s+/g, " ").trim(), "Q1 · net torque about the axle", "title text: prefix kept, rest lower case: " + t.inner);
+      assert.match(t.text, /^Q1 · Net torque about the axle$/, "text content keeps the bank title (dot included): " + t.text);
+      assert.ok(t.text.startsWith("Q1 · "), "the title's textContent holds 'Q1 · '");
+      const aria = await page.locator(".qhead").ariaSnapshot();
+      assert.match(aria, /Q1 · [Nn]et torque about the axle/, "the accessible name keeps the typed dot in one piece: " + aria);
+    } finally { await page.context().close(); }
+    const plain = await open(390, "v7", "PHYS_QS1");   // no prefix: the same DOM as before (no span)
+    try {
+      const t = await plain.evaluate(() => { const h = document.querySelector(".qhead"); return { inner: h.innerText, text: h.textContent, html: h.innerHTML, n: h.querySelectorAll(".qexam").length }; });
+      assert.equal(t.n, 0, "no prefix span on a plain title");
+      assert.equal(t.html, "Roll", "plain title DOM unchanged");
+      assert.equal(t.text, "Roll");
+      assert.equal(t.inner, "roll", "plain title still lower-cased whole");
+    } finally { await plain.context().close(); }
   });
   await step("flag off: the card is the one app.js draws (no text block, no ghost)", async () => {
     const page = await open(1366, "off", "PHYS_QL2");

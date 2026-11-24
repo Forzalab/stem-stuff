@@ -962,7 +962,7 @@ function genLadder(rp) {
     if (name === "repair_skip") repairSkip(mine);
     else if (name === "repair_expired" && S === mine) {                           // the keys are gone: say so, once, where the ladder was
       rpUnmount();
-      const p = document.createElement("p"); p.id = "rpGone"; p.className = "rp-line"; p.textContent = "These steps expired. Check again for new ones.";
+      const p = document.createElement("p"); p.id = "rpGone"; p.className = "rp-line"; p.textContent = "These steps expired. Check for new ones.";
       $("#fb").after(p);
     }
   } });
@@ -1061,7 +1061,7 @@ function ladderStep() {
   sec.querySelectorAll(".f.mid.cur").forEach(m => midOpen(m, false));                 // the last piece's notes fold to its "why?"
   if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); keyfFit(sec); }
   ladClock();                                                                          // any reveal restarts the 30 s clock
-  const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to the key formulas." : `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.`;
+  const sr = $("#sr"); if (sr) sr.textContent = st.k === "row" ? "A formula was added to Key formulas." : `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.`;
   return true;
 }
 /* the clock (Tony, Nov 5): on the question with Cluck's sheet closed, the next piece shows 30 s after the last reveal (or after the question loaded), until all are
@@ -1252,7 +1252,7 @@ const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autoc
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).
    It shows on the first choose-all question of the visit only (clutter C6, Tony Oct 5); an authored how always shows */
 let howAt = null;
-const GRID_HOW = "Tick correct options. There might be none, some, or all of them.";   // a grid item with no how (SCHEMA.md grid)
+const GRID_HOW = "Tick the correct options. There may be none, some, or all.";   // a grid item with no how (SCHEMA.md grid)
 const howLine = p => {
   let h = p.how;
   if (!h && all(p) && p.grid) h = GRID_HOW;                                    // a grid: say that nothing ticked is an answer too, in both modes

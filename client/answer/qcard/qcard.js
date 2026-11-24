@@ -1,7 +1,7 @@
 /* qcard.js: QCARD-SWISS v3, the question card redesign. BEHIND html.ui-v7 (fx.js, ?ui=v7). Flag off = this file touches nothing and the card is the one app.js draws.
    Flag on, after app.js render() fills #blocks (a MutationObserver on #blocks, so every re-render is covered), top to bottom on ONE card background:
    - GHOST: the question number as an ECHO numeral (6 Archivo 900 copies, step -12px x) at the card top; on a prev/next change the trail copies slide in (qcard.css .qanim, compositor only).
-   - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
+   - the figure(s), then the topic headline (the sugar title, lowercase; a bank "Q1 · " exam prefix keeps its capital Q, TITLE-EXAMQ), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
      kept bold); no fold and no inner scroller (ICK PR-A: the card is as tall as its text and the page scrolls), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
    - ASK-PIN (ICK PR-A, F1): on a long card the page scrolls it away until only its last strip, the bold ask, is left; that strip stays pinned at the top, a tap on it scrolls back to the full question.
    - FROST (§frost, Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE card (inset 0), between the card background + ghost numeral and the text.
@@ -12,6 +12,7 @@
   var on = function () { return H.classList.contains("ui-v7"); };
   var ABBR = /(?:\be\.g|\bi\.e|\bvs|\bet al|\bDr|\bMr|\bMrs|\bMs|\bFig|\bapprox|\bNo|\b[A-Z])\.$/;
   var raf = 0;
+  var EXAM = null;   // titles.mjs examPrefix, loaded by the dynamic import at the end (qcard.js is a classic script: no static import, the way shell.js reaches nav.js)
 
   /* the split point of the last sentence of <p>: { node, off } in a TOP-LEVEL text node (math / inline elements are never cut), or null = the whole p is one sentence */
   function lastSentenceStart(p) {
@@ -224,6 +225,22 @@
 
   function exam() { var n = D.getElementById("qlistName"); return n ? n.textContent.trim() : ""; }
   function span(cls, txt) { var e = D.createElement("span"); e.className = cls; e.textContent = txt; return e; }
+  /* TITLE-EXAMQ-DIM: the bank title's "Q1 · " exam-question prefix keeps its capital Q inside the lower-case headline, in the dim ink, with NO dot drawn
+     (Tony Nov 24: "remove the dot, keep the dim, the dot is ceremony"). The prefix comes from titles.mjs examPrefix (EXAM below), never a copied regex;
+     built with textContent, so no bank text goes through innerHTML. The typed " · " stays in the DOM inside .sr-only for screen readers and copy; the one
+     word space before the rest is .qexam's margin-right (qcard.css). No prefix = the same DOM as before. */
+  function examSpan(head) {
+    if (!EXAM || head.querySelector(":scope > .qexam")) return;
+    var pre = EXAM(head.textContent).prefix;
+    if (!pre) return;
+    var w = D.createTreeWalker(head, 4), n = w.nextNode();
+    if (!n || n.parentNode !== head || n.nodeValue.lastIndexOf(pre, 0) !== 0) return;
+    var num = pre.slice(0, pre.length - 3);   // EXAMQ_PREFIX fixes the tail " · " (space, U+00B7, space): the visible part is the number only
+    var q = span("qexam", num);
+    q.appendChild(span("sr-only", pre.slice(num.length)));   // " · ": kept for screen readers and copy, never drawn, no gap
+    head.insertBefore(q, n);
+    n.nodeValue = n.nodeValue.slice(pre.length);
+  }
   function meta(m) {
     var a = m.querySelector(".qexam"), e = exam(), t = (e ? e.toLowerCase() + " \u00b7 " : "") + "q" + number();
     if (!a) { a = span("qexam", ""); m.insertBefore(a, m.firstChild); }
@@ -264,7 +281,7 @@
         if (pt) {
           tw = pt.querySelector(".twist-chip");
           var kids = Array.prototype.filter.call(pt.childNodes, function (n) { return !(n.nodeType === 1 && n.classList.contains("twist-chip")); });   // TITLE-MATH: keep rendered math nodes, not only raw text
-          if (kids.some(function (n) { return (n.textContent || "").trim(); })) { head = D.createElement("h2"); head.className = "qhead"; kids.forEach(function (n) { head.appendChild(n.cloneNode(true)); }); }
+          if (kids.some(function (n) { return (n.textContent || "").trim(); })) { head = D.createElement("h2"); head.className = "qhead"; kids.forEach(function (n) { head.appendChild(n.cloneNode(true)); }); examSpan(head); }
         }
         var tx = D.createElement("div"); tx.className = "qtext";
         texts.forEach(function (c) { tx.appendChild(c); });
@@ -420,5 +437,12 @@
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(later);
     later();
   }
+  /* TITLE-EXAMQ: one shape for the exam prefix, read from titles.mjs (never a copy of its regex). Already loaded by app.js, so it resolves before the first card;
+     when it lands late (or not at all) the card keeps today's look and the sweep below fixes a card already on screen. */
+  import("../../pure_logic_modules/titles.mjs").then(function (m) {
+    EXAM = m.examPrefix;
+    var hs = D.querySelectorAll("#problem.qc7 .qhead");
+    for (var i = 0; i < hs.length; i++) examSpan(hs[i]);
+  }).catch(function () {});
   if (D.readyState === "loading") D.addEventListener("DOMContentLoaded", start); else start();
 })(window);

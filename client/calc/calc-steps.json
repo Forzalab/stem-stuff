@@ -10,7 +10,7 @@
      "NORM SCI ENG",
      "FLOAT 0123456789"
     ],
-    "note": "You press mode. Row 1: the highlighted word is your angle mode. You want DEG.",
+    "note": "Press mode. Row 1: the highlighted word shows the angle mode. You want DEG.",
     "screen_verified": true,
     "source_loc": "p.6-7"
    },
@@ -22,7 +22,7 @@
     "screen": [
      ""
     ],
-    "note": "If DEG is not lit, move to it with the arrows, press enter, then clear (or 2nd mode = quit). Real example photo showed RAD and ENG on screen.",
+    "note": "If DEG isn't lit, move to it with the arrows, press enter, then clear (or 2nd mode = quit). The example photo showed RAD and ENG on screen.",
     "screen_verified": true,
     "source_loc": "p.6"
    }

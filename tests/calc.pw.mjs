@@ -60,7 +60,7 @@ try {
     const { ctx, page, errs } = await fresh({ "stem-calc-model": "ti-36x-pro" });
     await page.goto(BASE + "/"); await anyUp(page);
     await page.waitForSelector("#q .cc-welcome");
-    assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Stuck? Click here for TI/Casio tricks.");
+    assert.equal(await page.textContent("#q .cc-welcome .cc-wt"), "Stuck? Click for TI/Casio tricks.");
     assert.equal(await noH(page), true);
     await page.click("#q .cc-welcome button"); await page.waitForSelector(".cc-ov .cc");
     await page.waitForSelector(".cc-ov .cc-deck"); assert.equal(await page.$$eval(".cc-ov .cc-slide", e => e.length), 2, "the routine deck: 2 slides");

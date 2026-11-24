@@ -60,7 +60,7 @@ const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-P
 const CL_COPY = {
   idle: "QUACKK QUACK QUACK. quack.",
   starters: ["What is this asking?", "Which formula fits?", "Check my setup"],
-  nokey: "404: Cluck not found. This one hatched without a duck, so he's off paddling somewhere else. The question is all yours. You've got this!",
+  nokey: "404: Cluck not found. This one hatched without a duck, so he's off paddling somewhere else. The question is all yours.",
   done: "Want my steps? Tap the duck chip under your answer.",
 };
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
