@@ -53,9 +53,10 @@ const geo = page => page.evaluate(() => {
     ico: sr && { w: sr.width, h: sr.height, color: getComputedStyle(svg).color }, cbt: cbt ? { w: cr.width, h: cr.height } : null };
 });
 const look = page => page.evaluate(() => { const b = document.getElementById("cluckBtn"), cs = getComputedStyle(b), px = v => parseFloat(v) || 0;
-  return { aria: b.getAttribute("aria-disabled"), bg: cs.backgroundColor, shadow: cs.boxShadow, btw: px(cs.borderTopWidth),
+  const p = document.createElement("i"); p.style.background = "var(--chip)"; document.body.append(p); const chip = getComputedStyle(p).backgroundColor; p.remove();
+  return { aria: b.getAttribute("aria-disabled"), bg: cs.backgroundColor, chip, duck: getComputedStyle(b.querySelector(".cb-duck")).color, shadow: cs.boxShadow, btw: px(cs.borderTopWidth),
     rad: [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius].map(px) }; });
-const TANGERINE = "rgb(255, 166, 62)", INK = "rgb(2, 4, 13)", near = (a, b, d) => Math.abs(a - b) <= d;
+const TANGERINE = "rgb(255, 166, 62)", INK = "rgb(2, 4, 13)", OFF_INK = "rgb(122, 138, 174)", near = (a, b, d) => Math.abs(a - b) <= d;
 async function card(page, vp) {
   await step(`${vp} AC1: #cluckBtn child of #problem, not fixed, float right`, async () => {
     const g = await geo(page); assert.ok(g, "no #cluckBtn"); assert.equal(g.parent, "problem", "parent is not #problem");
@@ -72,16 +73,20 @@ async function card(page, vp) {
     const g = await geo(page); assert.ok(g, "no #cluckBtn");
     assert.ok(near(g.r, g.cb.r, 1.5), `right ${g.r} vs content right ${g.cb.r}`); assert.ok(near(g.t, g.cb.t, 3), `top ${g.t} vs content top ${g.cb.t}`);
   });
-  await step(`${vp} AC4: tangerine both states, no shadow, no top border, four equal corners`, async () => {
-    const check = (s, when) => { assert.equal(s.bg, TANGERINE, `${when}: background ${s.bg}`); assert.equal(s.shadow, "none", `${when}: box-shadow ${s.shadow}`);
+  await step(`${vp} AC4: tangerine ready / --chip slate + #7a8aae duck off (CLUCK-BTN-DISABLED), no shadow, no top border, four equal corners`, async () => {
+    const shape = (s, when) => { assert.equal(s.shadow, "none", `${when}: box-shadow ${s.shadow}`);
       assert.equal(s.btw, 0, `${when}: border-top-width ${s.btw}`); assert.ok(s.rad.every(x => x > 0 && near(x, s.rad[0], .01)), `${when}: radii ${s.rad.join(" ")}`); };
-    await settled(page, "#cluckBtn"); const a = await look(page); assert.equal(a.aria, null, "Nov 22: ready before the first try (no first state)"); check(a, "ready");
-    /* synth off (data-st + aria-disabled) keeps the same tangerine look */
+    await settled(page, "#cluckBtn"); const a = await look(page); assert.equal(a.aria, null, "Nov 22: ready before the first try (no first state)");
+    assert.equal(a.bg, TANGERINE, `ready: background ${a.bg}`); assert.equal(a.duck, INK, `ready duck ${a.duck}`); shape(a, "ready");
+    /* synth off (data-st + aria-disabled): the disabled squircle is the --chip slate, duck #7a8aae, not tangerine (Tony Nov 23, option A) */
     const was = await page.evaluate(() => { const b = document.getElementById("cluckBtn"); return { st: b.dataset.st, ad: b.getAttribute("aria-disabled") }; });
     await page.evaluate(() => { const b = document.getElementById("cluckBtn"); b.dataset.st = "off"; b.setAttribute("aria-disabled", "true"); });
-    try { await settled(page, "#cluckBtn"); check(await look(page), "aria-disabled=true"); }
+    try { await settled(page, "#cluckBtn"); const s = await look(page);
+      assert.notEqual(s.bg, TANGERINE, `off: still tangerine ${s.bg}`); assert.equal(s.bg, s.chip, `off: background ${s.bg} != --chip ${s.chip}`);
+      assert.equal(s.duck, OFF_INK, `off duck ${s.duck}`); shape(s, "aria-disabled=true"); }
     finally { await page.evaluate(w => { const b = document.getElementById("cluckBtn"); if (w.st === undefined) delete b.dataset.st; else b.dataset.st = w.st;
       if (w.ad === null) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled", w.ad); }, was); }
+    await settled(page, "#cluckBtn");   // the 240 ms duck colour transition back to ready must end before AC5 reads the ink
   });
   await step(`${vp} AC5: duck-line icon 24x24 in --page, hidden label, name Ask Cluck`, async () => {
     const g = await geo(page); assert.ok(g, "no #cluckBtn"); assert.equal(g.href, "#i-duck-line", `svg use href ${g.href}`);
