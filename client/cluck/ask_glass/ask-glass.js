@@ -11,7 +11,7 @@
    Related: client/cluck/ask_glass/ask-glass.css (layers, strip, send button, thinking, fallbacks), client/cluck/cluck.js §ask-field (clAsk, clLockSync, clSend),
    client/shell/fx.js (html.fx-dim gate), client/answer/keyf_glass/keyf-glass.js (a different glass: a static scene on the Key formulas card; same MIT lens recipe, kept apart).
    Fallbacks: html.fx-dim / prefers-reduced-transparency = a solid warm fill (class ag-solid); an SVG filter that fails, or a phone sheet drag = the R3 frost (class ag-frost, ask-glass.css).
-   The optics below are liquidglass (gentpan/liquidglass @ d5db099, MIT). The notice is kept. Changes: wrapped in an IIFE, glassOn also returns the feImage (the thinking light swaps its map). */
+   The optics below are liquidglass (gentpan/liquidglass @ d5db099, MIT). The notice is kept. Changes: wrapped in an IIFE, glassOn also returns the feImage (the thinking light swaps its map), renderLensMap gains a centre magnify term. */
 (function (g) {
 "use strict";
 /* == §engine == */
@@ -29,8 +29,8 @@
  * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- * Copied verbatim: DEFAULTS, detectEngine, profileTable, renderLensMap, rimLight, write, bendScale (the optics + the
- * per-engine scale fixes). Written here: glassOn() below (static lens = whole element, no springs/components).
+ * Copied verbatim: DEFAULTS, detectEngine, profileTable, rimLight, write, bendScale (the optics + the
+ * per-engine scale fixes); renderLensMap adds the centre magnify term. Written here: glassOn() below (static lens = whole element, no springs/components).
  */
 const NS = 'http://www.w3.org/2000/svg';
 const XLINK = 'http://www.w3.org/1999/xlink';
@@ -49,6 +49,7 @@ const DEFAULTS = Object.freeze({
   curvature: 4, // rim profile exponent: 2 = circular, 4 = squircle-like, higher = steeper rim
   ior: 1.5, // index of refraction; shapes how quickly the bend fades from the rim inward
   invert: false, // false = convex lens (magnifies), true = concave (content pushed outward)
+  magnify: 1, // centre scale, >= 1 (ASK-GLASS-TUNE): output radius r samples r / magnify
   chroma: 0.12, // colour fringe; blue bends (1 + chroma)x as far as red. 0 skips the extra passes
   blur: 0, // frost, CSS px
   specular: 0.45, // rim highlight 0..1. 0 skips the pass
@@ -103,8 +104,9 @@ function profileTable(curvature, ior) {
 
 /**
  * Paint the displacement map for a lens into a canvas.
- * Returns { canvas, width, height, scale } — usable by the SVG path (as a data URL) and by WebGL
- * (as a texture), so both renderers share one optical model.
+ * Returns { canvas, width, height, scale, dispMax } — usable by the SVG path (as a data URL) and by
+ * WebGL (as a texture), so both renderers share one optical model. dispMax is the map's largest shift
+ * in CSS px (rim bend + centre magnification): pass it to bendScale so 127 maps to that many px.
  */
 function renderLensMap(options = {}, scale = 1) {
   const p = { ...DEFAULTS, ...options };
@@ -131,6 +133,10 @@ function renderLensMap(options = {}, scale = 1) {
   const lx = Math.cos(angle);
   const ly = Math.sin(angle);
   const dir = p.invert ? -1 : 1;
+  // ASK-GLASS-TUNE: normalise the map by the largest shift, rim bend + centre magnification.
+  const halfDiag = Math.hypot(hw, hh);
+  const magMax = Math.max(0, (1 - 1 / Math.max(1, p.magnify)) * halfDiag);
+  const dispMax = Math.max(0.001, p.refraction + magMax);
 
   // The rounded rectangle is symmetric in both axes: compute the top-left quadrant only and mirror
   // it, flipping the sign of the x bend across the vertical axis and of the y bend across the
@@ -169,8 +175,13 @@ function renderLensMap(options = {}, scale = 1) {
       const s = inset / bezel;
       const m = s >= 1 ? 0 : table[Math.min(N, Math.round(s * N))];
       // Convex glass samples from further inside (towards the centre) near the rim.
-      const bx = Math.round(127 * m * nx * dir);
-      const by = Math.round(127 * m * ny * dir);
+      // ASK-GLASS-TUNE: a radial term adds the centre magnification on top of that bend.
+      const rr = Math.hypot(x, y) || 1;
+      const mag = (1 - 1 / Math.max(1, p.magnify)) * Math.min(rr, halfDiag);
+      const ix = -x / rr;
+      const iy = -y / rr;
+      const bx = Math.max(-127, Math.min(127, Math.round((127 * (p.refraction * m * nx + mag * ix) * dir) / dispMax)));
+      const by = Math.max(-127, Math.min(127, Math.round((127 * (p.refraction * m * ny + mag * iy) * dir) / dispMax)));
 
       // Rim highlight: a crisp line plus a softer inner glow, brightest where the rim faces the
       // light, with a dimmer reflection on the far side.
@@ -189,7 +200,7 @@ function renderLensMap(options = {}, scale = 1) {
     }
   }
   ctx.putImageData(image, 0, 0);
-  return { canvas, width: w, height: h, scale };
+  return { canvas, width: w, height: h, scale, dispMax };
 }
 
 // Blue channel for a rim pixel: `facing` is n·L for its outward normal.
@@ -236,8 +247,9 @@ function glassOn(el, opts = {}) {
   }
   const W = el.offsetWidth, H = el.offsetHeight; p.width = W; p.height = H; p.x = 0; p.y = 0;
   const dpr = window.devicePixelRatio || 1, scale = Math.min(dpr, 2);
-  const url = renderLensMap(p, scale).canvas.toDataURL('image/png');
-  const { scale: k, kx, ky } = bendScale(p.refraction, W, H);
+  const map = renderLensMap(p, scale);
+  const url = map.canvas.toDataURL('image/png');
+  const { scale: k, kx, ky } = bendScale(map.dispMax, W, H);   // ASK-GLASS-TUNE: the map is normalised to bend + magnification
   /* one filter from the lens map: chroma > 0 = 3 displacement passes (fringe), 0 = one pass */
   const mk = (id, chroma) => {
   const f = node('filter', { id, filterUnits: 'objectBoundingBox', x: 0, y: 0, width: 1, height: 1, primitiveUnits: 'objectBoundingBox', 'color-interpolation-filters': 'sRGB' });
@@ -272,7 +284,7 @@ function glassOn(el, opts = {}) {
 /* The bar = the Cluck ask form (.ask.ag) itself. Layers inside it: .g-haze (glow, bleed), .g-copy (the synced copy of the reply, the one filtered node), .g-tint, .g-rim,
    .g-sweep (the unlock light), .g-think (the thinking ring), .g-lock (the locked strip's lock + words); the real field, counter and send button sit above them (ask-glass.css). */
 const D = document, H = D.documentElement;
-const PAR = { invert: false, refraction: 26, bezel: 0.56, curvature: 6, ior: 1, chroma: 0.13, blur: 5, specular: 0.55, specularWidth: 2.5, lightAngle: -25 };   // Tony's glass, exact
+const PAR = { invert: false, refraction: 46, magnify: 1.30, bezel: 0.56, curvature: 6, ior: 1, chroma: (2 * 4) / 46, blur: 6.5, specular: 0.55, specularWidth: 2.5, lightAngle: -25 };   // ASK-GLASS-TUNE: Tony's pick (C, zoom more, less frost): bend 46, 1.30x, 4 px chroma/side, 6.5 px frost
 const LOCKP = { refraction: 10, chroma: 0, specular: 0.25 };   // the locked strip: calm glass
 const RAD = 20, LOCK_RAD = 14;
 const mq = (q) => { try { return g.matchMedia(q).matches; } catch (e) { return false; } };
