@@ -130,7 +130,9 @@ await step("flag off: no mosaic, today's 1px --line edge, no change", async () =
 /* FLOW (question #737): answers flow down, one column count per set (1, or 2 / 3 only when every option measures one line at 16px), equal widths, natural heights, never clipped */
 const flowMeasure = p => p.evaluate(() => {
   const g = document.querySelector("#q .choices"), os = [...g.querySelectorAll(".opt")], rs = os.map(o => o.getBoundingClientRect()), body = document.querySelector("#problem .blocks");
-  return { mode: g.dataset.bento, fill: g.dataset.fill || "", cols: +getComputedStyle(g).getPropertyValue("--bc"), ws: [...new Set(rs.map(r => Math.round(r.width)))], xs: [...new Set(rs.map(r => Math.round(r.left)))].length,
+  const gr = g.getBoundingClientRect(), tops = {}; rs.forEach(r => (tops[Math.round(r.top)] ||= []).push(r));
+  const rowList = Object.values(tops), rowsOk = rowList.every(a => new Set(a.map(r => Math.round(r.width))).size === 1 && Math.abs(a[0].left - gr.left) < 1.5 && Math.abs(a[a.length - 1].right - gr.right) < 1.5);   // every row: equal widths, edge to edge = no hole
+  return { rowsOk, sizes: rowList.map(a => a.length), cols: Math.max(...rowList.map(a => a.length)), mode: g.dataset.bento, fill: g.dataset.fill || "", ws: [...new Set(rs.map(r => Math.round(r.width)))], xs: [...new Set(rs.map(r => Math.round(r.left)))].length,
     fs: [...new Set(os.map(o => getComputedStyle(o.querySelector(".txt")).fontSize))], bodyFs: body ? getComputedStyle(body).fontSize : "16px", sw: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     clip: os.filter(o => { const t = o.querySelector(".txt"), tr = t.getBoundingClientRect(), b = o.getBoundingClientRect(); return tr.bottom > b.bottom - 2 || tr.top < b.top || o.scrollHeight > o.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1; }).length,
     inorder: rs.every((r, i) => !i || r.top > rs[i - 1].top - 2), small: rs.filter(r => r.width < 44 || r.height < 44).length };
@@ -139,14 +141,18 @@ for (const [W, H] of [[390, 844], [360, 740], [768, 844], [1366, 800]]) for (con
   await step(`flow @${W} ${code}: equal widths, one column count, 16px text, no clipping, no h-scroll`, async () => {
     const [c, p] = await open("on", code, W, H), m = await flowMeasure(p);
     assert.equal(m.mode, "flow"); assert.equal(m.fill, "");
-    assert.equal(m.ws.length, 1, "every tile the same width: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
-    assert.equal(m.xs, m.cols, "tiles sit in exactly --bc columns: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["16px"], "choice text = question body size: " + JSON.stringify(m));
+    assert.ok(m.rowsOk, "every row: equal widths, edge to edge, no hole: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
+    assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["16px"], "choice text = question body size: " + JSON.stringify(m));
     assert.equal(m.clip, 0, "nothing clipped: " + JSON.stringify(m)); assert.ok(m.sw, "no h-scroll"); assert.equal(m.small, 0, "tap >= 44");
     if (code === "CALC1_MB02" || code === "CALC1_MB03") assert.equal(m.cols, W >= 1366 ? m.cols : 1, "long sentences stack (1 column) when they do not fit one line");
     await shot(p, `flow-${W}-${code}`);
     await c.close();
   });
 }
+await step("flow: 5 short choices -> 3+2 at 1366 (wide) and 2+2+1 at 390, never a hole; 2..7 fill every row", async () => {
+  const exp = { 1366: { CALC1_MB01: [3, 2] }, 390: { CALC1_MB01: [2, 2, 1] } };
+  for (const W of [390, 1366]) { const [c, p] = await open("on", "CALC1_MB01", W, 844), m = await flowMeasure(p); assert.deepEqual(m.sizes, exp[W].CALC1_MB01, W + " " + JSON.stringify(m)); assert.ok(m.rowsOk, "no hole"); await c.close(); }
+});
 await step("flow: short answers share columns (2+), sentences stack to 1; a picked tile keeps its text clear of the Check arrow", async () => {
   const [c1, p1] = await open("on", "CALC1_MB01", 390, 844); assert.ok((await flowMeasure(p1)).cols >= 2, "short tokens flow in 2+ equal columns"); await c1.close();
   const [c, p] = await open("on", "CALC1_MB02", 360, 740);

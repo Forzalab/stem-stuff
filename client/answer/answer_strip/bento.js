@@ -181,17 +181,33 @@
     pr.remove();
     for (C = 3; C > 1; C--) {
       inner = (R - (C - 1) * GAP) / C - FLOW_PAD;
-      if ((R - (C - 1) * GAP) / C >= FLOW_MINW && chs.length >= C && ws.every(function (w) { return w <= inner - 1; })) return C;
+      if ((R - (C - 1) * GAP) / C >= FLOW_MINW && ws.every(function (w) { return w <= inner - 1; })) return C;
     }
     return 1;
+  }
+  /* MIXED ROWS (user, Nov 24): c = widest column count whose every option fits one line; rows are split as evenly as possible (larger rows first), fewest rows on a tie, so the grid has NEVER a hole:
+     5 @ c=3 -> 3+2, 7 -> 3+2+2, 4 -> 2+2, 3 @ c=2 -> 2+1 (the lone tile spans the full width). A row of k tiles = k equal spans of a 6-column grid; k <= c, so each tile still fits its text. */
+  function flowRows(n, c) {
+    var best = null, k, rows, base, extra, r, i, sz;
+    if (c <= 1) return null;
+    for (k = 2; k <= c; k++) {
+      rows = Math.ceil(n / k); base = Math.floor(n / rows); extra = n % rows; sz = [];
+      for (i = 0; i < rows; i++) sz.push(base + (i < extra ? 1 : 0));
+      r = { sizes: sz, d: sz[0] - sz[rows - 1] };
+      if (!best || r.d < best.d || (r.d === best.d && sz.length < best.sizes.length)) best = r;
+    }
+    return best.sizes;
   }
   function flowLayout(g, chs, R) {
     if (mo) mo.disconnect();
     clear(g);
     var C = flowCols(chs, R);
     cur = { g: g, chs: chs, R: R, flow: true };
-    g.classList.add("bento", "flow"); g.dataset.bento = "flow"; g.style.setProperty("--bc", C);
-    chs.forEach(function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); unfit(o); } });
+    var sizes = flowRows(chs.length, C), spans = [];
+    if (sizes) sizes.forEach(function (k) { for (var j = 0; j < k; j++) spans.push(6 / k); });
+    g.classList.add("bento", "flow"); g.dataset.bento = "flow"; g.style.setProperty("--bc", sizes ? 6 : 1);
+    if (sizes) g.dataset.rows = sizes.join("+"); else delete g.dataset.rows;
+    chs.forEach(function (c, i) { c.style.gridRow = ""; c.style.gridColumn = sizes ? "span " + spans[i] : ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); unfit(o); } });
     chs.forEach(function (c) { var o = c.querySelector(".opt"); if (o) mathFit(o, MZ_MIN); });
     clearLetter(g);
   }
