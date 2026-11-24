@@ -1,7 +1,8 @@
-// GHOST-HYBRID-FROST smoke (Tony Nov 23): a frost layer between the v7 question card's text and the ghost numeral + card background, in FIVE variants (?gv=1..5;
-// no param = 3). Loads each variant at 390 and 1280, hides the text, screenshots the card, and takes the WORST WCAG ratio of the text colour against every background
-// pixel inside the text-line boxes that cross the numeral (>= 4.5 required for EVERY variant). Also checks the numeral is a glass layer (filter on, scrim present),
-// that the variant's frost really exists (one .qfrost layer for 1/2/3/5; one masked backdrop-filter on .qscrim for 4), and that flag off leaves no glass.
+// GHOST-HYBRID-FROST smoke (Tony Nov 23): ONE frost look on the v7 question card — variant 3, the glass lens (a static displacement lens + frost).
+// Loads it at 390 and 1280, hides the text, screenshots the card, and takes the WORST WCAG ratio of the text colour against every background pixel inside
+// the text-line boxes that cross the numeral (>= 4.5 required). Also checks the sheet covers the WHOLE card (inset 0, the card's radius: no inner rect edge),
+// that it is ONE backdrop-filtered layer (phone-safe) using the static lens #qg-lens, that the numeral can still read as a number through it (lens blur in px,
+// numeral paint alpha), that ?gv= is ignored (the variants are gone), and that flag off leaves no glass.
 // Own serve.py, uploaded bank.   node tests/ghost-glass.smoke.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -23,12 +24,10 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 const browser = await launchBrowser(pw);
 let fails = 0;
-const lum = c => { const f = v => (v /= 255) <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
-const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
-async function fresh(ui, vp, gv) {
+async function fresh(ui, vp, q) {
   const phone = vp.width < 500, ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", deviceScaleFactor: 1 });
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
-  const page = await ctx.newPage(); await page.goto(`${BASE}/${ui ? "?ui=v7" + (gv ? "&gv=" + gv : "") : ""}`);
+  const page = await ctx.newPage(); await page.goto(`${BASE}/${ui ? "?ui=v7" + (q || "") : ""}`);
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles({ name: "gg.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
   await page.waitForFunction(() => (document.querySelector("#pcode")?.textContent || "") === "PSY_G12" && !document.querySelector("#freeze").hidden
@@ -36,39 +35,43 @@ async function fresh(ui, vp, gv) {
   await settled(page); await page.waitForTimeout(400);
   return { ctx, page };
 }
-async function measure(vp, gv) {
-  const { ctx, page } = await fresh(true, vp, gv);
+async function measure(vp) {
+  const { ctx, page } = await fresh(true, vp);
   const info = await page.evaluate(() => {
     const p = document.getElementById("problem"), num = p.querySelector(".qghost i:nth-child(2)"), pr = p.getBoundingClientRect();
     const st = getComputedStyle(num), nr = num.getBoundingClientRect(), rows = [];
-    const qf = p.querySelector(":scope > .qfrost"), sc = p.querySelector(":scope > .qscrim");
+    const qf = p.querySelector(":scope > .qfrost"), lens = document.getElementById("qg-lens");
+    const qr = qf && qf.getBoundingClientRect(), qs = qf && getComputedStyle(qf), ps = getComputedStyle(p);
     p.querySelectorAll(".qhead, .qsetup, .qlead").forEach(e => { const rg = document.createRange(); rg.selectNodeContents(e);
       for (const q of rg.getClientRects()) if (q.width > 2 && q.right > nr.left && q.left < nr.right && q.bottom > nr.top && q.top < nr.bottom) rows.push({ x: q.left - pr.left, y: q.top - pr.top, w: q.width, h: q.height, ink: getComputedStyle(e).color }); });
-    return { filter: st.filter, scrim: !!p.querySelector(":scope > .qscrim i"), rows, gv: document.documentElement.dataset.gv,
-      frost: !!qf, frostFilter: qf ? getComputedStyle(qf).backdropFilter : "", scrimMask: sc ? getComputedStyle(sc).maskImage : "", scrimFilter: sc ? getComputedStyle(sc).backdropFilter : "",
-      lens: !!document.getElementById("qg-lens"), lensOn: document.documentElement.dataset.qfLens === "1",
+    const blur = lens && lens.querySelector("feGaussianBlur") ? lens.querySelector("feGaussianBlur").getAttribute("stdDeviation") : "";
+    return { filter: st.filter, scrim: !!p.querySelector(":scope > .qscrim i"), rows, gvAttr: document.documentElement.hasAttribute("data-gv"),
+      frost: !!qf, frostFilter: qf ? qs.backdropFilter : "",
+      box: { x: qr && qr.left - pr.left, y: qr && qr.top - pr.top, w: qr && qr.width, h: qr && qr.height,
+        radius: qs && qs.borderTopLeftRadius, cardRadius: ps.borderTopLeftRadius, cardW: pr.width, cardH: pr.height },
+      lens: !!lens, lensOn: document.documentElement.dataset.qfLens === "1", blur: blur ? parseFloat(blur) * pr.width : -1,
+      paint: (st.backgroundImage.match(/rgba?\([^)]*?,\s*([\d.]+)\)/g) || []).map(s => parseFloat(s.match(/,\s*([\d.]+)\)/)[1])).reduce((a, b) => Math.max(a, b), 0),
       layers: [...p.querySelectorAll("*")].filter(e => { const f = getComputedStyle(e).backdropFilter; return f && f !== "none"; }).length,
-      anim: qf ? getComputedStyle(qf).animationName : (sc ? getComputedStyle(sc).animationName : "none"),
-      box: { x: pr.left, y: pr.top, w: pr.width, h: pr.height } };
+      anim: qf ? getComputedStyle(qf).animationName : "none" };
   });
-  assert.equal(info.gv, String(gv), "html[data-gv] is the picked variant");
+  assert.equal(info.gvAttr, false, "no html[data-gv]: the ?gv variants are gone");
   assert.equal(info.layers, 1, "phone-safe: exactly ONE backdrop-filtered layer under #problem, got " + info.layers);
   assert.equal(info.anim, "none", "the frost never animates");
   assert.ok(info.filter.includes("qg-glass"), "numeral has the glass filter: " + info.filter);
   assert.ok(info.scrim, "scrim pills exist");
-  if (gv === 4) {
-    assert.equal(info.frost, false, "gv4 has no separate frost layer (the pills are the frost)");
-    assert.ok(info.scrimMask.includes("data:image/svg"), "gv4 scrim is masked to the text lines: " + String(info.scrimMask).slice(0, 60));
-    assert.ok(info.scrimFilter && info.scrimFilter !== "none", "gv4 scrim has the one backdrop-filter: " + info.scrimFilter);
-  } else {
-    assert.ok(info.frost, "qv" + gv + " has the frost layer");
-    assert.ok(info.frostFilter && info.frostFilter !== "none", "gv" + gv + " frost has a backdrop-filter: " + info.frostFilter);
-    if (gv === 3 || gv === 5) { assert.ok(info.lens && info.lensOn, "gv" + gv + " has the static lens filter #qg-lens"); assert.ok(info.frostFilter.includes("qg-lens"), "gv" + gv + " frost uses #qg-lens: " + info.frostFilter); }
-  }
+  assert.ok(info.frost, "the frost sheet exists");
+  assert.ok(info.frostFilter.includes("qg-lens"), "the frost uses the static lens #qg-lens: " + info.frostFilter);
+  assert.ok(info.lens && info.lensOn, "the static lens filter #qg-lens is built");
+  assert.ok(Math.abs(info.box.x) < 1 && Math.abs(info.box.y) < 1 && Math.abs(info.box.w - info.box.cardW) < 1 && Math.abs(info.box.h - info.box.cardH) < 1,
+    `the sheet is the WHOLE card (inset 0): sheet ${info.box.w.toFixed(1)}x${info.box.h.toFixed(1)} at ${info.box.x.toFixed(1)},${info.box.y.toFixed(1)} vs card ${info.box.cardW.toFixed(1)}x${info.box.cardH.toFixed(1)}`);
+  assert.equal(info.box.radius, info.box.cardRadius, "the sheet inherits the card's radius");
+  assert.ok(info.blur > 0 && info.blur <= 4, "the lens frost is <= 4px on the numeral (" + info.blur.toFixed(2) + "px)");
+  assert.ok(info.paint >= 0.42, "the numeral body is raised enough to read (" + info.paint + " alpha)");
   assert.ok(info.rows.length, "some text line crosses the numeral");
   await page.addStyleTag({ content: "#problem .blocks, #problem .blocks * { color: transparent !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; } #problem > button { visibility: hidden !important; }" });
   await page.waitForTimeout(150);
-  const shot = await page.screenshot({ clip: { x: info.box.x, y: info.box.y, width: info.box.w, height: info.box.h } });
+  const box = await page.evaluate(() => { const r = document.getElementById("problem").getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+  const shot = await page.screenshot({ clip: { x: box.x, y: box.y, width: box.w, height: box.h } });
   const px = await page.evaluate(async ({ b64, rows }) => {
     const img = new Image(); img.src = "data:image/png;base64," + b64; await img.decode();
     const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0);
@@ -84,14 +87,17 @@ async function measure(vp, gv) {
   await ctx.close(); return px;
 }
 async function step(name, fn) { try { const v = await fn(); console.log("ok  ", name, v ?? ""); } catch (e) { fails++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); } }
-for (const gv of [1, 2, 3, 4, 5]) for (const w of [390, 1280]) await step(`gv${gv} contrast at ${w} (text on numeral, worst pixel >= 4.5)`, async () => {
-  const r = await measure({ width: w, height: w < 500 ? 844 : 800 }, gv);
-  console.log(`     gv${gv} ${w}px: worst contrast ${r.worst.toFixed(2)}:1 over ${r.rows} lines crossing the numeral (ink ${r.inkWorst})`);
+for (const w of [390, 1280]) await step(`contrast at ${w} (text on numeral, worst pixel >= 4.5)`, async () => {
+  const r = await measure({ width: w, height: w < 500 ? 844 : 800 });
+  console.log(`     ${w}px: worst contrast ${r.worst.toFixed(2)}:1 over ${r.rows} lines crossing the numeral (ink ${r.inkWorst})`);
   assert.ok(r.worst >= 4.5, `contrast ${r.worst.toFixed(2)} < 4.5`);
 });
-await step("no gv: variant 3 is the default", async () => {
-  const { ctx, page } = await fresh(true, { width: 390, height: 844 });
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.gv), "3"); await ctx.close();
+await step("?gv= is ignored (one look only)", async () => {
+  const { ctx, page } = await fresh(true, { width: 390, height: 844 }, "&gv=4");
+  const r = await page.evaluate(() => ({ gv: document.documentElement.hasAttribute("data-gv"), frost: !!document.querySelector("#problem > .qfrost"),
+    layers: [...document.querySelectorAll("#problem *")].filter(e => { const f = getComputedStyle(e).backdropFilter; return f && f !== "none"; }).length }));
+  assert.equal(r.gv, false, "?gv=4 must not set html[data-gv]"); assert.ok(r.frost, "the one sheet still renders"); assert.equal(r.layers, 1, "still one filtered layer");
+  await ctx.close();
 });
 await step("flag off: no glass", async () => {
   const { ctx, page } = await fresh(false, { width: 390, height: 844 });

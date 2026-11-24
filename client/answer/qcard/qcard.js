@@ -4,7 +4,7 @@
    - the figure(s), then the topic headline (the sugar title, lowercase), then ONE text block: the setup, then the question sentence (the last sentence of the last text block,
      kept bold); no fold and no inner scroller (ICK PR-A: the card is as tall as its text and the page scrolls), then the small meta row: exam . q#, the Twist chip (app.js twistChip).
    - ASK-PIN (ICK PR-A, F1): on a long card the page scrolls it away until only its last strip, the bold ask, is left; that strip stays pinned at the top, a tap on it scrolls back to the full question.
-   - FROST (§frost, Tony Nov 23): ONE liquid-glass layer between the text block and the card + ghost numeral, picked by ?gv=1..5 (html[data-gv], default 3).
+   - FROST (§frost, Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE card (inset 0), between the card background + ghost numeral and the text.
    Source: brain ui-polish/hintbox/v71/longq (DESIGN.md), ui-v7-decisions QCARD-SWISS v3 (owner picked V3). Looks: qcard.css. */
 (function (g) {
   "use strict";
@@ -12,10 +12,6 @@
   var on = function () { return H.classList.contains("ui-v7"); };
   var ABBR = /(?:\be\.g|\bi\.e|\bvs|\bet al|\bDr|\bMr|\bMrs|\bMs|\bFig|\bapprox|\bNo|\b[A-Z])\.$/;
   var raf = 0;
-  /* GHOST-HYBRID-FROST (Tony Nov 23): ?gv=1..5 picks the frost recipe (html[data-gv]); read ONCE at boot, no param = 3 (glass-lens).
-     qcard.css §frost owns every look; this file only builds the one static lens map and the per-line mask. Flag off = no attribute, no layer. */
-  var GV = (function () { var m = /[?&]gv=([1-5])(?:&|$)/.exec(g.location.search); return m ? +m[1] : 3; })();
-  if (on()) H.setAttribute("data-gv", String(GV));
 
   /* the split point of the last sentence of <p>: { node, off } in a TOP-LEVEL text node (math / inline elements are never cut), or null = the whole p is one sentence */
   function lastSentenceStart(p) {
@@ -114,7 +110,7 @@
     if (!p || !on() || !p.classList.contains("qbr")) { if (sl) sl.remove(); return; }
     glassDefs();
     if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(sl, gb ? gb.nextSibling : p.firstChild); }
-    var cr = p.getBoundingClientRect(), pad = 9, html = "", mk = "";
+    var cr = p.getBoundingClientRect(), pad = 9, html = "";
     p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
       var rg = D.createRange(), rows = []; rg.selectNodeContents(e);
       [].slice.call(rg.getClientRects()).forEach(function (q) {
@@ -125,48 +121,26 @@
       rows.forEach(function (b) {
         var x = b.left - cr.left - pad, y = b.top - cr.top - pad * .7, w = b.right - b.left + 2 * pad, h = b.bottom - b.top + 1.4 * pad;
         html += '<i style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px"></i>';
-        mk += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="' + (h / 2).toFixed(1) + '"/>';
       });
     });
     if (sl.innerHTML !== html) sl.innerHTML = html;
-    /* GV4 frosts the pills instead of darkening them: ONE masked backdrop-filter on .qscrim (never one filter per pill = many layers). */
-    if (GV === 4) {
-      var msvg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + cr.width.toFixed(1) + '" height="' + cr.height.toFixed(1) + '">' + mk + '</svg>';
-      sl.style.webkitMaskImage = sl.style.maskImage = 'url("data:image/svg+xml,' + encodeURIComponent(msvg) + '")';
-      sl.style.webkitMaskSize = sl.style.maskSize = "100% 100%";
-      H.setAttribute("data-qf4", "1");
-    } else if (sl.style.maskImage) { sl.style.webkitMaskImage = sl.style.maskImage = ""; H.removeAttribute("data-qf4"); }
   }
 
-  /* == §frost == GHOST-HYBRID-FROST (Tony Nov 23): a SUBTLE liquid-glass layer between the question text and everything behind it (card background + ghost numeral).
-     ONE element, the size of the text block (headline + setup + ask), z 0 under .blocks (z 1) and above .qghostbox; text stays sharp on top. Variants live in qcard.css:
-     gv1 blur 4 + 4% warm film, gv2 blur 8 + saturate 1.3 + 6% film + 1px rim, gv3 static displacement lens (ask-glass map math: magnify 1.04, small bend) + blur 6,
-     gv4 no layer (the scrim pills are the frost), gv5 gv3 + the §ghost-glass lit rim. Static: nothing animates, no filter on a moving child. */
-  var textBox = function (p) {
-    var cr = p.getBoundingClientRect(), u = null;
-    p.querySelectorAll(":scope > .blocks > .qhead, :scope > .blocks > .qtext").forEach(function (e) {
-      var r = e.getBoundingClientRect();
-      if (r.width < 2 || r.height < 2) return;
-      u = u ? { l: Math.min(u.l, r.left), t: Math.min(u.t, r.top), r: Math.max(u.r, r.right), b: Math.max(u.b, r.bottom) }
-            : { l: r.left, t: r.top, r: r.right, b: r.bottom };
-    });
-    return u && { left: u.l - cr.left - 10, top: u.t - cr.top - 6, width: u.r - u.l + 20, height: u.b - u.t + 12 };
-  };
+  /* == §frost == GHOST-HYBRID-FROST (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE question card (inset 0, the card's radius, qcard.css §frost),
+     between the card background + ghost numeral and the text. Nothing to measure: the sheet is the card. qcard.css: a 3px frost as the no-SVG-filter fallback,
+     swapped for the static displacement lens (#qg-lens) once the map is built. Flag off = no layer. */
   function frost() {
     var p = D.getElementById("problem"), el = p && p.querySelector(":scope > .qfrost");
-    if (!p || !on() || !p.classList.contains("qbr") || GV === 4) { if (el) el.remove(); H.removeAttribute("data-qf-lens"); return; }
-    var b = textBox(p);
-    if (!b) { if (el) el.remove(); return; }
+    if (!p || !on() || !p.classList.contains("qbr")) { if (el) el.remove(); H.removeAttribute("data-qf-lens"); return; }
     if (!el) {
       el = D.createElement("div"); el.className = "qfrost"; el.setAttribute("aria-hidden", "true");
       var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(el, gb ? gb.nextSibling : p.firstChild);
     }
-    el.style.left = b.left.toFixed(1) + "px"; el.style.top = b.top.toFixed(1) + "px";
-    el.style.width = b.width.toFixed(1) + "px"; el.style.height = b.height.toFixed(1) + "px";
-    if (GV === 3 || GV === 5) lens(b.width, b.height);
+    var r = p.getBoundingClientRect();
+    lens(r.width, r.height);
   }
   /* the lens map is liquidglass's displacement map (gentpan @ d5db099, MIT, via ask-glass.js §engine): a convex profile bend (refraction px at the rim) +
-     a radial magnify term sampling towards the centre. Static, one map per layer size; chroma and specular are off (gv5's rim is paint, qcard.css). */
+     a radial magnify term sampling towards the centre. Static, one map per layer size; chroma and specular are off. */
   var ENG = (function () {
     var br = navigator.userAgentData && navigator.userAgentData.brands;
     if (br && br.some(function (x) { return /Chromium/.test(x.brand); })) return "blink";
@@ -175,7 +149,7 @@
     if (/AppleWebKit\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua)) return "webkit";
     return "blink";
   })();
-  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 6, id: "qg-lens", sig: "" };
+  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 3, id: "qg-lens", sig: "" };   /* blur 3 (pick 3 tune, Tony Nov 23: the numeral must read through the glass, was 6) */
   function lensProfile(curv, ior) {
     var N = 512, t = new Float32Array(N + 1), max = 0, i;
     for (i = 0; i <= N; i++) {
@@ -188,7 +162,7 @@
   }
   var LPROF = lensProfile(LENS.curv, LENS.ior);
   function lensMap(w0, h0) {
-    var w = Math.max(2, Math.round(w0)), h = Math.max(2, Math.round(h0)), sc = Math.min(1, Math.sqrt(9e4 / (w * h)));   // big layers: half-res map, stretched (the 6px frost hides it)
+    var w = Math.max(2, Math.round(w0)), h = Math.max(2, Math.round(h0)), sc = Math.min(1, Math.sqrt(9e4 / (w * h)));   // big layers: half-res map, stretched (the 3px frost hides it)
     var mw = Math.max(2, Math.round(w * sc)), mh = Math.max(2, Math.round(h * sc));
     var cv = D.createElement("canvas"); cv.width = mw; cv.height = mh;
     var ctx = cv.getContext("2d"), im = ctx.createImageData(mw, mh), px = im.data;
