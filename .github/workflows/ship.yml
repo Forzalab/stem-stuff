@@ -177,9 +177,8 @@ jobs:
             exit 0
           fi
           exit "$rc"
-      # BUG-SHIP-ORDER (2026-11-24): a late finisher used to overwrite a NEWER live commit (live went 88b4864 -> 8c9ec33). Same
-      # version.json read as the "already live" step: no live sha = fail open; only a strict ancestor of live refuses, and that is a
-      # green skip (notice), never a red job, so a stale run cannot block a fresh one.
+      # BUG-SHIP-ORDER: a late finisher used to overwrite a NEWER live commit; a target older than live is a green skip, not a red job.
+      # Same version.json read as "already live"; no live sha = fail open (ship-order.sh prints why).
       - name: live order (never go backward)
         id: order
         if: inputs.mode == 'live' && steps.gate.outputs.skip != 'true' && steps.live.outputs.already != 'true'
@@ -278,8 +277,7 @@ jobs:
           echo "lkg=$TARGET" >> "$GITHUB_OUTPUT"
           curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/deployments?app=stem-stuff&target=production&state=READY&limit=10&slug=forzalabs-projects" \
             | jq '[.deployments[] | {id: .uid, url: ("https://" + .url), sha: (.meta.shipSha // null)}]' > deploys.json
-          # BUG-SHIP-ORDER (2026-11-24): rollback may go backward only while live IS the red sha; live already a strict descendant of it
-          # means a newer commit replaced the red one, so redeploying the lkg would copy the same backward move. No `bad` (manual) = unchanged.
+          # BUG-SHIP-ORDER: rollback may go backward only while live IS the red sha; live past it means a newer commit replaced it.
           LIVE="$(jq -r '.[0].sha // empty' deploys.json)"
           if [ -n "$BAD" ]; then
             rc=0
