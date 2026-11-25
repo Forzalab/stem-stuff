@@ -276,6 +276,23 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:is(:disabled, [aria-disab
   html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
 }
 
+/* == §ib5-key == IB-5 SOFT LIFT, MULTI KEY OUTSIDE (Tony Nov 25; SOFT-LIFT-SPEC §5 §13; grill Q4a): each multi part's live .send
+   moved OUTSIDE its field, 12px to the right, 60x60, the SAME 18px squircle as the single box's #ansGo (§ib1-key), no second element.
+   The DOM keeps the button inside the .ff (app.js renders it live, partEls / IB-3 / IB-4 read it there); only its paint moves.
+   One key per part; the row's reserved 60px column (strip.css) keeps the field width fixed while the key is hidden. */
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send {
+  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
+  width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0;
+  display: grid; place-items: center; border: 0; border-radius: calc(18px * var(--r-k));
+  background: var(--chip); color: var(--ink); box-shadow: none; transition: none;
+}
+@supports (corner-shape: superellipse(2)) { html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send { corner-shape: superellipse(1.52); } }
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send .ico { display: none; }   /* the sprite i-go is 2px / 14x14; the inline 24-grid arrow is the single key's (app.js IB1_GO) */
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send .ib1-go { display: block; width: 24px; height: 24px; }
+@media (hover: hover) {
+  html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
+}
+
 /* IB-3 (SOFT-LIFT §6, grill Q1a): while a TYPED answer is being checked the box says "thinking"; its Check key only dims.
    app.css "grading wait" draws a ring in every .send and hides its arrow; typed answers keep the arrow and drop the ring.
    MC keeps the live spinner untouched (choose-all-spam.pw pins it). */
