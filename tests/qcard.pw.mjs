@@ -95,11 +95,12 @@ try {
         const sp = document.createElement("div"); sp.style.height = "900px"; document.querySelector("#freezeIn").appendChild(sp);   // the answers under this card are short: give the page the room a real long question has below it (a card only stays pinned while the page under it is long enough)
         window.scrollTo(0, 100000); await new Promise(r => setTimeout(r, 400));
         const r = lead.getBoundingClientRect(), c = p.getBoundingClientRect();
-        return { base, y: scrollY, leadTop: r.top, leadBottom: r.bottom, cardTop: c.top, cardBottom: c.bottom, pinned: p.classList.contains("qpinned"), weight: q(lead, "fontWeight"), lh: q(lead.querySelector("p") || lead, "lineHeight"), shadow: q(lead, "boxShadow"), border: q(lead, "borderTopWidth"), pad: q(document.documentElement, "scrollPaddingTop") };
+        return { base, y: scrollY, leadTop: r.top, leadBottom: r.bottom, cardTop: c.top, cardBottom: c.bottom, padB: parseFloat(q(p, "paddingBottom")), pinned: p.classList.contains("qpinned"), weight: q(lead, "fontWeight"), lh: q(lead.querySelector("p") || lead, "lineHeight"), shadow: q(lead, "boxShadow"), border: q(lead, "borderTopWidth"), pad: q(document.documentElement, "scrollPaddingTop") };
       });
       assert.deepEqual([o.base.fold, o.base.max, o.base.ov === "auto"], [0, "none", false], "no fold, no cap: " + JSON.stringify(o.base));
       assert.ok(o.base.pad && o.base.qpin && o.base.pos === "sticky", "the long card engages the pin: " + JSON.stringify(o.base));
-      assert.ok(o.pinned && o.leadTop >= -1 && o.leadBottom <= 420 * 0.4 && o.cardBottom <= 420 * 0.4, "the ask strip is stuck at the top, the rest of the card scrolled away: " + JSON.stringify(o));
+      // typescale Major Third, Tony Nov 25: the ask is step 1 (20/28 bold, 3 lines here = 84px, was 16 x 1.35 = 2 lines), so the card's bottom edge sits ~184px down a 420 viewport, past the old 40% (168). The lead stays inside 40%; the card bottom is now bounded by what it is: the strip + the card's own bottom padding, nothing else of the card left on screen.
+      assert.ok(o.pinned && o.leadTop >= -1 && o.leadBottom <= 420 * 0.4 && o.cardBottom <= o.leadBottom + o.padB + 1, "the ask strip is stuck at the top, the rest of the card scrolled away: " + JSON.stringify(o));
       assert.ok(parseFloat(o.pad) > 20, "scroll-padding-top = the strip height while pinned (WCAG 2.4.11): " + o.pad);
       assert.ok(+o.weight >= 600 && o.shadow === "none" && o.border === "0px", "bold ask, no box / shadow: " + JSON.stringify([o.weight, o.shadow, o.border]));
       await page.mouse.click(60, Math.round(o.cardBottom / 2));   // a tap on the visible strip (the card's bottom edge is the strip's)

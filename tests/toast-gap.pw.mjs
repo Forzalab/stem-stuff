@@ -65,7 +65,7 @@ async function beat(p, o, w, mood, opts = {}) {
   assert.equal(g.src, `client/rewards/icons/duck8-${mood}.webp`, `${w} ${mood}: duck img`);
   geom(g, `${w} ${mood}`);
   assert.ok(g.words.right <= g.card.right - 40 + 1, `${w} ${mood}: no word under the close`);
-  if (w < 600) assert.ok(g.titleH <= 25, `${w} ${mood}: title is one line at 390, got ${g.titleH}px`);
+  if (w < 600) assert.ok(g.titleH <= ONE_LINE, `${w} ${mood}: title is one line at 390, got ${g.titleH}px`);
   return g;
 }
 /* TOAST-DYN rule (approved design change, replaces the fixed 80 box / gap 32): box square, 44 + gap 12 for 1 line, 64 + gap 16 for 2-3 lines */
@@ -75,6 +75,8 @@ function geom(g, tag) {
   assert.ok(Math.abs(g.words.left - (g.box.right + gap)) <= 1, `${tag}: words start at box right + ${gap} (box ${g.box.right}, words ${g.words.left})`);
   assert.ok(g.x.width >= 44 && g.x.height >= 44, `${tag}: close hit area >= 44`);
 }
+/* one title line = its line-height + 1px of rounding. typescale Major Third, Tony Nov 25: the title is step 1, 20/28 (was 18/24, so 25); two lines would be 56 */
+const ONE_LINE = 29;
 const SH = (p, name) => p.screenshot({ path: join(SHOTS, name) });
 
 for (const w of [390, 1366]) {
@@ -85,7 +87,7 @@ for (const w of [390, 1366]) {
     assert.ok(g && g.row && g.src.endsWith("duck8-start.webp"), "start row");
     assert.equal(g.text, "Ready when you are", "start line");
     geom(g, "start"); assert.ok(g.one, "start is 1 line");
-    if (w < 600) assert.ok(g.titleH <= 25, "start title one line at 390");
+    if (w < 600) assert.ok(g.titleH <= ONE_LINE, "start title one line at 390");
     await SH(p, `toast-start-${w}.png`);
     assert.deepEqual(errs, [], "no page errors");
     await ctx.close();
@@ -102,7 +104,7 @@ for (const w of [390, 1366]) {
     assert.ok(g.src.endsWith("duck8-landmark.webp"), "landmark duck");
     assert.equal(g.text, "1 question done.", "title");
     geom(g, "landmark"); assert.ok(!g.one, "title + subtitle = multi");
-    if (w < 600) assert.ok(g.titleH <= 25, "landmark title one line");
+    if (w < 600) assert.ok(g.titleH <= ONE_LINE, "landmark title one line");
     await SH(p, `toast-landmark-${w}.png`);
     await ctx.close();
   });
