@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 # What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
 # through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
 CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip", "Doodle"}   # Doodle: a Steps anchor (stepper, Nov 8)
-GEO_CAPS = {"pts": 16, "marks": 16, "labels": 6}   # 16 (stepper iteration 2): a cube = 7 corners + its force arrows
+GEO_CAPS = {"pts": 16, "marks": 16, "labels": 16}   # 16 (stepper iteration 2): a cube = 7 corners + its force arrows
 GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1, "rect": 2, "poly": 3}   # poly: at least 3; rect / poly: the leading point names, then an optional label, then fill   # name -> point / number args before the text
 GEO_TEXT = {"dim", "angle", "arrow", "label", "rect", "poly"}
 PT_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9']{0,3})\s+(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$")
