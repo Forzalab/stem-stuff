@@ -1908,7 +1908,7 @@ function shutPart(i, ok) {
 function partFeedback(i, r, typed) {
   const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
-  if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
+  if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = !root.classList.contains("ui-v7"); vmark(box, "i-x"); }   // the box says it: no words (IB-4: ui-v7 keeps the dimmed key)
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
@@ -2365,7 +2365,7 @@ function feedback(r, typed) {
   const ff = S.prob.type === "mc" ? null : $("#ff");
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); ff.classList.add("lock"); vmark(ff, "i-lock"); }
-  else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = !waiting(); vmark(ff, "i-x"); }   // the 10 s second-try wait: the Check stays up as the progress bar
+  else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = root.classList.contains("ui-v7") ? false : !waiting(); vmark(ff, "i-x"); }   // the 10 s second-try wait: the Check stays up as the progress bar (IB-4: ui-v7 keeps it dimmed after the wait too)
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;

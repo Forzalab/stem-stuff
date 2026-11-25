@@ -266,3 +266,42 @@ html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(
     filter: none; transition: none;
   }
 }
+
+/* ===== IB-4 SOFT LIFT, VERDICT (Tony Nov 24; SOFT-LIFT-SPEC §0.3 §7; mock PICK-soft-lift.src.html right/wrong). html.ui-v7 only.
+   The aurora (IB-3) freezes at its last head angle and the verdict colour starts as the SAME ~173deg arc, recoloured in place; then the
+   ring closes in 440ms. COMPOSITOR RULE: no @property, no per-frame conic repaint. The three verdict arcs are fixed conic gradients
+   under the same static 3.5px mask; only their transform rotates (WAAPI, built per field in strip.js). A is the frozen aurora arc; B and
+   C are the two closing arcs (172.8deg + the last 15.48deg), their extra tail always covered by the layer behind, so the union is one
+   unbroken, growing arc. The ring STAYS as the final outline for right and wrong; the real .ff border is never recoloured (§0.3). The
+   tick / cross waits for the close and fades .25s (strip.js adds .ib4-done on the finished promise). Reduced motion: the same layers
+   at their final rotations, no motion. ===== */
+html.ui-v7 #q .ib4-ring {
+  position: absolute; z-index: 2; inset: -1.5px; border-radius: inherit; corner-shape: inherit;
+  padding: 3.5px; pointer-events: none; overflow: hidden;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+html.ui-v7 #q .ib4-ring[data-v="ok"] { --ib4-c: var(--correct); }
+html.ui-v7 #q .ib4-ring[data-v="bad"] { --ib4-c: var(--wrong); }
+html.ui-v7 #q .ib4-arc {
+  position: absolute; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
+  translate: -50% -50%; border-radius: 50%; pointer-events: none; will-change: transform;
+}
+html.ui-v7 #q .ib4-a { background: conic-gradient(from 0deg, var(--ib4-c) 0 48.3%, transparent 48.3%); }   /* 173.88deg: the frozen aurora arc */
+html.ui-v7 #q .ib4-b { background: conic-gradient(from 0deg, var(--ib4-c) 0 48%, transparent 48%); }       /* 172.8deg: the first close */
+html.ui-v7 #q .ib4-c { background: conic-gradient(from 0deg, var(--ib4-c) 0 4.3%, transparent 4.3%); }     /* 15.48deg: the last close */
+/* the verdict icon waits for the ring: hidden while the sweep runs, fading .25s once strip.js marks the field done */
+html.ui-v7 #q .ff[data-ib4="sweep"]:not(.ib4-done) > .vk { opacity: 0; }
+html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk { animation: ib4-fade .25s ease-out both; }
+html.ui-v7 #q .ff[data-ib4="still"] > .vk { opacity: 1; animation: none; }
+@keyframes ib4-fade { from { opacity: 0; } to { opacity: 1; } }
+/* the hint pops down at the sweep start (mock .hint pop): the single typed hint is #fb's card, the multi hint is .phint's */
+@keyframes ib4-pop { from { opacity: 0; transform: translateY(-4px); } }
+html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
+html.ui-v7 .mparts .phint .cluck { animation: ib4-pop .3s cubic-bezier(.22,.61,.36,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  html.ui-v7 #q .ff[data-ib4] > .vk { animation: none; opacity: 1; }
+  html.ui-v7 #q .ib4-arc { will-change: auto; }
+  html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
+  html.ui-v7 .mparts .phint .cluck { animation: none; }
+}

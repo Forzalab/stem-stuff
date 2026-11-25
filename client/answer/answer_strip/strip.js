@@ -310,7 +310,12 @@
       var t = Math.atan2(x, -y) * 180 / Math.PI;
       return t < 0 ? t + 360 : t;
     }
-    return { P: P, ang: ang };
+    function pos(a) {                                          // angle -> px along the outline (IB-4's handover + keyframes)
+      a = ((a % 360) + 360) % 360; var lo = 0, hi = P;
+      for (var i = 0; i < 24; i++) { var m = (lo + hi) / 2; if (ang(m) < a) lo = m; else hi = m; }
+      return lo;
+    }
+    return { P: P, ang: ang, pos: pos };
   }
   function ib3Checking(q) {
     var out = [];
@@ -362,11 +367,110 @@
     D.querySelectorAll(".ib3-ring").forEach(function (e) {
       var f = e.parentElement; if (f && ib3.has(f)) live.push(f); else e.remove();
     });
-    live.forEach(function (f) { if (want.indexOf(f) < 0) ib3Stop(f); });
+    live.forEach(function (f) {
+      if (want.indexOf(f) >= 0) return;
+      var a0 = ib4Angle(f);                                   // read the aurora's current head BEFORE ib3Stop cancels it
+      ib3Stop(f);
+      if (a0 != null) ib4Sweep(f, a0);                        // IB-4: the verdict ring starts as that arc (judged fields only)
+    });
     want.forEach(function (f) { if (!ib3.has(f)) ib3Start(f); });
   }
   var ib3q = false;
-  function ib3Later() { if (!ib3q) { ib3q = true; queueMicrotask(function () { ib3q = false; ib3Sync(); }); } }
+  function ib3Later() { if (!ib3q) { ib3q = true; queueMicrotask(function () { ib3q = false; ib3Sync(); ib4Sync(); }); } }
+
+  /* IB-4 (SOFT-LIFT-SPEC §0.3 §7; mock PICK-soft-lift.src.html right/wrong): VERDICT RING on the two typed fields, html.ui-v7 only.
+     The aurora's last head angle (read off the running .ib3-spin) is frozen; the verdict colour starts as the SAME ~173deg arc (layer A,
+     static) and the ring closes by rotating two fixed conic arcs under the same static 3.5px mask (transform-only, no @property, no
+     conic repaint per frame):
+       A: 173.88deg, static at a0-173.88 (the frozen aurora arc, recoloured in place; 1.08deg of tail overlap for the final seam)
+       B: 172.8deg,  rotates from a0-172.8 to a0  -> reveals a0..a0+172.8 (its extra tail always sits under A)
+       C: 15.48deg,  rotates from a0-15.48 to a0+171.72 -> reveals the last a0+172.8..a0+187.2 (its extra tail sits under B)
+     Both rotations share 32 perimeter-spaced keyframes (even px/s on every side) and one easing cubic-bezier(.3, .3k, .2, 1) with
+     k = (aurora px/s * 440ms) / (px left to close): the head leaves at the aurora's pace. 440ms, no delay. The ring STAYS as the
+     outline for right and wrong; the real border is never touched. The tick/cross waits for the close (the finished promise), then
+     fades .25s. Reduced motion: the same layers at their final rotations, no motion. The ring is the property of the verdict: it goes
+     when the verdict does (typing after a miss / a rebuilt question). */
+  function ib4Angle(f) {
+    var sp = f.querySelector(":scope > .ib3-ring .ib3-spin"); if (!sp) return null;
+    var cs = getComputedStyle(sp).transform; if (!cs || cs === "none") return 0;
+    try { var m = new DOMMatrix(cs), r = Math.atan2(m.b, m.a) * 180 / Math.PI; return r < 0 ? r + 360 : r; } catch (e) { return 0; }
+  }
+  function ib4Judge(f) {
+    if (!V7() || f.classList.contains("proof") || f.classList.contains("rbox")) return "";
+    var c = f.classList;
+    if (c.contains("ok")) return "ok";                                   // the verdict classes ARE the state; a stale .vk stays in the DOM after a retype
+    return c.contains("bad") || c.contains("lock") || c.contains("shut") ? "bad" : "";
+  }
+  function ib4Drop(f, ring) {
+    if (ring) ring.remove();
+    if (f) { f.removeAttribute("data-ib4"); f.classList.remove("ib4-done"); }
+  }
+  function ib4Sweep(f, a0, still) {
+    var want = ib4Judge(f);
+    if (!V7() || !want) return;
+    var old = f.querySelector(":scope > .ib4-ring");
+    if (old && old.dataset.v !== want) { ib4Drop(f, old); old = null; }   // a re-press with unchanged text can land a different verdict: rebuild, don't keep the old colour
+    if (old) return;
+    var w = f.offsetWidth, h = f.offsetHeight;
+    if (!w || !h) return;
+    var E = edge(w, h), P = E.P, LA = 173.88, LB = 172.8, LC = 15.48;
+    var ring = D.createElement("div");
+    ring.className = "ib4-ring"; ring.dataset.v = want; ring.dataset.a0 = (+a0 || 0).toFixed(2);
+    ring.setAttribute("aria-hidden", "true");
+    function arc(cls, len) {
+      var i = D.createElement("i"); i.className = "ib4-arc " + cls; i.dataset.len = len; i.setAttribute("aria-hidden", "true");
+      ring.append(i); return i;
+    }
+    var A = arc("ib4-a", LA), B = arc("ib4-b", LB), C = arc("ib4-c", LC);
+    var set = function (el, deg) { el.style.transform = "rotate(" + (+deg).toFixed(3) + "deg)"; };
+    set(A, a0 - LA); set(B, a0 - LB); set(C, a0 - LC);            // t = 0: every head sits on the frozen aurora head
+    f.append(ring);
+    if (still || RM.matches) {                                    // restored / reduced motion: the closed ring, no motion
+      set(B, a0); set(C, a0 + 187.2 - LC);
+      ring.classList.add("ib4-done", "ib4-still");
+      f.dataset.ib4 = "still"; f.classList.add("ib4-done");
+      return;
+    }
+    f.dataset.ib4 = "sweep"; f.classList.remove("ib4-done");
+    var s0 = E.pos(((a0 % 360) + 360) % 360), s1 = E.pos((((a0 + 187.2) % 360) + 360) % 360);
+    if (s1 <= s0) s1 += P;
+    var dist = s1 - s0;
+    if (!(dist > 0)) { ib4Drop(f, ring); return; }
+    var N = 32, kb = [], kc = [], prev = 0;
+    for (var i = 0; i <= N; i++) {
+      var hp = dist * i / N, ang = E.ang((s0 + hp) % P);
+      var d = (ang - a0) % 360; if (d < 0) d += 360;
+      if (i === 0) d = 0; else if (d < prev && d + 360 - prev < 180) d += 360;
+      if (d < prev) d = prev;
+      prev = d;
+      kb.push({ transform: "rotate(" + (a0 - LB + Math.min(d, LB)).toFixed(3) + "deg)", offset: i / N });
+      kc.push({ transform: "rotate(" + (a0 - LC + d).toFixed(3) + "deg)", offset: i / N });
+    }
+    var lap = Math.min(2600, Math.max(1600, P / .475)), aurora = P / lap;   // px per ms (lap is ms)
+    var k = Math.min(1, aurora * 440 / dist), ease = "cubic-bezier(.3," + (.3 * k).toFixed(3) + ",.2,1)";
+    var opt = { duration: 440, easing: ease, fill: "forwards" };
+    if (!B.animate) { set(B, a0); set(C, a0 + 187.2 - LC); ring.classList.add("ib4-done"); f.classList.add("ib4-done"); return; }
+    var anB = B.animate(kb, opt), anC = C.animate(kc, opt);
+    Promise.all([anB.finished, anC.finished]).then(function () {   // the icon starts only after the ring has closed
+      if (!ring.isConnected) return;
+      ring.classList.add("ib4-done"); f.classList.add("ib4-done");
+    }).catch(function () { /* cancelled: the verdict changed, or a test froze it */ });
+  }
+  function ib4Sync() {
+    var q = $("#q");
+    if (!q || !V7()) { D.querySelectorAll(".ib4-ring").forEach(function (r) { ib4Drop(r.parentElement, r); }); return; }
+    var fields = [];
+    var one = q.querySelector(":scope > .ff#ff:not(.proof):not(.rbox)");
+    if (one) fields.push(one);
+    q.querySelectorAll(".mparts .part > .ff:not(.rbox)").forEach(function (f) { fields.push(f); });
+    q.querySelectorAll(".ib4-ring").forEach(function (r) {
+      var f = r.parentElement, want = f && f.classList.contains("ff") ? ib4Judge(f) : "";
+      if (!want || r.dataset.v !== want) ib4Drop(f, r);   // verdict changed under the same ring (ok vs bad/lock): rebuild below
+    });
+    fields.forEach(function (f) {
+      if (ib4Judge(f) && !f.querySelector(":scope > .ib4-ring")) ib4Sweep(f, 0, true);   // a restored verdict shows the closed ring
+    });
+  }
   function ib3Watch() {
     var mo3 = new MutationObserver(ib3Later);
     mo3.observe(D.documentElement, { attributes: true, attributeFilter: ["class"] });
