@@ -71,7 +71,7 @@
   --body: var(--card); --ramp: var(--card); --knock: rgb(11 20 34 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* TYPESCALE (Major Third 1.25, typescale.com): size = 16 * 1.25^n, leading snaps to a 4px grid = ceil(size * 1.25 / 4) * 4, body leading 24.
      ONE scale for the whole app, the same at every width (the old fine-pointer desktop bumps of --t-* are gone). Floor 12px for anything readable:
-     step -2 (10.24) is decorative only (the code line-number gutter). The old --t-* names below point at these steps, so call sites keep working.
+     step -2 (10.24) is decorative only. The old --t-* names below point at these steps, so call sites keep working.
      Map of every old size -> step: scratchpad/qtokens/MAP.md. */
   --fs--2: 0.64rem;       --lh--2: 16px;   /* 10.24 decorative only */
   --fs--1: 0.8rem;        --lh--1: 16px;   /* 12.8  meta, ticks, tags, captions */
@@ -490,7 +490,7 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
    row keeps the hang indent (text-indent/padding of .l are untouched). Flag off: unchanged (no numbers on phones). */
 @media (max-width: 480px) {
   html.ui-v7 .cb { --g: 1.5ch; }
-  html.ui-v7 .cb code .l::before { content: counter(ln); position: static; display: inline-block; box-sizing: border-box; width: var(--g); margin: 0 var(--s2) 0 calc(-1 * (var(--g) + var(--s2))); font-size: var(--fs--2); line-height: 1; color: var(--dim, var(--muted)); vertical-align: baseline; }
+  html.ui-v7 .cb code .l::before { content: counter(ln); position: static; display: inline-block; box-sizing: border-box; width: var(--g); margin: 0 var(--s2) 0 calc(-1 * (var(--g) + var(--s2))); font-size: 9px; /* code line-number gutter stays 9px: decorative, off-scale on purpose (codeblock-ln smoke) */ line-height: 1; color: var(--dim, var(--muted)); vertical-align: baseline; }
 }
 .cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
 .cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
