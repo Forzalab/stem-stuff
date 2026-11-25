@@ -72,6 +72,12 @@ const FILE = { v: 1, problems: [
   { code: "PSY_C1A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
     choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
     wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
+  /* IB-7's own codes: the miss hint card's gap under the typed box (single + multi), so no earlier step has tried them. */
+  { code: "PSY_G1A", type: "num", how: "Number only.", body: T("Find the magnitude of the block's acceleration."), answer: "3.2", unit: "m/s^2", wish: true },
+  { code: "PSY_G2A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
+    { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
+    { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
+  ] },
 ] };
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES, STEM_TODAY: "2026-11-24" }, stdio: "ignore" });
 await serverUp(BASE);
@@ -236,6 +242,17 @@ const iconOf = (page, sel = "#q .ff") => page.evaluate(s => {
 }, sel);
 /* finish a paused sweep so strip.js's finished promise adds .ib4-done (the icon's signal) */
 const finishRing = page => page.evaluate(() => document.querySelectorAll("#q .ib4-arc").forEach(el => el.getAnimations().forEach(a => a.finish())));
+/* IB-7: the mock's own gap, box bottom -> hint card top. PICK-soft-lift.src.html, #states [data-force="wrong"]:
+   the hint's margin-top is 12 and the field row ends at the box, measured 12 at 390 and 1280. */
+const MOCK_GAP = 12;
+const hintGapOf = page => page.evaluate(() => {
+  const multi = document.querySelector("#q .mparts .part.hinted");
+  const box = multi ? multi.querySelector(".ff") : document.querySelector("#q > .ff#ff");
+  const card = multi ? multi.querySelector(".phint .cluck") : document.querySelector("#fb > .cluck");
+  if (!box || !card) return { err: "no box or hint card", box: !!box, card: !!card };
+  const b = box.getBoundingClientRect(), c = card.getBoundingClientRect();
+  return { gap: +(c.top - b.bottom).toFixed(1), boxBottom: +b.bottom.toFixed(1), cardTop: +c.top.toFixed(1), inPhint: !!card.closest(".phint") };
+});
 /* IB-4: the aurora's current head angle (the .ib3-spin rotation); the verdict ring must start there. */
 const auroraAt = page => page.evaluate(() => {
   const s = document.querySelector("#q .ib3-ring .ib3-spin, #q .mparts .part .ib3-ring .ib3-spin");
@@ -349,6 +366,17 @@ const edgeRatio = (page, sel) => page.evaluate(s => {
   const edge = parse(cs.borderTopColor), fill = parse(cs.backgroundColor);
   return { ratio: edge && fill && surround ? ratio(over(edge, fill), surround) : null, edge: cs.borderTopColor, fill: cs.backgroundColor, surround: `rgb(${surround.r} ${surround.g} ${surround.b})` };
 }, sel);
+/* EDGE (Nov 25 token fix): the typed field's edge is the SOLID --line, not an alpha tint of it (87% failed 3:1: 2.99 page /
+   2.76 card / 2.91 field; solid = 3.64 / 3.25 / 3.49). Compares the computed border colour to a probe painted var(--line);
+   canvas gives the alpha, so a color-mix tint cannot pass. */
+const edgeLine = (page, sel) => page.evaluate(s => {
+  const ff = document.querySelector(s), cv = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  const rgba = t => { cv.clearRect(0, 0, 1, 1); cv.fillStyle = "#000"; cv.fillStyle = String(t); cv.fillRect(0, 0, 1, 1); const d = cv.getImageData(0, 0, 1, 1).data; return { rgb: d[0] + "," + d[1] + "," + d[2], a: d[3] }; };
+  const probe = document.createElement("i"); probe.style.color = "var(--line)"; ff.append(probe);
+  const line = getComputedStyle(probe).color; probe.remove();
+  const bc = getComputedStyle(ff).borderTopColor, e = rgba(bc), l = rgba(line);
+  return { bc, line, eq: e.rgb === l.rgb && e.a === 255 && l.a === 255, alpha: e.a };
+}, sel);
 const SCALE = "matrix(1.014, 0, 0, 1.014, 0, 0)";
 async function shot(page, name, sel) {
   if (!SHOTS) return;
@@ -436,6 +464,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await go(page, "PSY_M1A");
     await page.mouse.move(0, 0);   // IB-5 runs first and leaves the pointer on the field: idle must be measured with the pointer away
     const m = await page.evaluate(MET);
+    const mEdge = await edgeLine(page, "#q .mparts .part > .ff");   // idle, before the hover probe below
     /* aim at the FIELD, not .part: since IB-5 the part centre sits ~1px under the field's top edge (the key column moved it),
        so the old proxy can hover the prompt/gap instead of the box. */
     await page.locator("#q .mparts .part > .ff").first().hover().catch(() => {});
@@ -445,6 +474,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
     assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
     assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
+    assert.ok(mEdge.eq && mEdge.alpha === 255, `multi rest edge is solid --line at alpha 1: ${mEdge.bc} vs ${mEdge.line} (alpha ${mEdge.alpha})`);
     assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
@@ -496,12 +526,15 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   });
   await step(`${w}: single field at rest + key outside`, async () => {
     await go(page, "PSY_S1A");
+    await page.mouse.move(0, 0);   // the pointer may sit where the multi field was: rest must be measured away from the box
     const m = await page.evaluate(MET);
+    const sEdge = await edgeLine(page, "#q > .ff#ff");
     assert.equal(m.kind, "single");
     assert.ok(near(m.h, 60), `field height ${m.h} (want 60)`);
     assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
     assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
     assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
+    assert.ok(sEdge.eq && sEdge.alpha === 255, `single rest edge is solid --line at alpha 1: ${sEdge.bc} vs ${sEdge.line} (alpha ${sEdge.alpha})`);
     assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
@@ -542,9 +575,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
         const anims = [...ff.querySelectorAll(".ib3-spin")].flatMap(s => s.getAnimations());
         const keys = anims.map(a => (a.effect ? a.effect.getKeyframes() : []).map(k => Object.keys(k).filter(n => ["offset", "computedOffset", "easing", "composite"].indexOf(n) < 0)));
         const ka = getComputedStyle(key, "::after");
+        const col = v => { const p = document.createElement("i"); p.style.color = v; ff.append(p); const c = getComputedStyle(p).color; p.remove(); return c; };
         return {
           tr: getComputedStyle(ff).transform, ro: inp.readOnly, busy: ff.getAttribute("aria-busy"),
           anims: anims.length, keys, names: anims.map(a => a.animationName || ""),
+          spinBgs: [...ff.querySelectorAll(".ib3-spin")].map(s => getComputedStyle(s).backgroundImage),
+          violet: col("var(--fig-violet-1, #8f78f5)"), correct: col("var(--correct)"),
+          af: col("var(--action-fill)"), ac: col("var(--action)"), ao: col("var(--action-on)"),
           ringOp: +getComputedStyle(ring).opacity, ringPad: getComputedStyle(ring).paddingTop, rings: ff.querySelectorAll(".ib3-ring").length,
           glowFilter: getComputedStyle(glow).filter, glowOp: +getComputedStyle(glow).opacity,
           blur: getComputedStyle(inp).filter, blurUnit: unit ? getComputedStyle(unit).filter : "blur(0.8px)",
@@ -567,6 +604,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.equal(t.rings, 1, "one ring layer on the single box");
       assert.equal(t.ringOp, 1, `ring opacity ${t.ringOp}`);
       assert.equal(t.ringPad, "3.5px", `ring width ${t.ringPad} (want 3.5px)`);
+      const flat = t.spinBgs.map(x => x.replace(/\s+/g, ""));
+      assert.ok(flat.length >= 2, "the aurora and its glow copy are there: " + flat.length);
+      for (const [i, bg] of flat.entries()) {
+        assert.ok(!bg.includes(t.violet.replace(/\s+/g, "")), `spin ${i}: no fig-violet in the aurora (${t.violet}): ${bg.slice(0, 180)}`);
+        assert.ok(!bg.includes(t.correct.replace(/\s+/g, "")), `spin ${i}: no verdict green in the aurora (${t.correct}): ${bg.slice(0, 180)}`);
+        assert.ok(bg.includes(t.af.replace(/\s+/g, "")) && bg.includes(t.ac.replace(/\s+/g, "")) && bg.includes(t.ao.replace(/\s+/g, "")),
+          `spin ${i}: the aurora is the action family (fill -> action -> on): ${bg.slice(0, 220)}`);
+      }
+      const th = await edgeLine(page, "#q > .ff#ff");
+      assert.ok(th.eq && th.alpha === 255, `thinking edge is the solid --line at alpha 1: ${th.bc} vs ${th.line} (alpha ${th.alpha})`);
       assert.equal(t.glowFilter, "blur(7px)", `glow filter ${t.glowFilter}`);
       assert.equal(t.glowOp, 0.45, `glow opacity ${t.glowOp}`);
       assert.equal(t.blur, "blur(0.8px)", `value blur ${t.blur}`);
@@ -1026,6 +1073,32 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.anim, /vm-flood/, `MC keeps the flood: ${m.anim}`);
     return `MC morph ${m.v}`;
   });
+  await step(`${w}: IB-7 miss hint sits snug under the typed box (mock gap ${MOCK_GAP} +-4)`, async () => {
+    const seen = [];
+    for (const [code, multi] of [["PSY_G1A", false], ["PSY_G2A", true]]) {
+      const hold = await holdGrade(page, [code], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Square the time." });
+      try {
+        await go(page, code);
+        const sel = multi ? "#q .mparts .part[data-i='0'] input.ans" : "#ans";
+        await page.fill(sel, "9.9"); await page.press(sel, "Enter");
+        await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+        hold.release();
+        await page.waitForSelector(multi ? "#q .mparts .phint .cluck" : "#fb > .cluck", { timeout: 6000 });
+        await page.waitForTimeout(450);   // the mock's .hint pop is .3s: measure the settled card
+        const g = await hintGapOf(page);
+        assert.ok(!g.err, `no hint card: ${JSON.stringify(g)}`);
+        assert.equal(g.inPhint, multi, `the hint card sits in the ${multi ? ".phint" : "#fb"}: ${JSON.stringify(g)}`);
+        assert.ok(g.gap >= MOCK_GAP - 4 && g.gap <= MOCK_GAP + 4,
+          `${multi ? "multi" : "single"} ${w}: the hint card is ${g.gap}px under the box; the mock's gap is ${MOCK_GAP} (want ${MOCK_GAP - 4}..${MOCK_GAP + 4})`);
+        seen.push(`${multi ? "multi" : "single"} ${g.gap}`);
+      } finally {
+        hold.release();
+        await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+        await hold.done();
+      }
+    }
+    return seen.join(" / ");
+  });
   await ctx.close();
 }
 
@@ -1194,6 +1267,30 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(ok.rings, 0, "flag off right: no verdict ring layers");
     assert.equal(ok.attr, null, "flag off right: no IB-4 hook");
     return "flag off: nothing";
+  });
+  await step("flag off 390: IB-7 leaves the hint gap alone", async () => {
+    const seen = [];
+    for (const [code, multi, want] of [["PSY_S4A", false, 38.5], ["PSY_M1A", true, 8]]) {   // the pre-IB-7 gaps: the empty preview's room; the .phint's app.css margin 0
+      const hold = await holdGrade(page, [code], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Square the time." });
+      try {
+        await go(page, code);
+        const sel = multi ? "#q .mparts .part[data-i='0'] input.ans" : "#ans";
+        await page.fill(sel, "9.9"); await page.press(sel, "Enter");
+        await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+        hold.release();
+        await page.waitForSelector(multi ? "#q .mparts .phint .cluck" : "#fb > .cluck", { timeout: 6000 });
+        await page.waitForTimeout(450);
+        const g = await hintGapOf(page);
+        assert.ok(!g.err, `flag off ${multi ? "multi" : "single"}: no hint card: ${JSON.stringify(g)}`);
+        assert.ok(Math.abs(g.gap - want) <= 1, `flag off ${multi ? "multi" : "single"}: gap ${g.gap}px (unchanged ${want})`);
+        seen.push(`${multi ? "multi" : "single"} ${g.gap}`);
+      } finally {
+        hold.release();
+        await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+        await hold.done();
+      }
+    }
+    return seen.join(" / ");
   });
   await step("flag off 1280: single has no 400px cap", async () => {
     await go(page, "PSY_S1A");
