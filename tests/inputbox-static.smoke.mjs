@@ -1,6 +1,6 @@
 // INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking + IB-4 verdict, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
-//   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), <= 400px wide on desktop.
-//   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field, 24px gap, no hairline.
+//   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), fills the column on desktop (no 400px cap, Tony Nov 25).
+//   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field (1fr, fills the row), 24px gap, no hairline.
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
 //   judged fields never lift; reduced motion = colours only.
 //   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
@@ -401,7 +401,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     const typed = await page.evaluate(() => {
       const p = document.querySelector("#q .mparts .part[data-i='0']"), ff = p.querySelector(".ff"), key = p.querySelector(".send");
       const f = ff.getBoundingClientRect(), k = key.getBoundingClientRect(), cs = getComputedStyle(key);
-      return { fw: f.width, fr: f.right, ft: f.top, kw: k.width, kh: k.height, kl: k.left, kt: k.top,
+      return { fw: f.width, fl: f.left, fr: f.right, ft: f.top, kw: k.width, kh: k.height, kl: k.left, kt: k.top,
         bg: cs.backgroundColor, r: cs.borderTopLeftRadius, bHidden: document.querySelector("#go1").hidden,
         overflow: document.documentElement.scrollWidth - innerWidth };
     });
@@ -411,7 +411,12 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(typed.kl >= typed.fr + 11 && typed.kl <= typed.fr + 14, `key gap ${(typed.kl - typed.fr).toFixed(1)} (want 12)`);
     assert.ok(near(typed.kt, typed.ft, 1.5), `key is level with the box: ${typed.kt} vs ${typed.ft}`);
     assert.equal(typed.fw, boxW, `box width jumps while typing: ${typed.fw} vs ${boxW}`);
-    if (w >= 900) assert.ok(near(typed.fw, 400, 1), `multi desktop field ${typed.fw} (want 400)`);
+    if (w >= 900) {   // Tony Nov 25: the multi field is 1fr, not 400px: no empty gap, it fills the row between the prompt and the 60px key column
+      const row = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part[data-i='0']"), cs = getComputedStyle(p), pr = p.querySelector(".pr").getBoundingClientRect();
+        return { right: p.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth), prRight: pr.right }; });
+      assert.ok(near(typed.kl + typed.kw, row.right, 1), `multi key's right edge ${typed.kl + typed.kw} sits on the row's right edge ${row.right}`);
+      assert.ok(near(typed.fl - row.prRight, 12, 1), `multi field starts 12px after the prompt (no empty gap): field left ${typed.fl} vs prompt right ${row.prRight}`);
+    }
     assert.ok(typed.overflow <= 0, `sideways overflow ${typed.overflow}px at ${w}`);
     assert.match(typed.r, /^(18|22\.5)px$/, `key squircle radius ${typed.r}`);
     await page.locator("#q .mparts .part[data-i='0'] input.ans").click();   // a real pointer: no keyboard focus ring in the shot (the mouse look)
@@ -480,12 +485,12 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.equal(m.mk, "a", `letter is bare: ${JSON.stringify(m.mk)}`);
-    assert.equal(m.mkSize, "40px", `letter size ${m.mkSize}`);
+    assert.equal(m.mkSize, "39.0624px", `letter size ${m.mkSize}`);   // typescale Major Third, Tony Nov 25 (was 40px)
     assert.match(m.mkFamily, /Schibsted/i, "letter face is the app's display face: " + m.mkFamily);
     assert.ok(near(m.mkBase, m.prBase, 1), `letter/prompt line baselines ${m.mkBase} vs ${m.prBase}`);
     assert.ok(near(m.mkGlyph, m.prGlyph, 1), `letter/prompt GLYPH baselines ${m.mkGlyph} vs ${m.prGlyph}`);
     if (w >= 900) assert.ok(near(m.valueBase, m.prBase, 1), `value/prompt baselines ${m.valueBase} vs ${m.prBase}`);
-    assert.equal(m.prSize, "17px", `prompt size ${m.prSize}`);
+    assert.equal(m.prSize, "16px", `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
     assert.ok(parseFloat(m.skin.pr) <= 20, `multi field right padding ${m.skin.pr} (IB-5: the key moved outside, no in-box room)`);
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
@@ -538,18 +543,20 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
-    assert.equal(m.fsize, "28px", `value size ${m.fsize}`);
+    assert.equal(m.fsize, "25px", `value size ${m.fsize}`);   // typescale Major Third, Tony Nov 25 (was 28px)
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.ok(m.unit, "the unit is in the box");
-    assert.equal(m.unitSize, "17px", `unit size ${m.unitSize}`);
+    assert.equal(m.unitSize, "16px", `unit size ${m.unitSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.match(m.unitFamily, /Atkinson/i, "unit face is Atkinson: " + m.unitFamily);
     assert.ok(m.key, "the Check key is on the page");
     assert.ok(near(m.key.w, 60) && near(m.key.h, 60), `key ${m.key.w}x${m.key.h} (want 60x60)`);
     assert.ok(m.key.left >= m.boxRight + 11 && m.key.left <= m.boxRight + 13, `key sits 12px right of the box: ${m.key.left} vs ${m.boxRight}`);
     assert.ok(near(m.key.top, m.boxTop, 1), `key is level with the box: ${m.key.top} vs ${m.boxTop}`);
     if (w >= 900) {
-      assert.equal(m.maxW, "400px", `single box max-width ${m.maxW}`);
-      assert.ok(m.boxW <= 400.5, `single box ${m.boxW} wide (cap 400)`);
+      // Tony Nov 25: no 400px cap; the box fills the column and only the 60px key + 12px gap stay outside on its right
+      assert.equal(m.maxW, "none", `single box max-width ${m.maxW} (no cap)`);
+      const col = await page.evaluate(() => document.querySelector("#q > .ff#ff").parentElement.clientWidth);
+      assert.ok(near(m.boxW, col - 72, 1), `single box ${m.boxW} wide: it fills the column ${col} minus the 72px key slot`);
     }
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
     await page.locator("#ans").focus();
@@ -867,7 +874,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.equal(mid.val, "3.2", `the typed value stays during the verdict: ${JSON.stringify(mid)}`);
       assert.ok(mid.op === "1" && mid.vis === "visible", `the typed value is painted: ${JSON.stringify(mid)}`);
       assert.equal(mid.bg, rest.bg, `wrong ground stays the resting ground mid-sweep: ${mid.bg} vs ${rest.bg}`);
-      if (w >= 900) assert.ok(mid.w <= 400.5, `single field stays capped after the verdict: ${mid.w}px (max-width ${mid.maxW})`);
+      if (w >= 900) assert.ok(mid.w > 400.5 && mid.maxW === "none", `single field keeps filling the column after the verdict: ${mid.w}px (max-width ${mid.maxW})`);   // Tony Nov 25: no 400px cap
       const heads = [];
       for (let t = 0; t <= 440; t += 40) heads.push(await headAt(page, t));
       for (let i = 1; i < heads.length; i++) assert.ok(heads[i].s >= heads[i - 1].s - 0.01, `head is monotonic: ${heads.map(x => x.s.toFixed(1)).join("/")}`);
@@ -889,7 +896,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.equal(fin.val, "3.2", `the typed value stays after the verdict: ${JSON.stringify(fin)}`);
       assert.equal(fin.bg, rest.bg, `wrong ground after the verdict == ground at rest: ${fin.bg} vs ${rest.bg}`);
       assert.equal(fin.color, rest.color, `wrong value keeps the resting ink: ${fin.color} vs ${rest.color}`);
-      if (w >= 900) assert.ok(fin.w <= 400.5, `single field stays capped at rest after the verdict: ${fin.w}px (max-width ${fin.maxW})`);
+      if (w >= 900) assert.ok(fin.w > 400.5 && fin.maxW === "none", `single field keeps filling the column at rest after the verdict: ${fin.w}px (max-width ${fin.maxW})`);   // Tony Nov 25: no 400px cap
       const h5 = await headAt(page, 5), spd = (h5.s - heads[0].s) / 5 * 1000, aur = heads[0].P / heads[0].lap * 1000;   // px/s at t=0 (5ms sample; t is ms)
       assert.ok(spd > aur * .75 && spd < aur * 1.25, `head leaves at the aurora pace: ${spd.toFixed(0)} vs ${aur.toFixed(0)} px/s`);
       assert.equal(r0.keyHidden, false, "wrong keeps the Check key visible");
@@ -908,7 +915,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.equal(after.bad, false, `a keystroke clears .bad: ${JSON.stringify(after)}`);
       assert.equal(after.op, 1, `a keystroke returns the key to full: ${after.op}`);
       assert.equal(after.attr, null, "the keystroke clears the verdict ring hook");
-      if (w >= 900) assert.ok(after.w <= 400.5, `single field stays capped when the retry is typed: ${after.w}px`);
+      if (w >= 900) assert.ok(after.w > 400.5, `single field keeps filling the column when the retry is typed: ${after.w}px`);   // Tony Nov 25: no 400px cap
       await shot(page, `single-${w}-retry-ib4-app.png`, "#freezeIn");
       return `cov ${cov.toFixed(1)} -> ${full.toFixed(1)}, key ${dimLuma}/${fullLuma}, ${spd.toFixed(0)}/${aur.toFixed(0)} px/s`;
     } finally {
@@ -937,7 +944,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const glyph = await page.evaluate(() => { const f = document.querySelector("#q .ff.ok"), n = f.querySelector(".nx"), r = f.getBoundingClientRect(), nr = n.getBoundingClientRect(), cs = getComputedStyle(f), ns = getComputedStyle(n);
         return { outside: nr.left >= r.right + 10, w: nr.width, h: nr.height, fr: +r.right.toFixed(1), fl: +r.left.toFixed(1), fw: f.offsetWidth, nl: +nr.left.toFixed(1), pos: ns.position, left: ns.left, pl: cs.paddingLeft, pr: cs.paddingRight, bw: cs.borderLeftWidth, tf: cs.transform, par: n.offsetParent && n.offsetParent.className }; });
       assert.ok(glyph.outside, "Next takes the 60px outer key slot: " + JSON.stringify(glyph));
-      if (w >= 900) assert.ok(glyph.fw <= 400.5, `single right field keeps the 400px cap: ${glyph.fw}px`);
+      if (w >= 900) assert.ok(glyph.fw > 400.5, `single right field keeps filling the column: ${glyph.fw}px`);   // Tony Nov 25: no 400px cap
       await page.waitForFunction(() => document.querySelector("#q .ff.ok")?.classList.contains("ib4-done"), null, { timeout: 3000 });
       await page.waitForFunction(() => +getComputedStyle(document.querySelector("#q .ff.ok .vk")).opacity >= .99, null, { timeout: 3000 });
       const done = await ringAt(page, null);
@@ -955,7 +962,9 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const A = pngOf(await page.locator("#q .ib4-ring").screenshot());
       await page.evaluate(() => {
         const ring = document.querySelector("#q .ib4-ring"), els = [...ring.querySelectorAll(".ib4-arc")];
-        const vals = els.map(el => getComputedStyle(el).transform);
+        // the animation's own last keyframe (an exact rotate(Xdeg)), not the computed matrix: getComputedStyle rounds the matrix to ~6 digits, and on the
+        // full-width box (arcs 816px wide, typescale branch) that rounding flips 2 antialiased pixels of the conic's hard stop. The check stays pixel-exact.
+        const vals = els.map(el => { const a = el.getAnimations()[0], k = a && a.effect.getKeyframes(); return k ? k[k.length - 1].transform : getComputedStyle(el).transform; });
         els.forEach(el => el.getAnimations().forEach(a => a.cancel()));
         els.forEach((el, i) => { el.style.transform = vals[i]; });
         ring.classList.add("ib4-still");

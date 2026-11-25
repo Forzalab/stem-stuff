@@ -119,22 +119,21 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:f
 /* disabled (a shut part / a closed question): the live .ff.shut / .q.closed opacity carries the dim; only the cursor is ours */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox):has(input:disabled),
 html.ui-v7 #q .mparts .part > .ff:has(input:disabled) { cursor: not-allowed; }
-/* the value: Atkinson Hyperlegible Next 600 28px, tabular (mock .f input). This replaces ICK5-MONO for these two inputs only.
+/* the value: Atkinson Hyperlegible Next 600 var(--fs-2) = 25px, tabular (mock .f input; 28 before the Major Third scale). This replaces ICK5-MONO for these two inputs only.
    28 is the mock at every width: app --t-xl grows to 36 on a fine-pointer desktop, the mock does not (the mock wins). */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > input.ans,
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) > input.ans {
   height: 54px; padding: 0;
-  font-family: var(--font-input); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+  font-family: var(--font-input); font-size: var(--fs-2); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
 }
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > input.ans::placeholder,
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) > input.ans::placeholder { font-family: var(--font-input); font-weight: 400; color: transparent; }   /* the mock's field is empty: the live "Ex: ..." hint would print at 28px and swamp the box */
 /* the unit / leading label role: Atkinson 400 17px muted (mock .unit). The app's typed single has no unit span; .lead (expr "f(x) =") is that role today. */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > :is(.lead, .unit),
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 17px/1 var(--font-input); color: var(--muted); }
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 var(--fs-0)/1 var(--font-input); color: var(--muted); }
 
-/* the single box leaves room for its key outside: 60 key + 12 gap = 72; desktop caps the box at 400 (Tony confirmed the cap) */
+/* the single box leaves room for its key outside: 60 key + 12 gap = 72; the box fills the column on every width, no desktop cap (Tony Nov 25: the empty gap right of the box was wrong, "expand to the col width") */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { width: calc(100% - 72px); }
-@media (min-width: 900px) { html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { max-width: 400px; } }
 /* Next takes the key's outside 60px slot on the single box (the live flow already puts rbox Next outside; this keeps the non-rbox cue there too) */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx {
   position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
@@ -161,14 +160,15 @@ html.ui-v7 .mparts .part {
 html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx ." ". ht ht"; }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
 html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
-html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: 17px; line-height: 24px; font-weight: 400; }
+html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
-html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: 17px; line-height: 24px; }
+html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: var(--fs-0); line-height: var(--lh-0); }
 @media (min-width: 900px) {
-  /* IB-5: 400px field + its own 60px key column on the same row (SOFT-LIFT §13). The hint row is always declared (empty
-     .phint = 0 height) for the same implicit-column reason as the phone template. */
-  html.ui-v7 .mparts .part { grid-template-columns: 36px minmax(0, 1fr) 400px 60px; grid-template-areas: "mk pr bx ." ". ht ht ."; }
+  /* IB-5: a field that fills the row (1fr; Tony Nov 25, was a 400px cap) + its own 60px key column on the same row (SOFT-LIFT §13).
+     The prompt is fit-content(40%): its own text width, never over 40% of the row, so the field keeps the rest. The hint row is
+     always declared (empty .phint = 0 height) for the same implicit-column reason as the phone template. */
+  html.ui-v7 .mparts .part { grid-template-columns: 36px fit-content(40%) minmax(0, 1fr) 60px; grid-template-areas: "mk pr bx ." ". ht ht ."; }
   /* the grid baseline is the flex box's, not the replaced input's text baseline: the value sat 4.5px low (measured
      1280, 28/54 input vs 17/24 prompt). Lift the field so the VALUE joins the letter/prompt line; the relative top
      moves paint only, so the grid row and the letter/prompt stay put. */
@@ -182,6 +182,10 @@ html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px
      card lands on the mock's 12 under the box, flush under the prompt's last line. An unhinted part keeps its old room, and the
      phone template (prompt above the field) keeps its 12. */
   html.ui-v7 .mparts .part.hinted .phint { margin-top: 0; }
+  /* The field no longer sets the row's other half: with a 1fr field the prompt is one short line (24px), so the row is
+     the FIELD's height and the card sat only 4.5px under its painted bottom (the -4.5px shift). The hinted field keeps
+     7.5px of its own room below (7.5 + 4.5 = 12), so a one-line prompt lands on the same 12 as a wrapped one. */
+  html.ui-v7 .mparts .part.hinted > .ff { margin-bottom: 7.5px; }
 }
 
 /* ===== IB-2 SOFT LIFT, FOCUS + TYPING (Tony Nov 24; SOFT-LIFT-SPEC §4; mock PICK-soft-lift.src.html). html.ui-v7 only.

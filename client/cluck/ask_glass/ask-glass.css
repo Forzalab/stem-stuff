@@ -35,7 +35,7 @@ html.ui-v7 .ask.ag > :is(.ff, .left, .send) { position: relative; z-index: 3; tr
 html.ui-v7 .ask.ag.locked > :is(.ff, .left, .send) { opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .15s, transform .15s; }
 html.ui-v7 .ask.ag > .ff { flex: 1; min-width: 0; }
 html.ui-v7 .ask.ag > .left { flex: none; width: 0; margin-left: -8px; overflow: hidden; white-space: nowrap; }   /* "N left" stays for screen readers; the bar is not a counter */
-html.ui-v7 .cl-ft .ask.ag .ff textarea { background: none; color: var(--ag-ink); caret-color: var(--help); font-size: 1.0625rem; text-shadow: 0 1px 2px rgb(0 0 0 / .5); }
+html.ui-v7 .cl-ft .ask.ag .ff textarea { background: none; color: var(--ag-ink); caret-color: var(--help); font-size: var(--fs-0); text-shadow: 0 1px 2px rgb(0 0 0 / .5); }
 html.ui-v7 .cl-ft .ask.ag .ff textarea::placeholder { color: var(--ag-dim); opacity: 1; }
 html.ui-v7 .cl-ft .ask.ag > .send {
   width: 44px; height: 44px; border: 0; border-radius: 14px; background: transparent; box-shadow: none; color: var(--ag-dim); overflow: hidden; padding: 0; opacity: 1;
@@ -52,7 +52,7 @@ html.ui-v7 .cl-ft .ask.ag.locked > .send { opacity: 0; transform: translateY(8px
 html.ui-v7 .cl-ft .ask.ag > .send:focus-visible { outline: 2px solid var(--help); outline-offset: 2px; }
 
 /* ---- the locked strip: a lock + words on calm glass ---- */
-html.ui-v7 .ask.ag > .g-lock { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--ag-dim, rgb(243 238 233 / .56)); font-size: .9rem; pointer-events: none; transition: opacity .2s ease .1s; }
+html.ui-v7 .ask.ag > .g-lock { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--ag-dim, rgb(243 238 233 / .56)); font-size: var(--fs-0); pointer-events: none; transition: opacity .2s ease .1s; }
 html.ui-v7 .ask.ag:not(.locked) > .g-lock { opacity: 0; }
 html.ui-v7 .g-lock svg { width: 18px; height: 18px; flex: none; overflow: visible; color: #f3eee9; opacity: .56; }
 html.ui-v7 .g-lock svg :is(path, rect) { stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -106,6 +106,6 @@ html.fx-dim.ui-v7 .ask.ag > .g-copy { display: none; }
 }
 
 /* ---- the starter chip: one bank-authored question, its first ask is free ---- */
-html.ui-v7 .cl-starter.has-free { display: inline-flex; align-items: center; gap: 8px; height: auto; max-width: 100%; padding: 10px 14px; border: 0; border-radius: 12px; background: rgb(255 166 62 / .14); color: var(--help-on); font-weight: 600; font-size: .92rem; line-height: 1.25; text-align: left; }
+html.ui-v7 .cl-starter.has-free { display: inline-flex; align-items: center; gap: 8px; height: auto; max-width: 100%; padding: 10px 14px; border: 0; border-radius: 12px; background: rgb(255 166 62 / .14); color: var(--help-on); font-weight: 600; font-size: var(--fs-0); line-height: 1.25; text-align: left; }
 html.ui-v7 .cl-starter.has-free:hover { background: rgb(255 166 62 / .22); }
-html.ui-v7 .cl-starter .free { flex: none; padding: 3px 5px; border-radius: 5px; background: var(--help); color: var(--help-ink); font-weight: 800; font-size: .66rem; line-height: 1; letter-spacing: .06em; text-transform: uppercase; }
+html.ui-v7 .cl-starter .free { flex: none; padding: 3px 5px; border-radius: 5px; background: var(--help); color: var(--help-ink); font-weight: 800; font-size: var(--fs--1); line-height: 1; letter-spacing: .06em; text-transform: uppercase; }
