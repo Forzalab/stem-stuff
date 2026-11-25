@@ -6,7 +6,7 @@
    TITLE-EXAMQ-DIM: the headline is lower case except a bank "Q1 · " exam prefix (qcard.js .qexam), which keeps its capital Q in the dim ink with no dot drawn. */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
-html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 20px; --qc-pad: 20px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 20px; --qc-pad: 20px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; --qw-body: 500; --qink-body: #e6eaf4; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
 html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pad: 16px; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 22px; --qc-pad: 32px; --qnum: 156px; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
@@ -56,7 +56,7 @@ html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; clear: both; }   /* F
 html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
 html.ui-v7 #problem.qc7 .qhead .qexam { text-transform: none; color: #7a8aae; white-space: nowrap; margin-right: .28em; }   /* TITLE-EXAMQ-DIM (Tony Nov 24): the "Q1" exam prefix keeps its capital Q, sits in the dim ink (#7a8aae, 5.3:1 on --qbox; no root token carries this value, cluckbtn's --cb-off-ink is scoped to the button), never breaks, and its margin-right is the ONE word space before the rest; the typed " · " is .sr-only in qcard.js, never drawn */
-html.ui-v7 #problem.qc7 .qtext { font: var(--w-body, 400) 16px/22px var(--qfont); color: #cdd4ea; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
+html.ui-v7 #problem.qc7 .qtext { font: var(--qw-body) 16px/22px var(--qfont); color: var(--qink-body); font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: 17px; line-height: 24px; } }
 /* Q-TEXT-WIDE (Tony Nov 22): on wide desktop the figure labels (.lbl = --t-sm, up to 19px) read bigger than the 17px body. Body + bold ask = 1.2 x the label token
    (floor 17px): 2133 wide -> ~22.8 vs 19, 1280 -> ~19 vs 16. Phone (<= 480) is untouched; the media starts at 900 like the rule above. */
@@ -68,9 +68,9 @@ html.ui-v7 #problem.qc7 .qtext > :last-child > :last-child { margin-bottom: 0; }
 /* ICK PR-A (A1, ICK-R1 2b): tighter body: 1.45 leading (was 22px; the code-chip lines carried 1.75) and half the paragraph gap (8 -> 4) */
 html.ui-v7 #problem.qc7 .qtext .md :is(p, li), html.ui-v7 #problem.qc7 .qtext > :is(p, li) { line-height: var(--qbody-lh); margin-bottom: var(--qbody-gap); }
 /* ICK PR-A (A1, ICK-R1 3a): the ask is a bold line on the body axis: no box, no shadow, no inset (app.css's `.ask` was the Cluck composer's class; the block is .qask now) */
-html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 600; line-height: var(--qbody-lh); }
-html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 600; }
-html.ui-v7 #problem.qc7 .qsetup { color: #cdd4ea; font-weight: var(--w-body, 400); }
+html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 700; line-height: var(--qbody-lh); }
+html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 700; }
+html.ui-v7 #problem.qc7 .qsetup { color: var(--qink-body); font-weight: var(--qw-body); }
 html.ui-v7 #problem.qc7 .qlead .katex, html.ui-v7 #problem.qc7 .qsetup .katex { font-size: 1em; }
 html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: var(--w-body, 400) 13px/18px var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
 html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
@@ -296,8 +296,8 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
 html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); }
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: 1; color: transparent; -webkit-background-clip: text; background-clip: text; filter: url(#qg-glass);
   background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .12) 46%, transparent 62%), linear-gradient(160deg, rgb(120 147 226 / .46), rgb(56 80 148 / .30)); }
-html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(8px); border-radius: inherit; overflow: hidden; }
-html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .85); border-radius: 999px; }
+html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(6px); border-radius: inherit; overflow: hidden; }
+html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .55); border-radius: 999px; }
 @media (prefers-reduced-transparency: reduce) {
   html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: .08; color: #5b6a9a; -webkit-background-clip: border-box; background-clip: border-box; background-image: none; filter: none; }
   html.ui-v7 #problem.qc7 > .qscrim { display: none; }
