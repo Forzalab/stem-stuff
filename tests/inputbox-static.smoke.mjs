@@ -1,8 +1,9 @@
-// INPUTBOX-STATIC smoke (IB-1 "Soft lift", Tony Nov 24): the STATIC look of the two typed-answer inputs under html.ui-v7 only.
+// INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing, Tony Nov 24): the look and the focus motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), <= 400px wide on desktop.
 //   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field, 24px gap, no hairline.
-//   flag off: the old field (no outline, --fld height, "a)" marker, no 400px cap) is untouched.
-// Own serve.py + an uploaded bank. No motion, no verdict states here (later slices).   node tests/inputbox-static.smoke.mjs [port]
+//   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
+//   judged fields never lift; reduced motion = colours only.   flag off: the old field is untouched.
+// Own serve.py + an uploaded bank. No verdict look here (later slices).   node tests/inputbox-static.smoke.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -42,10 +43,10 @@ async function step(name, fn) {
   catch (e) { fails++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); }
 }
 let browser;
-try { browser = await launchBrowser(pw, { args: ["--no-sandbox"] }); }
-catch { browser = await launchBrowser(pw, { args: ["--no-sandbox"], executablePath: "/opt/pw-browsers/chromium" }); }
-async function fresh(ui, vp) {
-  const phone = vp.width < 500, ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", deviceScaleFactor: 2 });
+try { browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] }); }
+catch { browser = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"], executablePath: "/opt/pw-browsers/chromium" }); }
+async function fresh(ui, vp, opts = {}) {
+  const phone = vp.width < 500, ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", deviceScaleFactor: 2, ...opts });
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);   // sugar, flag in the URL
   const page = await ctx.newPage(); await page.goto(`${BASE}/${ui ? "?ui=v7" : ""}`);
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
@@ -124,6 +125,28 @@ const skinOf = (page, sel) => page.evaluate(s => {
   const c = getComputedStyle(e), r = e.getBoundingClientRect();
   return { bg: c.backgroundColor, bw: c.borderTopWidth, bs: c.borderTopStyle, bc: c.borderTopColor, sh: c.boxShadow, r: c.borderRadius, pr: c.paddingRight, h: r.height, w: r.width, top: r.top, left: r.left, right: r.right };
 }, sel);
+/* IB-2: the whole focus motion contract in one read */
+const liftOf = (page, sel) => page.evaluate(s => {
+  const e = document.querySelector(s), c = getComputedStyle(e);
+  return { tr: c.transform, sh: c.boxShadow, bc: c.borderTopColor, bw: c.borderTopWidth, r: c.borderTopLeftRadius,
+    dur: c.transitionDuration, ease: c.transitionTimingFunction, prop: c.transitionProperty };
+}, sel);
+/* the focus edge is an edge: >= 3:1 against the card, composited over the field's own ground */
+const edgeRatio = (page, sel) => page.evaluate(s => {
+  const el = document.querySelector(s), cs = getComputedStyle(el);
+  const cv = document.createElement("canvas"); cv.width = cv.height = 1;
+  const cx = cv.getContext("2d", { willReadFrequently: true });
+  const parse = t => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = "#000"; cx.fillStyle = String(t); cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 }; };
+  const over = (f, b) => ({ r: f.r * f.a + b.r * (1 - f.a), g: f.g * f.a + b.g * (1 - f.a), b: f.b * f.a + b.b * (1 - f.a) });
+  const L = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(c.r) + .7152 * f(c.g) + .0722 * f(c.b); };
+  const ratio = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const bgOf = e => { const p = parse(getComputedStyle(e).backgroundColor); return p.a > 0 ? p : null; };
+  const card = el.closest(".p") || document.querySelector("#q");
+  const surround = bgOf(card) || bgOf(document.body) || bgOf(document.documentElement) || parse("#02040d");
+  const edge = parse(cs.borderTopColor), fill = parse(cs.backgroundColor);
+  return { ratio: edge && fill && surround ? ratio(over(edge, fill), surround) : null, edge: cs.borderTopColor, fill: cs.backgroundColor, surround: `rgb(${surround.r} ${surround.g} ${surround.b})` };
+}, sel);
+const SCALE = "matrix(1.014, 0, 0, 1.014, 0, 0)";
 async function shot(page, name, sel) {
   if (!SHOTS) return;
   try { await page.locator(sel).first().screenshot({ path: join(SHOTS, name) }); }
@@ -141,7 +164,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
     assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
     assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
-    assert.equal(m.transition, "0s", `no transition at rest (${m.transition})`);
+    assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
@@ -157,13 +180,25 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
     assert.notEqual(hoverCol, m.edgeCol, "hover changes the edge (idle -> hover)");
     await page.locator("#q .mparts .part:first-child input.ans").focus();
-    const focus = await page.evaluate(() => { const c = getComputedStyle(document.querySelector("#q .mparts .part:first-child .ff")); return { r: c.borderRadius, bw: c.borderTopWidth, sh: c.boxShadow }; });
-    const tile = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");
-    assert.equal(focus.r, tile, `focus keeps the live tile radius (${focus.r}, want ${tile}); IB-2 owns the lift`);
-    assert.equal(focus.bw, "1px", `focus keeps the live 1px hairline: ${JSON.stringify(focus)}`);
-    assert.match(focus.sh, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus keeps the live well shadow: " + focus.sh);
+    await page.waitForTimeout(520);
+    const focus = await liftOf(page, "#q .mparts .part:first-child .ff");
+    const liftR = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "22.5px" : "18px");
+    assert.equal(focus.tr, SCALE, `focus lifts in place (IB-2): ${focus.tr}`);
+    assert.equal(focus.r, liftR, `focus keeps the Soft-lift squircle (${focus.r}, want ${liftR})`);
+    assert.equal(focus.bw, "1px", `focus keeps the 1.5px edge: ${JSON.stringify(focus)}`);
+    assert.match(focus.sh, /0px 1px 0px 0px inset/, "focus: the lit top edge: " + focus.sh);
+    assert.match(focus.sh, /0px 0px 0px 0\.5px/, "focus: the .5px halo edge: " + focus.sh);
+    assert.match(focus.sh, /0px 12px 26px -8px/, "focus: the shadow straight underneath: " + focus.sh);
+    assert.doesNotMatch(focus.sh, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: the old well is gone: " + focus.sh);
+    assert.notEqual(focus.bc, m.edgeCol, "focus turns the edge --action");
+    const multiEdge = await edgeRatio(page, "#q .mparts .part:first-child .ff");
+    assert.ok(multiEdge.ratio >= 3, `focus edge reaches 3:1: ${multiEdge.ratio && multiEdge.ratio.toFixed(2)} (${multiEdge.edge} over ${multiEdge.fill} vs ${multiEdge.surround})`);
     await page.evaluate(() => document.activeElement?.blur());
+    await page.locator("#q .mparts .part:first-child input.ans").focus();
+    await page.locator("#q .mparts .part:first-child input.ans").fill("17");
+    await page.locator("#q .mparts .part:first-child input.ans").click();   // a real pointer: no keyboard ring in the shot (the mouse look)
     await shot(page, `multi-${w}-app.png`, "#q");
+    await page.evaluate(() => document.activeElement?.blur());
     const idle = m.skin;
     await page.fill("#q .mparts .part:first-child input.ans", "17");
     await page.press("#q .mparts .part:first-child input.ans", "Enter");
@@ -182,7 +217,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
     assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
     assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
-    assert.equal(m.transition, "0s", `no transition at rest (${m.transition})`);
+    assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fsize, "28px", `value size ${m.fsize}`);
@@ -199,8 +234,65 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.ok(m.boxW <= 400.5, `single box ${m.boxW} wide (cap 400)`);
     }
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
+    await page.locator("#ans").focus();
+    await page.locator("#ans").fill("17");
+    await page.locator("#ans").click();   // a real pointer: no keyboard ring in the shot (the mouse look)
     await shot(page, `single-${w}-app.png`, "#q");
+    await page.evaluate(() => document.activeElement?.blur());
     return `h ${m.h} box ${m.boxW} key ${m.key.w}x${m.key.h} gap ${(m.key.left - m.boxRight).toFixed(1)}`;
+  });
+  await step(`${w}: IB-2 single focus lift: scale in place, edge --action, shadow underneath`, async () => {
+    await go(page, "PSY_S1A");
+    const sel = "#q > .ff#ff";
+    const rest = await liftOf(page, sel);
+    await page.locator("#ans").focus();
+    await page.waitForTimeout(520);
+    const f = await liftOf(page, sel);
+    const liftR = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "22.5px" : "18px");
+    assert.equal(f.tr, SCALE, `focus lifts in place: ${f.tr}`);
+    assert.notEqual(f.tr, rest.tr, "rest is not lifted");
+    assert.equal(f.r, liftR, `focus radius ${f.r} (want ${liftR})`);
+    assert.match(f.sh, /0px 1px 0px 0px inset/, "the lit top edge: " + f.sh);
+    assert.match(f.sh, /0px 0px 0px 0\.5px/, "the .5px halo edge: " + f.sh);
+    assert.match(f.sh, /0px 2px 4px/, "the near shadow: " + f.sh);
+    assert.match(f.sh, /0px 12px 26px -8px/, "the far shadow straight underneath: " + f.sh);
+    assert.match(f.dur, /0\.42s/, `transform + shadow share .42s (${f.dur})`);
+    assert.match(f.ease, /cubic-bezier\(0\.22, 0\.61, 0\.36, 1\)/, `the one curve (${f.ease})`);
+    assert.notEqual(f.bc, rest.bc, `focus turns the edge --action: ${rest.bc} -> ${f.bc}`);
+    const er = await edgeRatio(page, sel);
+    assert.ok(er.ratio >= 3, `focus edge reaches 3:1: ${er.ratio && er.ratio.toFixed(2)} (${er.edge} over ${er.fill} vs ${er.surround})`);
+    return `tr ${f.tr}, edge ${f.bc}, ${er.ratio.toFixed(2)}:1`;
+  });
+  await step(`${w}: IB-2 key press: add 90%, delete 60%, back to 75% in ~320ms`, async () => {
+    await go(page, "PSY_S1A");
+    const sel = "#q > .ff#ff", col = async () => (await liftOf(page, sel)).bc;
+    await page.locator("#ans").focus();
+    await page.waitForTimeout(520);
+    const focus = await col();
+    await page.keyboard.type("1");
+    const add = await col();
+    assert.notEqual(add, focus, `a new character strengthens the edge: ${focus} -> ${add}`);
+    await page.waitForTimeout(430);
+    const back = await col();
+    assert.equal(back, focus, `the edge returns to the focus colour (${back})`);
+    await page.keyboard.press("Backspace");
+    const del = await col();
+    assert.notEqual(del, add, `a delete is weaker than an add: ${add} vs ${del}`);
+    await page.waitForTimeout(430);
+    const back2 = await col();
+    assert.equal(back2, focus, `the delete edge returns too (${back2})`);
+    return `add ${add} del ${del} focus ${focus}`;
+  });
+  await step(`${w}: IB-2 judged field does not lift on focus`, async () => {
+    await go(page, "PSY_S4A");
+    await page.fill("#ans", "9.9"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff.bad", { timeout: 6000 });
+    await page.locator("#ans").focus();
+    await page.waitForTimeout(520);
+    const j = await liftOf(page, "#q #ff.bad");
+    assert.equal(j.tr, "none", `a judged field never lifts: ${j.tr}`);
+    assert.doesNotMatch(j.sh, /0px 12px 26px -8px/, "a judged field keeps its verdict raise: " + j.sh);
+    return `tr ${j.tr} edge ${j.bc}`;
   });
   await step(`${w}: single wrong keeps the live verdict fill`, async () => {
     await go(page, "PSY_S2A");
@@ -220,6 +312,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await go(page, "PSY_S1A");
     await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
     await page.waitForSelector("#q #ff.rbox", { timeout: 6000 });
+    await settled(page, "#q #ff");
     const box = await skinOf(page, "#q #ff.rbox");
     assert.ok(parseFloat(box.pr) >= 48, `rbox padding-right ${box.pr} (want >= 48)`);
     assert.ok(Math.abs(box.h - 60) > 1, `rbox height ${box.h} got the IB-1 60px box`);
@@ -231,6 +324,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     const idle = (await page.evaluate(MET)).skin;
     await page.fill("#ans", "5"); await page.press("#ans", "Enter");
     await page.waitForSelector("#q #ff > .nx", { timeout: 6000 });
+    await settled(page, "#q #ff > .nx");
     const ok = await skinOf(page, "#q #ff.ok");
     assert.notEqual(ok.bg, idle.bg, `single right fill is still the idle ground (${ok.bg})`);
     assert.ok(ok.bw === "0px" || ok.bs === "none", `single right edge is still the resting border (${ok.bw} ${ok.bs})`);
@@ -259,6 +353,35 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(m.mc && near(m.mc.w, 56) && near(m.mc.h, 56), `#mcGo ${JSON.stringify(m.mc)}`);
     assert.equal(m.mc.inChk, true, "#mcGo still lives in .chk");
     return `${m.mc.w}x${m.mc.h} in .chk`;
+  });
+  await ctx.close();
+}
+/* IB-2: prefers-reduced-motion = colours only: no scale, no transition */
+{
+  const { ctx, page } = await fresh(true, { width: 390, height: 844 }, { reducedMotion: "reduce" });
+  await step("reduced motion: focus colours only, no scale, no transition", async () => {
+    await go(page, "PSY_S1A");
+    const sel = "#q > .ff#ff";
+    const rest = await liftOf(page, sel);
+    await page.locator("#ans").focus();
+    await page.waitForTimeout(520);
+    const f = await liftOf(page, sel);
+    assert.equal(f.tr, "none", `no scale under reduced motion: ${f.tr}`);
+    assert.equal(f.dur, "0s", `no transition under reduced motion: ${f.dur}`);
+    assert.notEqual(f.bc, rest.bc, "the edge colour still changes (colours only)");
+    await page.keyboard.type("7");
+    const typed = await liftOf(page, sel);
+    assert.equal(typed.tr, "none", `typing does not scale under reduced motion: ${typed.tr}`);
+    return `edge ${f.bc}, transition ${f.dur}`;
+  });
+  await step("reduced motion: judged field still does not lift", async () => {
+    await go(page, "PSY_S2A");
+    await page.fill("#ans", "9.9"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff.bad", { timeout: 6000 });
+    await page.locator("#ans").focus();
+    const j = await liftOf(page, "#q #ff.bad");
+    assert.equal(j.tr, "none", `judged: ${j.tr}`);
+    return `tr ${j.tr}`;
   });
   await ctx.close();
 }
@@ -292,6 +415,15 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.evaluate(() => document.documentElement.classList.remove("ui-v7"));
     return `h ${m.h} ow ${m.ow}`;
   });
+  await step("flag off 390: focus never lifts", async () => {
+    await go(page, "PSY_S1A");
+    await page.locator("#ans").focus();
+    await page.waitForTimeout(300);
+    const f = await liftOf(page, "#q > .ff#ff");
+    assert.equal(f.tr, "none", `flag off focus transform ${f.tr}`);
+    assert.doesNotMatch(f.dur, /0\.42s/, `flag off has no IB-2 transition: ${f.dur}`);
+    return `tr ${f.tr} dur ${f.dur}`;
+  });
   await step("flag off 1280: single has no 400px cap", async () => {
     await go(page, "PSY_S1A");
     const m = await page.evaluate(MET);
@@ -314,8 +446,14 @@ if (SHOTS) {
       const sel = w >= 900 ? "#desk .card" : "#live .card";
       const n = await page.locator(sel).count();
       if (n >= 2) {
-        await page.locator(sel).nth(0).screenshot({ path: join(SHOTS, `multi-${w}-mock.png`) }).catch(e => console.log("mock shot", e.message.slice(0, 100)));
-        await page.locator(sel).nth(1).screenshot({ path: join(SHOTS, `single-${w}-mock.png`) }).catch(e => console.log("mock shot", e.message.slice(0, 100)));
+        for (const [i, name] of [[0, "multi"], [1, "single"]]) {
+          const card = page.locator(sel).nth(i);
+          await card.locator(".f input").first().fill("17");   // IB-2: focus + typed, the lifted state
+          await page.waitForTimeout(520);
+          await card.screenshot({ path: join(SHOTS, `${name}-${w}-mock.png`) }).catch(e => console.log("mock shot", e.message.slice(0, 100)));
+          await page.evaluate(() => document.activeElement?.blur());
+          await page.waitForTimeout(520);
+        }
       } else console.log("mock cards not found at", w, n);
       await ctx.close();
     }

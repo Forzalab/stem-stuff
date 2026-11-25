@@ -275,6 +275,18 @@
     if (!drawer || drawer.hidden || !e.target.closest || !e.target.closest("#ff, .part")) return;
     close(false);
   }, true);
+  /* IB-2 (SOFT-LIFT §4): a key press nudges the field's outline strength only. [data-ib2] is the CSS hook (strip.css):
+     a new character 90%, a delete 60%, then back to the focus 75% over 320ms. Two frames so the stronger colour paints first. */
+  D.addEventListener("input", function (e) {
+    var t = e.target;
+    if (!t || !t.matches || !t.matches("#q .ff > input.ans")) return;
+    var ff = t.parentElement, it = e.inputType || "";
+    if (!ff || ff.classList.contains("proof") || !/^(insert|delete)/.test(it)) return;
+    if (ff.classList.contains("ok") || ff.classList.contains("bad") || ff.classList.contains("cue") || ff.classList.contains("rbox")) return;
+    var g = (ff._ib2g = (ff._ib2g || 0) + 1);
+    ff.setAttribute("data-ib2", it.indexOf("delete") === 0 ? "del" : "add");
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (ff._ib2g === g) ff.removeAttribute("data-ib2"); }); });
+  }, true);
 
   var mo = new MutationObserver(function (recs) {
     for (var i = 0; i < recs.length; i++) {
