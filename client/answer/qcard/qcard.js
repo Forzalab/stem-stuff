@@ -152,7 +152,7 @@
     if (/AppleWebKit\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua)) return "webkit";
     return "blink";
   })();
-  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 3, id: "qg-lens", sig: "" };   /* blur 3 (pick 3 tune, Tony Nov 23: the numeral must read through the glass, was 6) */
+  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 4, id: "qg-lens", sig: "" };   /* blur 4 (was 3, Tony Nov 25: a softer frost between card and body text; still <= 4px so the numeral reads through the glass, was 6 before Nov 23) */
   function lensProfile(curv, ior) {
     var N = 512, t = new Float32Array(N + 1), max = 0, i;
     for (i = 0; i <= N; i++) {
