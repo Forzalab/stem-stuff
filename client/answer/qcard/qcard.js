@@ -113,12 +113,17 @@
     if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(sl, gb ? gb.nextSibling : p.firstChild); }
     var cr = p.getBoundingClientRect(), pad = 9, html = "";
     p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
-      var rg = D.createRange(), rows = []; rg.selectNodeContents(e);
-      [].slice.call(rg.getClientRects()).forEach(function (q) {
-        if (q.width < 2) return;
-        var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
-        if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
-      });
+      /* ink only: a Range over the element's contents also returns each child block's border box (the <p> is as wide as the column), so range each TEXT NODE */
+      var rows = [], tw = D.createTreeWalker(e, NodeFilter.SHOW_TEXT), tn;
+      while ((tn = tw.nextNode())) {
+        if (!tn.nodeValue.trim()) continue;
+        var rg = D.createRange(); rg.selectNodeContents(tn);
+        [].slice.call(rg.getClientRects()).forEach(function (q) {
+          if (q.width < 2) return;
+          var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
+          if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+        });
+      }
       rows.forEach(function (b) {
         var x = b.left - cr.left - pad, y = b.top - cr.top - pad * .7, w = b.right - b.left + 2 * pad, h = b.bottom - b.top + 1.4 * pad;
         html += '<i style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px"></i>';
