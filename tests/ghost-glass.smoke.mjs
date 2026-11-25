@@ -67,7 +67,8 @@ async function measure(vp) {
     `the sheet is the WHOLE card (inset 0): sheet ${info.box.w.toFixed(1)}x${info.box.h.toFixed(1)} at ${info.box.x.toFixed(1)},${info.box.y.toFixed(1)} vs card ${info.box.cardW.toFixed(1)}x${info.box.cardH.toFixed(1)}`);
   assert.equal(info.box.radius, info.box.cardRadius, "the sheet inherits the card's radius");
   assert.ok(info.blur > 0 && info.blur <= 4, "the lens frost is <= 4px on the numeral (" + info.blur.toFixed(2) + "px)");
-  assert.ok(info.paint >= 0.42, "the numeral body is raised enough to read (" + info.paint + " alpha)");
+  // Tony locked the numeral body at .30 (22f8349: ghost .30 / .20); it was .42 before. The text-on-numeral contrast >= 4.5 check below still guards readability.
+  assert.ok(info.paint >= 0.30, "the numeral body is raised enough to read (" + info.paint + " alpha)");
   assert.ok(info.rows.length, "some text line crosses the numeral");
   await page.addStyleTag({ content: "#problem .blocks, #problem .blocks * { color: transparent !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; } #problem > button { visibility: hidden !important; }" });
   await page.waitForTimeout(150);
