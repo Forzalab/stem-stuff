@@ -1740,7 +1740,7 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 }
 /* == TYPESCALE ui-v7 == the old --t-* names on the scale (--fs-* in :root), the same at every width: it beats the three desktop :root bumps above (html.ui-v7 > :root).
    xs 13 -> step -1 · sm 15, md 17 -> step 0 · lg 20 -> step 1 · xl 28 -> step 2 · 2xl 40 -> step 4. Flag off: the old tokens above stay. */
-html.ui-v7 { --t-xs: var(--fs--1); --t-sm: var(--fs-0); --t-md: var(--fs-0); --t-lg: var(--fs-1); --t-xl: var(--fs-2); --t-2xl: var(--fs-4); --t-reply: var(--fs-0); }
+html.ui-v7 { --t-xs: var(--fs--1); --t-sm: var(--fs-0); --t-md: var(--fs-0); --t-lg: var(--fs-1); --t-xl: var(--fs-2); --t-2xl: var(--fs-4); --t-reply: var(--fs-0); --lh: 1.5; --lh-xs: 1.25; }   /* --lh / --lh-xs stay unitless (calc(N * var(--lh) * 1em) reads them): 1.5 = the step-0 body leading 24 / 16, 1.25 = step -1's 16 / 12.8 */
 /* the hard-coded sizes of the GLOBAL rules above, on the scale for ui-v7 only: .cl-title 21 -> step 1 · .cl-starter max(14, xs) -> step -1 (the code block keeps `font: 1rem` = step 0 on desktop; the phone's 14px mono (CB-PHONE, Tony Nov 17: 12 too small, floor 14) is the one size kept off the scale, see MAP.md) */
 html.ui-v7 .cl-title { font-size: var(--fs-1); }
 html.ui-v7 .cl-starter { font-size: var(--fs--1); }
