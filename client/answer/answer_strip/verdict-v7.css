@@ -275,3 +275,11 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:is(:disabled, [aria-disab
 @media (hover: hover) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
 }
+
+/* IB-3 (SOFT-LIFT §6, grill Q1a): while a TYPED answer is being checked the box says "thinking"; its Check key only dims.
+   app.css "grading wait" draws a ring in every .send and hides its arrow; typed answers keep the arrow and drop the ring.
+   MC keeps the live spinner untouched (choose-all-spam.pw pins it). */
+html.ui-v7.grading #q > .ff#ff:not(.proof):not(.rbox) > #ansGo::after { content: none; animation: none; }
+html.ui-v7.grading #q > .ff#ff:not(.proof):not(.rbox) > #ansGo > :is(.ico, .ib1-go) { visibility: visible; }
+html.ui-v7.grading #q .mparts .part.g-on > .ff > .send::after { content: none; animation: none; }
+html.ui-v7.grading #q .mparts .part.g-on > .ff > .send > :is(.ico, .svg, .ib1-go) { visibility: visible; }

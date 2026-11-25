@@ -288,6 +288,93 @@
     requestAnimationFrame(function () { requestAnimationFrame(function () { if (ff._ib2g === g) ff.removeAttribute("data-ib2"); }); });
   }, true);
 
+  /* IB-3 (SOFT-LIFT §0.1 §0.4 §6): THINKING on the two typed fields. While html.grading names a field (the single typed #ff; a
+     multi part only while it is .g-on) strip.js adds the aurora ring layers and sets the input readOnly. The ring is the compositor
+     cure from app.css "the rim turns on the compositor": a big square with the conic gradient is ROTATED by transform keyframes
+     (Web Animations API, no CSS @property, no conic repaint per frame) under the static ring masks in strip.css.
+     EVEN SPEED: the rotate() angles are perimeter-spaced (64 samples of edge(s)), so the head moves the same px/s on every side;
+     rebuilt per field and on resize. No animation under prefers-reduced-motion (strip.css shows a static ring). */
+  var RM = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+  var ib3 = new WeakMap();                                    // field -> { ring, glow, spins, anims, inp, ro, w, h }
+  /* s = px along the outline from the top middle, clockwise; ang(s) = the clockwise angle from the top (mock edge()) */
+  function edge(w, h) {
+    var P = 2 * (w + h);
+    function ang(s) {
+      s = ((s % P) + P) % P;
+      var x, y;
+      if (s < w / 2) { x = s; y = -h / 2; }
+      else if (s < w / 2 + h) { x = w / 2; y = s - w / 2 - h / 2; }
+      else if (s < 1.5 * w + h) { x = w / 2 - (s - w / 2 - h); y = h / 2; }
+      else if (s < 1.5 * w + 2 * h) { x = -w / 2; y = h / 2 - (s - 1.5 * w - h); }
+      else { x = s - 1.5 * w - 2 * h - w / 2; y = -h / 2; }
+      var t = Math.atan2(x, -y) * 180 / Math.PI;
+      return t < 0 ? t + 360 : t;
+    }
+    return { P: P, ang: ang };
+  }
+  function ib3Checking(q) {
+    var out = [];
+    var one = q.querySelector(":scope > .ff#ff:not(.proof)");
+    if (one && one.querySelector("input.ans")) out.push(one);
+    q.querySelectorAll(".mparts .part.g-on > .ff").forEach(function (f) { if (f.querySelector("input.ans")) out.push(f); });
+    return out;
+  }
+  function ib3Run(f, st) {
+    st.anims.forEach(function (a) { a.cancel(); });
+    st.anims = [];
+    if (RM.matches) return;                                   // reduced motion: the static ring is CSS only
+    var w = f.offsetWidth, h = f.offsetHeight;
+    if (!w || !h) return;
+    var E = edge(w, h), N = 64, kf = [];
+    for (var i = 0; i <= N; i++) kf.push({ transform: "rotate(" + (i === N ? 360 : E.ang(E.P * i / N)) + "deg)" });
+    var opt = { duration: Math.min(2600, Math.max(1600, E.P / .475)), iterations: Infinity, easing: "linear" };   // 475 px/s, lap clamped 1.6..2.6 s
+    st.spins.forEach(function (s) { st.anims.push(s.animate(kf, opt)); });
+    st.w = w; st.h = h;
+  }
+  function ib3Start(f) {
+    var ring = D.createElement("div"), glow = D.createElement("div");
+    ring.className = "ib3-ring"; glow.className = "ib3-glow";
+    ring.setAttribute("aria-hidden", "true"); glow.setAttribute("aria-hidden", "true");
+    var a = D.createElement("i"), b = D.createElement("i");
+    a.className = b.className = "ib3-spin"; a.setAttribute("aria-hidden", "true"); b.setAttribute("aria-hidden", "true");
+    ring.append(a); glow.append(b); f.append(ring, glow);
+    var inp = f.querySelector("input.ans");
+    inp.readOnly = true;                                      // the input is read-only while checking (SOFT-LIFT §6)
+    f.setAttribute("aria-busy", "true");
+    var st = { ring: ring, glow: glow, spins: [a, b], anims: [], inp: inp, ro: null, w: 0, h: 0 };
+    ib3.set(f, st);
+    if (window.ResizeObserver) { st.ro = new ResizeObserver(function () { if (f.offsetWidth !== st.w || f.offsetHeight !== st.h) ib3Run(f, st); }); st.ro.observe(f); }
+    ib3Run(f, st);
+  }
+  function ib3Stop(f) {
+    var st = ib3.get(f); if (!st) return;
+    st.anims.forEach(function (a) { a.cancel(); });
+    if (st.ro) st.ro.disconnect();
+    st.ring.remove(); st.glow.remove();
+    st.inp.readOnly = false;
+    f.removeAttribute("aria-busy");
+    ib3.delete(f);
+  }
+  function ib3Sync() {
+    var q = $("#q");
+    var want = q && V7() && D.documentElement.classList.contains("grading") ? ib3Checking(q) : [];
+    var live = [];
+    D.querySelectorAll(".ib3-ring").forEach(function (e) {
+      var f = e.parentElement; if (f && ib3.has(f)) live.push(f); else e.remove();
+    });
+    live.forEach(function (f) { if (want.indexOf(f) < 0) ib3Stop(f); });
+    want.forEach(function (f) { if (!ib3.has(f)) ib3Start(f); });
+  }
+  var ib3q = false;
+  function ib3Later() { if (!ib3q) { ib3q = true; queueMicrotask(function () { ib3q = false; ib3Sync(); }); } }
+  function ib3Watch() {
+    var mo3 = new MutationObserver(ib3Later);
+    mo3.observe(D.documentElement, { attributes: true, attributeFilter: ["class"] });
+    var q = $("#q"); if (q) mo3.observe(q, { subtree: true, attributes: true, attributeFilter: ["class"], childList: true });
+    if (RM.addEventListener) RM.addEventListener("change", ib3Later);
+    ib3Later();
+  }
+
   var mo = new MutationObserver(function (recs) {
     for (var i = 0; i < recs.length; i++) {
       var t = recs[i].target, el = t.nodeType === 1 ? t : t.parentElement;
@@ -300,6 +387,7 @@
     addEventListener("resize", re);
     if (window.ResizeObserver) new ResizeObserver(re).observe($("#q"));
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(re);
+    ib3Watch();
     later();
   }
   if (D.readyState === "loading") D.addEventListener("DOMContentLoaded", start); else start();

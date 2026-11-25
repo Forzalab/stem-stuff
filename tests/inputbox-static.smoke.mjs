@@ -1,9 +1,12 @@
-// INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing, Tony Nov 24): the look and the focus motion of the two typed-answer inputs under html.ui-v7 only.
+// INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), <= 400px wide on desktop.
 //   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field, 24px gap, no hairline.
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
-//   judged fields never lift; reduced motion = colours only.   flag off: the old field is untouched.
-// Own serve.py + an uploaded bank. No verdict look here (later slices).   node tests/inputbox-static.smoke.mjs [port]
+//   judged fields never lift; reduced motion = colours only.
+//   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
+//   400x60), the box sinks scale(.986), the input is readOnly, the typed key loses app.css's spinner (MC keeps it), reduced motion = a static
+//   --action ring, no sink/blur.   flag off: nothing.   Own serve.py + an uploaded bank. No verdict look here (later slices).
+//   node tests/inputbox-static.smoke.mjs [port]      SHOTS=<dir> also writes app + mock stills.
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -17,7 +20,7 @@ import { settled } from "./lib/wait.mjs";
 const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), ".."), PORT = +(process.argv[2] || 8862), BASE = `http://127.0.0.1:${PORT}`;
-const SHOTS = process.env.SHOTS || "";
+const SHOTS = process.env.SHOTS || "", SHOTS_APP = process.env.SHOTS_APP === "1";   // SHOTS_APP: app stills only (the mock block is slow; used to re-take the IB-3 thinking shots)
 const MOCK = process.env.MOCK || "/tmp/claude-0/-home-user-stem-stuff/e68c7368-bfe4-55d9-bc9b-0ddd1157720e/scratchpad/ib/PICK-soft-lift.src.html";
 if (SHOTS) { try { mkdirSync(SHOTS, { recursive: true }); } catch (e) { console.log("SHOTS dir unavailable:", e.message); } }
 const TRIES = join(mkdtempSync(join(tmpdir(), "ibstatic-")), "tries.json");
@@ -31,6 +34,13 @@ const FILE = { v: 1, problems: [
   { code: "PSY_S2A", type: "num", how: "Number only.", body: T("Find the magnitude of the cart's acceleration."), answer: "3.2", unit: "m/s^2" },
   { code: "PSY_S3A", type: "num", how: "Number only.", body: T("Find the magnitude of the sled's acceleration."), answer: "5", unit: "m/s^2" },
   { code: "PSY_S4A", type: "num", how: "Number only.", body: T("Find the mass of the cart."), answer: "7", unit: { bad: true } },
+  /* IB-3 uses its own codes: those items FINISH in the thinking steps, and go() only reloads on a hash change */
+  { code: "PSY_T1A", type: "num", how: "Number only.", body: T("Find the magnitude of the block's acceleration."), answer: "3.2", unit: "m/s^2", wish: true },
+  { code: "PSY_T2A", type: "num", how: "Number only.", body: T("Find the magnitude of the block's acceleration."), answer: "3.2", unit: "m/s^2" },
+  { code: "PSY_T3A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
+    { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
+    { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
+  ] },
   { code: "PSY_C1A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
     choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
     wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
@@ -125,6 +135,59 @@ const skinOf = (page, sel) => page.evaluate(s => {
   const c = getComputedStyle(e), r = e.getBoundingClientRect();
   return { bg: c.backgroundColor, bw: c.borderTopWidth, bs: c.borderTopStyle, bc: c.borderTopColor, sh: c.boxShadow, r: c.borderRadius, pr: c.paddingRight, h: r.height, w: r.width, top: r.top, left: r.left, right: r.right };
 }, sel);
+/* IB-3: hold a typed grade open. The uploaded bank grades on device (app.js check -> gradeLocal), so for the IB-3 steps this
+   page's stemOffline.has says "not mine" for the named codes: the app then makes its real POST /check, which page.route holds
+   until release() (then a plain correct verdict comes back). The html.grading wait, the readOnly input and the ring are the app's own. */
+async function holdGrade(page, codes) {
+  let release; const held = new Promise(f => { release = f; });
+  await page.evaluate(cs => {
+    window.__ib3has = window.stemOffline.has;
+    window.stemOffline.has = c => cs.indexOf(c) >= 0 ? false : window.__ib3has(c);
+  }, codes);
+  await page.route("**/check", async r => {
+    if (r.request().method() !== "POST") return r.continue();
+    await held;
+    await r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ verdict: "correct", triesLeft: 1 }) });
+  });
+  return {
+    release,
+    async done() {
+      await page.unroute("**/check");
+      await page.evaluate(() => { if (window.__ib3has) { window.stemOffline.has = window.__ib3has; delete window.__ib3has; } });
+    },
+  };
+}
+/* IB-3: sample the ring's rotating layer at 8 equal times over one lap; head px = the perimeter distance of the gradient's from
+   angle (mock tools/ring-speed.cjs). Returns the 8 px steps; even speed = every step is P/8. */
+const speedOf = (page, wantW) => page.evaluate(async wantW => {
+  const ff = document.querySelector("#q > .ff#ff");
+  ff.style.maxWidth = "none"; ff.style.width = wantW + "px";
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));   // the ResizeObserver rebuild
+  const spin = ff.querySelector(".ib3-ring .ib3-spin"), w = ff.offsetWidth, h = ff.offsetHeight, P = 2 * (w + h);
+  const an = spin && spin.getAnimations().slice(-1)[0];
+  if (!an) return { w, h, P, steps: [] };
+  const ang = s => {
+    s = ((s % P) + P) % P; let x, y;
+    if (s < w / 2) { x = s; y = -h / 2; } else if (s < w / 2 + h) { x = w / 2; y = s - w / 2 - h / 2; }
+    else if (s < 1.5 * w + h) { x = w / 2 - (s - w / 2 - h); y = h / 2; }
+    else if (s < 1.5 * w + 2 * h) { x = -w / 2; y = h / 2 - (s - 1.5 * w - h); }
+    else { x = s - 1.5 * w - 2 * h - w / 2; y = -h / 2; }
+    const t = Math.atan2(x, -y) * 180 / Math.PI; return t < 0 ? t + 360 : t;
+  };
+  const pos = a0 => { a0 = ((a0 % 360) + 360) % 360; let lo = 0, hi = P; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (ang(m) < a0) lo = m; else hi = m; } return lo; };
+  an.pause();
+  const lap = an.effect.getTiming().duration, s = [];
+  for (let i = 0; i <= 8; i++) {
+    an.currentTime = lap * i / 8;
+    const cs = getComputedStyle(spin).transform, m = new DOMMatrix(cs === "none" ? "matrix(1,0,0,1,0,0)" : cs);
+    let r = Math.atan2(m.b, m.a) * 180 / Math.PI; if (r < 0) r += 360;
+    s.push(pos(r));
+  }
+  an.play();
+  const steps = [];
+  for (let i = 0; i < 8; i++) { let d = s[i + 1] - s[i]; if (d < 0) d += P; steps.push(+d.toFixed(2)); }
+  return { w, h, P, lap, steps };
+}, wantW);
 /* IB-2: the whole focus motion contract in one read */
 const liftOf = (page, sel) => page.evaluate(s => {
   const e = document.querySelector(s), c = getComputedStyle(e);
@@ -241,6 +304,66 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.evaluate(() => document.activeElement?.blur());
     return `h ${m.h} box ${m.boxW} key ${m.key.w}x${m.key.h} gap ${(m.key.left - m.boxRight).toFixed(1)}`;
   });
+  await step(`${w}: IB-3 thinking: transform-only aurora, sink, readOnly input, typed key only dims`, async () => {
+    await go(page, "PSY_T1A");
+    await page.mouse.move(0, 0);   // no pointer hover: the rest edge is the authored IB-1 edge, not the hover edge
+    const restEdge = await page.evaluate(() => getComputedStyle(document.querySelector("#q > .ff#ff")).borderTopColor);
+    const hold = await holdGrade(page, ["PSY_T1A"]);
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .ib3-ring .ib3-spin", { timeout: 3000 });
+      await page.waitForTimeout(460);   // html.grading is 150 ms late; the sink is .42s
+      const t = await page.evaluate(() => {
+        const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"), key = document.querySelector("#ansGo");
+        const ring = ff.querySelector(".ib3-ring"), glow = ff.querySelector(".ib3-glow"), unit = ff.querySelector(".unit");
+        const anims = [...ff.querySelectorAll(".ib3-spin")].flatMap(s => s.getAnimations());
+        const keys = anims.map(a => (a.effect ? a.effect.getKeyframes() : []).map(k => Object.keys(k).filter(n => ["offset", "computedOffset", "easing", "composite"].indexOf(n) < 0)));
+        const ka = getComputedStyle(key, "::after");
+        return {
+          tr: getComputedStyle(ff).transform, ro: inp.readOnly, busy: ff.getAttribute("aria-busy"),
+          anims: anims.length, keys, names: anims.map(a => a.animationName || ""),
+          ringOp: +getComputedStyle(ring).opacity, ringPad: getComputedStyle(ring).paddingTop, rings: ff.querySelectorAll(".ib3-ring").length,
+          glowFilter: getComputedStyle(glow).filter, glowOp: +getComputedStyle(glow).opacity,
+          blur: getComputedStyle(inp).filter, blurUnit: unit ? getComputedStyle(unit).filter : "blur(0.8px)",
+          keyOp: +getComputedStyle(key).opacity, after: ka.content, afterAnim: ka.animationName,
+          arrow: getComputedStyle(key.querySelector(".ib1-go")).display,
+          fv: ff.matches(":has(input:focus-visible)"), ol: getComputedStyle(ff).outlineStyle,
+          ow: getComputedStyle(ff).outlineWidth, bc: getComputedStyle(ff).borderTopColor,
+        };
+      });
+      assert.match(t.tr, /matrix\(0\.986, 0, 0, 0\.986/, `the box sinks to .986: ${t.tr}`);
+      assert.equal(t.fv, true, "precondition: the checking input keeps keyboard focus-visible");
+      assert.ok(t.ol === "none" || parseFloat(t.ow) === 0, `thinking suppresses the focus-visible outline: ${t.ol} ${t.ow}`);
+      assert.equal(t.bc, restEdge, `thinking edge is the RESTING edge, not --action: ${t.bc} vs ${restEdge}`);
+      assert.equal(t.ro, true, "the typed input is readOnly while checking");
+      assert.equal(t.busy, "true", "the checking field says aria-busy");
+      assert.ok(t.anims >= 2, `the ring and its glow animate: ${t.anims}`);
+      assert.ok(t.keys.length && t.keys.every(list => list.length > 1 && list.every(ks => ks.length === 1 && ks[0] === "transform")),
+        "keyframes carry ONLY transform (no custom property): " + JSON.stringify(t.keys.slice(0, 1)).slice(0, 300));
+      assert.ok(t.names.every(n => !n), "no CSS animation-name (Web Animations transform keyframes only): " + JSON.stringify(t.names));
+      assert.equal(t.rings, 1, "one ring layer on the single box");
+      assert.equal(t.ringOp, 1, `ring opacity ${t.ringOp}`);
+      assert.equal(t.ringPad, "3.5px", `ring width ${t.ringPad} (want 3.5px)`);
+      assert.equal(t.glowFilter, "blur(7px)", `glow filter ${t.glowFilter}`);
+      assert.equal(t.glowOp, 0.45, `glow opacity ${t.glowOp}`);
+      assert.equal(t.blur, "blur(0.8px)", `value blur ${t.blur}`);
+      assert.equal(t.blurUnit, "blur(0.8px)", `unit blur ${t.blurUnit}`);
+      assert.equal(t.after, "none", "typed Check has no ::after spinner");
+      assert.equal(t.afterAnim, "none", `typed Check has no ring animation: ${t.afterAnim}`);
+      assert.ok(t.keyOp < 1, `typed Check only dims: opacity ${t.keyOp}`);
+      assert.equal(t.arrow, "block", "typed Check keeps its arrow");
+      await shot(page, `single-${w}-thinking-app.png`, "#q");
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading") && !document.querySelector(".ib3-ring"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+    const after = await page.evaluate(() => ({ ro: document.querySelector("#ans") && document.querySelector("#ans").readOnly, rings: document.querySelectorAll(".ib3-ring, .ib3-glow").length }));
+    assert.notEqual(after.ro, true, "readOnly clears when the grade lands");
+    assert.equal(after.rings, 0, "the ring layers leave when the grade lands");
+    return "transform-only ring, sink, readOnly";
+  });
   await step(`${w}: IB-2 single focus lift: scale in place, edge --action, shadow underneath`, async () => {
     await go(page, "PSY_S1A");
     const sel = "#q > .ff#ff";
@@ -340,6 +463,68 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(key.hidden || key.display === "none" || key.w === 0, `Check key still sits under Next: ${JSON.stringify(key)}`);
     return `gap ${(g.nLeft - g.fRight).toFixed(1)} size ${g.nW}x${g.nH} fit ${fit.sw}/${fit.cw}`;
   });
+  if (w >= 900) await step("1280: IB-3 even head speed, 286x60 and 400x60 (px per 1/8 lap within +-10%)", async () => {
+    await go(page, "PSY_T2A");
+    const hold = await holdGrade(page, ["PSY_T2A"]);
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .ib3-ring .ib3-spin", { timeout: 3000 });
+      const log = [];
+      for (const bw of [286, 400]) {
+        const r = await speedOf(page, bw);
+        assert.ok(Math.abs(r.w - bw) <= 1 && Math.abs(r.h - 60) <= 1, `box ${r.w}x${r.h} (want ${bw}x60)`);
+        assert.equal(r.steps.length, 8, `eight samples on ${r.w}x${r.h}: ${JSON.stringify(r.steps)}`);
+        const exp = r.P / 8;
+        r.steps.forEach((d, i) => assert.ok(Math.abs(d - exp) <= exp * .10,
+          `step ${i} = ${d}px on ${r.w}x${r.h}; want ${exp.toFixed(1)} +-10% (${r.steps.join("/")})`));
+        const pxPerSec = exp / (r.lap / 8000);
+        assert.ok(pxPerSec > 380 && pxPerSec < 560, `pace ${pxPerSec.toFixed(0)} px/s on ${r.w}x${r.h}`);
+        log.push(`${r.w}x${r.h} lap ${Math.round(r.lap)}ms ${r.steps.map(x => x.toFixed(1)).join("/")}`);
+      }
+      return log.join(" | ");
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading") && !document.querySelector(".ib3-ring"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
+  await step(`${w}: IB-3 multi: only the part being checked thinks`, async () => {
+    await go(page, "PSY_T3A");
+    await page.mouse.move(0, 0);
+    const restEdge = await page.evaluate(() => getComputedStyle(document.querySelector("#q .mparts .part:first-child > .ff")).borderTopColor);
+    const hold = await holdGrade(page, ["PSY_T3A"]);
+    try {
+      await page.fill("#q .mparts .part:first-child input.ans", "17");
+      await page.press("#q .mparts .part:first-child input.ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .mparts .part:first-child .ib3-ring", { timeout: 3000 });
+      await page.waitForTimeout(460);
+      const m = await page.evaluate(() => [...document.querySelectorAll("#q .mparts .part")].map((p, i) => {
+        const ff = p.querySelector(".ff"), inp = p.querySelector("input.ans"), key = p.querySelector(".send");
+        return { i, g: p.classList.contains("g-on"), ring: !!ff.querySelector(".ib3-ring"), ro: inp.readOnly,
+          tr: getComputedStyle(ff).transform, after: getComputedStyle(key, "::after").content, rings: document.querySelectorAll(".ib3-ring").length,
+          fv: ff.matches(":has(input:focus-visible)"), ol: getComputedStyle(ff).outlineStyle, ow: getComputedStyle(ff).outlineWidth,
+          bc: getComputedStyle(ff).borderTopColor };
+      }));
+      assert.deepEqual(m.map(x => x.g), [true, false], "only the checked part is .g-on: " + JSON.stringify(m));
+      assert.deepEqual(m.map(x => x.ring), [true, false], "only the checked part wears the ring: " + JSON.stringify(m));
+      assert.equal(m[0].ro, true, "the checked part's input is readOnly");
+      assert.equal(m[1].ro, false, "the idle part stays editable");
+      assert.match(m[0].tr, /matrix\(0\.986, 0, 0, 0\.986/, `the checked part sinks: ${m[0].tr}`);
+      assert.equal(m[1].tr, "none", `the idle part does not sink: ${m[1].tr}`);
+      assert.equal(m[0].after, "none", "the checked part's key has no spinner");
+      assert.equal(m[0].fv, true, "precondition: the checked part keeps keyboard focus-visible");
+      assert.ok(m[0].ol === "none" || parseFloat(m[0].ow) === 0, `the checked part has no focus-visible outline: ${m[0].ol} ${m[0].ow}`);
+      assert.equal(m[0].bc, restEdge, `the checked part's edge is the RESTING edge: ${m[0].bc} vs ${restEdge}`);
+      await shot(page, `multi-${w}-thinking-app.png`, "#q");
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading") && !document.querySelector(".ib3-ring"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+    return "ring on the g-on part only";
+  });
   await step(`${w}: non-string unit does not print [object Object]`, async () => {
     await go(page, "PSY_S4A");
     const u = await page.evaluate(() => ({ unit: document.querySelector("#q .unit")?.textContent || null, text: document.querySelector("#q").textContent }));
@@ -353,6 +538,29 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(m.mc && near(m.mc.w, 56) && near(m.mc.h, 56), `#mcGo ${JSON.stringify(m.mc)}`);
     assert.equal(m.mc.inChk, true, "#mcGo still lives in .chk");
     return `${m.mc.w}x${m.mc.h} in .chk`;
+  });
+  if (w === 390) await step("390: IB-3 MC keeps the live key spinner (typed-only switch-off)", async () => {
+    await go(page, "PSY_C1A");
+    const hold = await holdGrade(page, ["PSY_C1A"]);
+    try {
+      await page.click('#q .opt[data-id="a"]');
+      await page.waitForFunction(() => !document.querySelector("#mcGo").disabled);
+      await page.click("#mcGo");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      const k = await page.evaluate(() => {
+        const b = document.querySelector("#mcGo"), a = getComputedStyle(b, "::after");
+        return { content: a.content, anim: a.animationName, op: +getComputedStyle(b).opacity, rings: document.querySelectorAll(".ib3-ring, .ib3-glow").length };
+      });
+      assert.notEqual(k.content, "none", "MC still draws the ::after ring: " + JSON.stringify(k));
+      assert.match(k.anim, /^grade-(spin|pulse)$/, `MC still spins its ring: ${k.anim}`);
+      assert.ok(k.op < 1, `MC Check still dims: ${k.op}`);
+      assert.equal(k.rings, 0, "no typed thinking ring on the MC key");
+      return `MC ring ${k.anim}`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
   });
   await ctx.close();
 }
@@ -382,6 +590,33 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     const j = await liftOf(page, "#q #ff.bad");
     assert.equal(j.tr, "none", `judged: ${j.tr}`);
     return `tr ${j.tr}`;
+  });
+  await step("reduced motion: IB-3 thinking = static .6 --action ring, no rotation/sink/blur", async () => {
+    await go(page, "PSY_T1A");
+    const hold = await holdGrade(page, ["PSY_T1A"]);
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .ib3-ring", { timeout: 3000 });
+      const r = await page.evaluate(() => {
+        const ff = document.querySelector("#q > .ff#ff"), ring = ff.querySelector(".ib3-ring"), spin = ff.querySelector(".ib3-spin"), glow = ff.querySelector(".ib3-glow");
+        return { tr: getComputedStyle(ff).transform, blur: getComputedStyle(ff.querySelector("input.ans")).filter,
+          bg: getComputedStyle(ring).backgroundColor, op: +getComputedStyle(ring).opacity,
+          spin: getComputedStyle(spin).display, anims: spin.getAnimations().length, glow: getComputedStyle(glow).display };
+      });
+      assert.equal(r.tr, "none", `no sink under reduced motion: ${r.tr}`);
+      assert.equal(r.blur, "none", `no value blur under reduced motion: ${r.blur}`);
+      assert.equal(r.bg, "rgb(90, 169, 255)", `the static ring is --action: ${r.bg}`);
+      assert.equal(r.op, 0.6, `the static ring is .6: ${r.op}`);
+      assert.equal(r.spin, "none", "the rotating layer is hidden");
+      assert.equal(r.anims, 0, `no rotation under reduced motion: ${r.anims} animations`);
+      assert.equal(r.glow, "none", "no glow under reduced motion");
+      return `static ${r.bg} @ ${r.op}`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
   });
   await ctx.close();
 }
@@ -424,6 +659,30 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.doesNotMatch(f.dur, /0\.42s/, `flag off has no IB-2 transition: ${f.dur}`);
     return `tr ${f.tr} dur ${f.dur}`;
   });
+  await step("flag off 390: IB-3 adds nothing while a typed grade is out", async () => {
+    await go(page, "PSY_T1A");
+    const hold = await holdGrade(page, ["PSY_T1A"]);
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      const r = await page.evaluate(() => {
+        const ff = document.querySelector("#q > .ff#ff");
+        return { rings: document.querySelectorAll(".ib3-ring, .ib3-glow").length, ro: ff.querySelector("input.ans").readOnly,
+          tr: getComputedStyle(ff).transform, blur: getComputedStyle(ff.querySelector("input.ans")).filter,
+          after: getComputedStyle(document.querySelector("#ansGo"), "::after").content };
+      });
+      assert.equal(r.rings, 0, "flag off: no ring layers");
+      assert.equal(r.ro, false, "flag off: the input is not made readOnly");
+      assert.equal(r.tr, "none", `flag off: no sink (${r.tr})`);
+      assert.equal(r.blur, "none", `flag off: no value blur (${r.blur})`);
+      assert.notEqual(r.after, "none", "flag off keeps the live typed Check spinner");
+      return "flag off: nothing";
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
   await step("flag off 1280: single has no 400px cap", async () => {
     await go(page, "PSY_S1A");
     const m = await page.evaluate(MET);
@@ -432,8 +691,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   });
   await ctx.close();
 }
-/* side-by-side material: the mock's own cards at the same widths (only with SHOTS) */
-if (SHOTS) {
+/* side-by-side material: the mock's own cards at the same widths (only with SHOTS; SHOTS_APP skips it) */
+if (SHOTS && !SHOTS_APP) {
   try {
     for (const w of [390, 1280]) {
       const ctx = await browser.newContext({ viewport: { width: w, height: w === 390 ? 844 : 900 } });
@@ -453,6 +712,10 @@ if (SHOTS) {
           await card.screenshot({ path: join(SHOTS, `${name}-${w}-mock.png`) }).catch(e => console.log("mock shot", e.message.slice(0, 100)));
           await page.evaluate(() => document.activeElement?.blur());
           await page.waitForTimeout(520);
+        }
+        const chk = page.locator('#states [data-force="checking"] .card');
+        for (const [i, name] of [[0, "multi"], [1, "single"]]) {
+          if (await chk.nth(i).count()) await chk.nth(i).screenshot({ path: join(SHOTS, `${name}-${w}-mock-thinking.png`) }).catch(e => console.log("mock thinking shot", e.message.slice(0, 100)));
         }
       } else console.log("mock cards not found at", w, n);
       await ctx.close();

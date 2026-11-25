@@ -218,3 +218,51 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2],
   html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2] { transition: none; }
 }
+
+/* ===== IB-3 SOFT LIFT, THINKING (Tony Nov 24; SOFT-LIFT-SPEC §0.1 §0.4 §6; mock PICK-soft-lift.src.html "checking"). html.ui-v7 only.
+   While a typed answer is being graded the box says "thinking": an aurora arc walks its outline, the box sinks back and its value softens.
+   SHIP TECHNIQUE (§0.1): a big square holding a conic gradient is rotated by TRANSFORM keyframes under a STATIC 3.5px ring mask
+   (mask-composite: exclude), the app.css "rim turns on the compositor" cure: no @property, no animated custom property, no conic repaint
+   per frame. The 64 rotate() keyframes are perimeter-spaced, built per field in strip.js (even px/s on all four sides), rebuilt on resize.
+   The ring layer is inserted/removed by strip.js only while html.grading names this field (single typed #ff; a multi part while it is .g-on). ===== */
+html.ui-v7 #q .ib3-ring,
+html.ui-v7 #q .ib3-glow {
+  position: absolute; z-index: 2; inset: -1.5px; border-radius: inherit; corner-shape: inherit;
+  padding: 3.5px; pointer-events: none; overflow: hidden;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+html.ui-v7 #q .ib3-glow { inset: -3px; padding: 6.5px; filter: blur(7px); opacity: .45; }
+html.ui-v7 #q .ib3-spin {
+  position: absolute; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
+  translate: -50% -50%; border-radius: 50%; will-change: transform; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 52%, var(--action) 68%, var(--fig-violet-1, #8f78f5) 82%, var(--correct) 93%, transparent 100%);
+}
+/* the sink: 1.4% smaller in place + a deeper dish; the CONTENTS go soft, the rings stay sharp (never a filter on the box) */
+html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox),
+html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) {
+  transform: scale(.986);
+  box-shadow: inset 2px 3px 7px var(--lo), inset -1px -1px 3px var(--hi);
+  border-color: color-mix(in srgb, var(--line) 87%, transparent);   /* the box sank: the edge is the RESTING one, not IB-2's focus --action */
+  outline: none;                                                     /* and no keyboard focus-visible ring: SPEC §6, the mock shows the aurora only */
+  transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);
+}
+html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox) > input.ans,
+html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox) > :is(.lead, .unit),
+html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) > input.ans,
+html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) > :is(.lead, .unit) {
+  filter: blur(.8px); transition: filter .3s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* no rotation: a static .6 ring in --action; no sink, no blur */
+  html.ui-v7 #q .ib3-ring { background: var(--action); opacity: .6; }
+  html.ui-v7 #q .ib3-glow, html.ui-v7 #q .ib3-spin { display: none; }
+  html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox),
+  html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) {
+    transform: none; box-shadow: inset 1px 1px 3px var(--lo), inset -1px -1px 3px var(--hi); transition: none;
+  }
+  html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox) > :is(input.ans, .lead, .unit),
+  html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) > :is(input.ans, .lead, .unit) {
+    filter: none; transition: none;
+  }
+}
