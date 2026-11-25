@@ -100,7 +100,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) {
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) {
   background: var(--ans-field);
-  border: 1.5px solid color-mix(in srgb, var(--line) 87%, transparent);   /* IB-1 edge: 87% is the least strength whose composite reaches 3:1 vs the page (75% mock value = 2.44:1) */
+  border: 1.5px solid var(--line);   /* IB-1 edge: the SOLID --line. 87% was 2.99 page / 2.76 card / 2.91 field (under 3:1); solid = 3.64 / 3.25 / 3.49 */
   border-radius: calc(18px * var(--r-k));
   box-shadow: inset 1px 1px 3px var(--lo), inset -1px -1px 3px var(--hi);
   transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);   /* IB-2: the lift eases home on blur; hover keeps its instant edge */
@@ -176,6 +176,12 @@ html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px
   html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx ." ". ht ht ."; }
   html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { padding-top: 0; }
   html.ui-v7 .mparts .pr { margin: 0; }   /* letter, prompt and VALUE share one baseline: the field's own top/margin is set by the grid */
+  /* IB-7 (Tony Nov 25): the hint card sits SNUG under the box, like the mock (12). The row is as tall as the TALLER of prompt
+     and field; the field's -4.5px paint shift is not in the row, so the prompt's wrapped last line is already 12.4px below the
+     box's painted bottom. The hint's old 12px margin was added on top of that (24.4 gap). A HINTED part drops the margin: the
+     card lands on the mock's 12 under the box, flush under the prompt's last line. An unhinted part keeps its old room, and the
+     phone template (prompt above the field) keeps its 12. */
+  html.ui-v7 .mparts .part.hinted .phint { margin-top: 0; }
 }
 
 /* ===== IB-2 SOFT LIFT, FOCUS + TYPING (Tony Nov 24; SOFT-LIFT-SPEC §4; mock PICK-soft-lift.src.html). html.ui-v7 only.
@@ -239,14 +245,14 @@ html.ui-v7 #q .ib3-glow { inset: -3px; padding: 6.5px; filter: blur(7px); opacit
 html.ui-v7 #q .ib3-spin {
   position: absolute; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
   translate: -50% -50%; border-radius: 50%; will-change: transform; pointer-events: none;
-  background: conic-gradient(from 0deg, transparent 0 52%, var(--action) 68%, var(--fig-violet-1, #8f78f5) 82%, var(--correct) 93%, transparent 100%);
+  background: conic-gradient(from 0deg, transparent 0 52%, var(--action-fill) 62%, var(--action) 80%, var(--action-on) 95%, transparent 100%);
 }
 /* the sink: 1.4% smaller in place + a deeper dish; the CONTENTS go soft, the rings stay sharp (never a filter on the box) */
 html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox),
 html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) {
   transform: scale(.986);
   box-shadow: inset 2px 3px 7px var(--lo), inset -1px -1px 3px var(--hi);
-  border-color: color-mix(in srgb, var(--line) 87%, transparent);   /* the box sank: the edge is the RESTING one, not IB-2's focus --action */
+  border-color: var(--line);   /* the box sank: the edge is the RESTING solid --line, not IB-2's focus --action */
   outline: none;                                                     /* and no keyboard focus-visible ring: SPEC §6, the mock shows the aurora only */
   transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);
 }
@@ -298,6 +304,11 @@ html.ui-v7 #q .ff[data-ib4="sweep"]:not(.ib4-done) > .vk { opacity: 0; }
 html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk { animation: ib4-fade .25s ease-out both; }
 html.ui-v7 #q .ff[data-ib4="still"] > .vk { opacity: 1; animation: none; }
 @keyframes ib4-fade { from { opacity: 0; } to { opacity: 1; } }
+/* IB-7 (Tony Nov 25): the miss hint sits SNUG under the typed box, like the mock (12px). The single typed answer keeps a one-line
+   preview room (#preview, app.css W91) between the field and #fb; on a miss it is EMPTY, so it only pushed the card down (its 4px
+   margin + the 1.5em line, ~26.5/29.5px). With a card up it folds; a card only, the single typed field only: MC, proof and flag
+   off keep their gap. The card's own look is untouched. */
+:where(html.ui-v7) #q:has(> .ff#ff:not(.proof, .rbox):is(.bad, .lock)):has(+ #fb > .cluck) > .preview:empty { display: none; }
 /* the hint pops down at the sweep start (mock .hint pop): the single typed hint is #fb's card, the multi hint is .phint's */
 @keyframes ib4-pop { from { opacity: 0; transform: translateY(-4px); } }
 html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
