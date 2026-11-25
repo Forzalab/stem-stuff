@@ -60,7 +60,7 @@ html.ui-v7 #q .ff:not(.ok):not(.bad):not(.rbox), html.ui-v7 .code-box, html.ui-v
 html.ui-v7 #q .ff input:focus-visible, html.ui-v7 #q .ff input:focus, html.ui-v7 .code-box input:focus-visible, html.ui-v7 .code-box input:focus { outline: none; }
 html.ui-v7 #q .ff:has(input:focus-visible):not(.bad):not(.ok):not(.rbox):not([data-ptr]), html.ui-v7 .code-box:has(input:focus-visible):not([data-ptr]) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: var(--r-tile); }
 html.ui-v7 #q .ff input:focus::placeholder { color: var(--hint); }   /* the placeholder shows while the field is empty, focus or not */
-html.ui-v7 #q > .how { display: block !important; font-size: 13px; line-height: 1.4; color: var(--muted); }   /* ICK PR-A (A1, ICK-R1 3a): the "Tick all..." line is a caption: 13px, muted */   /* the hint line stays (the caption's :has rule hid it on focus) */
+html.ui-v7 #q > .how { display: block !important; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); }   /* ICK PR-A (A1, ICK-R1 3a): the "Tick all..." line is a caption: 13px, muted */   /* the hint line stays (the caption's :has rule hid it on focus) */
 html.ui-v7 .ff > .fl { display: none; }   /* Tony Nov 15 (round 3): no floating caption; the placeholder is the only label, and it hides when typing */
 html.ui-v7 #q .ff.bad, html.ui-v7 #q .ff.ok, html.ui-v7 #q .ff.rbox.ok { box-shadow: var(--shadow-raise); }
 
@@ -212,9 +212,9 @@ html.ui-v7 #q .ff.proof > .pwrap.pf-b { --pf-b: 10px; }
 html.ui-v7.proof-split.kbup #work > #q:focus-within .ff.proof > .pwrap { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }   /* PROOF-LOCK */
 html.ui-v7 #q .ff.proof > .pwrap > .ans {
   flex: 1 1 100%; min-width: 0; margin: 0; padding: 0; border: 0; outline: none; background: transparent; color: var(--ink); caret-color: var(--focus);
-  font: 400 16px/22px var(--mono); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; -webkit-user-select: text; user-select: text;
+  font: 400 var(--fs-0)/var(--lh-0) var(--mono); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; -webkit-user-select: text; user-select: text;
 }
-@media (min-width: 900px) { html.ui-v7 #q .ff.proof > .pwrap > .ans { font-size: 17px; line-height: 24px; } }
+@media (min-width: 900px) { html.ui-v7 #q .ff.proof > .pwrap > .ans { font-size: var(--fs-0); line-height: var(--lh-0); } }
 html.ui-v7 #q .ff.proof > .pwrap > .ans::before {
   content: ""; float: right; pointer-events: none;   /* --wrap-*: app.js ceField fit() measures the keys; the calc()s = the same numbers before it runs */
   width: var(--wrap-w, calc(var(--pw-keys) - var(--pw-x))); height: var(--wrap-f, 100%);

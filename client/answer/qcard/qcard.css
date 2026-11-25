@@ -6,7 +6,7 @@
    TITLE-EXAMQ-DIM: the headline is lower case except a bank "Q1 · " exam prefix (qcard.js .qexam), which keeps its capital Q in the dim ink with no dot drawn. */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
 @font-face { font-family: "G Schibsted"; font-weight: 400 900; font-display: swap; src: url(../../vendor/fonts/schibsted-grotesk-latin-var.woff2) format("woff2"); }   /* OFL, Latin subset: headline + text + meta */
-html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 20px; --qc-pad: 20px; --qnum: 108px; --qbody-lh: 1.45; --qbody-gap: 4px; --qw-body: 500; --qink-body: #e6eaf4; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
+html.ui-v7 #problem.qc7 { --qfont: "G Schibsted", var(--font); --qpad: 20px; --qc-pad: 20px; --qnum: 108px; --qbody-lh: var(--lh-0); --qbody-gap: 4px; --qw-body: 450; --qink-body: #e6eaf4; position: relative; isolation: isolate; padding: var(--qpad) var(--qc-pad); }   /* --qc-pad = the ONE inline inset: the text's left edge, its right margin, and the front numeral's left INK edge (qcard.js sets --lsb) */
 html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pad: 16px; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 { --qpad: 22px; --qc-pad: 32px; --qnum: 156px; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
@@ -29,7 +29,7 @@ html.ui-v7 .qghost i:nth-child(6) { --o: .03; }
 html.ui-v7 #problem.qc7.qbr { overflow: hidden; }
 html.ui-v7 #problem.qc7.qbr > .blocks { padding-top: 72px; }   /* QC-NOFRONT (Tony Nov 15): no top-left numeral; headline starts below the Ask Cluck row (44 + 28 air) */
 html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle, .qhead):first-child) { padding-top: 2px; }   /* ROW-ALIGN: title top on the button top (its 2px margin); qcard.js rowAlign() puts the shorter one's BOTTOM on the other's */
-html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.625rem; line-height: 30px; letter-spacing: -.03em; }
+html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: var(--fs-2); line-height: var(--lh-2); letter-spacing: -.03em; }
 html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { margin-top: 0; text-wrap: balance; overflow-wrap: anywhere; padding-right: calc(var(--cbw, 152px) + 24px); }   /* TITLE-BIG B (Tony Nov 16): big balanced title, reserves the MEASURED button width (--cbw, qcard.js) + 24 air */
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(1) { display: none; }
 html.ui-v7 #problem.qc7.qbr .blocks > :first-child { margin-top: 0; }
@@ -53,14 +53,13 @@ html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-sha
 
 /* figure, headline, text, meta: one grid edge */
 html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; clear: both; }   /* FIG-CLEAR: the Ask Cluck squircle floats top right (§ick5-tr); a block-level replaced svg may not overlap a float, so it dropped below the float while .fig and its absolute labels stayed at the top (svg 52px under its labels, the title over its foot). The box itself clears the float: svg, labels and the title below move together. */
-html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 30px/1.1 var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: 36px; } }
+html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 var(--fs-3)/var(--lh-3) var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: var(--fs-4); line-height: var(--lh-4); } }
 html.ui-v7 #problem.qc7 .qhead .qexam { text-transform: none; color: #7a8aae; white-space: nowrap; margin-right: .28em; }   /* TITLE-EXAMQ-DIM (Tony Nov 24): the "Q1" exam prefix keeps its capital Q, sits in the dim ink (#7a8aae, 5.3:1 on --qbox; no root token carries this value, cluckbtn's --cb-off-ink is scoped to the button), never breaks, and its margin-right is the ONE word space before the rest; the typed " · " is .sr-only in qcard.js, never drawn */
-html.ui-v7 #problem.qc7 .qtext { font: var(--qw-body) 16px/22px var(--qfont); color: var(--qink-body); font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: 17px; line-height: 24px; } }
-/* Q-TEXT-WIDE (Tony Nov 22): on wide desktop the figure labels (.lbl = --t-sm, up to 19px) read bigger than the 17px body. Body + bold ask = 1.2 x the label token
-   (floor 17px): 2133 wide -> ~22.8 vs 19, 1280 -> ~19 vs 16. Phone (<= 480) is untouched; the media starts at 900 like the rule above. */
-@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: max(17px, calc(var(--t-sm, .9375rem) * 1.2)); } }
+html.ui-v7 #problem.qc7 .qtext { font: var(--qw-body) var(--fs-0)/var(--lh-0) var(--qfont); color: var(--qink-body); font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: var(--fs-0); line-height: var(--lh-0); } }
+/* Q-TEXT-WIDE (Tony Nov 22) is retired by TYPESCALE: the body is step 0 (16/24) at every width and the figure labels (.lbl = --t-sm) are the same step, so
+   there is no 1.2 x label bump any more. */
 html.ui-v7 #problem.qc7 .qtext > * { margin: 0 0 8px; max-width: 64ch; }
 html.ui-v7 #problem.qc7 .qtext > :last-child { margin-bottom: 0; }
 html.ui-v7 #problem.qc7 .qtext p, html.ui-v7 #problem.qc7 .qtext ul, html.ui-v7 #problem.qc7 .qtext ol { margin: 0 0 8px; max-width: none; }
@@ -68,11 +67,14 @@ html.ui-v7 #problem.qc7 .qtext > :last-child > :last-child { margin-bottom: 0; }
 /* ICK PR-A (A1, ICK-R1 2b): tighter body: 1.45 leading (was 22px; the code-chip lines carried 1.75) and half the paragraph gap (8 -> 4) */
 html.ui-v7 #problem.qc7 .qtext .md :is(p, li), html.ui-v7 #problem.qc7 .qtext > :is(p, li) { line-height: var(--qbody-lh); margin-bottom: var(--qbody-gap); }
 /* ICK PR-A (A1, ICK-R1 3a): the ask is a bold line on the body axis: no box, no shadow, no inset (app.css's `.ask` was the Cluck composer's class; the block is .qask now) */
-html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 700; line-height: var(--qbody-lh); }
-html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 700; }
+html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 700; font-size: var(--fs-1); line-height: var(--lh-1); }   /* TYPESCALE: the title = the ask line, step 1 (20/28), 700 */
+html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 700; font-size: var(--fs-1); line-height: var(--lh-1); }
 html.ui-v7 #problem.qc7 .qsetup { color: var(--qink-body); font-weight: var(--qw-body); }
+/* TYPESCALE: the whole body copy at --qw-body (450; the variable face has every weight), emphasis 700 */
+html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md, html.ui-v7 #problem.qc7 .qtext .md :is(p, li), html.ui-v7 #problem.qc7 .qtext > :is(p, li) { font-weight: var(--qw-body); }
+html.ui-v7 #problem.qc7 :is(strong, b) { font-weight: 700; }
 html.ui-v7 #problem.qc7 .qlead .katex, html.ui-v7 #problem.qc7 .qsetup .katex { font-size: 1em; }
-html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: var(--w-body, 400) 13px/18px var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
+html.ui-v7 #problem.qc7 .qmeta { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: var(--w-body, 400) var(--fs--1)/var(--lh--1) var(--qfont); letter-spacing: .02em; color: #9aa5c8; }
 html.ui-v7 #problem.qc7 .qmeta .twist-chip { margin: 0; }
 /* KATEX-COVER (Nov 15): the G4.3 edge-fade "local covers" (app.css .md :is(.tbl,.katex-display)) paint solid --qbox squares that hid the echo numeral behind
    a display equation / table. Only a box that scrolls needs the fade (wideBoxes() sets tabindex then); a box that fits draws no background. */
@@ -91,8 +93,8 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
 /* NO-FOLD (ICK PR-A, Tony Nov 17, ICK-R1 1a: the Q-HALF cap, the fold chevron and the inner scrollers are gone): the card is as tall as its text and the page scrolls it (ASK-PIN below) */
 @media (max-width: 480px) {
   html.ui-v7:not(.mt):not(.swap) #problem.qc7 { margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
-  html.ui-v7 #problem.qc7 > .blocks { font-size: 15px; line-height: 1.45; }   /* Q-SMALL (Tony Nov 16): phone body one step down, more of the question in the half */
-  html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: 1.5rem; line-height: 28px; }
+  html.ui-v7 #problem.qc7 > .blocks { font-size: var(--fs-0); line-height: var(--lh-0); }   /* Q-SMALL (Tony Nov 16) retired: body = step 0, 16/24 (TYPE-B lock) */
+  html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: var(--fs-2); line-height: var(--lh-2); }
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
 }
 /* CODE-MONO (Tony Nov 16 "font looks weird"): inline code in the question is mono like the code blocks (FONT-ONE turned it into the grotesk: proportional punctuation, "isPal(s , lo , hi)") */
@@ -108,27 +110,27 @@ html.ui-v7 #problem.qc7 .blocks > :last-child, html.ui-v7 #problem.qc7 .blocks >
 .x-label { display: none; }
 html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex; margin-bottom: var(--s2); }
 /* STACK-NORMAL (Tony Nov 16): a title on its own row (option A: desktop, cramped, > 3 lines) is a normal title, not a hero: 20/26, flush with the text's left edge */
-html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: 1.25rem; line-height: 26px; letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }
+html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: var(--fs-1); line-height: var(--lh-1); letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }
 html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-child { margin-bottom: 24px; }   /* BREATHE: the shared title/button row ends on the button's bottom; 24 px air before the text */
 /* == KICKER-C (Tony Nov 16, Opus redesign variant C, "C but the kicker = the question's code, keep the old button font") ==
    Diagnosis (brain topics/ui-v7-decisions.md KICKER-C): rowAlign's 3 modes started the title at 3 heights, 4 title sizes, box- not baseline-aligned, button 47% of the measure.
    C = one newspaper layout, NO-BORDER: kicker row (question code, tracked caps, left) + Ask Cluck (right) | 20 px air | headline full measure | body 16/22 | meta. */
 html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle,.qhead):first-child), html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle,.qhead):first-child) { padding-top: 0 !important; }
-html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 8px !important; font: 700 28px/30px var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: 36px !important; line-height: 38px !important; } }
-html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: 16px; line-height: 22px; }   /* TYPE-B lock 16/22 (Q-SMALL's 15 px retired) */
+html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 8px !important; font: 700 var(--fs-3)/var(--lh-3) var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: var(--fs-4) !important; line-height: var(--lh-4) !important; } }
+html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: var(--fs-0); line-height: var(--lh-0); }   /* TYPE-B lock 16/22 -> TYPESCALE step 0, 16/24 (Q-SMALL's 15 px retired) */
 /* ICK4-SHORT-LH (Tony Nov 18 "1.35 for med to long, 1.25 for short text"): body leading 1.35, short body text 1.25 (qcard.js shortText: <= 4 setup lines).
    Unitless, so desktop 17px follows. Beats TYPE-B 16/22 above and .qtext 16/22 + 17/24 (same specificity, later). */
-html.ui-v7 #problem.qc7 { --qbody-lh: 1.35; }
-html.ui-v7 #problem.qc7.qshort { --qbody-lh: 1.25; }
+html.ui-v7 #problem.qc7 { --qbody-lh: var(--lh-0); }
+html.ui-v7 #problem.qc7.qshort { --qbody-lh: var(--lh-0); }   /* TYPESCALE: one body leading, 24 (the 1.35 / 1.25 split is retired; qcard.js still sets .qshort) */
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md, html.ui-v7 #problem.qc7 .qtext { line-height: var(--qbody-lh); }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md, html.ui-v7 #problem.qc7 .qtext { line-height: var(--qbody-lh); } }
 /* ICK5-CLUCK-TR: NOT a flex row any more. The Ask Cluck button is a FLOAT at the top right (qcard.css §ick5-tr), so #problem must be a plain block formatting
    context: a flex / grid / BFC .blocks makes every child a flex item (floats are ignored, no wrap) - this rule was the wrap blocker (AC6). The old flex
    kicker row and its order/align rules below are inert now. */
 html.ui-v7 #problem.qc7.qbr { display: flow-root; }
-html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-html.ui-v7 #problem.qc7.qbr > * { flex: 0 0 100%; }
+html.ui-v7 #problem.qc7.qbr::before { content: attr(data-code); order: 0; flex: 1; min-width: 0; font: 600 var(--fs--1)/var(--lh--1) var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.ui-v7 #problem.qc7.qbr > *{ flex: 0 0 100%; }
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { order: 1; flex: none; float: none; }   /* the old KICKER-C top-row flex placement is retired (ICK5: §ick5-tr floats it right); kept only so the link rules below stay scoped as before */
 html.ui-v7 #problem.qc7.qbr > .blocks { order: 2; margin-top: 14px; }
 html.ui-v7 #problem.qc7.qbr > .cc-row, html.ui-v7 #problem.qc7.qbr > #rtag { order: 3; }
@@ -138,7 +140,7 @@ html.ui-v7 #problem.qc7.qbr { align-items: baseline; }
 /* the kicker is a real element now (qcard.js span.qkicker, baseline-matched to the button label); the ::before kicker is off */
 html.ui-v7 #problem.qc7.qbr::before { content: none; display: none; }
 html.ui-v7 #problem.qc7.qbr { align-items: flex-start; }
-html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; align-self: flex-start; font: 600 12px/16px var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; align-self: flex-start; font: 600 var(--fs--1)/var(--lh--1) var(--qfont); letter-spacing: .12em; text-transform: uppercase; color: var(--dim, #7a8aae); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qkicker { display: none; }   /* ICK E3 (Tony Nov 17): the kicker is gone; the old `display: block` under qbr is retired */
 /* EXPLAIN-TAG fix (CI polish '(d) pad page gap 33px'): html.mt .xb-label { display: contents } (app.css) un-hid the label in the pad split; hidden everywhere unless the v7 side case */
 #work > .x-label { display: none !important; }
@@ -181,7 +183,7 @@ html.ui-v7 #problem.qc7.qbr > .cluckbtn:is(.cb-sheen, .cb-shake, .cb-nod, .cb-ho
 @media (prefers-reduced-motion: reduce) { html.ui-v7 #problem.qc7.qbr > .cluckbtn .cb-t { animation: none !important; } }
 /* SIZE-MATCH (Tony Nov 16 "make ask cluck and the code text look similar in size"): both were 15px 600, but the kicker is tracked CAPS (cap height on every letter), so it read
    bigger than the mixed-case link. Caps drop to 13.5px (about the link's x-height + ascenders), one font file for both (--qfont). Measured baselines stay equal at top alignment (393: 63/63, 1280: 168.5/168.5). */
-html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: calc(var(--t-sm, .9375rem) * .9); letter-spacing: .07em; }   /* 0.9 x the link size: 13.5 on phone, scales with --t-sm (up to 19px) on big screens */
+html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: var(--fs--1); letter-spacing: .07em; }   /* 0.9 x the link size: 13.5 on phone, scales with --t-sm (up to 19px) on big screens */
 html.ui-v7 #problem.qc7.qbr > .cluckbtn { font-family: var(--qfont); }
 /* GHOST-LIQUID (Tony Nov 16 "a liquid blur on top of the ghost number, mind CPU"): ONE static filter on the echo layer (not backdrop-filter, which re-runs every scroll
    frame, and not one filter per copy: 5 passes). The blurred layer is drawn once and moved as a texture; saturate keeps the blur from going grey. contain: paint keeps

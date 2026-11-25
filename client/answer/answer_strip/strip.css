@@ -124,13 +124,13 @@ html.ui-v7 #q .mparts .part > .ff:has(input:disabled) { cursor: not-allowed; }
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > input.ans,
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) > input.ans {
   height: 54px; padding: 0;
-  font-family: var(--font-input); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+  font-family: var(--font-input); font-size: var(--fs-2); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
 }
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > input.ans::placeholder,
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) > input.ans::placeholder { font-family: var(--font-input); font-weight: 400; color: transparent; }   /* the mock's field is empty: the live "Ex: ..." hint would print at 28px and swamp the box */
 /* the unit / leading label role: Atkinson 400 17px muted (mock .unit). The app's typed single has no unit span; .lead (expr "f(x) =") is that role today. */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > :is(.lead, .unit),
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 17px/1 var(--font-input); color: var(--muted); }
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 var(--fs-0)/1 var(--font-input); color: var(--muted); }
 
 /* the single box leaves room for its key outside: 60 key + 12 gap = 72; desktop caps the box at 400 (Tony confirmed the cap) */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { width: calc(100% - 72px); }
@@ -161,10 +161,10 @@ html.ui-v7 .mparts .part {
 html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx ." ". ht ht"; }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
 html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
-html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: 17px; line-height: 24px; font-weight: 400; }
+html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
-html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: 17px; line-height: 24px; }
+html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: var(--fs-0); line-height: var(--lh-0); }
 @media (min-width: 900px) {
   /* IB-5: 400px field + its own 60px key column on the same row (SOFT-LIFT §13). The hint row is always declared (empty
      .phint = 0 height) for the same implicit-column reason as the phone template. */
