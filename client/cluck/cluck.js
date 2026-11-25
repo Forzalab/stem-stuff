@@ -23,6 +23,7 @@ import { clampPos, dimAt, progress, radiusAt, snapTo } from "../pure_logic_modul
 import { speakable } from "../pure_logic_modules/speak.mjs";
 import { pipeHold, pipeTable, renumberSteps } from "../pure_logic_modules/steps.mjs";
 import { flipHTML, flipModel, tableShape } from "../pure_logic_modules/flip.mjs";
+import { drawIn } from "./figures/drawin.js";
 import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mockHold, noteAt, painting, rboxSync, renderMath, reqInc, rpUnmount, say, toast, waitReduced, xInc } from "../answer/drill_core/app.js";
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
@@ -135,6 +136,7 @@ const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x =
 const ckTel = () => ({ code: bank ? bank.code : null, item: S ? S.code : null, tries_left: S ? Math.max(0, maxTries(S.prob) - S.tries.length) : null, after_wrong: !!S && S.tries.some(x => x.v === "wrong") });
 async function wishStart(auto) {
   const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
+  w.fresh = true;                                         // FIG-DRAW-IN: this reply is being streamed now (a cache hit never sets it: static)
   w.key = key; w.tr = clTry(t);                                                           // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
@@ -348,6 +350,7 @@ function wishFigs(root) {
         const url = drawn || staticImg.has(src) ? viewImage(V, src) : null;   // pre-rendered once it drew (W113 static fallback)
         if (url && (!drawn || tooNarrow(ph))) showStatic(ph, url, alt);
         else if (!drawn) off();
+        else drawIn(ph, { fresh: !!(wish && wish.fresh) });                   // FIG-DRAW-IN: a fresh reply's figure draws in; the static image and a cached reply never do
       }).catch(e => { console.error(e); if (staticImg.has(src)) showStatic(ph, staticImg.get(src), alt); else off(); });
       if (!done) figEl[k] = ph;
       continue;
@@ -356,6 +359,7 @@ function wishFigs(root) {
     if (!b || b.type !== "graph") { figGone.add(k); figDrop(ph); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
     try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); figDrop(ph); continue; }
+    if (ph.querySelector("svg")) drawIn(ph, { fresh: !!(wish && wish.fresh) });   // FIG-DRAW-IN: only a reply streamed now draws its figure in
     if (!done) figEl[k] = ph;
   }
 }                                // "1. Find the momentum before — only one cart moves"
