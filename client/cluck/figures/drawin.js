@@ -7,7 +7,9 @@
 //   a closed shape is one stroke. d = 260 ms * sqrt(len / svg viewBox diagonal), clamped 120-400 ms; tier gap 90 ms;
 //   strokes ease cubic-bezier(.6,0,.15,1). Fills fade in 150 ms right after their own outline; dashed strokes, circles/dots
 //   and non-path marks fade 150 ms. Labels fade + rise 4 px, 120 ms, staggered 40 ms, sorted y then x.
-//   WAAPI only (delay + fill:'backwards'); an undrawn stroke waits at offset +-(len+1), so it leaves no round-cap dot.
+//   WAAPI only (delay + fill:'backwards'); an undrawn stroke waits at offset +-(dash+1) with dasharray "dash dash+2", in the
+//   element's dash units: getTotalLength() is user units, but a vector-effect:non-scaling-stroke element paints its dash in
+//   screen px, so its dash is scaled by getScreenCTM (sqrt |det|). No round-cap dot shows at either end of the wait.
 //   After the last mark the animations cancel and the inline dash styles go, so a later resize / zoom draws the finished figure.
 // WHEN: a FRESH reply only (cluck.js wishStart sets wish.fresh). A cached/history reply, a reload and a redraw that reuses a
 //   drawn node are static. One svg animates once (data-drawn). prefers-reduced-motion: reduce or a hidden page: no animation.
@@ -77,6 +79,15 @@ function inDefs(el) {
   return false;
 }
 
+/** The CSS px one user unit paints as: viewBox fit, the element's own transform, any CSS scale. 1 when it cannot be measured. */
+function screenScale(el) {
+  try {
+    const m = el.getScreenCTM && el.getScreenCTM();
+    if (m) { const s = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)); if (s > 0 && Number.isFinite(s)) return s; }
+  } catch { /* not rendered: the user-unit length stands */ }
+  return 1;
+}
+
 /* ---- the tier table: the real DOM each renderer emits (unknown element -> tier 1) ---- */
 function tierOf(el) {
   const tag = tagOf(el), c = el.classList;
@@ -124,7 +135,7 @@ function unitOf(el, tier, win) {
       if (reversed) { const q = p0; p0 = p1; p1 = q; }
     }
   } catch { /* no points: the sort sees the origin */ }
-  return { el, tier, kind: "stroke", len, closed, reversed, selfFill: fill, pt0: p0, pt1: p1 };
+  return { el, tier, kind: "stroke", len, closed, reversed, selfFill: fill, pt0: p0, pt1: p1, dash: len * (cs.vectorEffect === "non-scaling-stroke" ? screenScale(el) : 1) };
 }
 
 function labelOf(el, win, html) {
@@ -206,9 +217,10 @@ export function drawIn(root, opts = {}) {
     total = Math.max(total, tl.total);
     for (const u of tl.units) {
       if (u.kind === "stroke") {
-        const from = u.reversed ? -(u.len + 1) : (u.len + 1);         // no round-cap dot at the start of the wait
+        const dash = u.dash || u.len;                              // screen px when the element paints non-scaling
+        const from = u.reversed ? -(dash + 1) : (dash + 1);       // no round-cap dot at either end of the wait
         touched.push({ el: u.el, a: u.el.style.getPropertyValue("stroke-dasharray"), b: u.el.style.getPropertyValue("stroke-dashoffset") });
-        u.el.style.setProperty("stroke-dasharray", String(u.len));
+        u.el.style.setProperty("stroke-dasharray", `${dash} ${dash + 2}`);
         u.el.style.setProperty("stroke-dashoffset", "0");
         anims.push(u.el.animate([{ strokeDashoffset: String(from) }, { strokeDashoffset: "0" }], { duration: u.dur, delay: u.start, easing: EASE, fill: "backwards" }));
       } else {

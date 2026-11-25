@@ -343,6 +343,7 @@ function wishFigs(root) {
     ph.removeAttribute("data-f");
     if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
       const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); figDrop(ph); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
+      const fresh = !!(wish && wish.fresh);                                // FIG-DRAW-IN: read before the async import; wish may be another reply by .then
       ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
       import("./openui_views/views.js").then(V => {
         let drawn = false;
@@ -350,7 +351,7 @@ function wishFigs(root) {
         const url = drawn || staticImg.has(src) ? viewImage(V, src) : null;   // pre-rendered once it drew (W113 static fallback)
         if (url && (!drawn || tooNarrow(ph))) showStatic(ph, url, alt);
         else if (!drawn) off();
-        else drawIn(ph, { fresh: !!(wish && wish.fresh) });                   // FIG-DRAW-IN: a fresh reply's figure draws in; the static image and a cached reply never do
+        else drawIn(ph, { fresh });                                          // FIG-DRAW-IN: a fresh reply's figure draws in; the static image and a cached reply never do
       }).catch(e => { console.error(e); if (staticImg.has(src)) showStatic(ph, staticImg.get(src), alt); else off(); });
       if (!done) figEl[k] = ph;
       continue;

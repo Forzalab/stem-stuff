@@ -1177,27 +1177,31 @@
   }
 
   function render(el, block) {
-    if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
-    if (!el._g) el._g = prep(block);
-    if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; el.style.display = ""; el.removeAttribute("aria-hidden"); }   // a redraw starts clean
-    const g = el._g;
-    const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
-    el.style.maxWidth = ""; el.style.marginInline = "";
-    mount(el, build);
-    /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (docs/design/STYLE.md "Question box height").
-       Redrawn narrower and centred (not scaled), so labels keep their size and sit where they were placed; never below 60% of the width. */
-    const cap = window.matchMedia && matchMedia("(max-width: 34rem)").matches ? 0.28 * innerHeight : 0, W0 = el.clientWidth;
-    for (let i = 0; i < 2 && cap && W0; i++) {
-      const H = parseFloat(el.style.height);
-      if (!(H > cap + 1)) break;
-      const w = Math.max(0.6 * W0, Math.floor((el.clientWidth || W0) * cap / H));
-      if (w >= el.clientWidth) break;
-      el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
+    const tierWas = TIER;
+    TIER = 1;                                          // FIG-DRAW-IN: never inherit the previous figure's tier (bars() ends at 0)
+    try {
+      if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
+      if (!el._g) el._g = prep(block);
+      if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; el.style.display = ""; el.removeAttribute("aria-hidden"); }   // a redraw starts clean
+      const g = el._g;
+      const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
+      el.style.maxWidth = ""; el.style.marginInline = "";
       mount(el, build);
-    }
-    const fc = figFindings(el, build) || { codes: [], warn: [] }, degraded = fc.codes.length > 0;
-    if (degraded) degrade(el, block);
-    figReport(el, [...fc.codes, ...fc.warn], build.fixed || [], degraded);
+      /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (docs/design/STYLE.md "Question box height").
+         Redrawn narrower and centred (not scaled), so labels keep their size and sit where they were placed; never below 60% of the width. */
+      const cap = window.matchMedia && matchMedia("(max-width: 34rem)").matches ? 0.28 * innerHeight : 0, W0 = el.clientWidth;
+      for (let i = 0; i < 2 && cap && W0; i++) {
+        const H = parseFloat(el.style.height);
+        if (!(H > cap + 1)) break;
+        const w = Math.max(0.6 * W0, Math.floor((el.clientWidth || W0) * cap / H));
+        if (w >= el.clientWidth) break;
+        el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
+        mount(el, build);
+      }
+      const fc = figFindings(el, build) || { codes: [], warn: [] }, degraded = fc.codes.length > 0;
+      if (degraded) degrade(el, block);
+      figReport(el, [...fc.codes, ...fc.warn], build.fixed || [], degraded);
+    } finally { TIER = tierWas; }
   }
 
   root.Graph = { render, tex, fix };
