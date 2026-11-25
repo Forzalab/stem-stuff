@@ -185,28 +185,35 @@ try {
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });
-  for (const w of W) await step(`${w}: flag on: typed field = Soft-lift outlined dish at idle; focus/typed stay the live inset well until IB-2`, async () => {
+  for (const w of W) await step(`${w}: flag on: typed field = Soft-lift outlined dish at idle; focus and typed lift in place (IB-2)`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       await settled(page, "#q #ff.ff");
       const read = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(ff);
-        return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor }; });
+        return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor, tr: cs.transform, edge: cs.borderTopColor }; });
       const idle = await read();
       assert.ok(idle.bw === HAIR || idle.bw === "1.5px 1.5px 1.5px 1.5px", "idle: the Soft-lift outlined field " + JSON.stringify(idle));
       assert.match(idle.shadow, /rgba\(0, 0, 0, 0\.3\) 1px 1px 3px 0px inset/, "idle: the SOFT-LIFT §3 dish: " + idle.shadow);
       assert.doesNotMatch(idle.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "idle: the old well is gone: " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus();
       await page.waitForFunction(() => document.activeElement === document.querySelector("#ff :is(input, textarea)"));
+      await settled(page, "#q #ff.ff");
       const focus = await read();
-      assert.equal(focus.bw, HAIR, "focus: live hairline " + JSON.stringify(focus));
-      assert.match(focus.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: live inset well until IB-2: " + focus.shadow);
-      assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring, the well only: " + focus.shadow);
+      assert.equal(focus.bw, HAIR, "focus: the one hairline edge " + JSON.stringify(focus));
+      assert.equal(focus.tr, "matrix(1.014, 0, 0, 1.014, 0, 0)", "focus: scale(1.014) in place (IB-2): " + focus.tr);
+      assert.match(focus.shadow, /0px 1px 0px 0px inset/, "focus: the lit top edge: " + focus.shadow);
+      assert.match(focus.shadow, /0px 12px 26px -8px/, "focus: the shadow straight underneath: " + focus.shadow);
+      assert.doesNotMatch(focus.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: the old well is gone: " + focus.shadow);
+      assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring: " + focus.shadow);
+      assert.notEqual(focus.edge, idle.edge, "focus turns the edge --action: " + idle.edge + " -> " + focus.edge);
       await page.locator("#ff :is(input, textarea)").first().fill("1.5");
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
+      await settled(page, "#q #ff.ff");
       const typed = await read();
-      assert.equal(typed.bw, HAIR, "typed: live hairline " + JSON.stringify(typed));
-      assert.match(typed.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "typed: live inset well until IB-2: " + typed.shadow);
+      assert.equal(typed.bw, HAIR, "typed: the one hairline edge " + JSON.stringify(typed));
+      assert.equal(typed.tr, "matrix(1.014, 0, 0, 1.014, 0, 0)", "typed keeps the lift: " + typed.tr);
+      assert.match(typed.shadow, /0px 12px 26px -8px/, "typed: the shadow underneath: " + typed.shadow);
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
@@ -290,7 +297,7 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
-  for (const w of W) await step(`${w}: flag on (round 5): the Check button and the field well are apple squircles (corner-shape superellipse, --r-tile: 16px, 20px where corner-shape exists: ICK4-SQUIRCLE-C)`, async () => {
+  for (const w of W) await step(`${w}: flag on (round 5): the Check button is an apple squircle (--r-tile); the focused field is the Soft-lift 18px squircle (corner-shape superellipse: ICK4-SQUIRCLE-C, IB-2)`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
@@ -300,7 +307,7 @@ try {
         return { supports: CSS.supports("corner-shape", "superellipse(1.52)"), btn: cs.cornerShape, btnR: cs.borderTopLeftRadius, well: fs.cornerShape, wellR: fs.borderTopLeftRadius }; });
       if (m.supports) { assert.match(m.btn, /superellipse|squircle/, "button corner-shape: " + JSON.stringify(m)); assert.match(m.well, /superellipse|squircle/, "well corner-shape: " + JSON.stringify(m)); }
       assert.equal(m.btnR, m.supports ? "22.5px" : "18px", "SOFT-LIFT §5 key = 18 x --r-k: " + JSON.stringify(m));
-      assert.equal(m.wellR, m.supports ? "20px" : "16px", "typed/focused field keeps the live --r-tile until IB-2: " + JSON.stringify(m));
+      assert.equal(m.wellR, m.supports ? "22.5px" : "18px", "focused field = the Soft-lift 18px squircle, not the tile (IB-2): " + JSON.stringify(m));
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
