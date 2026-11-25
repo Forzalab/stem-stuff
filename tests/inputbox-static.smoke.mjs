@@ -9,7 +9,10 @@
 //   IB-4: the verdict ring starts as the frozen aurora arc (~173deg, NOT a full ring), closes in 440ms with transform-only conic arcs, the
 //   real border is never recoloured, the final frame is pixel-identical to the static done render, the typed key skips §verdict-morph and
 //   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close; MC keeps its full morph;
-//   reduced motion = a closed static ring.   flag off: nothing.
+//   reduced motion = a closed static ring.
+//   IB-5: each multi part's key sits OUTSIDE its field (60x60, 12px gap, same #ansGo squircle), hidden on an empty box with its slot
+//   reserved (the field width never jumps), dims while grading (no spinner), dimmed on wrong and full on the next keystroke, gone when
+//   the part is right.   flag off: the live in-box arrow, nothing moves.
 //   node tests/inputbox-static.smoke.mjs [port]      SHOTS=<dir> also writes app + mock stills.
 //   STEP_FILTER=<text> runs only the named steps (the whole file is an orc-run >2 min test; the cloud worker runs IB-4 alone).
 import { createRequire } from "node:module";
@@ -33,6 +36,11 @@ const TRIES = join(mkdtempSync(join(tmpdir(), "ibstatic-")), "tries.json");
 const T = (md) => [{ type: "text", md }];
 const FILE = { v: 1, problems: [
   { code: "PSY_M1A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
+    { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
+    { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
+  ] },
+  /* IB-5 uses its own multi code: the key-outside steps grade it, so the IB-1 multi step must stay untouched. */
+  { code: "PSY_K1A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
     { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
   ] },
@@ -349,10 +357,88 @@ async function shot(page, name, sel) {
 }
 for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   const w = vp.width, { ctx, page } = await fresh(true, vp);
+  await step(`${w}: IB-5 multi key outside the box`, async () => {
+    await go(page, "PSY_K1A");
+    await page.mouse.move(0, 0);
+    const empty = await page.evaluate(() => [...document.querySelectorAll("#q .mparts .part")].map(p => {
+      const ff = p.querySelector(".ff"), key = p.querySelector(".send"), r = ff.getBoundingClientRect();
+      return { w: r.width, top: r.top, right: r.right, hidden: key.hidden || getComputedStyle(key).display === "none" };
+    }));
+    assert.deepEqual(empty.map(p => p.hidden), [true, true], "an empty part hides its key: " + JSON.stringify(empty));
+    assert.ok(empty[0].w > 0, "the multi field measured");
+    await shot(page, `ib5-${w}-empty-app.png`, "#q");
+    const boxW = empty[0].w;
+    await page.fill("#q .mparts .part[data-i='0'] input.ans", "17");
+    await page.waitForFunction(() => !document.querySelector("#go0").hidden);
+    const typed = await page.evaluate(() => {
+      const p = document.querySelector("#q .mparts .part[data-i='0']"), ff = p.querySelector(".ff"), key = p.querySelector(".send");
+      const f = ff.getBoundingClientRect(), k = key.getBoundingClientRect(), cs = getComputedStyle(key);
+      return { fw: f.width, fr: f.right, ft: f.top, kw: k.width, kh: k.height, kl: k.left, kt: k.top,
+        bg: cs.backgroundColor, r: cs.borderTopLeftRadius, bHidden: document.querySelector("#go1").hidden,
+        overflow: document.documentElement.scrollWidth - innerWidth };
+    });
+    assert.equal(typed.bHidden, true, "the other part's key stays hidden");
+    assert.ok(near(typed.kw, 60) && near(typed.kh, 60), `key ${typed.kw}x${typed.kh} (want 60x60)`);
+    assert.ok(typed.kl >= typed.fr + 8, `key is not outside the box: left ${typed.kl} vs box right ${typed.fr}`);
+    assert.ok(typed.kl >= typed.fr + 11 && typed.kl <= typed.fr + 14, `key gap ${(typed.kl - typed.fr).toFixed(1)} (want 12)`);
+    assert.ok(near(typed.kt, typed.ft, 1.5), `key is level with the box: ${typed.kt} vs ${typed.ft}`);
+    assert.equal(typed.fw, boxW, `box width jumps while typing: ${typed.fw} vs ${boxW}`);
+    if (w >= 900) assert.ok(near(typed.fw, 400, 1), `multi desktop field ${typed.fw} (want 400)`);
+    assert.ok(typed.overflow <= 0, `sideways overflow ${typed.overflow}px at ${w}`);
+    assert.match(typed.r, /^(18|22\.5)px$/, `key squircle radius ${typed.r}`);
+    await page.locator("#q .mparts .part[data-i='0'] input.ans").click();   // a real pointer: no keyboard focus ring in the shot (the mouse look)
+    await shot(page, `ib5-${w}-typed-app.png`, "#q");
+    const hold = await holdGrade(page, ["PSY_K1A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Count both circles once." });
+    let grading, wrong;
+    try {
+      await page.press("#q .mparts .part[data-i='0'] input.ans", "Enter");   // Enter still submits THIS part
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      grading = await page.evaluate(() => {
+        const p = document.querySelector("#q .mparts .part[data-i='0']"), key = p.querySelector(".send"), ff = p.querySelector(".ff");
+        const k = key.getBoundingClientRect(), f = ff.getBoundingClientRect(), cs = getComputedStyle(key);
+        return { op: +cs.opacity, after: getComputedStyle(key, "::after").content, show: cs.visibility,
+          kl: k.left, fr: f.right, hidden: key.hidden };
+      });
+      assert.equal(grading.hidden, false, "the key stays up while its part is graded");
+      assert.ok(grading.op < 1, `grading only dims the key: opacity ${grading.op}`);
+      assert.equal(grading.after, "none", "no spinner on the typed key");
+      assert.equal(grading.show, "visible", "the arrow stays visible while grading");
+      assert.ok(grading.kl >= grading.fr + 8, `the key stays outside while grading: ${grading.kl} vs ${grading.fr}`);
+      hold.release();
+      await page.waitForSelector("#q .mparts .part[data-i='0'] .ff.bad", { timeout: 5000 });
+      wrong = await page.evaluate(() => {
+        const p = document.querySelector("#q .mparts .part[data-i='0']"), key = p.querySelector(".send"), ff = p.querySelector(".ff");
+        const k = key.getBoundingClientRect(), f = ff.getBoundingClientRect();
+        return { op: +getComputedStyle(key).opacity, hidden: key.hidden, kl: k.left, fr: f.right };
+      });
+      assert.equal(wrong.hidden, false, "a wrong part keeps its key (IB-4)");
+      assert.ok(wrong.op < 1, `a wrong part's key is dimmed: ${wrong.op}`);
+      assert.ok(wrong.kl >= wrong.fr + 8, "the dimmed key stays outside");
+      await page.waitForTimeout(800);   // the shot shows the settled verdict (ring closed + tick/cross faded in), as the mock does
+      await shot(page, `ib5-${w}-wrong-app.png`, "#q");
+      await page.locator("#q .mparts .part[data-i='0'] input.ans").press("1");
+      await page.waitForFunction(() => !document.querySelector("#q .mparts .part[data-i='0'] .ff.bad"));
+      assert.equal(await page.evaluate(() => +getComputedStyle(document.querySelector("#go0")).opacity), 1, "the next keystroke restores the key");
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+    await page.fill("#q .mparts .part[data-i='0'] input.ans", "14");
+    await page.press("#q .mparts .part[data-i='0'] input.ans", "Enter");
+    await page.waitForSelector("#q .mparts .part[data-i='0'] .ff.ok", { timeout: 8000 });
+    const shut = await page.evaluate(() => ({ hidden: document.querySelector("#go0").hidden, ok: document.querySelector("#q .mparts .part[data-i='0'] .ff").classList.contains("ok") }));
+    assert.equal(shut.ok, true, "a right part is shut");
+    assert.equal(shut.hidden, true, "a shut part shows no key");
+    return `box ${boxW.toFixed(1)} key ${typed.kw}x${typed.kh} gap ${(typed.kl - typed.fr).toFixed(1)} grading ${grading.op} wrong ${wrong.op}`;
+  });
   await step(`${w}: multi field at rest`, async () => {
     await go(page, "PSY_M1A");
+    await page.mouse.move(0, 0);   // IB-5 runs first and leaves the pointer on the field: idle must be measured with the pointer away
     const m = await page.evaluate(MET);
-    await page.locator("#q .mparts .part").first().hover().catch(() => {});
+    /* aim at the FIELD, not .part: since IB-5 the part centre sits ~1px under the field's top edge (the key column moved it),
+       so the old proxy can hover the prompt/gap instead of the box. */
+    await page.locator("#q .mparts .part > .ff").first().hover().catch(() => {});
     const hoverCol = await page.evaluate(() => { const s = getComputedStyle(document.querySelector("#q .mparts .part > .ff")); return s.outlineStyle !== "none" ? s.outlineColor : s.borderTopColor; });
     assert.equal(m.kind, "multi");
     assert.ok(near(m.h, 60), `field height ${m.h} (want 60)`);
@@ -371,8 +457,12 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     if (w >= 900) assert.ok(near(m.valueBase, m.prBase, 1), `value/prompt baselines ${m.valueBase} vs ${m.prBase}`);
     assert.equal(m.prSize, "17px", `prompt size ${m.prSize}`);
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
-    assert.ok(parseFloat(m.skin.pr) >= 48, `multi field right padding ${m.skin.pr} (live in-box Check room)`);
+    assert.ok(parseFloat(m.skin.pr) <= 20, `multi field right padding ${m.skin.pr} (IB-5: the key moved outside, no in-box room)`);
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
+    if (w < 900) {   // IB-5: the phone prompt keeps the mock's full text width (it spans the key column)
+      const row = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part"), pr = p.querySelector(".pr"); return { part: p.getBoundingClientRect().width, pr: pr.getBoundingClientRect().width }; });
+      assert.ok(near(row.pr, row.part - 48, 1), `phone prompt spans the key column: ${row.pr} vs part ${row.part}`);
+    }
     assert.notEqual(hoverCol, m.edgeCol, "hover changes the edge (idle -> hover)");
     await page.locator("#q .mparts .part:first-child input.ans").focus();
     await page.waitForTimeout(520);
@@ -1027,6 +1117,14 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.mk, "a)", `old marker ${JSON.stringify(m.mk)}`);
     assert.equal(m.os, "none", `old box has no outline (${m.os} ${m.ow})`);
     assert.ok(!near(m.h, 60, 1), `old field is --fld, not 60 (${m.h})`);
+    await page.fill("#q .mparts .part:first-child input.ans", "17");
+    const live = await page.evaluate(() => {
+      const ff = document.querySelector("#q .mparts .part:first-child .ff"), key = document.querySelector("#go0");
+      const f = ff.getBoundingClientRect(), k = key.getBoundingClientRect();
+      return { hidden: key.hidden, inside: k.left >= f.left && k.right <= f.right + .5 && k.top >= f.top && k.bottom <= f.bottom + .5 };
+    });
+    assert.equal(live.hidden, false, "flag off: the live arrow appears on text");
+    assert.equal(live.inside, true, "flag off: the live arrow stays INSIDE the box (IB-5 is ui-v7 only)");
     await shot(page, "multi-390-off-app.png", "#q");
     await page.evaluate(() => document.documentElement.classList.add("ui-v7"));
     const late = await page.evaluate(() => ({ mk: document.querySelector(".mk").innerText, paren: getComputedStyle(document.querySelector(".mk-p")).display }));

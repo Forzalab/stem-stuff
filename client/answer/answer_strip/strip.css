@@ -109,8 +109,9 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:f
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
   html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) { corner-shape: superellipse(1.52); }
 }
-/* multi keeps the live in-box room for its own Check / .vk (IB-5 moves it); a judged single keeps 48 for the in-box .vk */
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) { padding-right: calc(var(--btn) + var(--bw)); }
+/* IB-5: the multi part's Check moved OUTSIDE the field (verdict-v7.css §ib5-key), so the value gets the mock's 17.5px inset at
+   rest and no in-box key room; a judged part keeps 48 for the in-box .vk (the live tick / cross slot). */
+html.ui-v7 #q .mparts .part > .ff:is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
 html.ui-v7 #q > .ff#ff:not(.proof):is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
 /* hover = the resting edge only; judged / cue / rbox keep their own look */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover,
@@ -150,12 +151,14 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; heig
    Prompt 17/24 400, margin-bottom 12; hint 17/24, margin-top 12; the letter is bare "a" (app.js, ui-v7 only) at 40/24 in the app display face. */
 html.ui-v7 .mparts { gap: 24px; }
 html.ui-v7 .mparts .part {
-  grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
+  /* IB-5: the third 60px column is the part key's OUTSIDE slot, reserved even while the key is hidden, so the box never
+     changes width as the student types (the mock reserves the single key's slot the same way). The prompt spans the key
+     column (mock: the phone prompt is the full text width, the key hangs off the field only); "ht" is declared in every
+     template, else the empty .phint's undefined area adds implicit 0px columns and their gaps squeeze the row. */
+  grid-template-columns: 36px minmax(0, 1fr) 60px; grid-template-areas: "mk pr pr" ". bx ." ". ht ht";
   column-gap: 12px; row-gap: 0; align-items: baseline;
 }
-html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx"; }
-html.ui-v7 .mparts .part.hinted { grid-template-areas: "mk pr" ". bx" ". ht"; }
-html.ui-v7 .mparts .part.nopr.hinted { grid-template-areas: "mk bx" ". ht"; }
+html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx ." ". ht ht"; }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
 html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
 html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: 17px; line-height: 24px; font-weight: 400; }
@@ -163,14 +166,14 @@ html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pi
 html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
 html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: 17px; line-height: 24px; }
 @media (min-width: 900px) {
-  html.ui-v7 .mparts .part { grid-template-columns: 36px minmax(0, 1fr) 400px; grid-template-areas: "mk pr bx"; }
+  /* IB-5: 400px field + its own 60px key column on the same row (SOFT-LIFT §13). The hint row is always declared (empty
+     .phint = 0 height) for the same implicit-column reason as the phone template. */
+  html.ui-v7 .mparts .part { grid-template-columns: 36px minmax(0, 1fr) 400px 60px; grid-template-areas: "mk pr bx ." ". ht ht ."; }
   /* the grid baseline is the flex box's, not the replaced input's text baseline: the value sat 4.5px low (measured
      1280, 28/54 input vs 17/24 prompt). Lift the field so the VALUE joins the letter/prompt line; the relative top
      moves paint only, so the grid row and the letter/prompt stay put. */
   html.ui-v7 .mparts .part > .ff { top: -4.5px; }
-  html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx"; }
-  html.ui-v7 .mparts .part.hinted { grid-template-areas: "mk pr bx" ". ht ht"; }
-  html.ui-v7 .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
+  html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx ." ". ht ht ."; }
   html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { padding-top: 0; }
   html.ui-v7 .mparts .pr { margin: 0; }   /* letter, prompt and VALUE share one baseline: the field's own top/margin is set by the grid */
 }
