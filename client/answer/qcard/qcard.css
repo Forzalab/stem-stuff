@@ -297,9 +297,9 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
    Compositor-only: nothing animates here (the echo .qanim stays transform / opacity), no filter on a parent of a moving child, no backdrop-filter. */
 html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); }
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: 1; color: transparent; -webkit-background-clip: text; background-clip: text; filter: url(#qg-glass);
-  background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .12) 46%, transparent 62%), linear-gradient(160deg, rgb(120 147 226 / .46), rgb(56 80 148 / .30)); }
-html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(6px); border-radius: inherit; overflow: hidden; }
-html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .55); border-radius: 999px; }
+  background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .08) 46%, transparent 62%), linear-gradient(160deg, rgb(120 147 226 / .30), rgb(56 80 148 / .20)); }   /* Tony's locked values: ghost body .30 / .20, sheen .08 */
+html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(4px); border-radius: inherit; overflow: hidden; }   /* locked: scrim blur 4px */
+html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .35); border-radius: 999px; }   /* locked: scrim alpha .35 */
 @media (prefers-reduced-transparency: reduce) {
   html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: .08; color: #5b6a9a; -webkit-background-clip: border-box; background-clip: border-box; background-image: none; filter: none; }
   html.ui-v7 #problem.qc7 > .qscrim { display: none; }
