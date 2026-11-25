@@ -1,12 +1,17 @@
-// INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
+// INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking + IB-4 verdict, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), <= 400px wide on desktop.
 //   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field, 24px gap, no hairline.
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
 //   judged fields never lift; reduced motion = colours only.
 //   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
 //   400x60), the box sinks scale(.986), the input is readOnly, the typed key loses app.css's spinner (MC keeps it), reduced motion = a static
-//   --action ring, no sink/blur.   flag off: nothing.   Own serve.py + an uploaded bank. No verdict look here (later slices).
+//   --action ring, no sink/blur.
+//   IB-4: the verdict ring starts as the frozen aurora arc (~173deg, NOT a full ring), closes in 440ms with transform-only conic arcs, the
+//   real border is never recoloured, the final frame is pixel-identical to the static done render, the typed key skips §verdict-morph and
+//   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close; MC keeps its full morph;
+//   reduced motion = a closed static ring.   flag off: nothing.
 //   node tests/inputbox-static.smoke.mjs [port]      SHOTS=<dir> also writes app + mock stills.
+//   STEP_FILTER=<text> runs only the named steps (the whole file is an orc-run >2 min test; the cloud worker runs IB-4 alone).
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -14,6 +19,7 @@ import { mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { inflateSync } from "node:zlib";
 import { launchBrowser } from "./pw-browser.mjs";
 import { serverUp } from "./lib/boot.mjs";
 import { settled } from "./lib/wait.mjs";
@@ -41,6 +47,20 @@ const FILE = { v: 1, problems: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
     { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
   ] },
+  /* IB-4's own codes: the IB-3 steps above finish T1A/T2A/T3A (a held "correct"), so they cannot be answered again. */
+  { code: "PSY_V1A", type: "num", how: "Number only.", body: T("Find the magnitude of the block's acceleration."), answer: "3.2", unit: "m/s^2", wish: true },
+  { code: "PSY_V2A", type: "num", how: "Number only.", body: T("Find the magnitude of the cart's acceleration."), answer: "3.2", unit: "m/s^2" },
+  { code: "PSY_V3A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
+    { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
+    { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
+  ] },
+  { code: "PSY_V4A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
+    choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
+    wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
+  { code: "PSY_V5A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
+    { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
+    { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
+  ] },
   { code: "PSY_C1A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
     choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
     wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
@@ -48,7 +68,9 @@ const FILE = { v: 1, problems: [
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES, STEM_TODAY: "2026-11-24" }, stdio: "ignore" });
 await serverUp(BASE);
 let fails = 0;
+const FILTER = process.env.STEP_FILTER || "";   // e.g. STEP_FILTER=IB-4 runs only the IB-4 steps (the whole smoke is an orc-run >2 min test)
 async function step(name, fn) {
+  if (FILTER && name.indexOf(FILTER) < 0) return;
   try { const info = await fn(); console.log("ok  ", name, info ? `  [${info}]` : ""); }
   catch (e) { fails++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); }
 }
@@ -138,7 +160,7 @@ const skinOf = (page, sel) => page.evaluate(s => {
 /* IB-3: hold a typed grade open. The uploaded bank grades on device (app.js check -> gradeLocal), so for the IB-3 steps this
    page's stemOffline.has says "not mine" for the named codes: the app then makes its real POST /check, which page.route holds
    until release() (then a plain correct verdict comes back). The html.grading wait, the readOnly input and the ring are the app's own. */
-async function holdGrade(page, codes) {
+async function holdGrade(page, codes, reply = { verdict: "correct", triesLeft: 1 }) {   // IB-4: reply picks the verdict (right / wrong + hint)
   let release; const held = new Promise(f => { release = f; });
   await page.evaluate(cs => {
     window.__ib3has = window.stemOffline.has;
@@ -147,7 +169,7 @@ async function holdGrade(page, codes) {
   await page.route("**/check", async r => {
     if (r.request().method() !== "POST") return r.continue();
     await held;
-    await r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ verdict: "correct", triesLeft: 1 }) });
+    await r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(reply) });
   });
   return {
     release,
@@ -157,6 +179,116 @@ async function holdGrade(page, codes) {
     },
   };
 }
+/* IB-4: a PNG has no decoder in node's stdlib, so read IHDR + IDAT and inflate the RGBA rows (the tool's px diff, in the smoke). */
+const pngOf = buf => {
+  let p = 8, w = 0, h = 0, ct = 0, bd = 8; const idat = [];
+  while (p < buf.length) {
+    const len = buf.readUInt32BE(p), type = buf.toString("ascii", p + 4, p + 8), d = buf.subarray(p + 8, p + 8 + len);
+    p += 12 + len;
+    if (type === "IHDR") { w = d.readUInt32BE(0); h = d.readUInt32BE(4); bd = d[8]; ct = d[9]; }
+    else if (type === "IDAT") idat.push(d);
+  }
+  if (bd !== 8) throw new Error("PNG bit depth " + bd);
+  const bpp = ct === 6 ? 4 : ct === 2 ? 3 : ct === 4 ? 2 : 1, stride = w * bpp, raw = inflateSync(Buffer.concat(idat)), out = Buffer.alloc(h * stride);
+  for (let y = 0, q = 0; y < h; y++) {
+    const f = raw[q++], row = raw.subarray(q, q + stride); q += stride;
+    const prev = y ? out.subarray((y - 1) * stride, y * stride) : Buffer.alloc(stride), cur = out.subarray(y * stride, (y + 1) * stride);
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? cur[x - bpp] : 0, b = prev[x], c = x >= bpp ? prev[x - bpp] : 0; let v = row[x];
+      if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      cur[x] = v & 255;
+    }
+  }
+  return { w, h, bpp, data: out };
+};
+const pxDiff = (a, b) => {
+  if (a.w !== b.w || a.h !== b.h) return -1;
+  let n = 0;
+  for (let i = 0; i < a.data.length; i += a.bpp) if (a.data[i] !== b.data[i] || a.data[i + 1] !== b.data[i + 1] || a.data[i + 2] !== b.data[i + 2] || (a.bpp > 3 && a.data[i + 3] !== b.data[i + 3])) n++;
+  return n;
+};
+/* IB-4: the RENDERED max luma of an element (Rec.709), so a dim is measured in pixels, not by one element's opacity. */
+const maxLuma = async (page, sel) => {
+  const p = pngOf(await page.locator(sel).screenshot());
+  let m = 0;
+  for (let i = 0; i < p.data.length; i += p.bpp) {
+    const l = .2126 * p.data[i] + .7152 * p.data[i + 1] + .0722 * p.data[i + 2];
+    if (l > m) m = l;
+  }
+  return +m.toFixed(1);
+};
+/* IB-4b: the verdict icon after the ring closes (display/opacity/24px grid/17.5 inset/2.25 stroke). */
+const iconOf = (page, sel = "#q .ff") => page.evaluate(s => {
+  const ff = document.querySelector(s), vk = ff && ff.querySelector(":scope > .vk"), svg = vk && vk.querySelector("svg.ico");
+  const cs = vk && getComputedStyle(vk), ss = svg && getComputedStyle(svg), unit = ff && ff.querySelector(".unit");
+  const r = vk && vk.getBoundingClientRect(), ur = unit && unit.getBoundingClientRect();
+  return vk ? { display: cs.display, opacity: +cs.opacity, w: +r.width.toFixed(1), h: +r.height.toFixed(1), right: cs.right,
+    stroke: ss ? ss.strokeWidth : null, vkLeft: +r.left.toFixed(1), unitRight: ur ? +ur.right.toFixed(1) : null, data: vk.dataset.v } : null;
+}, sel);
+/* finish a paused sweep so strip.js's finished promise adds .ib4-done (the icon's signal) */
+const finishRing = page => page.evaluate(() => document.querySelectorAll("#q .ib4-arc").forEach(el => el.getAnimations().forEach(a => a.finish())));
+/* IB-4: the aurora's current head angle (the .ib3-spin rotation); the verdict ring must start there. */
+const auroraAt = page => page.evaluate(() => {
+  const s = document.querySelector("#q .ib3-ring .ib3-spin, #q .mparts .part .ib3-ring .ib3-spin");
+  if (!s) return null;
+  const cs = getComputedStyle(s).transform, m = new DOMMatrix(cs === "none" ? "matrix(1,0,0,1,0,0)" : cs);
+  let a = Math.atan2(m.b, m.a) * 180 / Math.PI; return a < 0 ? a + 360 : a;
+});
+/* IB-4: the verdict ring's arcs at time t (pauses the WAAPI sweep there), plus the union coverage in degrees. */
+const ringAt = (page, t) => page.evaluate(t => {
+  const ring = document.querySelector("#q .ib4-ring");
+  if (!ring) return null;
+  const ff = ring.parentElement;
+  const arcs = [...ring.querySelectorAll(".ib4-arc")].map(el => {
+    const an = el.getAnimations();
+    if (t != null) an.forEach(a => { a.pause(); a.currentTime = t; });
+    const cs = getComputedStyle(el).transform, m = new DOMMatrix(cs === "none" ? "matrix(1,0,0,1,0,0)" : cs);
+    let r = Math.atan2(m.b, m.a) * 180 / Math.PI; if (r < 0) r += 360;
+    return { cls: el.className, len: +el.dataset.len, rot: r, anims: an.length,
+      keys: an.map(a => ({ dur: a.effect.getTiming().duration, ease: a.effect.getTiming().easing, kf: a.effect.getKeyframes().map(k => ({ offset: k.offset, props: Object.keys(k).filter(n => ["offset", "computedOffset", "easing", "composite"].indexOf(n) < 0) })) })) };
+  });
+  const vk = ff.querySelector(":scope > .vk"), key = ff.querySelector(":scope > .send, :scope > #ansGo");
+  const cs = getComputedStyle(ff), ks = key && getComputedStyle(key);
+  return { a0: +ring.dataset.a0, v: ring.dataset.v, done: ring.classList.contains("ib4-done"), still: ring.classList.contains("ib4-still"),
+    w: ff.offsetWidth, h: ff.offsetHeight, arcs,
+    vkOp: vk ? +getComputedStyle(vk).opacity : null, vkAnim: vk ? getComputedStyle(vk).animationName : null,
+    keyHidden: key ? !!key.hidden || getComputedStyle(key).display === "none" : null, keyOp: ks ? +ks.opacity : null,
+    edge: { bw: cs.borderTopWidth, bs: cs.borderTopStyle, bc: cs.borderTopColor }, bg: cs.backgroundColor,
+    tone: getComputedStyle(ring.querySelector(".ib4-a")).backgroundImage,
+    hint: (() => { const h = ff.closest(".part") ? ff.closest(".part").querySelector(".phint .cluck") : document.querySelector("#fb > .cluck"); if (!h) return null;
+      const c = getComputedStyle(h); return { bg: c.backgroundColor, r: c.borderTopLeftRadius, sh: c.boxShadow, anim: c.animationName, inPhint: !!h.closest(".phint") }; })() };
+}, t);
+const coverageOf = arcs => {
+  const ints = [];
+  for (const a of arcs) {
+    const s = ((a.rot % 360) + 360) % 360, e = s + a.len;
+    if (e <= 360) ints.push([s, e]); else { ints.push([s, 360]); ints.push([0, e - 360]); }
+  }
+  ints.sort((x, y) => x[0] - y[0]);
+  let cov = 0, cs = null, ce = null;
+  for (const [s, e] of ints) { if (ce == null || s > ce + 1e-6) { if (ce != null) cov += ce - cs; cs = s; ce = e; } else ce = Math.max(ce, e); }
+  return ce == null ? 0 : cov + ce - cs;
+};
+/* the head's px along the outline at time t (C's head = its transform + its 4.3% arc), the same edge() mapping as strip.js */
+const headAt = (page, t) => page.evaluate(t => {
+  const ring = document.querySelector("#q .ib4-ring"); if (!ring) return null;
+  const ff = ring.parentElement, C = ring.querySelector(".ib4-c"), a0 = parseFloat(ring.dataset.a0);
+  const w = ff.offsetWidth, h = ff.offsetHeight, P = 2 * (w + h);
+  const ang = s => { s = ((s % P) + P) % P; let x, y;
+    if (s < w / 2) { x = s; y = -h / 2; } else if (s < w / 2 + h) { x = w / 2; y = s - w / 2 - h / 2; }
+    else if (s < 1.5 * w + h) { x = w / 2 - (s - w / 2 - h); y = h / 2; } else if (s < 1.5 * w + 2 * h) { x = -w / 2; y = h / 2 - (s - 1.5 * w - h); }
+    else { x = s - 1.5 * w - 2 * h - w / 2; y = -h / 2; }
+    const r = Math.atan2(x, -y) * 180 / Math.PI; return r < 0 ? r + 360 : r; };
+  const pos = a => { a = ((a % 360) + 360) % 360; let lo = 0, hi = P; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (ang(m) < a) lo = m; else hi = m; } return lo; };
+  const an = C.getAnimations()[0]; if (t != null) { an.pause(); an.currentTime = t; }
+  const cs = getComputedStyle(C).transform, m = new DOMMatrix(cs === "none" ? "matrix(1,0,0,1,0,0)" : cs);
+  let r = Math.atan2(m.b, m.a) * 180 / Math.PI; if (r < 0) r += 360;
+  const head = r + parseFloat(C.dataset.len), s0 = pos(a0);
+  let d = pos(head) - s0; if (d < 0) d += P;
+  if (t === 0) d = 0;
+  return { t, s: +d.toFixed(3), P, w, h, lap: Math.min(2600, Math.max(1600, P / .475)) };
+}, t);
 /* IB-3: sample the ring's rotating layer at 8 equal times over one lap; head px = the perimeter distance of the gradient's from
    angle (mock tools/ring-speed.cjs). Returns the 8 px steps; even speed = every step is P/8. */
 const speedOf = (page, wantW) => page.evaluate(async wantW => {
@@ -267,7 +399,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.press("#q .mparts .part:first-child input.ans", "Enter");
     await page.waitForSelector("#q .mparts .part:first-child .ff.bad", { timeout: 6000 });
     const bad = await skinOf(page, "#q .mparts .part:first-child .ff");
-    assert.notEqual(bad.bg, idle.bg, `multi wrong fill is still the idle ground (${bad.bg})`);
+    assert.equal(bad.bg, idle.bg, `multi wrong ground = the resting ground (SPEC §7 BACKGROUND) (${bad.bg})`);
     assert.ok(bad.bw === "0px" || bad.bs === "none", `multi wrong edge is still the resting 1.5px border (${bad.bw} ${bad.bs})`);
     assert.notEqual(bad.sh, idle.sh, "multi wrong keeps the inset dish instead of the verdict raise");
     return `h ${m.h} edge ${m.edgeW} gap ${m.overflow} line ${m.mkBase}/${m.prBase} glyph ${m.mkGlyph}/${m.prGlyph}${w >= 900 ? " value " + m.valueBase : ""} bad ${bad.bg} ${bad.bw}`;
@@ -417,13 +549,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.doesNotMatch(j.sh, /0px 12px 26px -8px/, "a judged field keeps its verdict raise: " + j.sh);
     return `tr ${j.tr} edge ${j.bc}`;
   });
-  await step(`${w}: single wrong keeps the live verdict fill`, async () => {
+  await step(`${w}: single wrong keeps the resting ground`, async () => {
     await go(page, "PSY_S2A");
     const idle = (await page.evaluate(MET)).skin;
     await page.fill("#ans", "9.9"); await page.press("#ans", "Enter");
     await page.waitForSelector("#q #ff.bad", { timeout: 6000 });
     const bad = await skinOf(page, "#q #ff.bad");
-    assert.notEqual(bad.bg, idle.bg, `single wrong fill is still the idle ground (${bad.bg})`);
+    assert.equal(bad.bg, idle.bg, `single wrong ground = the resting ground (SPEC §7 BACKGROUND) (${bad.bg})`);
     assert.ok(bad.bw === "0px" || bad.bs === "none", `single wrong edge is still the resting 1.5px border (${bad.bw} ${bad.bs})`);
     assert.notEqual(bad.sh, idle.sh, "single wrong keeps the inset dish instead of the verdict raise");
     const wait = await page.evaluate(() => { const f = document.querySelector("#q #ff.bad"), g = document.querySelector("#ansGo"); return { gLeft: g.getBoundingClientRect().left, fRight: f.getBoundingClientRect().right, nx: !!f.querySelector(".nx") }; });
@@ -449,7 +581,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.waitForSelector("#q #ff > .nx", { timeout: 6000 });
     await settled(page, "#q #ff > .nx");
     const ok = await skinOf(page, "#q #ff.ok");
-    assert.notEqual(ok.bg, idle.bg, `single right fill is still the idle ground (${ok.bg})`);
+    assert.equal(ok.bg, idle.bg, `single right ground = the resting ground (SPEC §7 BACKGROUND) (${ok.bg})`);
     assert.ok(ok.bw === "0px" || ok.bs === "none", `single right edge is still the resting border (${ok.bw} ${ok.bs})`);
     const g = await page.evaluate(() => {
       const ff = document.querySelector("#q > #ff.ff"), nx = ff.querySelector(":scope > .nx");
@@ -562,8 +694,251 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await hold.done();
     }
   });
+  await step(`${w}: IB-4 single wrong: ring starts as the aurora arc, key stays dimmed, hint card, border untouched`, async () => {
+    await go(page, "PSY_V1A");
+    await page.mouse.move(0, 0);
+    const fullLuma = await maxLuma(page, "#ansGo");   // the key's RENDERED arrow at rest
+    const rest = await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+    const hold = await holdGrade(page, ["PSY_V1A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Square the time." });
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .ib3-ring .ib3-spin", { timeout: 3000 });
+      const aurora = await auroraAt(page);
+      hold.release();
+      await page.waitForSelector("#q .ib4-ring", { timeout: 5000 });
+      const r0 = await ringAt(page, 0), cov = coverageOf(r0.arcs);
+      assert.ok(r0.a0 >= 0 && r0.a0 < 360, `the frozen aurora angle is stored: ${r0.a0}`);
+      const da = ((r0.a0 - aurora) % 360 + 360) % 360;
+      assert.ok(aurora != null && da < 90, `t=0 starts at the aurora's live head: ${r0.a0} vs ${aurora} (delta ${da})`);
+      assert.equal(r0.v, "bad", `ring verdict ${r0.v}`);
+      assert.ok(cov > 170 && cov < 178, `t=0 shows the aurora's ~173deg arc, not a full ring: ${cov}`);
+      assert.equal(r0.arcs[0].anims, 0, "A is the frozen aurora arc (no animation)");
+      const anim = r0.arcs.slice(1);
+      assert.ok(anim.every(a => a.anims >= 1), "the closing arcs animate: " + JSON.stringify(r0.arcs.map(a => a.anims)));
+      assert.ok(anim.every(a => a.keys.every(k => k.kf.every(f => f.offset === 0 || f.offset > 0))), "keyframe 0 exists");
+      assert.ok(anim.every(a => a.keys.every(k => k.kf.every(f => f.props.length === 1 && f.props[0] === "transform"))),
+        "transform-only keyframes: " + JSON.stringify(anim[1] && anim[1].keys));
+      assert.ok(anim.every(a => a.keys.every(k => k.dur === 440)), "440ms sweep: " + JSON.stringify(anim.map(a => a.keys.map(k => k.dur))));
+      assert.ok(anim.every(a => a.keys.every(k => /^cubic-bezier\(0\.3, 0?\.\d+, 0?\.2, 1\)$/.test(k.ease))), "easing cubic-bezier(.3,.3k,.2,1): " + JSON.stringify(anim.map(a => a.keys.map(k => k.ease))));
+      await ringAt(page, 200);
+      await shot(page, `single-${w}-mid-ib4-app.png`, "#freezeIn");
+      const mid = await page.evaluate(() => {
+        const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"), cs = getComputedStyle(ff), ins = getComputedStyle(inp);
+        return { val: inp.value, color: ins.color, op: ins.opacity, vis: ins.visibility, w: ff.offsetWidth, maxW: cs.maxWidth, bg: cs.backgroundColor };
+      });
+      assert.equal(mid.val, "3.2", `the typed value stays during the verdict: ${JSON.stringify(mid)}`);
+      assert.ok(mid.op === "1" && mid.vis === "visible", `the typed value is painted: ${JSON.stringify(mid)}`);
+      assert.equal(mid.bg, rest.bg, `wrong ground stays the resting ground mid-sweep: ${mid.bg} vs ${rest.bg}`);
+      if (w >= 900) assert.ok(mid.w <= 400.5, `single field stays capped after the verdict: ${mid.w}px (max-width ${mid.maxW})`);
+      const heads = [];
+      for (let t = 0; t <= 440; t += 40) heads.push(await headAt(page, t));
+      for (let i = 1; i < heads.length; i++) assert.ok(heads[i].s >= heads[i - 1].s - 0.01, `head is monotonic: ${heads.map(x => x.s.toFixed(1)).join("/")}`);
+      const full = coverageOf((await ringAt(page, 440)).arcs);
+      assert.ok(full > 355, `the ring closes: coverage ${full}`);
+      await finishRing(page);   // the real close (a paused sweep never resolves strip.js's finished promise)
+      await page.waitForFunction(() => document.querySelector("#q .ff")?.classList.contains("ib4-done"), null, { timeout: 3000 });
+      await page.waitForFunction(() => { const v = document.querySelector("#q .ff > .vk"); return v && +getComputedStyle(v).opacity >= .99; }, null, { timeout: 3000 });
+      const icon = await iconOf(page, "#q .ff");
+      assert.ok(icon && icon.display !== "none" && icon.opacity >= .99, `the wrong cross is visible after the close: ${JSON.stringify(icon)}`);
+      assert.ok(near(icon.w, 24) && near(icon.h, 24), `the cross is on the 24px grid: ${icon.w}x${icon.h}`);
+      assert.equal(icon.right, "17.5px", `the cross sits 17.5 from the right: ${icon.right}`);
+      assert.ok(Math.abs(parseFloat(icon.stroke) - 2.25) < .01, `the cross stroke is 2.25: ${icon.stroke}`);
+      assert.ok(icon.vkLeft >= icon.unitRight, `the cross is right of the unit: ${icon.vkLeft} vs ${icon.unitRight}`);
+      await shot(page, `single-${w}-wrong-ib4-final-app.png`, "#freezeIn");
+      const dimLuma = await maxLuma(page, "#ansGo");
+      assert.ok(dimLuma < fullLuma * .8, `the Check key's PIXELS are dim: ${dimLuma} vs full ${fullLuma}`);
+      const fin = await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"); return { val: inp.value, w: ff.offsetWidth, maxW: getComputedStyle(ff).maxWidth, bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+      assert.equal(fin.val, "3.2", `the typed value stays after the verdict: ${JSON.stringify(fin)}`);
+      assert.equal(fin.bg, rest.bg, `wrong ground after the verdict == ground at rest: ${fin.bg} vs ${rest.bg}`);
+      assert.equal(fin.color, rest.color, `wrong value keeps the resting ink: ${fin.color} vs ${rest.color}`);
+      if (w >= 900) assert.ok(fin.w <= 400.5, `single field stays capped at rest after the verdict: ${fin.w}px (max-width ${fin.maxW})`);
+      const h5 = await headAt(page, 5), spd = (h5.s - heads[0].s) / 5 * 1000, aur = heads[0].P / heads[0].lap * 1000;   // px/s at t=0 (5ms sample; t is ms)
+      assert.ok(spd > aur * .75 && spd < aur * 1.25, `head leaves at the aurora pace: ${spd.toFixed(0)} vs ${aur.toFixed(0)} px/s`);
+      assert.equal(r0.keyHidden, false, "wrong keeps the Check key visible");
+      assert.ok(r0.keyOp < 1, `wrong dims the Check key: opacity ${r0.keyOp}`);
+      assert.ok(r0.hint && r0.hint.bg !== "rgba(0, 0, 0, 0)" && parseFloat(r0.hint.r) >= 16, "the single hint is the navy card: " + JSON.stringify(r0.hint));
+      assert.equal(r0.hint.inPhint, false, "the single hint is #fb's, not a multi .phint");
+      assert.ok(r0.edge.bw === "0px" || r0.edge.bs === "none", `the real border is not recoloured: ${JSON.stringify(r0.edge)}`);
+      const wrong = await page.evaluate(() => { const p = document.createElement("i"); p.style.color = "var(--wrong)"; document.querySelector("#q").append(p); const c = getComputedStyle(p).color; p.remove(); return c; });
+      assert.ok(r0.tone.includes(wrong), `the ring carries --wrong (${wrong}): ${r0.tone.slice(0, 90)}`);
+      await page.locator("#ans").press("1");
+      await page.waitForTimeout(250);
+      const after = await page.evaluate(() => ({ ring: !!document.querySelector("#q .ib4-ring"), bad: document.querySelector("#ff").classList.contains("bad"),
+        vk: !!document.querySelector("#ff .vk"), val: document.querySelector("#ans").value, ro: document.querySelector("#ans").readOnly, op: +getComputedStyle(document.querySelector("#ansGo")).opacity,
+        w: document.querySelector("#q > .ff#ff").offsetWidth, attr: document.querySelector("#ff").getAttribute("data-ib4") }));
+      assert.equal(after.ring, false, `a keystroke clears the verdict ring: ${JSON.stringify(after)}`);
+      assert.equal(after.bad, false, `a keystroke clears .bad: ${JSON.stringify(after)}`);
+      assert.equal(after.op, 1, `a keystroke returns the key to full: ${after.op}`);
+      assert.equal(after.attr, null, "the keystroke clears the verdict ring hook");
+      if (w >= 900) assert.ok(after.w <= 400.5, `single field stays capped when the retry is typed: ${after.w}px`);
+      await shot(page, `single-${w}-retry-ib4-app.png`, "#freezeIn");
+      return `cov ${cov.toFixed(1)} -> ${full.toFixed(1)}, key ${dimLuma}/${fullLuma}, ${spd.toFixed(0)}/${aur.toFixed(0)} px/s`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
+  await step(`${w}: IB-4 single right: ring stays, no key morph, Next takes the slot, tick fades, pixel diff 0`, async () => {
+    await go(page, "PSY_V2A");
+    const rest = await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+    const hold = await holdGrade(page, ["PSY_V2A"], { verdict: "correct", triesLeft: 1 });
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .ib3-ring .ib3-spin", { timeout: 3000 });
+      hold.release();
+      await page.waitForSelector("#q .ib4-ring", { timeout: 5000 });
+      await page.waitForSelector("#q .ff.ok .nx", { timeout: 5000 });
+      await settled(page, "#q .ff.ok .nx");   // g-next-in lands Next in the slot before the geometry read
+      const nx = await page.evaluate(() => { const n = document.querySelector("#q .ff.ok .nx"); return { cls: n.className, ico: !!n.querySelector(".vm-ico"), v: n.dataset.v || null }; });
+      assert.doesNotMatch(nx.cls, /vmorph/, "a typed key skips §verdict-morph: " + JSON.stringify(nx));
+      assert.equal(nx.ico, false, "no morph tick/cross is drawn on a typed Next");
+      const key = await page.evaluate(() => { const g = document.querySelector("#ansGo"), r = g.getBoundingClientRect(); return { hidden: g.hidden, w: r.width, op: +getComputedStyle(g).opacity }; });
+      assert.ok(key.hidden || key.w === 0, "right hands the slot to Next: " + JSON.stringify(key));
+      const glyph = await page.evaluate(() => { const f = document.querySelector("#q .ff.ok"), n = f.querySelector(".nx"), r = f.getBoundingClientRect(), nr = n.getBoundingClientRect(), cs = getComputedStyle(f), ns = getComputedStyle(n);
+        return { outside: nr.left >= r.right + 10, w: nr.width, h: nr.height, fr: +r.right.toFixed(1), fl: +r.left.toFixed(1), fw: f.offsetWidth, nl: +nr.left.toFixed(1), pos: ns.position, left: ns.left, pl: cs.paddingLeft, pr: cs.paddingRight, bw: cs.borderLeftWidth, tf: cs.transform, par: n.offsetParent && n.offsetParent.className }; });
+      assert.ok(glyph.outside, "Next takes the 60px outer key slot: " + JSON.stringify(glyph));
+      if (w >= 900) assert.ok(glyph.fw <= 400.5, `single right field keeps the 400px cap: ${glyph.fw}px`);
+      await page.waitForFunction(() => document.querySelector("#q .ff.ok")?.classList.contains("ib4-done"), null, { timeout: 3000 });
+      await page.waitForFunction(() => +getComputedStyle(document.querySelector("#q .ff.ok .vk")).opacity >= .99, null, { timeout: 3000 });
+      const done = await ringAt(page, null);
+      assert.equal(done.done, true, "the ring is the settled outline (done)");
+      assert.ok(done.vkOp >= .99, `the tick fades in after the ring closes: ${done.vkOp}`);
+      const icon = await iconOf(page, "#q .ff.ok");
+      assert.ok(icon && icon.display !== "none" && icon.opacity >= .99, `the right tick is visible after the close: ${JSON.stringify(icon)}`);
+      assert.ok(near(icon.w, 24) && near(icon.h, 24), `the tick is on the 24px grid: ${icon.w}x${icon.h}`);
+      assert.equal(icon.right, "17.5px", `the tick sits 17.5 from the right: ${icon.right}`);
+      assert.ok(Math.abs(parseFloat(icon.stroke) - 2.25) < .01, `the tick stroke is 2.25: ${icon.stroke}`);
+      assert.ok(icon.vkLeft >= icon.unitRight, `the tick is right of the unit: ${icon.vkLeft} vs ${icon.unitRight}`);
+      const gnd = await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+      assert.equal(gnd.bg, rest.bg, `right ground after the verdict == ground at rest: ${gnd.bg} vs ${rest.bg}`);
+      assert.equal(gnd.color, rest.color, `right value keeps the resting ink: ${gnd.color} vs ${rest.color}`);
+      const A = pngOf(await page.locator("#q .ib4-ring").screenshot());
+      await page.evaluate(() => {
+        const ring = document.querySelector("#q .ib4-ring"), els = [...ring.querySelectorAll(".ib4-arc")];
+        const vals = els.map(el => getComputedStyle(el).transform);
+        els.forEach(el => el.getAnimations().forEach(a => a.cancel()));
+        els.forEach((el, i) => { el.style.transform = vals[i]; });
+        ring.classList.add("ib4-still");
+      });
+      const B = pngOf(await page.locator("#q .ib4-ring").screenshot());
+      const diff = pxDiff(A, B);
+      assert.equal(diff, 0, `final sweep frame vs a static done render: ${diff}px differ`);
+      await shot(page, `single-${w}-right-ib4-app.png`, "#freezeIn");
+      return `pixel diff ${diff}, tick ${done.vkOp}, Next ${glyph.w}x${glyph.h}`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
+  await step(`${w}: IB-4 multi wrong: ring on the part + the same navy hint card`, async () => {
+    await go(page, "PSY_V3A");
+    await page.mouse.move(0, 0);
+    const rest = await page.evaluate(() => { const ff = document.querySelector("#q .mparts .part:first-child > .ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+    const hold = await holdGrade(page, ["PSY_V3A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Count both circles once." });
+    try {
+      await page.fill("#q .mparts .part:first-child input.ans", "17");
+      await page.waitForTimeout(80);
+      const fullLuma = await maxLuma(page, "#q .mparts .part:first-child .send");
+      await page.press("#q .mparts .part:first-child input.ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .mparts .part:first-child .ib3-ring .ib3-spin", { timeout: 3000 });
+      const aurora = await auroraAt(page);
+      hold.release();
+      await page.waitForSelector("#q .mparts .part:first-child .ib4-ring", { timeout: 5000 });
+      const r0 = await ringAt(page, 0);
+      assert.equal(r0.v, "bad", `part ring verdict ${r0.v}`);
+      const da = ((r0.a0 - aurora) % 360 + 360) % 360;
+      assert.ok(aurora != null && da < 90, `the part ring starts at the aurora's live head: ${r0.a0} vs ${aurora} (delta ${da})`);
+      assert.ok(r0.hint && r0.hint.inPhint && r0.hint.bg !== "rgba(0, 0, 0, 0)" && parseFloat(r0.hint.r) >= 16,
+        "the multi hint wears the same navy card: " + JSON.stringify(r0.hint));
+      assert.equal(r0.keyHidden, false, "the part's Check stays visible on a miss");
+      assert.ok(r0.keyOp < 1, `the part's Check dims: ${r0.keyOp}`);
+      await ringAt(page, 200);
+      await shot(page, `multi-${w}-mid-ib4-app.png`, "#freezeIn");
+      await ringAt(page, 440);
+      await finishRing(page);
+      await page.waitForFunction(() => document.querySelector("#q .mparts .part:first-child > .ff")?.classList.contains("ib4-done"), null, { timeout: 3000 });
+      await page.waitForFunction(() => { const v = document.querySelector("#q .mparts .part:first-child > .ff > .vk"); return v && +getComputedStyle(v).opacity >= .99; }, null, { timeout: 3000 });
+      const icon = await iconOf(page, "#q .mparts .part:first-child > .ff");
+      assert.ok(icon && icon.display !== "none" && icon.opacity >= .99, `the part cross is visible after the close: ${JSON.stringify(icon)}`);
+      assert.ok(near(icon.w, 24) && near(icon.h, 24), `the part cross is on the 24px grid: ${icon.w}x${icon.h}`);
+      assert.equal(icon.right, "17.5px", `the part cross sits 17.5 from the right: ${icon.right}`);
+      assert.ok(Math.abs(parseFloat(icon.stroke) - 2.25) < .01, `the part cross stroke is 2.25: ${icon.stroke}`);
+      const gnd = await page.evaluate(() => { const ff = document.querySelector("#q .mparts .part:first-child > .ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+      assert.equal(gnd.bg, rest.bg, `multi wrong ground after the verdict == ground at rest: ${gnd.bg} vs ${rest.bg}`);
+      assert.equal(gnd.color, rest.color, `multi wrong value keeps the resting ink: ${gnd.color} vs ${rest.color}`);
+      await shot(page, `multi-${w}-wrong-ib4-final-app.png`, "#freezeIn");
+      const dimLuma = await maxLuma(page, "#q .mparts .part:first-child .send");
+      assert.ok(dimLuma < fullLuma * .8, `the part key's PIXELS are dim: ${dimLuma} vs full ${fullLuma}`);
+      await page.locator("#q .mparts .part:first-child input.ans").press("1");
+      await page.waitForFunction(() => !document.querySelector("#q .mparts .part .ib4-ring"), null, { timeout: 3000 });
+      const after = await page.evaluate(() => +getComputedStyle(document.querySelector("#q .mparts .part:first-child .send")).opacity);
+      assert.equal(after, 1, `the next keystroke restores the part key: ${after}`);
+      await shot(page, `multi-${w}-retry-ib4-app.png`, "#freezeIn");
+      return `multi card ${r0.hint.r}, key ${dimLuma}/${fullLuma} px luma, ${r0.keyOp} -> ${after}`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
+  await step(`${w}: IB-4 multi right: ground stays resting, tick visible`, async () => {
+    await go(page, "PSY_V5A");
+    const rest = await page.evaluate(() => { const ff = document.querySelector("#q .mparts .part:first-child > .ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+    const hold = await holdGrade(page, ["PSY_V5A"], { verdict: "correct", triesLeft: 1 });
+    try {
+      await page.fill("#q .mparts .part:first-child input.ans", "14");
+      await page.press("#q .mparts .part:first-child input.ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .mparts .part:first-child .ib3-ring .ib3-spin", { timeout: 3000 });
+      hold.release();
+      await page.waitForSelector("#q .mparts .part:first-child .ib4-ring", { timeout: 5000 });
+      await page.waitForSelector("#q .mparts .part:first-child > .ff.ok", { timeout: 5000 });
+      await page.waitForFunction(() => document.querySelector("#q .mparts .part:first-child > .ff")?.classList.contains("ib4-done"), null, { timeout: 3000 });
+      await page.waitForFunction(() => { const v = document.querySelector("#q .mparts .part:first-child > .ff > .vk"); return v && +getComputedStyle(v).opacity >= .99; }, null, { timeout: 3000 });
+      const icon = await iconOf(page, "#q .mparts .part:first-child > .ff");
+      assert.ok(icon && icon.display !== "none" && icon.opacity >= .99, `the part tick is visible after the close: ${JSON.stringify(icon)}`);
+      assert.ok(near(icon.w, 24) && near(icon.h, 24), `the part tick is on the 24px grid: ${icon.w}x${icon.h}`);
+      assert.equal(icon.right, "17.5px", `the part tick sits 17.5 from the right: ${icon.right}`);
+      assert.ok(Math.abs(parseFloat(icon.stroke) - 2.25) < .01, `the part tick stroke is 2.25: ${icon.stroke}`);
+      const gnd = await page.evaluate(() => { const ff = document.querySelector("#q .mparts .part:first-child > .ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
+      assert.equal(gnd.bg, rest.bg, `multi right ground after the verdict == ground at rest: ${gnd.bg} vs ${rest.bg}`);
+      assert.equal(gnd.color, rest.color, `multi right value keeps the resting ink: ${gnd.color} vs ${rest.color}`);
+      await shot(page, `multi-${w}-right-ib4-app.png`, "#freezeIn");
+      return `multi right ${gnd.bg}, tick ${icon.opacity}`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
+  if (w === 390) await step("390: IB-4 verdict change: the ring follows the new verdict (bad -> ok)", async () => {
+    await go(page, "PSY_V1A");
+    await page.evaluate(() => { document.querySelector("#q > .ff#ff").classList.add("bad"); });
+    await page.waitForSelector("#q .ib4-ring[data-v='bad']", { timeout: 3000 });
+    await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"); ff.classList.remove("bad"); ff.classList.add("ok"); });
+    await page.waitForSelector("#q .ib4-ring[data-v='ok']", { timeout: 3000 });
+    return "bad ring replaced by ok";
+  });
+  if (w === 390) await step("390: IB-4 MC keeps the full verdict morph (typed answers only skip it)", async () => {
+    await go(page, "PSY_V4A");
+    await page.click('#q .opt[data-id="a"]');
+    await page.waitForFunction(() => !document.querySelector("#mcGo").disabled);
+    await page.click("#mcGo");
+    await page.waitForSelector("#q .nx.vmorph", { timeout: 6000 });
+    const m = await page.evaluate(() => { const n = document.querySelector("#q .nx.vmorph"); return { v: n.dataset.v, ico: !!n.querySelector(".vm-ico"), anim: getComputedStyle(n).animationName }; });
+    assert.equal(m.v, "ok", "MC's Next morphs as the verdict: " + JSON.stringify(m));
+    assert.equal(m.ico, true, "MC keeps the drawn tick");
+    assert.match(m.anim, /vm-flood/, `MC keeps the flood: ${m.anim}`);
+    return `MC morph ${m.v}`;
+  });
   await ctx.close();
 }
+
 /* IB-2: prefers-reduced-motion = colours only: no scale, no transition */
 {
   const { ctx, page } = await fresh(true, { width: 390, height: 844 }, { reducedMotion: "reduce" });
@@ -612,6 +987,29 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.equal(r.anims, 0, `no rotation under reduced motion: ${r.anims} animations`);
       assert.equal(r.glow, "none", "no glow under reduced motion");
       return `static ${r.bg} @ ${r.op}`;
+    } finally {
+      hold.release();
+      await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
+      await hold.done();
+    }
+  });
+  await step("reduced motion: IB-4 verdict ring = closed static verdict colour, icon + hint without motion", async () => {
+    await go(page, "PSY_V1A");
+    const hold = await holdGrade(page, ["PSY_V1A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Square the time." });
+    try {
+      await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+      await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForSelector("#q .ib3-ring", { timeout: 3000 });
+      hold.release();
+      await page.waitForSelector("#q .ib4-ring", { timeout: 5000 });
+      const r = await ringAt(page, null), cov = coverageOf(r.arcs);
+      assert.equal(r.v, "bad", `ring verdict ${r.v}`);
+      assert.equal(r.still, true, "reduced motion: the ring is the static done state");
+      assert.ok(r.arcs.every(a => a.anims === 0), "no sweep under reduced motion: " + JSON.stringify(r.arcs.map(a => a.anims)));
+      assert.ok(cov > 355, `the ring appears closed: ${cov}`);
+      assert.ok(r.vkOp >= .99, `the icon is there at once: ${r.vkOp}`);
+      assert.ok(r.hint && r.hint.anim === "none", "the hint arrives without motion: " + JSON.stringify(r.hint));
+      return `static ${cov.toFixed(1)}deg, icon ${r.vkOp}`;
     } finally {
       hold.release();
       await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
@@ -682,6 +1080,22 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
       await hold.done();
     }
+  });
+  await step("flag off 390: IB-4 adds no verdict ring", async () => {
+    await go(page, "PSY_S2A");
+    await page.fill("#ans", "9.9"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff.bad", { timeout: 6000 });
+    const bad = await page.evaluate(() => ({ rings: document.querySelectorAll(".ib4-ring, .ib4-arc").length, attr: document.querySelector("#ff").getAttribute("data-ib4"), vkAnim: getComputedStyle(document.querySelector("#q .ff .vk")).animationName }));
+    assert.equal(bad.rings, 0, "flag off: no verdict ring layers");
+    assert.equal(bad.attr, null, "flag off: no IB-4 hook on the field");
+    assert.doesNotMatch(bad.vkAnim, /ib4/, "flag off: the verdict icon keeps its live timing: " + bad.vkAnim);
+    await go(page, "PSY_S3A");
+    await page.fill("#ans", "5"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q #ff.ok", { timeout: 6000 });
+    const ok = await page.evaluate(() => ({ rings: document.querySelectorAll(".ib4-ring, .ib4-arc").length, attr: document.querySelector("#ff").getAttribute("data-ib4") }));
+    assert.equal(ok.rings, 0, "flag off right: no verdict ring layers");
+    assert.equal(ok.attr, null, "flag off right: no IB-4 hook");
+    return "flag off: nothing";
   });
   await step("flag off 1280: single has no 400px cap", async () => {
     await go(page, "PSY_S1A");

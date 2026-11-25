@@ -132,6 +132,7 @@ try {
       const page = await open(w, "v7", "#PHYS_FP2");
       try {
         await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+        const rest = await page.evaluate(() => { const ff = document.querySelector("#ff"), i = ff.querySelector("input"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(i).color }; });
         const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
         await typeAnswer("1.636");
         await page.waitForFunction(() => window.__drill && window.__drill.state && window.__drill.state.tries.length === 1, null, { timeout: 6000 });
@@ -156,9 +157,15 @@ try {
         if (SHOTS) { const bb = await page.locator("#q .ff.bad").boundingBox(); await page.screenshot({ path: join(SHOTS, `corner-${w}.png`), clip: { x: Math.max(0, bb.x + bb.width - 120), y: bb.y + bb.height - 40, width: 120 + 8, height: 100 } }); }
         assert.ok(bad, "a judged-wrong typed box");
         assert.equal(bad.bw, ZERO, "wrong box has no dash: " + JSON.stringify(bad));
-        assert.equal(bad.bg, "rgb(62, 20, 30)", "the MC bento wrong fill #3e141e");
-        const L = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-        const cr = (L(bad.color) + 0.05) / (L(bad.bg) + 0.05); assert.ok(cr >= 4.5, "wrong text contrast " + cr.toFixed(2));
+        assert.equal(bad.bg, rest.bg, "SPEC §7 BACKGROUND: the wrong box keeps its resting ground");
+        assert.equal(bad.color, rest.color, "the wrong value keeps the resting ink");
+        const cr = await page.evaluate(({ fg, bg }) => {
+          const cv = document.createElement("canvas"); cv.width = cv.height = 1; const cx = cv.getContext("2d", { willReadFrequently: true });
+          const parse = t => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = "#000"; cx.fillStyle = t; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2]]; };
+          const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+          const a = lum(parse(fg)), b = lum(parse(bg)); return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+        }, { fg: bad.color, bg: bad.bg });
+        assert.ok(cr >= 4.5, "wrong text contrast " + cr.toFixed(2));
         if (SHOTS) { await page.locator("#q .ff.bad").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, `verdict-${w}.png`) }); }
         assert.equal(d.shown, false, "no verdict tray is shown under the row");
         assert.deepEqual(page.errs, [], "page errors");
@@ -169,6 +176,7 @@ try {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+      const rest = await page.evaluate(() => { const ff = document.querySelector("#ff"), i = ff.querySelector("input"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(i).color }; });
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
       await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await settled(page, "#q .ff.rbox.ok");
       const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
@@ -176,12 +184,12 @@ try {
       assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is a plain glyph, no tile (VERDICT-MARK-INERT)"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
       assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
-      // the correct fill is the MC bento right tile: --mc-right #0c2c22 + --correct-on text (#b9efd8), on the reveal pill and on a plain judged-right box
+      // the reveal pill keeps the MC bento right tile (--mc-right #0c2c22 + --correct-on text); the PLAIN judged-right box is now the resting ground/ink (SPEC §7 BACKGROUND, Tony Nov 25 07:38)
       assert.equal(m.text, "rgb(185, 239, 216)", "right text = --correct-on: " + m.text);
       const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"); ff.classList.remove("rbox"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
         return { bg: cs.backgroundColor, bw: cs.borderTopWidth, r: cs.borderTopLeftRadius, color: i.color }; });
       const tile = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");   // ICK4-SQUIRCLE-C: --r-tile x 1.25 under corner-shape
-      assert.deepEqual(plain, { bg: "rgb(12, 44, 34)", bw: "0px", r: tile, color: "rgb(185, 239, 216)" }, "the plain judged-right box = the MC right tile (was the soft --correct-fill): " + JSON.stringify(plain));
+      assert.deepEqual(plain, { bg: rest.bg, bw: "0px", r: tile, color: rest.color }, "the plain judged-right box keeps the resting ground + ink (SPEC §7 BACKGROUND): " + JSON.stringify(plain));
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `right-${w}.png`) });
     } finally { await page.context().close(); }
   });

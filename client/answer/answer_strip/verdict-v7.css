@@ -283,3 +283,24 @@ html.ui-v7.grading #q > .ff#ff:not(.proof):not(.rbox) > #ansGo::after { content:
 html.ui-v7.grading #q > .ff#ff:not(.proof):not(.rbox) > #ansGo > :is(.ico, .ib1-go) { visibility: visible; }
 html.ui-v7.grading #q .mparts .part.g-on > .ff > .send::after { content: none; animation: none; }
 html.ui-v7.grading #q .mparts .part.g-on > .ff > .send > :is(.ico, .svg, .ib1-go) { visibility: visible; }
+
+/* IB-4 (SOFT-LIFT-SPEC §7, grill Q2a/Q3b): a typed miss skips §verdict-morph and KEEPS its Check key, dimmed (live hid it), so the retry
+   is the same key; the next keystroke clears .bad and the key returns to full. The tick/cross is the verdict icon: it shows beside the
+   dimmed key (app.css's "the arrow replaces the x" rule was for the hidden-key world), and strip.js times its fade after the ring. */
+html.ui-v7 #q > .ff#ff.bad:not(.cue) > #ansGo,
+html.ui-v7 #q > .ff#ff.bad:not(.cue) > #ansGo[aria-disabled="true"] { opacity: .55; }   /* also during the 10 s wait (app.css / §ib1-key rests the key full) */
+html.ui-v7 #q .mparts .part > .ff.bad:not(.shut) > .send { opacity: .55; }
+html.ui-v7 #q .ff:has(> #ansGo:not([hidden], :disabled, .waiting)) > .vk[data-v="i-x"] { display: grid; }
+
+/* IB-4b (Tony Nov 25 07:38, SPEC §7 BACKGROUND): on right, wrong and lock the TYPED box keeps its RESTING ground (--ans-field) and the
+   resting value ink; the verdict ring + the tick/cross carry the colour. Low specificity (:where) and typed-only: MC, the proof box and
+   the reveal pill (.rbox) keep their own verdict looks. */
+html.ui-v7 #q :where(.ff#ff:not(.proof, .rbox), .mparts .part > .ff:not(.rbox)):where(.ok, .bad, .lock, .cue) {
+  background: var(--ans-field);
+}
+html.ui-v7 #q :where(.ff#ff:not(.proof, .rbox), .mparts .part > .ff:not(.rbox)):where(.ok, .bad, .lock, .cue) > input.ans {
+  color: var(--ink);
+}
+/* the verdict icon, IB-1's one 24px grid: 24x24 at 17.5 from the field's right ink edge (the value's left ink inset) */
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .vk,
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .vk { right: 17.5px; }

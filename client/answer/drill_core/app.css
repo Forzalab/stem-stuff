@@ -1903,7 +1903,7 @@ html.ui-v7 #rwHud .rw-lvl { display: none; }
 /* TOP-GAP (Tony, Nov 15): the HUD is empty until the first reward (coin + streak hidden, level retired), yet its 48px box + margin pushed the headings ~95px down. Collapsed until it has something to show. */
 html.ui-v7 #rwHud.rw-z-xp.rw-z-st { display: none; }
 /* D: the miss hint is the float family (the stage toast's fill, radius 16, shadow-3, no edge), not the old filled duck card */
-html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }
+html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck, html.ui-v7 .mparts .phint .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }
 /* PROOF-V7 (Tony Nov 16 "no nested box + an experience like the short answer box"): under ui-v7 the proof pane (#work > #q, the Nov 4 bordered 8 px box) draws nothing;
    the proof field IS the short-answer field: same .ff well (fill, 16 radius, --well inset + lit foot), same Atkinson 17 px text (no mono), the Check button in the same
    top-right slot. The how line sits above it as plain hint text, like the pick-all hint. One box, no nesting. */

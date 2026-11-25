@@ -67,6 +67,7 @@ async function open(w, flag, hash = "") {
 async function judge(w, flag, right, tries = 1) {
   const page = await open(w, flag, "#PHYS_FP2");
   await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
+  await page.evaluate(() => { window.__ib4RestBg = getComputedStyle(document.querySelector("#ff")).backgroundColor; });
   const typeAnswer = async v => { await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill(v); await f.press("Enter"); };
   if (right) { await typeAnswer("1.38"); await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); }
   else {
@@ -86,7 +87,7 @@ const geo = page => page.evaluate(() => {
   const d = document.querySelector("#q .vdrawer, #q .vk[role=button], #q .vkb, #wish .wchip"), ff = document.querySelector("#q .ff.rbox.ok, #q .ff.bad, #q #ff"), nx = document.querySelector("#q .nx"), q = document.querySelector("#q"), vk = ff.querySelector(".vk");
   const lines = [...document.querySelectorAll("#q .ansl")].map(l => ({ inDrawer: !!l.closest(".vdrawer"), shown: l.getBoundingClientRect().width > 2 && l.getBoundingClientRect().height > 2, text: l.textContent.replace(/\s+/g, " ").trim() }));
   const cs = getComputedStyle(ff);
-  return { d: R(d), dShown: !!d && d.getClientRects().length > 0, ff: R(ff), nx: R(nx), nf: R(nx && nx.querySelector(".nf")), q: R(q), vk: R(vk), lines, bg: cs.backgroundColor, radius: cs.borderRadius, ffBw: B(ff), nxBw: B(nx), nfBw: nx && B(nx.querySelector(".nf")),
+  return { d: R(d), dShown: !!d && d.getClientRects().length > 0, ff: R(ff), nx: R(nx), nf: R(nx && nx.querySelector(".nf")), q: R(q), vk: R(vk), lines, bg: cs.backgroundColor, restBg: window.__ib4RestBg, radius: cs.borderRadius, ffBw: B(ff), nxBw: B(nx), nfBw: nx && B(nx.querySelector(".nf")),
     nfBg: nx && getComputedStyle(nx.querySelector(".nf")).backgroundColor, vkBg: vk && getComputedStyle(vk).backgroundColor, vkLabel: vk && vk.getAttribute("aria-label"), vkDuck: !!(vk && vk.querySelector(".vk-duck")), vw: innerWidth, sw: document.documentElement.scrollWidth };
 });
 const W = [360, 390, 768, 1366];
@@ -109,8 +110,8 @@ try {
         assert.equal(g.bg, "rgb(12, 44, 34)", "the row = the verdict fill"); assert.equal(g.vkBg, "rgba(0, 0, 0, 0)", "the mark is a plain glyph, no slot tile (VERDICT-MARK-INERT, Tony Nov 15)");
         assert.ok(g.nf.w > 0 && g.nfBg === "rgb(78, 230, 175)", "Next keeps its own fill: " + g.nfBg);
       } else {
-        assert.equal(g.bg, "rgb(62, 20, 30)"); assert.equal(g.ffBw, "0px 0px 0px 0px");
-        near(g.vk.r, g.ff.r - 14, "the mark sits 14px in from the row end (round 3 centred mark, Tony Nov 15)");
+        assert.equal(g.bg, g.restBg, "wrong: SPEC §7 BACKGROUND (Tony Nov 25 07:38): the box keeps its resting ground"); assert.equal(g.ffBw, "0px 0px 0px 0px");
+        near(g.vk.r, g.ff.r - 17.5, "the mark sits 17.5px in from the row end (IB-1 24px grid, SPEC §5)");
       }
       assert.ok(!g.vkDuck && g.vkLabel === null && g.vk.w > 0 && g.vk.h > 0, "the slot is a plain tick / X, no duck, no button label (inert glyph, no 44px target: VERDICT-MARK-INERT, Tony Nov 15): " + JSON.stringify(g.vk));
       assert.ok(g.ff.r <= g.vw - 8 || right, "right gutter kept"); assert.ok(g.nx ? g.nx.r <= g.vw - 8 : true, "right gutter kept"); assert.ok(g.sw <= g.vw, "no sideways scroll");
@@ -125,7 +126,7 @@ try {
       await page.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden && c.getClientRects().length > 0; }, null, { timeout: 8000 });
     } finally { await page.context().close(); }
   });
-  await step("390: flag on: out of tries = 'Not it. The answer is ...' kept hidden for screen readers, red row, no tray", async () => {
+  await step("390: flag on: out of tries = 'Not it. The answer is ...' kept hidden for screen readers, red row (the reveal pill, not touched by SPEC §7 BACKGROUND), no tray", async () => {
     const page = await open(390, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
@@ -135,7 +136,7 @@ try {
       await page.waitForSelector("#q .ansl", { state: "attached", timeout: 8000 }); await settled(page);
       const g = await geo(page);
       assert.ok(g.lines.length === 1 && !g.lines[0].shown && /^Not it\. The answer is/.test(g.lines[0].text), JSON.stringify(g.lines));
-      assert.equal(g.bg, "rgb(62, 20, 30)"); assert.ok(!g.d);
+      assert.equal(g.bg, "rgb(62, 20, 30)", "out of tries with a wish becomes the reveal pill: its fill is not touched (SPEC §7 BACKGROUND excludes .rbox)"); assert.ok(!g.d);
       if (SHOTS) { await page.locator("#q").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, "vcard-notit-390.png") }); }
     } finally { await page.context().close(); }
   });
