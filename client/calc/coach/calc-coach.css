@@ -173,7 +173,7 @@ html:not(.cc-calc-on) .cc-row:has(> .cc-cta-calc:only-child) { display: none; }
 /* ui-v7 (Tony Nov 14): the "Calculator moves" card is ONE compact toast (calc-coach.js v7Toast, toast.js `tap` + `cls`). Matches PR #556's toast look
    with tokens: --float face, no border, radius 16, --shadow-3. Words | visible action chip (--chip, no border, 44px) | X. */
 html.ui-v7 .stoast.stoast-c-calc { background: var(--float); border: 0; border-radius: 16px; box-shadow: var(--shadow-3); }
-html.ui-v7 .stoast.stoast-c-calc { grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 8px; padding: 8px 4px 8px 16px; font-size: var(--t-sm); line-height: 20px; }   /* words | action chip | X */
+html.ui-v7 .stoast.stoast-c-calc { grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 8px; padding: 8px 4px 8px 16px; font-size: var(--fs--1); line-height: var(--lh--1); }   /* words | action chip | X */
 html.ui-v7 .stoast.stoast-c-calc .stoast-b { display: contents; }
 html.ui-v7 .stoast.stoast-c-calc .stoast-a { grid-column: 2; grid-row: 1; justify-self: end; min-height: 44px; padding: 0 var(--s3); border: 0; border-radius: 10px; background: var(--chip); color: var(--ink); font-weight: 600; white-space: nowrap; cursor: pointer; }
 html.ui-v7 .stoast.stoast-c-calc .stoast-a:focus-visible { outline: var(--ring, 2px) solid var(--focus); outline-offset: 2px; }
