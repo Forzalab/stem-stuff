@@ -78,7 +78,7 @@
   const fin = p => Number.isFinite(p[0]) && Number.isFinite(p[1]);
   /* stroke recorder (U3, I-LBL-1): while a figure is built, every drawn stroke is kept as screen-px segments tagged with the mark
      that drew it, so mount() can place labels off them (figcheck.js place()). Grid lines are not obstacles. */
-  let REC = null, CUR = -1, LAY = 1;   // LAY: the emphasis layer (1 main, 2 given, 3 context) of the mark being drawn; its labels take it too
+  let REC = null, CUR = -1, LAY = 1, TIER = 1;   // LAY: the emphasis layer (1 main, 2 given, 3 context) of the mark being drawn; its labels take it too. TIER: FIG-DRAW-IN's construction tier, written as data-tier (NOT the layer)
   function rec(pts, closed, dash) {
     if (!REC) return;
     const q = pts.filter(fin), d = dash ? { dash: true } : {};
@@ -86,9 +86,11 @@
     if (closed && q.length > 2) REC.push({ id: CUR, pts: [q[q.length - 1], q[0]], ...d });
   }
   const ring = (c, r, a0 = 0, a1 = 360, n = 16) => Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + (a1 - a0) * i / n) * deg; return [c[0] + r * Math.cos(a), c[1] - r * Math.sin(a)]; });
+  /* FIG-DRAW-IN tier of a mark: 0 frame/axes, 1 main shape/curve, 2 detail (arc, guide, point). Text marks are labels. */
+  const tierOf = m => (m === "axes" ? 0 : m === "right" || m === "angle" || m === "dim" || m === "point" ? 2 : 1);
   function line(pts, st, w, dash) {
     if (st !== "var(--grid)") rec(pts, false, dash);
-    return `<polyline points="${P(pts)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
+    return `<polyline points="${P(pts)}" fill="none" data-tier="${st === "var(--grid)" ? 0 : TIER}" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
   }
   /* split a sampled curve at non-finite points and big jumps (asymptotes) */
   function curve(pts, st, w, dash, H) {
@@ -109,7 +111,7 @@
     const W = 0.75 * L;
     const wedge = t => { const bx = t[0] - L * ux, by = t[1] - L * uy;
       rec([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]], true);
-      return `<polygon points="${P([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]])}" style="fill:${st};stroke:${st}" stroke-width="1"/>`; };
+      return `<polygon data-tier="${TIER}" points="${P([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]])}" style="fill:${st};stroke:${st}" stroke-width="1"/>`; };
     const cut = head === "fill" ? 0.6 * L : head === "double" ? 1.35 * L : head === "open" ? 0.3 * w : 0;
     let s = line([a, [b[0] - cut * ux, b[1] - cut * uy]], st, w, dash);
     if (head === "fill") s += wedge(b);
@@ -160,15 +162,15 @@
   }
   function pointSvg(x, y, m) {
     return m.open
-      ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`
-      : `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:${col(m.color)}"/>`;
+      ? `<circle data-tier="${TIER}" cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`
+      : `<circle data-tier="${TIER}" cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:${col(m.color)}"/>`;
   }
   function arcPath(c, r, a0, a1, st, w, dash = "") {
     const p = a => [c[0] + r * Math.cos(a * deg), c[1] - r * Math.sin(a * deg)];
     rec(ring(c, r, a0, Math.abs(a1 - a0) >= 359.99 ? a0 + 360 : a1, Math.max(4, Math.ceil(Math.abs(a1 - a0) / 15))));
-    if (Math.abs(a1 - a0) >= 359.99) return `<circle cx="${n2(c[0])}" cy="${n2(c[1])}" r="${n2(r)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
+    if (Math.abs(a1 - a0) >= 359.99) return `<circle data-tier="${TIER}" cx="${n2(c[0])}" cy="${n2(c[1])}" r="${n2(r)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
     const [s, e] = [p(a0), p(a1)], big = Math.abs(a1 - a0) > 180 ? 1 : 0, sweep = a1 > a0 ? 0 : 1;
-    return `<path d="M${n2(s[0])} ${n2(s[1])}A${n2(r)} ${n2(r)} 0 ${big} ${sweep} ${n2(e[0])} ${n2(e[1])}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
+    return `<path data-tier="${TIER}" d="M${n2(s[0])} ${n2(s[1])}A${n2(r)} ${n2(r)} 0 ${big} ${sweep} ${n2(e[0])} ${n2(e[1])}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
   }
   function hatch(a, b, side) {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]), [ux, uy] = norm(b[0] - a[0], b[1] - a[1]);
@@ -587,7 +589,7 @@
   function drawMarks(marks, k) {
     if (root.FigCheck && root.FigCheck.autoHues) k.hues = root.FigCheck.autoHues(marks.filter(m => m.mark === "force" && wantsAuto(m)).map(forceKey));   // the whole figure's keys, not the draw order
     return marks.filter(m => S[m.mark]).map((m, i) => [LAYER[m.mark] ?? 5, i, m]).sort((a, b) => a[0] - b[0] || a[1] - b[1])
-      .map(([, i, m]) => { CUR = i; LAY = layerOf(m); try { return lyr(LAY, S[m.mark].draw(m, k)); } catch (e) { console.warn("mark", m.mark, e); return ""; } finally { LAY = 1; } }).join("");
+      .map(([, i, m]) => { CUR = i; LAY = layerOf(m); TIER = tierOf(m.mark); try { return lyr(LAY, S[m.mark].draw(m, k)); } catch (e) { console.warn("mark", m.mark, e); return ""; } finally { LAY = 1; } }).join("");
   }
 
 // == §axis-cross ==
@@ -772,7 +774,7 @@
       const other = [];
       for (const [i, m] of g.marks.entries()) {
         const c = col(m.color || "c1");
-        CUR = "c" + i;
+        CUR = "c" + i; TIER = tierOf(m.mark);
         if (m.mark === "shade") {
           const n = 120, up = [], dn = [], vy = m.var === "y";
           for (let i = 0; i <= n; i++) { const t = m.from + (m.to - m.from) * i / n;
@@ -803,7 +805,7 @@
         } else other.push(m);
       }
       top += drawMarks(other.map(m => m.mark === "point" ? { ...m, color: m.color || "ink" } : m), k);
-      CUR = "axes";
+      CUR = "axes"; TIER = 0;                          // FIG-DRAW-IN tier 0: the frame, axes + their ticks, before any shape
       let axes = "";
       if (axesOn) {
         const O = X([ax, ay]);
@@ -816,12 +818,14 @@
         if (g.y.label) k.label(g.y.label, [O[0], pt], "n", "ink");
       }
       s += `<g clip-path="url(#${id})">${body}</g>` + axes + `<g clip-path="url(#${id})">${top}</g>`;
+      TIER = 1;
       return { svg: s, H };
     };
   }
 
   function bars(g) {
     return (W, pad, k) => {
+      TIER = 1;                                        // a bar is a shape; its grid lines carry their own data-tier 0
       const H = 240, pl = pad.l + 18, pr = pad.r, pt = pad.t + 4, pb = pad.b + 48;
       const n = g.groups.reduce((a, gr) => a + gr.bars.length, 0), gaps = g.groups.length - 1;
       const bw = Math.max(20, Math.min(48, (W - pl - pr - gaps * 24 - n * 8) / n));
@@ -842,6 +846,7 @@
         k.label(gr.label, [(start + x - 8) / 2, H - pb + 30], "s", "", "tick");
         if (gi < gaps) { s += line([[x + 8, pt], [x + 8, H - pb + 44]], "var(--grid)", SW.grid); x += 24; }
       });
+      TIER = 0;                                        // the zero line is a frame line, after the bars
       s += line([[pl, Y(0)], [W - pr, Y(0)]], col("ink"), SW.axis);
       return { svg: s, H };
     };
@@ -1172,27 +1177,31 @@
   }
 
   function render(el, block) {
-    if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
-    if (!el._g) el._g = prep(block);
-    if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; el.style.display = ""; el.removeAttribute("aria-hidden"); }   // a redraw starts clean
-    const g = el._g;
-    const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
-    el.style.maxWidth = ""; el.style.marginInline = "";
-    mount(el, build);
-    /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (docs/design/STYLE.md "Question box height").
-       Redrawn narrower and centred (not scaled), so labels keep their size and sit where they were placed; never below 60% of the width. */
-    const cap = window.matchMedia && matchMedia("(max-width: 34rem)").matches ? 0.28 * innerHeight : 0, W0 = el.clientWidth;
-    for (let i = 0; i < 2 && cap && W0; i++) {
-      const H = parseFloat(el.style.height);
-      if (!(H > cap + 1)) break;
-      const w = Math.max(0.6 * W0, Math.floor((el.clientWidth || W0) * cap / H));
-      if (w >= el.clientWidth) break;
-      el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
+    const tierWas = TIER;
+    TIER = 1;                                          // FIG-DRAW-IN: never inherit the previous figure's tier (bars() ends at 0)
+    try {
+      if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
+      if (!el._g) el._g = prep(block);
+      if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; el.style.display = ""; el.removeAttribute("aria-hidden"); }   // a redraw starts clean
+      const g = el._g;
+      const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
+      el.style.maxWidth = ""; el.style.marginInline = "";
       mount(el, build);
-    }
-    const fc = figFindings(el, build) || { codes: [], warn: [] }, degraded = fc.codes.length > 0;
-    if (degraded) degrade(el, block);
-    figReport(el, [...fc.codes, ...fc.warn], build.fixed || [], degraded);
+      /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (docs/design/STYLE.md "Question box height").
+         Redrawn narrower and centred (not scaled), so labels keep their size and sit where they were placed; never below 60% of the width. */
+      const cap = window.matchMedia && matchMedia("(max-width: 34rem)").matches ? 0.28 * innerHeight : 0, W0 = el.clientWidth;
+      for (let i = 0; i < 2 && cap && W0; i++) {
+        const H = parseFloat(el.style.height);
+        if (!(H > cap + 1)) break;
+        const w = Math.max(0.6 * W0, Math.floor((el.clientWidth || W0) * cap / H));
+        if (w >= el.clientWidth) break;
+        el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
+        mount(el, build);
+      }
+      const fc = figFindings(el, build) || { codes: [], warn: [] }, degraded = fc.codes.length > 0;
+      if (degraded) degrade(el, block);
+      figReport(el, [...fc.codes, ...fc.warn], build.fixed || [], degraded);
+    } finally { TIER = tierWas; }
   }
 
   root.Graph = { render, tex, fix };

@@ -159,7 +159,9 @@ const IB1_V = {
   "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l12 12M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 /* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
-const IB1_GO = '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// feel-better: a press on the rim of a typed box (the input is 54 tall inside a 60px field, 17.5px side pad) still focuses its input
+document.addEventListener("pointerdown", e => { const f = e.target instanceof Element && e.target.matches("html.ui-v7 #q .ff:not(.proof, .rbox)") ? e.target : null, i = f && f.querySelector("input.ans:not(:disabled)"); if (i) { e.preventDefault(); i.focus(); } });
+const IB1_GO = '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function vmark(box, id) {
   if (!box) return;
   let m = box.querySelector(".vk");
@@ -1023,7 +1025,7 @@ function renderQuestion() {
        Each part is graded alone, with its own tries and lockout (SCHEMA.md "Grading"). */
     q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
       const l = esc(u.label || LETTERS[i].toLowerCase()), lab = `${l}<span class="mk-p">)</span>`;   // IB-1: ui-v7 hides .mk-p (bare "a"); flag off/late toggle keeps the live "a)" (render.pw pins it)
-      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
+      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}" data-t="${u.type}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}"${p.how ? ` aria-describedby="how${i}"` : ""} ${INPUT_ATTRS}>
           <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}${IB1_GO}</button></div>
         ${phow(p, "how" + i)}<div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
