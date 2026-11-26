@@ -262,7 +262,7 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo {
   position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
   width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0;
   display: grid; place-items: center; border: 0; border-radius: calc(18px * var(--r-k));
-  background: var(--chip); color: var(--ink); box-shadow: none; transition: none;
+  background: var(--chip); color: var(--ink); box-shadow: none; transition: transform .12s ease-out, opacity .15s ease-out;   /* press = scale(.96); dim <-> full eases */
 }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo { corner-shape: superellipse(1.52); } }
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo .ico { display: none; }   /* the sprite i-go is 2px / 14x14; the inline 24-grid arrow below replaces it under v7 only */
@@ -271,6 +271,12 @@ html.ui-v7 #q > .ff#ff:not(.proof) > .vk .ico,
 html.ui-v7 #q .mparts .part > .ff > .vk .ico { width: 24px; height: 24px; stroke-width: 2.25; }   /* the live vmark tick / cross: one 24px grid (app.js IB1_V) */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:is(:disabled, [aria-disabled="true"]) {
   opacity: 1; background: var(--chip); color: var(--ink); cursor: default;   /* idle: the key rests full (mock .go); the closed row dims the whole field */
+}
+html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:not(:disabled, [aria-disabled="true"]):active,
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:not(:disabled, [aria-disabled="true"]):active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) {
+  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo, html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send { transition: none; }
+  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:active, html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:active { transform: none; }
 }
 @media (hover: hover) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
@@ -284,7 +290,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send {
   position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
   width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0;
   display: grid; place-items: center; border: 0; border-radius: calc(18px * var(--r-k));
-  background: var(--chip); color: var(--ink); box-shadow: none; transition: none;
+  background: var(--chip); color: var(--ink); box-shadow: none; transition: transform .12s ease-out, opacity .15s ease-out;
 }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send { corner-shape: superellipse(1.52); } }
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send .ico { display: none; }   /* the sprite i-go is 2px / 14x14; the inline 24-grid arrow is the single key's (app.js IB1_GO) */
