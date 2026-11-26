@@ -110,6 +110,26 @@ await step("engine guard: Firefox UA gets the plain 3px frost, no lens (SVG back
   assert.ok(r.frost, "the frost sheet still renders"); assert.equal(r.attr, false, "data-qf-lens is absent"); assert.equal(r.lens, false, "no #qg-lens filter");
   assert.equal(r.bf, "blur(3px)", "plain 3px frost: " + r.bf); await ctx.close();
 });
+await step("option B: perf dims (forced slow probe, Firefox Android UA) keep the real frost; reduced transparency / Save-Data = filter-blur fallback", async () => {
+  const FF = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
+  const read = page => page.evaluate(() => { const q = document.querySelector("#problem > .qfrost"), g = document.querySelector("#problem .qghostbox"), c = document.documentElement.classList;
+    return { dim: c.contains("fx-dim"), a11y: c.contains("fx-dim-a11y"), bf: q ? getComputedStyle(q).backdropFilter : null, gf: getComputedStyle(g).filter, why: window.stemFx.why }; });
+  { const { ctx, page } = await fresh(true, { width: 390, height: 844 });   // slow probe: dim for perf, frost stays
+    await page.evaluate(() => { document.documentElement.classList.add("fx-dim"); });
+    const r = await read(page); assert.ok(r.dim && !r.a11y && r.bf !== "none" && r.gf === "none", "perf dim keeps the frost: " + JSON.stringify(r)); await ctx.close(); }
+  { const { ctx, page } = await fresh(true, { width: 390, height: 844 }, "", FF);   // Firefox Android: never a11y, frost on
+    const r = await read(page); assert.ok(!r.a11y && r.bf !== "none", "FF Android keeps the frost: " + JSON.stringify(r)); await ctx.close(); }
+  for (const [name, init] of [["reduced transparency", `Object.defineProperty(window, "matchMedia", { value: q => ({ matches: /reduced-transparency/.test(q), addEventListener() {}, removeEventListener() {} }) });`],
+    ["Save-Data", `Object.defineProperty(Navigator.prototype, "connection", { get: () => ({ saveData: true }), configurable: true });`]]) {
+    const vp = { width: 390, height: 844 }, ctx = await browser.newContext({ viewport: vp, hasTouch: true, isMobile: true, serviceWorkers: "block", deviceScaleFactor: 1 });
+    await ctx.addInitScript(init); await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
+    const page = await ctx.newPage(); await page.goto(`${BASE}/?ui=v7`);
+    const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+    await fc.setFiles({ name: "gg.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
+    await page.waitForFunction(() => (document.querySelector("#pcode")?.textContent || "") === "PSY_G12", null, { timeout: 8000 }); await page.waitForTimeout(500);
+    const r = await read(page); assert.ok(r.a11y && r.dim && (r.bf === "none" || r.bf == null) && r.gf === "blur(3px)", name + " shows the fallback: " + JSON.stringify(r)); await ctx.close();
+  }
+});
 await step("flag off: no glass", async () => {
   const { ctx, page } = await fresh(false, { width: 390, height: 844 });
   assert.equal(await page.evaluate(() => !!document.querySelector(".qscrim, .qfrost, #qg-glass, #qg-lens, [data-gv]")), false); await ctx.close();
