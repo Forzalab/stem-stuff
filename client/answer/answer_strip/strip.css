@@ -154,7 +154,7 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; heig
    (the 18px hang column is the box's 17.5 value inset). The letter hangs left of the prompt, on its first baseline; the box and hint start at the part's left edge.
    Prompt 17/24 400, margin-bottom 12; the letter is the part label, upper-cased here (app.js keeps the data as typed). */
 html.ui-v7 .boxed .q { padding-top: 0; background: none; box-shadow: none; border-radius: 0; }   /* BENTO (Tony Nov 26): NO panel surface, the parts sit straight on the page; the --s5 = 24px air under the qcard is the card's margin (qcard.css), not a panel pad */   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
-html.ui-v7 .mparts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4) var(--s5); align-items: start; container: mparts / inline-size; }   /* BENTO (Tony Nov 26): short parts (num / text) tile 2 across in reading order (no dense), an expr spans the row; a lone short before a long keeps its half cell */
+html.ui-v7 .mparts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s5); align-items: start; container: mparts / inline-size; }   /* BENTO (Tony Nov 26): short parts (num / text) tile 2 across in reading order (no dense), an expr spans the row; a lone short before a long keeps its half cell */
 html.ui-v7 .mparts .part[data-t="expr"] { grid-column: 1 / -1; }
 html.ui-v7 .mparts { --part-optical: 2px; }   /* OPTICAL (Tony Nov 26): the box edge is a ~22px squircle, so its visible left edge reads ~3px right of the letter, prompt and hint glyphs that share its bbox edge; pull the box out by this much (3px overshot in a 4x crop, 2px reads flush) (text stays on the card text axis) */
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) { margin-inline-start: calc(-1 * var(--part-optical)); --ans-field: color-mix(in oklab, var(--cb-well, #060b1b) 40%, var(--card)); }   /* no panel: the well sits on the darker page, so its fill steps up (60% well + 40% page -> 40% well + 60% card; single box unchanged) */
@@ -166,6 +166,8 @@ html.ui-v7 .mparts .part {
      undefined area adds implicit 0px columns and their gaps squeeze the row. */
   grid-template-columns: 24px minmax(0, 1fr) 72px; grid-template-areas: "mk pr pr" "bx bx ." "hw hw hw" "ht ht ht";
   column-gap: 0; row-gap: 0; align-items: baseline;
+  /* BENTO rows: each part spans the 4 row tracks of the parts grid as a SUBGRID, so a, b in one row share prompt / box / hint tracks (a 2-line prompt in b pushes both boxes down together); the 16px between parts is bottom padding (it lands in the last track) */
+  grid-row: span 4; grid-template-rows: subgrid; padding-bottom: var(--s4);
 }
 html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk mk mk" "bx bx ." "hw hw hw" "ht ht ht"; }
 html.ui-v7 .mparts .part.nopr .mk { margin-bottom: var(--s2); }
