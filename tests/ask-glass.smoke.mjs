@@ -4,6 +4,7 @@
 //         an item without `starter` keeps the 3 generic chips
 //   (iii) after a graded try the bar is 56px (radius 20, desktop width <= 560) and the input is enabled
 //   (iv)  typing sets the send button .on (the tangerine circle), clearing takes it off
+//   gecko Firefox UA (engine 'gecko'): no lens, no copy of the reply, the bar is ag-frost (backdrop-filter blur(16px) saturate(1.5)); gate dim keeps ag-solid
 //   off   without ?ui=v7 nothing of the glass bar exists
 //   repro the bug-log repro, RED on origin/main (button data-st="first" while the desktop Cluck box is open before a try), GREEN here:   node tests/ask-glass.smoke.mjs 8890 repro
 // Own serve.py + a throwaway bank; /explain and /chat are stubbed in the page (no LLM).   node tests/ask-glass.smoke.mjs [port] [repro]
@@ -138,6 +139,27 @@ for (const w of [390, 1280]) {
     } finally { await page.context().close(); }
   });
 }
+await step("gecko: a Firefox UA gets the plain frost: no lens filter, empty .g-copy, class ag-frost + backdrop-filter (fx-dim still wins: ag-solid)", async () => {
+  const FF = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
+  for (const dim of [false, true]) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block", reducedMotion: "no-preference", userAgent: FF });
+    await ctx.addInitScript(dim => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); if (dim) localStorage.setItem("stem-fx", "dim"); } catch { /* */ }
+      Object.defineProperty(navigator, "userAgentData", { get: () => undefined }); }, dim);
+    await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const page = await ctx.newPage();
+    await page.route("**/explain", r => r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "POOF! A short canned reply.\n" }));
+    try {
+      await page.goto(`${BASE}/?ui=v7#BANK_AGL`);
+      await page.waitForFunction(() => !document.getElementById("splash") && document.querySelector("#pcode")?.textContent === "CALC1_AG1", null, { timeout: 15000 });
+      await settled(page); await wrongTry(page, 390);
+      const r = await page.evaluate(sel => { const f = document.querySelector(sel), gc = f.querySelector(".g-copy");
+        return { cls: f.className, kids: gc.children.length, lens: [...document.querySelectorAll("#cluck *")].filter(e => /url\(/.test(getComputedStyle(e).filter)).length, bf: getComputedStyle(f).backdropFilter, defs: !!document.querySelector("svg filter feImage") }; }, FORM);
+      assert.equal(r.kids, 0, "the reply copy was built: " + JSON.stringify(r)); assert.equal(r.lens, 0, "a lens filter is applied"); assert.equal(r.defs, false, "lens filter defs exist");
+      if (dim) { assert.match(r.cls, /ag-solid/); assert.doesNotMatch(r.cls, /ag-frost/); assert.equal(r.bf, "none"); }
+      else { assert.match(r.cls, /ag-frost/); assert.doesNotMatch(r.cls, /ag-solid/); assert.match(r.bf, /blur\(16px\)/); }
+    } finally { await ctx.close(); }
+  }
+});
 await step("off: without ?ui=v7 there is no glass bar (today's footer field)", async () => {
   const page = await open(1280, 1, "");
   try {
