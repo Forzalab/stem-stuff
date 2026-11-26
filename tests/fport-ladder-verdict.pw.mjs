@@ -225,6 +225,63 @@ try {
       } finally { await page.context().close(); }
     });
   }
+  for (const w of [390, 1280]) await step(`${w}: LADDER-DUCK / LADDER-FIELD: the hint duck centres on the first text line (<= 0.5px); the unit + field are the typed-answer field; a done typed step is a green verdict chip`, async () => {
+    const page = await open(w, "v7");
+    try {
+      await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-chip', { timeout: 10000 });
+      await settled(page, "#q section.wl");
+      await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=1');            // a wrong tap: the hint card
+      const hint = await page.waitForSelector("#q section.wl .rp-miss:not([hidden])", { state: "visible", timeout: 6000 });
+      const duck = await hint.evaluate(e => {
+        const line = (card, t) => { const cs = getComputedStyle(t), lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2, ir = card.querySelector(".hintcard-ico").getBoundingClientRect(), r = t.getBoundingClientRect();
+          return { d: +((ir.top + ir.height / 2) - (r.top + lh / 2)).toFixed(2), lh }; };
+        const out = [{ name: "live", ...line(e, e.querySelector(".hintcard-t")) }];
+        for (const [name, text] of [["short", "Hmm"], ["long", "QUACK. The air presses down too, so include it before you divide by the area."]]) {
+          const p = e.cloneNode(true); p.querySelector(".hintcard-t").textContent = text; p.removeAttribute("aria-live"); e.after(p);
+          out.push({ name, ...line(p, p.querySelector(".hintcard-t")) }); p.remove();
+        }
+        return out;
+      });
+      assert.deepEqual(duck.filter(x => Math.abs(x.d) > 0.5), [], "the duck is off the first text line's centre: " + JSON.stringify(duck));
+      await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=0');            // the right pick: the Final answer field
+      await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-in', { state: "visible", timeout: 6000 });
+      await settled(page, "#q section.wl");
+      const m = await page.evaluate(() => {
+        const lf = document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-field'), lu = lf.querySelector(".rp-unit"), li = lf.querySelector(".rp-in");
+        if (document.querySelectorAll("#ff").length) throw new Error("the welcome item already has #ff");
+        const pf = document.createElement("div"); pf.id = "ff"; pf.className = "ff";
+        pf.innerHTML = '<input class="ans" value="3.74"><span class="unit">m/s</span>';
+        document.querySelector("#q").append(pf);
+        const pu = pf.querySelector(".unit"), pi = pf.querySelector("input");
+        const read = (f, u, i) => { const fs = getComputedStyle(f), us = getComputedStyle(u), is = getComputedStyle(i), fr = f.getBoundingClientRect(), ur = u.getBoundingClientRect(), ir = i.getBoundingClientRect();
+          return { h: fs.height, pt: fs.paddingTop, pr: fs.paddingRight, pl: fs.paddingLeft, bt: fs.borderTopWidth, br: fs.borderTopLeftRadius, bg: fs.backgroundColor, sh: fs.boxShadow, ai: fs.alignItems, gap: fs.gap,
+            uf: us.fontFamily, us: us.fontSize, uw: us.fontWeight, ulh: us.lineHeight, uc: us.color, ub: +(ur.bottom - fr.top).toFixed(2),
+            ifont: is.fontFamily, isize: is.fontSize, iw: is.fontWeight, ilh: is.lineHeight, itab: is.fontVariantNumeric, ih: is.height, it: +(ir.top - fr.top).toFixed(2) }; };
+        const out = { ladder: read(lf, lu, li), probe: read(pf, pu, pi), unit: lu.textContent.trim() };
+        pf.remove(); return out;
+      });
+      for (const k of ["h", "pt", "pr", "pl", "bt", "br", "bg", "sh", "ai", "gap", "ifont", "isize", "iw", "ilh", "itab", "ih"]) assert.equal(m.ladder[k], m.probe[k], "ladder field/input " + k + ": " + JSON.stringify(m));
+      for (const k of ["uf", "us", "uw", "ulh", "uc"]) assert.equal(m.ladder[k], m.probe[k], "ladder unit " + k + ": " + JSON.stringify(m));
+      assert.ok(Math.abs(m.ladder.ub - m.probe.ub) <= 0.5, "unit baseline off: " + JSON.stringify(m));
+      assert.ok(Math.abs(m.ladder.it - m.probe.it) <= 0.5, "input top off: " + JSON.stringify(m));
+      await page.fill('#q section.wl .rp-step[data-state="active"] .rp-in', "3.74");
+      await page.press('#q section.wl .rp-step[data-state="active"] .rp-in', "Enter");
+      await page.waitForSelector('#q section.wl .rp-step[data-id="answer"][data-state="done"]', { timeout: 8000 });
+      const done = await page.evaluate(() => {
+        const li = document.querySelector('#q section.wl .rp-step[data-id="answer"]'), v = li.querySelector(".rp-val"),
+          picked = document.querySelector("#q section.wl .rp-step[data-id=\"who\"] .rp-locked .rp-chip.rp-picked"),
+          cs = getComputedStyle(v), pc = getComputedStyle(picked);
+        return { text: v.textContent.trim(), bg: cs.backgroundColor, r: cs.borderTopLeftRadius, ok: !!v.querySelector(".rp-vg"), pickBg: pc.backgroundColor, pickR: pc.borderTopLeftRadius,
+          field: li.querySelectorAll(".rp-val-ui").length, okShown: [...li.querySelectorAll(".rp-ok")].filter(e => getComputedStyle(e).display !== "none").length };
+      });
+      assert.match(done.text, /3\.74\s*m\/s/, "the done value: " + JSON.stringify(done));
+      assert.deepEqual([done.bg, done.r], [done.pickBg, done.pickR], "a typed done value is not the welcome picked chip: " + JSON.stringify(done));
+      assert.ok(done.ok, "the verdict chip has no tick");
+      assert.equal(done.field, 0, "the locked field still sits under the verdict chip");
+      assert.equal(done.okShown, 0, "a row-end tick is still shown");
+      assert.deepEqual(page.errs, [], "page errors");
+    } finally { await page.context().close(); }
+  });
   for (const w of W) await step(`${w}: flag on: right answer = green row (no border), tick glyph (VERDICT-MARK-INERT), verdict line stays hidden (live region), no tray`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {

@@ -258,13 +258,19 @@
       const head = h("div", "rp-head"), n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";
       head.append(n, h("span", "rp-label", st.label));
-      if (s.ok) head.append(h("span", "sr-only", shown(s)));                     // the value for a screen reader: the locked chips are aria-hidden
+      const typedDone = s.ok && (st.kind === "num" || st.kind === "expr");        // LADDER-UNIFY (Tony Nov 26): a typed answer is the same green verdict
+      if (!typedDone && s.ok) head.append(h("span", "sr-only", shown(s)));       // the value for a screen reader: the locked chips are aria-hidden
       head.append(h("span", "rp-ok", "✓"));                                      // always there (welcome.css hides it until done): its room never moves the label
       li.append(head);
-      const body = h("div", "rp-body"), val = valueUi(s);
-      const pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
-      if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
-      body.append(val);
+      if (typedDone) {                                                           // chip as a picked one, on the line under number + label; the locked field goes
+        const v = h("span", "rp-val", shown(s)); v.insertAdjacentHTML("beforeend", mark("i-ok")); li.append(v);
+      }
+      const body = h("div", "rp-body");
+      if (!typedDone) {                                                          // the chip is the single verdict mark: no locked field below it
+        const val = valueUi(s), pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
+        if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
+        body.append(val);
+      }
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
       if (s.miss && s.state !== "future") {
         body.append(hintEl(s.miss, s.missGone));
@@ -287,12 +293,13 @@
       const n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
       head.append(n, h("span", "rp-label", st.label));
+      li.append(head);
       if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) {
         const v = h("span", "rp-val", shown(s));                                  // ui-v7: the right value is the welcome ladder's green verdict chip (glyph = the chip's tick; the row-end .rp-ok is hidden)
-        v.insertAdjacentHTML("beforeend", mark("i-ok")); head.append(v);
+        v.insertAdjacentHTML("beforeend", mark("i-ok"));
+        li.append(v);                                                             // under the number + label line, at the body indent: the welcome row rhythm
+        if (s.state === "done") li.append(h("span", "rp-ok", "✓"));              // flag off: the tick follows the value (hidden under ui-v7: the chip carries it)
       }
-      if (s.state === "done" && !s.skipped) head.append(h("span", "rp-ok", "✓"));
-      li.append(head);
       if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
       if (s.state === "active") {
         const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not

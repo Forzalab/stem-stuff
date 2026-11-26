@@ -11,14 +11,14 @@ html.ui-v7 section.wl .rp { background: none; box-shadow: none; padding: 0; bord
 html.ui-v7 section.wl .rp-line { left: var(--s5); }
 /* GAP-BATCH1 B (ui-v7 phones): the intro pill starts clear of the bottom-left stash tab (44px column, app.css .rot.stashed) */
 @media (max-width: 700px) { html.ui-v7 section.wl .rp-line { left: max(var(--s5), 52px); } }
-html.ui-v7 .rp-step, html.ui-v7 section.wl .rp-step { border-top: 0; padding: var(--s3) 0; }          /* the divider rules go: more room between steps instead */
+html.ui-v7 .rp .rp-step { border-top: 0; padding: var(--s3) 0; }          /* the divider rules go: more room between steps instead (one rule for both ladders) */
 html.ui-v7 .rp-n[data-auto] { border-radius: 8px; }
 /* typescale: ladder leading on the 4px grid (16/20) so the docked toast fits 360x640 */
 html.ui-v7 .rp { line-height: 20px; }
 
 /* chips: a fill step on the card, no edge */
-html.ui-v7 .rp .rp-chip, html.ui-v7 section.wl .rp .rp-chip { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); }
-html.ui-v7 .rp .rp-chip:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--chip) 82%, var(--ink)); }
+html.ui-v7 .rp .rp-chip { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); }
+html.ui-v7 .rp .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--chip) 82%, var(--ink)); }
 html.ui-v7 .rp .rp-skip { border: 0; background: none; color: var(--muted); }
 /* not answerable yet: the chip blended into the card (the fill says "not yet", the dash goes), words stay readable */
 html.ui-v7 .rp .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border: 0; background: color-mix(in srgb, var(--chip) 40%, var(--rp-bg)); color: var(--muted); }
@@ -28,11 +28,11 @@ html.ui-v7 .rp .rp-locked .rp-chip.rp-picked { border: 0; background: var(--acti
 html.ui-v7 .rp .rp-locked .rp-in { border: 0; color: var(--ink); }
 
 /* the Final answer input: a recessed well, no edge; the 2px focus ring is the only outline */
-html.ui-v7 .rp .rp-in, html.ui-v7 section.wl .rp .rp-in { border: 0; border-radius: 12px; background: var(--page); box-shadow: var(--well), inset 0 0 0 1px var(--rp-edge); color: var(--ink); }
+html.ui-v7 .rp .rp-in { border: 0; border-radius: 12px; background: var(--page); box-shadow: var(--well), inset 0 0 0 1px var(--rp-edge); color: var(--ink); }
 html.ui-v7 .rp .rp-in:focus { border: 0; box-shadow: var(--well); outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 
 /* Check / Next: no edge; on the warm welcome sheet they stay --help-ink on --help (7.67:1, welcome.css), elsewhere --action */
-html.ui-v7 .rp :is(.rp-check, .rp-next), html.ui-v7 section.wl :is(.rp-check, .rp-next), html.ui-v7 section.wl > .nx .nf { border: 0; border-radius: 12px; }
+html.ui-v7 .rp :is(.rp-check, .rp-next), html.ui-v7 section.wl > .nx .nf { border: 0; border-radius: 12px; }
 
 
 /* a catch-all: no line of any kind inside the ladder card at rest (divider, pill, chip, dashed ghost input / Check). KaTeX draws its fraction bar / rules with borders: left alone. */
@@ -47,10 +47,10 @@ html.ui-v7 .rp .rp-step[data-state="done"] .rp-label, html.ui-v7 .rp .rp-step[da
 html.ui-v7 .rp .rp-vg { display: inline-block; width: 1.1rem; height: 1.1rem; margin-left: var(--s2); vertical-align: -0.2em; }
 html.ui-v7 .rp .rp-x { display: none; }                                  /* the text ✗ (locks the non-welcome chip) is the cross glyph now */
 /* wrong pick = the wrong fill + the cross (stays on the chip once the step is answered); doubled class beats the hover / locked rules */
-html.ui-v7 .rp .rp-chip.rp-tried.rp-tried, html.ui-v7 section.wl .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-tried { background: var(--mc-wrong); color: var(--wrong-on); }
+html.ui-v7 .rp .rp-chip.rp-tried.rp-tried, html.ui-v7 .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 .rp .rp-locked .rp-chip.rp-tried { background: var(--mc-wrong); color: var(--wrong-on); }
 /* right pick = the right fill + the tick; the other options sink (dim text on the card fill) */
-html.ui-v7 .rp .rp-locked .rp-chip.rp-picked, html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-picked { background: var(--mc-right); color: var(--correct-on); }
-html.ui-v7 .rp .rp-locked .rp-chip:not(.rp-picked):not(.rp-tried), html.ui-v7 section.wl .rp .rp-locked .rp-chip:not(.rp-picked):not(.rp-tried) { color: var(--mc-dim); }
+html.ui-v7 .rp .rp-locked .rp-chip.rp-picked { background: var(--mc-right); color: var(--correct-on); }
+html.ui-v7 .rp .rp-locked .rp-chip:not(.rp-picked):not(.rp-tried) { color: var(--mc-dim); }
 /* HINTCARD: the reusable hint look (tokens --hint-fill / --hint-edge, app.css). Ink text, small card, the duck in the edge hue. Other hints on the site: add the class */
 html.ui-v7 .hintcard { display: flex; align-items: flex-start; gap: var(--s2); box-sizing: border-box; margin: var(--s2) 0 0; padding: var(--s2) var(--s3);
   border-radius: 12px; background: var(--hint-fill); color: var(--ink); }
@@ -101,7 +101,6 @@ html.ui-v7 .rp .hintcard { width: fit-content; max-width: 100%; color: color-mix
    solved card = the red "wrong" chip + cross), on its own line under the label at the body indent, KaTeX inside the chip too. The chip is the single verdict mark: the row-end tick
    (.rp-ok, both variants) is gone. The ghost / locked / picked rules above are shared by both variants (were section.wl only). */
 html.ui-v7 .rp .rp-ok { display: none; }
-html.ui-v7 .rp .rp-head:has(.rp-val) .rp-label { flex-basis: 100%; }
 html.ui-v7 .rp .rp-val, html.ui-v7 .rp .rp-wrong { display: inline-flex; align-items: center; gap: var(--s2); box-sizing: border-box; min-height: 44px; margin: var(--s1) 0 0 calc(1.25rem + var(--s2)); padding: var(--s1) var(--s3);
   border-radius: 12px; text-decoration: none; }
 html.ui-v7 .rp .rp-val { background: var(--mc-right); color: var(--correct-on); }
@@ -125,5 +124,10 @@ html.ui-v7 .rp .rp-field > .rp-in.rp-in::placeholder { color: transparent; }
 html.ui-v7 .rp .rp-field > .rp-unit { flex: none; font: 400 var(--fs-0)/1 var(--font-input); color: var(--muted); }
 
 /* LADDER-SHORT (CI calc-toast 360x640): the docked calc toast needs room under the ladder. The 60px typed-answer field + key (LADDER-FIELD) cost 16px over the old 44px row, so on a short
-   viewport the step rows give back 8px each (12 -> 8 vertical padding) instead of the field shrinking away from the typed box. */
-@media (max-height: 700px) { html.ui-v7 .rp-step, html.ui-v7 section.wl .rp-step { padding: var(--s2) 0; } }
+   viewport the step rows give back 8px each (12 -> 8 vertical padding) instead of the field shrinking away from the typed box, and the card's top padding gives 8px more (the measured
+   docked-toast slot at 360x640 had 0px to spare: one CI font metric taller and the toast had no place at all). */
+@media (max-height: 700px) {
+  html.ui-v7 .rp { padding-top: calc(var(--s5) - 8px); }
+  html.ui-v7 section.wl { padding-top: calc(var(--s5) + 2px); }
+  html.ui-v7 .rp .rp-step { padding: var(--s2) 0; }
+}
