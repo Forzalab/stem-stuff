@@ -184,11 +184,11 @@
 .vw-doodle .e { fill: var(--ink); }
 .vw-doodle .w { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .vw-doodle figcaption { margin-top: 0; text-align: center; }
+/* no pop any more (GLASS-FIG-POPIN is dead): a fresh reply's doodle draws in with its strokes (figures/drawin.js, FIG-DRAW-IN);
+   every other draw (a cached reply, a static image, reduced motion) is the finished figure, at once. */
 
 @media (prefers-reduced-motion: no-preference) {
   .vw-reveal.open .vw-body { animation: vw-fade var(--d-move) ease-out both; }
-  .vw-doodle svg { animation: vw-pop var(--d-dim) ease-out both; transform-origin: 50% 100%; }
 }
 @keyframes vw-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes vw-pop { from { opacity: 0; transform: translateY(var(--s2)); } to { opacity: 1; transform: none; } }
 
