@@ -150,7 +150,7 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; heig
 
 /* multi-part row: 24px module (gap 24, no hairline between parts), 36px letter column + 12 gutter, baseline-aligned letter / prompt / box.
    Prompt 17/24 400, margin-bottom 12; hint 17/24, margin-top 12; the letter is bare "a" (app.js, ui-v7 only) at 40/24 in the app display face. */
-html.ui-v7 .boxed .q { padding-top: var(--s4); }   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
+html.ui-v7 .boxed .q { padding-top: var(--s5); border-radius: var(--r-card); }   /* GAP-BAND v2: the multi panel is its own rounded surface under the card (gap --s5 24px, qcard.css) */   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
 html.ui-v7 .mparts { gap: 16px; }   /* GAP (Tony Nov 25): 24 -> 16, the next step down the 4/8/12/16/24/32 scale, so a, b, c read as one group (inside a part 12 / 8 < between parts 16 < between sections) */
 html.ui-v7 .mparts .part {
   /* IB-5: the third 60px column is the part key's OUTSIDE slot, reserved even while the key is hidden, so the box never
@@ -174,22 +174,8 @@ html.ui-v7 .mparts .part.hinted .phint { margin-top: 8px; }   /* the miss card s
 html.ui-v7 #q .phow { display: block; margin: 8px 0 0; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); }
 html.ui-v7 .mparts .phow { grid-area: hw; min-width: 0; }
 html.ui-v7 #q:has(> .phow, > .mparts .phow) > .how:not(.phow) { display: none !important; }
-@media (min-width: 900px) {
-  /* IB-5: a field that fills the row (1fr; Tony Nov 25, was a 400px cap) + its own 60px key column on the same row (SOFT-LIFT §13).
-     The prompt is fit-content(40%): its own text width, never over 40% of the row, so the field keeps the rest. The hint row is
-     always declared (empty .phint = 0 height) for the same implicit-column reason as the phone template. */
-  html.ui-v7 .mparts .part { grid-template-columns: 36px fit-content(40%) minmax(0, 1fr) 60px; grid-template-areas: "mk pr bx ." ". . hw ." ". ht ht ."; }
-  /* the grid baseline is the flex box's, not the replaced input's text baseline: the value sat 4.5px low (measured
-     1280, 28/54 input vs 17/24 prompt). Lift the field so the VALUE joins the letter/prompt line; the relative top
-     moves paint only, so the grid row and the letter/prompt stay put. */
-  html.ui-v7 .mparts .part > .ff { top: -4.5px; }
-  html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx ." ". hw hw ." ". ht ht ."; }
-  html.ui-v7 #q .mparts .phow { margin-top: 3.5px; }   /* the field paints 4.5px above its row (top: -4.5px): 3.5 + 4.5 = the same 8 under the box */
-  html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { padding-top: 0; }
-  html.ui-v7 .mparts .pr { margin: 0; }   /* letter, prompt and VALUE share one baseline: the field's own top/margin is set by the grid */
-  /* IB-7 (multi, rewritten Nov 25): the box is followed by its grey hint (.phow, 8 under the painted box) and the miss card sits 8 under
-     that (the 12px / 7.5px compensations for a card directly under the box are gone). */
-}
+/* PROMPT ON TOP at every width (Tony Nov 25): the phone template (prompt / box + key / grey hint / miss card) is the only one; the old desktop row
+   (prompt beside the box, baseline-lifted field, fit-content prompt column) is gone. IB-7 (multi): the miss card sits 8 under the grey hint. */
 
 /* ===== IB-2 SOFT LIFT, FOCUS + TYPING (Tony Nov 24; SOFT-LIFT-SPEC §4; mock PICK-soft-lift.src.html). html.ui-v7 only.
    Focus = the field comes toward the viewer: scale(1.014) in place (never translateY), the dish becomes a shadow straight

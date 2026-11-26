@@ -419,9 +419,9 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(typed.fw, boxW, `box width jumps while typing: ${typed.fw} vs ${boxW}`);
     if (w >= 900) {   // Tony Nov 25: the multi field is 1fr, not 400px: no empty gap, it fills the row between the prompt and the 60px key column
       const row = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part[data-i='0']"), cs = getComputedStyle(p), pr = p.querySelector(".pr").getBoundingClientRect();
-        return { right: p.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth), prRight: pr.right }; });
+        return { right: p.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth), prRight: pr.right, prBottom: pr.bottom }; });
       assert.ok(near(typed.kl + typed.kw, row.right, 1), `multi key's right edge ${typed.kl + typed.kw} sits on the row's right edge ${row.right}`);
-      assert.ok(near(typed.fl - row.prRight, 12, 1), `multi field starts 12px after the prompt (no empty gap): field left ${typed.fl} vs prompt right ${row.prRight}`);
+      assert.ok(typed.ft >= row.prBottom, `prompt ON TOP of its box at every width (Tony Nov 25): box top ${typed.ft} vs prompt bottom ${row.prBottom}`);
     }
     assert.ok(typed.overflow <= 0, `sideways overflow ${typed.overflow}px at ${w}`);
     assert.match(typed.r, /^(18|22\.5)px$/, `key squircle radius ${typed.r}`);
@@ -495,7 +495,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.mkFamily, /Schibsted/i, "letter face is the app's display face: " + m.mkFamily);
     assert.ok(near(m.mkBase, m.prBase, 1), `letter/prompt line baselines ${m.mkBase} vs ${m.prBase}`);
     assert.ok(near(m.mkGlyph, m.prGlyph, 1), `letter/prompt GLYPH baselines ${m.mkGlyph} vs ${m.prGlyph}`);
-    if (w >= 900) assert.ok(near(m.valueBase, m.prBase, 1), `value/prompt baselines ${m.valueBase} vs ${m.prBase}`);
+    // Tony Nov 25: the prompt is above the box at every width, so there is no shared value/prompt baseline any more
     assert.equal(m.prSize, "16px", `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
     assert.ok(parseFloat(m.skin.pr) <= 20, `multi field right padding ${m.skin.pr} (IB-5: the key moved outside, no in-box room)`);
@@ -1114,17 +1114,22 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     }
     return seen.join(" / ");
   });
-  /* GAP-BAND + hint under the box + tighter parts (Tony Nov 25). Repro of the band: `STEP_FILTER=GAP-BAND node tests/inputbox-static.smoke.mjs` (red on #756) */
-  await step(`${w}: GAP-BAND card meets the answer panel; grey hint under each box; parts 16 apart`, async () => {
+  /* GAP-BAND + hint under the box + tighter parts (Tony Nov 25). Repro of the band: `STEP_FILTER=GAP-BAND node tests/inputbox-static.smoke.mjs` (red on #756; v2 asserts the 24px gap) */
+  await step(`${w}: GAP-BAND 24px gap card -> answer panel (rounded, card shadow); grey hint under each box; parts 16 apart`, async () => {
     await go(page, "PSY_M1A");
     await page.mouse.move(0, 0);
     const m = await page.evaluate(() => {
       const r = e => e.getBoundingClientRect(), card = r(document.querySelector("#problem")), q = r(document.querySelector("#q"));
       const parts = [...document.querySelectorAll("#q .mparts .part")].map(p => ({ top: r(p).top, bottom: r(p).bottom, box: r(p.querySelector(".ff")), hint: p.querySelector(".phow") && { d: getComputedStyle(p.querySelector(".phow")).display, t: r(p.querySelector(".phow")).top, txt: p.querySelector(".phow").textContent } }));
       const top = document.querySelector("#q > .how");
-      return { band: +(q.top - card.bottom).toFixed(1), parts, topHow: top ? getComputedStyle(top).display : "none" };
+      const cc = getComputedStyle(document.querySelector("#problem")), qc = getComputedStyle(document.querySelector("#q"));
+      return { cardBottomR: Math.min(parseFloat(cc.borderBottomLeftRadius), parseFloat(cc.borderBottomRightRadius)), panelTopR: Math.min(parseFloat(qc.borderTopLeftRadius), parseFloat(qc.borderTopRightRadius)), cardShadow: cc.boxShadow,
+        band: +(q.top - card.bottom).toFixed(1), parts, topHow: top ? getComputedStyle(top).display : "none" };
     });
-    assert.ok(Math.abs(m.band) <= 1, `a dark band of ${m.band}px between the question card and the answer panel`);
+    /* GAP-BAND v2 (Tony Nov 25, intent changed): a DELIBERATE --s5 = 24px gap, the card's shadow in it, both surfaces rounded (not a raw strip, not a joined seam) */
+    assert.ok(Math.abs(m.band - 24) <= 1, `card -> answer panel gap is ${m.band}px (want 24 = --s5)`);
+    assert.ok(m.cardBottomR > 4 && m.panelTopR > 4, `both facing corners are rounded: card bottom ${m.cardBottomR}, panel top ${m.panelTopR}`);
+    assert.ok(m.cardShadow && m.cardShadow !== "none", `the card casts a shadow into the gap: ${m.cardShadow}`);
     assert.equal(m.topHow, "none", "the shared hint no longer sits above the parts");
     for (const [i, p] of m.parts.entries()) {
       assert.ok(p.hint && p.hint.d === "block" && /Number only/.test(p.hint.txt), `part ${i} repeats the grey hint: ${JSON.stringify(p.hint)}`);
