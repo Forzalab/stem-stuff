@@ -2849,7 +2849,7 @@ Style goals:
 - 150 to 200 words of prose ($$ lines not counted), the same order, short paragraphs. Keep and even grow the warmth: praise for the student's thinking, effort and instincts stays, and a wrong pick still feels safe and normal. One QUACK and one (action) at most.
 - Drop every mention of a KEY, an answer key, a SLIP or a NOTE, or of where the answer comes from ("From the KEY:", "the key says"): the fact stays, said as your friend's own.
 Please keep these exactly as they are, character for character: every $$...$$ line (the $$\\boxed{...}$$ one too), the ```fig block, the "Pick" line, $...$ math and **bold**. The answer, numbers, units and facts stay as your friend wrote them, and the praise never turns a wrong pick right; your work is the words around them.
-Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls go in a Tug view, a step vs its fix in a Flip view (```openui), other rows in a "- " list."""
+Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls go in a Tug view, a step vs its fix in a Table view (```openui), other rows in a "- " list."""
 
 
 def rewrite_on():
@@ -3829,7 +3829,7 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
             "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer). A \"by what factor\" question gets a Tug, never a ```fig curve: each row names a change in the question's own words (\"V | box halved | up 2\"), never a fraction you worked out\n"
-            "- a step they did vs the fix: a Flip, one card per step\n"
+            "- a step they did vs the fix: a Table, columns step | you did | the fix, one row per step\n"
             "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
             "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
             "- forces, torque, motion: a ```fig scene (every force an arrow); lengths, angles, lever arms: a Geometry\n"
@@ -3838,14 +3838,13 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
             "- an algebra chain: a stepper, the broken step named in its caption\n"
             "- a proof: a Table with base | assume | prove, or a Callout per part\n"
             "- graph theory: a ```fig network of the few key nodes only, never the whole graph again\n"
-            "Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls: a Tug; a step vs its fix: a Flip; other rows: a Table or a \"- \" list.\n"
-            "Plain text in Tug and Flip cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
+            "Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls: a Tug; a step vs its fix or any other rows: a Table, or a \"- \" list.\n"
+            "Plain text in Tug cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
             "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
-            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 5 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
+            + _view_lines(("Tug", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 5 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
             "root = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n"
             "root = View([t])\nt = Tug([\"PE | ball falls | down 3\", \"KE | speeds up | up 3\"], \"E\", \"energy trades forms\")\n"
-            "root = View([f])\nf = Flip([[\"arm of W\", \"L\", \"half of L\"]])\n"
             "root = View([t])\nt = Table([\"case\", \"before\", \"after\"], [[\"gas\", \"2 atm\", \"6 atm\"]])\n"
             "root = View([s])\ns = Steps(g, [s1, s2], null, [\"i\", \"s\"])\ng = Graph(\"i 40 40, s 160 40\", \"i>s\")\n"
             "s1 = Step(\"First test: i = 1, s = 0.\", \"i:cur\", null, null, null, null, [[\"1\", \"0\"]])\n"
@@ -3858,7 +3857,7 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
 # R6d: the letter's order (L44: "an ```openui Geometry view, else a ```fig block"): the openui lead first, then the ```fig rule
-V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```openui Tug; a step they did vs its fix, an ```openui Flip; "
+V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```openui Tug; a step they did vs its fix, an ```openui Table; "
                 "for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
                 "for the other kinds below, a ```fig block.\nThe ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
                 "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4 + "\n" + V4_VIEWS)

@@ -1266,7 +1266,7 @@ class Visuals(unittest.TestCase):
         from cluck_reply_checks import views_gate
         ex = serve.V4_VIEWS.split("Examples:\n")[1].split("\nNumbers in a view")[0]
         progs = ["root" + x for x in ex.split("root")[1:]]
-        self.assertEqual(len(progs), 5, "Tug, Tug battery, Flip, Table, Steps")
+        self.assertEqual(len(progs), 4, "Tug, Tug battery, Table, Steps")
         ctx = serve.livefig.context("CPA", "for (int i = 1; i < n; i++) s += i; the weight W acts at the middle, the arm L", "", [10.0])
         for prog in progs:
             out, log = views_gate.gate(prog.strip(), ctx)

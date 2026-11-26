@@ -25,7 +25,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/cluck/figure_language/layout-core.mjs` | The streamed, constraint-checked figure language (prototype): parseStatement, createSession (DAG of points + shapes, evaluate), overlap findings as pairs + push vectors (pair, check), Layer/Union, ghosts, sceneSummary for the LLM, layoutView (labels). Plain ESM, no DOM. Has a CODEMAP header. | layout engine, figure placement rules, a parse or overlap finding, label placement |
 | `client/cluck/figure_language/layout-docs.mjs` | The figure language's LLM docs (progressive disclosure) + the built-in scenes of the Figure Lab mockup. | figure language docs or lab scenes |
 | `client/cluck/figures/formula-figs.js` | Small pictures for formula-sheet rows. | formula sheet figures |
-| `client/cluck/openui_views/views.js` | OpenUI Lang renderer in the browser: register / render / stream / mountView, class Session (per-statement paint + error boundary), figure drawing (drawGraph, drawGeometry), components View Head Text Table (Tug -> Table fallback) Flip Graph Geometry Callout Answer Steps Hints Predict Reveal Doodle. Has a CODEMAP header. | a Cluck reply view renders wrong; add or change a view component |
+| `client/cluck/openui_views/views.js` | OpenUI Lang renderer in the browser: register / render / stream / mountView, class Session (per-statement paint + error boundary), figure drawing (drawGraph, drawGeometry), components View Head Text Table (Tug and Flip -> Table fallbacks) Graph Geometry Callout Answer Steps Hints Predict Reveal Doodle. Has a CODEMAP header. | a Cluck reply view renders wrong; add or change a view component |
 | `client/cluck/openui_views/views-lib.js` | Component list of the stem view library (from views/library.json). | add a view component |
 | `client/cluck/openui_views/views.css` | Styles of the views. | view look |
 | `client/answer/answer_strip/strip.js` | Answer strip: typed, multiple choice, pick-all, multi-part. Also IB-2's key-press nudge on the two typed fields (`[data-ib2]` add 90% / delete 60%, back in ~320ms; the CSS is in strip.css); IB-3's THINKING ring (edge() perimeter-spaced rotate keyframes, `ib3Start` / `ib3Run` / `ib3Sync`; transform-only WAAPI under the static mask; input readOnly while `html.grading`); IB-4's VERDICT ring (`ib4Sweep` / `ib4Sync`: the aurora's last angle frozen, three fixed conic arcs under the static 3.5px mask, two rotate-only closes in 440ms; `ib4Judge` reads the field classes; the icon waits on the finished promise). | the answer strip, a typed field's key-press edge nudge, the thinking ring, the verdict ring |
@@ -88,7 +88,6 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/pure_logic_modules/speak.mjs` | Cluck text as words for voiceover. | voiceover |
 | `client/pure_logic_modules/steps.mjs` | Renumber step badges, pipe tables. | step badges |
 | `client/pure_logic_modules/suggest.mjs` | Code box suggestion list. | code box |
-| `client/pure_logic_modules/flip.mjs` | The Flip view (what you did vs the fix cards). | Flip view |
 | `server/http_server/serve.py` | The whole server (dispatch() shared with api/index.py): routes (/check /b /p /state /diagnose /narrate /mini /health), grading + tries (grade, same, slip_hit), modes (sugar/diet), Cluck genie / chat / NOTE streams, proof grading, incidents. Has a CODEMAP header with 15 anchors; see its section below. | any server behaviour: a route, a verdict, a Cluck prompt, an incident code |
 | `api/index.py` | Vercel entry; imports http_server/serve.py. | Vercel routing |
 | `server/accounts/acct.py` | My Cluck accounts: token over the sid cookie. | accounts |
@@ -260,7 +259,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §statements: statement splitting (splitStatements, rootIds, capError) — open when streaming splits wrong or caps fire
 - §session: class Session, mountView, render, stream (paint per statement, error boundary, Reveal patch merge) — open when streaming or patching a view breaks
 - §figure-marks: graph + geometry drawing (graphModel, drawGraph, geoModel, drawGeometry, sample, chips, table) — open when a figure in a view draws wrong
-- §l0: View, Head, Text, Legend, Table (Tug -> Table fallback), Flip, Graph, Geometry — open when one of these components is wrong
+- §l0: View, Head, Text, Legend, Table (Tug and Flip -> Table fallbacks), Graph, Geometry — open when one of these components is wrong
 - §l1: Callout, Answer — open when those components are wrong
 - §steps: Steps helpers (litMarks, sayMap, texHue, texNode) + Steps — open when the stepper or its lit parts are wrong
 - §hints: Hints — open when hints reveal wrong
