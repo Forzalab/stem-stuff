@@ -8,8 +8,9 @@
 //   --action ring, no sink/blur.
 //   IB-4: the verdict ring starts as the frozen aurora arc (~173deg, NOT a full ring), closes in 440ms with transform-only conic arcs, the
 //   real border is never recoloured, the final frame is pixel-identical to the static done render, the typed key skips §verdict-morph and
-//   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close; MC keeps its full morph;
-//   reduced motion = a closed static ring.
+//   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close then draws on (stroke
+//   dash ~240ms; the cross's two strokes .14s each) with a .9 -> 1 scale; a live verdict that beats the 150ms aurora still sweeps, a
+//   restore stays static; MC keeps its full morph; reduced motion = a closed static ring.
 //   IB-5: each multi part's key sits OUTSIDE its field (60x60, 12px gap, same #ansGo squircle), visible but dimmed + inert on an empty box in its
 //   reserved slot (KEY-ALL, Nov 25; the field width never jumps), dims while grading (no spinner), dimmed on wrong and full on the next keystroke, gone when
 //   the part is right.   flag off: the live in-box arrow, nothing moves.
@@ -75,6 +76,8 @@ const FILE = { v: 1, problems: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
     { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
   ] },
+  /* the fast-verdict step: an on-device grade (0 ms), then the same item after a reload */
+  { code: "PSY_Q1A", type: "num", how: "Number only.", body: T("Find the magnitude of the cart's acceleration."), answer: "3.2", unit: "m/s^2" },
   { code: "PSY_C1A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
     choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
     wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
@@ -1079,6 +1082,35 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
       await hold.done();
     }
+  });
+  if (w === 390) await step("390: IB-4 fast verdict (0 ms): the tick draws live, a reload restores it still", async () => {
+    await go(page, "PSY_Q1A");
+    const iconAnim = () => {
+      const ff = document.querySelector("#q > .ff#ff"), vk = ff && ff.querySelector(":scope > .vk"), p = vk && vk.querySelector("svg.ico path");
+      return { attr: ff && ff.getAttribute("data-ib4"), vk: vk ? getComputedStyle(vk).animationName : null,
+        path: p ? getComputedStyle(p).animationName : null, op: vk ? +getComputedStyle(vk).opacity : null };
+    };
+    /* an uploaded item grades on device: the verdict lands in the same task as the tap, so html.grading (150 ms) never turns on */
+    await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q > .ff#ff > .vk", { timeout: 5000 });
+    const fast = await page.evaluate(() => document.documentElement.classList.contains("grading"));
+    assert.equal(fast, false, "the 150 ms aurora rule is kept: no thinking ring on a 0 ms grade");
+    await page.waitForFunction(() => document.querySelector("#q > .ff#ff")?.classList.contains("ib4-done"), null, { timeout: 5000 });
+    await page.waitForFunction(() => { const v = document.querySelector("#q > .ff#ff > .vk"); return v && +getComputedStyle(v).opacity >= .99; }, null, { timeout: 3000 });
+    const live = await page.evaluate(iconAnim);
+    assert.equal(live.attr, "sweep", "a 0 ms verdict runs the IB-4 sequence, not the still restore: " + JSON.stringify(live));
+    assert.notEqual(live.vk, "none", "the tick scales in on a live 0 ms verdict: " + JSON.stringify(live));
+    assert.notEqual(live.path, "none", "the tick path draws on a live 0 ms verdict: " + JSON.stringify(live));
+    /* a reload on the answered question is the restore path: the closed ring, the icon shown, no draw and no scale */
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PSY_Q1A" && !!document.querySelector("#q > .ff#ff > .vk"), null, { timeout: 10000 });
+    await settled(page);
+    const still = await page.evaluate(iconAnim);
+    assert.equal(still.attr, "still", "a restored verdict is static: " + JSON.stringify(still));
+    assert.equal(still.vk, "none", "no scale animation on restore: " + JSON.stringify(still));
+    assert.equal(still.path, "none", "no draw on restore: " + JSON.stringify(still));
+    assert.ok(still.op >= .99, "the restored icon is shown: " + JSON.stringify(still));
+    return `live ${live.vk} / ${live.path} -> still ${still.vk}`;
   });
   if (w === 390) await step("390: IB-4 verdict change: the ring follows the new verdict (bad -> ok)", async () => {
     await go(page, "PSY_V1A");
