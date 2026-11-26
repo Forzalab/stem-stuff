@@ -148,30 +148,34 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; heig
   html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { corner-shape: superellipse(1.52); }
 }
 
-/* multi-part row: 24px module (gap 24, no hairline between parts), 36px letter column + 12 gutter, baseline-aligned letter / prompt / box.
-   Prompt 17/24 400, margin-bottom 12; hint 17/24, margin-top 12; the letter is bare "a" (app.js, ui-v7 only) at 40/24 in the app display face. */
+/* multi-part row: B HANGING INDEX LETTER (Tony Nov 25: "B", uppercase). Two axes: 36 (card text edge) = the letter, the box edge and the grey hint; 54 = the prompt and the value
+   (the 18px hang column is the box's 17.5 value inset). The letter hangs left of the prompt, on its first baseline; the box and hint start at the part's left edge.
+   Prompt 17/24 400, margin-bottom 12; the letter is the part label, upper-cased here (app.js keeps the data as typed). */
 html.ui-v7 .boxed .q { padding-top: var(--s5); border-radius: var(--r-card); }   /* GAP-BAND v2: the multi panel is its own rounded surface under the card (gap --s5 24px, qcard.css) */   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
 html.ui-v7 .mparts { gap: 16px; }   /* GAP (Tony Nov 25): 24 -> 16, the next step down the 4/8/12/16/24/32 scale, so a, b, c read as one group (inside a part 12 / 8 < between parts 16 < between sections) */
 html.ui-v7 .mparts .part {
-  /* IB-5: the third 60px column is the part key's OUTSIDE slot, reserved even while the key is hidden, so the box never
-     changes width as the student types (the mock reserves the single key's slot the same way). The prompt spans the key
-     column (mock: the phone prompt is the full text width, the key hangs off the field only); "ht" is declared in every
-     template, else the empty .phint's undefined area adds implicit 0px columns and their gaps squeeze the row. */
-  grid-template-columns: 36px minmax(0, 1fr) 60px; grid-template-areas: "mk pr pr" ". bx ." ". hw hw" ". ht ht";
-  column-gap: 12px; row-gap: 0; align-items: baseline;
+  /* IB-5: the third column is the part key's OUTSIDE slot (12 gap + 60 key), reserved even while the key is hidden, so the box never
+     changes width as the student types. The prompt spans the key column; "ht" is declared in every template, else the empty .phint's
+     undefined area adds implicit 0px columns and their gaps squeeze the row. */
+  grid-template-columns: 18px minmax(0, 1fr) 72px; grid-template-areas: "mk pr pr" "bx bx ." "hw hw hw" "ht ht ht";
+  column-gap: 0; row-gap: 0; align-items: baseline;
 }
-html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx ." ". hw hw" ". ht ht"; }
+html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk mk mk" "bx bx ." "hw hw hw" "ht ht ht"; }
+html.ui-v7 .mparts .part.nopr .mk { margin-bottom: 12px; }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
-html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
+html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-0)/var(--lh-0) var(--font-input); text-transform: uppercase; color: var(--ink); }
 html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
+/* B-SHORT (Tony Nov 25): a number / text box is only as wide as its answer (6 digits + the inset + the unit room, min 120); an expression keeps the full width.
+   The key follows the box (left: 100% + 13.5px), so it hangs off the short box's right edge. */
+html.ui-v7 .mparts .part:is([data-t="num"], [data-t="text"]) > .ff:not(.rbox) { justify-self: start; width: max(120px, calc(6ch + 36px)); font-size: var(--fs-2); }
 html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
 html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 0; font-size: var(--fs-0); line-height: var(--lh-0); }
 html.ui-v7 .mparts .part.hinted .phint { margin-top: 8px; }   /* the miss card sits 8 under the grey hint (an empty .phint adds no room: it used to carry a 12px margin, which made the gap between parts 36) */
 /* HINT UNDER THE BOX (Tony Nov 25): the shared grey "how" line is repeated under EACH box (single + every multi part); the top .how is the flag-off copy.
    The two copies never show together. The schema has no per-part how / type yet: queued. */
 .phow { display: none; }
-html.ui-v7 #q .phow { display: block; margin: 8px 0 0; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); }
+html.ui-v7 #q .phow { display: block; margin: 8px 0 0; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); }   /* variant A (Tony Nov 25): flush with the box edge, 12.8/16 muted */
 html.ui-v7 .mparts .phow { grid-area: hw; min-width: 0; }
 html.ui-v7 #q:has(> .phow, > .mparts .phow) > .how:not(.phow) { display: none !important; }
 /* PROMPT ON TOP at every width (Tony Nov 25): the phone template (prompt / box + key / grey hint / miss card) is the only one; the old desktop row

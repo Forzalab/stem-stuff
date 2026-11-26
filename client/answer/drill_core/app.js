@@ -1023,7 +1023,7 @@ function renderQuestion() {
        Each part is graded alone, with its own tries and lockout (SCHEMA.md "Grading"). */
     q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
       const l = esc(u.label || LETTERS[i].toLowerCase()), lab = `${l}<span class="mk-p">)</span>`;   // IB-1: ui-v7 hides .mk-p (bare "a"); flag off/late toggle keeps the live "a)" (render.pw pins it)
-      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
+      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}" data-t="${u.type}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}"${p.how ? ` aria-describedby="how${i}"` : ""} ${INPUT_ATTRS}>
           <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}${IB1_GO}</button></div>
         ${phow(p, "how" + i)}<div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
