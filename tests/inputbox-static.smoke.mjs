@@ -511,7 +511,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
     if (w < 900) {   // IB-5: the phone prompt keeps the mock's full text width (it spans the key column)
       const row = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part"), pr = p.querySelector(".pr"); return { part: p.getBoundingClientRect().width, pr: pr.getBoundingClientRect().width }; });
-      /* 18px hang column (#759 B letter); the key column is part of the prompt span */ assert.ok(near(row.pr, row.part - 18, 1), `phone prompt spans the key column: ${row.pr} vs part ${row.part}`);
+      /* 22px hang column (18 + --s1, #759 B letter); the key column is part of the prompt span */ assert.ok(near(row.pr, row.part - 22, 1), `phone prompt spans the key column: ${row.pr} vs part ${row.part}`);
     }
     assert.notEqual(hoverCol, m.edgeCol, "hover changes the edge (idle -> hover)");
     await page.locator("#q .mparts .part:first-child input.ans").focus();
@@ -986,7 +986,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       });
       const B = pngOf(await page.locator("#q .ib4-ring").screenshot());
       const diff = pxDiff(A, B);
-      assert.ok(diff <= 400, `final sweep frame vs a static done render: ${diff}px differ (#759 dropped the permanent will-change on .ib4-arc, so the animated frame and the static render rasterise a few antialiased edge pixels apart; was exact, now <= 400 of ~40k)`);
+      assert.equal(diff, 0, `final sweep frame vs a static done render: ${diff}px differ`);
       await shot(page, `single-${w}-right-ib4-app.png`, "#freezeIn");
       return `pixel diff ${diff}, tick ${done.vkOp}, Next ${glyph.w}x${glyph.h}`;
     } finally {
