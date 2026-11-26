@@ -317,6 +317,9 @@ html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; po
 html.ui-v7[data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens); }
 /* no sheet when transparency is reduced (solid card; the §ghost-glass rule above already flattens the numeral and drops the scrim) + the weak-device fallback */
 @media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7 > .qfrost { display: none; } }
+/* fx-dim (Tony Nov 26, option A): no backdrop-filter, but the glyph stays softened: a plain filter blur on the ghost box itself (works everywhere, incl. Firefox) */
 html.ui-v7.fx-dim #problem.qc7 > .qfrost { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.ui-v7.fx-dim #problem.qc7 .qghostbox { -webkit-filter: blur(3px); filter: blur(3px); }
+@media (prefers-reduced-transparency: reduce) { html.ui-v7.fx-dim #problem.qc7 .qghostbox { -webkit-filter: none; filter: none; } }
 
 

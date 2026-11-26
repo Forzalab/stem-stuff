@@ -1,7 +1,7 @@
 /* Blur gate + device tier (20261013-T40, brain analytics-2026-10-13/DEVICES.md). Runs in <head>, before the first paint.
    Sets html.fx-blur or html.fx-dim. A glass surface (app.css .glass) blurs only on fx-blur; fx-dim = a plain dim, no backdrop-filter.
    Tony (Oct 13): "if weak phone/computer, auto not blur and instead do the dim as a replacement. blur minimally."
-   Dim when ANY of: reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory <= 4, cores <= 4 (tie-break: only
+   Dim when ANY of: reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory <= 1 (MEM_DIM_MAX; Tony Nov 26: was 4, "everyone must see the blur"), cores <= 4 (tie-break: only
    when deviceMemory is unknown and it is not iOS; Safari's core count is unverified), or the frame probe failed (p95 > 24 ms or
    median > 20 ms). The probe result is latched in localStorage "stem-fx"; the rest is read fresh on every load.
    window.stemFx = { fx, tier, why, info, fps } for telemetry.js. Never throws. */
@@ -10,6 +10,7 @@
   var W = window, N = navigator, H = document.documentElement;
 
   /* ---- pure helpers (exported for tests/fx.test.mjs) ---- */
+  var MEM_DIM_MAX = 1;   // GB: dim only when navigator.deviceMemory <= this (Tony Nov 26; was 4)
   /* iPhone / iPad / iPod, or an iPad that says Macintosh (touch points > 1): html.ios, the one test (offline.js reads the class) */
   function isIOS(ua, touch) { ua = ua || ""; return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1); }
   function iosMajor(ua) { var m = /(?:iPhone|iPad|iPod)[^)]*? OS (\d+)_/.exec(ua || ""); return m ? +m[1] : null; }
@@ -25,7 +26,7 @@
     if (d.saveData) pref.push("save_data");
     if (!d.blurOk) hw.push("no_backdrop_filter");
     if (d.ios != null && d.ios < 17) hw.push("ios_lt_17");
-    if (typeof d.mem === "number" && d.mem <= 4) hw.push("mem_le_4");
+    if (typeof d.mem === "number" && d.mem <= MEM_DIM_MAX) hw.push("mem_le_" + MEM_DIM_MAX);
     if (typeof d.cores === "number" && d.cores <= 4 && typeof d.mem !== "number" && d.ios == null) hw.push("cores_le_4");
     if (d.fpsBad) hw.push("fps");
     var why = pref.concat(hw);

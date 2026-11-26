@@ -38,7 +38,9 @@ test("each rule alone", () => {
   assert.deepEqual(gate({ ...base, rt: true }), { fx: "dim", tier: "strong", why: ["reduced_transparency"] }, "a preference dims, not weak");
   assert.deepEqual(gate({ ...base, saveData: true }).why, ["save_data"]);
   assert.deepEqual(gate({ ...base, blurOk: false }).why, ["no_backdrop_filter"]);
-  assert.deepEqual(gate({ ...base, mem: 4 }).why, ["mem_le_4"]);
+  assert.deepEqual(gate({ ...base, mem: 1 }).why, ["mem_le_1"]);
+  assert.equal(gate({ ...base, mem: 2 }).fx, "blur", "2 GB and 4 GB keep the blur (Tony Nov 26)");
+  assert.equal(gate({ ...base, mem: 4 }).fx, "blur");
   assert.equal(gate({ ...base, cores: 4 }).fx, "blur", "cores with a known memory: no tie to break");
   assert.deepEqual(gate({ ...base, mem: undefined, cores: 4 }).why, ["cores_le_4"]);
   assert.deepEqual(gate({ ...base, fpsBad: true }), { fx: "dim", tier: "weak", why: ["fps"] });
