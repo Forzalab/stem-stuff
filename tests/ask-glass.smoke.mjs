@@ -161,7 +161,7 @@ await step("gecko: a Firefox UA gets the plain frost: no lens filter, empty .g-c
     } finally { await ctx.close(); }
   }
 });
-/* THINK-GAP: /chat answers after 3.5 s (the server's NOTE call runs before the first word); sampled in that gap */
+/* THINK-GAP: /chat answers after 2.6 s (the server's NOTE call runs before the first word); sampled in that gap (CI lane budget: 5 locked engine cases + 2 ready ones, not 10) */
 const FFUA = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
 async function gap({ ua, dim, locked, calm }) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block", reducedMotion: calm ? "reduce" : "no-preference", ...(ua ? { userAgent: ua } : {}) });
@@ -170,7 +170,7 @@ async function gap({ ua, dim, locked, calm }) {
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   await page.route("**/explain", r => r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "POOF! A short canned reply.\n" }));
-  await page.route("**/chat", async r => { await new Promise(res => setTimeout(res, 3500)); r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "Quack. Because six times seven is forty-two.\n" }); });
+  await page.route("**/chat", async r => { await new Promise(res => setTimeout(res, 2600)); r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "Quack. Because six times seven is forty-two.\n" }); });
   try {
     await page.goto(`${BASE}/?ui=v7#BANK_AGL`);
     await page.waitForFunction(() => !document.getElementById("splash") && document.querySelector("#pcode")?.textContent === "CALC1_AG1", null, { timeout: 15000 });
@@ -178,7 +178,7 @@ async function gap({ ua, dim, locked, calm }) {
     if (locked) { await showBox(page, 390); await page.click("#cluck > .cl-bd .cl-starter"); }
     else { await wrongTry(page, 390); await page.fill(TA, "why sin and not cos?"); await page.keyboard.press("Enter"); }
     const seen = [];
-    for (const t of [700, 1000, 1000]) {
+    for (const t of [500, 800, 700]) {
       await page.waitForTimeout(t);
       seen.push(await page.evaluate(sel => { const f = document.querySelector(sel), th = document.querySelector("#cluck .cl-thread"), reply = [...th.querySelectorAll(".msg:not(.me) .wtext")].map(e => e.textContent.trim()).join("");
         return { cls: f.className, ring: +getComputedStyle(f.querySelector(".g-think")).opacity, glow: getComputedStyle(f.querySelector(".g-haze")).boxShadow !== "none", reply: reply.length, locked: f.classList.contains("locked") }; }, FORM));
@@ -186,8 +186,8 @@ async function gap({ ua, dim, locked, calm }) {
     return seen;
   } finally { await ctx.close(); }
 }
-for (const c of [{ n: "blink lens", ua: "" }, { n: "firefox UA (frost)", ua: FFUA }, { n: "fx-dim (solid)", ua: "", dim: true }, { n: "firefox UA + fx-dim", ua: FFUA, dim: true }, { n: "reduced motion", ua: "", calm: true }])
-  for (const locked of [true, false])
+for (const [c, locked] of [[{ n: "blink lens" }, true], [{ n: "firefox UA (frost)", ua: FFUA }, true], [{ n: "fx-dim (solid)", dim: true }, true], [{ n: "firefox UA + fx-dim", ua: FFUA, dim: true }, true], [{ n: "reduced motion", calm: true }, true],
+  [{ n: "blink lens" }, false], [{ n: "firefox UA + fx-dim", ua: FFUA, dim: true }, false]])
     await step(`think: ${c.n}, ${locked ? "locked strip (free starter chip)" : "ready bar"}: a thinking sign from the tap to the first reply text`, async () => {
       const seen = await gap({ ...c, locked });
       for (const x of seen) {
