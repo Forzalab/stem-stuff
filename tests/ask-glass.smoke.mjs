@@ -144,7 +144,8 @@ await step("gecko: a Firefox UA gets the plain frost: no lens filter, empty .g-c
   const FF = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
   for (const dim of [false, true]) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block", reducedMotion: "no-preference", userAgent: FF });
-    await ctx.addInitScript(dim => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); if (dim) localStorage.setItem("stem-fx", "dim"); } catch { /* */ }
+    await ctx.addInitScript(dim => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ }
+      if (dim) { Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 4 }); Object.defineProperty(navigator, "deviceMemory", { get: () => undefined }); }   // fx.js: cores <= 4 with no deviceMemory = weak = fx-dim (a Firefox phone; the stem-fx latch is gone since #761)
       Object.defineProperty(navigator, "userAgentData", { get: () => undefined }); }, dim);
     await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
     const page = await ctx.newPage();
@@ -165,7 +166,8 @@ await step("gecko: a Firefox UA gets the plain frost: no lens filter, empty .g-c
 const FFUA = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
 async function gap({ ua, dim, locked, calm }) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block", reducedMotion: calm ? "reduce" : "no-preference", ...(ua ? { userAgent: ua } : {}) });
-  await ctx.addInitScript(([dim, ua]) => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); if (dim) localStorage.setItem("stem-fx", "dim"); } catch { /* */ }
+  await ctx.addInitScript(([dim, ua]) => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ }
+      if (dim) { Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 4 }); Object.defineProperty(navigator, "deviceMemory", { get: () => undefined }); }   // fx.js: cores <= 4 with no deviceMemory = weak = fx-dim (a Firefox phone; the stem-fx latch is gone since #761)
     if (ua) Object.defineProperty(navigator, "userAgentData", { get: () => undefined }); }, [!!dim, !!ua]);
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
