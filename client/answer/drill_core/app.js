@@ -1818,7 +1818,7 @@ function ceField(el) {
     el.style.setProperty("--wrap-f", "0px");   // first: every read below is of this one layout (the box at its resting height)
     const keys = [...ff.querySelectorAll(":scope > button, :scope > .nx")].map(k => k.getBoundingClientRect()).filter(r => r.width && r.height);
     const a = el.getBoundingClientRect(), s = sc.getBoundingClientRect(), h0 = el.clientHeight;
-    const w = keys.length ? Math.max(0, Math.ceil(a.right - Math.min(...keys.map(k => k.left)) + 8)) : 0;
+    const w = keys.length ? Math.max(0, Math.ceil(a.right - Math.min(...keys.map(k => k.left)) + 12)) : 0;   // 12 = the key gap (verdict-v7.css --key-gap): wider than one mono space, so a wrapped line's hanging space never reaches under a key
     const n = keys.length ? Math.max(0, Math.ceil(s.bottom - (parseFloat(getComputedStyle(sc).paddingBottom) || 0) - Math.min(...keys.map(k => k.top)) + 6)) : 0;
     let f = h0;
     for (let i = 0; i < 4; i++) { set(f, w, n); const t = textH(); if (t <= f + 0.5) break; f = Math.ceil(t); }
@@ -2243,9 +2243,11 @@ const DUCK = `<svg class="dk" viewBox="0 2 24 20.5" aria-hidden="true"><ellipse 
 function rboxSync() {
   const ff = document.querySelector("#q #ff.ff.cue");
   if (!ff || !rboxOn() || !S.finished) return;
-  ff.classList.add("rbox");
   const ok = ff.classList.contains("ok");
-  ff.classList.toggle("tight", ff.parentElement.clientWidth < 480);        // the label needs room: below it, the duck-only segment (the mock's 390 fallback)
+  if (!root.classList.contains("ui-v7")) {                                 // KEY-ONE: under ui-v7 the closed box keeps its typed look (ring + tick) and Next is the Check key in its outside slot (verdict-v7.css §key); no joined reveal pill
+    ff.classList.add("rbox");
+    ff.classList.toggle("tight", ff.parentElement.clientWidth < 480);      // the label needs room: below it, the duck-only segment (the mock's 390 fallback)
+  }
   const wb = document.querySelector("#wish .wbar"), btn = wb && wb.querySelector(".wchip");
   if (btn) {
     ff.querySelectorAll(":scope > .wchip").forEach(x => x.remove());

@@ -223,7 +223,7 @@ html.ui-v7.pad-off:not(.mt):not(.swap):has(#problem.qpin) { scroll-padding-top: 
    question text wrap around it (AC6). The ICK E3 left-edge tab dies on phone AND desktop: no fixed box, no brainrot-handle tracking (qcard.js tab()/tabSoon()/watchRot()
    are gone). The phone proof-typing slot (verdict-v7.css §proof-v7) reads the same fill / ink / eye tokens; --ick5-size is the ONE knob (Tony may pick 40 or 56). */
 html.ui-v7 {
-  --ick5-size: 44px;                      /* ICK5: the squircle's side; the proof box keeps its own 56px --ick12-size slot */
+  --ick5-size: 44px;                      /* ICK5: the squircle's side; the in-box copy in the proof box is the same 44 (verdict-v7.css §key --key-in) */
   --ick5-ico: 24px;                       /* ICK5: the duck line icon inside it (the in-box duck stays 30px, verdict-v7.css) */
   --ick7-fill: var(--help, #ffa63e);      /* tangerine = the app's --help token, no new colour */
   --ick7-ink: var(--page, #02040d);       /* the navy the duck is drawn in (--page = navy-900) */

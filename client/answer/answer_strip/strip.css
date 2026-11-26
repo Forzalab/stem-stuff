@@ -111,7 +111,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:f
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
   html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) { corner-shape: superellipse(1.52); }
 }
-/* IB-5: the multi part's Check moved OUTSIDE the field (verdict-v7.css §ib5-key), so the value gets the mock's 17.5px inset at
+/* IB-5: the multi part's Check moved OUTSIDE the field (verdict-v7.css §key), so the value gets the mock's 17.5px inset at
    rest and no in-box key room; a judged part keeps 48 for the in-box .vk (the live tick / cross slot). */
 html.ui-v7 #q .mparts .part > .ff:is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
 html.ui-v7 #q > .ff#ff:not(.proof):is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }

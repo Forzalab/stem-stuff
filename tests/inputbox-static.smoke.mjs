@@ -722,16 +722,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(wait.nx, false, "Next appeared inside the waiting field");
     return `bad ${bad.bg} ${bad.bw}`;
   });
-  await step(`${w}: reveal pill keeps its live padding and height`, async () => {
+  await step(`${w}: a closed sugar box is no reveal pill: same 60px box, Next in the key slot`, async () => {   // KEY-ONE: was "reveal pill keeps its live padding and height"; under ui-v7 app.js rboxSync no longer adds .rbox, so the joined row + Next pill is gone
     await go(page, "PSY_S1A");
     await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
-    await page.waitForSelector("#q #ff.rbox", { timeout: 6000 });
-    await settled(page, "#q #ff");
-    const box = await skinOf(page, "#q #ff.rbox");
-    assert.ok(parseFloat(box.pr) >= 48, `rbox padding-right ${box.pr} (want >= 48)`);
-    assert.ok(Math.abs(box.h - 60) > 1, `rbox height ${box.h} got the IB-1 60px box`);
-    if (w >= 900) assert.ok(box.w > 400.5, `rbox width ${box.w} got the 400px idle cap`);
-    return `pad ${box.pr} h ${box.h} w ${box.w}`;
+    await page.waitForSelector("#q #ff > .nx", { timeout: 6000 });
+    await settled(page, "#q #ff > .nx");
+    const g = await page.evaluate(() => { const ff = document.querySelector("#q #ff"), f = ff.getBoundingClientRect(), n = ff.querySelector(":scope > .nx").getBoundingClientRect(); return { rbox: ff.classList.contains("rbox"), h: f.height, fRight: f.right, nLeft: n.left, nW: n.width, nH: n.height }; });
+    assert.equal(g.rbox, false, "ui-v7 still builds the reveal pill (.rbox)");
+    assert.ok(near(g.h, 60), `the closed box left the 60px typed box: ${g.h}`);
+    assert.ok(near(g.nW, 60) && near(g.nH, 60) && g.nLeft >= g.fRight + 10, `Next is not the 60px key outside the box: ${JSON.stringify(g)}`);
+    return `box h ${g.h}, Next ${g.nW}x${g.nH} at +${(g.nLeft - g.fRight).toFixed(1)}`;
   });
   await step(`${w}: single Next takes the outer key slot`, async () => {
     await go(page, "PSY_S3A");
@@ -823,10 +823,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(!u.text.includes("[object Object]"), "object unit leaked into the card");
     return "no unit";
   });
-  await step(`${w}: MC key (#mcGo) unchanged`, async () => {
+  await step(`${w}: MC key (#mcGo) is the 60px OUT key in .chk`, async () => {   // KEY-ONE: 56 near-white -> the one 60px --chip key (verdict-v7.css §key)
     await go(page, "PSY_C1A");
     const m = await page.evaluate(MET);
-    assert.ok(m.mc && near(m.mc.w, 56) && near(m.mc.h, 56), `#mcGo ${JSON.stringify(m.mc)}`);
+    assert.ok(m.mc && near(m.mc.w, 60) && near(m.mc.h, 60), `#mcGo ${JSON.stringify(m.mc)}`);
     assert.equal(m.mc.inChk, true, "#mcGo still lives in .chk");
     return `${m.mc.w}x${m.mc.h} in .chk`;
   });
@@ -838,6 +838,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.waitForFunction(() => !document.querySelector("#mcGo").disabled);
       await page.click("#mcGo");
       await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForFunction(() => +getComputedStyle(document.querySelector("#mcGo")).opacity < .6, null, { timeout: 2000 }).catch(() => {});   // KEY-ONE: the dim eases .15s on every key
       const k = await page.evaluate(() => {
         const b = document.querySelector("#mcGo"), a = getComputedStyle(b, "::after");
         return { content: a.content, anim: a.animationName, op: +getComputedStyle(b).opacity, rings: document.querySelectorAll(".ib3-ring, .ib3-glow").length };
@@ -856,7 +857,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   await step(`${w}: IB-4 single wrong: ring starts as the aurora arc, key stays dimmed, hint card, border untouched`, async () => {
     await go(page, "PSY_V1A");
     await page.mouse.move(0, 0);
-    const fullLuma = await maxLuma(page, "#ansGo");   // the key's RENDERED arrow at rest
+    await page.fill("#ans", "3.2"); await page.mouse.move(0, 0);
+    await page.waitForFunction(() => +getComputedStyle(document.querySelector("#ansGo")).opacity >= .999, null, { timeout: 2000 });
+    const fullLuma = await maxLuma(page, "#ansGo");   // the key's RENDERED arrow, ready (KEY-ONE: an empty single key rests dim .35 like a multi part's, so "full" needs a value)
+    await page.fill("#ans", "");
     const rest = await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
     const hold = await holdGrade(page, ["PSY_V1A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Square the time." });
     try {
@@ -915,7 +919,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const h5 = await headAt(page, 5), spd = (h5.s - heads[0].s) / 5 * 1000, aur = heads[0].P / heads[0].lap * 1000;   // px/s at t=0 (5ms sample; t is ms)
       assert.ok(spd > aur * .75 && spd < aur * 1.25, `head leaves at the aurora pace: ${spd.toFixed(0)} vs ${aur.toFixed(0)} px/s`);
       assert.equal(r0.keyHidden, false, "wrong keeps the Check key visible");
-      assert.ok(r0.keyOp < 1, `wrong dims the Check key: opacity ${r0.keyOp}`);
+      { const sel = "#ansGo", op = await page.waitForFunction(q => { const o = +getComputedStyle(document.querySelector(q)).opacity; return o < 1 ? o : false; }, sel, { timeout: 2000 }).then(h => h.jsonValue()).catch(() => 1);   // KEY-ONE: the dim is read once it shows, not on the ring's first frame (grading drops a tick before .bad lands; under load that frame read 1)
+        assert.ok(op < 1, `wrong dims the Check key: ${op}`); }
       assert.ok(r0.hint && r0.hint.bg !== "rgba(0, 0, 0, 0)" && parseFloat(r0.hint.r) >= 16, "the single hint is the navy card: " + JSON.stringify(r0.hint));
       assert.equal(r0.hint.inPhint, false, "the single hint is #fb's, not a multi .phint");
       assert.ok(r0.edge.bw === "0px" || r0.edge.bs === "none", `the real border is not recoloured: ${JSON.stringify(r0.edge)}`);
@@ -1018,7 +1023,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.ok(r0.hint && r0.hint.inPhint && r0.hint.bg !== "rgba(0, 0, 0, 0)" && parseFloat(r0.hint.r) >= 16,
         "the multi hint wears the same navy card: " + JSON.stringify(r0.hint));
       assert.equal(r0.keyHidden, false, "the part's Check stays visible on a miss");
-      assert.ok(r0.keyOp < 1, `the part's Check dims: ${r0.keyOp}`);
+      { const sel = "#q .mparts .part:first-child .send", op = await page.waitForFunction(q => { const o = +getComputedStyle(document.querySelector(q)).opacity; return o < 1 ? o : false; }, sel, { timeout: 2000 }).then(h => h.jsonValue()).catch(() => 1);   // KEY-ONE: the dim is read once it shows, not on the ring's first frame (grading drops a tick before .bad lands; under load that frame read 1)
+        assert.ok(op < 1, `the part's Check dims: ${op}`); }
       await ringAt(page, 200);
       await shot(page, `multi-${w}-mid-ib4-app.png`, "#freezeIn");
       await ringAt(page, 440);

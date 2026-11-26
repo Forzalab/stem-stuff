@@ -150,16 +150,16 @@ html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 10px; }   /* Tony Nov 18: thin
 /* == §ick4-wrap == ICK4-WRAP (Tony Nov 18, 3a "word-wrap effect for the two button ... shape-outside"): the proof text flows AROUND the keys.
    app.js proofField(): under ui-v7 the field is .pwrap > #ans.ans[contenteditable] (a <textarea> cannot wrap around anything).
    - .ff.proof gives its padding to .pwrap (--pw-x / --pw-b), so the float's size is plain arithmetic from the keys' 8px inset:
-       width  = 8 inset + 44 key + 8 air - --pw-x          (+ 52 with the in-box duck: 44 + 8 gap)
+       width  = 8 inset + 44 key + 12 air (--key-gap) - --pw-x  (+ 52 with the in-box duck: 44 + 8 gap)
        height = 8 inset + 44 key + 6 air - --pw-b
    - .pwrap = the scroller in keyboard mode (PROOF-LOCK) + a WRAPPING flex line: the line is as tall as max(content, box), .ans stretches to it,
      so the float's height: 100% resolves and its shape sits at the CONTENT's foot (Afif's float-bottom trick); app.js fit() then sets the
      exact px (--wrap-f / -w / -n): 100% alone runs one line long when the notch itself makes a new line.
    - known limit: scrolled up in keyboard mode, a middle line can pass under the keys (they sit on the box, the notch sits at the content's end). */
-html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 60px; }
+html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 64px; }
 html.ui-v7.proof-split #q .ff.proof:has(> .pwrap) { --pw-x: 16px; }                       /* PROOF-AXIS: the card's text axis */
 html.ui-v7.mt.proof-split #q .ff.proof:has(> .pwrap) { --pw-t: 0px; --pw-b: 8px; }      /* C8 + ICK4-FADE: text to the box edge while typing */
-html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 112px; }                           /* duck + Check = one block */
+html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 116px; }                           /* duck + Check = one block */
 html.ui-v7 #q .ff.proof > .pwrap {
   flex: 1 1 auto; min-width: 0; min-height: 10rem; display: flex; flex-wrap: wrap; align-content: stretch; box-sizing: border-box;
   padding: var(--pw-t) var(--pw-x) var(--pw-b); cursor: text;
@@ -223,6 +223,7 @@ html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::
    STATES empty = dim .35 + inert (the MC tile has no key until a pick: the pick is its "has an answer") · ready = full · hover = face 82% + white · :active = scale(.96) + face 90% ·
           focus-visible = the app's 2px --focus ring, offset 2 · busy / judged-wrong-with-a-try / the 10 s retry wait = dim .55 (busy: a typed box shows its thinking ring, so its key keeps the arrow;
           the other three have no ring, so the key carries the spinner) · right or out of tries = Next: the SAME key (place, size, radius, arrow), full, in the verdict's tint · reduced motion = no scale, no fade.
+   The sugar reveal pill (.ff.rbox: joined row + "Next" pill) is flag-off only now: app.js rboxSync no longer adds .rbox under ui-v7, so a closed typed box keeps its look and Next is this key.
    The verdict flash on the key (§verdict-morph) and the tick / cross in the box (strip.css IB-4) are untouched: they paint on this key's geometry. */
 html.ui-v7 {
   --key-out: 60px; --key-in: 44px; --key-inset: 8px; --key-gap: 12px;
@@ -270,11 +271,10 @@ html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > 
 }
 html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx .nf > span { display: none; }
 /* states: empty */
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .mparts .part > .ff > .send, .chk > #mcGo):is(:disabled, [aria-disabled="true"]) { opacity: var(--key-off); cursor: default; pointer-events: none; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .mparts .part > .ff > .send, .chk > #mcGo):disabled { opacity: var(--key-off); cursor: default; pointer-events: none; }
 /* states: judged wrong with a try left (the key waits for an edit), the 10 s retry wait (no bar: the dim says it), busy */
-html.ui-v7 #q .ff#ff.bad:not(.cue, .rbox) > #ansGo,
-html.ui-v7 #q .mparts .part > .ff.bad:not(.shut) > .send,
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo).waiting,
+html.ui-v7 #q :is(.ff#ff.bad:not(.cue, .rbox) > #ansGo, .mparts .part > .ff.bad:not(.shut) > .send),   /* one :is() = one specificity (the skin's), so the later rule wins */
+html.ui-v7 #q :is(.ff#ff, .chk) > #mcGo.waiting,   /* typed: the wait dims only while the box is still .bad (IB-4 grill Q2a: the next keystroke returns the key to full); pick-all has no such edit state, its key waits dim (.ff#ff in the :is() only lifts this to the skin specificity) */
 html.ui-v7.grading #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo, .choices .ch > .send, .mparts .part.g-on > .ff > .send) { opacity: var(--key-wait); }
 html.ui-v7.grading #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo, .choices .ch > .send, .mparts .part.g-on > .ff > .send) { cursor: progress; }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo).waiting::before { display: none; }
