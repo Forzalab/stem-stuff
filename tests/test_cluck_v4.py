@@ -629,6 +629,46 @@ class Handlers(unittest.TestCase):
         self.assertIn("RESULT: wrong", json.dumps(self.bodies[-1]["messages"]))
         self.assertTrue(out.startswith("Not quite."))
 
+    PRE_WALK = ("The time between them is the period.\nThat means one full cycle.\nPick the formula tool:\n$$P = W / t$$\nPut in the numbers:\n"
+                "$$P = 52.0 / 4.0$$\nSo the answer is **13.0 W**, because 52.0 over 4.0 is 13.0.\n")
+    PRE_Q = [{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "How do I get power?"}]
+
+    def pre_try_nudge(self, fn=None, **body):
+        """Nov 26 prod (P4X_4EA, phone): a question asked BEFORE the first try (answer "") got the whole worked solution and the final answer. A
+        pre-try reply is a nudge: at most 3 lines, no display math, never the answer value; the model is told REVEAL no and is never told RESULT: correct"""
+        serve._chats.clear()                                                        # the per-item follow-up cap is shared by the cases
+        self.reply = self.PRE_WALK
+        out = self.go(fn or serve.chat, answer="", **({"history": self.PRE_Q} if fn is None else {}), **body)
+        self.assertNotIn("13.0", out)
+        self.assertNotIn("$$", out)
+        self.assertLessEqual(len([x for x in out.splitlines() if x.strip()]), 3, out)
+        self.assertIn("The time between them is the period.", out)                 # a nudge still comes out
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("RESULT: correct", ctx)
+        return ctx
+
+    def test_pre_try_reply_is_a_nudge(self):
+        self.assertIn("REVEAL: no", self.pre_try_nudge())
+
+    def test_pre_try_after_an_earlier_solve_is_still_a_nudge(self):     # the page is pre-try (a redo round; /chat sends no round), the base state says solved
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(("d" * 32, "H_1"))["done"] = True
+        ctx = self.pre_try_nudge()
+        self.assertIn("REVEAL: no", ctx)
+
+    def test_pre_try_third_turn_is_still_a_nudge(self):                # REVEAL yes from the 3rd Cluck turn never opens a pre-try reply
+        for _ in range(2):
+            serve.cluck_begin(dict(P1, code="H_1"), "d" * 32, "")
+        self.assertIn("REVEAL: no", self.pre_try_nudge())
+
+    def test_pre_try_wish_route_is_a_nudge(self):
+        self.pre_try_nudge(serve.explain)
+
+    def test_pre_try_old_chain_is_a_nudge(self):                       # v4 off (no letter prompt): the old chain had no leak guard at all
+        with mock.patch.object(serve, "PROMPT_V4", None):
+            self.pre_try_nudge()
+
     def test_solved_wish_then_chat(self):                              # C: a correct pick -> REVEAL yes + RESULT: correct, no nudge, replayed
         with serve._tries_lock:
             serve._load_tries()
@@ -1182,6 +1222,8 @@ class PartHandlers(Handlers):
 
     test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None      # single-item cases live in Handlers
     test_locked_wish_tells_cluck_not_to_invite_a_retry = None                              # the single-item case lives in Handlers
+    test_pre_try_reply_is_a_nudge = test_pre_try_after_an_earlier_solve_is_still_a_nudge = test_pre_try_third_turn_is_still_a_nudge = None   # single-item cases
+    test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
 
     def test_right_part_pick_without_state(self):
         self.reply = "Yes! **6** is right. The test fails once i is 6.\n"
@@ -1266,7 +1308,7 @@ class Visuals(unittest.TestCase):
         from cluck_reply_checks import views_gate
         ex = serve.V4_VIEWS.split("Examples:\n")[1].split("\nNumbers in a view")[0]
         progs = ["root" + x for x in ex.split("root")[1:]]
-        self.assertEqual(len(progs), 5, "Tug, Tug battery, Flip, Table, Steps")
+        self.assertEqual(len(progs), 4, "Tug, Tug battery, Table, Steps")
         ctx = serve.livefig.context("CPA", "for (int i = 1; i < n; i++) s += i; the weight W acts at the middle, the arm L", "", [10.0])
         for prog in progs:
             out, log = views_gate.gate(prog.strip(), ctx)

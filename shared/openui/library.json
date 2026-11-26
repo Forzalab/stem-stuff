@@ -179,7 +179,7 @@
         ]
       },
       "Flip": {
-        "description": "Cards that flip from \"you did\" to \"the fix\": rows of [step, you did, the fix]; tap a card to flip it back",
+        "description": "DEPRECATED: the Flip view is gone and renders as a plain Table; use Table with columns step | you did | the fix instead",
         "type": "object",
         "properties": {
           "rows": {
@@ -786,7 +786,7 @@
     },
     "Flip": {
       "signature": "Flip(rows: string[][], alt?: string)",
-      "description": "Cards that flip from \"you did\" to \"the fix\": rows of [step, you did, the fix]; tap a card to flip it back",
+      "description": "DEPRECATED: the Flip view is gone and renders as a plain Table; use Table with columns step | you did | the fix instead",
       "layer": "L1",
       "kind": "interaction",
       "props": {

@@ -36,7 +36,7 @@
 #   §trace          per-request flight-recorder trace: set_trace, trace_id, log
 #   §genie          Cluck genie after a wrong answer, OpenRouter stream: explain_prompt, explain_stream, graph_json, wish_pick
 #   §claude-pipe    Claude API path + spend/cooldown: claude_params, claude_system, claude_ok, claude_spent, ReplyCut
-#   §prompt-v4      v4 prompt (letter as system), leak guards, figure re-ask: v4_user, v4_dynamic, leak_scan, prompt_guard, fig_spec
+#   §prompt-v4      v4 prompt (letter as system), leak guards, figure re-ask: v4_user, v4_dynamic, leak_scan, prompt_guard, fig_spec, PRE_TRY_LINES / PRE_TRY_RULE / pre_try_lines (a pre-try ask is a nudge: no_attempt(pick) wins on every path)
 #   §cram-day       TEMPORARY Exam 3 per-item guidance, subject gate, v4_stream, _cluck_stream, emoji_cut
 #   §stage-events   wait-step lines for the stage list: stage_line, _staged_relay, explain
 #   §note-chat      NOTE call under the box + follow-up chat: note, note_block, CLUCK_CHAT, CHAT_TURNS
@@ -2603,6 +2603,10 @@ def _unit_slip(u, a):
     return statements(h)
 
 
+PRE_TRY_RULE = ("BEFORE THE FIRST TRY: nudge only, at most 3 short lines. Name the idea or the formula's name, no display math, no steps of the solution, "
+                "no number from the KEY, never the final answer.")
+
+
 def explain_prompt(p, answer):
     """the user turn: question, shown choices, the student's pick (a multi: its part, the part's prompt and key), the KEY, the SLIP for
     it (none on a right pick), the sheet formulas."""
@@ -2622,7 +2626,7 @@ def explain_prompt(p, answer):
     slips = [(sg.get("slip") or {}).get(str(x)) for x in picked] if not isinstance(answer, dict) else []
     slip = " ".join(x for x in slips if x) or (_unit_slip(u, a) if u is not None and ok is False else "")
     if no_attempt(answer):                               # a free question: no pick, no slip, no verdict (v4_result gives none either)
-        lines += ["STUDENT PICKED: nothing yet (the student has not tried this question)", f"KEY:\n{sg['key']}"]
+        lines += ["STUDENT PICKED: nothing yet (the student has not tried this question)", f"KEY:\n{sg['key']}", PRE_TRY_RULE]
     else:
         lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}{at}", f"KEY:\n{sg['key']}",
                   "SLIP: " + ("none, the pick is right" if ok else slip or "(none written; name the likely slip from the KEY)")]
@@ -2683,11 +2687,14 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None, sto
         rows = cluck_noted(p, sid, turn[0], xyz, store=store)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
         locked = any(row_locked(r) for r in rows if r[0] == turn[0])
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=turn_closed((sid, p["code"]), store=store), facts=leak_facts(p, pick_done(p, units_done(p, sid, store=store), answer)),
+        pre = no_attempt(answer)                                  # before the first try: open, whatever the server's tries say (cluck_begin pre)
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=not pre and turn_closed((sid, p["code"]), store=store),
+                  free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, sid, store=store), answer)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
-    yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
-                            fig_ctx(p, answer), edit=True, v4=v4, out=out, swap=True)
+    st = _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
+                       fig_ctx(p, answer), edit=True, v4=v4, out=out, swap=True)
+    yield from pre_try_lines(st, p) if v4 is None and no_attempt(answer) else st
     on("write", "end")
 
 
@@ -2849,7 +2856,7 @@ Style goals:
 - 150 to 200 words of prose ($$ lines not counted), the same order, short paragraphs. Keep and even grow the warmth: praise for the student's thinking, effort and instincts stays, and a wrong pick still feels safe and normal. One QUACK and one (action) at most.
 - Drop every mention of a KEY, an answer key, a SLIP or a NOTE, or of where the answer comes from ("From the KEY:", "the key says"): the fact stays, said as your friend's own.
 Please keep these exactly as they are, character for character: every $$...$$ line (the $$\\boxed{...}$$ one too), the ```fig block, the "Pick" line, $...$ math and **bold**. The answer, numbers, units and facts stay as your friend wrote them, and the praise never turns a wrong pick right; your work is the words around them.
-Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls go in a Tug view, a step vs its fix in a Flip view (```openui), other rows in a "- " list."""
+Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls go in a Tug view, a step vs its fix in a Table view (```openui), other rows in a "- " list."""
 
 
 def rewrite_on():
@@ -3201,16 +3208,19 @@ def turn_closed(key, store=None):
 def cluck_begin(p, sid, pick, store=None):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
     counted server-side (its own turn key with the hash store, the tries blob otherwise; a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
-    used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved)."""
+    used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved).
+    pre = no_attempt(pick) (the page is before its first try): never closed, never solved, never REVEAL yes, whatever the server's tries say
+    (a redo round sends no round to /chat or /explain, so the base sid may hold an earlier solve) and however many turns came before."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
-    out = tries_out(p, sid, store=store)
-    solved = item_solved(p, sid, store=store) or (p.get("type") != "multi" and pick_ok(p, pick) is True)   # W110: the server's own grade, no KV
+    pre = no_attempt(pick)
+    out = not pre and tries_out(p, sid, store=store)
+    solved = not pre and (item_solved(p, sid, store=store) or (p.get("type") != "multi" and pick_ok(p, pick) is True))   # W110: the server's own grade, no KV
     key = (sid, p["code"])
     if store is not None:
         rows = turns_read(sid, p["code"])
         n = (rows[-1][0] + 1) if rows else 1
-        reveal = out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3)
+        reveal = not pre and (out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3))
         rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))
         del rows[:-CLUCK_KEEP]
         turns_write(sid, p["code"], rows)
@@ -3219,7 +3229,7 @@ def cluck_begin(p, sid, pick, store=None):
         _load_tries()
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
-        reveal = out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3)   # cram items: the stage-by-stage walk (overview + up to 5 stages) is not the "3rd ask" give-up; only later (stricter), tries-out and solved still open it
+        reveal = not pre and (out or solved or n >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3))   # cram items: the stage-by-stage walk (overview + up to 5 stages) is not the "3rd ask" give-up; only later (stricter), tries-out and solved still open it
         rows.append([n, 2 if solved else int(reveal), "", pick] + ([True] if out and not solved else []))   # [4] = True only on a locked item (tries used up, not solved): the reply must not invite a retry
         del rows[:-CLUCK_KEEP]
         _save_tries()
@@ -3314,6 +3324,7 @@ def pick_line(line, vals):
     return bool(vals) and any(livefig._eq(n, v) for n in livefig.nums(line) for v in vals)
 
 
+PRE_TRY_LINES = 3                            # Nov 26 prod: a question before the first try got the whole worked solution. Before a try Cluck nudges: at most this many lines
 # a no-attempt turn is not a miss: the letter's RESULT: wrong opener ("Not quite.") is cut if the model writes it anyway (prod Nov 3: "Which formula fits?")
 _MISS_RE = re.compile(r"^[ \t]*(?:not[ \t]+quite|not[ \t]+it|wrong|incorrect|nope)\b[ \t]*[,.!:;]*(?:[ \t]*quack\b[ \t]*[,.!]*)?[ \t]*", re.I)
 
@@ -3321,8 +3332,9 @@ _MISS_RE = re.compile(r"^[ \t]*(?:not[ \t]+quite|not[ \t]+it|wrong|incorrect|nop
 class LineStrip:
     """open item (not locked, not solved): drops the lines for which pick_line is true, keeps the rest. Lines stream as they end; the last partial
     line is held to the end. A fenced figure passes untouched."""
-    def __init__(self, vals, picks=True, opener=False):
+    def __init__(self, vals, picks=True, opener=False, cap=None):
         self.vals, self.buf, self.fenced, self.picks, self.opener = vals, "", False, picks, opener   # opener: cut a miss verdict off the first line (a free question)
+        self.cap, self.kept = cap, 0             # cap: a pre-try nudge keeps at most this many non-blank lines, the rest of the reply is dropped
 
     def _lines(self, text):
         out = []
@@ -3332,11 +3344,18 @@ class LineStrip:
                 out.append(line)
             elif self.fenced:
                 out.append(line)
+            elif self.cap is not None and self.kept >= self.cap:
+                continue
             elif not (self.picks and pick_line(line, self.vals)):
                 if self.opener and line.strip():
                     self.opener, line = False, _MISS_RE.sub("", line, 1)
                     if not line.strip():
                         continue
+                if self.cap is not None and line.strip():
+                    if self.kept + 1 == self.cap and line.rstrip().endswith(":"):   # the last line a nudge may have only leads into a cut equation: drop it too
+                        self.kept = self.cap
+                        continue
+                    self.kept += 1
                 out.append(line)
         return "".join(out)
 
@@ -3715,7 +3734,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=Tru
     ask = reask if reask and fig is not None and livefig.on() else None
     xyz, fence = Xyz(), views_gate.Fence(fig, FIG_SLOT if ask else None)
     guard = None if reveal else LeakGuard(facts)
-    strip = LineStrip(facts[1], not closed, free) if free or not closed else None   # open item (even on REVEAL yes from the 3rd turn): no pick, no answer value, ever
+    strip = LineStrip(facts[1], not closed, free, PRE_TRY_LINES if free else None) if free or not closed else None   # open item (even on REVEAL yes from the 3rd turn): no pick, no answer value, ever; free (no try yet): a nudge, PRE_TRY_LINES lines
     sent, head, waited = False, "", False        # head: the first visible line so far; None once it went on. waited: FIG_WAIT went out
     for t in chunks:
         vis = fence.feed(xyz.feed(t))
@@ -3727,8 +3746,12 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=Tru
             if "\n" not in vis.lstrip():            # no word yet, or the first line not ended
                 continue
             head = None
-        vis = guard.feed(vis) if guard else vis
-        vis = strip.feed(vis) if strip and vis else vis
+        if free and strip:                       # no try yet: the cap and the value strip go first, so the leak guard never sees (and never nudges "Not quite" over) a line they drop
+            vis = strip.feed(vis) if vis else vis
+            vis = guard.feed(vis) if guard else vis
+        else:
+            vis = guard.feed(vis) if guard else vis
+            vis = strip.feed(vis) if strip and vis else vis
         if vis:
             sent = True
             yield vis
@@ -3745,10 +3768,15 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None, closed=Tru
     if head is not None:
         vis = lamp_cut(head + vis)
         vis = vis if vis.strip() else ""
-    if guard:
-        vis = guard.feed(vis) + guard.end()
-    if strip:
+    if free and strip:
         vis = strip.feed(vis) + strip.end()
+        if guard:
+            vis = guard.feed(vis) + guard.end()
+    else:
+        if guard:
+            vis = guard.feed(vis) + guard.end()
+        if strip:
+            vis = strip.feed(vis) + strip.end()
     if vis:
         sent = True
         yield vis
@@ -3829,7 +3857,7 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
             "- a factor, a ratio, forces or terms that pull a result up or down: a Tug, one row per pull (never the net or the answer). A \"by what factor\" question gets a Tug, never a ```fig curve: each row names a change in the question's own words (\"V | box halved | up 2\"), never a fraction you worked out\n"
-            "- a step they did vs the fix: a Flip, one card per step\n"
+            "- a step they did vs the fix: a Table, columns step | you did | the fix, one row per step\n"
             "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
             "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
             "- forces, torque, motion: a ```fig scene (every force an arrow); lengths, angles, lever arms: a Geometry\n"
@@ -3838,14 +3866,13 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
             "- an algebra chain: a stepper, the broken step named in its caption\n"
             "- a proof: a Table with base | assume | prove, or a Callout per part\n"
             "- graph theory: a ```fig network of the few key nodes only, never the whole graph again\n"
-            "Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls: a Tug; a step vs its fix: a Flip; other rows: a Table or a \"- \" list.\n"
-            "Plain text in Tug and Flip cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
+            "Never a markdown pipe table (| a | b |): it shows as raw bars. Side-by-side pulls: a Tug; a step vs its fix or any other rows: a Table, or a \"- \" list.\n"
+            "Plain text in Tug cells, no $...$ (write 1/3, not \\frac13), in the question's own words or numbers; a pull size (up 3) is only a bar length.\n"
             "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
-            + _view_lines(("Tug", "Flip", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 5 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
+            + _view_lines(("Tug", "Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nA Tug row = \"label | move | direction | optional why\": the direction cell is up, down or same with its 1-9 pull size in that SAME cell (\"up 3\", never \"up | 3\"). Label 10 characters at most (a symbol or one word: V, T, speed), move 24 at most, why 60 at most. 2 to 5 rows, one per pull the question names; no row for the result, no net, no row whose label is the asked quantity. rows is one list of strings, one string per row.\nExamples:\n"
             "root = View([t])\nt = Tug([\"V | box squeezed | up 3 | Smaller box, more hits per wall.\", \"T | gas cooled | down 2\"], \"P\", \"pressure: two pulls\")\n"
             "root = View([t])\nt = Tug([\"PE | ball falls | down 3\", \"KE | speeds up | up 3\"], \"E\", \"energy trades forms\")\n"
-            "root = View([f])\nf = Flip([[\"arm of W\", \"L\", \"half of L\"]])\n"
             "root = View([t])\nt = Table([\"case\", \"before\", \"after\"], [[\"gas\", \"2 atm\", \"6 atm\"]])\n"
             "root = View([s])\ns = Steps(g, [s1, s2], null, [\"i\", \"s\"])\ng = Graph(\"i 40 40, s 160 40\", \"i>s\")\n"
             "s1 = Step(\"First test: i = 1, s = 0.\", \"i:cur\", null, null, null, null, [[\"1\", \"0\"]])\n"
@@ -3858,7 +3885,7 @@ V4_VIEWS = ("\n" + V4_FIG_POS + "VISUALS: a visual is REQUIRED in each reply to 
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
 # R6d: the letter's order (L44: "an ```openui Geometry view, else a ```fig block"): the openui lead first, then the ```fig rule
-V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```openui Tug; a step they did vs its fix, an ```openui Flip; "
+V4_FIG_FIXED = ("\nWhich fence: a factor, a ratio or pulls up and down, an ```openui Tug; a step they did vs its fix, an ```openui Table; "
                 "for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
                 "for the other kinds below, a ```fig block.\nThe ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
                 "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4 + "\n" + V4_VIEWS)
@@ -4353,6 +4380,18 @@ def hidden_values(p):
     if p.get("type") == "multi":
         return [n for u in p.get("parts", []) for n in livefig.nums(u.get("answer", ""))]
     return livefig.nums(p.get("answer", ""))
+
+
+def pre_try_lines(chunks, p):
+    """a pre-try reply (no_attempt) on the old chain, where v4_visible does not run: the same cap and answer-value strip, so no path answers before the first try"""
+    strip = LineStrip(hidden_values(p), True, True, PRE_TRY_LINES)
+    for t in chunks:
+        o = strip.feed(t)
+        if o:
+            yield o
+    o = strip.end()
+    if o:
+        yield o
 
 
 def fig_ctx(p, answer, chat=False, reveal=False):
@@ -5204,7 +5243,8 @@ def chat(cookie_header, body):
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
     pick = wish_pick(p, b)
     store = _new_store()
-    turn = cluck_begin(p, sid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd)
+    pre = no_attempt(pick)                          # before the first try (the starter chip, or any ask with no pick): a nudge, never the answer, on every path
+    turn = cluck_begin(p, sid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd; never when pre)
     def chunks():
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
         out = set()
@@ -5218,9 +5258,10 @@ def chat(cookie_header, body):
         v4 = None
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n), store=store)
-            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=turn_closed((sid, p["code"]), store=store), free=no_attempt(pick), facts=leak_facts(p, pick_done(p, units_done(p, sid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
+            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=not pre and turn_closed((sid, p["code"]), store=store), free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, sid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
-        yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
+        st = _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
+        yield from pre_try_lines(st, p) if v4 is None and pre else st
     return _relay(p, chunks, "chat", head)
 
 
