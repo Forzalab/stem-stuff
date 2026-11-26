@@ -4741,7 +4741,10 @@ def explain(cookie_header, body):
         _turn_open(p, nsid, turn[0], pick, store=store)
     reveal_without_try(p, nsid, rnd, turn, store=store)
     # F3 (desync): X-Cluck-Reveal 0|1 = this reply was written open (0) or closed / REVEAL yes (1; also unknown, no turn). The client caches only a 0
-    head = dict(head, **{"X-Cluck-Reveal": "0" if turn and not turn[1] and (no_attempt(pick) or not turn_closed((nsid, p["code"]), store=store)) else "1"})
+    # With v4 on, cluck_begin / _turn_open just wrote THIS request's newest turn row: when turn[1] is 0 that row is open (reveal 0, no lock),
+    # so turn_closed is false from the turn tuple alone, with no second turns_read. Without v4 no row is written: the stored rows decide, as before.
+    closed = turn_closed((nsid, p["code"]), store=store) if turn and not turn[1] and not v4_on() else False
+    head = dict(head, **{"X-Cluck-Reveal": "0" if turn and not turn[1] and (no_attempt(pick) or not closed) else "1"})
     if b.get("stages") is True:
         return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, on, store=store), "explain")
     return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, store=store), "explain", head)
