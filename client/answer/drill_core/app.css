@@ -37,6 +37,9 @@
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
      Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
   --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc; --ink-qnum: #7a8aae;
+  /* ONE answer-letter definition (Tony Nov 26): MC tile letter, pick-all tile letter, typed multi-part letter (.mparts .mk) all read these:
+     step 0 (16/24), 600, uppercase, dimmed like the Q-number. The type steps are declared below; a forward var() reference is fine. */
+  --ans-letter-fs: var(--fs-0); --ans-letter-lh: var(--lh-0); --ans-letter-fw: 600; --ans-letter-tt: uppercase; --ans-letter-color: var(--ink-qnum);
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
   --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
