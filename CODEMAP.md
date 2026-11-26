@@ -160,7 +160,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §trace: per-request flight-recorder trace (set_trace, trace_id, log) — open when a trace line is missing
 - §genie: Cluck genie after a wrong answer, OpenRouter stream (explain_prompt, explain_stream, graph_json, wish_pick) — open when the genie reply or its prompt is wrong
 - §claude-pipe: Claude API path, spend and cooldown (claude_params, claude_system, claude_ok, claude_spent, ReplyCut) — open when the Claude stream, cost cap or fallback acts up
-- §prompt-v4: v4 prompt (Tony's letter as system), leak guards, figure re-ask (v4_user, v4_dynamic, leak_scan, prompt_guard, fig_spec) — open when a reply leaks the answer or a figure spec is wrong
+- §prompt-v4: v4 prompt (Tony's letter as system), leak guards, figure re-ask, the pre-try nudge (v4_user, v4_dynamic, leak_scan, prompt_guard, fig_spec, PRE_TRY_LINES, PRE_TRY_RULE, pre_try_lines) — open when a reply leaks the answer or a figure spec is wrong
 - §cram-day: TEMPORARY Exam 3 guidance, subject gate, v4_stream, _cluck_stream, emoji_cut — open when cram-day guidance or the stream wrapper is wrong
 - §stage-events: the wait-step lines (stage_line, _staged_relay, explain) — open when the step list shows wrong stages
 - §note-chat: NOTE call under the box and follow-up chat (note, note_block, CLUCK_CHAT, CHAT_TURNS) — open when the note or a chat turn is wrong
