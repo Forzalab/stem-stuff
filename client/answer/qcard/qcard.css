@@ -278,6 +278,7 @@ html.ui-v7:not(.mt):not(.swap) #problem.qc7 { border-radius: var(--r-card); box-
    (was: Q-GAP 20px on phone only, which cut a raw strip through a joined multi pair). The card casts a faint shadow down into the gap and a little onto the panel
    (the card is positioned, so it paints over the panel); the multi's panel has its own rounded top (strip.css). */
 html.ui-v7:not(.mt):not(.swap) #problem.qc7 { margin-bottom: var(--s5); box-shadow: var(--lift-drop), 0 18px 24px -8px rgb(0 0 0 / .4); }
+html.ui-v7:not(.mt):not(.swap) .boxed #problem.qc7 { box-shadow: var(--lift-drop); }   /* BENTO (Tony Nov 26): a multi has no panel under the card, so no cast shadow into the gap; the 24px gap stays as the card's margin */
 html.ui-v7 #q .opt { border-radius: var(--r-tile); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
 /* rest state only: selected / pending / reveal / judged / kept / pressed keep their own shadow (pressed = none) */
 html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right):not(.wrong):not(.kept):not(:active) { box-shadow: var(--lift-drop); }

@@ -153,24 +153,31 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; heig
 /* multi-part row: B HANGING INDEX LETTER (Tony Nov 25: "B", uppercase). Two axes: 36 (card text edge) = the letter, the box edge and the grey hint; 54 = the prompt and the value
    (the 18px hang column is the box's 17.5 value inset). The letter hangs left of the prompt, on its first baseline; the box and hint start at the part's left edge.
    Prompt 17/24 400, margin-bottom 12; the letter is the part label, upper-cased here (app.js keeps the data as typed). */
-html.ui-v7 .boxed .q { padding-top: var(--s5); border-radius: var(--r-card); }   /* GAP-BAND v2: the multi panel is its own rounded surface under the card (gap --s5 24px, qcard.css) */   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
-html.ui-v7 .mparts { gap: 16px; }   /* GAP (Tony Nov 25): 24 -> 16, the next step down the 4/8/12/16/24/32 scale, so a, b, c read as one group (inside a part 12 / 8 < between parts 16 < between sections) */
+html.ui-v7 .boxed .q { padding-top: 0; background: none; box-shadow: none; border-radius: 0; }   /* BENTO (Tony Nov 26): NO panel surface, the parts sit straight on the page; the --s5 = 24px air under the qcard is the card's margin (qcard.css), not a panel pad */   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
+html.ui-v7 .mparts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4) var(--s5); align-items: start; container: mparts / inline-size; }   /* BENTO (Tony Nov 26): short parts (num / text) tile 2 across in reading order (no dense), an expr spans the row; a lone short before a long keeps its half cell */
+html.ui-v7 .mparts .part[data-t="expr"] { grid-column: 1 / -1; }
+html.ui-v7 .mparts { --part-optical: 2px; }   /* OPTICAL (Tony Nov 26): the box edge is a ~22px squircle, so its visible left edge reads ~3px right of the letter, prompt and hint glyphs that share its bbox edge; pull the box out by this much (3px overshot in a 4x crop, 2px reads flush) (text stays on the card text axis) */
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) { margin-inline-start: calc(-1 * var(--part-optical)); --ans-field: color-mix(in oklab, var(--cb-well, #060b1b) 40%, var(--card)); }   /* no panel: the well sits on the darker page, so its fill steps up (60% well + 40% page -> 40% well + 60% card; single box unchanged) */
+/* 2 columns only when a cell fits box 120 + 13.5 gap + 60 key = 193.5: cell >= 200 -> container >= 2*200 + 24 = 424px; below that ONE column */
+@container mparts (max-width: 423.98px) { html.ui-v7 .mparts .part { grid-column: 1 / -1; } }
 html.ui-v7 .mparts .part {
   /* IB-5: the third column is the part key's OUTSIDE slot (12 gap + 60 key), reserved even while the key is hidden, so the box never
      changes width as the student types. The prompt spans the key column; "ht" is declared in every template, else the empty .phint's
      undefined area adds implicit 0px columns and their gaps squeeze the row. */
-  grid-template-columns: 18px minmax(0, 1fr) 72px; grid-template-areas: "mk pr pr" "bx bx ." "hw hw hw" "ht ht ht";
+  grid-template-columns: 24px minmax(0, 1fr) 72px; grid-template-areas: "mk pr pr" "bx bx ." "hw hw hw" "ht ht ht";
   column-gap: 0; row-gap: 0; align-items: baseline;
 }
 html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk mk mk" "bx bx ." "hw hw hw" "ht ht ht"; }
-html.ui-v7 .mparts .part.nopr .mk { margin-bottom: 12px; }
+html.ui-v7 .mparts .part.nopr .mk { margin-bottom: var(--s2); }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
-html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-0)/var(--lh-0) var(--font-input); text-transform: uppercase; color: var(--ink); }
-html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
+html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-2)/var(--lh-1) var(--font-input); text-transform: uppercase; color: var(--ink); }
+html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; margin: 0 0 var(--s2); font-size: var(--fs-1); line-height: var(--lh-1); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 /* B-SHORT (Tony Nov 25): a number / text box is only as wide as its answer (6 digits + the inset + the unit room, min 120); an expression keeps the full width.
    The key follows the box (left: 100% + 13.5px), so it hangs off the short box's right edge. */
-html.ui-v7 .mparts .part:is([data-t="num"], [data-t="text"]) > .ff:not(.rbox) { justify-self: start; width: max(120px, calc(6ch + 36px)); font-size: var(--fs-2); }
+html.ui-v7 .mparts .part:is([data-t="num"], [data-t="text"]) > .ff:not(.rbox) { font-size: var(--fs-2); }
+/* BENTO invariant (Tony Nov 26): in 2-col mode a short box STRETCHES to its column (cell = box + 13.5 + 60 key), so A.left = C.left and B key right = C key right; only the 1-col fallback keeps the B-short width */
+@container mparts (max-width: 423.98px) { html.ui-v7 .mparts .part:is([data-t="num"], [data-t="text"]) > .ff:not(.rbox) { justify-self: start; width: max(120px, calc(6ch + 36px)); } }
 html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
 html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 0; font-size: var(--fs-0); line-height: var(--lh-0); }
 html.ui-v7 .mparts .part.hinted .phint { margin-top: 8px; }   /* the miss card sits 8 under the grey hint (an empty .phint adds no room: it used to carry a 12px margin, which made the gap between parts 36) */

@@ -39,6 +39,12 @@ const FILE = { v: 1, problems: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
     { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
   ] },
+  /* BENTO: a, b short (num) + c long (expr) -> row 1 [a][b], row 2 [c full] */
+  { code: "PSY_B3A", type: "multi", how: "Number only in each box.", body: T("A stone is thrown."), parts: [
+    { label: "a", prompt: "How long is it in the air?", type: "num", answer: "2.8" },
+    { label: "b", prompt: "How far does it land?", type: "num", answer: "33.4" },
+    { label: "c", prompt: "Write the height as a function of time.", type: "expr", answer: "38-4.9*t^2" },
+  ] },
   /* IB-5 uses its own multi code: the key-outside steps grade it, so the IB-1 multi step must stay untouched. */
   { code: "PSY_K1A", type: "multi", how: "Number only in each box.", body: T("Two sets, $A$ and $B$."), parts: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
@@ -1123,25 +1129,48 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const parts = [...document.querySelectorAll("#q .mparts .part")].map(p => ({ top: r(p).top, bottom: r(p).bottom, box: r(p.querySelector(".ff")), hint: p.querySelector(".phow") && { d: getComputedStyle(p.querySelector(".phow")).display, t: r(p.querySelector(".phow")).top, txt: p.querySelector(".phow").textContent } }));
       const top = document.querySelector("#q > .how");
       const cc = getComputedStyle(document.querySelector("#problem")), qc = getComputedStyle(document.querySelector("#q"));
-      return { cardBottomR: Math.min(parseFloat(cc.borderBottomLeftRadius), parseFloat(cc.borderBottomRightRadius)), panelTopR: Math.min(parseFloat(qc.borderTopLeftRadius), parseFloat(qc.borderTopRightRadius)), cardShadow: cc.boxShadow,
+      return { cardBottomR: Math.min(parseFloat(cc.borderBottomLeftRadius), parseFloat(cc.borderBottomRightRadius)), panelTopR: Math.min(parseFloat(qc.borderTopLeftRadius), parseFloat(qc.borderTopRightRadius)), cardShadow: cc.boxShadow, panelBg: qc.backgroundColor, panelShadow: qc.boxShadow,
         band: +(q.top - card.bottom).toFixed(1), parts, topHow: top ? getComputedStyle(top).display : "none" };
     });
     /* GAP-BAND v2 (Tony Nov 25, intent changed): a DELIBERATE --s5 = 24px gap, the card's shadow in it, both surfaces rounded (not a raw strip, not a joined seam) */
     assert.ok(Math.abs(m.band - 24) <= 1, `card -> answer panel gap is ${m.band}px (want 24 = --s5)`);
-    assert.ok(m.cardBottomR > 4 && m.panelTopR > 4, `both facing corners are rounded: card bottom ${m.cardBottomR}, panel top ${m.panelTopR}`);
-    assert.ok(m.cardShadow && m.cardShadow !== "none", `the card casts a shadow into the gap: ${m.cardShadow}`);
+    /* BENTO (Tony Nov 26): the answer panel has no surface of its own (no background, border, shadow); the card keeps its lift shadow but casts no 18px cast into the gap */
+    assert.ok(m.cardBottomR > 4, `the card's bottom corners stay rounded: ${m.cardBottomR}`);
+    assert.ok(m.panelBg === "rgba(0, 0, 0, 0)" && m.panelShadow === "none", `no panel surface: bg ${m.panelBg}, shadow ${m.panelShadow}`);
+    assert.ok(!/\b18px 24px\b/.test(m.cardShadow || ""), `no cast shadow into the gap: ${m.cardShadow}`);
     assert.equal(m.topHow, "none", "the shared hint no longer sits above the parts");
     for (const [i, p] of m.parts.entries()) {
       assert.ok(p.hint && p.hint.d === "block" && /Number only/.test(p.hint.txt), `part ${i} repeats the grey hint: ${JSON.stringify(p.hint)}`);
       assert.ok(p.hint.t >= p.box.bottom + 5 && p.hint.t <= p.box.bottom + 12, `part ${i}: the hint is ${(p.hint.t - p.box.bottom).toFixed(1)}px under its box (want ~8)`);
     }
-    const g = m.parts[1].top - m.parts[0].bottom;
-    assert.ok(Math.abs(g - 16) <= 1, `parts are ${g.toFixed(1)}px apart (want 16, was 24)`);
+    /* BENTO: two short parts sit side by side when the parts container is >= 424px (24px column gap), else stacked 16 apart */
+    const side = Math.abs(m.parts[1].top - m.parts[0].top) < 2;
+    const g = side ? m.parts[1].box.left - m.parts[0].box.right : m.parts[1].top - m.parts[0].bottom;
+    if (side) assert.ok(m.parts[1].box.left > m.parts[0].box.left, "a, b tile side by side in reading order");
+    else assert.ok(Math.abs(g - 16) <= 1, `parts are ${g.toFixed(1)}px apart (want 16)`);
     await go(page, "PSY_S2A");
     const s1 = await page.evaluate(() => { const b = document.querySelector("#q > .ff#ff").getBoundingClientRect(), h = document.querySelector("#q > .phow"); return { d: h && getComputedStyle(h).display, gap: h && +(h.getBoundingClientRect().top - b.bottom).toFixed(1) }; });
     assert.equal(s1.d, "block", "the single box has its grey hint");
     assert.ok(s1.gap >= 6 && s1.gap <= 10, `single: the hint is ${s1.gap}px under the box (want ~8)`);
     return `band ${m.band} / hint ${(m.parts[0].hint.t - m.parts[0].box.bottom).toFixed(1)} / parts ${g.toFixed(1)} / single ${s1.gap}`;
+  });
+  /* BENTO invariant (Tony Nov 26): 2-col mode: A.left = C.left, B key right = C key right, A + gap + B = C; 1-col below the container breakpoint (424) */
+  await step(`${w}: BENTO a,b short side by side over c long; A.left = C.left, B key right = C key right`, async () => {
+    await go(page, "PSY_B3A");
+    const m = await page.evaluate(() => {
+      const r = e => e.getBoundingClientRect(), P = [...document.querySelectorAll("#q .mparts .part")], pr = P.map(r);
+      return { cw: r(document.querySelector("#q .mparts")).width, pr, k: P.map(p => r(p.querySelector(".send"))), box: P.map(p => r(p.querySelector(".ff"))) };
+    });
+    if (m.cw >= 424) {
+      assert.ok(Math.abs(m.pr[0].top - m.pr[1].top) < 1 && m.pr[2].top > m.pr[0].bottom, "row 1 = a, b; row 2 = c");
+      assert.ok(Math.abs(m.pr[0].left - m.pr[2].left) <= .5, `A.left ${m.pr[0].left} vs C.left ${m.pr[2].left}`);
+      assert.ok(Math.abs(m.pr[1].right - m.pr[2].right) <= .5, `B cell right ${m.pr[1].right} vs C cell right ${m.pr[2].right}`);
+      assert.ok(Math.abs(m.k[1].right - m.k[2].right) <= .5, `B key right ${m.k[1].right} vs C key right ${m.k[2].right}`);
+      assert.ok(Math.abs(m.box[0].width + (m.box[1].left - m.box[0].right) + m.box[1].width - m.box[2].width) <= 1.5, "A + gap + B = C (box + gap + box)");
+      return `A.left-C.left ${(m.pr[0].left - m.pr[2].left).toFixed(2)} / Bkey.right-Ckey.right ${(m.k[1].right - m.k[2].right).toFixed(2)} / cw ${m.cw}`;
+    }
+    assert.ok(m.pr[1].top > m.pr[0].bottom && m.pr[2].top > m.pr[1].bottom, "one column under the 424 container breakpoint");
+    return `1 col (container ${m.cw})`;
   });
   await ctx.close();
 }
