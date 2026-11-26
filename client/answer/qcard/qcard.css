@@ -93,6 +93,7 @@ html.ui-v7 #problem.qc7 .md .tbl { width: fit-content; max-width: 100%; margin-i
 /* NO-FOLD (ICK PR-A, Tony Nov 17, ICK-R1 1a: the Q-HALF cap, the fold chevron and the inner scrollers are gone): the card is as tall as its text and the page scrolls it (ASK-PIN below) */
 @media (max-width: 480px) {
   html.ui-v7:not(.mt):not(.swap) #problem.qc7 { margin-bottom: 20px; }   /* Q-GAP: the answers start clearly below the card */
+  html.ui-v7:not(.mt):not(.swap) .boxed #problem.qc7 { margin-bottom: 0; }   /* GAP-BAND (Tony Nov 25): a multi's question + answers are ONE boxed pair (.boxed .p / .boxed .q); Q-GAP's 20px cut a dark band of page between them. Flush, like desktop. */
   html.ui-v7 #problem.qc7 > .blocks { font-size: var(--fs-0); line-height: var(--lh-0); }   /* Q-SMALL (Tony Nov 16) retired: body = step 0, 16/24 (TYPE-B lock) */
   html.ui-v7 #problem.qc7.qbr > .blocks > .ptitle:first-child { font-size: var(--fs-2); line-height: var(--lh-2); }
   html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle, .qhead):first-child { padding-right: calc(var(--cbw, 142px) + 20px); }
@@ -275,6 +276,7 @@ html.ui-v7 #problem#problem.qc7.qbr > .blocks { margin-top: 0; }
    set (card 20, tile 16, x1.25 where corner-shape exists: app.css) and the top bar's drop shadow (--lift-drop, no lit top), so they float like #codeChip / .pb-list /
    .pb-nav / .pb. Firefox (no corner-shape) keeps k = 1, the plain round token values. */
 html.ui-v7:not(.mt):not(.swap) #problem.qc7 { border-radius: var(--r-card); box-shadow: var(--lift-drop); }   /* the split panes (mt / swap) keep app.css's full-bleed, radius-0 card */
+html.ui-v7:not(.mt):not(.swap) .boxed #problem.qc7 { border-radius: var(--r-card) var(--r-card) 0 0; }   /* GAP-BAND: flat seam into the answer panel, no page showing at the corners */
 html.ui-v7 #q .opt { border-radius: var(--r-tile); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
 /* rest state only: selected / pending / reveal / judged / kept / pressed keep their own shadow (pressed = none) */
 html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right):not(.wrong):not(.kept):not(:active) { box-shadow: var(--lift-drop); }

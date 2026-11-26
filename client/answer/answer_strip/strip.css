@@ -90,9 +90,11 @@
 /* ground = a token scoped to these fields only. --field (18 uses in 7 files) is NOT touched. --hi / --lo are the dish + lift inks, scoped here (SOFT-LIFT §3 §4). */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox),
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) {
-  --ans-field: color-mix(in oklab, var(--card) 50%, var(--page));
+  --ans-field: color-mix(in oklab, var(--cb-well, #060b1b) 60%, var(--page));   /* SINK (Tony Nov 25): the resting box is an inset dark well, darker than the card (the older #060b1b well, a touch deeper) */
   --hi: rgb(255 255 255 / .042);
   --lo: rgb(0 0 0 / .3);
+  --ib-edge: color-mix(in srgb, var(--line) 40%, transparent);   /* SINK: the soft resting edge (was the solid --line, 3.25:1) */
+  --ib-well: inset 0 2px 5px rgb(0 0 0 / .5), inset 0 -1px 0 var(--hi);   /* the faint inner shadow; focus keeps it under the lift */
   box-sizing: border-box; height: 60px; padding: 0 17.5px; gap: 8px; align-items: baseline;
 }
 /* the REST skin only. Judged (.ok/.bad), cue (out of tries) and the reveal pill (.rbox) keep the live verdict skin from verdict-v7.css:
@@ -100,9 +102,9 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) {
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) {
   background: var(--ans-field);
-  border: 1.5px solid var(--line);   /* IB-1 edge: the SOLID --line. 87% was 2.99 page / 2.76 card / 2.91 field (under 3:1); solid = 3.64 / 3.25 / 3.49 */
+  border: 1.5px solid var(--ib-edge);   /* SINK (Tony Nov 25): a soft, low-contrast edge; the dark well carries the field */
   border-radius: calc(18px * var(--r-k));
-  box-shadow: inset 1px 1px 3px var(--lo), inset -1px -1px 3px var(--hi);
+  box-shadow: var(--ib-well);
   transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);   /* IB-2: the lift eases home on blur; hover keeps its instant edge */
 }
 @supports (corner-shape: superellipse(2)) {
@@ -148,44 +150,45 @@ html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; heig
 
 /* multi-part row: 24px module (gap 24, no hairline between parts), 36px letter column + 12 gutter, baseline-aligned letter / prompt / box.
    Prompt 17/24 400, margin-bottom 12; hint 17/24, margin-top 12; the letter is bare "a" (app.js, ui-v7 only) at 40/24 in the app display face. */
-html.ui-v7 .mparts { gap: 24px; }
+html.ui-v7 .boxed .q { padding-top: var(--s4); }   /* the grey hint no longer rides above the parts: air between the card seam and part a (the old 4px + hint line) */
+html.ui-v7 .mparts { gap: 16px; }   /* GAP (Tony Nov 25): 24 -> 16, the next step down the 4/8/12/16/24/32 scale, so a, b, c read as one group (inside a part 12 / 8 < between parts 16 < between sections) */
 html.ui-v7 .mparts .part {
   /* IB-5: the third 60px column is the part key's OUTSIDE slot, reserved even while the key is hidden, so the box never
      changes width as the student types (the mock reserves the single key's slot the same way). The prompt spans the key
      column (mock: the phone prompt is the full text width, the key hangs off the field only); "ht" is declared in every
      template, else the empty .phint's undefined area adds implicit 0px columns and their gaps squeeze the row. */
-  grid-template-columns: 36px minmax(0, 1fr) 60px; grid-template-areas: "mk pr pr" ". bx ." ". ht ht";
+  grid-template-columns: 36px minmax(0, 1fr) 60px; grid-template-areas: "mk pr pr" ". bx ." ". hw hw" ". ht ht";
   column-gap: 12px; row-gap: 0; align-items: baseline;
 }
-html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx ." ". ht ht"; }
+html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx ." ". hw hw" ". ht ht"; }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
 html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--t-2xl)/24px var(--font-title); letter-spacing: -.04em; color: var(--ink); }
 html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 html.ui-v7 .mparts .mk-p { display: none; }   /* the DOM keeps ")" for the flag-off page and a late ui-v7 toggle */
-html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 12px; font-size: var(--fs-0); line-height: var(--lh-0); }
+html.ui-v7 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: 8px; margin-top: 0; font-size: var(--fs-0); line-height: var(--lh-0); }
+html.ui-v7 .mparts .part.hinted .phint { margin-top: 8px; }   /* the miss card sits 8 under the grey hint (an empty .phint adds no room: it used to carry a 12px margin, which made the gap between parts 36) */
+/* HINT UNDER THE BOX (Tony Nov 25): the shared grey "how" line is repeated under EACH box (single + every multi part); the top .how is the flag-off copy.
+   The two copies never show together. The schema has no per-part how / type yet: queued. */
+.phow { display: none; }
+html.ui-v7 #q .phow { display: block; margin: 8px 0 0; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); }
+html.ui-v7 .mparts .phow { grid-area: hw; min-width: 0; }
+html.ui-v7 #q:has(> .phow, > .mparts .phow) > .how:not(.phow) { display: none !important; }
 @media (min-width: 900px) {
   /* IB-5: a field that fills the row (1fr; Tony Nov 25, was a 400px cap) + its own 60px key column on the same row (SOFT-LIFT §13).
      The prompt is fit-content(40%): its own text width, never over 40% of the row, so the field keeps the rest. The hint row is
      always declared (empty .phint = 0 height) for the same implicit-column reason as the phone template. */
-  html.ui-v7 .mparts .part { grid-template-columns: 36px fit-content(40%) minmax(0, 1fr) 60px; grid-template-areas: "mk pr bx ." ". ht ht ."; }
+  html.ui-v7 .mparts .part { grid-template-columns: 36px fit-content(40%) minmax(0, 1fr) 60px; grid-template-areas: "mk pr bx ." ". . hw ." ". ht ht ."; }
   /* the grid baseline is the flex box's, not the replaced input's text baseline: the value sat 4.5px low (measured
      1280, 28/54 input vs 17/24 prompt). Lift the field so the VALUE joins the letter/prompt line; the relative top
      moves paint only, so the grid row and the letter/prompt stay put. */
   html.ui-v7 .mparts .part > .ff { top: -4.5px; }
-  html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx ." ". ht ht ."; }
+  html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk bx bx ." ". hw hw ." ". ht ht ."; }
+  html.ui-v7 #q .mparts .phow { margin-top: 3.5px; }   /* the field paints 4.5px above its row (top: -4.5px): 3.5 + 4.5 = the same 8 under the box */
   html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { padding-top: 0; }
   html.ui-v7 .mparts .pr { margin: 0; }   /* letter, prompt and VALUE share one baseline: the field's own top/margin is set by the grid */
-  /* IB-7 (Tony Nov 25): the hint card sits SNUG under the box, like the mock (12). The row is as tall as the TALLER of prompt
-     and field; the field's -4.5px paint shift is not in the row, so the prompt's wrapped last line is already 12.4px below the
-     box's painted bottom. The hint's old 12px margin was added on top of that (24.4 gap). A HINTED part drops the margin: the
-     card lands on the mock's 12 under the box, flush under the prompt's last line. An unhinted part keeps its old room, and the
-     phone template (prompt above the field) keeps its 12. */
-  html.ui-v7 .mparts .part.hinted .phint { margin-top: 0; }
-  /* The field no longer sets the row's other half: with a 1fr field the prompt is one short line (24px), so the row is
-     the FIELD's height and the card sat only 4.5px under its painted bottom (the -4.5px shift). The hinted field keeps
-     7.5px of its own room below (7.5 + 4.5 = 12), so a one-line prompt lands on the same 12 as a wrapped one. */
-  html.ui-v7 .mparts .part.hinted > .ff { margin-bottom: 7.5px; }
+  /* IB-7 (multi, rewritten Nov 25): the box is followed by its grey hint (.phow, 8 under the painted box) and the miss card sits 8 under
+     that (the 12px / 7.5px compensations for a card directly under the box are gone). */
 }
 
 /* ===== IB-2 SOFT LIFT, FOCUS + TYPING (Tony Nov 24; SOFT-LIFT-SPEC §4; mock PICK-soft-lift.src.html). html.ui-v7 only.
@@ -200,7 +203,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
   border: 1.5px solid color-mix(in srgb, var(--action) 75%, transparent);
   border-radius: calc(18px * var(--r-k));
   transform: scale(1.014);
-  box-shadow: inset 0 1px 0 var(--hi), 0 0 0 .5px var(--hi), 0 2px 4px var(--lo), 0 12px 26px -8px var(--lo);
+  box-shadow: inset 0 1px 0 var(--hi), inset 0 3px 6px -2px rgb(0 0 0 / .45), 0 0 0 .5px var(--hi), 0 2px 4px var(--lo), 0 12px 26px -8px var(--lo);   /* SINK: the lift keeps the inset well fill + a faint inner shadow */
   transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1), border-color 320ms cubic-bezier(.22,.61,.36,1);
 }
 @supports (corner-shape: superellipse(2)) {
@@ -225,7 +228,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
   html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within {
     transform: none;
-    box-shadow: inset 1px 1px 3px var(--lo), inset -1px -1px 3px var(--hi);
+    box-shadow: var(--ib-well);
     transition: none;
   }
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2],
@@ -256,7 +259,7 @@ html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbo
 html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) {
   transform: scale(.986);
   box-shadow: inset 2px 3px 7px var(--lo), inset -1px -1px 3px var(--hi);
-  border-color: var(--line);   /* the box sank: the edge is the RESTING solid --line, not IB-2's focus --action */
+  border-color: var(--ib-edge);   /* the box sank: the edge is the RESTING soft edge, not IB-2's focus --action */
   outline: none;                                                     /* and no keyboard focus-visible ring: SPEC §6, the mock shows the aurora only */
   transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);
 }
