@@ -287,7 +287,10 @@
       const n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
       head.append(n, h("span", "rp-label", st.label));
-      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) head.append(h("span", "rp-val", shown(s)));
+      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) {
+        const v = h("span", "rp-val", shown(s));                                  // ui-v7: the right value is the welcome ladder's green verdict chip (glyph = the chip's tick; the row-end .rp-ok is hidden)
+        v.insertAdjacentHTML("beforeend", mark("i-ok")); head.append(v);
+      }
       if (s.state === "done" && !s.skipped) head.append(h("span", "rp-ok", "✓"));
       li.append(head);
       if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
@@ -313,7 +316,7 @@
     function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
       const box = h("div", "rp-solved"), a = h("p", "rp-a");
       if (item.stem) box.append(h("p", "rp-stem", item.stem));
-      if (solved.wrong != null) a.append(h("del", "rp-wrong", solved.wrong), " ");
+      if (solved.wrong != null) { const d = h("del", "rp-wrong", solved.wrong); d.insertAdjacentHTML("beforeend", mark("i-x")); a.append(d, " "); }   // ui-v7: the red verdict chip
       a.append(h("span", "rp-ans", solved.answer));
       box.append(a);
       return box;

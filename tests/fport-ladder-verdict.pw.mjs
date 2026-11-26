@@ -113,10 +113,31 @@ try {
         assert.equal(bg, "rgb(6, 11, 27)", "the ladder card sits on --cb-well");
         await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=1');              // a wrong tap: the hint card
         const hint = await page.waitForSelector("#q section.wl .rp-miss:not([hidden])", { state: "visible", timeout: 6000 });
-        const hw = await hint.evaluate(e => ({ w: e.getBoundingClientRect().width, row: e.parentElement.getBoundingClientRect().width, c: getComputedStyle(e).color }));
+        /* the live hint is a random line (CI drew a long one that fills the row), so the shrink-wrap is asserted on a short probe card in the same ladder */
+        const hw = await hint.evaluate(e => {
+          const p = e.cloneNode(true); p.querySelector(".hintcard-t").textContent = "Hmm"; p.removeAttribute("aria-live"); e.after(p);
+          const out = { w: p.getBoundingClientRect().width, row: p.parentElement.getBoundingClientRect().width, c: getComputedStyle(e).color }; p.remove(); return out;
+        });
         assert.ok(hw.w < hw.row - 8, "the hint card wraps its text, not the row: " + JSON.stringify(hw));
-        assert.notEqual(hw.c, "rgb(243, 247, 252)", "the hint text is tinted toward the card's hue");
+        assert.ok(!/^(rgb\(243, 247, 252\)|color\(srgb 0\.9529)/.test(hw.c), "the hint text is tinted toward the card's hue: " + hw.c);
         await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=0');
+        /* LADDER-UNIFY: no row-end tick (the chip carries the verdict); a collapsed repair row's value is the same green chip as the picked welcome chip, wrong = the red chip */
+        const uni = await page.evaluate(() => {
+          const okShown = [...document.querySelectorAll("#q section.wl .rp-ok")].filter(e => getComputedStyle(e).display !== "none").length;
+          const picked = document.querySelector("#q section.wl .rp-locked .rp-chip.rp-picked"), tried = document.querySelector("#q section.wl .rp-chip.rp-tried");
+          const probe = document.createElement("section"); probe.className = "rp";
+          probe.innerHTML = '<ol class="rp-steps"><li class="rp-step" data-state="done"><div class="rp-head"><span class="rp-n">1</span><span class="rp-label">q</span><span class="rp-val">y</span><span class="rp-ok">\u2713</span></div></li></ol><div class="rp-solved"><p class="rp-a"><del class="rp-wrong">w</del></p></div>';
+          document.querySelector("#q").append(probe);
+          const g = (e, p) => getComputedStyle(e)[p], v = probe.querySelector(".rp-val"), x = probe.querySelector(".rp-wrong");
+          const out = { okShown, probeOk: g(probe.querySelector(".rp-ok"), "display"), val: [g(v, "backgroundColor"), g(v, "borderTopLeftRadius"), parseFloat(g(v, "minHeight"))], wrong: [g(x, "backgroundColor"), g(x, "borderTopLeftRadius")],
+            picked: picked && [g(picked, "backgroundColor"), g(picked, "borderTopLeftRadius")], tried: tried && [g(tried, "backgroundColor"), g(tried, "borderTopLeftRadius")] };
+          probe.remove(); return out;
+        });
+        assert.equal(uni.okShown, 0, "a row-end tick is still shown: " + JSON.stringify(uni));
+        assert.equal(uni.probeOk, "none");
+        assert.deepEqual(uni.val.slice(0, 2), uni.picked, "a done value is not the green verdict chip: " + JSON.stringify(uni));
+        assert.ok(uni.val[2] >= 44, "value chip under 44px");
+        assert.deepEqual(uni.wrong, uni.tried, "a wrong value is not the red verdict chip: " + JSON.stringify(uni));
         const inp = await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-in', { state: "visible", timeout: 6000 });
         await settled(page, "#q section.wl");
         const read = () => page.evaluate(() => {
@@ -150,9 +171,13 @@ try {
         // type into the Final-answer path: pick a chip, the next step's input appears; focus ring is an outline, not a border
         await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip');
         const inp = await page.waitForSelector("#q section.wl .rp-in", { state: "visible", timeout: 6000 });
+        /* LADDER-FIELD: the field is the typed answer box (1.5px soft edge); the input inside is bare, and focus moves the FIELD's edge to the action blue (no ring on the input) */
+        const edge = () => page.evaluate(() => { const e = document.querySelector("#q section.wl .rp-in"), cs = getComputedStyle(e), fc = getComputedStyle(e.closest(".rp-field")); return { bw: cs.borderTopWidth, ow: cs.outlineStyle, fbw: fc.borderTopWidth, fcol: fc.borderTopColor }; });
+        await inp.evaluate(e => e.blur()); const rest = await edge();
         await inp.focus();
-        const f = await page.evaluate(() => { const e = document.querySelector("#q section.wl .rp-in"), cs = getComputedStyle(e); return { bw: cs.borderTopWidth, ow: cs.outlineWidth, os: cs.outlineStyle }; });
-        assert.deepEqual(f, { bw: "0px", ow: "2px", os: "solid" }, "focused input: 2px ring only");
+        const f = await edge();
+        assert.deepEqual([f.bw, f.ow, parseFloat(f.fbw) >= 1], ["0px", "none", true], "focused input: bare, the field keeps its edge (1.5px, device-snapped): " + JSON.stringify(f));
+        assert.notEqual(f.fcol, rest.fcol, "focus did not move the field's edge: " + JSON.stringify([rest, f]));
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });

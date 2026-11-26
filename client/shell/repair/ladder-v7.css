@@ -21,11 +21,11 @@ html.ui-v7 .rp .rp-chip, html.ui-v7 section.wl .rp .rp-chip { border: 0; border-
 html.ui-v7 .rp .rp-chip:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--chip) 82%, var(--ink)); }
 html.ui-v7 .rp .rp-skip { border: 0; background: none; color: var(--muted); }
 /* not answerable yet: the chip blended into the card (the fill says "not yet", the dash goes), words stay readable */
-html.ui-v7 section.wl .rp .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border: 0; background: color-mix(in srgb, var(--chip) 40%, var(--rp-bg)); color: var(--muted); }
+html.ui-v7 .rp .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border: 0; background: color-mix(in srgb, var(--chip) 40%, var(--rp-bg)); color: var(--muted); }
 /* done step: the pick keeps a lit fill, the rest sink into the card with dim text (5.3:1 on navy-800) */
-html.ui-v7 section.wl .rp .rp-locked .rp-chip { border: 0; background: var(--rp-bg); color: var(--dim); }
-html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-picked { border: 0; background: var(--action-fill); color: var(--action-on); }
-html.ui-v7 section.wl .rp .rp-locked .rp-in { border: 0; color: var(--ink); }
+html.ui-v7 .rp .rp-locked .rp-chip { border: 0; background: var(--rp-bg); color: var(--dim); }
+html.ui-v7 .rp .rp-locked .rp-chip.rp-picked { border: 0; background: var(--action-fill); color: var(--action-on); }
+html.ui-v7 .rp .rp-locked .rp-in { border: 0; color: var(--ink); }
 
 /* the Final answer input: a recessed well, no edge; the 2px focus ring is the only outline */
 html.ui-v7 .rp .rp-in, html.ui-v7 section.wl .rp .rp-in { border: 0; border-radius: 12px; background: var(--page); box-shadow: var(--well), inset 0 0 0 1px var(--rp-edge); color: var(--ink); }
@@ -55,7 +55,7 @@ html.ui-v7 .rp .rp-locked .rp-chip:not(.rp-picked):not(.rp-tried), html.ui-v7 se
 html.ui-v7 .hintcard { display: flex; align-items: flex-start; gap: var(--s2); box-sizing: border-box; margin: var(--s2) 0 0; padding: var(--s2) var(--s3);
   border-radius: 12px; background: var(--hint-fill); color: var(--ink); }
 html.ui-v7 .hintcard[hidden] { display: none; }
-html.ui-v7 .hintcard-ico { display: block; flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--hint-edge); }
+html.ui-v7 .hintcard-ico { display: block; flex: none; width: 20px; height: 20px; margin-top: calc((1lh - 20px) / 2 - 0.4px); color: var(--hint-edge); }
 html.ui-v7 .hintcard-t { min-width: 0; }
 
 /* LADDER-TYPE (Tony Nov 26: "change the ladder wrong-step CTA text to a better colour and font, and I mean ALL the ladder box"): the type + colour pass, ui-v7 only.
@@ -80,10 +80,6 @@ html.ui-v7 .rp .rp-step[data-state="active"] .rp-label { font-weight: var(--w-em
    :active scale(.96), empty = dimmed .35 + inert, busy = .55. The word stays as the accessible name (visually hidden). The unit sits INSIDE the box at its right edge (the typed
    .unit role: Atkinson 16 muted). The field is 60px tall like the typed box. Reduced motion: no scale. */
 html.ui-v7 .rp .rp-num { flex-wrap: nowrap; gap: 13.5px; align-items: center; }
-html.ui-v7 .rp .rp-field { display: inline-flex; position: relative; align-items: center; min-width: 0; }
-html.ui-v7 .rp .rp-field .rp-in { height: 60px; min-height: 60px; border-radius: calc(18px * var(--r-k)); }
-html.ui-v7 .rp .rp-field:has(.rp-unit) .rp-in { padding-right: 3.5rem; }
-html.ui-v7 .rp .rp-field .rp-unit { position: absolute; right: var(--s4); top: 50%; transform: translateY(-50%); pointer-events: none; font: 400 var(--fs-0)/1 var(--font-input); color: var(--muted); }
 html.ui-v7 .rp .rp-check { display: grid; place-items: center; flex: none; width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0; border: 0;
   border-radius: calc(18px * var(--r-k)); background: var(--chip); color: var(--ink); box-shadow: none; transition: none; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-check { corner-shape: superellipse(1.52); } }
@@ -99,3 +95,35 @@ html.ui-v7 .rp .rp-ghost .rp-check:disabled { opacity: 1; }                     
 /* LADDER-HINT (Tony Nov 26): the hint card inside the ladder wraps its text (shrink-to-fit, long hints still wrap at the row), and its text is the ink a touch toward the card's
    warm hue (ink 76% + --help-on 24%) so the words belong to the box. Scoped to .rp: the site-wide .hintcard is unchanged. */
 html.ui-v7 .rp .hintcard { width: fit-content; max-width: 100%; color: color-mix(in srgb, var(--ink) 76%, var(--help-on)); }
+
+/* LADDER-UNIFY (Tony Nov 26: "unify the ladder with the WELCOME ladder styling ... correct / wrong answers show as chips too"): ONE look for both variants. An answered value is the
+   welcome ladder's verdict chip (the .rp-val of a collapsed repair row = the green "right" chip + tick, same tokens / 44px / 12px radius as .rp-chip.rp-picked; the wrong try of a
+   solved card = the red "wrong" chip + cross), on its own line under the label at the body indent, KaTeX inside the chip too. The chip is the single verdict mark: the row-end tick
+   (.rp-ok, both variants) is gone. The ghost / locked / picked rules above are shared by both variants (were section.wl only). */
+html.ui-v7 .rp .rp-ok { display: none; }
+html.ui-v7 .rp .rp-head:has(.rp-val) .rp-label { flex-basis: 100%; }
+html.ui-v7 .rp .rp-val, html.ui-v7 .rp .rp-wrong { display: inline-flex; align-items: center; gap: var(--s2); box-sizing: border-box; min-height: 44px; margin: var(--s1) 0 0 calc(1.25rem + var(--s2)); padding: var(--s1) var(--s3);
+  border-radius: 12px; text-decoration: none; }
+html.ui-v7 .rp .rp-val { background: var(--mc-right); color: var(--correct-on); }
+html.ui-v7 .rp .rp-wrong { background: var(--mc-wrong); color: var(--wrong-on); margin-left: 0; }
+html.ui-v7 .rp :is(.rp-val, .rp-wrong) .rp-vg { margin: 0; }
+html.ui-v7 .rp .rp-step[data-state] .rp-val { color: var(--correct-on); }
+
+/* LADDER-FIELD (Tony Nov 26: "move the unit text into the box, SAME STYLE as the input box and the multi box too"): the number step's field IS the typed answer box (strip.css IB-1 / SINK,
+   read-only here; its tokens are scoped to #q .ff so the same three formulas are restated): 60px sink well, soft --line 40% 1.5px edge, 18px squircle, padding 0 17.5, gap 8, baseline row;
+   the value is Atkinson 600 --fs-2 25px tabular; the unit is the .unit role (Atkinson 400 --fs-0 16/1, --muted) as the row's last flex item, i.e. pinned at the right inside the padding.
+   Focus = the 75% --action edge (no lift). The input itself is bare (no fill, edge, ring). */
+html.ui-v7 .rp .rp-field { --ans-field: color-mix(in oklab, var(--cb-well, #060b1b) 60%, var(--page)); --ib-edge: color-mix(in srgb, var(--line) 40%, transparent);
+  --ib-well: inset 0 2px 5px rgb(0 0 0 / .5), inset 0 -1px 0 rgb(255 255 255 / .042);
+  display: flex; align-items: baseline; gap: 8px; box-sizing: border-box; flex: 0 1 16rem; min-width: 0; height: 60px; padding: 0 17.5px; background: var(--ans-field);
+  border: 1.5px solid var(--ib-edge); border-radius: calc(18px * var(--r-k)); box-shadow: var(--ib-well); }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-field { corner-shape: superellipse(1.52); } }
+html.ui-v7 .rp .rp-field:focus-within { border-color: color-mix(in srgb, var(--action) 75%, transparent); }
+html.ui-v7 .rp .rp-field > .rp-in.rp-in { flex: 1 1 auto; min-width: 0; width: auto; height: 54px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: 0;
+  font-family: var(--font-input); font-size: var(--fs-2); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+html.ui-v7 .rp .rp-field > .rp-in.rp-in::placeholder { color: transparent; }
+html.ui-v7 .rp .rp-field > .rp-unit { flex: none; font: 400 var(--fs-0)/1 var(--font-input); color: var(--muted); }
+
+/* LADDER-SHORT (CI calc-toast 360x640): the docked calc toast needs room under the ladder. The 60px typed-answer field + key (LADDER-FIELD) cost 16px over the old 44px row, so on a short
+   viewport the step rows give back 8px each (12 -> 8 vertical padding) instead of the field shrinking away from the typed box. */
+@media (max-height: 700px) { html.ui-v7 .rp-step, html.ui-v7 section.wl .rp-step { padding: var(--s2) 0; } }
