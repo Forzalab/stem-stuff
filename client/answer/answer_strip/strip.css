@@ -292,8 +292,10 @@ html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(
    under the same static 3.5px mask; only their transform rotates (WAAPI, built per field in strip.js). A is the frozen aurora arc; B and
    C are the two closing arcs (172.8deg + the last 15.48deg), their extra tail always covered by the layer behind, so the union is one
    unbroken, growing arc. The ring STAYS as the final outline for right and wrong; the real .ff border is never recoloured (§0.3). The
-   tick / cross waits for the close and fades .25s (strip.js adds .ib4-done on the finished promise). Reduced motion: the same layers
-   at their final rotations, no motion. ===== */
+   tick / cross waits for the close, then DRAWS on (stroke-dashoffset, pathLength 1: tick .24s, the cross 2 x .14s in sequence) with a
+   subtle .9 -> 1 scale (strip.js adds .ib4-done on the finished promise). A live verdict that beat the 150 ms aurora sweeps too, from
+   the arc start; a RESTORED verdict stays still. Reduced motion: the same layers at their final rotations, the icon shown with no draw
+   or scale. ===== */
 html.ui-v7 #q .ib4-ring {
   position: absolute; z-index: 2; inset: -1.5px; border-radius: calc(18px * var(--r-k) + 1.5px); corner-shape: inherit;   /* concentric: box radius + the 1.5px outset (was inherit, a tighter ring corner) */
   padding: 3.5px; pointer-events: none; overflow: hidden;
@@ -309,11 +311,18 @@ html.ui-v7 #q .ib4-arc {
 html.ui-v7 #q .ib4-a { background: conic-gradient(from 0deg, var(--ib4-c) 0 48.3%, transparent 48.3%); }   /* 173.88deg: the frozen aurora arc */
 html.ui-v7 #q .ib4-b { background: conic-gradient(from 0deg, var(--ib4-c) 0 48%, transparent 48%); }       /* 172.8deg: the first close */
 html.ui-v7 #q .ib4-c { background: conic-gradient(from 0deg, var(--ib4-c) 0 4.3%, transparent 4.3%); }     /* 15.48deg: the last close */
-/* the verdict icon waits for the ring: hidden while the sweep runs, fading .25s once strip.js marks the field done */
+/* the verdict icon waits for the ring: hidden while the sweep runs, then DRAWS on. The tick (1 path) draws in .24s; the cross's two
+   strokes run in sequence, .14s each (pathLength="1" on app.js IB1_V = dash units are one path). The scale uses the independent
+   `scale` property: the .vk's transform is its vertical centring (verdict-v7.css) and must not be overwritten. */
 html.ui-v7 #q .ff[data-ib4="sweep"]:not(.ib4-done) > .vk { opacity: 0; }
-html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk { animation: ib4-fade .25s ease-out both; }
+html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk { animation: vk-in .24s cubic-bezier(.22,.61,.36,1) both; }
+html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk svg path { stroke-dasharray: 1; stroke-dashoffset: 0; animation: vk-draw .24s ease-out both; }
+html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk[data-v="i-x"] svg path { animation-duration: .14s; }
+html.ui-v7 #q .ff[data-ib4="sweep"].ib4-done > .vk[data-v="i-x"] svg path + path { animation-delay: .14s; }
 html.ui-v7 #q .ff[data-ib4="still"] > .vk { opacity: 1; animation: none; }
-@keyframes ib4-fade { from { opacity: 0; } to { opacity: 1; } }
+html.ui-v7 #q .ff[data-ib4="still"] > .vk svg path { animation: none; stroke-dashoffset: 0; }
+@keyframes vk-in { from { opacity: 0; scale: .9; } to { opacity: 1; scale: 1; } }
+@keyframes vk-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 /* IB-7 (Tony Nov 25): the miss hint sits SNUG under the typed box, like the mock (12px). The single typed answer keeps a one-line
    preview room (#preview, app.css W91) between the field and #fb; on a miss it is EMPTY, so it only pushed the card down (its 4px
    margin + the 1.5em line, ~26.5/29.5px). With a card up it folds; a card only, the single typed field only: MC, proof and flag
@@ -325,6 +334,7 @@ html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
 html.ui-v7 .mparts .phint .cluck { animation: ib4-pop .3s cubic-bezier(.22,.61,.36,1) both; }
 @media (prefers-reduced-motion: reduce) {
   html.ui-v7 #q .ff[data-ib4] > .vk { animation: none; opacity: 1; }
+  html.ui-v7 #q .ff[data-ib4] > .vk svg path { animation: none; stroke-dashoffset: 0; }
   html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
   html.ui-v7 .mparts .phint .cluck { animation: none; }
 }

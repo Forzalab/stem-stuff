@@ -155,8 +155,8 @@ addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt())
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 /* IB-1 (Tony Nov 24): under ui-v7 the typed tick/cross sit on the mock's ONE 24px grid, stroke 2.25 (the sprite's is 2); flag off keeps the sprite. */
 const IB1_V = {
-  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l12 12M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M7 6l12 12" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/><path pathLength="1" d="M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 /* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
 // feel-better: a press on the rim of a typed box (the input is 54 tall inside a 60px field, 17.5px side pad) still focuses its input
@@ -704,13 +704,17 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
 let busy = false;    // a grading request is out (MC and typed answers)
 /* the wait is shown (Tony, Nov 17: "no animation denoting it is waiting"): html.grading while a request is out, 150 ms late so an
    on-device grade (instant) never flashes it. app.css "grading wait" dims the Check button and spins a ring in it. One place: setBusy. */
-let busyT = 0, busyRow = null;
+let busyT = 0, busyRow = null, liveEl = null, liveT = 0;
 function setBusy(v, row) {   // row: a multi-part item's own part (only its Check spins, not every part's)
   busy = v; clearTimeout(busyT); busyT = 0;
   const H = document.documentElement;
   if (busyRow) busyRow.classList.remove("g-on");
   busyRow = v && row ? row : null;
   if (busyRow) busyRow.classList.add("g-on");
+  /* IB-4: a live check marks its field's row (multi) or the page (single / mc) so strip.js tells a live verdict from a restore.
+     The mark is removed one task later, after strip.js's MutationObserver microtask has seen the verdict; it is never a visible state. */
+  if (v) { const el = row || H; if (liveEl && liveEl !== el) liveEl.removeAttribute("data-check-live"); clearTimeout(liveT); liveEl = el; el.setAttribute("data-check-live", ""); }
+  else if (liveEl) { const el = liveEl; liveEl = null; liveT = setTimeout(() => el.removeAttribute("data-check-live"), 0); }
   if (v) busyT = setTimeout(() => H.classList.add("grading"), 150); else H.classList.remove("grading");
 }
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
