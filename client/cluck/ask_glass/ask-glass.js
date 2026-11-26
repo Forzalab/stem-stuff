@@ -323,7 +323,8 @@ function attach(sc) {
   }, { passive: true });
   new MutationObserver(() => { const s = sc._ag; if (s && s.form.isConnected) later(s); }).observe(sc, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'hidden'] });
 }
-const thinking = (s) => !s.locked && !!s.cl && (s.cl.classList.contains('wbusy') || !!s.cl.querySelector('.wtext.wrun'));
+const thinking = (s) => !!s.cl &&   // the locked strip thinks too (the free starter chip sends before the first try): the CSS ring + glow only, no lens light there (thinkSet)
+   (s.cl.classList.contains('wbusy') || !!s.cl.querySelector('.wtext.wrun'));
 /* rebuild the copy at most every ~120 ms while Cluck streams (40 ms otherwise); the filter stays on .g-copy, so a new copy needs no new lens */
 /* CLUCK-SHEET-LAG: a class / data-state change on .cl (a drag or settle) is not a content change: it only asks for a cheap check (stateOnly -> s.chk), and the copy is rebuilt
    only when the reply changed (s.dirty, set by the content observer) or the measured box moved (sigOf != s.sig). Before, every drag end cloned the whole reply for nothing. */
@@ -489,12 +490,12 @@ function setLocked(form, locked) {
    compositor layers (ask-glass.css): no gradient angle is animated. */
 const setMap = (img, url) => { img.setAttribute('href', url); img.setAttributeNS(XLINK, 'xlink:href', url); };
 function thinkSet(s, on) {
-  on = !!on && !s.locked;
+  on = !!on;
   if (on) { clearTimeout(s.mt); s.mt = 0; s.mv = false; }   // thinking owns .g-copy: a scroll's 1-pass filter and its 150 ms restore never outlive the light
   if (on === s.thinkOn && on === s.form.classList.contains('think')) return;
   s.thinkOn = on; s.form.classList.toggle('think', on);
   cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen); clearInterval(s.clock); s.clock = 0;
-  if (!s.img) return;                                     // no lens (solid, frost, hidden): the CSS light is all there is
+  if (!s.img || s.locked) return;                         // no lens (solid, frost, hidden) or the locked strip: the CSS ring + glow is all there is
   const rb = s.img.parentNode, bid = rb.id, fb = (s.gl && s.gl.mid && document.getElementById(s.gl.mid)) || rb, drop = () => { (s.fids || []).forEach((id) => { const c = document.getElementById(id); if (c) c.remove(); }); s.fids = []; };
   drop();
   if (!on) { if (s.copy) s.copy.style.filter = `url(#${bid})`; return; }

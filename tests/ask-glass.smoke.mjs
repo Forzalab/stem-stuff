@@ -5,6 +5,7 @@
 //   (iii) after a graded try the bar is 56px (radius 20, desktop width <= 560) and the input is enabled
 //   (iv)  typing sets the send button .on (the tangerine circle), clearing takes it off
 //   gecko Firefox UA (engine 'gecko'): no lens, no copy of the reply, the bar is ag-frost (backdrop-filter blur(16px) saturate(1.5)); gate dim keeps ag-solid
+//   think from the tap on a send (the locked strip's free starter chip AND the ready bar) until the first reply text, the bar wears the thinking sign (.think: ring opacity > .5 + glow), in lens / frost (gecko UA) / solid (fx-dim) and reduced motion
 //   off   without ?ui=v7 nothing of the glass bar exists
 //   repro the bug-log repro, RED on origin/main (button data-st="first" while the desktop Cluck box is open before a try), GREEN here:   node tests/ask-glass.smoke.mjs 8890 repro
 // Own serve.py + a throwaway bank; /explain and /chat are stubbed in the page (no LLM).   node tests/ask-glass.smoke.mjs [port] [repro]
@@ -89,7 +90,7 @@ for (const w of [390, 1280]) {
       const b = await btn(page); assert.equal(b.why, "", "a note: " + b.why); assert.equal(b.label, "Ask Cluck");
       await page.click("#cluckBtn"); await page.waitForSelector(FORM, { state: "visible", timeout: 8000 }); await settled(page, "#cluck");
       const f = await form(page); assert.ok(f.locked, "the bar is not locked"); assert.equal(f.txt, "Available after your first try.");
-      assert.ok(Math.abs(f.h - 44) <= 1.5, "strip height " + f.h); assert.ok(Math.abs(f.rad - 14) <= .5, "strip radius " + f.rad); assert.equal(f.disabled, true, "the field is not disabled");
+      assert.ok(Math.abs(f.h - 44) <= 1.5, "strip height " + f.h); assert.ok(Math.abs(f.rad - (w >= 720 ? 16 : 14)) <= .5, "strip radius " + f.rad)   // desktop side column: 16 (concentric with the 28 column + 12 inset); assert.equal(f.disabled, true, "the field is not disabled");
       assert.equal(await page.evaluate(sel => { const t = document.querySelector(sel); t.focus(); return document.activeElement === t; }, TA), false, "the locked field took focus");
       assert.equal(page.explains, 0, "an /explain call before a try");
       if (w >= 720) assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("cl-starter")), true, "the press did not focus the chip");
@@ -127,7 +128,7 @@ for (const w of [390, 1280]) {
     try {
       await wrongTry(page, w);
       const f = await form(page); assert.equal(f.locked, false); assert.equal(f.disabled, false, "the field is still disabled");
-      assert.ok(Math.abs(f.h - 56) <= 1.5, "bar height " + f.h); assert.ok(Math.abs(f.rad - 20) <= .5, "bar radius " + f.rad);
+      assert.ok(Math.abs(f.h - 56) <= 1.5, "bar height " + f.h); assert.ok(Math.abs(f.rad - (w >= 720 ? 16 : 20)) <= .5, "bar radius " + f.rad);
       if (w >= 720) assert.ok(f.w <= 560.5, "the desktop bar is " + f.w + "px wide (cap 560)");
       assert.ok(f.clone || f.solid || f.frost, "the glass copy is missing and no fallback class is set: " + JSON.stringify(f));
       if (!f.solid && !f.frost) assert.match(f.filt, /url\(/, "the lens filter is not applied");
@@ -160,6 +161,42 @@ await step("gecko: a Firefox UA gets the plain frost: no lens filter, empty .g-c
     } finally { await ctx.close(); }
   }
 });
+/* THINK-GAP: /chat answers after 3.5 s (the server's NOTE call runs before the first word); sampled in that gap */
+const FFUA = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
+async function gap({ ua, dim, locked, calm }) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block", reducedMotion: calm ? "reduce" : "no-preference", ...(ua ? { userAgent: ua } : {}) });
+  await ctx.addInitScript(([dim, ua]) => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); if (dim) localStorage.setItem("stem-fx", "dim"); } catch { /* */ }
+    if (ua) Object.defineProperty(navigator, "userAgentData", { get: () => undefined }); }, [!!dim, !!ua]);
+  await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
+  const page = await ctx.newPage();
+  await page.route("**/explain", r => r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "POOF! A short canned reply.\n" }));
+  await page.route("**/chat", async r => { await new Promise(res => setTimeout(res, 3500)); r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "Quack. Because six times seven is forty-two.\n" }); });
+  try {
+    await page.goto(`${BASE}/?ui=v7#BANK_AGL`);
+    await page.waitForFunction(() => !document.getElementById("splash") && document.querySelector("#pcode")?.textContent === "CALC1_AG1", null, { timeout: 15000 });
+    await settled(page);
+    if (locked) { await showBox(page, 390); await page.click("#cluck > .cl-bd .cl-starter"); }
+    else { await wrongTry(page, 390); await page.fill(TA, "why sin and not cos?"); await page.keyboard.press("Enter"); }
+    const seen = [];
+    for (const t of [700, 1000, 1000]) {
+      await page.waitForTimeout(t);
+      seen.push(await page.evaluate(sel => { const f = document.querySelector(sel), th = document.querySelector("#cluck .cl-thread"), reply = [...th.querySelectorAll(".msg:not(.me) .wtext")].map(e => e.textContent.trim()).join("");
+        return { cls: f.className, ring: +getComputedStyle(f.querySelector(".g-think")).opacity, glow: getComputedStyle(f.querySelector(".g-haze")).boxShadow !== "none", reply: reply.length, locked: f.classList.contains("locked") }; }, FORM));
+    }
+    return seen;
+  } finally { await ctx.close(); }
+}
+for (const c of [{ n: "blink lens", ua: "" }, { n: "firefox UA (frost)", ua: FFUA }, { n: "fx-dim (solid)", ua: "", dim: true }, { n: "firefox UA + fx-dim", ua: FFUA, dim: true }, { n: "reduced motion", ua: "", calm: true }])
+  for (const locked of [true, false])
+    await step(`think: ${c.n}, ${locked ? "locked strip (free starter chip)" : "ready bar"}: a thinking sign from the tap to the first reply text`, async () => {
+      const seen = await gap({ ...c, locked });
+      for (const x of seen) {
+        assert.equal(x.reply, 0, "the reply text was already there (the gap is over): " + JSON.stringify(x));
+        assert.match(x.cls, /\bthink\b/, "no .think on the bar in the wait: " + JSON.stringify(x));
+        assert.ok(x.ring > 0.5, "thinking ring not visible: " + JSON.stringify(x)); assert.ok(x.glow, "no thinking glow: " + JSON.stringify(x));
+        assert.equal(x.locked, locked, "the strip changed state");
+      }
+    });
 await step("off: without ?ui=v7 there is no glass bar (today's footer field)", async () => {
   const page = await open(1280, 1, "");
   try {
