@@ -105,7 +105,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:f
   border: 1.5px solid var(--ib-edge);   /* SINK (Tony Nov 25): a soft, low-contrast edge; the dark well carries the field */
   border-radius: calc(18px * var(--r-k));
   box-shadow: var(--ib-well);
-  transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);   /* IB-2: the lift eases home on blur; hover keeps its instant edge */
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1);   /* IB-2: the lift eases home on blur (.18s, feel-better pass); hover keeps its instant edge */
 }
 @supports (corner-shape: superellipse(2)) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
@@ -115,6 +115,8 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:f
    rest and no in-box key room; a judged part keeps 48 for the in-box .vk (the live tick / cross slot). */
 html.ui-v7 #q .mparts .part > .ff:is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
 html.ui-v7 #q > .ff#ff:not(.proof):is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
+/* the whole 60px box is a text target (the input is 54 inside 17.5px side pad): I-beam over the rim; app.js focuses the input on a press there */
+html.ui-v7 #q > .ff#ff:not(.proof, .rbox), html.ui-v7 #q .mparts .part > .ff:not(.rbox) { cursor: text; }
 /* hover = the resting edge only; judged / cue / rbox keep their own look */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover,
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover { border-color: color-mix(in srgb, var(--muted) 75%, transparent); }
@@ -164,7 +166,7 @@ html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk mk mk" "bx bx ." "hw hw
 html.ui-v7 .mparts .part.nopr .mk { margin-bottom: 12px; }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
 html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-0)/var(--lh-0) var(--font-input); text-transform: uppercase; color: var(--ink); }
-html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
+html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; margin: 0 0 12px; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 /* B-SHORT (Tony Nov 25): a number / text box is only as wide as its answer (6 digits + the inset + the unit room, min 120); an expression keeps the full width.
    The key follows the box (left: 100% + 13.5px), so it hangs off the short box's right edge. */
@@ -175,7 +177,7 @@ html.ui-v7 .mparts .part.hinted .phint { margin-top: 8px; }   /* the miss card s
 /* HINT UNDER THE BOX (Tony Nov 25): the shared grey "how" line is repeated under EACH box (single + every multi part); the top .how is the flag-off copy.
    The two copies never show together. The schema has no per-part how / type yet: queued. */
 .phow { display: none; }
-html.ui-v7 #q .phow { display: block; margin: 8px 0 0; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); }   /* variant A (Tony Nov 25): flush with the box edge, 12.8/16 muted */
+html.ui-v7 #q .phow { display: block; margin: 8px 0 0; font-size: var(--fs--1); line-height: var(--lh--1); color: var(--muted); text-wrap: pretty; }   /* variant A (Tony Nov 25): flush with the box edge, 12.8/16 muted */
 html.ui-v7 .mparts .phow { grid-area: hw; min-width: 0; }
 html.ui-v7 #q:has(> .phow, > .mparts .phow) > .how:not(.phow) { display: none !important; }
 /* PROMPT ON TOP at every width (Tony Nov 25): the phone template (prompt / box + key / grey hint / miss card) is the only one; the old desktop row
@@ -194,7 +196,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
   border-radius: calc(18px * var(--r-k));
   transform: scale(1.014);
   box-shadow: inset 0 1px 0 var(--hi), inset 0 3px 6px -2px rgb(0 0 0 / .45), 0 0 0 .5px var(--hi), 0 2px 4px var(--lo), 0 12px 26px -8px var(--lo);   /* SINK: the lift keeps the inset well fill + a faint inner shadow */
-  transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1), border-color 320ms cubic-bezier(.22,.61,.36,1);
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1), border-color .15s cubic-bezier(.22,.61,.36,1);   /* feel-better: a lift is a response, not a scene (was .42s / 320ms) */
 }
 @supports (corner-shape: superellipse(2)) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
@@ -204,12 +206,12 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="add"],
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="add"] {
   border-color: color-mix(in srgb, var(--action) 90%, transparent);
-  transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1), border-color 0s;
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1), border-color 0s;
 }
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="del"],
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="del"] {
   border-color: color-mix(in srgb, var(--action) 60%, transparent);
-  transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1), border-color 0s;
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1), border-color 0s;
 }
 /* reduced motion: no scale, no lift, no transition; the edge colour still changes (SOFT-LIFT §4, Tony) */
 @media (prefers-reduced-motion: reduce) {
@@ -225,6 +227,8 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
   html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2] { transition: none; }
 }
 
+/* radii: the box and the key are 18 (x --r-k); the multi panel 25 and the card 22.5 are separate surfaces, not concentric on purpose. */
+
 /* ===== IB-3 SOFT LIFT, THINKING (Tony Nov 24; SOFT-LIFT-SPEC §0.1 §0.4 §6; mock PICK-soft-lift.src.html "checking"). html.ui-v7 only.
    While a typed answer is being graded the box says "thinking": an aurora arc walks its outline, the box sinks back and its value softens.
    SHIP TECHNIQUE (§0.1): a big square holding a conic gradient is rotated by TRANSFORM keyframes under a STATIC 3.5px ring mask
@@ -233,15 +237,15 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
    The ring layer is inserted/removed by strip.js only while html.grading names this field (single typed #ff; a multi part while it is .g-on). ===== */
 html.ui-v7 #q .ib3-ring,
 html.ui-v7 #q .ib3-glow {
-  position: absolute; z-index: 2; inset: -1.5px; border-radius: inherit; corner-shape: inherit;
+  position: absolute; z-index: 2; inset: -1.5px; border-radius: calc(18px * var(--r-k) + 1.5px); corner-shape: inherit;   /* concentric: box radius + the 1.5px outset (was inherit, a tighter ring corner) */
   padding: 3.5px; pointer-events: none; overflow: hidden;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
-html.ui-v7 #q .ib3-glow { inset: -3px; padding: 6.5px; filter: blur(7px); opacity: .45; }
+html.ui-v7 #q .ib3-glow { inset: -3px; border-radius: calc(18px * var(--r-k) + 3px); padding: 6.5px; filter: blur(7px); opacity: .45; }
 html.ui-v7 #q .ib3-spin {
   position: absolute; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
-  translate: -50% -50%; border-radius: 50%; will-change: transform; pointer-events: none;
+  translate: -50% -50%; border-radius: 50%; pointer-events: none;   /* no permanent will-change: the WAAPI transform promotes the layer while it runs */
   background: conic-gradient(from 0deg, transparent 0 52%, var(--action-fill) 62%, var(--action) 80%, var(--action-on) 95%, transparent 100%);
 }
 /* the sink: 1.4% smaller in place + a deeper dish; the CONTENTS go soft, the rings stay sharp (never a filter on the box) */
@@ -282,7 +286,7 @@ html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(
    tick / cross waits for the close and fades .25s (strip.js adds .ib4-done on the finished promise). Reduced motion: the same layers
    at their final rotations, no motion. ===== */
 html.ui-v7 #q .ib4-ring {
-  position: absolute; z-index: 2; inset: -1.5px; border-radius: inherit; corner-shape: inherit;
+  position: absolute; z-index: 2; inset: -1.5px; border-radius: calc(18px * var(--r-k) + 1.5px); corner-shape: inherit;   /* concentric: box radius + the 1.5px outset (was inherit, a tighter ring corner) */
   padding: 3.5px; pointer-events: none; overflow: hidden;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -291,7 +295,7 @@ html.ui-v7 #q .ib4-ring[data-v="ok"] { --ib4-c: var(--correct); }
 html.ui-v7 #q .ib4-ring[data-v="bad"] { --ib4-c: var(--wrong); }
 html.ui-v7 #q .ib4-arc {
   position: absolute; left: 50%; top: 50%; width: calc(100% + 160px); aspect-ratio: 1;
-  translate: -50% -50%; border-radius: 50%; pointer-events: none; will-change: transform;
+  translate: -50% -50%; border-radius: 50%; pointer-events: none;
 }
 html.ui-v7 #q .ib4-a { background: conic-gradient(from 0deg, var(--ib4-c) 0 48.3%, transparent 48.3%); }   /* 173.88deg: the frozen aurora arc */
 html.ui-v7 #q .ib4-b { background: conic-gradient(from 0deg, var(--ib4-c) 0 48%, transparent 48%); }       /* 172.8deg: the first close */
@@ -312,7 +316,6 @@ html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
 html.ui-v7 .mparts .phint .cluck { animation: ib4-pop .3s cubic-bezier(.22,.61,.36,1) both; }
 @media (prefers-reduced-motion: reduce) {
   html.ui-v7 #q .ff[data-ib4] > .vk { animation: none; opacity: 1; }
-  html.ui-v7 #q .ib4-arc { will-change: auto; }
   html.ui-v7 #q:has(> .ff:is(.bad, .lock)) + #fb > .cluck,
   html.ui-v7 .mparts .phint .cluck { animation: none; }
 }

@@ -159,7 +159,9 @@ const IB1_V = {
   "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l12 12M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 /* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
-const IB1_GO = '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// feel-better: a press on the rim of a typed box (the input is 54 tall inside a 60px field, 17.5px side pad) still focuses its input
+document.addEventListener("pointerdown", e => { const f = e.target instanceof Element && e.target.matches("html.ui-v7 #q .ff:not(.proof, .rbox)") ? e.target : null, i = f && f.querySelector("input.ans:not(:disabled)"); if (i) { e.preventDefault(); i.focus(); } });
+const IB1_GO = '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function vmark(box, id) {
   if (!box) return;
   let m = box.querySelector(".vk");
