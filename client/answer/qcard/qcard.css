@@ -316,6 +316,11 @@ html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; po
 html.ui-v7[data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens); }
 /* no sheet when transparency is reduced (solid card; the §ghost-glass rule above already flattens the numeral and drops the scrim) + the weak-device fallback */
 @media (prefers-reduced-transparency: reduce) { html.ui-v7 #problem.qc7 > .qfrost { display: none; } }
-html.ui-v7.fx-dim #problem.qc7 > .qfrost { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* Tony Nov 26: the real frost stays on for every perf reason (html.fx-dim from cores / probe / iOS / memory does NOT touch it: option B). Only a USER choice
+   (html.fx-dim-a11y = reduced transparency or Save-Data, set by fx.js) or a browser without backdrop-filter drops it, and then (option A) the glyph stays
+   softened by a plain filter blur on the ghost box itself (same 3px; works everywhere, incl. Firefox). */
+html.ui-v7.fx-dim-a11y #problem.qc7 > .qfrost { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.ui-v7.fx-dim-a11y #problem.qc7 .qghostbox { -webkit-filter: blur(3px); filter: blur(3px); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { html.ui-v7 #problem.qc7 .qghostbox { -webkit-filter: blur(3px); filter: blur(3px); } }
 
 
