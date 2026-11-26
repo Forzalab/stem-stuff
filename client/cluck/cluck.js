@@ -131,6 +131,7 @@ function wishOnWrong() {
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
+const wishRound = code => (window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {});   // app.js check()'s expression: a redo round's tries namespace
 /* telemetry (cluck_ask / cluck_reply): where the student is when Cluck is asked. code = the bank, item = the question; telemetry.js scrubs the text */
 const ckTel = () => ({ code: bank ? bank.code : null, item: S ? S.code : null, tries_left: S ? Math.max(0, maxTries(S.prob) - S.tries.length) : null, after_wrong: !!S && S.tries.some(x => x.v === "wrong") });
 async function wishStart(auto) {
@@ -147,7 +148,7 @@ async function wishStart(auto) {
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true, ...wishRound(w.code) }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
     fr.h(r);
     if (!r.ok || !r.body) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
@@ -1115,7 +1116,7 @@ async function clCompare(w) {
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail() }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail(), ...wishRound(w.code) }) });
     fr.h(r);
     if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
     else {
@@ -1151,7 +1152,7 @@ async function clSend(msg, o = {}) {                                      // o.s
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}) }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}), ...wishRound(w.code) }) });
     fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });

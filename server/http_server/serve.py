@@ -1374,6 +1374,56 @@ def _round_sid(sid, rnd):
     return sid
 
 
+def _round_ns(sid, b, store=None):
+    """the body's round (validated as grade() does) and its namespace (the /check helper, computed once); rnd False = malformed, None = base"""
+    rnd = b.get("round")
+    if rnd is not None and (isinstance(rnd, bool) or not isinstance(rnd, int) or not 0 < rnd < 2 ** 31): return False, sid
+    if rnd is None:
+        return None, sid
+    if store is not None:
+        return rnd, store.round(sid, rnd)
+    with _tries_lock:
+        _load_tries()
+        return rnd, _round_sid(sid, rnd)
+
+
+def _open_round(p, sid, store=None):
+    """a redo round under this browser + item still has a try left and is not done: an old page must not read the base as closed over it."""
+    if store is not None:
+        store.load(sid); pairs = store.entries()
+    else:
+        with _tries_lock:
+            pairs = [((k[0],) + tuple(k[1:]), st) for k, st in _tries.items()]
+    return any(key[1] == p["code"] and key[0].startswith(sid + ":r") and key[0][len(sid) + 2:].isdigit()
+               and not st["done"] and len(st["wrong"]) < max_tries(p) for key, st in pairs)
+
+
+def reveal_without_try(p, sid, rnd, turn, store=None):
+    """tripwire (desync F1): REVEAL yes on a namespace with no recorded try and no solve. Log the cause; never change the reply."""
+    if not turn or not turn[1] or (rnd is None and not _open_round(p, sid, store=store)):
+        return
+    st = state(p, sid, store=store)
+    if item_solved(p, sid, store=store) or any(u["wrong"] for u in (st["parts"] if "parts" in st else [st])):
+        return
+    why = "closed" if tries_out(p, sid, store=store) else "turn3" if turn[0] >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3) else "solved"
+    log(f"desync reveal-without-try sid={str(sid)[:8]} code={p['code']} round={rnd if rnd is not None else '-'} server={why}")
+
+
+def _turn_open(p, sid, n, pick, store=None):
+    """an old page over an open round: this turn's row replays as not solved / not locked"""
+    if store is not None:
+        rows = turns_read(sid, p["code"])
+        for r in rows:
+            if r[0] == n: r[1:] = [0, r[2] if len(r) > 2 else "", pick]
+        turns_write(sid, p["code"], rows)
+        return
+    with _tries_lock:
+        rows = _cluck_turns.get((sid, p["code"])) or []
+        for r in rows:
+            if r[0] == n: r[1:] = [0, r[2] if len(r) > 2 else "", pick]
+        _save_tries()
+
+
 def _grade(p, st, body, multi, idx, reveal=False):
     """One try on entry st (the caller holds _tries_lock). reveal: add `correct` once the unit is shut out of tries (T19, sugar),
     and on a pick-all miss whose ticks are all right, `kept` = those ticked ids (sugar kept rows, app.js keep())."""
@@ -1520,7 +1570,8 @@ def tries_key(sid):
 
 
 def turns_key(sid, code):
-    return f"{tries_prefix()}{TURNS_KEY}{_base_sid(sid)}:{code}"
+    """one turn key per namespace: a redo round (sid:r<N>) keeps its own turn rows, never the base's"""
+    return f"{tries_prefix()}{TURNS_KEY}{sid}:{code}"
 
 
 def _base_sid(sid):
@@ -2770,7 +2821,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None, sto
         pre = no_attempt(answer)                                  # before the first try: open, whatever the server's tries say (cluck_begin pre)
         v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=not pre and turn_closed((sid, p["code"]), store=store),
                   free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, sid, store=store), answer)),
-                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
+                  code=p["code"], arm=cluck_arm(_base_sid(sid)), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     st = _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                        fig_ctx(p, answer), edit=True, v4=v4, out=out, swap=True)
@@ -3292,7 +3343,7 @@ def cluck_begin(p, sid, pick, store=None):
     counted server-side (its own turn key with the hash store, the tries blob otherwise; a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
     used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved).
     pre = no_attempt(pick) (the page is before its first try): never closed, never solved, never REVEAL yes, whatever the server's tries say
-    (a redo round sends no round to /chat or /explain, so the base sid may hold an earlier solve) and however many turns came before."""
+    (a page that sends no `round` keeps the base namespace; /explain and /chat keep it open over an open round) and however many turns came before."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
     pre = no_attempt(pick)
@@ -4669,22 +4720,29 @@ def _relay(p, chunks, what, head):
 
 
 def explain(cookie_header, body):
-    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+    """POST /explain {code, answer, auto, round?}: (status, headers, iterator of bytes). Easy mode only; `round` = the redo round's tries namespace (the /check rule)."""
     sid, head = _stream_head(cookie_header)
     b = _body(body, 8192)
     p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
     if p is None:
         return 404, head, iter([b""])
+    store = _new_store()
+    rnd, nsid = _round_ns(sid, b, store)            # validated once: the request's own tries namespace
+    if rnd is False:
+        return 400, dict(head, **{"Content-Type": "application/json"}), iter([json.dumps({"verdict": "invalid", "triesLeft": max_tries(p)}).encode()])
     if not key:
         return 503, head, iter([b""])
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
     pick = wish_pick(p, b)
-    store = _new_store()
-    turn = cluck_begin(p, sid, pick, store=store)
+    turn = cluck_begin(p, nsid, pick, store=store)
+    if rnd is None and turn and turn[1] and _open_round(p, nsid, store=store):
+        turn = (turn[0], False)                      # an old page over an open round: never reveal on the base record alone
+        _turn_open(p, nsid, turn[0], pick, store=store)
+    reveal_without_try(p, nsid, rnd, turn, store=store)
     if b.get("stages") is True:
-        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), sid, turn, on, store=store), "explain")
-    return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), sid, turn, store=store), "explain", head)
+        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, on, store=store), "explain")
+    return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, store=store), "explain", head)
 
 
 # == §note-chat ==
@@ -5354,22 +5412,26 @@ def starter_give_back(k):
 
 
 def chat(cookie_header, body):
-    """POST /chat {code, answer, history, starter?}: (status, headers, iterator of bytes), like /explain. A 6th follow-up: 429 {"error": "limit"}.
-    `starter: true` + the item's `starter` text as the first question, before any try: that one ask is free (not counted in CHAT_TURNS)."""
+    """POST /chat {code, answer, history, starter?, round?}: (status, headers, iterator of bytes), like /explain. A 6th follow-up: 429 {"error": "limit"}.
+    `starter: true` + the item's `starter` text as the first question, before any try: that one ask is free. `round` = the redo round's tries namespace."""
     sid, head = _stream_head(cookie_header)
     b = _body(body, CHAT_MAX)
     p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
     if p is None:
         return 404, head, iter([b""])
+    store = _new_store()
+    rnd, nsid = _round_ns(sid, b, store)            # validated once: the request's own tries namespace
+    if rnd is False:
+        return 400, dict(head, **{"Content-Type": "application/json"}), iter([json.dumps({"verdict": "invalid", "triesLeft": max_tries(p)}).encode()])
     history = chat_history(b.get("history"))
     if history is None:
         return 400, head, iter([b""])
     if not key:
         return 503, head, iter([b""])
-    turn, k = len(history) // 2, (sid, p["code"])
+    turn, k = len(history) // 2, (sid, p["code"])     # the follow-up cap is per browser + item, never per round
     free = over = False
     with _asked_lock:                        # check and count in one step: two tabs at once can't both take the last turn
-        if k not in _starters and not chat_count(k) and starter_free(p, sid, b, history) and starter_take(k):
+        if k not in _starters and not chat_count(k) and starter_free(p, nsid, b, history) and starter_take(k):
             free = True                      # the one free starter ask: first chat turn, once per browser and item (any instance)
         else:
             over = turn > CHAT_TURNS or chat_count(k) >= CHAT_TURNS
@@ -5387,9 +5449,12 @@ def chat(cookie_header, body):
                 chat_untake(k)
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
     pick = wish_pick(p, b)
-    store = _new_store()
     pre = no_attempt(pick)                          # before the first try (the starter chip, or any ask with no pick): a nudge, never the answer, on every path
-    turn = cluck_begin(p, sid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd; never when pre)
+    turn = cluck_begin(p, nsid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd; never when pre)
+    if rnd is None and turn and turn[1] and _open_round(p, nsid, store=store):
+        turn = (turn[0], False)                     # an old page over an open round: never reveal on the base record alone
+        _turn_open(p, nsid, turn[0], pick, store=store)
+    reveal_without_try(p, nsid, rnd, turn, store=store)
     def chunks():
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
         out = set()
@@ -5402,8 +5467,8 @@ def chat(cookie_header, body):
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
         v4 = None
         if v4_on():
-            rows = cluck_noted(p, sid, turn[0], xyz_block(n), store=store)
-            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=not pre and turn_closed((sid, p["code"]), store=store), free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, sid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
+            rows = cluck_noted(p, nsid, turn[0], xyz_block(n), store=store)
+            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=not pre and turn_closed((nsid, p["code"]), store=store), free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, nsid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
         st = _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
         yield from pre_try_lines(st, p) if v4 is None and pre else st
