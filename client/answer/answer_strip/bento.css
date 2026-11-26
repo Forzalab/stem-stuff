@@ -141,3 +141,38 @@ html.ui-v7 .choices.bento.flow .ch > .nx .nf > span { display: none; }
 html.ui-v7 .choices.bento.flow .ch .vg, html.ui-v7 .choices.bento.flow .ch.cue .vg { right: 16px; top: 50%; margin-top: -9px; }
 /* no per-state padding on purpose: Check / cue / verdict states reuse the tile's one padding, so the words never move (these re-state it above the section B/C :has() rules that would add top padding) */
 html.ui-v7 .choices.bento.flow .ch:has(> .send:not([hidden])) > .opt.opt, html.ui-v7 .choices.bento.flow .ch.cue > .opt.opt, html.ui-v7 .choices.bento.flow .ch:has(> .vg) > .opt.opt, html.ui-v7 .choices.bento.flow .ch:has(> .nx) > .opt.opt { padding: 14px 52px; }
+
+/* ---- (E) §swiss-ratio + §swiss-key (Tony Nov 26; DESIGN-LANGUAGE "Type does the hierarchy", grid 4px atom, "Card padding", "bento: letter left, value --t-val"): the single-choice FLOW tile on the Swiss grid.
+   Scale = the app's Major Third steps: the answers (value AND letter) sit at step 1 (20/28), one step above the ask and the body (step 0, 16/24), one step below the title (25/32), so the answers are as weighty as
+   the question card, and they match the typed part letter (--fs-1, #759). The letter is a real grid column (24px, in the flow, uppercase 600 muted like the typed letter); the value starts on the same left edge in every
+   tile (left aligned, same baseline as the letter), never floating mid-tile. Tile = 64px high (4px atom), padding 18 / 16 / 18 and the 52px key reserve on the right (= bento.js FLOW_PAD 104 split 52 + 52). ---- */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt {
+  display: flex; align-items: baseline; justify-content: flex-start; gap: var(--s3); min-height: 64px; padding: 18px 52px 18px var(--s4);
+  text-align: left; border-radius: var(--r-tile);
+}
+html.ui-v7 .choices.bento.flow:not(.all) .opt .txt, html.ui-v7 .choices.bento.flow:not(.all) .opt[data-k] .txt { flex: 1 1 auto; text-align: left; font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-em); }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge.badge {
+  position: static; flex: 0 0 24px; width: 24px; height: auto !important; margin: 0; text-align: left; text-transform: uppercase; letter-spacing: 0; font-weight: var(--w-em);
+  font-size: var(--fs-1) !important; line-height: var(--lh-1) !important;
+}
+/* pick-all keeps its own letter / check layout; its words take the same step so every choice reads at one size */
+html.ui-v7 .choices.bento.flow.all .opt .txt, html.ui-v7 .choices.bento.flow.all .opt[data-k] .txt { font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-em); }
+/* the tile keeps ONE padding in every state (the old per-state 14/52 re-statement of section D), so nothing moves when a key appears */
+html.ui-v7 .choices.bento.flow:not(.all) .ch:is(:has(> .send:not([hidden])), .cue, :has(> .vg), :has(> .nx)) > .opt.opt { padding: 18px 52px 18px var(--s4); }
+/* SWISS-KEY: Check (.send) and Next (.nx) in a tile are the typed answer's key (verdict-v7.css §ib1-key / §ib5-key): --chip face, --ink arrow on the same 24px grid, stroke 2.25, no shadow, hover = --chip 82% + white,
+   :active = scale(.96); it is 44px (the tap size) inset 8 in a 64px tile, radius = the tile's radius - the inset (concentric: 20 - 8 = 12, fallback 16 - 8 = 8). No green face, no black ring: the verdict is the tile's fill. */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) {
+  position: absolute; right: 8px; top: 50%; bottom: auto; margin: -22px 0 0; width: 44px; min-width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0;
+  border-radius: calc(var(--r-tile) - 8px); background: var(--chip); color: var(--ink); box-shadow: none; transition: transform var(--d-fast) ease-out;
+}
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) { corner-shape: superellipse(1.52); } }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .send .ico, html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf .ico { display: none; }   /* the sprite i-go / the filled i-tri: the 24-grid arrow replaces them */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) .ib1-go { display: block; width: 24px; height: 24px; }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx::before { display: none; }   /* sugar's --field ring plate (app.css): gone */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf { display: grid !important; place-items: center; width: 100%; height: 100%; padding: 0 !important; border: 0 !important; border-radius: inherit !important; background: none !important; color: inherit !important; transform: none; }   /* !important: app.css's verdict-green .nf rule is (0,7,0) */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf > span { display: none; }
+@media (hover: hover) {
+  html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); border: 0; }
+}
+html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):not(:disabled):active { transform: scale(.96); background: color-mix(in srgb, var(--chip) 90%, #000); }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) { transition: none; } html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):active { transform: none; } }

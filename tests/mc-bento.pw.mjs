@@ -99,6 +99,11 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const [c, p] = await open("on", "CALC1_MB01");
   await p.click("#q .opt[data-id='a']");
   await p.waitForFunction(() => document.querySelector("#q .opt[data-id='a']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
+  const key = await p.evaluate(() => { const k = document.querySelector("#q .ch:has(.opt[data-id='a']) .send"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect(), o = k.parentElement.querySelector(".opt").getBoundingClientRect();
+    return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), tile: parseFloat(getComputedStyle(k.parentElement.querySelector(".opt")).borderTopLeftRadius), inset: o.right - r.right, shadow: c.boxShadow }; });
+  assert.equal(key.bg, rgb("#283352"), "SWISS-KEY: the tile's Check wears the typed key's --chip face: " + JSON.stringify(key));
+  assert.ok(key.w === 44 && key.h === 44 && key.arrow && key.sprite === "none" && key.shadow === "none", "SWISS-KEY: 44px, the 24-grid arrow, no shadow: " + JSON.stringify(key));
+  assert.ok(Math.abs(key.rad - (key.tile - key.inset)) <= 1, "SWISS-KEY: concentric radius (tile - inset): " + JSON.stringify(key));
   await p.click("#q .ch:has(.opt[data-id='a']) .send");
   await bgIs(p, "#q .opt[data-id='a']", rgb("#3e141e"));
   const w = await look(p, "#q .opt[data-id='a']");
@@ -138,11 +143,11 @@ const flowMeasure = p => p.evaluate(() => {
     inorder: rs.every((r, i) => !i || r.top > rs[i - 1].top - 2), small: rs.filter(r => r.width < 44 || r.height < 44).length };
 });
 for (const [W, H] of [[390, 844], [360, 740], [768, 844], [1366, 800]]) for (const code of ["CALC1_MB01", "CALC1_MB02", "CALC1_MB03", "CALC1_MB04"]) {
-  await step(`flow @${W} ${code}: equal widths, one column count, 16px text, no clipping, no h-scroll`, async () => {
+  await step(`flow @${W} ${code}: equal widths, one column count, 20px text (SWISS-RATIO), no clipping, no h-scroll`, async () => {
     const [c, p] = await open("on", code, W, H), m = await flowMeasure(p);
     assert.equal(m.mode, "flow"); assert.equal(m.fill, "");
     assert.ok(m.rowsOk, "every row: equal widths, edge to edge, no hole: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
-    assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["16px"], "choice text = question body size: " + JSON.stringify(m));
+    assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["20px"], "SWISS-RATIO: choice text = type step 1 (20px), one step above the body (" + m.bodyFs + "): " + JSON.stringify(m));
     assert.equal(m.clip, 0, "nothing clipped: " + JSON.stringify(m)); assert.ok(m.sw, "no h-scroll"); assert.equal(m.small, 0, "tap >= 44");
     if (code === "CALC1_MB02" || code === "CALC1_MB03") assert.equal(m.cols, W >= 1366 ? m.cols : 1, "long sentences stack (1 column) when they do not fit one line");
     await shot(p, `flow-${W}-${code}`);

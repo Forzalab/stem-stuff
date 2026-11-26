@@ -59,7 +59,7 @@ async function measure(vp) {
   assert.equal(info.layers, 1, "phone-safe: exactly ONE backdrop-filtered layer under #problem, got " + info.layers);
   assert.equal(info.anim, "none", "the frost never animates");
   assert.ok(info.filter.includes("qg-glass"), "numeral has the glass filter: " + info.filter);
-  assert.ok(info.scrim, "scrim pills exist");
+  assert.ok(!info.scrim, "SWISS-GLYPH: no scrim pills behind the words (the glyph itself is dimmer): " + JSON.stringify(info.scrim));
   assert.ok(info.frost, "the frost sheet exists");
   assert.ok(info.frostFilter.includes("qg-lens"), "the frost uses the static lens #qg-lens: " + info.frostFilter);
   assert.ok(info.lens && info.lensOn, "the static lens filter #qg-lens is built");

@@ -164,16 +164,16 @@
     if (window.MutationObserver) { mo = mo || new MutationObserver(function () { if (cur && cur.fill && cur.g.isConnected) requestAnimationFrame(function () { if (cur && cur.fill && cur.g.isConnected) refit(cur); }); }); mo.observe(g, { attributes: true, subtree: true, attributeFilter: ["class", "hidden", "aria-checked"] }); }
   }
   /* FLOW (question #737, BANK_CEP): the answers FLOW DOWN, they are not fitted to one screen. ONE column count for the whole set, so every tile has the same width:
-     3, then 2, columns only when EVERY option's real text (measured rendered width, nowrap, at the full 16px body size) fits on one line inside that tile; else 1 column.
+     3, then 2, columns only when EVERY option's real text (measured rendered width, nowrap, at the 20px answer size, SWISS-RATIO) fits on one line inside that tile; else 1 column.
      Tiles take their natural height (a row = its tallest tile), the page scrolls, nothing is clipped, no search / probe grid / guard. Content cut at the viewport bottom on first load is the scroll cue.
      A formula wider than its tile still shrinks, then side-scrolls (mathFit). */
-  var FLOW_PAD = 104, FLOW_MINW = 96;   // words' side room: letter 46 + Check / Next / verdict reserve 58 (so a pick never re-wraps); a tile is never narrower than 96px
+  var FLOW_PAD = 104, FLOW_MINW = 96;   // words' side room: left 16 + letter 24 + gap 12 = 52, right = Check / Next key 44 + 8 inset (so a pick never re-wraps); a tile is never narrower than 96px
   function flowCols(chs, R) {
     var pr = D.createElement("div"), ws, C, inner;
     pr.className = "mc-probe"; pr.setAttribute("aria-hidden", "true");
     chs.forEach(function (c) {
       var t = c.querySelector(".opt .txt"), cs = t && getComputedStyle(t), e = D.createElement("span");
-      e.style.cssText = "display:inline-block;white-space:nowrap;font-size:16px;line-height:22px;letter-spacing:0;font-family:" + (cs ? cs.fontFamily : "inherit") + ";font-weight:" + (cs ? cs.fontWeight : "400");
+      e.style.cssText = "display:inline-block;white-space:nowrap;font-size:20px;line-height:28px;letter-spacing:0;font-family:" + (cs ? cs.fontFamily : "inherit") + ";font-weight:" + (cs ? cs.fontWeight : "400");
       e.innerHTML = t ? t.innerHTML : ""; pr.appendChild(e);
     });
     D.body.appendChild(pr);
