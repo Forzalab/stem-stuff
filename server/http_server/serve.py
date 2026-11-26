@@ -4740,6 +4740,8 @@ def explain(cookie_header, body):
         turn = (turn[0], False)                      # an old page over an open round: never reveal on the base record alone
         _turn_open(p, nsid, turn[0], pick, store=store)
     reveal_without_try(p, nsid, rnd, turn, store=store)
+    # F3 (desync): X-Cluck-Reveal 0|1 = this reply was written open (0) or closed / REVEAL yes (1; also unknown, no turn). The client caches only a 0
+    head = dict(head, **{"X-Cluck-Reveal": "0" if turn and not turn[1] and (no_attempt(pick) or not turn_closed((nsid, p["code"]), store=store)) else "1"})
     if b.get("stages") is True:
         return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, on, store=store), "explain")
     return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, store=store), "explain", head)
