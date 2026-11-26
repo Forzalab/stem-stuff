@@ -178,15 +178,15 @@ try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       const rest = await page.evaluate(() => { const ff = document.querySelector("#ff"), i = ff.querySelector("input"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(i).color }; });
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
-      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await settled(page, "#q .ff.rbox.ok");
-      const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
+      await page.waitForSelector("#q .ff.ok .vk", { timeout: 8000 }); await settled(page, "#q .ff.ok");   // KEY-ONE: ui-v7 builds no reveal pill (.rbox); the closed box is the plain judged-right box
+      const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
         return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height, text: getComputedStyle(ff.querySelector("input")).color }; });
-      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is a plain glyph, no tile (VERDICT-MARK-INERT)"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
+      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is a plain glyph, no tile (VERDICT-MARK-INERT)"); assert.equal(m.row, rest.bg, "KEY-ONE: the closed right box keeps the resting ground (was the reveal pill's #0c2c22 row)"); assert.equal(await page.evaluate(() => document.querySelector("#q #ff").classList.contains("rbox")), false, "no reveal pill under ui-v7");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
       assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
-      // the reveal pill keeps the MC bento right tile (--mc-right #0c2c22 + --correct-on text); the PLAIN judged-right box is now the resting ground/ink (SPEC §7 BACKGROUND, Tony Nov 25 07:38)
-      assert.equal(m.text, "rgb(185, 239, 216)", "right text = --correct-on: " + m.text);
-      const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"); ff.classList.remove("rbox"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
+      // KEY-ONE: there is no reveal pill under ui-v7 any more; the judged-right box is the resting ground/ink (SPEC §7 BACKGROUND, Tony Nov 25 07:38)
+      assert.equal(m.text, rest.color, "right text = the resting ink: " + m.text);
+      const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.ok"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
         return { bg: cs.backgroundColor, bw: cs.borderTopWidth, r: cs.borderTopLeftRadius, color: i.color }; });
       const tile = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");   // ICK4-SQUIRCLE-C: --r-tile x 1.25 under corner-shape
       assert.deepEqual(plain, { bg: rest.bg, bw: "0px", r: tile, color: rest.color }, "the plain judged-right box keeps the resting ground + ink (SPEC §7 BACKGROUND): " + JSON.stringify(plain));
@@ -298,7 +298,7 @@ try {
       assert.equal(wrong.input, "none", "wrong: the judged input shows no outline (a keyboard submit): " + JSON.stringify(wrong));
       await page.waitForFunction(() => !window.__drill.state.wait, null, { timeout: 12000 });
       await tabTo(); await page.keyboard.type("1.38"); await page.keyboard.press("Enter");
-      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 9000 }); await settled(page, "#q #ff.ff");
+      await page.waitForSelector("#q .ff.ok .vk", { timeout: 9000 }); await settled(page, "#q #ff.ff");   // KEY-ONE: no .rbox under ui-v7
       const right = await dy();
       assert.ok(Math.abs(right.dy) <= 1, "correct: the tick centred on the pill within 1px: " + JSON.stringify(right));
       assert.equal(right.input, "none", "correct: no input outline: " + JSON.stringify(right));

@@ -255,12 +255,15 @@ html.ui-v7 #q :is(.ff.proof#ff > :is(#ansGo, .nx), .choices .ch > :is(.send, .nx
   position: absolute; left: auto; right: var(--key-inset);
 }
 /* place */
-html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx)) {   /* the 1.5px = the field's own edge (the offsets count from its padding box) */
-  position: absolute; left: calc(100% + var(--key-gap) + 1.5px); right: auto; top: -1.5px; bottom: auto;
+html.ui-v7 #q :is(.ff#ff, .mparts .part > .ff) { --ffb: 1px; }                  /* the field's own edge: the key's offsets count from the field's PADDING box, so they add the edge back */
+html.ui-v7 #q :is(.ff#ff, .mparts .part > .ff):is(.ok, .bad) { --ffb: 0px; }   /* a judged box drops its edge (the verdict ring replaces it): without this the key jumped 1px up and right on every verdict */
+html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx)) {
+  position: absolute; left: calc(100% + var(--key-gap) + var(--ffb)); right: auto; top: 50%; bottom: auto; margin-top: calc(var(--key-out) / -2);   /* centred on the field: same top, same foot */
 }
 html.ui-v7 #q .chk { margin-top: var(--s4); }
 html.ui-v7 #q .chk > :is(#mcGo, .nx) { position: relative; inset: auto; }
 html.ui-v7 #q .choices .ch > :is(.send, .nx) { top: 50%; bottom: auto; margin: calc(var(--key-in) / -2) 0 0; }
+html.ui-v7 #q .choices .ch > .send { animation-fill-mode: backwards; }   /* app.css fades the tile key in with fill-mode both, which pinned opacity 1 for good: the busy dim never showed on MC */
 html.ui-v7 #q .ff.proof#ff > :is(#ansGo, .nx) { top: auto; bottom: var(--key-inset); margin: 0; }
 /* glyph: the one arrow; Next has no word and no plate (aria-label says "Next question") */
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) .ico { display: none; }

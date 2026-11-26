@@ -179,7 +179,7 @@ try {
     const page = await open2(1366, "PHYS_FP2");
     try {
       await typeAnswer(page, "1.38");
-      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 });
+      await page.waitForSelector("#q .ff.ok .vk", { timeout: 8000 });   // KEY-ONE: ui-v7 no longer builds the reveal pill (.rbox); the closed box is the typed box with its tick
       await page.waitForFunction(() => document.querySelector("#cluckBtn") && !document.querySelector("#cluckBtn").hasAttribute("aria-disabled"), null, { timeout: 8000 });
       assert.equal((await geo(page)).ladder, 0);
       assert.equal(await page.evaluate(() => /See steps|Explain my mistake/.test(document.querySelector("#q").textContent + document.querySelector("#wish").textContent)), false);
