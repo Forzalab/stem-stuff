@@ -62,7 +62,7 @@ like every other script. `privacy.html` is "pass" (needs the network). No sw.js 
 | `fps_probe` | fps_med, frame_p95_ms, dropped_pct, slow (p95 > 24 ms or median > 20 ms), fx (gate state during the sample) | fx.js: 2 s rAF sample once per session, after the first question, on idle |
 | `long_tasks` | phase (`load`), n, ms (long tasks that started in the first 10 s) | telemetry.js, 10 s after start; not sent without longtask timing (Safari) |
 
-Blur gate (T40, `fx.js`, brain analytics-2026-10-13/DEVICES.md): `html.fx-dim` instead of `fx-blur` when reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory ≤ 4, cores ≤ 4 (only when deviceMemory is unknown and not iOS), or a slow `fps_probe` (latched: localStorage `stem-fx=dim`). Runs with telemetry off too (it is app behaviour); only telemetry sends the result. CSS hook: `.glass` in app.css.
+Blur gate (T40, `fx.js`, brain analytics-2026-10-13/DEVICES.md): `html.fx-dim` instead of `fx-blur` when reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory ≤ 1 (was 4; Tony Nov 26), cores ≤ 4 (only when deviceMemory is unknown and not iOS), or a slow `fps_probe` (latched: localStorage `stem-fx=dim`). Runs with telemetry off too (it is app behaviour); only telemetry sends the result. CSS hook: `.glass` in app.css.
 
 Plus PostHog `$pageview`, `$pageleave` (with PostHog's own browser / device / referrer properties). NOT on: autocapture and session replay (`autocapture: false, disable_session_recording: true`, bench 2026-10-07: both on = +202 ms TBT); Clarity (build flag, above).
 

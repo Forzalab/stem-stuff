@@ -1,15 +1,19 @@
 /* Blur gate + device tier (20261013-T40, brain analytics-2026-10-13/DEVICES.md). Runs in <head>, before the first paint.
    Sets html.fx-blur or html.fx-dim. A glass surface (app.css .glass) blurs only on fx-blur; fx-dim = a plain dim, no backdrop-filter.
    Tony (Oct 13): "if weak phone/computer, auto not blur and instead do the dim as a replacement. blur minimally."
-   Dim when ANY of: reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory <= 4, cores <= 4 (tie-break: only
+   Dim when ANY of: reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory <= 1 (MEM_DIM_MAX; Tony Nov 26: was 4, "everyone must see the blur"), cores <= 4 (tie-break: only
    when deviceMemory is unknown and it is not iOS; Safari's core count is unverified), or the frame probe failed (p95 > 24 ms or
-   median > 20 ms). The probe result is latched in localStorage "stem-fx"; the rest is read fresh on every load.
+   median > 20 ms). Nothing is persisted: a slow probe dims THIS session only (Tony Nov 26: one slow session must not lock the blur off forever);
+   the old localStorage "stem-fx" latch is deleted on load. Second class html.fx-dim-a11y = only the USER-CHOICE reasons (reduced transparency,
+   Save-Data): the qcard frost (qcard.css §frost) keys its real backdrop-filter off THAT class, not fx-dim, so perf reasons (cores, probe, iOS < 17,
+   memory) never switch the frost off (Tony Nov 26, option B); other glass keeps fx-dim.
    window.stemFx = { fx, tier, why, info, fps } for telemetry.js. Never throws. */
 (function () {
   "use strict";
   var W = window, N = navigator, H = document.documentElement;
 
   /* ---- pure helpers (exported for tests/fx.test.mjs) ---- */
+  var MEM_DIM_MAX = 1;   // GB: dim only when navigator.deviceMemory <= this (Tony Nov 26; was 4)
   /* iPhone / iPad / iPod, or an iPad that says Macintosh (touch points > 1): html.ios, the one test (offline.js reads the class) */
   function isIOS(ua, touch) { ua = ua || ""; return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1); }
   function iosMajor(ua) { var m = /(?:iPhone|iPad|iPod)[^)]*? OS (\d+)_/.exec(ua || ""); return m ? +m[1] : null; }
@@ -25,11 +29,11 @@
     if (d.saveData) pref.push("save_data");
     if (!d.blurOk) hw.push("no_backdrop_filter");
     if (d.ios != null && d.ios < 17) hw.push("ios_lt_17");
-    if (typeof d.mem === "number" && d.mem <= 4) hw.push("mem_le_4");
+    if (typeof d.mem === "number" && d.mem <= MEM_DIM_MAX) hw.push("mem_le_" + MEM_DIM_MAX);
     if (typeof d.cores === "number" && d.cores <= 4 && typeof d.mem !== "number" && d.ios == null) hw.push("cores_le_4");
     if (d.fpsBad) hw.push("fps");
     var why = pref.concat(hw);
-    return { fx: why.length ? "dim" : "blur", tier: hw.length ? "weak" : "strong", why: why };
+    return { fx: why.length ? "dim" : "blur", tier: hw.length ? "weak" : "strong", why: why, a11y: pref.length > 0 };
   }
   /* frame deltas (ms) → { fps_med, frame_p95_ms, dropped_pct, bad } */
   function frameStats(dt) {
@@ -46,7 +50,7 @@
 
   var mq = function (q) { try { return matchMedia(q).matches; } catch (e) { return false; } };
   var sup = function (p) { try { return CSS.supports(p, "blur(1px)"); } catch (e) { return false; } };
-  var latched = false; try { latched = localStorage.getItem("stem-fx") === "dim"; } catch (e) { /* blocked */ }
+  try { localStorage.removeItem("stem-fx"); } catch (e) { /* blocked, or an old latch we cannot clear */ }   // the retired permanent latch
   var c = N.connection || {}, ua = N.userAgent || "";
   var info = {
     hw_cores: typeof N.hardwareConcurrency === "number" ? N.hardwareConcurrency : null,
@@ -61,6 +65,7 @@
     var g = gate({ rt: info.reduced_transparency, saveData: info.save_data, blurOk: info.blur_supported, ios: info.ios_ver, mem: info.dev_mem, cores: info.hw_cores, fpsBad: fpsBad });
     H.classList.toggle("fx-dim", g.fx === "dim");
     H.classList.toggle("fx-blur", g.fx === "blur");
+    H.classList.toggle("fx-dim-a11y", g.a11y);
     st.fx = g.fx; st.tier = g.tier; st.why = g.why;
   }
   try { H.classList.toggle("ios", isIOS(ua, N.maxTouchPoints)); } catch (e) { /* no class: no iOS-only chrome */ }
@@ -75,7 +80,7 @@
   } catch (e) { if (live) H.classList.add("ui-v7"); }   // blocked storage: the host default
   var st = { info: info, fps: null };
   W.stemFx = st;
-  try { apply(latched); } catch (e) { H.classList.add("fx-dim"); }
+  try { apply(false); } catch (e) { H.classList.add("fx-dim"); }
 
   /* ---- frame probe: once per session, 2 s of rAF after the first question is up and the page is idle ---- */
   function probe() {
@@ -94,7 +99,7 @@
       if (!r) return;
       r.fx = st.fx;
       st.fps = r;
-      if (r.bad) { try { localStorage.setItem("stem-fx", "dim"); } catch (e) { /* blocked */ } apply(true); }
+      if (r.bad) apply(true);   // this session only: nothing persisted
       try { W.dispatchEvent(new CustomEvent("stem-fx-probe", { detail: r })); } catch (e) { /* old browser */ }
     }
     requestAnimationFrame(tick);

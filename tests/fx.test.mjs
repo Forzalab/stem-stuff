@@ -35,20 +35,35 @@ test("each rule alone", () => {
   const { gate } = run().api;
   const base = { blurOk: true, ios: null, mem: 8, cores: 8 };
   assert.equal(gate(base).fx, "blur");
-  assert.deepEqual(gate({ ...base, rt: true }), { fx: "dim", tier: "strong", why: ["reduced_transparency"] }, "a preference dims, not weak");
+  assert.deepEqual(gate({ ...base, rt: true }), { fx: "dim", tier: "strong", why: ["reduced_transparency"], a11y: true }, "a preference dims, not weak");
   assert.deepEqual(gate({ ...base, saveData: true }).why, ["save_data"]);
   assert.deepEqual(gate({ ...base, blurOk: false }).why, ["no_backdrop_filter"]);
-  assert.deepEqual(gate({ ...base, mem: 4 }).why, ["mem_le_4"]);
+  assert.deepEqual(gate({ ...base, mem: 1 }).why, ["mem_le_1"]);
+  assert.equal(gate({ ...base, mem: 2 }).fx, "blur", "2 GB and 4 GB keep the blur (Tony Nov 26)");
+  assert.equal(gate({ ...base, mem: 4 }).fx, "blur");
   assert.equal(gate({ ...base, cores: 4 }).fx, "blur", "cores with a known memory: no tie to break");
   assert.deepEqual(gate({ ...base, mem: undefined, cores: 4 }).why, ["cores_le_4"]);
-  assert.deepEqual(gate({ ...base, fpsBad: true }), { fx: "dim", tier: "weak", why: ["fps"] });
+  assert.deepEqual(gate({ ...base, fpsBad: true }), { fx: "dim", tier: "weak", why: ["fps"], a11y: false });
 });
 
 test("prefers-reduced-transparency, Save-Data, no backdrop-filter, a latched probe", () => {
   assert.equal(run({ media: ["reduced-transparency"] }).fx.fx, "dim");
   assert.equal(run({ nav: { connection: { saveData: true } } }).fx.fx, "dim");
   assert.equal(run({ blur: false }).fx.why[0], "no_backdrop_filter");
-  assert.deepEqual(run({ store: { "stem-fx": "dim" } }).fx.why, ["fps"]);
+  const old = run({ store: { "stem-fx": "dim" } });   // the retired latch: ignored and deleted, never dims
+  assert.equal(old.fx.fx, "blur"); assert.deepEqual(old.fx.why, []);
+});
+
+test("fx-dim-a11y = user-choice reasons only (the qcard frost keys off it)", () => {
+  const { gate } = run().api, base = { blurOk: true, ios: null, mem: 8, cores: 8 };
+  assert.equal(gate({ ...base, rt: true }).a11y, true);
+  assert.equal(gate({ ...base, saveData: true }).a11y, true);
+  for (const perf of [{ fpsBad: true }, { mem: 1 }, { ios: 16 }, { mem: undefined, cores: 4 }, { blurOk: false }]) {
+    const g = gate({ ...base, ...perf }); assert.equal(g.fx, "dim"); assert.equal(g.a11y, false, JSON.stringify(perf));
+  }
+  const ffAndroid = run({ nav: { userAgent: "Mozilla/5.0 (Android 14; Mobile; rv:130.0) Gecko/130.0 Firefox/130.0", hardwareConcurrency: 4 } });
+  assert.deepEqual(ffAndroid.fx.why, ["cores_le_4"]); assert.ok(ffAndroid.cls.has("fx-dim") && !ffAndroid.cls.has("fx-dim-a11y"), "FF Android: dim, but the frost stays");
+  assert.ok(run({ media: ["reduced-transparency"] }).cls.has("fx-dim-a11y"));
 });
 
 test("iosMajor / webview", () => {
