@@ -47,7 +47,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/answer/keyf_glass/keyf-glass.css` | Styles of the glass layers (`.kg`, `.fcard.kg-on`), fallbacks for reduced transparency / contrast. | glass look |
 | `client/shell/repair/repair.js` | Repair ladder UI after a miss. | repair steps |
 | `client/shell/repair/repair.css` | Styles of the repair ladder. | repair look |
-| `client/shell/repair/ladder-v7.css` | Ladder card, its chips and input, under `html.ui-v7`: state by fill, no edges. | ladder card colours |
+| `client/shell/repair/ladder-v7.css` | Ladder card, its chips and input, under `html.ui-v7`: state by fill, no edges; LADDER-TYPE foot block = the type + colour pass (title Schibsted 20 in --action-on, rest Atkinson 16, tabular numbers, balance / pretty wrap). | ladder card colours, fonts |
 | `client/cluck/jev_nudges/intent.js` | Event-line log and rule counters (Jev); decides help modal. | Jev rules, help timing |
 | `client/cluck/jev_nudges/lockhelp.js` | "Let me help you with that!" modal. | lock help |
 | `client/shell/stages/stages.js` | Cluck's live step list while he works. | wait UI |

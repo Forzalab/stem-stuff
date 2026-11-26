@@ -56,3 +56,20 @@ html.ui-v7 .hintcard { display: flex; align-items: flex-start; gap: var(--s2); b
 html.ui-v7 .hintcard[hidden] { display: none; }
 html.ui-v7 .hintcard-ico { display: block; flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--hint-edge); }
 html.ui-v7 .hintcard-t { min-width: 0; }
+
+/* LADDER-TYPE (Tony Nov 26: "change the ladder wrong-step CTA text to a better colour and font, and I mean ALL the ladder box"): the type + colour pass, ui-v7 only.
+   FONT-SPLIT: the card's title is the one Schibsted line (--font-title, --fs-1 20/28, 600); everything else is Atkinson Hyperlegible Next (--font) on the 1.25 scale:
+   body / labels / chips / buttons / unit --fs-0 16, meta (why:) --fs--1 12.8. COLOUR: the title is the action family (--action-on on --sheet, the same blue as Check, so the line that
+   asks for the next step reads as the way forward, not an error and not grey); the cream --help-on line is gone from the card (Cluck's warm family stays on the duck + hint card).
+   The welcome tab (section.wl .rp-line) keeps its orange pill. Numbers tabular, lines balance / pretty so no one-word widow (the fallback title wrapped "time.").
+   (the sheet is #0d142a here; --action-on 9.8:1, --ink 17.0:1, --muted 9.1:1, dark ink on --action 8.3:1: AA text everywhere.) */
+html.ui-v7 .rp { font-family: var(--font); font-size: var(--fs-0); }
+html.ui-v7 .rp .rp-line:not(section.wl .rp-line) { margin: 0 0 var(--s4); color: var(--action-on); font-family: var(--font-title); font-size: var(--fs-1); font-weight: var(--w-em);
+  line-height: var(--lh-1); letter-spacing: -0.005em; text-wrap: balance; }
+html.ui-v7 .rp .rp-line em { font-weight: 400; }                                  /* the *action* aside keeps its italic, lighter than the line it leads */
+html.ui-v7 .rp :is(.rp-label, .rp-ask, .rp-q, .rp-val, .rp-miss, .rp-done, .rp-later) { text-wrap: pretty; }
+html.ui-v7 .rp .rp-n { font-variant-numeric: tabular-nums; }
+html.ui-v7 .rp .rp-because { font-size: var(--fs--1); line-height: var(--lh--1); }
+html.ui-v7 .rp :is(.rp-chip, .rp-check, .rp-next, .rp-skip, .rp-in) { font-family: var(--font); font-size: var(--fs-0); }
+html.ui-v7 .rp :is(.rp-check, .rp-next) { letter-spacing: 0.005em; }
+html.ui-v7 .rp .rp-step[data-state="active"] .rp-label { font-weight: var(--w-em); }
