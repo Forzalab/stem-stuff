@@ -4,9 +4,10 @@
    card = --sheet (navy-800); chip = --chip (navy-600); picked chip = --action-fill; ghost (not yet answerable) = the chip step blended into the card; locked others = the card fill, dim text;
    the input is a well (--page + --well). The only outline left is the 2px focus ring. Warm (--help) stays only as the small accents it always was (the pill,
    the Check button): CONTRAST-PORT = dark ink on orange, never light text, and no warm-brown chip on the navy card. No circles (the auto-filled step number is a rounded square). */
-html.ui-v7 .rp { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); }
-html.ui-v7 section.wl { background: var(--sheet); border: 0; border-radius: 16px; padding: var(--s5); padding-top: calc(var(--s5) + 10px); }
-html.ui-v7 section.wl .rp { background: none; padding: 0; border-radius: 0; }
+html.ui-v7 .rp, html.ui-v7 section.wl { --rp-bg: var(--cb-well); --rp-edge: color-mix(in srgb, var(--line) 40%, transparent); }   /* LADDER-BG (Tony Nov 26: "darker background"): the card sits on --cb-well (#060b1b, the input well navy) not --sheet; the soft --line 40% ring keeps it apart from --page (1.04:1 alone) */
+html.ui-v7 .rp { background: var(--rp-bg); box-shadow: inset 0 0 0 1px var(--rp-edge); border: 0; border-radius: 16px; padding: var(--s5); }
+html.ui-v7 section.wl { background: var(--rp-bg); box-shadow: inset 0 0 0 1px var(--rp-edge); border: 0; border-radius: 16px; padding: var(--s5); padding-top: calc(var(--s5) + 10px); }
+html.ui-v7 section.wl .rp { background: none; box-shadow: none; padding: 0; border-radius: 0; }
 html.ui-v7 section.wl .rp-line { left: var(--s5); }
 /* GAP-BATCH1 B (ui-v7 phones): the intro pill starts clear of the bottom-left stash tab (44px column, app.css .rot.stashed) */
 @media (max-width: 700px) { html.ui-v7 section.wl .rp-line { left: max(var(--s5), 52px); } }
@@ -20,14 +21,14 @@ html.ui-v7 .rp .rp-chip, html.ui-v7 section.wl .rp .rp-chip { border: 0; border-
 html.ui-v7 .rp .rp-chip:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--chip) 82%, var(--ink)); }
 html.ui-v7 .rp .rp-skip { border: 0; background: none; color: var(--muted); }
 /* not answerable yet: the chip blended into the card (the fill says "not yet", the dash goes), words stay readable */
-html.ui-v7 section.wl .rp .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border: 0; background: color-mix(in srgb, var(--chip) 40%, var(--sheet)); color: var(--muted); }
+html.ui-v7 section.wl .rp .rp-ghost :is(.rp-chip, .rp-in, .rp-check) { border: 0; background: color-mix(in srgb, var(--chip) 40%, var(--rp-bg)); color: var(--muted); }
 /* done step: the pick keeps a lit fill, the rest sink into the card with dim text (5.3:1 on navy-800) */
-html.ui-v7 section.wl .rp .rp-locked .rp-chip { border: 0; background: var(--sheet); color: var(--dim); }
+html.ui-v7 section.wl .rp .rp-locked .rp-chip { border: 0; background: var(--rp-bg); color: var(--dim); }
 html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-picked { border: 0; background: var(--action-fill); color: var(--action-on); }
 html.ui-v7 section.wl .rp .rp-locked .rp-in { border: 0; color: var(--ink); }
 
 /* the Final answer input: a recessed well, no edge; the 2px focus ring is the only outline */
-html.ui-v7 .rp .rp-in, html.ui-v7 section.wl .rp .rp-in { border: 0; border-radius: 12px; background: var(--page); box-shadow: var(--well); color: var(--ink); }
+html.ui-v7 .rp .rp-in, html.ui-v7 section.wl .rp .rp-in { border: 0; border-radius: 12px; background: var(--page); box-shadow: var(--well), inset 0 0 0 1px var(--rp-edge); color: var(--ink); }
 html.ui-v7 .rp .rp-in:focus { border: 0; box-shadow: var(--well); outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 
 /* Check / Next: no edge; on the warm welcome sheet they stay --help-ink on --help (7.67:1, welcome.css), elsewhere --action */
@@ -59,7 +60,7 @@ html.ui-v7 .hintcard-t { min-width: 0; }
 
 /* LADDER-TYPE (Tony Nov 26: "change the ladder wrong-step CTA text to a better colour and font, and I mean ALL the ladder box"): the type + colour pass, ui-v7 only.
    FONT-SPLIT: the card's title is the one Schibsted line (--font-title, --fs-1 20/28, 600); everything else is Atkinson Hyperlegible Next (--font) on the 1.25 scale:
-   body / labels / chips / buttons / unit --fs-0 16, meta (why:) --fs--1 12.8. COLOUR: the title is the action family (--action-on on --sheet, the same blue as Check, so the line that
+   body / labels / chips / buttons / unit --fs-0 16, meta (why:) --fs--1 12.8. COLOUR: the title is the action family (--action-on on --cb-well, the same blue as Check, so the line that
    asks for the next step reads as the way forward, not an error and not grey); the cream --help-on line is gone from the card (Cluck's warm family stays on the duck + hint card).
    The welcome tab (section.wl .rp-line) keeps its orange pill. Numbers tabular, lines balance / pretty so no one-word widow (the fallback title wrapped "time.").
    (the sheet is #0d142a here; --action-on 9.8:1, --ink 17.0:1, --muted 9.1:1, dark ink on --action 8.3:1: AA text everywhere.) */
@@ -73,3 +74,28 @@ html.ui-v7 .rp .rp-because { font-size: var(--fs--1); line-height: var(--lh--1);
 html.ui-v7 .rp :is(.rp-chip, .rp-check, .rp-next, .rp-skip, .rp-in) { font-family: var(--font); font-size: var(--fs-0); }
 html.ui-v7 .rp :is(.rp-check, .rp-next) { letter-spacing: 0.005em; }
 html.ui-v7 .rp .rp-step[data-state="active"] .rp-label { font-weight: var(--w-em); }
+
+/* LADDER-KEY (Tony Nov 26: "check button, please unify with the arrow button too"): the number step's Check is the typed answer's arrow key (verdict-v7.css §ib1-key /
+   §ib5-key / KEY-ALL, read-only here): 60x60, the same 18px squircle, --chip fill, 24px arrow at stroke 2.25 (app.js IB1_GO), 13.5px right of the field, hover = a fill step,
+   :active scale(.96), empty = dimmed .35 + inert, busy = .55. The word stays as the accessible name (visually hidden). The unit sits INSIDE the box at its right edge (the typed
+   .unit role: Atkinson 16 muted). The field is 60px tall like the typed box. Reduced motion: no scale. */
+html.ui-v7 .rp .rp-num { flex-wrap: nowrap; gap: 13.5px; align-items: center; }
+html.ui-v7 .rp .rp-field { display: inline-flex; position: relative; align-items: center; min-width: 0; }
+html.ui-v7 .rp .rp-field .rp-in { height: 60px; min-height: 60px; border-radius: calc(18px * var(--r-k)); }
+html.ui-v7 .rp .rp-field:has(.rp-unit) .rp-in { padding-right: 3.5rem; }
+html.ui-v7 .rp .rp-field .rp-unit { position: absolute; right: var(--s4); top: 50%; transform: translateY(-50%); pointer-events: none; font: 400 var(--fs-0)/1 var(--font-input); color: var(--muted); }
+html.ui-v7 .rp .rp-check { display: grid; place-items: center; flex: none; width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0; border: 0;
+  border-radius: calc(18px * var(--r-k)); background: var(--chip); color: var(--ink); box-shadow: none; transition: none; }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-check { corner-shape: superellipse(1.52); } }
+html.ui-v7 .rp .rp-check .ib1-go { display: block; width: 24px; height: 24px; }
+html.ui-v7 .rp .rp-check .rp-check-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (hover: hover) { html.ui-v7 .rp .rp-check:not(:disabled):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); } }
+html.ui-v7 .rp .rp-check:not(:disabled):active { transform: scale(.96); }
+html.ui-v7 .rp .rp-check:disabled { opacity: .35; cursor: default; }
+html.ui-v7 .rp .rp-check[aria-busy="true"] { opacity: .55; }
+html.ui-v7 .rp .rp-ghost .rp-check:disabled { opacity: 1; }                       /* a not-yet-answerable step is already blended into the card */
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .rp .rp-check:not(:disabled):active { transform: none; } }
+
+/* LADDER-HINT (Tony Nov 26): the hint card inside the ladder wraps its text (shrink-to-fit, long hints still wrap at the row), and its text is the ink a touch toward the card's
+   warm hue (ink 76% + --help-on 24%) so the words belong to the box. Scoped to .rp: the site-wide .hintcard is unchanged. */
+html.ui-v7 .rp .hintcard { width: fit-content; max-width: 100%; color: color-mix(in srgb, var(--ink) 76%, var(--help-on)); }

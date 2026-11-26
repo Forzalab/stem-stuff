@@ -104,6 +104,34 @@ const ZERO = "0px 0px 0px 0px", HAIR = "1px 1px 1px 1px";   // HAIR: ICK PR-A, t
 const W = [390, 1366];
 try {
   for (const w of W) {
+    await step(`${w}: flag on (LADDER-TYPE / BG / KEY): card on --cb-well; hint card shrink-wraps; the number step's Check is the 60px arrow key, dim when empty, unit inside the box`, async () => {
+      const page = await open(w, "v7");
+      try {
+        await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-chip', { timeout: 10000 });
+        await settled(page, "#q section.wl");
+        const bg = await page.evaluate(() => getComputedStyle(document.querySelector("#q section.wl")).backgroundColor);
+        assert.equal(bg, "rgb(6, 11, 27)", "the ladder card sits on --cb-well");
+        await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=1');              // a wrong tap: the hint card
+        const hint = await page.waitForSelector("#q section.wl .rp-miss:not([hidden])", { state: "visible", timeout: 6000 });
+        const hw = await hint.evaluate(e => ({ w: e.getBoundingClientRect().width, row: e.parentElement.getBoundingClientRect().width, c: getComputedStyle(e).color }));
+        assert.ok(hw.w < hw.row - 8, "the hint card wraps its text, not the row: " + JSON.stringify(hw));
+        assert.notEqual(hw.c, "rgb(243, 247, 252)", "the hint text is tinted toward the card's hue");
+        await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=0');
+        const inp = await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-in', { state: "visible", timeout: 6000 });
+        await settled(page, "#q section.wl");
+        const read = () => page.evaluate(() => {
+          const key = document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-check'), fld = document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-field'),
+            unit = fld.querySelector(".rp-unit"), k = key.getBoundingClientRect(), f = fld.getBoundingClientRect(), u = unit && unit.getBoundingClientRect(), cs = getComputedStyle(key);
+          return { kw: Math.round(k.width), kh: Math.round(k.height), gap: +(k.left - f.right).toFixed(1), fh: Math.round(f.height), arrow: !!key.querySelector("svg.ib1-go") && getComputedStyle(key.querySelector("svg.ib1-go")).display !== "none",
+            name: key.textContent.trim(), dis: key.disabled, op: cs.opacity, unitIn: !!u && u.left >= f.left && u.right <= f.right, radius: cs.borderTopLeftRadius };
+        });
+        const idle = await read();
+        assert.deepEqual([idle.kw, idle.kh, idle.gap, idle.fh, idle.arrow, idle.name, idle.dis, idle.op, idle.unitIn], [60, 60, 13.5, 60, true, "Check", true, "0.35", true], "idle key: " + JSON.stringify(idle));
+        await inp.fill("3.7");
+        const ready = await read();
+        assert.deepEqual([ready.dis, ready.op], [false, "1"], "ready key: " + JSON.stringify(ready));
+      } finally { await page.context().close(); }
+    });
     await step(`${w}: flag on: ladder card, chips, input, Check have no border; chip text >= 4.5:1; tap >= 44`, async () => {
       const page = await open(w, "v7");
       try {

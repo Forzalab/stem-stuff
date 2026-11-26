@@ -205,13 +205,17 @@
     function valueUi(s) {
       const st = s.st, box = h("div", "rp-val-ui");
       if (st.kind === "num" || st.kind === "expr") {                             // expr (generated proof steps): the same box, a text keyboard
-        const f = h("form", "rp-num"), inp = h("input", "rp-in"), go = h("button", "rp-check", L().check || "Check");
+        const f = h("form", "rp-num"), fld = h("span", "rp-field"), inp = h("input", "rp-in"), go = h("button", "rp-check");
+        go.append(h("span", "rp-check-t", L().check || "Check"));
+        go.insertAdjacentHTML("beforeend", '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>');   // ui-v7: the typed answer key's arrow (app.js IB1_GO); flag off: the word
         inp.type = "text"; inp.inputMode = st.kind === "expr" ? "text" : "decimal"; inp.autocomplete = "off";
         if (st.kind === "expr") inp.placeholder = "e.g. 2" + (st.var || "k") + "+4"; inp.setAttribute("aria-label", st.label);
         go.type = "submit";
-        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) tryValue(s, inp.value); });   // Enter submits natively: no key handler
-        f.append(inp, go); box.append(f);
-        if (st.unit) f.append(h("span", "rp-unit", st.unit));
+        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) { go.setAttribute("aria-busy", "true"); tryValue(s, inp.value); } });   // Enter submits natively: no key handler
+        const idle = () => { go.disabled = !inp.value.trim(); };                 // KEY-ALL: an empty box leaves the key dimmed + inert, full once there is text
+        inp.addEventListener("input", idle); idle();
+        fld.append(inp); if (st.unit) fld.append(h("span", "rp-unit", st.unit));   // the unit sits inside the box, like the typed answer's .unit
+        f.append(fld, go); box.append(f);
         return box;
       }
       if (st.kind === "fill") box.append(h("div", "rp-tex", fillTex(st, null).replace("$", "$\\displaystyle ")));

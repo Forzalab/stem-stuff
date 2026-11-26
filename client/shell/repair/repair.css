@@ -65,3 +65,7 @@
 .rp :is(.rp-chip, .rp-check, .rp-skip, .rp-next):focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @keyframes rp-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .rp-body.rp-open { animation: none; } }
+
+/* LADDER-KEY: the number step's field wrapper adds no box off the flag (order: input, unit, key); the arrow glyph is the ui-v7 key's (ladder-v7.css) */
+.rp-field { display: contents; }
+.rp-check .ib1-go { display: none; }
