@@ -172,7 +172,7 @@ html.ui-v7 .mparts .part {
 html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk mk mk" "bx bx ." "hw hw hw" "ht ht ht"; }
 html.ui-v7 .mparts .part.nopr .mk { margin-bottom: var(--s2); }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
-html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-1)/var(--lh-0) var(--font-input); text-transform: uppercase; color: var(--muted); }   /* dim like the question code (.pcode, app.css: var(--muted)); hang column 18 + --s1 = 22: 4px more air letter -> prompt (Tony Nov 26) */
+html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-1)/var(--lh-0) var(--font-input); text-transform: uppercase; color: #7a8aae; }   /* dim exactly like the qcard title "Q11" prefix (.qhead .qexam, qcard.css TITLE-EXAMQ-DIM: #7a8aae, no root token carries it); hang column 18 + --s1 = 22: 4px more air letter -> prompt (Tony Nov 26) */
 html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; margin: 0 0 var(--s2); font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 /* B-SHORT (Tony Nov 25): a number / text box is only as wide as its answer (6 digits + the inset + the unit room, min 120); an expression keeps the full width.
