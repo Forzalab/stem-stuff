@@ -85,7 +85,7 @@
    (the state rules here keep their transitions so the lift eases in and out). The mock wins over the text.
    The Check key of the single box is restyled in verdict-v7.css (it is the existing #ansGo, moved outside the box; no second element). ===== */
 
-.ff .ib1-go { display: none; }   /* flag off: the sprite i-go only; ui-v7 shows the inline 24-grid arrow */
+.ib1-go { display: none; }   /* flag off: the sprite i-go only; ui-v7 shows the inline 24-grid arrow */
 
 /* ground = a token scoped to these fields only. --field (18 uses in 7 files) is NOT touched. --hi / --lo are the dish + lift inks, scoped here (SOFT-LIFT §3 §4). */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox),
@@ -138,17 +138,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 var
 
 /* the single box leaves room for its key outside: 60 key + 12 gap = 72; the box fills the column on every width, no desktop cap (Tony Nov 25: the empty gap right of the box was wrong, "expand to the col width") */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { width: calc(100% - 72px); }
-/* Next takes the key's outside 60px slot on the single box (the live flow already puts rbox Next outside; this keeps the non-rbox cue there too) */
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx {
-  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
-  width: 60px; min-width: 60px; height: 60px; margin: 0; padding: 0; border-radius: calc(18px * var(--r-k));
-}
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { width: 100%; height: 100%; padding: 0 2px; gap: 2px; border-radius: calc(18px * var(--r-k)); }
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; height: 18px; }
-@supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx,
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { corner-shape: superellipse(1.52); }
-}
+/* Next takes the key's outside slot on the single box: verdict-v7.css §key (one rule set for every Check and Next) */
 
 /* multi-part row: B HANGING INDEX LETTER (Tony Nov 25: "B", uppercase). Two axes: 36 (card text edge) = the letter, the box edge and the grey hint; 54 = the prompt and the value
    (the 18px hang column is the box's 17.5 value inset). The letter hangs left of the prompt, on its first baseline; the box and hint start at the part's left edge.

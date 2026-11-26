@@ -1012,10 +1012,10 @@ function renderQuestion() {
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true, true)}</span>
         </button>
-        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
+        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}${IB1_GO}</button>`}
         ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Enter your answers here...")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
           data-how="${esc(p.fix.how || "Enter your answers here...")}" placeholder="${esc(p.fix.how || "Enter your answers here...")}"></div>` : ""}
-      </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
+      </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}${IB1_GO}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
     if (all(p)) syncTicks();                                               // nothing ticked can already be checked (prove mode: not yet)
@@ -1036,7 +1036,7 @@ function renderQuestion() {
        (correct | partly there | not yet) under it after a Check; the reference proof in #preview once a sugar lockout reveals it */
     q.innerHTML = `${howLine(p)}<div class="ff proof" id="ff">
         ${proofField(p)}
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check proof" disabled>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check proof" disabled>${icon("i-go")}${IB1_GO}</button>
       </div><div class="proof-len" id="plen" aria-live="polite" hidden></div><div class="stg" id="stgp" aria-live="off"></div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
     wireProof();
   } else {
@@ -2207,13 +2207,14 @@ function nextBtn() {                                                            
   const b = document.createElement("button");
   const v = vmorphV();                                                           // SUBMIT-VERDICT-MORPH: the C4a key flashes the verdict, then is Next (verdict-v7.css §verdict-morph)
   b.type = "button"; b.className = "nx" + (v ? " vmorph" : painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
-  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}</span>`;
+  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}${IB1_GO}</span>`;   // SWISS-KEY: the MC tile's Next wears the typed key's arrow (bento.css §swiss-key); everywhere else .ib1-go stays hidden (app.css)
   if (v) {
     b.dataset.v = v;
     const P = d => `<path d="${d}" pathLength="100"/>`;
     b.insertAdjacentHTML("beforeend", `<svg class="vm-ico" viewBox="0 0 24 24" aria-hidden="true">${v === "ok" ? P("M5 12.5 L10 17.5 L19 7") : P("M7 7 L17 17") + P("M17 7 L7 17")}</svg>`);
     setTimeout(() => b.classList.remove("vmorph"), 1150);
   }
+  const kv = S && S.tries.at(-1)?.v; if (kv === "correct" || kv === "wrong") b.dataset.kv = kv === "correct" ? "ok" : "bad";   // KEY-ONE verdict tint (verdict-v7.css §key): Next takes the hue of the verdict it follows
   b.addEventListener("click", e => {
     e.stopPropagation();
     if (document.documentElement.classList.contains("ui-v7") && window.stemNavNext) { window.stemNavNext(); return; }   // ui-v7: the exact action of the top bar's Next (nav.js goNext), no detour through #qnext's state

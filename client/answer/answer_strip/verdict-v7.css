@@ -104,49 +104,9 @@ html.ui-v7.start .code-box, html.ui-v7.start .code-box:hover, html.ui-v7.start .
 html.ui-v7.start .code-box:has(input:focus-visible):not([data-ptr]) { outline: none; }
 html.ui-v7.start .entry:has(#code:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7.start .entry { corner-shape: superellipse(2); } }
-/* == §ick12-key == ICK 12 C4a (Tony Nov 17, port = brain ick-v1/v/R2/style.css PICK 3, value for value): both Checks (#mcGo under the choices, #ansGo in the proof box)
-   are ONE 56px near-white squircle key at the bottom-right of their area, navy arrow, one soft lift. Each rule carries the control's own id so it beats GO-MUTED above. */
-html.ui-v7 {
-  --ick12-size: 56px;                          /* one size for both Checks (--btn is 48 on the phone) */
-  --ick12-r: var(--r-tile);                    /* ICK4-SQUIRCLE-C: the app's one tile radius (16, x1.25 under corner-shape) */
-  --ick12-face: #f2f4f8;                       /* the key's material, near-white on the navy card */
-  --ick12-ink: var(--page);                    /* the arrow is the page's own navy */
-  --ick12-cast: 0 8px 24px rgb(0 0 0 / .45);   /* the lift: one big soft shadow, no tight edge ring */
-  --ick12-off-face: color-mix(in srgb, var(--ick12-face) 40%, var(--card));   /* off: a grey slate, not white */
-  --ick12-off-ink: color-mix(in srgb, var(--page) 72%, var(--muted));         /* off: a soft navy arrow */
-  --ick12-off-cast: 0 2px 6px rgb(0 0 0 / .35);                               /* off: the key sits, it does not float */
-}
-html.ui-v7 #q .chk > .send#mcGo,
-html.ui-v7 #q .ff.proof#ff > .send#ansGo {
-  width: var(--ick12-size); height: var(--ick12-size); border: 0; border-radius: var(--ick12-r);
-  background: var(--ick12-face); color: var(--ick12-ink); box-shadow: var(--ick12-cast);
-  place-items: center;
-}
-@supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q .chk > .send#mcGo,
-  html.ui-v7 #q .ff.proof#ff > .send#ansGo { corner-shape: superellipse(2); }
-}
-html.ui-v7 #q .chk > .send#mcGo .ico,
-html.ui-v7 #q .ff.proof#ff > .send#ansGo .ico { width: 26px; height: 26px; }   /* the arrow grows with the key */
-/* the proof Check sits at the box's bottom-right corner (8px inset); the text clears the key at its foot (56 + 8 inset + 8 air) */
-html.ui-v7 #q .ff.proof#ff > .send#ansGo { position: absolute; right: 8px; bottom: 8px; top: auto; }
-html.ui-v7.proof-split #q .ff.proof#ff > textarea { padding: 0 8px 72px 0; }
-html.ui-v7 #q .ff.proof#ff > textarea { padding-bottom: 72px; }
-/* the Check at rest: grey face, soft navy arrow, tight shadow, still readable */
-html.ui-v7 #q .chk > .send#mcGo:is(:disabled, [aria-disabled="true"]),
-html.ui-v7 #q .ff.proof#ff > .send#ansGo:is(:disabled, [aria-disabled="true"]),
-html.ui-v7 #q .chk > .send#mcGo:is(:disabled, [aria-disabled="true"]):hover,
-html.ui-v7 #q .ff.proof#ff > .send#ansGo:is(:disabled, [aria-disabled="true"]):hover {
-  background: var(--ick12-off-face); color: var(--ick12-off-ink); box-shadow: var(--ick12-off-cast);
-  opacity: 1;
-  cursor: default;
-}
-@media (hover: hover) {
-  html.ui-v7 #q .chk > .send#mcGo:hover,
-  html.ui-v7 #q .ff.proof#ff > .send#ansGo:hover { background: #fff; }
-}
-html.ui-v7 #q .chk > .send#mcGo:active,
-html.ui-v7 #q .ff.proof#ff > .send#ansGo:active { background: color-mix(in srgb, var(--ick12-face) 92%, #000); box-shadow: 0 2px 8px rgb(0 0 0 / .4); }
+/* the proof text clears the key at the box's foot (8 inset + 44 key + 8 air = 60); the key itself is §key at the foot of this file */
+html.ui-v7.proof-split #q .ff.proof#ff > textarea { padding: 0 8px 60px 0; }
+html.ui-v7 #q .ff.proof#ff > textarea { padding-bottom: 60px; }
 
 /* == §proof-v7 == ICK3 (Tony Nov 18 phone review): the proof question while TYPING (html.mt + .proof-split; app.js proofTyping) */
 /* C5: NO EDGE. The pad split's hairline (app.css "html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line) }") drew a 1px --line ring inside the
@@ -159,18 +119,18 @@ html.ui-v7.mt.proof-split #freezeIn { box-shadow: none; }
    (focus leaves the textarea for the button) never re-pads the box mid-tap (app.css:1843). */
 html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; padding-bottom: 0; }   /* ICK4-FADE (Tony Nov 18 "closer to bottom"): the textarea runs to the box edge, so its fade sits on the edge (its own 72px foot still clears the keys) */
 /* C7: while typing, the ONE Ask Cluck button (cluckbtn.js moves #cluckBtn into the proof box; same element, same states, same window.stemCluckAsk
-   action) sits just left of the Check key: 56x56 = the Check key (--ick12-size, --ick12-r), bottom 8 / right 72 (= the key's 8px inset + 56 + 8px gap);
+   action) sits just left of the Check key: the in-box key size (§key --key-in 44, --key-r-in), bottom 8 / right 60 (= the key's 8px inset + 44 + 8px gap);
    tangerine squircle from the §ick5-tr tokens (qcard.css), no lift. */
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox {
-  position: absolute !important; top: auto !important; left: auto !important; right: 72px !important; bottom: 8px !important;
+  position: absolute !important; top: auto !important; left: auto !important; right: calc(var(--key-in) + 2 * var(--key-inset)) !important; bottom: var(--key-inset) !important;
   float: none; display: grid; place-items: center;
-  width: var(--ick12-size); height: var(--ick12-size); min-width: var(--ick12-size); min-height: var(--ick12-size); margin: 0 !important; padding: 0 !important;
-  border: 0; border-radius: var(--ick12-r); background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
+  width: var(--key-in); height: var(--key-in); min-width: var(--key-in); min-height: var(--key-in); margin: 0 !important; padding: 0 !important;
+  border: 0; border-radius: var(--key-r-in); background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
   box-shadow: none !important; overflow: hidden; opacity: 1 !important; z-index: 3;
 }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::before,
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox::after { display: none; }
-html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-duck { width: 30px; height: 30px; top: 0; align-self: center;
+html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-duck { width: 24px; height: 24px; top: 0; align-self: center;
   color: var(--ick7-ink, var(--page, #02040d)) !important; --c2: var(--ick7-eye, var(--help-on, #ffdcc0)) !important; --paper: var(--ick7-eye, var(--help-on, #ffdcc0)); opacity: 1 !important; }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-t { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: scale(.95); }
@@ -190,16 +150,16 @@ html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 10px; }   /* Tony Nov 18: thin
 /* == §ick4-wrap == ICK4-WRAP (Tony Nov 18, 3a "word-wrap effect for the two button ... shape-outside"): the proof text flows AROUND the keys.
    app.js proofField(): under ui-v7 the field is .pwrap > #ans.ans[contenteditable] (a <textarea> cannot wrap around anything).
    - .ff.proof gives its padding to .pwrap (--pw-x / --pw-b), so the float's size is plain arithmetic from the keys' 8px inset:
-       width  = 8 inset + 56 key + 8 air - --pw-x          (+ 64 with the in-box duck: 56 + 8 gap)
-       height = 8 inset + 56 key + 6 air - --pw-b
+       width  = 8 inset + 44 key + 8 air - --pw-x          (+ 52 with the in-box duck: 44 + 8 gap)
+       height = 8 inset + 44 key + 6 air - --pw-b
    - .pwrap = the scroller in keyboard mode (PROOF-LOCK) + a WRAPPING flex line: the line is as tall as max(content, box), .ans stretches to it,
      so the float's height: 100% resolves and its shape sits at the CONTENT's foot (Afif's float-bottom trick); app.js fit() then sets the
      exact px (--wrap-f / -w / -n): 100% alone runs one line long when the notch itself makes a new line.
    - known limit: scrolled up in keyboard mode, a middle line can pass under the keys (they sit on the box, the notch sits at the content's end). */
-html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 72px; }
+html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 60px; }
 html.ui-v7.proof-split #q .ff.proof:has(> .pwrap) { --pw-x: 16px; }                       /* PROOF-AXIS: the card's text axis */
 html.ui-v7.mt.proof-split #q .ff.proof:has(> .pwrap) { --pw-t: 0px; --pw-b: 8px; }      /* C8 + ICK4-FADE: text to the box edge while typing */
-html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 136px; }                           /* duck + Check = one block */
+html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 112px; }                           /* duck + Check = one block */
 html.ui-v7 #q .ff.proof > .pwrap {
   flex: 1 1 auto; min-width: 0; min-height: 10rem; display: flex; flex-wrap: wrap; align-content: stretch; box-sizing: border-box;
   padding: var(--pw-t) var(--pw-x) var(--pw-b); cursor: text;
@@ -218,16 +178,16 @@ html.ui-v7 #q .ff.proof > .pwrap > .ans {
 html.ui-v7 #q .ff.proof > .pwrap > .ans::before {
   content: ""; float: right; pointer-events: none;   /* --wrap-*: app.js ceField fit() measures the keys; the calc()s = the same numbers before it runs */
   width: var(--wrap-w, calc(var(--pw-keys) - var(--pw-x))); height: var(--wrap-f, 100%);
-  shape-outside: inset(calc(100% - var(--wrap-n, calc(70px - var(--pw-b)))) 0 0 0);
+  shape-outside: inset(calc(100% - var(--wrap-n, calc(58px - var(--pw-b)))) 0 0 0);
 }
 html.ui-v7 #q .ff.proof > .pwrap > .ans.empty::after { content: attr(data-ph); color: var(--line); pointer-events: none; }   /* the placeholder (PH-NAVY) */
 html.ui-v7 #q .ff.proof > .pwrap > .ans.empty:focus::after, html.ui-v7:is(.kb, .kbup, .mt) #q .ff.proof > .pwrap > .ans.empty::after { color: transparent; }
 html.ui-v7 #q .ff.proof.done > .pwrap > .ans { color: var(--correct); }
 
-/* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (C4a, 56px squircle) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
+/* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (§key) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
    app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,
    shake (bad) 120-480, hold to 900, crossfade icon -> .nf 900-1150. Percents of 1150: 120=10.43 420=36.52 480=41.74 570=49.57 900=78.26. Reduced motion: colour + full icon, then the swap at 1150. */
-html.ui-v7 #q .nx.vmorph { --vm-c: #0c2c22; --vm-s: var(--correct); display: grid; place-items: center; width: var(--ick12-size); height: var(--ick12-size); padding: 0; border-radius: var(--ick12-r);
+html.ui-v7 #q .nx.vmorph { --vm-c: #0c2c22; --vm-s: var(--correct); display: grid; place-items: center;
   animation: vm-flood 1150ms cubic-bezier(0, 0, .2, 1) both; }
 html.ui-v7 #q .nx.vmorph[data-v="bad"] { --vm-c: #3e141e; --vm-s: var(--wrong); animation: vm-flood 1150ms cubic-bezier(0, 0, .2, 1) both, vm-shake 1150ms linear both; }
 html.ui-v7 #q .nx.vmorph > * { grid-area: 1 / 1; }
@@ -236,9 +196,8 @@ html.ui-v7 #q .nx.vmorph .vm-ico { width: 28px; height: 28px; fill: none; stroke
   animation: vm-pop 1150ms linear both, vm-icon-out 1150ms cubic-bezier(.4, 0, .2, 1) both; }
 html.ui-v7 #q .nx.vmorph .vm-ico path { stroke-dasharray: 100; animation: vm-draw 1150ms cubic-bezier(.4, 0, .2, 1) both; }
 html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
-@keyframes vm-flood { 0% { background: var(--ick12-face); width: var(--ick12-size); height: var(--ick12-size); border-radius: var(--ick12-r); }
-  10.43%, 78.26% { background: var(--vm-c); width: var(--ick12-size); height: var(--ick12-size); border-radius: var(--ick12-r); }   /* the key keeps its 56px squircle until the crossfade */
-  100% { background: transparent; border-radius: 8px; width: var(--nxw); height: var(--btn); } }
+html.ui-v7 #q .nx:not(.vmorph) > .vm-ico { display: none; }   /* after the flash the tick / cross leaves: it sat under Next as a black wedge (no fill rule off .vmorph) */
+@keyframes vm-flood { 0% { background: var(--key-face); } 100% { background: var(--kf, var(--key-face)); } 10.43%, 78.26% { background: var(--vm-c); } }   /* size and radius never move: Next is the same key (§key) */
 @keyframes vm-shake { 0%, 10.43%, 41.74%, 100% { translate: 0; } 19% { translate: 4px; } 27% { translate: -3px; } 35% { translate: 2px; } }
 @keyframes vm-draw { 0%, 10.43% { stroke-dashoffset: 100; } 36.52%, 100% { stroke-dashoffset: 0; } }
 @keyframes vm-draw2 { 0%, 15.65% { stroke-dashoffset: 100; } 41.74%, 100% { stroke-dashoffset: 0; } }   /* the cross's 2nd stroke starts +60 ms */
@@ -246,7 +205,7 @@ html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
 @keyframes vm-icon-out { 0%, 78.26% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes vm-label { 0%, 78.26% { opacity: 0; } 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  html.ui-v7 #q .nx.vmorph, html.ui-v7 #q .nx.vmorph[data-v="bad"] { animation: none; background: var(--vm-c); }
+  html.ui-v7 #q .nx.vmorph, html.ui-v7 #q .nx.vmorph[data-v="bad"] { animation: none; --kf: var(--vm-c); }   /* --kf = the §key face */
   html.ui-v7 #q .nx.vmorph .nf { animation: none; opacity: 0; }
   html.ui-v7 #q .nx.vmorph .vm-ico, html.ui-v7 #q .nx.vmorph .vm-ico path { animation: none; stroke-dashoffset: 0; }
 }
@@ -254,69 +213,86 @@ html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
    the short-answer input and the proof box type AND hint in the mono (was --font-input Atkinson / --font). Not the code box, not the Cluck composer. */
 html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::placeholder { font-family: var(--mono); }
 
-/* == §ib1-key == IB-1 SOFT LIFT, STATIC (Tony Nov 24; SOFT-LIFT-SPEC §5; mock PICK-soft-lift.src.html): the single answer box's Check key.
-   It is the live #ansGo moved OUTSIDE its field, 12px to the right, 60x60, the same 18px squircle as the box. No second element (the proof key,
-   #ick12-key above, keeps its own place; MC's #mcGo is untouched). Icons share one 24px grid at 2.25 stroke; tick / cross stay the live vmark.
-   No motion: hover is a fill step, no transition. */
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo {
-  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
-  width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0;
-  display: grid; place-items: center; border: 0; border-radius: calc(18px * var(--r-k));
-  background: var(--chip); color: var(--ink); box-shadow: none; transition: transform .12s ease-out, opacity .15s ease-out;   /* press = scale(.96); dim <-> full eases */
+/* == §key == KEY-ONE (Tony Nov 26; brain key-audit-2026-11-26 + DESIGN-LANGUAGE "Keys"): ONE key for every answer's Check and its Next.
+   Five families, one rule set: typed #ansGo, each multi part's .send, the MC tile's .send, pick-all #mcGo, proof #ansGo, and the .nx that replaces each of them.
+   SKIN   --chip face, --ink arrow, flat (no edge, no shadow). No near-white key, no --action blue key, no bright --correct Next. A key on a judged answer takes the verdict's tint (VERDICT TINT below).
+   SIZE   two sizes by where the key sits: OUT 60 = beside or under what it submits (typed, multi, pick-all; = the 60px field's height); IN 44 = inside what it submits (MC tile, proof box; = --tap).
+   RADIUS concentric: OUT = its neighbour field's 18px squircle; IN = the container's --r-tile minus the 8px inset.
+   PLACE  typed / multi: right of the field, 12px gap, same top. pick-all: under the choices, right edge on the column's (where the typed key sits), 16px above. MC: in the picked tile, right 8, centred. proof: in the box, bottom-right 8.
+   GLYPH  one arrow (app.js IB1_GO: 24px grid, stroke 2) for Check and for Next; the sprite i-go / i-tri stay in the DOM for the flag-off look.
+   STATES empty = dim .35 + inert (the MC tile has no key until a pick: the pick is its "has an answer") · ready = full · hover = face 82% + white · :active = scale(.96) + face 90% ·
+          focus-visible = the app's 2px --focus ring, offset 2 · busy / judged-wrong-with-a-try / the 10 s retry wait = dim .55 (busy: a typed box shows its thinking ring, so its key keeps the arrow;
+          the other three have no ring, so the key carries the spinner) · right or out of tries = Next: the SAME key (place, size, radius, arrow), full, in the verdict's tint · reduced motion = no scale, no fade.
+   The verdict flash on the key (§verdict-morph) and the tick / cross in the box (strip.css IB-4) are untouched: they paint on this key's geometry. */
+html.ui-v7 {
+  --key-out: 60px; --key-in: 44px; --key-inset: 8px; --key-gap: 12px;
+  --key-r-out: calc(18px * var(--r-k)); --key-r-in: calc(var(--r-tile) - var(--key-inset));
+  --key-face: var(--chip); --key-ink: var(--ink);
+  --key-ok-face: color-mix(in srgb, var(--correct) 40%, var(--page)); --key-bad-face: color-mix(in srgb, var(--wrong) 45%, var(--page));   /* VERDICT TINT: a step of the verdict's own hue (tokens only), ink = --correct-on / --wrong-on (>= 6:1) */
+  --key-off: .35; --key-wait: .55;
 }
-@supports (corner-shape: superellipse(2)) { html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo { corner-shape: superellipse(1.52); } }
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo .ico { display: none; }   /* the sprite i-go is 2px / 14x14; the inline 24-grid arrow below replaces it under v7 only */
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo .ib1-go { display: block; width: 24px; height: 24px; }
-html.ui-v7 #q > .ff#ff:not(.proof) > .vk .ico,
-html.ui-v7 #q .mparts .part > .ff > .vk .ico { width: 24px; height: 24px; stroke-width: 2.25; }   /* the live vmark tick / cross: one 24px grid (app.js IB1_V) */
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:is(:disabled, [aria-disabled="true"]) {
-  opacity: 1; background: var(--chip); color: var(--ink); cursor: default;   /* idle: the key rests full (mock .go); the closed row dims the whole field */
+/* skin */
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) {
+  box-sizing: border-box; display: grid; place-items: center; padding: 0; border: 0;
+  background: var(--kf, var(--key-face)); color: var(--ki, var(--key-ink)); box-shadow: none; opacity: 1; cursor: pointer;
+  transition: transform var(--d-fast) ease-out, opacity .15s ease-out, background-color .15s ease-out;
 }
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:not(:disabled, [aria-disabled="true"]):active,
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:not(:disabled, [aria-disabled="true"]):active { transform: scale(.96); }
+@supports (corner-shape: superellipse(2)) {
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) { corner-shape: superellipse(1.52); }
+}
+/* VERDICT TINT (Tony Nov 26 "tint colour to match right and wrong"): a key on a judged answer takes that verdict's hue, never the neutral navy: Next after a right answer = green family,
+   Next after the last miss = red family (app.js nextBtn data-kv), a typed Check waiting on a missed box = red family. Unjudged = --chip. Low specificity on purpose: §verdict-morph's --kf wins while it flashes. */
+html.ui-v7 .nx[data-kv="ok"] { --kf: var(--key-ok-face); --ki: var(--correct-on); }
+html.ui-v7 .nx[data-kv="bad"], html.ui-v7 .ff.bad > .send { --kf: var(--key-bad-face); --ki: var(--wrong-on); }
+/* size + radius: OUT */
+html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx), .chk > :is(#mcGo, .nx)) {
+  width: var(--key-out); min-width: var(--key-out); height: var(--key-out); min-height: var(--key-out); margin: 0; border-radius: var(--key-r-out);
+}
+/* size + radius: IN */
+html.ui-v7 #q :is(.ff.proof#ff > :is(#ansGo, .nx), .choices .ch > :is(.send, .nx)) {
+  width: var(--key-in); min-width: var(--key-in); height: var(--key-in); min-height: var(--key-in); border-radius: var(--key-r-in);
+  position: absolute; left: auto; right: var(--key-inset);
+}
+/* place */
+html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx)) {   /* the 1.5px = the field's own edge (the offsets count from its padding box) */
+  position: absolute; left: calc(100% + var(--key-gap) + 1.5px); right: auto; top: -1.5px; bottom: auto;
+}
+html.ui-v7 #q .chk { margin-top: var(--s4); }
+html.ui-v7 #q .chk > :is(#mcGo, .nx) { position: relative; inset: auto; }
+html.ui-v7 #q .choices .ch > :is(.send, .nx) { top: 50%; bottom: auto; margin: calc(var(--key-in) / -2) 0 0; }
+html.ui-v7 #q .ff.proof#ff > :is(#ansGo, .nx) { top: auto; bottom: var(--key-inset); margin: 0; }
+/* glyph: the one arrow; Next has no word and no plate (aria-label says "Next question") */
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) .ico { display: none; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) .ib1-go { display: block; width: 24px; height: 24px; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx::before { display: none; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx .nf {
+  display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: none; color: inherit; box-shadow: none; transform: none;
+}
+html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx .nf > span { display: none; }
+/* states: empty */
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .mparts .part > .ff > .send, .chk > #mcGo):is(:disabled, [aria-disabled="true"]) { opacity: var(--key-off); cursor: default; pointer-events: none; }
+/* states: judged wrong with a try left (the key waits for an edit), the 10 s retry wait (no bar: the dim says it), busy */
+html.ui-v7 #q .ff#ff.bad:not(.cue, .rbox) > #ansGo,
+html.ui-v7 #q .mparts .part > .ff.bad:not(.shut) > .send,
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo).waiting,
+html.ui-v7.grading #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo, .choices .ch > .send, .mparts .part.g-on > .ff > .send) { opacity: var(--key-wait); }
+html.ui-v7.grading #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo, .choices .ch > .send, .mparts .part.g-on > .ff > .send) { cursor: progress; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo).waiting::before { display: none; }
+/* busy: a TYPED answer's box carries the thinking ring (strip.css IB-3), so its key keeps the arrow and drops app.css's spinner; MC, pick-all and proof have no ring, the key spins */
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send)::after { content: none; animation: none; }
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send) > .ib1-go { visibility: visible; }
+/* states: hover, press */
+@media (hover: hover) {
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx):not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--kf, var(--key-face)) 82%, #fff); }
+}
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx):not(:disabled, [aria-disabled="true"]):active { transform: scale(.96); background: color-mix(in srgb, var(--kf, var(--key-face)) 90%, #000); }
 @media (prefers-reduced-motion: reduce) {
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo, html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send { transition: none; }
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:active, html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:active { transform: none; }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) { transition: none; }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx):active { transform: none; }
 }
-@media (hover: hover) {
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > #ansGo:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
-}
-
-/* == §ib5-key == IB-5 SOFT LIFT, MULTI KEY OUTSIDE (Tony Nov 25; SOFT-LIFT-SPEC §5 §13; grill Q4a): each multi part's live .send
-   moved OUTSIDE its field, 12px to the right, 60x60, the SAME 18px squircle as the single box's #ansGo (§ib1-key), no second element.
-   The DOM keeps the button inside the .ff (app.js renders it live, partEls / IB-3 / IB-4 read it there); only its paint moves.
-   One key per part; the row's reserved 60px column (strip.css) keeps the field width fixed while the key is hidden. */
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send {
-  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
-  width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0;
-  display: grid; place-items: center; border: 0; border-radius: calc(18px * var(--r-k));
-  background: var(--chip); color: var(--ink); box-shadow: none; transition: transform .12s ease-out, opacity .15s ease-out;
-}
-@supports (corner-shape: superellipse(2)) { html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send { corner-shape: superellipse(1.52); } }
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send .ico { display: none; }   /* the sprite i-go is 2px / 14x14; the inline 24-grid arrow is the single key's (app.js IB1_GO) */
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send .ib1-go { display: block; width: 24px; height: 24px; }
-@media (hover: hover) {
-  html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
-}
-
-/* KEY-ALL (Tony Nov 25): every open part shows its key; an EMPTY box leaves it dimmed and inert (app.js partKey sets disabled), full once there is text.
-   The slot is the same reserved 60px, so the field never changes width. Beats app.css's "grading: the other parts' keys stay full" (0,5,1). */
-html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:disabled:not([hidden]) { opacity: .35; cursor: default; pointer-events: none; }
-
-/* IB-3 (SOFT-LIFT §6, grill Q1a): while a TYPED answer is being checked the box says "thinking"; its Check key only dims.
-   app.css "grading wait" draws a ring in every .send and hides its arrow; typed answers keep the arrow and drop the ring.
-   MC keeps the live spinner untouched (choose-all-spam.pw pins it). */
-html.ui-v7.grading #q > .ff#ff:not(.proof):not(.rbox) > #ansGo::after { content: none; animation: none; }
-html.ui-v7.grading #q > .ff#ff:not(.proof):not(.rbox) > #ansGo > :is(.ico, .ib1-go) { visibility: visible; }
-html.ui-v7.grading #q .mparts .part.g-on > .ff > .send::after { content: none; animation: none; }
-html.ui-v7.grading #q .mparts .part.g-on > .ff > .send > :is(.ico, .svg, .ib1-go) { visibility: visible; }
-
-/* IB-4 (SOFT-LIFT-SPEC §7, grill Q2a/Q3b): a typed miss skips §verdict-morph and KEEPS its Check key, dimmed (live hid it), so the retry
-   is the same key; the next keystroke clears .bad and the key returns to full. The tick/cross is the verdict icon: it shows beside the
-   dimmed key (app.css's "the arrow replaces the x" rule was for the hidden-key world), and strip.js times its fade after the ring. */
-html.ui-v7 #q > .ff#ff.bad:not(.cue) > #ansGo,
-html.ui-v7 #q > .ff#ff.bad:not(.cue) > #ansGo[aria-disabled="true"] { opacity: .55; }   /* also during the 10 s wait (app.css / §ib1-key rests the key full) */
-html.ui-v7 #q .mparts .part > .ff.bad:not(.shut) > .send { opacity: .55; }
+/* the live tick / cross in a typed box: one 24px grid (app.js IB1_V); it shows beside the dimmed key after a miss (app.css's "the arrow replaces the x" was for the hidden-key world) */
+html.ui-v7 #q > .ff#ff:not(.proof) > .vk .ico,
+html.ui-v7 #q .mparts .part > .ff > .vk .ico { width: 24px; height: 24px; stroke-width: 2.25; }
 html.ui-v7 #q .ff:has(> #ansGo:not([hidden], :disabled, .waiting)) > .vk[data-v="i-x"] { display: grid; }
 
 /* IB-4b (Tony Nov 25 07:38, SPEC §7 BACKGROUND): on right, wrong and lock the TYPED box keeps its RESTING ground (--ans-field) and the
