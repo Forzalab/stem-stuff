@@ -168,6 +168,10 @@
      Tiles take their natural height (a row = its tallest tile), the page scrolls, nothing is clipped, no search / probe grid / guard. Content cut at the viewport bottom on first load is the scroll cue.
      A formula wider than its tile still shrinks, then side-scrolls (mathFit). */
   var FLOW_PAD = 104, FLOW_MINW = 96;   // words' side room: left 16 + letter 24 + gap 12 = 52, right = Check / Next key 44 + 8 inset (so a pick never re-wraps); a tile is never narrower than 96px
+  function flowPad(ch) {   // the left inset is --mc-pl (bento.css, on the card's text edge: 20 / 32 / 16) + letter 24 + gap 12 + the 52 key reserve; FLOW_PAD is the fallback
+    var pl = parseFloat(getComputedStyle(ch.parentNode).getPropertyValue("--mc-pl"));
+    return pl > 0 ? pl + 24 + 12 + 52 : FLOW_PAD;
+  }
   function flowCols(chs, R) {
     var pr = D.createElement("div"), ws, C, inner;
     pr.className = "mc-probe"; pr.setAttribute("aria-hidden", "true");
@@ -180,7 +184,7 @@
     ws = [].map.call(pr.children, function (e) { return e.getBoundingClientRect().width; });
     pr.remove();
     for (C = 3; C > 1; C--) {
-      inner = (R - (C - 1) * GAP) / C - FLOW_PAD;
+      inner = (R - (C - 1) * GAP) / C - flowPad(chs[0]);
       if ((R - (C - 1) * GAP) / C >= FLOW_MINW && ws.every(function (w) { return w <= inner - 1; })) return C;
     }
     return 1;
