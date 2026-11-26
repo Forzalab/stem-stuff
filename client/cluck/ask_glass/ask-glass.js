@@ -284,7 +284,8 @@ function glassOn(el, opts = {}) {
 const D = document, H = D.documentElement;
 const PAR = { invert: false, refraction: 46, magnify: 1.30, bezel: 0.56, curvature: 6, ior: 1, chroma: (2 * 4) / 46, blur: 6.5, specular: 0.55, specularWidth: 2.5, lightAngle: -25 };   // ASK-GLASS-TUNE: Tony's pick (C, zoom more, less frost): bend 46, 1.30x, 4 px chroma/side, 6.5 px frost
 const LOCKP = { refraction: 10, chroma: 0, specular: 0.25 };   // the locked strip: calm glass
-const RAD = 20, LOCK_RAD = 14;
+/* the lens map's corner radius = the bar's own CSS radius (phone 20 / locked 14; desktop side column 16, ask-glass.css), so the refraction edge follows the CSS whatever it is */
+const radOf = (f, locked) => parseFloat(g.getComputedStyle(f).borderTopLeftRadius) || (locked ? 14 : 20);
 const mq = (q) => { try { return g.matchMedia(q).matches; } catch (e) { return false; } };
 const reduced = () => mq('(prefers-reduced-motion: reduce)');
 const solid = () => H.classList.contains('fx-dim') || mq('(prefers-reduced-transparency: reduce)');   // fx.js low tier / no-blur gate, or the person asked for less transparency
@@ -419,7 +420,7 @@ function glass(s) {
   f.classList.toggle('ag-solid', solid());
   if (solid() || !s.copy || !f.offsetWidth) { s.W = f.offsetWidth; s.H = f.offsetHeight; return; }
   try {
-    const o = Object.assign({}, PAR, { radius: s.locked ? LOCK_RAD : RAD }, s.locked ? LOCKP : {});
+    const o = Object.assign({}, PAR, { radius: radOf(f, s.locked) }, s.locked ? LOCKP : {});
     s.gl = glassOn(s.copy, o); s.img = s.gl.img; s.base = s.img.getAttribute('href'); s.opts = o; s.W = s.copy.offsetWidth; s.H = s.copy.offsetHeight;
     f.classList.remove('ag-frost');
   } catch (e) { s.gl = null; s.img = null; s.bad = true; s.W = f.offsetWidth; s.H = f.offsetHeight; f.classList.add('ag-frost'); }   // the lens failed: the R3 frost (ask-glass.css)
@@ -473,9 +474,10 @@ function setLocked(form, locked) {
   form.classList.add('opening');
   track(s);
   s.t1 = setTimeout(() => {
+    const r0 = radOf(form, true);
     form.classList.remove('locked'); form.classList.add('sweep');
-    const h1 = form.offsetHeight;
-    if (form.animate) s.anim = form.animate([{ height: h0 + 'px', borderRadius: LOCK_RAD + 'px' }, { height: h1 + 'px', borderRadius: RAD + 'px' }], { duration: 460, delay: 160, easing: 'cubic-bezier(.2,1.35,.32,1)', fill: 'backwards' });
+    const h1 = form.offsetHeight, r1 = radOf(form, false);
+    if (form.animate) s.anim = form.animate([{ height: h0 + 'px', borderRadius: r0 + 'px' }, { height: h1 + 'px', borderRadius: r1 + 'px' }], { duration: 460, delay: 160, easing: 'cubic-bezier(.2,1.35,.32,1)', fill: 'backwards' });
     if (s.anim) track(s, s.anim, true);   // the same follow, now ended by the animation's finish
   }, 170);
   s.t3 = setTimeout(() => { form.classList.remove('sweep', 'opening'); }, 1100);

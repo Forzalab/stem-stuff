@@ -90,6 +90,12 @@ html.ui-v7 .ask.ag.think > .g-haze {
 @keyframes ag-glow-in { from { opacity: 0; } to { opacity: .55; } }   /* opacity only: the glow fades in, then ag-breathe takes over at the same .55 */
 @keyframes ag-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }   /* opacity only */
 
+/* ---- desktop side column: concentric radii (Tony Nov 26; outer = inner + gap). Column 28 = bar 16 + the 12px inset on left / right / bottom (measured). The bar's padding is 6, so the send button (44) is 16 - 6 = 10.
+   Phones are untouched: these rules need html.side, the sheet keeps its --rr / --pp radius and the bar 20 / 14. ask-glass.js reads the bar's computed radius for the lens map, so the refraction edge follows. ---- */
+html.ui-v7.side .cl { border-radius: 28px; }
+html.ui-v7.side .cl-ft .ask.ag, html.ui-v7.side .cl-ft .ask.ag.locked { --ask-r: 16px; border-radius: 16px; }
+html.ui-v7.side .cl-ft .ask.ag > .send { border-radius: 10px; }
+
 /* ---- fallbacks ---- */
 html.ui-v7 .ask.ag:is(.ag-solid, .ag-frost) > .g-copy { display: none; }
 html.ui-v7 .ask.ag.ag-solid > .g-tint { background: var(--ai-tint, #221c16); }
