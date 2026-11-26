@@ -346,8 +346,8 @@ function drawGraph(doc, g, st = {}) {
 }
 // Geometry: named points "A 0,0; B 3,0" (y up, 1:1 scale) and marks seg(A,B) circle(O,r) right(at,from,to) dim(from,to,label[,left|right])
 // angle(at,from,to[,label]) arrow(from,to[,label]) label(at,text) poly(A,B,C,...[,label][,fill]) rect(A,B[,label][,fill]) (stepper iteration 2:
-// generic shapes only, a resistor / block / cube / piston is composed from them). Caps (registry): 16 points, 16 marks, 6 labels; over one: too-long.
-const GEO_CAPS = { pts: 16, marks: 16, labels: 6 };
+// generic shapes only, a resistor / block / cube / piston is composed from them). Caps (registry): 16 points, 16 marks, 16 labels; over one: too-long.
+const GEO_CAPS = { pts: 16, marks: 16, labels: 16 };
 const GREEK = { alpha: "α", beta: "β", gamma: "γ", delta: "δ", theta: "θ", phi: "φ", pi: "π", mu: "μ", omega: "ω", lambda: "λ", Delta: "Δ", circ: "°", cdot: "·", Omega: "Ω", parallel: "∥", perp: "⊥", rho: "ρ", sigma: "σ", tau: "τ", eta: "η" };
 const SUB = { 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉", a: "ₐ", e: "ₑ", o: "ₒ", x: "ₓ", i: "ᵢ", r: "ᵣ", n: "ₙ", k: "ₖ", m: "ₘ", p: "ₚ", s: "ₛ", t: "ₜ" };
 const plainTex = s => String(s).replace(/\$/g, "").replace(/_\{?([0-9a-z]{1,3})\}?/g, (m, w) => ([...w].every(ch => SUB[ch]) ? [...w].map(ch => SUB[ch]).join("") : m)).replace(/\\,/g, " ").replace(/\\([A-Za-z]+)/g, (m, w) => GREEK[w] ?? w).replace(/[{}]/g, "").replace(/\^\s*°/g, "°").replace(/_(?=[^\x00-\x7F])/g, "").trim();

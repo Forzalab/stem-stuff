@@ -33,10 +33,10 @@ html.ui-v7 .choices.bento .ch > .opt.opt {
   transition: background-color .2s ease-out, color .2s ease-out;
 }
 html.ui-v7 .choices.bento .ch > .opt.opt:active:not(:disabled) { transform: scale(.98); }
-html.ui-v7 .choices.bento .opt .txt, html.ui-v7 .mc-probe .opt .txt { display: block; min-width: 0; white-space: normal; overflow-wrap: normal; word-break: normal; text-align: center; font-size: 1.125rem; line-height: 24px; font-weight: var(--w); letter-spacing: 0; }
+html.ui-v7 .choices.bento .opt .txt, html.ui-v7 .mc-probe .opt .txt { display: block; min-width: 0; white-space: normal; overflow-wrap: normal; word-break: normal; text-align: center; font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w); letter-spacing: 0; }
 html.ui-v7 .choices.bento .opt[data-brk] .txt { overflow-wrap: anywhere; }
-html.ui-v7 .choices.bento .opt[data-k="s"] .txt, html.ui-v7 .mc-probe .opt[data-k="s"] .txt { font-size: 1.375rem; line-height: 28px; font-weight: var(--w-em); letter-spacing: -.01em; }
-html.ui-v7 .choices.bento .opt[data-k="p"] .txt, html.ui-v7 .mc-probe .opt[data-k="p"] .txt { font-size: 1.5rem; line-height: 28px; }
+html.ui-v7 .choices.bento .opt[data-k="s"] .txt, html.ui-v7 .mc-probe .opt[data-k="s"] .txt { font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-em); letter-spacing: -.01em; }
+html.ui-v7 .choices.bento .opt[data-k="p"] .txt, html.ui-v7 .mc-probe .opt[data-k="p"] .txt { font-size: var(--fs-2); line-height: var(--lh-2); }
 html.ui-v7 .choices.bento .opt .txt > p, html.ui-v7 .mc-probe .opt .txt > p { margin: 0; }
 html.ui-v7 .choices.bento .opt .txt .katex { font-size: calc(1em * var(--mz, 1)); }   /* --mz: LONG-MATH shrink (bento.js mathFit, floor .7) */
 /* LONG-MATH (Tony Nov 18): a formula still wider than its full row at the floor size: that tile scrolls sideways, nothing is cut. Right edge fades (the cue);
@@ -52,7 +52,7 @@ html.ui-v7 .mc-probe .katex { font-size: 1em; }
 /* pick-all (Tony, BENTO-CHECK-TR): letter = top-left at the MC inset (14/12), the square check = top-right at the same 14px side inset (check 20px, top 10 = centred on the letter's line).
    The words keep a symmetric 36px reserve so they stay centred and clear of both corners. */
 html.ui-v7 .choices.bento.all .ch > .opt.opt { padding-left: 36px; padding-right: 36px; }
-html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 20px; top: 18px; margin: 0; height: 16px; font-size: 12px; line-height: 16px; letter-spacing: .02em; color: var(--mc-letter); text-transform: lowercase; }   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only, DOM text unchanged */
+html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 20px; top: 18px; margin: 0; height: 16px; font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em; color: var(--mc-letter); text-transform: lowercase; }   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only, DOM text unchanged */
 html.ui-v7 .choices.bento.all .ch > .opt.opt .badge { position: absolute; left: auto; right: 20px; top: 16px; width: 20px; height: 20px; margin: 0; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt .badge .ico { width: 14px; height: 14px; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt.kept { background: var(--mc-right); color: var(--correct-on); border-width: 0; }
@@ -62,7 +62,7 @@ html.ui-v7 .choices.bento.all .ch > .opt.opt.wrong:not(.reveal) .lt { color: var
 /* the letter: a 12px corner label, no badge, no fill */
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.opt .badge.badge {
   position: absolute; left: 20px; top: 18px; width: auto; height: 16px; padding: 0; border: 0; border-radius: 0; background: none;
-  color: var(--mc-letter); font-size: 12px; line-height: 16px; letter-spacing: .02em; font-weight: var(--w-em); display: block; text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony) */
+  color: var(--mc-letter); font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em; font-weight: var(--w-em); display: block; text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony) */
 }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt[aria-checked="true"] .badge.badge { color: var(--action-on); }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.right:not(.reveal) .badge.badge { color: var(--correct-on); }
@@ -86,7 +86,7 @@ html.ui-v7 .choices.bento.fill .ch > .opt.opt {
 html.ui-v7 .choices.bento.fill .opt .txt, html.ui-v7 .choices.bento.fill .opt[data-k] .txt { flex: 1 1 auto; font-size: calc(var(--fs, 15px) * 1.2); line-height: 1.3; font-weight: var(--w); letter-spacing: 0; }
 html.ui-v7 .choices.bento.fill .opt[data-brk] .txt { overflow-wrap: anywhere; }
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt {
-  position: absolute; left: 8px; top: 6px; width: auto; height: 11px; margin: 0; font-size: 11px; line-height: 11px; letter-spacing: .02em;   /* Tony: letter pinned top-left, the words stay centred */
+  position: absolute; left: 8px; top: 6px; width: auto; height: var(--lh--1); margin: 0; font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em;   /* Tony: letter pinned top-left, the words stay centred */
   text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only */
 }
 /* pick-all (BENTO-CHECK-TR): the letter keeps the MC top-left inset, the check moves to the top-right; the words reserve both corners symmetrically (--lp left, --rp right) so they stay centred */
@@ -118,8 +118,8 @@ html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt { padding-top: calc(24px + v
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { top: 14px !important; left: 16px !important; }
 html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge { top: 12px; right: 16px; }
 /* LETTER-SIZE (Tony Nov 16 "bigger corner letter, looks off with the checkbox"): the letter matches the check's row: phone 14 px on the 16 px check row, desktop 15 px on the 20 px row */
-html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { font-size: 14px !important; line-height: 16px !important; height: 16px !important; top: 12px !important; font-weight: 600; }
-html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt .lt, html.ui-v7 .choices.bento.all:not(.fill) .ch > .opt.opt .lt { font-size: 15px; line-height: 20px; height: 20px; top: 16px; font-weight: 600; }
+html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { font-size: var(--fs--1) !important; line-height: 16px !important; height: 16px !important; top: 12px !important; font-weight: 600; }
+html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt .lt, html.ui-v7 .choices.bento.all:not(.fill) .ch > .opt.opt .lt { font-size: var(--fs-0); line-height: 20px; height: 20px; top: 16px; font-weight: 600; }
 
 /* ---- (D) FLOW (question #737, BANK_CEP; bento.js flowLayout): the answers flow DOWN and the page scrolls. 1 column, or 2 / 3 EQUAL columns when every option measured one line at 16px (--bc, bento.js flowCols);
    every tile has its natural height (a row = its tallest tile), the text is the question body's size (16/22), CENTRED on the whole tile box (Tony Nov 24: flex centre + text-align:center + the SAME padding left and right in every state; the letter / badge / Check / verdict are absolute and out of flow, so no state moves the words), never clipped. Beats sections B / C (.bento.flow, not .fill, no data-k look). ---- */
@@ -129,9 +129,9 @@ html.ui-v7 .choices.bento.flow .ch > .opt.opt {
   display: flex; align-items: center; justify-content: center; position: relative; height: auto; min-height: 52px; overflow: visible; box-sizing: border-box; text-align: center; border-radius: 14px;
   padding: 14px 52px;   /* 52 = the Check / Next key (44 + 6 gap, right) and clears the letter (left 16 + ~14); equal both sides = true centre; never changed by a state */
 }
-html.ui-v7 .choices.bento.flow .opt .txt, html.ui-v7 .choices.bento.flow .opt[data-k] .txt { display: block; min-width: 0; max-width: 100%; text-align: center; font-size: 16px; line-height: 22px; font-weight: var(--w); letter-spacing: 0; }
+html.ui-v7 .choices.bento.flow .opt .txt, html.ui-v7 .choices.bento.flow .opt[data-k] .txt { display: block; min-width: 0; max-width: 100%; text-align: center; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: var(--w); letter-spacing: 0; }
 html.ui-v7 .choices.bento.flow .opt[data-x] .txt { align-self: stretch; text-align: start; }
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .lt { left: 16px !important; top: 14px !important; height: 22px !important; font-size: 14px !important; line-height: 22px !important; }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .lt { left: 16px !important; top: 14px !important; height: 22px !important; font-size: var(--fs--1) !important; line-height: 22px !important; }
 html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .badge { right: 16px; left: auto; top: 16px; width: 18px; height: 18px; }
 /* Check / Next / verdict mark: centred at the tile's right edge, the words keep clear of them (padding), the tile never changes height */
 html.ui-v7 .choices.bento.flow .ch > .send { right: 6px; top: 50%; margin: -22px 0 0; }

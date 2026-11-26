@@ -82,7 +82,7 @@ const col = s => {
 };
 const over = (fg, bg) => { const a = fg[3]; return [0, 1, 2].map(i => Math.round(fg[i] * a + bg[i] * (1 - a))); };
 const rgb = a => `rgb(${a[0]}, ${a[1]}, ${a[2]})`;
-const DISH = /rgba\(0, 0, 0, 0\.3\) 1px 1px 3px 0px inset/;   // SOFT-LIFT §3 dish (INSET light from above, no well)
+const DISH = /rgba\(0, 0, 0, 0\.5\) 0px 2px 5px 0px inset/;   // SINK (Tony Nov 25): the resting typed box is an inset dark well (was the SOFT-LIFT §3 dish, 1px 1px 3px .3)
 /* the field's computed fill vs the nearest opaque ancestor surface (what the field sits on) */
 const gate = (p, sel) => p.evaluate(s => {
   const f = document.querySelector(s); if (!f) return null;
@@ -134,7 +134,7 @@ await step("flag on: the question card .p floats (ICK4-FLOAT: drop shadow, no li
   assert.match(card.shadow, DROP, "ICK4-FLOAT: the card floats: " + card.shadow); assert.doesNotMatch(card.shadow, LIT, "no lit top: " + card.shadow);
   await c.close();
 });
-await step("flag on: the short-answer .ff is the Soft-lift dish; its resting edge reaches 3:1 (WCAG 1.4.11)", async () => {
+await step("flag on: the short-answer .ff is the inset dark well; its resting edge is the soft --line at 40% (Tony Nov 25)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP02");
   const g = await gate(p, "#q .ff");
   assert.ok(g, "a short-answer field is shown");
@@ -143,7 +143,9 @@ await step("flag on: the short-answer .ff is the Soft-lift dish; its resting edg
   const er = ratio(rgb(edge), g.surround);                      // the edge pixel vs the card
   const fr = ratio(g.fill, g.surround);
   console.log(`     .ff edge ${rgb(edge)} vs ${g.surround} (${g.via}): ${er.toFixed(2)}:1 (fill ${fr.toFixed(2)}:1, border ${g.bw} ${g.bc})`);
-  assert.ok(er >= 3, "the resting edge reaches 3:1: " + er.toFixed(2) + ":1 (" + rgb(edge) + " vs " + g.surround + ")");
+  /* SINK (Tony Nov 25): Tony asked for a soft, low-contrast edge on the sunken box, so the old 3:1 edge gate (WCAG 1.4.11) is replaced by: the edge is still
+     there (border 1px+, --line at alpha .4, brighter than the well) and the number is reported above. */
+  assert.ok(parseFloat(g.bw) >= 1 && er > 1.1, "the soft edge is present and brighter than the card: " + er.toFixed(2) + ":1 (" + rgb(edge) + " vs " + g.surround + ")");
   await c.close();
 });
 await step("flag on: the proof box .xb is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {

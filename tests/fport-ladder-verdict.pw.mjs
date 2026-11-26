@@ -202,7 +202,7 @@ try {
         return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor, tr: cs.transform, edge: cs.borderTopColor }; });
       const idle = await read();
       assert.ok(idle.bw === HAIR || idle.bw === "1.5px 1.5px 1.5px 1.5px", "idle: the Soft-lift outlined field " + JSON.stringify(idle));
-      assert.match(idle.shadow, /rgba\(0, 0, 0, 0\.3\) 1px 1px 3px 0px inset/, "idle: the SOFT-LIFT §3 dish: " + idle.shadow);
+      assert.match(idle.shadow, /rgba\(0, 0, 0, 0\.5\) 0px 2px 5px 0px inset/, "idle: the SINK inset dark well (Tony Nov 25, was the SOFT-LIFT §3 dish): " + idle.shadow);
       assert.doesNotMatch(idle.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "idle: the old well is gone: " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus();
       await page.waitForFunction(() => document.activeElement === document.querySelector("#ff :is(input, textarea)"));

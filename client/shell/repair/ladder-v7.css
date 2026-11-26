@@ -12,6 +12,8 @@ html.ui-v7 section.wl .rp-line { left: var(--s5); }
 @media (max-width: 700px) { html.ui-v7 section.wl .rp-line { left: max(var(--s5), 52px); } }
 html.ui-v7 .rp-step, html.ui-v7 section.wl .rp-step { border-top: 0; padding: var(--s3) 0; }          /* the divider rules go: more room between steps instead */
 html.ui-v7 .rp-n[data-auto] { border-radius: 8px; }
+/* typescale: ladder leading on the 4px grid (16/20) so the docked toast fits 360x640 */
+html.ui-v7 .rp { line-height: 20px; }
 
 /* chips: a fill step on the card, no edge */
 html.ui-v7 .rp .rp-chip, html.ui-v7 section.wl .rp .rp-chip { border: 0; border-radius: 12px; background: var(--chip); color: var(--ink); }

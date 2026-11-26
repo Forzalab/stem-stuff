@@ -113,12 +113,17 @@
     if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(sl, gb ? gb.nextSibling : p.firstChild); }
     var cr = p.getBoundingClientRect(), pad = 9, html = "";
     p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
-      var rg = D.createRange(), rows = []; rg.selectNodeContents(e);
-      [].slice.call(rg.getClientRects()).forEach(function (q) {
-        if (q.width < 2) return;
-        var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
-        if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
-      });
+      /* ink only: a Range over the element's contents also returns each child block's border box (the <p> is as wide as the column), so range each TEXT NODE */
+      var rows = [], tw = D.createTreeWalker(e, NodeFilter.SHOW_TEXT), tn;
+      while ((tn = tw.nextNode())) {
+        if (!tn.nodeValue.trim()) continue;
+        var rg = D.createRange(); rg.selectNodeContents(tn);
+        [].slice.call(rg.getClientRects()).forEach(function (q) {
+          if (q.width < 2) return;
+          var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
+          if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+        });
+      }
       rows.forEach(function (b) {
         var x = b.left - cr.left - pad, y = b.top - cr.top - pad * .7, w = b.right - b.left + 2 * pad, h = b.bottom - b.top + 1.4 * pad;
         html += '<i style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px"></i>';
@@ -152,7 +157,7 @@
     if (/AppleWebKit\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua)) return "webkit";
     return "blink";
   })();
-  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 3, id: "qg-lens", sig: "" };   /* blur 3 (pick 3 tune, Tony Nov 23: the numeral must read through the glass, was 6) */
+  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 4, id: "qg-lens", sig: "" };   /* blur 4 (was 3, Tony Nov 25: a softer frost between card and body text; still <= 4px so the numeral reads through the glass, was 6 before Nov 23) */
   function lensProfile(curv, ior) {
     var N = 512, t = new Float32Array(N + 1), max = 0, i;
     for (i = 0; i <= N; i++) {

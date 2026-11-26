@@ -1024,9 +1024,9 @@ function renderQuestion() {
     q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
       const l = esc(u.label || LETTERS[i].toLowerCase()), lab = `${l}<span class="mk-p">)</span>`;   // IB-1: ui-v7 hides .mk-p (bare "a"); flag off/late toggle keeps the live "a)" (render.pw pins it)
       return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${lab}</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
-        <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
-          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}</button></div>
-        <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
+        <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}"${p.how ? ` aria-describedby="how${i}"` : ""} ${INPUT_ATTRS}>
+          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}${IB1_GO}</button></div>
+        ${phow(p, "how" + i)}<div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
     }).join("")}</div>`;
     wireParts();
   } else if (p.type === "proof") {
@@ -1047,7 +1047,7 @@ function renderQuestion() {
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
           ${INPUT_ATTRS} placeholder="${ph}">${ph ? `<span class="fl" aria-hidden="true">${ph}</span>` : ""}${unit}
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}${IB1_GO}</button>
-      </div><div class="preview" id="preview" aria-hidden="true"></div>`;
+      </div>${phow(p, "howb")}<div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
   formulaCard();
@@ -1268,6 +1268,9 @@ const howLine = p => {
   if (!h && all(p) && modeOf() === "sugar" && (howAt ??= p.code) === p.code) h = "Tick all true options.";
   return h ? `<p class="how" id="how">${md(h, true)}</p>` : "";
 };
+/* ui-v7 typed answers (Tony Nov 25): the grey "how" line sits UNDER each box, repeated per part of a multi (the schema has one shared `how`;
+   a per-part hint / type is queued). The top .how stays in the DOM for flag off; CSS (strip.css) shows one of the two. */
+const phow = (p, id) => p.how ? `<p class="how phow" id="${id}">${md(p.how, true)}</p>` : "";
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -1887,11 +1890,20 @@ function proofWait(r) {
 /* == §multi == */
 /* ---------- multi: every part has its own arrow, verdict, tries and lockout ---------- */
 const partEls = i => { const r = document.querySelector(`#q .part[data-i="${i}"]`); return { row: r, box: r.querySelector(".ff"), inp: r.querySelector(".ans"), go: r.querySelector(".send"), hint: r.querySelector(".phint") }; };
+/* a part's Check key. ui-v7 (Tony Nov 25): on every open part, dimmed + inert (disabled) while its box is empty, full once it has text, so the 60px
+   slot never changes. Flag off: hidden until there is text. A shut part hides it (shutPart). */
+function partKey(i) {
+  const { inp, go } = partEls(i), has = !!inp.value.trim();
+  if (S.parts[i]?.shut) return;
+  if (root.classList.contains("ui-v7")) { go.hidden = false; go.disabled = !has; go.setAttribute("aria-disabled", String(!has)); }
+  else { go.hidden = !has; go.disabled = false; go.removeAttribute("aria-disabled"); }
+}
 function wireParts() {
   S.parts = S.prob.parts.map(() => ({ shut: false, ok: false }));
   S.prob.parts.forEach((_, i) => {
     const { inp, go, box } = partEls(i);
-    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); vmark(box, null); if (xOn(i)) xPreview(xEls(i).pv, inp.value, null); });   // the arrow appears once there is text (like the code box); W137: the working + its value
+    partKey(i);
+    inp.addEventListener("input", () => { partKey(i); box.classList.remove("bad"); vmark(box, null); if (xOn(i)) xPreview(xEls(i).pv, inp.value, null); });   // the arrow appears once there is text (like the code box); W137: the working + its value
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
     go.addEventListener("click", () => submitPart(i));
   });

@@ -43,10 +43,11 @@ class Gate(unittest.TestCase):
 
     def test_over_caps(self):
         seventeen = "[" + ", ".join(['"seg(A,B)"'] * 17) + "]"
-        seven = "[" + ", ".join(f'"label(A,L{i})"' for i in range(7)) + "]"
+        seventeen_labels = "[" + ", ".join(f'"label(A,L{i})"' for i in range(17)) + "]"
         pts = "; ".join(f"P{i} {i},0" for i in range(17))
         for src, why in [(f'root = View([g])\ng = Geometry("A 0,0; B 3,0", {seventeen})', "too-long:Geometry.marks"),
-                         (f'root = View([g])\ng = Geometry("A 0,0; B 3,0", {seven})', "labels"),
+                         # a label is a mark too, so 17 labels trip the mark cap (16) before the label cap (16) can
+                         (f'root = View([g])\ng = Geometry("A 0,0; B 3,0", {seventeen_labels})', "too-long:Geometry.marks"),
                          (f'root = View([g])\ng = Geometry("{pts}", ["seg(P0,P1)"])', "too-long:pts"),
                          ('root = View([g])\ng = Geometry("A 0,0; B 3,0", ["seg(A,Z)"])', "geo-point"),
                          ('root = View([g])\ng = Geometry("A 0,0; B 3,0", ["blob(A,B)"])', "geo-mark")]:

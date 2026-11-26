@@ -20,7 +20,7 @@
   var COPY = {
     exam: { title: 'Stuck? Click for TI/Casio tricks.',
       body: 'Type the whole equation and hit SOLVE. Store a number once and reuse it. Pick your calculator and I will show you the keys. QUACK.' },
-    v7: 'Calculator moves: solve in one go, store a number.',
+    v7: 'Calc moves: solve once, store a number.',
     plain: { title: 'Calculator moves', body: 'Two moves worth knowing: solve an equation in one go, and store a number instead of retyping it. Pick your calculator to see the keys.' }
   };
   var DATA = null, loading = null, ov = null, CRAM = null;
