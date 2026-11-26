@@ -164,7 +164,7 @@ html.ui-v7 .mparts .part {
   /* IB-5: the third column is the part key's OUTSIDE slot (12 gap + 60 key), reserved even while the key is hidden, so the box never
      changes width as the student types. The prompt spans the key column; "ht" is declared in every template, else the empty .phint's
      undefined area adds implicit 0px columns and their gaps squeeze the row. */
-  grid-template-columns: 24px minmax(0, 1fr) 72px; grid-template-areas: "mk pr pr" "bx bx ." "hw hw hw" "ht ht ht";
+  grid-template-columns: 18px minmax(0, 1fr) 72px; grid-template-areas: "mk pr pr" "bx bx ." "hw hw hw" "ht ht ht";
   column-gap: 0; row-gap: 0; align-items: baseline;
   /* BENTO rows: each part spans the 4 row tracks of the parts grid as a SUBGRID, so a, b in one row share prompt / box / hint tracks (a 2-line prompt in b pushes both boxes down together); the 16px between parts is bottom padding (it lands in the last track) */
   grid-row: span 4; grid-template-rows: subgrid; padding-bottom: var(--s4);
@@ -172,8 +172,8 @@ html.ui-v7 .mparts .part {
 html.ui-v7 .mparts .part.nopr { grid-template-areas: "mk mk mk" "bx bx ." "hw hw hw" "ht ht ht"; }
 html.ui-v7 .mparts .part.nopr .mk { margin-bottom: var(--s2); }
 html.ui-v7 .mparts .part + .part { padding-top: 0; border-top: 0; }   /* space only, never a hairline (Tony, 02:08) */
-html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-2)/var(--lh-1) var(--font-input); text-transform: uppercase; color: var(--ink); }
-html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; margin: 0 0 var(--s2); font-size: var(--fs-1); line-height: var(--lh-1); font-weight: 400; }
+html.ui-v7 .mparts .mk { grid-area: mk; font: 600 var(--fs-1)/var(--lh-0) var(--font-input); text-transform: uppercase; color: var(--ink); }
+html.ui-v7 .mparts .pr { grid-area: pr; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; margin: 0 0 var(--s2); font-size: var(--fs-0); line-height: var(--lh-0); font-weight: 400; }
 html.ui-v7 .mparts .mk, html.ui-v7 .mparts .pr { align-self: baseline; }   /* pin the letter's glyph baseline to the prompt's FIRST line, not the row box */
 /* B-SHORT (Tony Nov 25): a number / text box is only as wide as its answer (6 digits + the inset + the unit room, min 120); an expression keeps the full width.
    The key follows the box (left: 100% + 13.5px), so it hangs off the short box's right edge. */
