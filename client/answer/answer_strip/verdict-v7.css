@@ -293,6 +293,10 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send .ib1-go { display: block; w
   html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); }
 }
 
+/* KEY-ALL (Tony Nov 25): every open part shows its key; an EMPTY box leaves it dimmed and inert (app.js partKey sets disabled), full once there is text.
+   The slot is the same reserved 60px, so the field never changes width. Beats app.css's "grading: the other parts' keys stay full" (0,5,1). */
+html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .send:disabled:not([hidden]) { opacity: .35; cursor: default; pointer-events: none; }
+
 /* IB-3 (SOFT-LIFT §6, grill Q1a): while a TYPED answer is being checked the box says "thinking"; its Check key only dims.
    app.css "grading wait" draws a ring in every .send and hides its arrow; typed answers keep the arrow and drop the ring.
    MC keeps the live spinner untouched (choose-all-spam.pw pins it). */

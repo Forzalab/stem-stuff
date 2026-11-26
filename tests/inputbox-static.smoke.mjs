@@ -1,6 +1,6 @@
 // INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking + IB-4 verdict, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), fills the column on desktop (no 400px cap, Tony Nov 25).
-//   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field (1fr, fills the row), 24px gap, no hairline.
+//   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
 //   judged fields never lift; reduced motion = colours only.
 //   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
@@ -10,8 +10,8 @@
 //   real border is never recoloured, the final frame is pixel-identical to the static done render, the typed key skips §verdict-morph and
 //   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close; MC keeps its full morph;
 //   reduced motion = a closed static ring.
-//   IB-5: each multi part's key sits OUTSIDE its field (60x60, 12px gap, same #ansGo squircle), hidden on an empty box with its slot
-//   reserved (the field width never jumps), dims while grading (no spinner), dimmed on wrong and full on the next keystroke, gone when
+//   IB-5: each multi part's key sits OUTSIDE its field (60x60, 12px gap, same #ansGo squircle), visible but dimmed + inert on an empty box in its
+//   reserved slot (KEY-ALL, Nov 25; the field width never jumps), dims while grading (no spinner), dimmed on wrong and full on the next keystroke, gone when
 //   the part is right.   flag off: the live in-box arrow, nothing moves.
 //   node tests/inputbox-static.smoke.mjs [port]      SHOTS=<dir> also writes app + mock stills.
 //   STEP_FILTER=<text> runs only the named steps (the whole file is an orc-run >2 min test; the cloud worker runs IB-4 alone).
@@ -242,7 +242,7 @@ const iconOf = (page, sel = "#q .ff") => page.evaluate(s => {
 }, sel);
 /* finish a paused sweep so strip.js's finished promise adds .ib4-done (the icon's signal) */
 const finishRing = page => page.evaluate(() => document.querySelectorAll("#q .ib4-arc").forEach(el => el.getAnimations().forEach(a => a.finish())));
-/* IB-7: the mock's own gap, box bottom -> hint card top. PICK-soft-lift.src.html, #states [data-force="wrong"]:
+/* IB-7: the mock's own gap, box (now: the grey hint under it) bottom -> hint card top. PICK-soft-lift.src.html, #states [data-force="wrong"]:
    the hint's margin-top is 12 and the field row ends at the box, measured 12 at 390 and 1280. */
 const MOCK_GAP = 12;
 const hintGapOf = page => page.evaluate(() => {
@@ -250,8 +250,10 @@ const hintGapOf = page => page.evaluate(() => {
   const box = multi ? multi.querySelector(".ff") : document.querySelector("#q > .ff#ff");
   const card = multi ? multi.querySelector(".phint .cluck") : document.querySelector("#fb > .cluck");
   if (!box || !card) return { err: "no box or hint card", box: !!box, card: !!card };
-  const b = box.getBoundingClientRect(), c = card.getBoundingClientRect();
-  return { gap: +(c.top - b.bottom).toFixed(1), boxBottom: +b.bottom.toFixed(1), cardTop: +c.top.toFixed(1), inPhint: !!card.closest(".phint") };
+  /* HINT UNDER THE BOX (Tony Nov 25): the grey .phow line sits between the box and the miss card; the card is measured from it (from the box when there is none) */
+  const grey = multi ? multi.querySelector(".phow") : document.querySelector("#q > .phow");
+  const b = (grey && getComputedStyle(grey).display !== "none" ? grey : box).getBoundingClientRect(), c = card.getBoundingClientRect();
+  return { gap: +(c.top - b.bottom).toFixed(1), boxBottom: +b.bottom.toFixed(1), cardTop: +c.top.toFixed(1), inPhint: !!card.closest(".phint"), grey: !!grey };
 });
 /* IB-4: the aurora's current head angle (the .ib3-spin rotation); the verdict ring must start there. */
 const auroraAt = page => page.evaluate(() => {
@@ -375,7 +377,8 @@ const edgeLine = (page, sel) => page.evaluate(s => {
   const probe = document.createElement("i"); probe.style.color = "var(--line)"; ff.append(probe);
   const line = getComputedStyle(probe).color; probe.remove();
   const bc = getComputedStyle(ff).borderTopColor, e = rgba(bc), l = rgba(line);
-  return { bc, line, eq: e.rgb === l.rgb && e.a === 255 && l.a === 255, alpha: e.a };
+  const near3 = (a, b) => a.split(",").every((v, i) => Math.abs(+v - +b.split(",")[i]) <= 3);
+  return { bc, line, eq: near3(e.rgb, l.rgb) && Math.abs(e.a - 102) <= 3 && l.a === 255, alpha: e.a };   // SINK (Tony Nov 25): the resting edge is --line at 40% (alpha 102), soft and low contrast
 }, sel);
 const SCALE = "matrix(1.014, 0, 0, 1.014, 0, 0)";
 async function shot(page, name, sel) {
@@ -390,22 +393,25 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.mouse.move(0, 0);
     const empty = await page.evaluate(() => [...document.querySelectorAll("#q .mparts .part")].map(p => {
       const ff = p.querySelector(".ff"), key = p.querySelector(".send"), r = ff.getBoundingClientRect();
-      return { w: r.width, top: r.top, right: r.right, hidden: key.hidden || getComputedStyle(key).display === "none" };
+      return { w: r.width, top: r.top, right: r.right, hidden: key.hidden || getComputedStyle(key).display === "none", dis: key.disabled, op: +getComputedStyle(key).opacity, kw: key.getBoundingClientRect().width };
     }));
-    assert.deepEqual(empty.map(p => p.hidden), [true, true], "an empty part hides its key: " + JSON.stringify(empty));
+    /* KEY-ALL (Tony Nov 25): every open part shows its key; an empty box dims it and makes it inert (disabled), the slot stays 60px */
+    assert.deepEqual(empty.map(p => p.hidden), [false, false], "an empty part shows its key, dimmed: " + JSON.stringify(empty));
+    assert.ok(empty.every(p => p.dis && p.op < 0.6 && near(p.kw, 60)), "an empty part's key is inert + dimmed in the 60px slot: " + JSON.stringify(empty));
     assert.ok(empty[0].w > 0, "the multi field measured");
     await shot(page, `ib5-${w}-empty-app.png`, "#q");
     const boxW = empty[0].w;
     await page.fill("#q .mparts .part[data-i='0'] input.ans", "17");
-    await page.waitForFunction(() => !document.querySelector("#go0").hidden);
+    await page.waitForFunction(() => !document.querySelector("#go0").disabled);
     const typed = await page.evaluate(() => {
       const p = document.querySelector("#q .mparts .part[data-i='0']"), ff = p.querySelector(".ff"), key = p.querySelector(".send");
       const f = ff.getBoundingClientRect(), k = key.getBoundingClientRect(), cs = getComputedStyle(key);
       return { fw: f.width, fl: f.left, fr: f.right, ft: f.top, kw: k.width, kh: k.height, kl: k.left, kt: k.top,
-        bg: cs.backgroundColor, r: cs.borderTopLeftRadius, bHidden: document.querySelector("#go1").hidden,
+        bg: cs.backgroundColor, r: cs.borderTopLeftRadius, bHidden: document.querySelector("#go1").disabled && !document.querySelector("#go1").hidden, kop: +getComputedStyle(document.querySelector("#go0")).opacity,
         overflow: document.documentElement.scrollWidth - innerWidth };
     });
-    assert.equal(typed.bHidden, true, "the other part's key stays hidden");
+    assert.equal(typed.bHidden, true, "the other part's key stays visible but inert");
+    assert.equal(typed.kop, 1, "a typed part's key is full");
     assert.ok(near(typed.kw, 60) && near(typed.kh, 60), `key ${typed.kw}x${typed.kh} (want 60x60)`);
     assert.ok(typed.kl >= typed.fr + 8, `key is not outside the box: left ${typed.kl} vs box right ${typed.fr}`);
     assert.ok(typed.kl >= typed.fr + 11 && typed.kl <= typed.fr + 14, `key gap ${(typed.kl - typed.fr).toFixed(1)} (want 12)`);
@@ -413,9 +419,9 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(typed.fw, boxW, `box width jumps while typing: ${typed.fw} vs ${boxW}`);
     if (w >= 900) {   // Tony Nov 25: the multi field is 1fr, not 400px: no empty gap, it fills the row between the prompt and the 60px key column
       const row = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part[data-i='0']"), cs = getComputedStyle(p), pr = p.querySelector(".pr").getBoundingClientRect();
-        return { right: p.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth), prRight: pr.right }; });
+        return { right: p.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth), prRight: pr.right, prBottom: pr.bottom }; });
       assert.ok(near(typed.kl + typed.kw, row.right, 1), `multi key's right edge ${typed.kl + typed.kw} sits on the row's right edge ${row.right}`);
-      assert.ok(near(typed.fl - row.prRight, 12, 1), `multi field starts 12px after the prompt (no empty gap): field left ${typed.fl} vs prompt right ${row.prRight}`);
+      assert.ok(typed.ft >= row.prBottom, `prompt ON TOP of its box at every width (Tony Nov 25): box top ${typed.ft} vs prompt bottom ${row.prBottom}`);
     }
     assert.ok(typed.overflow <= 0, `sideways overflow ${typed.overflow}px at ${w}`);
     assert.match(typed.r, /^(18|22\.5)px$/, `key squircle radius ${typed.r}`);
@@ -479,7 +485,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
     assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
     assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
-    assert.ok(mEdge.eq && mEdge.alpha === 255, `multi rest edge is solid --line at alpha 1: ${mEdge.bc} vs ${mEdge.line} (alpha ${mEdge.alpha})`);
+    assert.ok(mEdge.eq, `multi rest edge is the soft --line at alpha .4: ${mEdge.bc} vs ${mEdge.line} (alpha ${mEdge.alpha})`);
     assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
@@ -489,7 +495,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.mkFamily, /Schibsted/i, "letter face is the app's display face: " + m.mkFamily);
     assert.ok(near(m.mkBase, m.prBase, 1), `letter/prompt line baselines ${m.mkBase} vs ${m.prBase}`);
     assert.ok(near(m.mkGlyph, m.prGlyph, 1), `letter/prompt GLYPH baselines ${m.mkGlyph} vs ${m.prGlyph}`);
-    if (w >= 900) assert.ok(near(m.valueBase, m.prBase, 1), `value/prompt baselines ${m.valueBase} vs ${m.prBase}`);
+    // Tony Nov 25: the prompt is above the box at every width, so there is no shared value/prompt baseline any more
     assert.equal(m.prSize, "16px", `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
     assert.ok(parseFloat(m.skin.pr) <= 20, `multi field right padding ${m.skin.pr} (IB-5: the key moved outside, no in-box room)`);
@@ -539,7 +545,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
     assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
     assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
-    assert.ok(sEdge.eq && sEdge.alpha === 255, `single rest edge is solid --line at alpha 1: ${sEdge.bc} vs ${sEdge.line} (alpha ${sEdge.alpha})`);
+    assert.ok(sEdge.eq, `single rest edge is the soft --line at alpha .4: ${sEdge.bc} vs ${sEdge.line} (alpha ${sEdge.alpha})`);
     assert.match(m.transition, /0\.42s/, `IB-2 transition at rest (${m.transition})`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
@@ -620,7 +626,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
           `spin ${i}: the aurora is the action family (fill -> action -> on): ${bg.slice(0, 220)}`);
       }
       const th = await edgeLine(page, "#q > .ff#ff");
-      assert.ok(th.eq && th.alpha === 255, `thinking edge is the solid --line at alpha 1: ${th.bc} vs ${th.line} (alpha ${th.alpha})`);
+      assert.ok(th.eq, `thinking edge is the soft --line at alpha .4: ${th.bc} vs ${th.line} (alpha ${th.alpha})`);
       assert.equal(t.glowFilter, "blur(7px)", `glow filter ${t.glowFilter}`);
       assert.equal(t.glowOp, 0.45, `glow opacity ${t.glowOp}`);
       assert.equal(t.blur, "blur(0.8px)", `value blur ${t.blur}`);
@@ -1107,6 +1113,35 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       }
     }
     return seen.join(" / ");
+  });
+  /* GAP-BAND + hint under the box + tighter parts (Tony Nov 25). Repro of the band: `STEP_FILTER=GAP-BAND node tests/inputbox-static.smoke.mjs` (red on #756; v2 asserts the 24px gap) */
+  await step(`${w}: GAP-BAND 24px gap card -> answer panel (rounded, card shadow); grey hint under each box; parts 16 apart`, async () => {
+    await go(page, "PSY_M1A");
+    await page.mouse.move(0, 0);
+    const m = await page.evaluate(() => {
+      const r = e => e.getBoundingClientRect(), card = r(document.querySelector("#problem")), q = r(document.querySelector("#q"));
+      const parts = [...document.querySelectorAll("#q .mparts .part")].map(p => ({ top: r(p).top, bottom: r(p).bottom, box: r(p.querySelector(".ff")), hint: p.querySelector(".phow") && { d: getComputedStyle(p.querySelector(".phow")).display, t: r(p.querySelector(".phow")).top, txt: p.querySelector(".phow").textContent } }));
+      const top = document.querySelector("#q > .how");
+      const cc = getComputedStyle(document.querySelector("#problem")), qc = getComputedStyle(document.querySelector("#q"));
+      return { cardBottomR: Math.min(parseFloat(cc.borderBottomLeftRadius), parseFloat(cc.borderBottomRightRadius)), panelTopR: Math.min(parseFloat(qc.borderTopLeftRadius), parseFloat(qc.borderTopRightRadius)), cardShadow: cc.boxShadow,
+        band: +(q.top - card.bottom).toFixed(1), parts, topHow: top ? getComputedStyle(top).display : "none" };
+    });
+    /* GAP-BAND v2 (Tony Nov 25, intent changed): a DELIBERATE --s5 = 24px gap, the card's shadow in it, both surfaces rounded (not a raw strip, not a joined seam) */
+    assert.ok(Math.abs(m.band - 24) <= 1, `card -> answer panel gap is ${m.band}px (want 24 = --s5)`);
+    assert.ok(m.cardBottomR > 4 && m.panelTopR > 4, `both facing corners are rounded: card bottom ${m.cardBottomR}, panel top ${m.panelTopR}`);
+    assert.ok(m.cardShadow && m.cardShadow !== "none", `the card casts a shadow into the gap: ${m.cardShadow}`);
+    assert.equal(m.topHow, "none", "the shared hint no longer sits above the parts");
+    for (const [i, p] of m.parts.entries()) {
+      assert.ok(p.hint && p.hint.d === "block" && /Number only/.test(p.hint.txt), `part ${i} repeats the grey hint: ${JSON.stringify(p.hint)}`);
+      assert.ok(p.hint.t >= p.box.bottom + 5 && p.hint.t <= p.box.bottom + 12, `part ${i}: the hint is ${(p.hint.t - p.box.bottom).toFixed(1)}px under its box (want ~8)`);
+    }
+    const g = m.parts[1].top - m.parts[0].bottom;
+    assert.ok(Math.abs(g - 16) <= 1, `parts are ${g.toFixed(1)}px apart (want 16, was 24)`);
+    await go(page, "PSY_S2A");
+    const s1 = await page.evaluate(() => { const b = document.querySelector("#q > .ff#ff").getBoundingClientRect(), h = document.querySelector("#q > .phow"); return { d: h && getComputedStyle(h).display, gap: h && +(h.getBoundingClientRect().top - b.bottom).toFixed(1) }; });
+    assert.equal(s1.d, "block", "the single box has its grey hint");
+    assert.ok(s1.gap >= 6 && s1.gap <= 10, `single: the hint is ${s1.gap}px under the box (want ~8)`);
+    return `band ${m.band} / hint ${(m.parts[0].hint.t - m.parts[0].box.bottom).toFixed(1)} / parts ${g.toFixed(1)} / single ${s1.gap}`;
   });
   await ctx.close();
 }
