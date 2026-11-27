@@ -222,6 +222,9 @@ class Arms(unittest.TestCase):
         return Resp(sse_or(self.reply))
 
     def go(self, fn, status=200, **body):
+        with serve._tries_lock:                                 # F4 (Tony Nov 27): the pick "a" is a recorded wrong try, as /check leaves it
+            serve._load_tries()
+            serve._entry(("e" * 32, "H_1")).update(wrong=["a"])
         st, head, chunks = fn("sid=" + "e" * 32, json.dumps({"code": "H_1", "answer": "a", **body}).encode())
         out = b"".join(chunks).decode()
         self.assertEqual(st, status, out)

@@ -1387,6 +1387,21 @@ def _round_ns(sid, b, store=None):
         return rnd, _round_sid(sid, rnd)
 
 
+def fail_closed_pick(p, sid, pick, store=None):
+    """F4 (Tony Nov 27, fail-closed): the pick as Cluck may see it. A pick whose unit has no recorded try in this namespace (no wrong, not done) was
+    never graded by /check, so grading it here would make /chat an answer oracle (right vs wrong for free): it becomes "no attempt" (pre-try, no
+    reveal, no RESULT line). A part pick keeps its part with an empty answer. A recorded try (wrong or done) passes through unchanged."""
+    if no_attempt(pick):
+        return pick
+    st = state(p, sid, store=store)
+    us = st["parts"] if "parts" in st else [st]
+    part = pick["part"] if isinstance(pick, dict) else None
+    tried = [us[part]] if part is not None else us             # a bare answer on a multi (no part named): any part's try counts
+    if any(u["wrong"] or u["done"] for u in tried):
+        return pick
+    return {"part": part, "answer": ""} if part is not None else None
+
+
 def _open_round(p, sid, store=None):
     """a redo round under this browser + item still has a try left and is not done: an old page must not read the base as closed over it."""
     if store is not None:
@@ -4734,7 +4749,7 @@ def explain(cookie_header, body):
         return 503, head, iter([b""])
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
-    pick = wish_pick(p, b)
+    pick = fail_closed_pick(p, nsid, wish_pick(p, b), store=store)   # F4: no recorded try = pre-try, never graded here
     turn = cluck_begin(p, nsid, pick, store=store)
     if rnd is None and turn and turn[1] and _open_round(p, nsid, store=store):
         turn = (turn[0], False)                      # an old page over an open round: never reveal on the base record alone
@@ -5453,7 +5468,7 @@ def chat(cookie_header, body):
             else:
                 chat_untake(k)
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
-    pick = wish_pick(p, b)
+    pick = fail_closed_pick(p, nsid, wish_pick(p, b), store=store)   # F4: no recorded try = pre-try, never graded here
     pre = no_attempt(pick)                          # before the first try (the starter chip, or any ask with no pick): a nudge, never the answer, on every path
     turn = cluck_begin(p, nsid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd; never when pre)
     if rnd is None and turn and turn[1] and _open_round(p, nsid, store=store):
