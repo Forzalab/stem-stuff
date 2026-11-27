@@ -54,7 +54,23 @@ const look = (page, sel) => page.evaluate(sel => {
   return { id: k.id, cls: k.className, op: +cs.opacity, bg: cs.backgroundColor, color: cs.color, w: k.getBoundingClientRect().width,
     anim: s && getComputedStyle(s).animationName, start: m && m[0], off: !!k.disabled };
 }, sel);
-const hold = (page, ms = 950) => page.waitForTimeout(ms);
+// wait until the key has landed on `want` AND every CSS transition on it is done: the 120ms `d` morph / colour / opacity
+// runs on the path / button, so a bare computed-d match can fire before the first frame and read a mid-morph value.
+const settled = (page, sel, want) => page.waitForFunction(([sel, want]) => {
+  const k = document.querySelector(sel); if (!k) return false;
+  const p = k.querySelector("svg.ib1-go path"); if (!p) return false;
+  const m = String(getComputedStyle(p).d || p.getAttribute("d") || "").replace(/([ML])\s+/g, "$1").match(/M[\d.]+ [\d.]+/);
+  if (!m || m[0] !== want) return false;
+  return p.getAnimations().every(a => a.playState === "finished") && k.getAnimations().every(a => a.playState === "finished");
+}, [sel, want], { timeout: 2000 });
+// BUSY: the spinner glyph has landed and the svg turns (its own key-spin), the button's colour / opacity settled
+const busyKey = (page, sel) => page.waitForFunction(sel => {
+  const k = document.querySelector(sel); if (!k) return false;
+  const s = k.querySelector("svg.ib1-go"), p = s && s.querySelector("path"); if (!p) return false;
+  const m = String(getComputedStyle(p).d || p.getAttribute("d") || "").replace(/([ML])\s+/g, "$1").match(/M[\d.]+ [\d.]+/);
+  return !!m && m[0] === "M12 4.5" && getComputedStyle(s).animationName !== "none"
+    && p.getAnimations().every(a => a.playState === "finished") && k.getAnimations().length === 0;
+}, sel, { timeout: 4000 });
 
 async function open(code, ui = true, delay = 0) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block", reducedMotion: "no-preference" });
@@ -74,17 +90,17 @@ try {
     const { ctx, page } = await open("PROBE_TY1", true, 700);
     await page.fill("#q #ans", "4"); await page.click("#ansGo");
     await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
-    await page.waitForTimeout(260);
+    await busyKey(page, "#ansGo");
     const busy = await look(page, "#ansGo");
     assert.notEqual(busy.anim, "none", "busy: the key's svg spins: " + JSON.stringify(busy));
     assert.equal(busy.start, "M12 4.5", "busy: the glyph is the spinner: " + busy.start);
     assert.equal(busy.op, 1, "busy: the face stays full (no .55 dim): " + busy.op);
     await page.waitForSelector("#q .nx.k-ok", { timeout: 5000 });
-    await page.waitForFunction(() => { const p = document.querySelector("#q .nx.k-ok svg.ib1-go path"); const d = p && (getComputedStyle(p).d || p.getAttribute("d")); return /M\s*5\.5/.test(String(d)); }, null, { timeout: 2000 });
+    await settled(page, "#q .nx", "M5.5 12.5");
     const tick = await look(page, "#q .nx");
     assert.equal(tick.start, "M5.5 12.5", "the tick: " + JSON.stringify(tick));
     assert.equal(tick.bg, "rgb(16, 38, 31)", "right: --correct-fill face: " + tick.bg);
-    await hold(page);
+    await settled(page, "#q .nx", ARROW);
     const done = await look(page, "#q .nx");
     assert.doesNotMatch(done.cls, /k-ok|k-bad/, "the verdict classes leave after the hold: " + done.cls);
     assert.equal(done.start, ARROW, "exit: the arrow is back: " + done.start);
@@ -98,11 +114,11 @@ try {
     const { ctx, page } = await open("PROBE_TY1", true, 700);
     await page.fill("#q #ans", "5"); await page.click("#ansGo");
     await page.waitForSelector("#ansGo.k-bad", { timeout: 5000 });
-    await page.waitForTimeout(180);   // the 120ms d / colour morph lands
+    await settled(page, "#ansGo", "M7 7");
     const cross = await look(page, "#ansGo");
     assert.equal(cross.start, "M7 7", "the cross: " + JSON.stringify(cross));
     assert.equal(cross.bg, "rgb(42, 26, 36)", "wrong: --wrong-fill face: " + cross.bg);
-    await hold(page);
+    await settled(page, "#ansGo", ARROW);
     const dim = await look(page, "#ansGo");
     assert.equal(dim.start, ARROW, "exit: the arrow is back: " + dim.start);
     assert.equal(dim.op, 0.35, "wrong: the retry key waits at .35: " + dim.op);
@@ -118,10 +134,10 @@ try {
     assert.deepEqual(before, { chk: true, tile: false, w: 60 }, "MC key place: " + JSON.stringify(before));
     await page.click('#q .opt[data-id="a"]'); await page.click("#mcGo");
     await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
-    await page.waitForTimeout(260);
+    await busyKey(page, "#mcGo");
     assert.notEqual((await look(page, "#mcGo")).anim, "none", "MC busy: svg spins");
     await page.waitForSelector("#q .nx.k-ok", { timeout: 5000 });
-    await hold(page);
+    await settled(page, "#q .nx", ARROW);
     const done = await look(page, "#q .nx");
     assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)");
     await ctx.close();
@@ -131,12 +147,11 @@ try {
     const { ctx, page } = await open("PROBE_MC1", true, 700);
     await page.click('#q .opt[data-id="b"]'); await page.click("#mcGo");
     await page.waitForSelector("#mcGo.k-bad", { timeout: 5000 });
-    await page.waitForFunction(() => { const p = document.querySelector("#mcGo svg.ib1-go path"); return /M\s*7\s+7/.test(String(getComputedStyle(p).d)); }, null, { timeout: 2000 });
-    await page.waitForTimeout(80);
+    await settled(page, "#mcGo", "M7 7");
     const cross = await look(page, "#mcGo");
     assert.equal(cross.start, "M7 7", "MC wrong: the cross: " + JSON.stringify(cross));
     assert.equal(cross.bg, "rgb(42, 26, 36)", "MC wrong: --wrong-fill: " + cross.bg);
-    await hold(page);
+    await settled(page, "#mcGo", ARROW);
     const dim = await look(page, "#mcGo");
     assert.equal(dim.start, ARROW); assert.equal(dim.op, 0.35);
     assert.equal(dim.off, true, "MC wrong: inert until another pick");
@@ -147,17 +162,16 @@ try {
     const { ctx, page } = await open("PROBE_ALL", true, 700);
     await page.click('#q .opt[data-id="a"]'); await page.click("#mcGo");
     await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
-    await page.waitForTimeout(260);
+    await busyKey(page, "#mcGo");
     const busy = await look(page, "#mcGo");
     assert.notEqual(busy.anim, "none", "pick-all busy: the key's svg spins: " + JSON.stringify(busy));
     assert.equal(busy.start, "M12 4.5", "pick-all busy: the spinner glyph: " + busy.start);
     assert.equal(busy.op, 1, "pick-all busy: face full: " + busy.op);
     await page.waitForSelector("#mcGo.k-bad", { timeout: 5000 });
-    await page.waitForFunction(() => { const p = document.querySelector("#mcGo svg.ib1-go path"); return /M\s*7\s+7/.test(String(getComputedStyle(p).d)); }, null, { timeout: 2000 });
-    await page.waitForTimeout(80);
+    await settled(page, "#mcGo", "M7 7");
     const cross = await look(page, "#mcGo");
     assert.equal(cross.start, "M7 7");
-    await hold(page);
+    await settled(page, "#mcGo", ARROW);
     const dim = await look(page, "#mcGo");
     assert.equal(dim.start, ARROW); assert.equal(dim.op, 0.35, "wrong pick-all: .35");
     assert.equal(dim.off, true, "wrong pick-all: the retry Check is inert until the edit");
@@ -170,11 +184,11 @@ try {
     const { ctx, page } = await open("PROBE_ALL", true, 700);
     await page.click('#q .opt[data-id="a"]'); await page.click('#q .opt[data-id="c"]'); await page.click("#mcGo");
     await page.waitForSelector("#q .nx.k-ok", { timeout: 5000 });
-    await page.waitForFunction(() => { const p = document.querySelector("#q .nx.k-ok svg.ib1-go path"); const d = p && (getComputedStyle(p).d || p.getAttribute("d")); return /M\s*5\.5/.test(String(d)); }, null, { timeout: 2000 });
+    await settled(page, "#q .nx", "M5.5 12.5");
     const tick = await look(page, "#q .nx");
     assert.equal(tick.start, "M5.5 12.5", "pick-all right: the tick: " + JSON.stringify(tick));
     assert.equal(tick.bg, "rgb(16, 38, 31)", "pick-all right: --correct-fill: " + tick.bg);
-    await hold(page);
+    await settled(page, "#q .nx", ARROW);
     const done = await look(page, "#q .nx");
     assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)"); assert.equal(done.op, 1);
     await ctx.close();
@@ -185,17 +199,16 @@ try {
     await page.fill('#q .part[data-i="0"] .ans', "5");
     await page.press('#q .part[data-i="0"] .ans', "Enter");
     await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
-    await page.waitForTimeout(260);
+    await busyKey(page, '#q .part[data-i="0"] .send');
     const busy = await look(page, '#q .part[data-i="0"] .send');
     assert.notEqual(busy.anim, "none", "multi busy: the part key spins: " + JSON.stringify(busy));
     assert.equal(busy.start, "M12 4.5", "multi busy: the spinner glyph: " + busy.start);
     assert.equal(busy.op, 1, "multi busy: face full: " + busy.op);
     await page.waitForSelector('#q .part[data-i="0"] .send.k-bad', { timeout: 5000 });
-    await page.waitForFunction(() => { const p = document.querySelector('#q .part[data-i="0"] .send svg.ib1-go path'); return /M\s*7\s+7/.test(String(getComputedStyle(p).d)); }, null, { timeout: 2000 });
-    await page.waitForTimeout(80);
+    await settled(page, '#q .part[data-i="0"] .send', "M7 7");
     const cross = await look(page, '#q .part[data-i="0"] .send');
     assert.equal(cross.start, "M7 7", "multi wrong: the cross: " + JSON.stringify(cross));
-    await hold(page);
+    await settled(page, '#q .part[data-i="0"] .send', ARROW);
     const dim = await look(page, '#q .part[data-i="0"] .send');
     assert.equal(dim.start, ARROW); assert.equal(dim.op, 0.35, "multi wrong: the retry key waits at .35");
     assert.equal(dim.off, true, "multi wrong: inert until the edit");
@@ -210,7 +223,7 @@ try {
       await page.waitForFunction(i => window.__drill.state.parts?.[i]?.shut, i, { timeout: 5000 }).catch(() => {});
     }
     await page.waitForSelector("#q .nx.k-ok", { timeout: 6000 });
-    await hold(page);
+    await settled(page, "#q .nx", ARROW);
     const done = await look(page, "#q .nx");
     assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)");
     await ctx.close();
@@ -223,13 +236,13 @@ try {
     await page.fill("#q #ans", "A mental frame.");
     await page.click("#ansGo");
     await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
-    await page.waitForTimeout(260);
+    await busyKey(page, "#ff.proof #ansGo");
     const busy = await look(page, "#ff.proof #ansGo");
     assert.notEqual(busy.anim, "none", "proof busy: the key's svg spins: " + JSON.stringify(busy));
     assert.equal(busy.start, "M12 4.5", "proof busy: the spinner glyph: " + busy.start);
     assert.equal(busy.op, 1, "proof busy: face full: " + busy.op);
     await page.waitForSelector("#q .nx.k-ok", { timeout: 6000 });
-    await hold(page);
+    await settled(page, "#q .nx", ARROW);
     const done = await look(page, "#q .nx");
     assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)");
     await ctx.close();
