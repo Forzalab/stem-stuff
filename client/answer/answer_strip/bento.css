@@ -39,6 +39,11 @@ html.ui-v7 .choices.bento .opt[data-k="s"] .txt, html.ui-v7 .mc-probe .opt[data-
 html.ui-v7 .choices.bento .opt[data-k="p"] .txt, html.ui-v7 .mc-probe .opt[data-k="p"] .txt { font-size: var(--fs-2); line-height: var(--lh-2); }
 html.ui-v7 .choices.bento .opt .txt > p, html.ui-v7 .mc-probe .opt .txt > p { margin: 0; }
 html.ui-v7 .choices.bento .opt .txt .katex { font-size: calc(1em * var(--mz, 1)); }   /* --mz: LONG-MATH shrink (bento.js mathFit, floor .7) */
+/* MC-CODE-XHEIGHT: monospace code in an option tile drew ~29% taller than 16px KaTeX beside it (x-height 9 vs 7). Pin the x-height to 7/16 of the tile text; keep the code family. */
+html.ui-v7 .choices .ch code { font-size-adjust: 0.4375; }
+@supports not (font-size-adjust: 1) {
+  html.ui-v7 .choices .ch code { font-size: .8em; }
+}
 /* LONG-MATH (Tony Nov 18): a formula still wider than its full row at the floor size: that tile scrolls sideways, nothing is cut. Right edge fades (the cue);
    24px of room after the formula so its end clears the fade when scrolled home */
 html.ui-v7 .choices.bento .opt[data-x] .txt { justify-self: stretch; max-width: 100%; overflow-x: auto; overflow-y: hidden; white-space: nowrap; text-align: start; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x pan-y;
