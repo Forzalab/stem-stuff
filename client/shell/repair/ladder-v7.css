@@ -4,13 +4,11 @@
    card = --sheet (navy-800); chip = --chip (navy-600); picked chip = --action-fill; ghost (not yet answerable) = the chip step blended into the card; locked others = the card fill, dim text;
    the input is a well (--page + --well). The only outline left is the 2px focus ring. Warm (--help) stays only as the small accents it always was (the pill,
    the Check button): CONTRAST-PORT = dark ink on orange, never light text, and no warm-brown chip on the navy card. No circles (the auto-filled step number is a rounded square). */
-html.ui-v7 .rp, html.ui-v7 section.wl { --rp-bg: var(--cb-well); --rp-edge: color-mix(in srgb, var(--line) 40%, transparent); }   /* LADDER-BG (Tony Nov 26: "darker background"): the card sits on --cb-well (#060b1b, the input well navy) not --sheet; the soft --line 40% ring keeps it apart from --page (1.04:1 alone) */
+html.ui-v7 .rp, html.ui-v7 section.wl { --rp-bg: var(--cb-well); --rp-edge: color-mix(in srgb, var(--line) 40%, transparent);
+  --rp-tab-x: calc(var(--s5) + 1.25rem + var(--s2)); }   /* LADDER-BG (Tony Nov 26: "darker background"): the card sits on --cb-well (#060b1b, the input well navy) not --sheet; the soft --line 40% ring keeps it apart from --page (1.04:1 alone). --rp-tab-x = the card's s5 padding + the .rp-body indent = the input box's left edge on BOTH ladders */
 html.ui-v7 .rp { background: var(--rp-bg); box-shadow: inset 0 0 0 1px var(--rp-edge); border: 0; border-radius: 16px; padding: var(--s5); }
 html.ui-v7 section.wl { background: var(--rp-bg); box-shadow: inset 0 0 0 1px var(--rp-edge); border: 0; border-radius: 16px; padding: var(--s5); padding-top: calc(var(--s5) + 10px); }
 html.ui-v7 section.wl .rp { background: none; box-shadow: none; padding: 0; border-radius: 0; }
-html.ui-v7 section.wl .rp-line { left: var(--s5); }
-/* GAP-BATCH1 B (ui-v7 phones): the intro pill starts clear of the bottom-left stash tab (44px column, app.css .rot.stashed) */
-@media (max-width: 700px) { html.ui-v7 section.wl .rp-line { left: max(var(--s5), 52px); } }
 html.ui-v7 .rp .rp-step { border-top: 0; padding: var(--s3) 0; }          /* the divider rules go: more room between steps instead (one rule for both ladders) */
 html.ui-v7 .rp-n[data-auto] { border-radius: 8px; }
 /* typescale: ladder leading on the 4px grid (16/20) so the docked toast fits 360x640 */
@@ -59,14 +57,10 @@ html.ui-v7 .hintcard-ico { display: block; flex: none; width: 20px; height: 20px
 html.ui-v7 .hintcard-t { min-width: 0; }
 
 /* LADDER-TYPE (Tony Nov 26: "change the ladder wrong-step CTA text to a better colour and font, and I mean ALL the ladder box"): the type + colour pass, ui-v7 only.
-   FONT-SPLIT: the card's title is the one Schibsted line (--font-title, --fs-1 20/28, 600); everything else is Atkinson Hyperlegible Next (--font) on the 1.25 scale:
-   body / labels / chips / buttons / unit --fs-0 16, meta (why:) --fs--1 12.8. COLOUR: the title is the action family (--action-on on --cb-well, the same blue as Check, so the line that
-   asks for the next step reads as the way forward, not an error and not grey); the cream --help-on line is gone from the card (Cluck's warm family stays on the duck + hint card).
-   The welcome tab (section.wl .rp-line) keeps its orange pill. Numbers tabular, lines balance / pretty so no one-word widow (the fallback title wrapped "time.").
+   FONT-SPLIT: the card's intro line is the shared orange tab (.rp-tab, welcome.css: --help-ink on --help, the duck) on BOTH ladders now; everything else is Atkinson Hyperlegible Next
+   (--font) on the 1.25 scale: body / labels / chips / buttons / unit --fs-0 16, meta (why:) --fs--1 12.8. Numbers tabular, lines balance / pretty so no one-word widow.
    (the sheet is #0d142a here; --action-on 9.8:1, --ink 17.0:1, --muted 9.1:1, dark ink on --action 8.3:1: AA text everywhere.) */
 html.ui-v7 .rp { font-family: var(--font); font-size: var(--fs-0); }
-html.ui-v7 .rp .rp-line:not(section.wl .rp-line) { margin: 0 0 var(--s4); color: var(--action-on); font-family: var(--font-title); font-size: var(--fs-1); font-weight: var(--w-em);
-  line-height: var(--lh-1); letter-spacing: -0.005em; text-wrap: balance; }
 html.ui-v7 .rp .rp-line em { font-weight: 400; }                                  /* the *action* aside keeps its italic, lighter than the line it leads */
 html.ui-v7 .rp :is(.rp-label, .rp-ask, .rp-q, .rp-val, .rp-miss, .rp-done, .rp-later) { text-wrap: pretty; }
 html.ui-v7 .rp .rp-n { font-variant-numeric: tabular-nums; }
@@ -92,9 +86,12 @@ html.ui-v7 .rp .rp-check[aria-busy="true"] { opacity: .55; }
 html.ui-v7 .rp .rp-ghost .rp-check:disabled { opacity: 1; }                       /* a not-yet-answerable step is already blended into the card */
 @media (prefers-reduced-motion: reduce) { html.ui-v7 .rp .rp-check:not(:disabled):active { transform: none; } }
 
-/* LADDER-HINT (Tony Nov 26): the hint card inside the ladder wraps its text (shrink-to-fit, long hints still wrap at the row), and its text is the ink a touch toward the card's
-   warm hue (ink 76% + --help-on 24%) so the words belong to the box. Scoped to .rp: the site-wide .hintcard is unchanged. */
-html.ui-v7 .rp .hintcard { width: fit-content; max-width: 100%; color: color-mix(in srgb, var(--ink) 76%, var(--help-on)); }
+/* LADDER-HINT (Tony Nov 26): the hint card inside the ladder wraps its text (shrink-to-fit, long hints still wrap at the row), sits on the input's content column
+   (repair.css) and takes the INFO family: the existing --action-fill / --action blue tokens, the words the ink a touch toward that blue (ink 84% + --action 16%,
+   12.6:1 on --action-fill: over the 7:1 asked). Scoped to .rp: the site-wide .hintcard is unchanged. */
+html.ui-v7 .rp .hintcard { width: fit-content; max-width: 100%; background: var(--action-fill); color: color-mix(in srgb, var(--ink) 84%, var(--action)); }
+html.ui-v7 .rp .hintcard-ico { color: var(--action); }
+html.ui-v7 .rp .rp-step > .hintcard { margin-left: calc(1.25rem + var(--s2)); }   /* the hint's left = the input box's left (the global .hintcard margin outranks repair.css's rule) */
 
 /* LADDER-UNIFY (Tony Nov 26: "unify the ladder with the WELCOME ladder styling ... correct / wrong answers show as chips too"): ONE look for both variants. An answered value is the
    welcome ladder's verdict chip (the .rp-val of a collapsed repair row = the green "right" chip + tick, same tokens / 44px / 12px radius as .rp-chip.rp-picked; the wrong try of a

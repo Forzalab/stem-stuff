@@ -2,8 +2,8 @@
    a help surface (Cluck's warm family), one step open at a time. States say themselves in glyphs (✓ / ✗) and words; colour only repeats them.
    welcome.css (B3) owns the welcome variant's warm page; this file only lays the ladder out. */
 /* the box and its choices wear the welcome (onboarding) box's look (Tony, Nov 3 19:11: "should be same as the onboarding box"; welcome.css section.wl) */
-.rp { box-sizing: border-box; max-width: 100%; margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); background: color-mix(in srgb, var(--help) 6%, var(--help-sheet));
-  border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.rp { position: relative; box-sizing: border-box; max-width: 100%; margin-top: calc(var(--s3) + 14px); padding: var(--s3) var(--s4) var(--s4);   /* room for the intro tab's half above the card (s3 gap) */
+  background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); font-size: var(--t-sm); line-height: var(--lh-ui); }
 .rp-line { margin: 0 0 var(--s3); color: var(--help-on); }
 .rp-steps { margin: 0; padding: 0; list-style: none; }
 .rp-step { padding: var(--s2) 0; border-top: var(--bw) solid var(--help-rule); }
@@ -63,8 +63,11 @@
 .rp-foot:empty { display: none; }
 .rp-done { margin: 0; font-weight: var(--w-em); }
 .rp-later { margin: 0; color: var(--muted); }
-.rp-skip { margin-left: auto; border-color: transparent; background: none; color: var(--muted); }
+.rp-skip { margin-left: auto; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--edge); min-width: 40px; color: var(--muted); border-color: transparent; background: none; }
+.rp-skip:hover { color: var(--ink); text-decoration-color: currentColor; }
 .rp :is(.rp-chip, .rp-check, .rp-skip, .rp-next):focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* the ladder's hint sits on the input's content column (28 = the step number + its gap), never on the card edge */
+.rp-step > .hintcard { margin-left: calc(1.25rem + var(--s2)); }
 @keyframes rp-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .rp-body.rp-open { animation: none; } }
 

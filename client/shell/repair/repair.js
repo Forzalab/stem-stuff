@@ -316,8 +316,9 @@
       const I = L().intro || {}, many = String(o.error).split("+").length > 1;
       const key = o.gen ? "proof" : variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
       const t = String(I[key] || "");
-      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line");
+      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line rp-tab");   // the ONE intro tab (welcome.css .rp-tab): orange --help pill, dark ink, the duck, on both ladders
       if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
+      p.insertAdjacentHTML("afterbegin", '<svg class="icon wl-duck" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
       return p;
     }
     function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
