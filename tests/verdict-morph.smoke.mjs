@@ -1,28 +1,39 @@
-// VERDICT-MORPH smoke (SUBMIT-VERDICT-MORPH, Tony Nov 17): under html.ui-v7 the pick-all Check (#mcGo) hands its slot to a Next that
-// flashes the verdict: key face floods green/red + a tick/cross draws on, then morphs into today's Next (plain Next = g-next; no vmorph).
-// Phone 390x844, diet cookies, own serve.py with a throwaway tries.json:  node tests/verdict-morph.smoke.mjs [port]
+// VERDICT-MORPH smoke (SHIPPED KEY, Tony Nov 26): under html.ui-v7 every family's Check / Next is ONE key. Its one
+// <svg><path> morphs arrow -> spin (grading, spinning) -> cross / tick (120ms, spin frozen on the next 180deg) ->
+// HOLD 600ms -> EXIT 200ms back to the arrow: right ends --chip / --ink (Next), wrong ends .35 (retry Check inert,
+// Next still clickable). No .vm-ico, no 1150ms flood timeline. Flag off is untouched.
+// Phone 390x844, diet cookies, own serve.py:  node tests/verdict-morph.smoke.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchBrowser } from "./pw-browser.mjs";
-import { serverUp } from "./lib/boot.mjs";   // CI-ARCH B3: a dead serve.py fails at once, with its URL
+import { serverUp } from "./lib/boot.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8837), BASE = `http://127.0.0.1:${PORT}`;
-const TRIES = join(mkdtempSync(join(tmpdir(), "verdict-morph-")), "tries.json");
-/* two pick-all problems (a jump list needs a queue, or cueNext never lands a Next): whichever opens, a, c are right and b, d wrong */
-const FILE = { v: 1, problems: ["CSCI26_U01", "CSCI26_U02"].map(code => ({ code, type: "mc", pick: "all", shuffle: false,
-  body: [{ type: "text", md: "Even numbers?" }], choices: ["2", "3", "4", "5"].map((md, i) => ({ id: "abcd"[i], md })),
-  correct: ["a", "c"], miss: "QUACK. miss", wrong: [{ choice: "b", error: "misread", hint: "QUACK. b" }, { choice: "d", error: "misread", hint: "QUACK. d" }] })) };
+const TMP = mkdtempSync(join(tmpdir(), "verdict-morph-")), BANKS = join(TMP, "banks");
+mkdirSync(BANKS);
+const txt = md => [{ type: "text", md }];
+const FILE = { v: 1, problems: [
+  { code: "PROBE_TY1", type: "num", answer: "4", tol: 0.01, body: txt("What is $2+2$?") },
+  { code: "PROBE_MC1", type: "mc", body: txt("Pick the even one."), choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }, { id: "c", md: "5" }], correct: "a" },
+  { code: "PROBE_MU1", type: "multi", body: txt("Add them."), parts: [
+    { label: "a", prompt: "first", type: "num", answer: "2", tol: 0.01 },
+    { label: "b", prompt: "second", type: "num", answer: "3", tol: 0.01 }] },
+  { code: "PROBE_PF1", type: "proof", body: txt("Say what a schema is."), how: "In your own words.", proof: { reference: "A mental frame." } },
+  { code: "PROBE_ALL", type: "mc", pick: "all", shuffle: false, body: txt("Even numbers?"), how: "Tick all that are true.",
+    choices: ["2", "3", "4", "5"].map((md, i) => ({ id: "abcd"[i], md })), correct: ["a", "c"], miss: "QUACK. miss" },
+] };
+writeFileSync(join(BANKS, "BANK_MORPH.json"), JSON.stringify(FILE));
 
-const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_MORPH", STEM_TODAY: "2026-11-03", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "", CLAUDE_API: "" }, stdio: "ignore" });
 await serverUp(BASE);
 
 let fails = 0;
@@ -30,108 +41,141 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { fails++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const opened = page => page.waitForFunction(() => /^CSCI26_U/.test(document.querySelector("#pcode")?.textContent || "") && !document.querySelector("#freeze").hidden
-  && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), null, { timeout: 8000 });
-const row = (page, id) => page.locator(`#q .opt[data-id="${id}"]`);
-const tries = page => page.evaluate(() => window.__drill.state.tries.length);
-/* wait for the morphing Next; snap it the moment it lands, so the 300 ms window is measured from the click (not from a poll) */
-const watch = (page, v) => page.evaluate(v => new Promise(res => {
-  const t0 = performance.now();
-  const snap = n => ({ ms: Math.round(performance.now() - t0), v: n.dataset.v, icon: !!n.querySelector("svg.vm-ico"),
-    aria: n.querySelector("svg.vm-ico")?.getAttribute("aria-hidden"),
-    paths: [...n.querySelectorAll("svg.vm-ico path")].map(p => [p.getAttribute("d"), p.getAttribute("pathLength")]),
-    nf: !!n.querySelector(".nf"), gnext: n.classList.contains("g-next"), label: n.getAttribute("aria-label"), off: !!n.disabled });
-  const mo = new MutationObserver(() => { const n = document.querySelector(`#q .nx.vmorph[data-v="${v}"]`); if (n) { mo.disconnect(); res(snap(n)); } });
-  mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true });
-  const n = document.querySelector(`#q .nx.vmorph[data-v="${v}"]`); if (n) { mo.disconnect(); res(snap(n)); }
-  setTimeout(() => { mo.disconnect(); res(null); }, 2500);
-}), v);
-/* the flag-off case: did a .vmorph ever exist during the whole 1150 ms timeline? */
-const watchNone = page => page.evaluate(() => new Promise(res => {
-  let seen = false;
-  const hit = () => { if (document.querySelector("#q .nx.vmorph")) seen = true; };
-  const mo = new MutationObserver(hit);
-  mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true });
-  hit();
-  setTimeout(() => { mo.disconnect(); hit(); res(seen); }, 1400);
-}));
-async function fresh(ui) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
-  await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
-  const page = await ctx.newPage();
-  await page.goto(`${BASE}/${ui ? "?ui=v7" : ""}`);
-  const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
-  await fc.setFiles({ name: "morph.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
-  await opened(page);
-  return { ctx, page };
-}
-/* one wrong try, then a second wrong try: A7K gives two in diet, and the second Check closes the question (out of tries) */
-async function twoWrong(page) {
-  await row(page, "b").click();
-  const n0 = await tries(page);
-  await page.click("#mcGo");
-  await page.waitForFunction(k => window.__drill.state.tries.length > k, n0, { timeout: 4000 });
-  await row(page, "d").click();
-}
-const endState = page => page.evaluate(() => { const n = document.querySelector("#q .nx");
-  return n && { vm: n.classList.contains("vmorph"), nf: !!n.querySelector(".nf"), label: n.getAttribute("aria-label"), gnext: n.classList.contains("g-next") }; });
-
+const ARROW = "M5 12";
 let browser;
 try { browser = await launchBrowser(pw, { args: ["--no-sandbox"] }); }
-catch { browser = await launchBrowser(pw, { args: ["--no-sandbox"], executablePath: "/opt/pw-browsers/chromium" }); }   // only if the default launch has no browser
+catch { browser = await launchBrowser(pw, { args: ["--no-sandbox"], executablePath: "/opt/pw-browsers/chromium" }); }
+
+const look = (page, sel) => page.evaluate(sel => {
+  const k = document.querySelector(sel); if (!k) return null;
+  const s = k.querySelector("svg.ib1-go"), p = s && s.querySelector("path"), cs = getComputedStyle(k);
+  const d = p && (getComputedStyle(p).d || p.getAttribute("d"));
+  const m = String(d || "").replace(/([ML])\s+/g, "$1").match(/M[\d.]+ [\d.]+/);
+  return { id: k.id, cls: k.className, op: +cs.opacity, bg: cs.backgroundColor, color: cs.color, w: k.getBoundingClientRect().width,
+    anim: s && getComputedStyle(s).animationName, start: m && m[0], off: !!k.disabled };
+}, sel);
+const hold = (page, ms = 950) => page.waitForTimeout(ms);
+
+async function open(code, ui = true, delay = 0) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block", reducedMotion: "no-preference" });
+  await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
+  const page = await ctx.newPage();
+  page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
+  if (delay) await page.route("**/check", async r => { await new Promise(x => setTimeout(x, delay)); r.continue(); });
+  if (code === "PROBE_PF1") await page.route("**/check", r => r.fulfill({ json: { verdict: "correct" } }));
+  await page.goto(`${BASE}/${ui ? "?ui=v7" : ""}#${code}`);
+  const ok = await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 10000 }).then(() => true, () => false);
+  assert.ok(ok, `the question ${code} did not open`);
+  return { ctx, page };
+}
+
 try {
-  await step("A: ui-v7 pick-all, wrong last try: .nx.vmorph[data-v=bad] + a cross, gone after 1150 ms", async () => {
-    const { ctx, page } = await fresh(true);
-    assert.equal(await page.evaluate(() => document.documentElement.classList.contains("ui-v7")), true, "the ui-v7 flag is on");
-    await twoWrong(page);
-    const pending = watch(page, "bad");
-    await page.click("#mcGo");
-    const m = await pending;
-    assert.ok(m, "no #q .nx.vmorph[data-v=bad] appeared: the Next is still plain");
-    assert.ok(m.ms <= 300, `the morph landed after ${m.ms} ms (spec: within 300 ms)`);
-    assert.equal(m.icon, true, "an svg.vm-ico rides the .nx");
-    assert.equal(m.aria, "true", "the icon is aria-hidden");
-    assert.deepEqual(m.paths.map(p => p[1]), ["100", "100"], "the cross: two paths, each pathLength 100");
-    assert.deepEqual(m.paths.map(p => p[0]), ["M7 7 L17 17", "M17 7 L7 17"], "the cross's two strokes");
-    assert.equal(m.nf, true, "the .nf label stays inside");
-    assert.equal(m.gnext, false, "a vmorph .nx never carries g-next");
-    assert.equal(m.label, "Next question", "aria-label unchanged");
-    assert.equal(m.off, false, "the Next is still clickable during the morph");
-    await page.waitForTimeout(1400);
-    const e = await endState(page);
-    assert.ok(e, "the Next is still there after the morph");
-    assert.equal(e.vm, false, ".vmorph is removed after 1150 ms");
-    assert.equal(e.nf, true, "the plain Next keeps its label");
+  await step("typed right: busy spins, tick holds, exits to the plain --chip / --ink Next", async () => {
+    const { ctx, page } = await open("PROBE_TY1", true, 700);
+    await page.fill("#q #ans", "4"); await page.click("#ansGo");
+    await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
+    await page.waitForTimeout(260);
+    const busy = await look(page, "#ansGo");
+    assert.notEqual(busy.anim, "none", "busy: the key's svg spins: " + JSON.stringify(busy));
+    assert.equal(busy.start, "M12 4.5", "busy: the glyph is the spinner: " + busy.start);
+    assert.equal(busy.op, 1, "busy: the face stays full (no .55 dim): " + busy.op);
+    await page.waitForSelector("#q .nx.k-ok", { timeout: 5000 });
+    await page.waitForFunction(() => { const p = document.querySelector("#q .nx.k-ok svg.ib1-go path"); const d = p && (getComputedStyle(p).d || p.getAttribute("d")); return /M\s*5\.5/.test(String(d)); }, null, { timeout: 2000 });
+    const tick = await look(page, "#q .nx");
+    assert.equal(tick.start, "M5.5 12.5", "the tick: " + JSON.stringify(tick));
+    assert.equal(tick.bg, "rgb(16, 38, 31)", "right: --correct-fill face: " + tick.bg);
+    await hold(page);
+    const done = await look(page, "#q .nx");
+    assert.doesNotMatch(done.cls, /k-ok|k-bad/, "the verdict classes leave after the hold: " + done.cls);
+    assert.equal(done.start, ARROW, "exit: the arrow is back: " + done.start);
+    assert.equal(done.bg, "rgb(40, 51, 82)", "right: the Next face is --chip again: " + done.bg);
+    assert.equal(done.op, 1, "right: full opacity");
+    assert.deepEqual(page.errs, []);
     await ctx.close();
   });
 
-  await step("B: ui-v7 pick-all, right last try: .nx.vmorph[data-v=ok] + a single tick", async () => {
-    const { ctx, page } = await fresh(true);
-    await row(page, "a").click(); await row(page, "c").click();
-    const pending = watch(page, "ok");
-    await page.click("#mcGo");
-    const m = await pending;
-    assert.ok(m, "no #q .nx.vmorph[data-v=ok] appeared: the Next is still plain");
-    assert.ok(m.ms <= 300, `the morph landed after ${m.ms} ms (spec: within 300 ms)`);
-    assert.equal(m.icon, true); assert.equal(m.aria, "true");
-    assert.deepEqual(m.paths.map(p => [p[0], p[1]]), [["M5 12.5 L10 17.5 L19 7", "100"]], "the tick: one path, pathLength 100");
-    assert.equal(m.nf, true); assert.equal(m.gnext, false); assert.equal(m.label, "Next question"); assert.equal(m.off, false);
-    await page.waitForTimeout(1400);
-    const e = await endState(page);
-    assert.ok(e); assert.equal(e.vm, false); assert.equal(e.nf, true);
+  await step("typed wrong (retry open): cross on the Check, then the dim arrow until the next edit", async () => {
+    const { ctx, page } = await open("PROBE_TY1", true, 700);
+    await page.fill("#q #ans", "5"); await page.click("#ansGo");
+    await page.waitForSelector("#ansGo.k-bad", { timeout: 5000 });
+    await page.waitForTimeout(180);   // the 120ms d / colour morph lands
+    const cross = await look(page, "#ansGo");
+    assert.equal(cross.start, "M7 7", "the cross: " + JSON.stringify(cross));
+    assert.equal(cross.bg, "rgb(42, 26, 36)", "wrong: --wrong-fill face: " + cross.bg);
+    await hold(page);
+    const dim = await look(page, "#ansGo");
+    assert.equal(dim.start, ARROW, "exit: the arrow is back: " + dim.start);
+    assert.equal(dim.op, 0.35, "wrong: the retry key waits at .35: " + dim.op);
+    assert.equal(dim.off, true, "wrong: the retry key is inert until the edit");
+    await page.fill("#q #ans", "4");
+    await page.waitForFunction(() => { const k = document.querySelector("#ansGo"); return !k.disabled && +getComputedStyle(k).opacity >= .999; }, null, { timeout: 3000 });
     await ctx.close();
   });
 
-  await step("C: no ui-v7: the Next never wears .vmorph (today's g-next Next)", async () => {
-    const { ctx, page } = await fresh(false);
-    assert.equal(await page.evaluate(() => document.documentElement.classList.contains("ui-v7")), false, "the flag is off");
-    await twoWrong(page);
-    const pending = watchNone(page);
-    await page.click("#mcGo");
-    await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 4000 });
-    assert.equal(await pending, false, ".nx.vmorph appeared without ui-v7");
-    const e = await endState(page);
-    assert.ok(e, "the Next is there"); assert.equal(e.vm, false); assert.equal(e.gnext, true, "today's Next (g-next)");
+  await step("MC: the key is the 60px .chk key (never in a tile), busy spins, right exits to the Next arrow", async () => {
+    const { ctx, page } = await open("PROBE_MC1", true, 700);
+    const before = await page.evaluate(() => ({ chk: !!document.querySelector("#q .chk #mcGo"), tile: !!document.querySelector("#q .ch .send"), w: document.querySelector("#mcGo").getBoundingClientRect().width }));
+    assert.deepEqual(before, { chk: true, tile: false, w: 60 }, "MC key place: " + JSON.stringify(before));
+    await page.click('#q .opt[data-id="a"]'); await page.click("#mcGo");
+    await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });
+    await page.waitForTimeout(260);
+    assert.notEqual((await look(page, "#mcGo")).anim, "none", "MC busy: svg spins");
+    await page.waitForSelector("#q .nx.k-ok", { timeout: 5000 });
+    await hold(page);
+    const done = await look(page, "#q .nx");
+    assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)");
+    await ctx.close();
+  });
+
+  await step("pick-all wrong: the .chk key crosses, then waits dim with the arrow for the edit", async () => {
+    const { ctx, page } = await open("PROBE_ALL", true, 700);
+    await page.click('#q .opt[data-id="a"]'); await page.click("#mcGo");
+    await page.waitForSelector("#mcGo.k-bad", { timeout: 5000 });
+    await page.waitForTimeout(180);
+    const cross = await look(page, "#mcGo");
+    assert.equal(cross.start, "M7 7");
+    await hold(page);
+    const dim = await look(page, "#mcGo");
+    assert.equal(dim.start, ARROW); assert.equal(dim.op, 0.35, "wrong pick-all: .35");
+    assert.equal(dim.off, true, "wrong pick-all: the retry Check is inert until the edit");
+    await page.click('#q .opt[data-id="c"]');
+    await page.waitForFunction(() => { const k = document.querySelector("#mcGo"); return !k.disabled && +getComputedStyle(k).opacity >= .999; }, null, { timeout: 3000 });
+    await ctx.close();
+  });
+
+  await step("multi: both parts right -> the last part's Next ticks then returns to the arrow", async () => {
+    const { ctx, page } = await open("PROBE_MU1", true, 0);
+    for (const [i, v] of [[0, "2"], [1, "3"]]) {
+      await page.fill(`#q .part[data-i="${i}"] .ans`, v);
+      await page.press(`#q .part[data-i="${i}"] .ans`, "Enter");
+      await page.waitForFunction(i => window.__drill.state.parts?.[i]?.shut, i, { timeout: 5000 }).catch(() => {});
+    }
+    await page.waitForSelector("#q .nx.k-ok", { timeout: 6000 });
+    await hold(page);
+    const done = await look(page, "#q .nx");
+    assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)");
+    await ctx.close();
+  });
+
+  await step("proof: the key stays in the box (44px), ticks, then returns to the arrow", async () => {
+    const { ctx, page } = await open("PROBE_PF1", true, 0);
+    const box = await page.evaluate(() => { const k = document.querySelector("#ff.proof #ansGo"), p = document.querySelector("#ff.proof").getBoundingClientRect(); return { w: k.getBoundingClientRect().width, inside: k.getBoundingClientRect().left >= p.left && k.getBoundingClientRect().right <= p.right }; });
+    assert.deepEqual(box, { w: 44, inside: true }, "proof key: " + JSON.stringify(box));
+    await page.fill("#q #ans", "A mental frame.");
+    await page.click("#ansGo");
+    await page.waitForSelector("#q .nx.k-ok", { timeout: 6000 });
+    await hold(page);
+    const done = await look(page, "#q .nx");
+    assert.equal(done.start, ARROW); assert.equal(done.bg, "rgb(40, 51, 82)");
+    await ctx.close();
+  });
+
+  await step("flag off: no key stages, today's g-next Next", async () => {
+    const { ctx, page } = await open("PROBE_ALL", false, 0);
+    await page.click('#q .opt[data-id="a"]'); await page.click('#q .opt[data-id="c"]'); await page.click("#mcGo");
+    await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
+    const e = await page.evaluate(() => { const n = document.querySelector("#q .nx"); return { k: /k-(ok|bad|wait)/.test(n?.className || ""), g: n?.classList.contains("g-next") }; });
+    assert.deepEqual(e, { k: false, g: true }, "flag off Next: " + JSON.stringify(e));
     await ctx.close();
   });
 } finally { await browser.close(); srv.kill(); }

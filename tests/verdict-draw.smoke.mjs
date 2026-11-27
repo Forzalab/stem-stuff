@@ -111,7 +111,7 @@ try {
 
   await step("MC tile: live tick draws; the reload is still", async () => {
     const { ctx, page } = await open("CALC1_DV3");
-    await page.click('#q .opt[data-id="a"]'); await page.click('#q .ch[data-id="a"] .send');
+    await page.click('#q .opt[data-id="a"]'); await page.click("#mcGo");   // SHIPPED KEY: the MC Check is the .chk key under the choices
     const a = await anim(page, '#q .opt[data-id="a"] .vg');
     assert.equal(a.name, "vk-in", "the live MC tick is not vk-in: " + JSON.stringify(a));
     await page.reload();

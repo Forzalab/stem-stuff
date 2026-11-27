@@ -161,7 +161,71 @@ const IB1_V = {
 /* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
 // feel-better: a press on the rim of a typed box (the input is 54 tall inside a 60px field, 17.5px side pad) still focuses its input
 document.addEventListener("pointerdown", e => { const f = e.target instanceof Element && e.target.matches("html.ui-v7 #q .ff:not(.proof, .rbox)") ? e.target : null, i = f && f.querySelector("input.ans:not(:disabled)"); if (i) { e.preventDefault(); i.focus(); } });
-const IB1_GO = '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+/* SHIPPED KEY (Tony Nov 26): every Check / Next is ONE <svg viewBox="0 0 24 24"><path> and the CSS owns its `d`
+   (verdict-v7.css §key) so arrow -> spin -> cross/tick -> arrow interpolates on the same command list. The d attribute
+   below is the no-CSS-d fallback (Safari): keyGlyph() rewrites it per stage. */
+const KEY_D = {
+  arrow: "M5 12 L8.5 12 L12 12 L15.5 12 L19 12 M13 6 L16 9 L19 12 L16 15 L13 18",
+  spin: "M12 4.5 L16.57 6.05 L19.24 10.06 L18.93 14.87 L15.75 18.5 M12 19.5 L7.43 17.95 L4.76 13.94 L5.07 9.13 L8.25 5.5",
+  cross: "M7 7 L9.5 9.5 L12 12 L14.5 14.5 L17 17 M17 7 L14.5 9.5 L12 12 L9.5 14.5 L7 17",
+  tick: "M5.5 12.5 L6.625 13.625 L7.75 14.75 L8.875 15.875 L10 17 M10 17 L12.125 14.625 L14.25 12.25 L16.375 9.875 L18.5 7.5",
+};
+const KEY_CSS_D = !!(window.CSS && CSS.supports && CSS.supports("d", 'path("M0 0")'));
+const IB1_GO = `<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="${KEY_D.arrow}"/></svg>`;
+const keySvg = b => b && b.querySelector("svg.ib1-go");
+function keyGlyph(b, name) {
+  const p = b && b.querySelector("svg.ib1-go path");
+  if (p && !KEY_CSS_D) p.setAttribute("d", KEY_D[name] || KEY_D.arrow);
+}
+function keyReset(b) {
+  if (!b) return;
+  clearTimeout(b._kHold); clearTimeout(b._kDone); clearTimeout(b._kSpin);
+  b.classList.remove("k-ok", "k-bad", "k-wait", "k-stop", "k-spin", "k-swap");
+  keyGlyph(b, "arrow");
+}
+/* the live verdict: freeze the spin, ease to the next 180deg while the glyph morphs to cross / tick, hold 600 ms,
+   then morph back to the arrow in 200 ms. Wrong ends dim + inert (the retry re-arms on the next edit); right ends
+   as the normal --chip / --ink Next. Reduced motion: colours + shapes switch at once, no rotation. */
+function keyVerdict(b, v, src) {
+  if (!b || !root.classList.contains("ui-v7") || painting || !v) return;
+  const fs = keySvg(src || b), s = keySvg(b);
+  let a = 0, spinning = false;
+  if (fs) { const cs = getComputedStyle(fs); a = parseFloat(cs.rotate) || 0; spinning = cs.animationName !== "none"; }
+  clearTimeout(b._kHold); clearTimeout(b._kDone); clearTimeout(b._kSpin);
+  b.classList.remove("k-wait", "k-ok", "k-bad", "k-exit");
+  const swap = () => { if (!KEY_CSS_D) { b.classList.add("k-swap"); clearTimeout(b._kSpin); b._kSpin = setTimeout(() => b.classList.remove("k-swap"), 220); } };
+  /* grading is removed one task after feedback(): stage after it, so the busy rules never fight the verdict */
+  setTimeout(() => {
+    if (spinning && KEY_CSS_D && a) {
+      b.classList.add("k-stop", "k-spin"); if (s) s.style.rotate = a + "deg";
+      void b.getBoundingClientRect();
+      if (s) { s.style.transition = "rotate 120ms var(--key-exit)"; s.style.rotate = Math.ceil(a / 180) * 180 + "deg"; }
+      b._kSpin = setTimeout(() => { if (s) { s.style.transition = "none"; s.style.rotate = "0deg"; void s.getBoundingClientRect(); s.style.transition = ""; } }, 140);
+    }
+    b.classList.remove("k-spin");
+    b.classList.add(v === "ok" ? "k-ok" : "k-bad");
+    keyGlyph(b, v === "ok" ? "tick" : "cross");
+    swap();
+  }, 0);
+  b._kHold = setTimeout(() => {
+    b.classList.remove("k-ok", "k-bad", "k-stop");
+    keyGlyph(b, "arrow");
+    swap();
+  }, 600);
+  b._kDone = setTimeout(() => {
+    if (v !== "bad") return;
+    b.classList.add("k-wait");
+    if (!b.classList.contains("nx")) { b.disabled = true; }
+  }, 800);
+}
+function keyBusy() {   // the no-CSS-d fallback: the arrow becomes the spinner while grading
+  if (KEY_CSS_D) return;
+  const busy = document.documentElement.classList.contains("grading");
+  document.querySelectorAll("#q .ff#ff:not(.proof):not(.rbox) > #ansGo, #q .mparts .part.g-on > .ff > .send, #q .chk > #mcGo, #q .ff.proof#ff > #ansGo").forEach(b => {
+    if (b.classList.contains("k-ok") || b.classList.contains("k-bad")) return;
+    keyGlyph(b, busy ? "spin" : "arrow");
+  });
+}
 function vmark(box, id) {
   if (!box) return;
   let m = box.querySelector(".vk");
@@ -719,7 +783,7 @@ function setBusy(v, row) {   // row: a multi-part item's own part (only its Chec
      The mark is removed one task later, after strip.js's MutationObserver microtask has seen the verdict; it is never a visible state. */
   if (v) { const el = row || H; if (liveEl && liveEl !== el) liveEl.removeAttribute("data-check-live"); clearTimeout(liveT); liveEl = el; el.setAttribute("data-check-live", ""); }
   else if (liveEl) { const el = liveEl; liveEl = null; liveT = setTimeout(() => el.removeAttribute("data-check-live"), 0); }
-  if (v) busyT = setTimeout(() => H.classList.add("grading"), 150); else H.classList.remove("grading");
+  if (v) busyT = setTimeout(() => { H.classList.add("grading"); keyBusy(); }, 150); else { H.classList.remove("grading"); keyBusy(); }
 }
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
 /* one problem source: the open bank already holds every question (the same public view the server sends), so it answers at
@@ -1021,10 +1085,9 @@ function renderQuestion() {
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true, true)}</span>
         </button>
-        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}${IB1_GO}</button>`}
         ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Enter your answers here...")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
           data-how="${esc(p.fix.how || "Enter your answers here...")}" placeholder="${esc(p.fix.how || "Enter your answers here...")}"></div>` : ""}
-      </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}${IB1_GO}</button></div>` : ""}`;
+      </div>`).join("")}</div><div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}${IB1_GO}</button></div>`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
     if (all(p)) syncTicks();                                               // nothing ticked can already be checked (prove mode: not yet)
@@ -1375,11 +1438,9 @@ function fitFix(f) {
 }
 function select(o) {
   S.selected = o ? o.dataset.id : null;
-  for (const x of opts()) {
-    const on = x === o;
-    x.setAttribute("aria-checked", on);
-    x.parentElement.querySelector(".send").hidden = !on;
-  }
+  for (const x of opts()) x.setAttribute("aria-checked", x === o);
+  syncTicks();                                                 // MC key (the .chk row): live only once a choice is picked
+  keyReset($("#mcGo"));
   placeToast();   // a row of choices reflows when the arrow shows: the toast follows its struck choice, never lands on a live one
 }
 /* #q outlives every problem (only its innerHTML changes), so wire it ONCE: a listener per load stacked up and one tap
@@ -1451,6 +1512,7 @@ function tick(o, m = "on") {
   if (lock && next === "on" && S.prob.fix) for (const x of opts()) if (x !== o && !x.hasAttribute("data-lock") && !x.classList.contains("wrong") && fixOf(x) && markOf(x) !== "x") mark(x, "x");
   mark(o, next);
   syncTicks();
+  keyReset($("#mcGo"));
 }
 /* sugar kept rows (brain tick-lock proposal, look B, Tony Oct 20): after a pick-all miss whose ticks are ALL right (the server says so
    from the key: `kept` = the ticked ids, never an unticked one; gradeLocal mirrors it), those rows stay ticked in green and can't be
@@ -1473,9 +1535,10 @@ function keptTap(o) {
 }
 /* Check is live with nothing ticked too (that is the answer "none of them": docs/design/EASY.md); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
-  S.selected = ticked().map(x => x.dataset.id);
+  if (all(S.prob)) S.selected = ticked().map(x => x.dataset.id);   // single MC keeps select()'s pick
   const proved = !S.prob.fix || opts().every(o => o.hasAttribute("data-lock") || markOf(o) === "on" || (markOf(o) === "x" && fixOf(o).querySelector("input").value.trim()));
-  const go = $("#mcGo"); if (go) go.disabled = !proved || S.finished;      // nothing ticked = "none of them is true": a real answer
+  const has = all(S.prob) ? true : !!S.selected;                  // a single pick needs a pick; pick-all's nothing ticked = "none of them is true"
+  const go = $("#mcGo"); if (go) go.disabled = !proved || S.finished || !has;      // nothing ticked = "none of them is true": a real answer
 }
 function strike(o) {                                        // a wrong choice: unticked, struck through, disabled (prove mode: X'd, its box live)
   if (!o) return;
@@ -1661,6 +1724,7 @@ function wireFF() {
   for (const inp of ins) {
     inp.addEventListener("input", () => {
       go.disabled = ins.some(x => !x.value.trim());
+      keyReset(go);
       const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); go.hidden = false; }
       if (!pv) return;
       if (xOn(null)) { xPreview(pv, inp.value, null); const ln = $("#xline"); if (ln && ln.classList.contains("bad")) { ln.className = "xline"; ln.textContent = X_PROMPT; } return; }   // W137: the working + its value
@@ -1855,6 +1919,7 @@ function wireProof() {
   sc.addEventListener("scroll", fade, { passive: true }); inp.addEventListener("input", fade); new ResizeObserver(fade).observe(sc);
   inp.addEventListener("input", () => {
     go.disabled = !inp.value.trim();
+    keyReset(go);
     proofLen(inp.value);
     const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); go.hidden = false; }
   });
@@ -1912,7 +1977,7 @@ const partEls = i => { const r = document.querySelector(`#q .part[data-i="${i}"]
 function partKey(i) {
   const { inp, go } = partEls(i), has = !!inp.value.trim();
   if (S.parts[i]?.shut) return;
-  if (root.classList.contains("ui-v7")) { go.hidden = false; go.disabled = !has; go.setAttribute("aria-disabled", String(!has)); }
+  if (root.classList.contains("ui-v7")) { go.hidden = false; go.disabled = !has; go.setAttribute("aria-disabled", String(!has)); if (!has) keyReset(go); }
   else { go.hidden = !has; go.disabled = false; go.removeAttribute("aria-disabled"); }
 }
 function wireParts() {
@@ -1920,7 +1985,7 @@ function wireParts() {
   S.prob.parts.forEach((_, i) => {
     const { inp, go, box } = partEls(i);
     partKey(i);
-    inp.addEventListener("input", () => { partKey(i); box.classList.remove("bad"); vmark(box, null); if (xOn(i)) xPreview(xEls(i).pv, inp.value, null); });   // the arrow appears once there is text (like the code box); W137: the working + its value
+    inp.addEventListener("input", () => { partKey(i); keyReset(go); box.classList.remove("bad"); vmark(box, null); if (xOn(i)) xPreview(xEls(i).pv, inp.value, null); });   // the arrow appears once there is text (like the code box); W137: the working + its value
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
     go.addEventListener("click", () => submitPart(i));
   });
@@ -1931,13 +1996,13 @@ function shutPart(i, ok) {
   S.parts[i].shut = true; S.parts[i].ok = ok;
   box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
   for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
-  go.hidden = true;
+  go.hidden = true;                                                            // a shut part's key leaves; its box mark carries the verdict
   vmark(box, ok ? "i-ok" : "i-lock");
 }
 function partFeedback(i, r, typed) {
   const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
-  if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = !root.classList.contains("ui-v7"); vmark(box, "i-x"); }   // the box says it: no words (IB-4: ui-v7 keeps the dimmed key)
+  if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = !root.classList.contains("ui-v7"); vmark(box, "i-x"); if (root.classList.contains("ui-v7")) keyVerdict(go, "bad"); }   // the box says it (IB-4: the key takes the verdict, then waits dim for the edit)
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
@@ -2215,23 +2280,10 @@ function finish() {
    (e.repeat) never skips a question. Live: g-next-in (app.css) lands it once; a restored question shows it still. No list (#qnav hidden)
    = nowhere to go, so no Next. */
 let painting = false;
-function vmorphV() {                                                             // "ok" | "bad" when the Check key (#mcGo / #ansGo) hands over to a verdict-flash Next, else ""
-  if (painting || !document.documentElement.classList.contains("ui-v7") || !S) return "";
-  const send = cueCarrier().send, v = S.tries.at(-1)?.v;                         // the C4a key only: pick-all #mcGo, or #ansGo in the PROOF box (a typed num/expr #ansGo is the row + Next pill)
-  return send && (send.id === "mcGo" || (send.id === "ansGo" && send.closest(".ff.proof"))) ? (v === "correct" ? "ok" : v === "wrong" ? "bad" : "") : "";
-}
 function nextBtn() {                                                             // the cue's Next: nav.js go(1), the same queue as the bar's Next
   const b = document.createElement("button");
-  const v = vmorphV();                                                           // SUBMIT-VERDICT-MORPH: the C4a key flashes the verdict, then is Next (verdict-v7.css §verdict-morph)
-  b.type = "button"; b.className = "nx" + (v ? " vmorph" : painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
-  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}${IB1_GO}</span>`;   // SWISS-KEY: the MC tile's Next wears the typed key's arrow (bento.css §swiss-key); everywhere else .ib1-go stays hidden (app.css)
-  if (v) {
-    b.dataset.v = v;
-    const P = d => `<path d="${d}" pathLength="100"/>`;
-    b.insertAdjacentHTML("beforeend", `<svg class="vm-ico" viewBox="0 0 24 24" aria-hidden="true">${v === "ok" ? P("M5 12.5 L10 17.5 L19 7") : P("M7 7 L17 17") + P("M17 7 L7 17")}</svg>`);
-    setTimeout(() => b.classList.remove("vmorph"), 1150);
-  }
-  const kv = S && S.tries.at(-1)?.v; if (kv === "correct" || kv === "wrong") b.dataset.kv = kv === "correct" ? "ok" : "bad";   // KEY-ONE verdict tint (verdict-v7.css §key): Next takes the hue of the verdict it follows
+  b.type = "button"; b.className = "nx" + (painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
+  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}${IB1_GO}</span>`;   // SHIPPED KEY: one arrow, no word, no plate (the span / sprite stay for screen readers, visually hidden)
   b.addEventListener("click", e => {
     e.stopPropagation();
     if (document.documentElement.classList.contains("ui-v7") && window.stemNavNext) { window.stemNavNext(); return; }   // ui-v7: the exact action of the top bar's Next (nav.js goNext), no detour through #qnext's state
@@ -2243,12 +2295,7 @@ function nextBtn() {                                                            
 }
 function cueCarrier() {
   const p = S.prob, t = S.tries.at(-1) || {};
-  if (all(p)) return { box: $("#q .chk"), send: $("#mcGo") };
-  if (p.type === "mc") {
-    const id = t.c ?? S.selected ?? $("#q .opt.right")?.dataset.id;
-    const box = (id != null && [...document.querySelectorAll("#q .ch")].find(c => c.dataset.id === String(id))) || $("#q .ch");
-    return { box, send: box && box.querySelector(".send") };
-  }
+  if (p.type === "mc") return { box: $("#q .chk"), send: $("#mcGo") };           // SHIPPED KEY: the MC key lives in the .chk row (the pick-all slot), never in a tile
   if (p.type === "multi") { const e = partEls(typeof t.part === "number" ? t.part : p.parts.length - 1); return { box: e.box, send: e.go }; }
   return { box: $("#ff"), send: $("#ansGo") };
 }
@@ -2297,6 +2344,8 @@ function cueNext() {
   box.classList.add("cue");
   const nx = nextBtn();
   send.after(nx);
+  const last = S && S.tries.at(-1), v = last && (last.v === "correct" ? "ok" : last.v === "wrong" || last.v === "locked" ? "bad" : "");
+  if (v) { if (painting) { if (v === "bad") nx.classList.add("k-wait"); } else keyVerdict(nx, v, send); }   // SHIPPED KEY: verdict hold + exit on the Next; a reload shows the final state, no replay
   if (h0 && Math.abs(box.offsetHeight - h0) > 0.5) nx.style.top = h0 / 2 + "px";
   const g = box.closest(".choices.inline");                                     // pills: Next must fit its pill, else the rows stack
   if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");
@@ -2428,6 +2477,11 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   bridge.layoutFreeze();
   rboxSync();
+  /* SHIPPED KEY: no Next (a retry is still open) -> the Check itself wears the verdict; a restore is still */
+  if (!document.querySelector("#q .nx") && (r.verdict === "wrong" || r.verdict === "locked")) {
+    const go = cueCarrier().send;
+    if (go) { if (painting) go.classList.add("k-wait"); else keyVerdict(go, "bad"); }
+  }
   if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); hintFold(inRow ? chk.querySelector(".cluck") : fb.querySelector(".cluck")); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }

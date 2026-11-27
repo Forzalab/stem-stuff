@@ -227,7 +227,7 @@
       if (st.kind === "num" || st.kind === "expr") {                             // expr (generated proof steps): the same box, a text keyboard
         const f = h("form", "rp-num"), fld = h("span", "rp-field"), inp = h("input", "rp-in"), go = h("button", "rp-check");
         go.append(h("span", "rp-check-t", L().check || "Check"));
-        go.insertAdjacentHTML("beforeend", '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>');   // ui-v7: the typed answer key's arrow (app.js IB1_GO); flag off: the word
+        go.insertAdjacentHTML("beforeend", '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12 L8.5 12 L12 12 L15.5 12 L19 12 M13 6 L16 9 L19 12 L16 15 L13 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>');   // ui-v7: the shipped key's one glyph (verdict-v7.css §key); flag off: the word
         inp.type = "text"; inp.inputMode = st.kind === "expr" ? "text" : "decimal"; inp.autocomplete = "off";
         if (st.kind === "expr") inp.placeholder = "e.g. 2" + (st.var || "k") + "+4"; inp.setAttribute("aria-label", st.label);
         go.type = "submit";

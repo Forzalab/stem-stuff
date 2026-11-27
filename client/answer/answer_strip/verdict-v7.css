@@ -184,114 +184,110 @@ html.ui-v7 #q .ff.proof > .pwrap > .ans.empty::after { content: attr(data-ph); c
 html.ui-v7 #q .ff.proof > .pwrap > .ans.empty:focus::after, html.ui-v7:is(.kb, .kbup, .mt) #q .ff.proof > .pwrap > .ans.empty::after { color: transparent; }
 html.ui-v7 #q .ff.proof.done > .pwrap > .ans { color: var(--correct); }
 
-/* == §verdict-morph == SUBMIT-VERDICT-MORPH (Tony Nov 17): the Check key (§key) floods the verdict colour, a tick / cross draws on, then it morphs into Next.
-   app.js nextBtn() puts class vmorph + data-v ok|bad + svg.vm-ico on the .nx and removes vmorph at 1150 ms. One timeline, 1150 ms: flood 0-120, draw 120-420 (cross 2nd stroke +60), pop 120-570,
-   shake (bad) 120-480, hold to 900, crossfade icon -> .nf 900-1150. Percents of 1150: 120=10.43 420=36.52 480=41.74 570=49.57 900=78.26. Reduced motion: colour + full icon, then the swap at 1150. */
-html.ui-v7 #q .nx.vmorph { --vm-c: #0c2c22; --vm-s: var(--correct); display: grid; place-items: center;
-  animation: vm-flood 1150ms cubic-bezier(0, 0, .2, 1) both; }
-html.ui-v7 #q .nx.vmorph[data-v="bad"] { --vm-c: #3e141e; --vm-s: var(--wrong); animation: vm-flood 1150ms cubic-bezier(0, 0, .2, 1) both, vm-shake 1150ms linear both; }
-html.ui-v7 #q .nx.vmorph > * { grid-area: 1 / 1; }
-html.ui-v7 #q .nx.vmorph .nf { opacity: 0; animation: vm-label 1150ms cubic-bezier(.4, 0, .2, 1) both; }
-html.ui-v7 #q .nx.vmorph .vm-ico { width: 28px; height: 28px; fill: none; stroke: var(--vm-s); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
-  animation: vm-pop 1150ms linear both, vm-icon-out 1150ms cubic-bezier(.4, 0, .2, 1) both; }
-html.ui-v7 #q .nx.vmorph .vm-ico path { stroke-dasharray: 100; animation: vm-draw 1150ms cubic-bezier(.4, 0, .2, 1) both; }
-html.ui-v7 #q .nx.vmorph .vm-ico path + path { animation-name: vm-draw2; }
-html.ui-v7 #q .nx:not(.vmorph) > .vm-ico { display: none; }   /* after the flash the tick / cross leaves: it sat under Next as a black wedge (no fill rule off .vmorph) */
-@keyframes vm-flood { 0% { background: var(--key-face); } 100% { background: var(--kf, var(--key-face)); } 10.43%, 78.26% { background: var(--vm-c); } }   /* size and radius never move: Next is the same key (§key) */
-@keyframes vm-shake { 0%, 10.43%, 41.74%, 100% { translate: 0; } 19% { translate: 4px; } 27% { translate: -3px; } 35% { translate: 2px; } }
-@keyframes vm-draw { 0%, 10.43% { stroke-dashoffset: 100; } 36.52%, 100% { stroke-dashoffset: 0; } }
-@keyframes vm-draw2 { 0%, 15.65% { stroke-dashoffset: 100; } 41.74%, 100% { stroke-dashoffset: 0; } }   /* the cross's 2nd stroke starts +60 ms */
-@keyframes vm-pop { 0%, 10.43% { scale: .6; } 31% { scale: 1.1; } 49.57%, 100% { scale: 1; } }
-@keyframes vm-icon-out { 0%, 78.26% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes vm-label { 0%, 78.26% { opacity: 0; } 100% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-  html.ui-v7 #q .nx.vmorph, html.ui-v7 #q .nx.vmorph[data-v="bad"] { animation: none; --kf: var(--vm-c); }   /* --kf = the §key face */
-  html.ui-v7 #q .nx.vmorph .nf { animation: none; opacity: 0; }
-  html.ui-v7 #q .nx.vmorph .vm-ico, html.ui-v7 #q .nx.vmorph .vm-ico path { animation: none; stroke-dashoffset: 0; }
-}
+/* == §verdict-morph == SHIPPED-KEY STAGES (Tony Nov 26): the old 1150 ms flood + drawn-icon timeline and the near-white key are gone.
+   The key itself carries every stage (verdict-v7.css §key below): busy spins -> freeze + morph to cross / tick (120 ms) -> HOLD 600 ms ->
+   EXIT 200 ms back to the arrow. see §key's `.k-ok` / `.k-bad` / `.k-wait` (app.js keyVerdict). */
 /* ICK5-MONO (Tony Nov 18 "inconsistent placeholder font on proof box/input box ... should be monospace ... both placeholder and actual text typed in"):
    the short-answer input and the proof box type AND hint in the mono (was --font-input Atkinson / --font). Not the code box, not the Cluck composer. */
 html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::placeholder { font-family: var(--mono); }
 
-/* == §key == KEY-ONE (Tony Nov 26; brain key-audit-2026-11-26 + DESIGN-LANGUAGE "Keys"): ONE key for every answer's Check and its Next.
-   Five families, one rule set: typed #ansGo, each multi part's .send, the MC tile's .send, pick-all #mcGo, proof #ansGo, and the .nx that replaces each of them.
-   SKIN   --chip face, --ink arrow, flat (no edge, no shadow). No near-white key, no --action blue key, no bright --correct Next. A key on a judged answer takes the verdict's tint (VERDICT TINT below).
-   SIZE   two sizes by where the key sits: OUT 60 = beside or under what it submits (typed, multi, pick-all; = the 60px field's height); IN 44 = inside what it submits (MC tile, proof box; = --tap).
-   RADIUS concentric: OUT = its neighbour field's 18px squircle; IN = the container's --r-tile minus the 8px inset.
-   PLACE  typed / multi: right of the field, 12px gap, same top. pick-all: under the choices, right edge on the column's (where the typed key sits), 16px above. MC: in the picked tile, right 8, centred. proof: in the box, bottom-right 8.
-   GLYPH  one arrow (app.js IB1_GO: 24px grid, stroke 2) for Check and for Next; the sprite i-go / i-tri stay in the DOM for the flag-off look.
-   STATES empty = dim .35 + inert (the MC tile has no key until a pick: the pick is its "has an answer") · ready = full · hover = face 82% + white · :active = scale(.96) + face 90% ·
-          focus-visible = the app's 2px --focus ring, offset 2 · busy / judged-wrong-with-a-try / the 10 s retry wait = dim .55 (busy: a typed box shows its thinking ring, so its key keeps the arrow;
-          the other three have no ring, so the key carries the spinner) · right or out of tries = Next: the SAME key (place, size, radius, arrow), full, in the verdict's tint · reduced motion = no scale, no fade.
-   The sugar reveal pill (.ff.rbox: joined row + "Next" pill) is flag-off only now: app.js rboxSync no longer adds .rbox under ui-v7, so a closed typed box keeps its look and Next is this key.
-   The verdict flash on the key (§verdict-morph) and the tick / cross in the box (strip.css IB-4) are untouched: they paint on this key's geometry. */
+/* == §key == SHIPPED KEY (Tony Nov 26, try-SHIPPED.html is the spec): ONE key for every answer's Check and its Next.
+   Five families, one rule set: typed #ansGo, each multi part's .send, MC #mcGo (in the .chk row under the choices, never in a tile), pick-all #mcGo,
+   proof #ansGo, and the .nx that replaces each of them.
+   LOOK   every family = the typed key: 60x60 OUT / 44x44 IN, radius calc(18px * --r-k) + corner-shape superellipse(1.52), flat --chip face, --ink glyph.
+   GLYPH  ONE <svg viewBox="0 0 24 24"><path> per key; the CSS owns `d` (--key-g-*) so arrow -> spin -> cross / tick interpolates on one command list.
+          The d attribute in app.js is the no-CSS-d fallback (Safari): @supports not (d: path("M0 0")) cross-fades the glyph instead.
+   SIZE   OUT 60 = beside or under what it submits (typed, multi, MC, pick-all); IN 44 = inside its box (proof, inset 8).
+   PLACE  typed / multi: right of the field, 12px gap, centred. MC / pick-all: the .chk row under the choices, right edge. proof: in the box, bottom-right 8.
+   STAGES empty = .35 + inert · idle = full · hover = face 82% + white · focus-visible = --ring --focus, offset 2 · active = scale(.96) 120ms ·
+          BUSY / grading = arrow morphs to spin in 120ms, then the svg rotates 700ms linear infinite, face stays full (no ::after spinner, no .55 dim) ·
+          VERDICT = freeze the spin at its angle, ease to the next 180deg (120ms) while `d` morphs to cross / tick and face / glyph shift in 120ms
+          (bad = --wrong-fill / --wrong, ok = --correct-fill / --correct) · HOLD 600ms · EXIT 200ms back to the arrow (wrong -> .35 until the
+          answer changes; right -> normal --chip / --ink Next). No dash draw on the key (the chip / box marks keep #766's .vmark-live draw). */
 html.ui-v7 {
   --key-out: 60px; --key-in: 44px; --key-inset: 8px; --key-gap: 12px;
   --key-r-out: calc(18px * var(--r-k)); --key-r-in: calc(var(--r-tile) - var(--key-inset));
   --key-face: var(--chip); --key-ink: var(--ink);
-  --key-ok-face: color-mix(in srgb, var(--correct) 40%, var(--page)); --key-bad-face: color-mix(in srgb, var(--wrong) 45%, var(--page));   /* VERDICT TINT: a step of the verdict's own hue (tokens only), ink = --correct-on / --wrong-on (>= 6:1) */
-  --key-off: .35; --key-wait: .55;
+  --key-off: .35;
+  --key-fast: 120ms; --key-ex: 200ms; --key-exit: cubic-bezier(0.2, 0, 0, 1);
+  --key-g-arrow: path("M5 12 L8.5 12 L12 12 L15.5 12 L19 12 M13 6 L16 9 L19 12 L16 15 L13 18");
+  --key-g-spin: path("M12 4.5 L16.57 6.05 L19.24 10.06 L18.93 14.87 L15.75 18.5 M12 19.5 L7.43 17.95 L4.76 13.94 L5.07 9.13 L8.25 5.5");
+  --key-g-cross: path("M7 7 L9.5 9.5 L12 12 L14.5 14.5 L17 17 M17 7 L14.5 9.5 L12 12 L9.5 14.5 L7 17");
+  --key-g-tick: path("M5.5 12.5 L6.625 13.625 L7.75 14.75 L8.875 15.875 L10 17 M10 17 L12.125 14.625 L14.25 12.25 L16.375 9.875 L18.5 7.5");
 }
 /* skin */
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) {
-  box-sizing: border-box; display: grid; place-items: center; padding: 0; border: 0;
-  background: var(--kf, var(--key-face)); color: var(--ki, var(--key-ink)); box-shadow: none; opacity: 1; cursor: pointer;
-  transition: transform var(--d-fast) ease-out, opacity .15s ease-out, background-color .15s ease-out;
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) {
+  box-sizing: border-box; display: grid; place-items: center; padding: 0; border: 0; margin: 0;
+  background: var(--key-face); color: var(--key-ink); box-shadow: none; opacity: 1; cursor: pointer;
+  transition: background-color var(--key-ex) var(--key-exit), color var(--key-ex) var(--key-exit), opacity var(--key-ex) var(--key-exit), transform var(--key-fast) ease-out;
 }
 @supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) { corner-shape: superellipse(1.52); }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) { corner-shape: superellipse(1.52); }
 }
-/* VERDICT TINT (Tony Nov 26 "tint colour to match right and wrong"): a key on a judged answer takes that verdict's hue, never the neutral navy: Next after a right answer = green family,
-   Next after the last miss = red family (app.js nextBtn data-kv), a typed Check waiting on a missed box = red family. Unjudged = --chip. Low specificity on purpose: §verdict-morph's --kf wins while it flashes. */
-html.ui-v7 .nx[data-kv="ok"] { --kf: var(--key-ok-face); --ki: var(--correct-on); }
-html.ui-v7 .nx[data-kv="bad"], html.ui-v7 .ff.bad > .send { --kf: var(--key-bad-face); --ki: var(--wrong-on); }
 /* size + radius: OUT */
 html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx), .chk > :is(#mcGo, .nx)) {
-  width: var(--key-out); min-width: var(--key-out); height: var(--key-out); min-height: var(--key-out); margin: 0; border-radius: var(--key-r-out);
+  width: var(--key-out); min-width: var(--key-out); height: var(--key-out); min-height: var(--key-out); border-radius: var(--key-r-out);
 }
-/* size + radius: IN */
-html.ui-v7 #q :is(.ff.proof#ff > :is(#ansGo, .nx), .choices .ch > :is(.send, .nx)) {
+/* size + radius: IN (proof stays inside its box) */
+html.ui-v7 #q .ff.proof#ff > :is(#ansGo, .nx) {
   width: var(--key-in); min-width: var(--key-in); height: var(--key-in); min-height: var(--key-in); border-radius: var(--key-r-in);
-  position: absolute; left: auto; right: var(--key-inset);
+  position: absolute; left: auto; right: var(--key-inset); top: auto; bottom: var(--key-inset); margin: 0;
 }
-/* place */
-html.ui-v7 #q :is(.ff#ff, .mparts .part > .ff) { --ffb: 1px; }                  /* the field's own edge: the key's offsets count from the field's PADDING box, so they add the edge back */
-html.ui-v7 #q :is(.ff#ff, .mparts .part > .ff):is(.ok, .bad) { --ffb: 0px; }   /* a judged box drops its edge (the verdict ring replaces it): without this the key jumped 1px up and right on every verdict */
+/* place: typed / multi sit outside, centred on their field (the field has no edge now: --ffb = 0) */
 html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx)) {
-  position: absolute; left: calc(100% + var(--key-gap) + var(--ffb)); right: auto; top: 50%; bottom: auto; margin-top: calc(var(--key-out) / -2);   /* centred on the field: same top, same foot */
+  position: absolute; left: calc(100% + var(--key-gap)); right: auto; top: 50%; bottom: auto; margin-top: calc(var(--key-out) / -2);
 }
 html.ui-v7 #q .chk { margin-top: var(--s4); }
 html.ui-v7 #q .chk > :is(#mcGo, .nx) { position: relative; inset: auto; }
-html.ui-v7 #q .choices .ch > :is(.send, .nx) { top: 50%; bottom: auto; margin: calc(var(--key-in) / -2) 0 0; }
-html.ui-v7 #q .choices .ch > .send { animation-fill-mode: backwards; }   /* app.css fades the tile key in with fill-mode both, which pinned opacity 1 for good: the busy dim never showed on MC */
-html.ui-v7 #q .ff.proof#ff > :is(#ansGo, .nx) { top: auto; bottom: var(--key-inset); margin: 0; }
-/* glyph: the one arrow; Next has no word and no plate (aria-label says "Next question") */
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) .ico { display: none; }
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) .ib1-go { display: block; width: 24px; height: 24px; }
-html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx::before { display: none; }
-html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx .nf {
+/* glyph: one 24-grid path; the sprite i-go / i-tri and the word stay in the DOM for the flag-off page and the screen reader */
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) .ico { display: none; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) .ib1-go { display: block; width: 24px; height: 24px; overflow: visible; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) .ib1-go path {
+  fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round;
+  d: var(--key-g-arrow); transition: d var(--key-ex) var(--key-exit);
+}
+html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx::before { display: none; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx .nf {
   display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: none; color: inherit; box-shadow: none; transform: none;
 }
-html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk, .choices .ch) > .nx .nf > span { display: none; }
-/* states: empty */
+html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx .nf > span { display: none; }
+/* states: empty / wait */
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .mparts .part > .ff > .send, .chk > #mcGo):disabled { opacity: var(--key-off); cursor: default; pointer-events: none; }
-/* states: judged wrong with a try left (the key waits for an edit), the 10 s retry wait (no bar: the dim says it), busy */
-html.ui-v7 #q :is(.ff#ff.bad:not(.cue, .rbox) > #ansGo, .mparts .part > .ff.bad:not(.shut) > .send),   /* one :is() = one specificity (the skin's), so the later rule wins */
-html.ui-v7 #q :is(.ff#ff, .chk) > #mcGo.waiting,   /* typed: the wait dims only while the box is still .bad (IB-4 grill Q2a: the next keystroke returns the key to full); pick-all has no such edit state, its key waits dim (.ff#ff in the :is() only lifts this to the skin specificity) */
-html.ui-v7.grading #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo, .choices .ch > .send, .mparts .part.g-on > .ff > .send) { opacity: var(--key-wait); }
-html.ui-v7.grading #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo, .choices .ch > .send, .mparts .part.g-on > .ff > .send) { cursor: progress; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-wait { opacity: var(--key-off); cursor: default; animation: none; }   /* .g-next pins opacity 1 with fill both: the dim needs the landing animation off */
+/* focus-visible: the app's one keyboard ring */
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx):focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* BUSY / grading: the arrow morphs to the spinner (120ms), then the svg turns 700ms linear infinite; face stays --chip full */
+@keyframes key-spin { to { rotate: 360deg; } }
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send, .chk > #mcGo, .ff.proof#ff > #ansGo) { opacity: 1; cursor: progress; }
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send, .chk > #mcGo, .ff.proof#ff > #ansGo) .ib1-go path { d: var(--key-g-spin); transition-duration: var(--key-fast); }
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send, .chk > #mcGo, .ff.proof#ff > #ansGo) .ib1-go { animation-name: key-spin; animation-duration: 700ms; animation-timing-function: linear; animation-delay: 120ms; animation-iteration-count: infinite; }
+/* the old app.css spinner / .7 dim / hidden svg never apply to a key */
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send, .chk > #mcGo, .ff.proof#ff > #ansGo)::after { content: none; animation: none; }
+html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send, .chk > #mcGo, .ff.proof#ff > #ansGo) > .ib1-go { visibility: visible; }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo).waiting::before { display: none; }
-/* busy: a TYPED answer's box carries the thinking ring (strip.css IB-3), so its key keeps the arrow and drops app.css's spinner; MC, pick-all and proof have no ring, the key spins */
-html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send)::after { content: none; animation: none; }
-html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send) > .ib1-go { visibility: visible; }
-/* states: hover, press */
+/* VERDICT: the spin freezes on the next half-turn while the glyph becomes the cross / tick and the face shifts; 120ms */
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-bad { background: var(--wrong-fill); color: var(--wrong); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-ok { background: var(--correct-fill); color: var(--correct); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-bad .ib1-go path { d: var(--key-g-cross); transition-duration: var(--key-fast); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-ok .ib1-go path { d: var(--key-g-tick); transition-duration: var(--key-fast); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-stop { transition-duration: var(--key-fast); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-stop .ib1-go { animation: none; }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-spin .ib1-go path { d: var(--key-g-spin); }
+/* states: hover, press (never over a verdict colour) */
 @media (hover: hover) {
-  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx):not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--kf, var(--key-face)) 82%, #fff); }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx):not(:disabled, [aria-disabled="true"], .k-ok, .k-bad):hover { background: color-mix(in srgb, var(--key-face) 82%, #fff); }
 }
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx):not(:disabled, [aria-disabled="true"]):active { transform: scale(.96); background: color-mix(in srgb, var(--kf, var(--key-face)) 90%, #000); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx):not(:disabled, [aria-disabled="true"], .k-ok, .k-bad):active { transform: scale(.96); background: color-mix(in srgb, var(--key-face) 90%, #000); }
+/* Safari (no CSS d): cross-fade the glyph while its d attribute swaps (app.js keyGlyph) and still rotate the spin glyph */
+@supports not (d: path("M0 0")) {
+  @keyframes key-glyph-swap { from { opacity: 0; scale: .25; filter: blur(4px); } to { opacity: 1; scale: 1; filter: blur(0); } }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-swap .ib1-go { animation: key-glyph-swap 200ms var(--key-exit); }
+}
 @media (prefers-reduced-motion: reduce) {
-  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx) { transition: none; }
-  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx, .choices .ch > .send, .choices .ch > .nx):active { transform: none; }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) { transition: none; }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) .ib1-go { animation: none !important; }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) .ib1-go path { transition: none; }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx):active { transform: none; }
 }
 /* the live tick / cross in a typed box: one 24px grid (app.js IB1_V); it shows beside the dimmed key after a miss (app.css's "the arrow replaces the x" was for the hidden-key world) */
 html.ui-v7 #q > .ff#ff:not(.proof) > .vk .ico,

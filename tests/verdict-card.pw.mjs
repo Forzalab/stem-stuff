@@ -78,6 +78,10 @@ async function judge(w, flag, right, tries = 1) {
   if (flag === "v7") await page.waitForFunction(() => { const b = document.querySelector("#cluckBtn"); return !!b && !b.hasAttribute("aria-disabled"); }, null, { timeout: 8000 });
   else await page.waitForSelector("#q .vdrawer .wchip", { state: "attached", timeout: 8000 });
   await settled(page);   // the verdict card is at rest (animations + transitions ended) before the geometry reads
+  if (flag === "v7") {   // SHIPPED KEY: wait for the 600ms hold + 200ms exit (timer throttling makes a fixed sleep flaky)
+    await page.waitForFunction(() => { const n = document.querySelector("#q .nx"); return !n || (!n.classList.contains("k-ok") && !n.classList.contains("k-bad")); }, null, { timeout: 4000 }).catch(() => {});
+    await page.waitForTimeout(250);
+  }
   return page;
 }
 /* the geometry: the row (.ff) + Next (.nx) = the pill, the slot (.vk), the (never shown) tray, the verdict line */
@@ -88,7 +92,8 @@ const geo = page => page.evaluate(() => {
   const lines = [...document.querySelectorAll("#q .ansl")].map(l => ({ inDrawer: !!l.closest(".vdrawer"), shown: l.getBoundingClientRect().width > 2 && l.getBoundingClientRect().height > 2, text: l.textContent.replace(/\s+/g, " ").trim() }));
   const cs = getComputedStyle(ff);
   return { d: R(d), dShown: !!d && d.getClientRects().length > 0, ff: R(ff), nx: R(nx), nf: R(nx && nx.querySelector(".nf")), q: R(q), vk: R(vk), lines, bg: cs.backgroundColor, restBg: window.__ib4RestBg, radius: cs.borderRadius, ffBw: B(ff), nxBw: B(nx), nfBw: nx && B(nx.querySelector(".nf")),
-    nfBg: nx && getComputedStyle(nx.querySelector(".nf")).backgroundColor, nxKv: nx && nx.dataset.kv, vkBg: vk && getComputedStyle(vk).backgroundColor, vkLabel: vk && vk.getAttribute("aria-label"), vkDuck: !!(vk && vk.querySelector(".vk-duck")), vw: innerWidth, sw: document.documentElement.scrollWidth };
+    nfBg: nx && getComputedStyle(nx.querySelector(".nf")).backgroundColor, nxKv: nx && nx.dataset.kv, nxCls: nx && nx.className, nxOp: nx && +getComputedStyle(nx).opacity,
+    nxBg: nx && getComputedStyle(nx).backgroundColor, nxD: nx && (getComputedStyle(nx.querySelector("svg.ib1-go path")).d || ""), vkBg: vk && getComputedStyle(vk).backgroundColor, vkLabel: vk && vk.getAttribute("aria-label"), vkDuck: !!(vk && vk.querySelector(".vk-duck")), vw: innerWidth, sw: document.documentElement.scrollWidth };
 });
 const W = [360, 390, 768, 1366];
 const near = (a, b, m) => assert.ok(Math.abs(a - b) <= 1, `${m}: ${a} vs ${b}`);
@@ -108,7 +113,9 @@ try {
         assert.equal(g.nxBw, "0px 0px 0px 0px"); assert.equal(g.nfBw, "0px 0px 0px 0px", "no plate edge in the key");
         assert.ok(!/ 0px/.test(g.radius), "the box keeps all four corners (no flat join): " + g.radius);
         assert.equal(g.bg, g.restBg, "right: the box keeps its resting ground (SPEC §7 BACKGROUND now covers the closed box too)"); assert.equal(g.vkBg, "rgba(0, 0, 0, 0)", "the mark is a plain glyph, no slot tile (VERDICT-MARK-INERT, Tony Nov 15)");
-        assert.ok(g.nf.w > 0 && g.nfBg === "rgba(0, 0, 0, 0)" && g.nxKv === "ok", "Next has no plate of its own; the key carries the green verdict tint: " + g.nfBg + " " + g.nxKv);
+        assert.ok(g.nf.w > 0 && g.nfBg === "rgba(0, 0, 0, 0)" && !g.nxKv, "Next has no plate of its own and no verdict tint: " + g.nfBg + " " + g.nxKv);
+        assert.equal(g.nxBg, "rgb(40, 51, 82)", "SHIPPED KEY: right exits to the plain --chip Next: " + g.nxBg);
+        assert.match(String(g.nxD), /M\s*5\s+12/, "SHIPPED KEY: the arrow is back: " + g.nxD);
       } else {
         assert.equal(g.bg, g.restBg, "wrong: SPEC §7 BACKGROUND (Tony Nov 25 07:38): the box keeps its resting ground"); assert.equal(g.ffBw, "0px 0px 0px 0px");
         near(g.vk.r, g.ff.r - 17.5, "the mark sits 17.5px in from the row end (IB-1 24px grid, SPEC §5)");
@@ -134,10 +141,12 @@ try {
       for (let i = 0; i < 5&& !await page.evaluate(() => !!document.querySelector("#q .ansl")); i++) {
         await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); const n0 = await page.evaluate(() => window.__drill.state.tries.length); await f.fill(["1.636", "0.650", "2.2", "3.3", "4.4"][i]); await f.press("Enter"); await page.waitForFunction(k => (window.__drill?.state?.tries?.length ?? 0) > k, n0, { timeout: 8000 });
       }
-      await page.waitForSelector("#q .ansl", { state: "attached", timeout: 8000 }); await settled(page);
+      await page.waitForSelector("#q .ansl", { state: "attached", timeout: 8000 });
+      await page.waitForSelector("#q .nx.k-wait", { timeout: 4000 }).catch(() => {});
+      await settled(page);
       const g = await geo(page);
       assert.ok(g.lines.length === 1 && !g.lines[0].shown && /^Not it\. The answer is/.test(g.lines[0].text), JSON.stringify(g.lines));
-      assert.notEqual(g.bg, "rgb(62, 20, 30)", "out of tries: no red reveal pill under ui-v7 (KEY-ONE); the box is the plain locked typed box"); assert.equal(g.nxKv, "bad", "Next after the last miss wears the red verdict tint"); assert.ok(!g.d);
+      assert.notEqual(g.bg, "rgb(62, 20, 30)", "out of tries: no red reveal pill under ui-v7 (KEY-ONE); the box is the plain locked typed box"); assert.ok(!g.nxKv, "Next carries no verdict tint attr"); assert.equal(g.nxOp, 0.35, "SHIPPED KEY: the wrong Next rests dim .35 (" + g.nxOp + " " + g.nxCls + ")"); assert.match(String(g.nxD), /M\s*5\s+12/, "the wrong Next still shows the arrow: " + g.nxD); assert.ok(!g.d);
       if (SHOTS) { await page.locator("#q").scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, "vcard-notit-390.png") }); }
     } finally { await page.context().close(); }
   });

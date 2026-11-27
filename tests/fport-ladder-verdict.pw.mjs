@@ -149,6 +149,7 @@ try {
         const idle = await read();
         assert.deepEqual([idle.kw, idle.kh, idle.gap, idle.fh, idle.arrow, idle.name, idle.dis, idle.op, idle.unitIn], [60, 60, 13.5, 60, true, "Check", true, "0.35", true], "idle key: " + JSON.stringify(idle));
         await inp.fill("3.7");
+        await page.waitForFunction(() => +getComputedStyle(document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-check')).opacity >= .999, null, { timeout: 3000 });
         const ready = await read();
         assert.deepEqual([ready.dis, ready.op], [false, "1"], "ready key: " + JSON.stringify(ready));
       } finally { await page.context().close(); }
@@ -172,12 +173,13 @@ try {
         await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip');
         const inp = await page.waitForSelector("#q section.wl .rp-in", { state: "visible", timeout: 6000 });
         /* LADDER-FIELD: the field is the typed answer box (1.5px soft edge); the input inside is bare, and focus moves the FIELD's edge to the action blue (no ring on the input) */
-        const edge = () => page.evaluate(() => { const e = document.querySelector("#q section.wl .rp-in"), cs = getComputedStyle(e), fc = getComputedStyle(e.closest(".rp-field")); return { bw: cs.borderTopWidth, ow: cs.outlineStyle, fbw: fc.borderTopWidth, fcol: fc.borderTopColor }; });
+        const edge = () => page.evaluate(() => { const e = document.querySelector("#q section.wl .rp-in"), cs = getComputedStyle(e), fc = getComputedStyle(e.closest(".rp-field")); return { bw: cs.borderTopWidth, ow: cs.outlineStyle, fbw: fc.borderTopWidth, fsh: fc.boxShadow }; });
         await inp.evaluate(e => e.blur()); const rest = await edge();
         await inp.focus();
         const f = await edge();
-        assert.deepEqual([f.bw, f.ow, parseFloat(f.fbw) >= 1], ["0px", "none", true], "focused input: bare, the field keeps its edge (1.5px, device-snapped): " + JSON.stringify(f));
-        assert.notEqual(f.fcol, rest.fcol, "focus did not move the field's edge: " + JSON.stringify([rest, f]));
+        assert.deepEqual([f.bw, f.ow, f.fbw], ["0px", "none", "0px"], "focused input: bare, and the field has no border (SHIPPED KEY): " + JSON.stringify(f));
+        assert.match(f.fsh, /0px 0px 0px 2px/, "focus: the field's 2px ring: " + f.fsh);
+        assert.doesNotMatch(rest.fsh, /0px 0px 0px 2px/, "rest: no ring: " + rest.fsh);
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
@@ -246,6 +248,7 @@ try {
       await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=0');            // the right pick: the Final answer field
       await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-in', { state: "visible", timeout: 6000 });
       await settled(page, "#q section.wl");
+      await page.evaluate(() => document.activeElement?.blur());   // compare the REST field styles (the focus ring is a state, not the skin)
       const m = await page.evaluate(() => {
         const lf = document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-field'), lu = lf.querySelector(".rp-unit"), li = lf.querySelector(".rp-in");
         if (document.querySelectorAll("#ff").length) throw new Error("the welcome item already has #ff");
@@ -311,25 +314,24 @@ try {
       const read = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(ff);
         return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor, tr: cs.transform, edge: cs.borderTopColor }; });
       const idle = await read();
-      assert.ok(idle.bw === HAIR || idle.bw === "1.5px 1.5px 1.5px 1.5px", "idle: the Soft-lift outlined field " + JSON.stringify(idle));
+      assert.equal(idle.bw, ZERO, "idle: the SHIPPED KEY field has no edge " + JSON.stringify(idle));
       assert.match(idle.shadow, /rgba\(0, 0, 0, 0\.5\) 0px 2px 5px 0px inset/, "idle: the SINK inset dark well (Tony Nov 25, was the SOFT-LIFT §3 dish): " + idle.shadow);
       assert.doesNotMatch(idle.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "idle: the old well is gone: " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus();
       await page.waitForFunction(() => document.activeElement === document.querySelector("#ff :is(input, textarea)"));
       await settled(page, "#q #ff.ff");
       const focus = await read();
-      assert.equal(focus.bw, HAIR, "focus: the one hairline edge " + JSON.stringify(focus));
+      assert.equal(focus.bw, ZERO, "focus: still no border " + JSON.stringify(focus));
       assert.equal(focus.tr, "matrix(1.014, 0, 0, 1.014, 0, 0)", "focus: scale(1.014) in place (IB-2): " + focus.tr);
-      assert.match(focus.shadow, /0px 1px 0px 0px inset/, "focus: the lit top edge: " + focus.shadow);
+      assert.match(focus.shadow, /0px 0px 0px 2px/, "focus: the 2px --action ring: " + focus.shadow);
       assert.match(focus.shadow, /0px 12px 26px -8px/, "focus: the shadow straight underneath: " + focus.shadow);
       assert.doesNotMatch(focus.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: the old well is gone: " + focus.shadow);
-      assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring: " + focus.shadow);
-      assert.notEqual(focus.edge, idle.edge, "focus turns the edge --action: " + idle.edge + " -> " + focus.edge);
+      assert.doesNotMatch(focus.shadow, /0px 1px 0px 0px inset/, "focus: no lit top edge: " + focus.shadow);
       await page.locator("#ff :is(input, textarea)").first().fill("1.5");
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
       await settled(page, "#q #ff.ff");
       const typed = await read();
-      assert.equal(typed.bw, HAIR, "typed: the one hairline edge " + JSON.stringify(typed));
+      assert.equal(typed.bw, ZERO, "typed: still no border " + JSON.stringify(typed));
       assert.equal(typed.tr, "matrix(1.014, 0, 0, 1.014, 0, 0)", "typed keeps the lift: " + typed.tr);
       assert.match(typed.shadow, /0px 12px 26px -8px/, "typed: the shadow underneath: " + typed.shadow);
       assert.deepEqual(page.errs, [], "page errors");
