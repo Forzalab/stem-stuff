@@ -82,6 +82,8 @@
     }));
     let whyOk = true, autos = 0, finished = full, timer = 0, gone = false, solved = null;   // solved = { wrong, answer } once the server sends it
     let missed = false, taps = 0;                                               // any wrong try (done level); welcome wrong taps on this item (hint tier)
+    const liveSeen = new Set();                                                 // VK-DRAW: a mark animates on the draw that earns it, not on every later redraw
+    const firstLive = key => { if (liveSeen.has(key)) return false; liveSeen.add(key); return true; };
     const optsOf = st => st.opts || (st.kind === "pick" && item.choices) || [];
     const emit = (name, data) => { if (o.on) o.on(name, data); };
     function hint() {                                                            // welcome: tap 1 far, 2 two, 3+ three; old shape: the one hint
@@ -184,7 +186,24 @@
       if (st.kind === "fill") return fillTex(st, ok);
       return String(ok) + (st.unit ? " " + st.unit : "");
     }
-    function mark(id) { return `<svg class="rp-vg" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`; }   // the main tiles' glyphs (i-ok / i-x), drawn inline
+    const V7 = () => !!root.document && root.document.documentElement.classList.contains("ui-v7");
+    const VG = {                                                                 // the main tiles' glyphs, inline with pathLength 1 under ui-v7 so a live mark can draw on (#764's vk-draw)
+      "i-ok": '<path pathLength="1" d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      "i-x": '<path pathLength="1" d="M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path pathLength="1" d="M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    };
+    /* LADDER-STATES: the inline glyphs (i-ok / i-x). ui-v7: the same paths as the main tiles, so the shared .vmark-live draw applies;
+       flag off / the lab keeps index.html's sprite (<use>) exactly as before. */
+    function mark(id, live) {
+      const cls = "rp-vg" + (live ? " vmark-live" : "");
+      return V7() && VG[id]
+        ? `<svg class="${cls}" viewBox="0 0 24 24" data-v="${id}" aria-hidden="true" focusable="false">${VG[id]}</svg>`
+        : `<svg class="${cls}" data-v="${id}" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`;
+    }
+    function okMark(live) {                                                      // the step head's ✓ (same draw under ui-v7; welcome.css hides it until done)
+      return V7()
+        ? `<svg class="rp-ok${live ? " vmark-live" : ""}" viewBox="0 0 24 24" data-v="i-ok" aria-hidden="true" focusable="false">${VG["i-ok"]}</svg>`
+        : '<span class="rp-ok">✓</span>';
+    }
     function hintEl(text, gone) {                                                // LADDER-STATES: one .hintcard (app.css --hint-fill / --hint-edge), duck in front
       const m = h("p", "rp-miss hintcard");
       m.insertAdjacentHTML("afterbegin", '<svg class="hintcard-ico" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
@@ -196,7 +215,7 @@
       const b = h("button", "rp-chip", text);
       b.type = "button"; Object.assign(b.dataset, data);
       if (tried.has(key)) {                                                     // LADDER-STATES (Tony Nov 18): a tried-wrong chip says so in every variant (ui-v7: the wrong fill + a cross)
-        b.classList.add("rp-tried"); b.insertAdjacentHTML("beforeend", mark("i-x"));
+        b.classList.add("rp-tried"); b.insertAdjacentHTML("beforeend", mark("i-x", firstLive(`x:${s.st.id}:${key}`)));
         if (!welcome) { b.disabled = true; b.append(h("span", "rp-x", "✗")); }   // welcome stays tappable (unfailable); the glyph text only where it locks
       }
       b.addEventListener("click", () => onTap(s, data.why != null ? Number(data.why) : data.v));
@@ -236,14 +255,14 @@
     }
     /* welcome (W129): a box that is not answerable now is still drawn, in place: its controls disabled (never `inert`: toast.js would take the
        inert rows for empty page and slide its card onto the ladder), hidden from a screen reader; `picked` marks the answer */
-    function lock(box, how, picked) {
+    function lock(box, how, picked, stepId) {
       box.classList.add(how);
       box.setAttribute("aria-hidden", "true");
       box.querySelectorAll("button, input").forEach(c => { c.disabled = true; c.tabIndex = -1; });
       if (picked != null) box.querySelectorAll(".rp-chip").forEach(c => {
         const on = (c.dataset.why != null ? c.dataset.why : c.dataset.v) === String(picked);
         c.classList.toggle("rp-picked", on);
-        if (on && how === "rp-locked" && !c.querySelector(".rp-vg")) c.insertAdjacentHTML("beforeend", mark("i-ok"));   // LADDER-STATES: the right pick gets the tick
+        if (on && how === "rp-locked" && !c.querySelector(".rp-vg")) c.insertAdjacentHTML("beforeend", mark("i-ok", firstLive(`v:${box.classList.contains("rp-why") ? "w" : "v"}:${stepId}:${picked}`)));   // LADDER-STATES: the right pick gets the tick
       });
       const inp = box.querySelector(".rp-in"); if (inp && picked != null) inp.value = String(picked);
     }
@@ -255,11 +274,11 @@
       if (s.auto && !L().auto) n.dataset.auto = "";
       head.append(n, h("span", "rp-label", st.label));
       if (s.ok) head.append(h("span", "sr-only", shown(s)));                     // the value for a screen reader: the locked chips are aria-hidden
-      head.append(h("span", "rp-ok", "✓"));                                      // always there (welcome.css hides it until done): its room never moves the label
+      head.insertAdjacentHTML("beforeend", okMark(s.state === "done" && !s.skipped && firstLive(`h:${st.id}`)));   // always there (welcome.css hides it until done): its room never moves the label
       li.append(head);
       const body = h("div", "rp-body"), val = valueUi(s);
       const pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
-      if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
+      if (s.state === "future") lock(val, "rp-ghost", null, st.id); else if (!live || s.ok) lock(val, "rp-locked", pick, st.id);
       body.append(val);
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
       if (s.miss && s.state !== "future") {
@@ -267,8 +286,8 @@
       }
       if (s.ask) {
         const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
-        if (early) lock(w, "rp-ghost", null);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
-        else if (s.why != null) lock(w, "rp-locked", s.why);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
+        if (early) lock(w, "rp-ghost", null, st.id);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
+        else if (s.why != null) lock(w, "rp-locked", s.why, st.id);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
         body.append(w);
       }
       li.append(body);
@@ -284,7 +303,7 @@
       if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
       head.append(n, h("span", "rp-label", st.label));
       if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) head.append(h("span", "rp-val", shown(s)));
-      if (s.state === "done" && !s.skipped) head.append(h("span", "rp-ok", "✓"));
+      if (s.state === "done" && !s.skipped) head.insertAdjacentHTML("beforeend", okMark(!s.worked && firstLive(`h:${st.id}`)));
       li.append(head);
       if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
       if (s.state === "active") {

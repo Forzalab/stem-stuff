@@ -44,6 +44,7 @@ html.ui-v7 .rp .rp-step[data-state] .rp-n[data-auto] { background: var(--chip); 
 html.ui-v7 .rp .rp-step[data-state] .rp-label, html.ui-v7 .rp .rp-step[data-state] .rp-q { color: var(--ink); }
 html.ui-v7 .rp .rp-step[data-state="done"] .rp-label, html.ui-v7 .rp .rp-step[data-state="done"] .rp-q, html.ui-v7 .rp .rp-step .rp-ghost .rp-q { color: var(--muted); }
 html.ui-v7 .rp .rp-vg { display: inline-block; width: 1.1rem; height: 1.1rem; margin-left: var(--s2); vertical-align: -0.2em; }
+html.ui-v7 .rp svg.rp-ok { display: inline-block; width: 1.1rem; height: 1.1rem; align-self: center; }   /* VK-DRAW: the head ✓ is an inline svg under ui-v7 (repair.js okMark), so it can draw on like the chips */
 html.ui-v7 .rp .rp-x { display: none; }                                  /* the text ✗ (locks the non-welcome chip) is the cross glyph now */
 /* wrong pick = the wrong fill + the cross (stays on the chip once the step is answered); doubled class beats the hover / locked rules */
 html.ui-v7 .rp .rp-chip.rp-tried.rp-tried, html.ui-v7 section.wl .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 .rp .rp-chip.rp-tried.rp-tried:hover:not(:disabled), html.ui-v7 section.wl .rp .rp-locked .rp-chip.rp-tried { background: var(--mc-wrong); color: var(--wrong-on); }
