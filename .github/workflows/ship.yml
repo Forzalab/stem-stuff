@@ -202,6 +202,48 @@ jobs:
         run: |
           case "$MODE" in demo|live) ;; *) echo "::error::mode must be demo or live"; exit 2 ;; esac
           tools/build_and_ship/ship.sh "$MODE" 2>&1 | tee ship.log
+      # mode=demo only: pre-merge visual evidence (Tony Nov 27). The preview is behind Vercel Authentication; the repo secret
+      # VERCEL_AUTOMATION_BYPASS_SECRET ("Protection Bypass for Automation") lets a header through. Checks the deploy IS the requested ref
+      # (ship.sh deploys origin/<ref> = `git fetch origin <ref>` in the main checkout), then shoots it. The checkout is main, so the script is
+      # taken from the commit this workflow runs from (GITHUB_SHA: a branch while it is being proven, main once merged).
+      - name: preview-shots
+        id: shots
+        if: inputs.mode == 'demo' && steps.sh.conclusion == 'success'
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          REF: ${{ inputs.ref }}
+        run: |
+          [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ] || { echo "::error::missing repo secret VERCEL_AUTOMATION_BYPASS_SECRET (Vercel project > Settings > Deployment Protection > Protection Bypass for Automation; add it as a repo secret)"; exit 1; }
+          echo "::add-mask::$VERCEL_AUTOMATION_BYPASS_SECRET"
+          git fetch -q origin "$GITHUB_SHA"
+          git checkout "$GITHUB_SHA" -- tools/operations/preview-shots.mjs
+          URL="$(grep -oE 'demo (ready|building[^:]*): https://[a-z0-9.-]+\.vercel\.app' ship.log | grep -oE 'https://.*' | tail -1)"
+          [ -n "$URL" ] || { echo "::error::no demo URL in ship.log"; exit 1; }
+          git fetch -q origin "$REF"
+          HEAD_SHA="$(git rev-parse FETCH_HEAD)"
+          echo "preview $URL, requested $REF @ $HEAD_SHA"
+          rc=0
+          node tools/operations/preview-shots.mjs "$URL" preview-shots --expect-sha "$HEAD_SHA" 2>&1 | tee preview-shots.log || rc=$?
+          SAFE="$(printf '%s' "$REF" | tr -c 'A-Za-z0-9._-' '-' | cut -c1-60)"
+          {
+            echo "### preview-shots"
+            echo "- run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- ref: \`$REF\` head sha \`$HEAD_SHA\`"
+            echo "- preview: $URL (behind Vercel Authentication)"
+            echo "- sha check: $(cat preview-shots/sha-check.txt 2>/dev/null || echo none)"
+            echo "- artifact: \`preview-shots-$SAFE-${HEAD_SHA:0:7}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "name=preview-shots-$SAFE-${HEAD_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          exit "$rc"
+      - name: upload preview-shots
+        if: always() && inputs.mode == 'demo' && steps.shots.outputs.name != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.shots.outputs.name }}
+          path: |
+            preview-shots/
+            preview-shots.log
+          if-no-files-found: warn
       # pr-green + live: the PUBLIC domain must now serve this commit (ship.sh smoked the deployment URL). A rollback (`vercel rollback`) turns
       # auto-assign off, so a later deploy may not be live: promote it once. Still red = smoke_red -> the smoke-rollback job puts the LKG back.
       - name: prod smoke
