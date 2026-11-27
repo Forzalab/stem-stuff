@@ -151,6 +151,9 @@ async function diff(before, frames, allow, zoom, live) {
     return { res, worst, png };
   }, { before: before.toString("base64"), frames: frames.map(f => f.toString("base64")), allow, zoom, live });
 }
+const PROBE = page => page.evaluate(() => { const r = s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(v => +v.toFixed(3)); };
+  const cs = getComputedStyle(document.documentElement), bs = getComputedStyle(document.body);
+  return { top: r("body > .top"), main: r("main"), work: r("#work"), wk1: r("#work > *"), sent: r("#sentinel"), sh: document.documentElement.scrollHeight, ih: innerHeight, sy: scrollY, bm: bs.marginTop, bp: bs.paddingTop, pg: cs.getPropertyValue("--pg-top"), cl: cs.getPropertyValue("--cl-top"), wpos: getComputedStyle(document.querySelector("#work")).position, sw: innerWidth - document.documentElement.clientWidth, fonts: [...document.fonts].filter(f => f.status === "loaded").map(f => f.family).join("|") }; });
 const AT = [50, 150, 300, 600];
 /* tap = the action; allowFn(after) = the boxes allowed to change (CSS px, viewport). Shoots before + AT, diffs, throws on red */
 /* tap.live: the allowed boxes hold content that animates on its own (Cluck typing his reply): there a frame may differ from the last one */
@@ -162,11 +165,13 @@ async function gate(page, label, size, tap, allowFn) {
   const focus0 = await page.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null;   // its focus ring leaves on a tap elsewhere: that box may change
     const r = (e.closest(".ff") || e).getBoundingClientRect(); return { x: r.x - 4, y: r.y - 4, w: r.width + 8, h: r.height + 8 }; });
   await page.evaluate(() => { window.__cls = []; });
+  const p0 = await PROBE(page);
   const t0 = Date.now(); await tap(); const frames = [], at = [];
   for (const ms of AT) { const w = ms - (Date.now() - t0);
     if (w > 0) await page.waitForTimeout(w);                                  // keep: app timer L6 needs a shot at +50/+150/+300/+600 ms after the tap
     at.push(Date.now() - t0); frames.push(await page.screenshot({ caret: "hide" })); }
   const q1 = await qCol(page), r1 = await rows(page);
+  if (/1920/.test(size.name)) console.log("PROBE", label, JSON.stringify(p0), JSON.stringify(await PROBE(page)));
   const allow = [...await allowFn({ r0, r1, q0, q1 }), ...(focus0 ? [focus0] : [])];
   const { res, worst, png } = await diff(before, frames, allow, size.zoom, !!tap.live);
   const tag = `${size.engine}-${size.name.replace(/[@.]/g, "_")}-${label.replace(/\W+/g, "_")}`;
