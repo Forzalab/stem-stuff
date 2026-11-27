@@ -1021,7 +1021,7 @@ function renderQuestion() {
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true, true)}</span>
         </button>
-        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
+        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}${IB1_GO}</button>`}
         ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Enter your answers here...")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
           data-how="${esc(p.fix.how || "Enter your answers here...")}" placeholder="${esc(p.fix.how || "Enter your answers here...")}"></div>` : ""}
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
@@ -2170,19 +2170,13 @@ function retryTag() {
   window.stemToast?.show({ text: sub && !v7 ? RTAG[k][0] + "\n" + sub : RTAG[k][0], sub: (v7 && sub) || undefined, row: true, dock: true, onshow: rd ? rd.take : undefined, duck: k === "won" || k === "kept" ? "landmark" : "twist", at: () => $("#q"), until: Date.now() + 15000 });
 }
 let rtagLast = null;
-/* W104 Sleeping guard (MC only): a closed item says so in a row under the choices, three cues so colour never carries it: the lock, the words,
-   Cluck napping on it. A Redeem closed right wakes him instead: the feather burst plays on the live moment only (a revisit is still, and
-   reduced motion never gets one). Kind copy; no clock (nothing on the page knows when it comes back). */
+/* W104 Sleeping guard (MC only): a closed, not-yet-won item says so in a row under the choices (the lock, the words), so colour never carries it.
+   A won item shows no row (the "Avenged!" row with its hairline is gone, Tony Nov 26; the retry toast still says it). No clock: nothing on the page knows when it comes back. */
 function guard() {
   $("#q .guard")?.remove();
   if (!S || S.prob.type !== "mc") return;
-  const r = window.stemRedo.get(), redeem = !!r && r.codes.includes(S.code) && r.redeem !== false;
-  const won = isSolved(S);
-  if (won && !redeem) return;
-  const burst = won && !painting && !matchMedia("(prefers-reduced-motion: reduce)").matches ? `<span class="burst" aria-hidden="true">${"<i></i>".repeat(8)}</span>` : "";
-  $("#q").insertAdjacentHTML("beforeend", won
-    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
-    : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
+  if (isSolved(S)) return;
+  $("#q").insertAdjacentHTML("beforeend", `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
 /* PROGBAR-P4 (PORT-ARCH D2): a closed question = one notch submit, fed from finish() (settle() reaches it for a multi). State only, no DOM:
    saved under pbKey(bank) via pbLoad's tolerant read; blocked/throwing storage is a silent no-op. A restore (painting) is not a submit.
@@ -2230,7 +2224,7 @@ function nextBtn() {                                                            
   const b = document.createElement("button");
   const v = vmorphV();                                                           // SUBMIT-VERDICT-MORPH: the C4a key flashes the verdict, then is Next (verdict-v7.css §verdict-morph)
   b.type = "button"; b.className = "nx" + (v ? " vmorph" : painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
-  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}</span>`;
+  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}${IB1_GO}</span>`;   // SWISS-KEY: the MC tile's Next wears the typed key's arrow (bento.css §swiss-key); everywhere else .ib1-go stays hidden (app.css)
   if (v) {
     b.dataset.v = v;
     const P = d => `<path d="${d}" pathLength="100"/>`;

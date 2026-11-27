@@ -99,6 +99,13 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const [c, p] = await open("on", "CALC1_MB01");
   await p.click("#q .opt[data-id='a']");
   await p.waitForFunction(() => document.querySelector("#q .opt[data-id='a']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
+  const key = await p.evaluate(() => { const k = document.querySelector("#q .ch:has(.opt[data-id='a']) .send"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect(), o = k.parentElement.querySelector(".opt").getBoundingClientRect();
+    return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), tile: parseFloat(getComputedStyle(k.parentElement.querySelector(".opt")).borderTopLeftRadius), inset: o.right - r.right, shadow: c.boxShadow }; });
+  const lt = await p.evaluate(() => { const b = document.querySelector("#q .ch:has(.opt[data-id='b']) .badge"), c = getComputedStyle(b), r = getComputedStyle(document.documentElement); return { fs: c.fontSize, fw: c.fontWeight, tt: c.textTransform, root: r.getPropertyValue("--ans-letter-fs").trim() }; });
+  assert.ok(lt.fs === "16px" && lt.fw === "600" && lt.tt === "uppercase", "SHARED answer letter on the MC tile (16px, 600, uppercase; app.css --ans-letter-*): " + JSON.stringify(lt));
+  assert.equal(key.bg, rgb("#283352"), "SWISS-KEY: the tile's Check wears the typed key's --chip face: " + JSON.stringify(key));
+  assert.ok(key.w === 44 && key.h === 44 && key.arrow && key.sprite === "none" && key.shadow === "none", "SWISS-KEY: 44px, the 24-grid arrow, no shadow: " + JSON.stringify(key));
+  assert.ok(Math.abs(key.rad - (key.tile - key.inset)) <= 1, "SWISS-KEY: concentric radius (tile - inset): " + JSON.stringify(key));
   await p.click("#q .ch:has(.opt[data-id='a']) .send");
   await bgIs(p, "#q .opt[data-id='a']", rgb("#3e141e"));
   const w = await look(p, "#q .opt[data-id='a']");
@@ -138,17 +145,39 @@ const flowMeasure = p => p.evaluate(() => {
     inorder: rs.every((r, i) => !i || r.top > rs[i - 1].top - 2), small: rs.filter(r => r.width < 44 || r.height < 44).length };
 });
 for (const [W, H] of [[390, 844], [360, 740], [768, 844], [1366, 800]]) for (const code of ["CALC1_MB01", "CALC1_MB02", "CALC1_MB03", "CALC1_MB04"]) {
-  await step(`flow @${W} ${code}: equal widths, one column count, 16px text, no clipping, no h-scroll`, async () => {
+  await step(`flow @${W} ${code}: equal widths, one column count, 20px text (SWISS-RATIO), no clipping, no h-scroll`, async () => {
     const [c, p] = await open("on", code, W, H), m = await flowMeasure(p);
     assert.equal(m.mode, "flow"); assert.equal(m.fill, "");
     assert.ok(m.rowsOk, "every row: equal widths, edge to edge, no hole: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
-    assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["16px"], "choice text = question body size: " + JSON.stringify(m));
+    assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["20px"], "SWISS-RATIO: choice text = type step 1 (20px), one step above the body (" + m.bodyFs + "): " + JSON.stringify(m));
     assert.equal(m.clip, 0, "nothing clipped: " + JSON.stringify(m)); assert.ok(m.sw, "no h-scroll"); assert.equal(m.small, 0, "tap >= 44");
     if (code === "CALC1_MB02" || code === "CALC1_MB03") assert.equal(m.cols, W >= 1366 ? m.cols : 1, "long sentences stack (1 column) when they do not fit one line");
     await shot(p, `flow-${W}-${code}`);
     await c.close();
   });
 }
+await step("shared answer letter: MC + pick-all 16/24 600 uppercase --ink-qnum; MC 24px column at the card text edge (36 @390, 52 @1280)", async () => {
+  for (const [W, H] of [[390, 844], [1280, 800]]) for (const code of ["CALC1_MB01", "CALC1_MB03"]) {
+    const [c, p] = await open("on", code, W, H);
+    const m = await p.evaluate(() => {
+      const card = document.querySelector("#problem"), cs = getComputedStyle(card), cr = card.getBoundingClientRect();
+      const g = document.querySelector("#q .choices"), all = g.classList.contains("all"), o = g.querySelector(".opt"), l = o.querySelector(all ? ".lt" : ".badge");
+      const ls = getComputedStyle(l), lr = l.getBoundingClientRect(), root = getComputedStyle(document.documentElement);
+      return { all, x: lr.x, w: lr.width, fs: ls.fontSize, fw: ls.fontWeight, tt: ls.textTransform, color: ls.color, edge: cr.x + parseFloat(cs.paddingLeft), mcpl: parseFloat(getComputedStyle(g).getPropertyValue("--mc-pl")),
+        root: { fs: root.getPropertyValue("--ans-letter-fs").trim(), lh: root.getPropertyValue("--ans-letter-lh").trim(), fw: root.getPropertyValue("--ans-letter-fw").trim(), tt: root.getPropertyValue("--ans-letter-tt").trim(), color: root.getPropertyValue("--ans-letter-color").trim() } };
+    });
+    assert.ok(m.root.fs === "1rem" && m.root.lh === "24px" && m.root.fw === "600" && m.root.tt === "uppercase" && m.root.color === "#7a8aae", "ONE answer-letter definition in app.css: " + JSON.stringify(m.root));
+    assert.equal(m.fs, "16px", `shared letter size @${W} ${code}: ${m.fs}`);
+    assert.equal(m.fw, "600", `shared letter weight @${W} ${code}: ${m.fw}`);
+    assert.equal(m.tt, "uppercase", `shared letter transform @${W} ${code}: ${m.tt}`);
+    assert.equal(m.color, "rgb(122, 138, 174)", `shared letter colour @${W} ${code}: ${m.color} (--ink-qnum)`);
+    assert.ok(Math.abs(m.x - m.edge) <= .5, `letter sits on the card text edge @${W} ${code}: ${m.x} vs ${m.edge}`);
+    assert.ok(Math.abs(m.x - (W === 390 ? 36 : 52)) <= .5, `letter ink x @${W} ${code}: ${m.x} (want ${W === 390 ? 36 : 52})`);
+    if (!m.all) assert.equal(m.w, 24, `MC 24px letter column @${W}: ${m.w}`);
+    else assert.equal(m.mcpl, W === 390 ? 20 : 32, `pick-all --mc-pl @${W}: ${m.mcpl}`);
+    await c.close();
+  }
+});
 await step("flow: 5 short choices -> 3+2 at 1366 (wide) and 2+2+1 at 390, never a hole; 2..7 fill every row", async () => {
   const exp = { 1366: { CALC1_MB01: [3, 2] }, 390: { CALC1_MB01: [2, 2, 1] } };
   for (const W of [390, 1366]) { const [c, p] = await open("on", "CALC1_MB01", W, 844), m = await flowMeasure(p); assert.deepEqual(m.sizes, exp[W].CALC1_MB01, W + " " + JSON.stringify(m)); assert.ok(m.rowsOk, "no hole"); await c.close(); }

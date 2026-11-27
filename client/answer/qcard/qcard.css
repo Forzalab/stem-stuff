@@ -53,8 +53,8 @@ html.ui-v7 #problem.qc7 > .cluckbtn:not([aria-disabled="true"]):active { box-sha
 
 /* figure, headline, text, meta: one grid edge */
 html.ui-v7 #problem.qc7 .blocks > .fig { margin: 12px 0 0; clear: both; }   /* FIG-CLEAR: the Ask Cluck squircle floats top right (§ick5-tr); a block-level replaced svg may not overlap a float, so it dropped below the float while .fig and its absolute labels stayed at the top (svg 52px under its labels, the title over its foot). The box itself clears the float: svg, labels and the title below move together. */
-html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; font: 700 var(--fs-3)/var(--lh-3) var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: var(--fs-4); line-height: var(--lh-4); } }
+html.ui-v7 #problem.qc7 .qhead { margin: 16px 0 8px; text-indent: -.06em; /* OPTICAL: the bold title's left side bearing (~2px at 25-31px) put its ink 2px right of the stem / ask edge; the box edge stays on --qc-pad */ font: 700 var(--fs-2)/var(--lh-2) var(--qfont); letter-spacing: -.01em; font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-transform: lowercase; color: var(--ink); text-wrap: balance; overflow-wrap: anywhere; }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7 .qhead { font-size: var(--fs-3); line-height: var(--lh-3); } }   /* SWISS-RATIO: title = ONE step above the answers' 20 (Major Third 1.25): 25/32 phone, 31/40 desk (was 31/40, 39/52) */
 html.ui-v7 #problem.qc7 .qhead .qexam { text-transform: none; color: var(--ink-qnum); white-space: nowrap; margin-right: .28em; }   /* TITLE-EXAMQ-DIM (Tony Nov 24): the "Q1" exam prefix keeps its capital Q, sits in the dim ink (#7a8aae, 5.3:1 on --qbox; now the root token --ink-qnum, app.css, shared with the multi-part A/B/C letter), never breaks, and its margin-right is the ONE word space before the rest; the typed " · " is .sr-only in qcard.js, never drawn */
 html.ui-v7 #problem.qc7 .qtext { font: var(--qw-body) var(--fs-0)/var(--lh-0) var(--qfont); color: var(--qink-body); font-kerning: normal; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; text-wrap: pretty; hyphens: manual; -webkit-hyphens: manual; }
 @media (min-width: 900px) { html.ui-v7 #problem.qc7 .qtext { font-size: var(--fs-0); line-height: var(--lh-0); } }
@@ -67,8 +67,8 @@ html.ui-v7 #problem.qc7 .qtext > :last-child > :last-child { margin-bottom: 0; }
 /* ICK PR-A (A1, ICK-R1 2b): tighter body: 1.45 leading (was 22px; the code-chip lines carried 1.75) and half the paragraph gap (8 -> 4) */
 html.ui-v7 #problem.qc7 .qtext .md :is(p, li), html.ui-v7 #problem.qc7 .qtext > :is(p, li) { line-height: var(--qbody-lh); margin-bottom: var(--qbody-gap); }
 /* ICK PR-A (A1, ICK-R1 3a): the ask is a bold line on the body axis: no box, no shadow, no inset (app.css's `.ask` was the Cluck composer's class; the block is .qask now) */
-html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 700; font-size: var(--fs-1); line-height: var(--lh-1); }   /* TYPESCALE: the title = the ask line, step 1 (20/28), 700 */
-html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 700; font-size: var(--fs-1); line-height: var(--lh-1); }
+html.ui-v7 #problem.qc7 .qtext > .md.qlead { margin-top: 12px; color: #e8ebf5; font-weight: 700; font-size: var(--fs-0); line-height: var(--lh-0); }   /* SWISS-RATIO (DESIGN-LANGUAGE 'question sentence' = body size, bold): the ask = step 0 (16/24), 700; the answers (20) now outrank it, as the wiki's 22 bento value outranks 17 */
+html.ui-v7 #problem.qc7 .qtext > .md.qlead > :is(p, li) { margin: 0; font-weight: 700; font-size: var(--fs-0); line-height: var(--lh-0); }
 html.ui-v7 #problem.qc7 .qsetup { color: var(--qink-body); font-weight: var(--qw-body); }
 /* TYPESCALE: the whole body copy at --qw-body (450; the variable face has every weight), emphasis 700 */
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md, html.ui-v7 #problem.qc7 .qtext .md :is(p, li), html.ui-v7 #problem.qc7 .qtext > :is(p, li) { font-weight: var(--qw-body); }
@@ -116,7 +116,7 @@ html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-
    C = one newspaper layout, NO-BORDER: kicker row (question code, tracked caps, left) + Ask Cluck (right) | 20 px air | headline full measure | body 16/22 | meta. */
 html.ui-v7 #problem.qc7.qbr > .blocks, html.ui-v7 #problem.qc7.qbr.qstack > .blocks:has(> :is(.ptitle,.qhead):first-child), html.ui-v7 #problem.qc7.qbr > .blocks:has(> :is(.ptitle,.qhead):first-child) { padding-top: 0 !important; }
 html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { padding: 0 !important; margin: 0 0 8px !important; font: 700 var(--fs-3)/var(--lh-3) var(--qfont) !important; letter-spacing: -.01em !important; text-wrap: balance; color: var(--ink); text-transform: none; }
-@media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: var(--fs-4) !important; line-height: var(--lh-4) !important; } }
+@media (min-width: 900px) { html.ui-v7 #problem.qc7.qbr > .blocks > :is(.ptitle,.qhead):first-child { font-size: var(--fs-3) !important; line-height: var(--lh-3) !important; } }
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > .blocks > .md { font-size: var(--fs-0); line-height: var(--lh-0); }   /* TYPE-B lock 16/22 -> TYPESCALE step 0, 16/24 (Q-SMALL's 15 px retired) */
 /* ICK4-SHORT-LH (Tony Nov 18 "1.35 for med to long, 1.25 for short text"): body leading 1.35, short body text 1.25 (qcard.js shortText: <= 4 setup lines).
    Unitless, so desktop 17px follows. Beats TYPE-B 16/22 above and .qtext 16/22 + 17/24 (same specificity, later). */
@@ -295,18 +295,16 @@ html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right
 }
 
 /* == §ghost-glass == GHOST-G3-GLASS (Tony Nov 23, mock variant C "rim + scrim"): the ghost numeral is a glass slab: a gradient body painted through the glyph (background-clip: text),
-   ONE static SVG filter (#qg-glass, qcard.js glassDefs: lit rim + eroded dark inner edge + grain = the KEYF rim recipe) and a faint diagonal sheen layered in the body. A static blurred
-   scrim (.qscrim, one pill per text line, qcard.js scrims) dims it under the words so text over the numeral keeps >= 4.5:1. Softer mask fade than the flat numeral had.
+   ONE static SVG filter (#qg-glass, qcard.js glassDefs: lit rim + eroded dark inner edge + grain = the KEYF rim recipe) and a faint diagonal sheen layered in the body. (The blurred text scrim of the first version is gone, SWISS-GLYPH below: the whole glyph is dimmer instead.) Softer mask fade than the flat numeral had.
    GHOST-READ (Tony Nov 23, pick 3): the body one step stronger (.46 / .30, was .32 / .18) so the digits still read as a number through the §frost lens (blur 3).
    Compositor-only: nothing animates here (the echo .qanim stays transform / opacity), no filter on a parent of a moving child, no backdrop-filter. */
 html.ui-v7 #problem.qc7.qbr .qghostbox { -webkit-mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); mask-image: radial-gradient(140% 140% at 100% 100%, #000 10%, rgb(0 0 0 / .88) 52%, rgb(0 0 0 / .5) 100%); }
 html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: 1; color: transparent; -webkit-background-clip: text; background-clip: text; filter: url(#qg-glass);
   background-image: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .08) 46%, transparent 62%), linear-gradient(160deg, rgb(120 147 226 / .30), rgb(56 80 148 / .20)); }   /* Tony's locked values: ghost body .30 / .20, sheen .08 */
-html.ui-v7 #problem.qc7 > .qscrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; filter: blur(4px); border-radius: inherit; overflow: hidden; }   /* locked: scrim blur 4px */
-html.ui-v7 #problem.qc7 > .qscrim i { position: absolute; background: rgb(3 14 34 / .35); border-radius: 999px; }   /* locked: scrim alpha .35 */
+/* SWISS-GLYPH (Tony Nov 26): the glyph steps back (box opacity .6: ~2.6:1 to ~1.8:1 against the card, still a shape) and the dark blurred scrim pills behind the words are gone (qcard.js scrims removed): the words read on the dimmer glyph itself */
+html.ui-v7 #problem.qc7.qbr .qghostbox { opacity: .6; }
 @media (prefers-reduced-transparency: reduce) {
   html.ui-v7 #problem.qc7.qbr .qghost i:nth-child(2) { --o: .08; color: #5b6a9a; -webkit-background-clip: border-box; background-clip: border-box; background-image: none; filter: none; }
-  html.ui-v7 #problem.qc7 > .qscrim { display: none; }
 }
 
 /* == §frost == GHOST-HYBRID-FROST (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE question card (inset 0, inherit the card's radius), between the

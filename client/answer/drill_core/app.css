@@ -37,6 +37,9 @@
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
      Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
   --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc; --ink-qnum: #7a8aae;
+  /* ONE answer-letter definition (Tony Nov 26): MC tile letter, pick-all tile letter, typed multi-part letter (.mparts .mk) all read these:
+     step 0 (16/24), 600, uppercase, dimmed like the Q-number. The type steps are declared below; a forward var() reference is fine. */
+  --ans-letter-fs: var(--fs-0); --ans-letter-lh: var(--lh-0); --ans-letter-fw: 600; --ans-letter-tt: uppercase; --ans-letter-color: var(--ink-qnum);
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
   --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
@@ -159,6 +162,7 @@ body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
   background: var(--paper); color: var(--ink);
   font: var(--w-body) var(--t-md)/var(--lh) var(--font); font-synthesis: none;   /* no faux bold or oblique, ever */
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;   /* make-interfaces-feel-better: crisper dark-UI text on macOS, set once at the root; other platforms ignore it */
   -webkit-tap-highlight-color: transparent;
 }
 /* No overflow on any ancestor of .freeze: it would become the sticky scroller (Safari and everyone else). */
@@ -620,6 +624,7 @@ html.ui-v7 .choices:not(.all) .opt.wrong:not(.reveal):not([aria-checked="true"])
 @media (prefers-reduced-motion: reduce) { .opt.jolt, .opt.pop { animation: none; } }
 .opt.pend { border-color: var(--action); border-style: dashed; }
 .ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
+.ch .ib1-go, .nx .ib1-go { display: none; }   /* the typed key's inline arrow: shown only where bento.css §swiss-key / strip.css ask for it */
 /* pick all (docs/design/CHOOSE-ALL.md §4): a square check badge (empty until ticked), the letter beside it, no arrow in the row;
    one Check under the list. Never one row, no lock-in dimming (many rows can be ticked). */
 .choices.all .opt { padding-right: var(--s3); }
@@ -714,11 +719,10 @@ html:has(#cluck:not([hidden])) .q :is(.ch, .ff, .part)::after { opacity: 0; visi
 .q.closed .ff.ok { border-color: var(--correct); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 /* W104 Sleeping guard (app.js guard; mock-opus/104 v4 = layout + motion only, type and colour are the site's): a quiet row under a closed MC's choices.
-   Locked: a --muted padlock, words in --muted with the lead in --ink. Redeemed: the lead is the retry tag's
-   word in --correct at the same --w-em (no new size, no bold green). Feather burst: live redeem only, motion allowed only */
-.guard { position: relative; display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); border-top: var(--bw) solid var(--edge); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; pointer-events: none; }
+   Locked: a --muted padlock, words in --muted with the lead in --ink. The won row (hairline + "Avenged!" + feather burst) is removed. */
+.guard { position: relative; display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; pointer-events: none; }
 /* locked: the mock's frosted veil. The row rises over the lower choices; its ::before blurs what is behind it, faded in from the top by a mask. Next stays above it */
-.guard.lock { margin-top: calc(-1 * var(--s7)); padding: var(--s7) 0 0; border-top: 0; isolation: isolate; }
+.guard.lock { margin-top: calc(-1 * var(--s7)); padding: var(--s7) 0 0; isolation: isolate; }
 .guard.lock::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent, var(--page) 55%); -webkit-backdrop-filter: blur(var(--s2)); backdrop-filter: blur(var(--s2));
   -webkit-mask-image: linear-gradient(transparent, #000 45%); mask-image: linear-gradient(transparent, #000 45%); }
 @media (prefers-reduced-transparency: reduce) { .guard.lock::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--page) 88%, transparent); } }
@@ -726,17 +730,8 @@ html:has(#cluck:not([hidden])) .q :is(.ch, .ff, .part)::after { opacity: 0; visi
 .q.closed .nx { z-index: 1; }
 .guard p { margin: 0; }
 .guard b { color: var(--ink); font-weight: var(--w-em); }
-.guard .gd-win { color: var(--correct); }
-.gd-burst { position: relative; flex: none; width: var(--s6); height: var(--s6); }   /* anchor for the feather burst (no icon) */
 .gd-lock { flex: none; order: -1; width: var(--s5); height: var(--s5); color: var(--muted); }
 .gd-lock .ico { width: 100%; height: 100%; }
-.burst i { position: absolute; left: 50%; top: 50%; width: var(--s1); height: var(--s2); margin: calc(-0.5 * var(--s2)) 0 0 calc(-0.5 * var(--s1)); border-radius: 50% 50% 50% 0; background: var(--reward); opacity: 0; }
-.burst i:nth-child(1) { --a: 0deg; } .burst i:nth-child(2) { --a: 45deg; } .burst i:nth-child(3) { --a: 90deg; } .burst i:nth-child(4) { --a: 135deg; }
-.burst i:nth-child(5) { --a: 180deg; } .burst i:nth-child(6) { --a: 225deg; } .burst i:nth-child(7) { --a: 270deg; } .burst i:nth-child(8) { --a: 315deg; }
-@media (prefers-reduced-motion: no-preference) {
-  .guard.won.live .burst i { animation: gd-fl 700ms ease-out both; }
-}
-@keyframes gd-fl { from { opacity: 1; transform: rotate(var(--a)) translateY(0); } to { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--s5))); } }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
 .ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, docs/design/EASY.md) */
 /* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.

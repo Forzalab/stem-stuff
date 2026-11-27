@@ -1,6 +1,6 @@
 // INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking + IB-4 verdict, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), fills the column on desktop (no 400px cap, Tony Nov 25).
-//   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
+//   multi-part rows: 22px hang column (18 + --s1), the ONE shared answer letter (16/24, 600, uppercase, --ink-qnum), 16/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
 //   judged fields never lift; reduced motion = colours only.
 //   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
@@ -165,6 +165,7 @@ const MET = () => {
     unit: !!(box && box.querySelector(".unit")), unitSize: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontSize,
     unitFamily: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontFamily,
     mk: mk ? mk.innerText : null, mkSize: mk && getComputedStyle(mk).fontSize, mkFamily: mk && getComputedStyle(mk).fontFamily,
+    mkWeight: mk && getComputedStyle(mk).fontWeight, mkTt: mk && getComputedStyle(mk).textTransform, mkColor: mk && getComputedStyle(mk).color,
     prSize: pr && getComputedStyle(pr).fontSize, prLh: pr && getComputedStyle(pr).lineHeight, prMb: pr && getComputedStyle(pr).marginBottom,
     mkBase: mkB && mkB.line, prBase: prB && prB.line, mkGlyph: mkB && mkB.glyph, prGlyph: prB && prB.glyph, valueBase, maxW: cs && cs.maxWidth,
     skin: cs && { bg: cs.backgroundColor, bw: cs.borderTopWidth, bs: cs.borderTopStyle, bc: cs.borderTopColor, sh: cs.boxShadow, r: cs.borderRadius, pr: cs.paddingRight, h: b && b.height, w: b && b.width },
@@ -503,10 +504,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.equal(m.mk, "A", `letter is bare + upper-cased by CSS (#759, Tony Nov 25): ${JSON.stringify(m.mk)}`);
-    assert.equal(m.mkSize, "20px", `letter size ${m.mkSize}`);   // --fs-1 (Tony Nov 26: letter 39 -> 20, one step down the 1.25 scale after the bento pass)
+    assert.equal(m.mkSize, "16px", `letter size ${m.mkSize}`);   // the ONE shared answer letter (app.css --ans-letter-*: --fs-0 16px, 600, uppercase, --ink-qnum; MC / pick-all / typed multi, Tony Nov 26)
+    assert.equal(m.mkWeight, "600", `letter weight ${m.mkWeight} (shared answer letter)`);
+    assert.equal(m.mkTt, "uppercase", `letter transform ${m.mkTt} (shared answer letter)`);
+    assert.equal(m.mkColor, "rgb(122, 138, 174)", `letter colour ${m.mkColor} (--ink-qnum, shared answer letter)`);
     assert.match(m.mkFamily, /Atkinson/i, "letter face is the typed-answer face --font-input (Atkinson; Tony: fonts unchanged): " + m.mkFamily);
     assert.ok(near(m.mkBase, m.prBase, 1), `letter/prompt line baselines ${m.mkBase} vs ${m.prBase}`);
     assert.ok(near(m.mkGlyph, m.prGlyph, 1), `letter/prompt GLYPH baselines ${m.mkGlyph} vs ${m.prGlyph}`);
+    const hang = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part"), mk = p.querySelector(".mk"), pr = p.querySelector(".pr"); return { part: p.getBoundingClientRect().left, mk: mk.getBoundingClientRect().left, pr: pr.getBoundingClientRect().left }; });
+    assert.ok(near(hang.mk, hang.part, .5), `the typed letter hangs on the part edge: ${hang.mk} vs ${hang.part}`);
+    assert.ok(near(hang.pr - hang.mk, 22, 1), `typed hang column ${(hang.pr - hang.mk).toFixed(1)} (want 22 = 18 + --s1)`);
     // Tony Nov 25: the prompt is above the box at every width, so there is no shared value/prompt baseline any more
     assert.equal(m.prSize, "16px", `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);

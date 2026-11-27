@@ -3,14 +3,14 @@
        idle = navy-800 (--sheet #0d142a), hover = --float (#141d36), picked = --action-fill #102542, right = green-900 #0c2c22, wrong = red-900 #3e141e,
        revealed (the missed right one) = navy-600 (--chip #283352), dimmed = same fill with text grey-400 #7a8aae (no opacity). The only edges left are the 2px focus ring (unchanged)
        and the notch .next ring (progbar.css). Resting tiles carry NO lit top (Tony: it reads as a border) and no shadow.
-   (B) the mosaic: bento.js writes grid-column / grid-row on each .ch; .choices.bento is the 12-column grid (row unit 100, gap 8, radius 16). The letter is a 12px corner label (no badge),
+   (B) the mosaic: bento.js writes grid-column / grid-row on each .ch; .choices.bento is the 12-column grid (row unit 100, gap 8, radius 16). The letter is the ONE shared answer letter (app.css --ans-letter-*: 16/24, 600, uppercase, --ink-qnum; the flow tile gives it a 24px column),
        the value is centred (28px math / 22px text). Pick-all (.all) and the stacked-list fallback keep their row layout and get (A) only. */
 
 /* ---- (A) state by fill: every option, list or mosaic ---- */
 html.ui-v7 :is(.choices, .rp) {   /* .rp: the repair ladder's step chips wear the same states (LADDER-STATES) */
   --mc-right: #0c2c22;    /* REVIEW2 green-900 */
   --mc-wrong: #3e141e;    /* REVIEW2 red-900 hsl(345 52% 16%): 11.0:1 with --wrong-on */
-  --mc-letter: #a7b5d2;   /* REVIEW2 grey-300: idle corner letter (8.6:1 on #0d142a) */
+  --mc-letter: var(--ans-letter-color);   /* the shared answer-letter colour (app.css --ans-letter-*, --ink-qnum #7a8aae, 5.3:1 on #0d142a) */
   --mc-dim: #7a8aae;      /* REVIEW2 grey-400: dimmed text (5.3:1 on #0d142a) */
 }
 html.ui-v7 .choices .ch > .opt.opt { border-width: 0; box-shadow: none; background: var(--sheet); }
@@ -57,7 +57,7 @@ html.ui-v7 .mc-probe .katex { font-size: 1em; }
 /* pick-all (Tony, BENTO-CHECK-TR): letter = top-left at the MC inset (14/12), the square check = top-right at the same 14px side inset (check 20px, top 10 = centred on the letter's line).
    The words keep a symmetric 36px reserve so they stay centred and clear of both corners. */
 html.ui-v7 .choices.bento.all .ch > .opt.opt { padding-left: 36px; padding-right: 36px; }
-html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 20px; top: 18px; margin: 0; height: 16px; font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em; color: var(--mc-letter); text-transform: lowercase; }   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only, DOM text unchanged */
+html.ui-v7 .choices.bento.all .ch > .opt.opt .lt { position: absolute; left: 20px; top: 18px; margin: 0; height: 16px; font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: 0; color: var(--mc-letter); text-transform: var(--ans-letter-tt); }   /* shared answer letter (app.css --ans-letter-*; size/fw set by the non-fill rule below) */
 html.ui-v7 .choices.bento.all .ch > .opt.opt .badge { position: absolute; left: auto; right: 20px; top: 16px; width: 20px; height: 20px; margin: 0; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt .badge .ico { width: 14px; height: 14px; }
 html.ui-v7 .choices.bento.all .ch > .opt.opt.kept { background: var(--mc-right); color: var(--correct-on); border-width: 0; }
@@ -67,7 +67,7 @@ html.ui-v7 .choices.bento.all .ch > .opt.opt.wrong:not(.reveal) .lt { color: var
 /* the letter: a 12px corner label, no badge, no fill */
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.opt .badge.badge {
   position: absolute; left: 20px; top: 18px; width: auto; height: 16px; padding: 0; border: 0; border-radius: 0; background: none;
-  color: var(--mc-letter); font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em; font-weight: var(--w-em); display: block; text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony) */
+  color: var(--mc-letter); font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em; font-weight: var(--w-em); display: block; text-transform: var(--ans-letter-tt);   /* shared answer letter (app.css --ans-letter-*; the flow rule sets the shared size/fw) */
 }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt[aria-checked="true"] .badge.badge { color: var(--action-on); }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.right:not(.reveal) .badge.badge { color: var(--correct-on); }
@@ -92,7 +92,7 @@ html.ui-v7 .choices.bento.fill .opt .txt, html.ui-v7 .choices.bento.fill .opt[da
 html.ui-v7 .choices.bento.fill .opt[data-brk] .txt { overflow-wrap: anywhere; }
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt {
   position: absolute; left: 8px; top: 6px; width: auto; height: var(--lh--1); margin: 0; font-size: var(--fs--1); line-height: var(--lh--1); letter-spacing: .02em;   /* Tony: letter pinned top-left, the words stay centred */
-  text-transform: lowercase;   /* BENTO-LETTER-LOWER (Tony): a b c d, CSS only */
+  text-transform: var(--ans-letter-tt);   /* shared answer letter */
 }
 /* pick-all (BENTO-CHECK-TR): the letter keeps the MC top-left inset, the check moves to the top-right; the words reserve both corners symmetrically (--lp left, --rp right) so they stay centred */
 html.ui-v7 .choices.bento.fill.all { --lp: 28px; --rp: 28px; }
@@ -124,7 +124,7 @@ html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.u
 html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .badge { top: 12px; right: 16px; }
 /* LETTER-SIZE (Tony Nov 16 "bigger corner letter, looks off with the checkbox"): the letter matches the check's row: phone 14 px on the 16 px check row, desktop 15 px on the 20 px row */
 html.ui-v7 .choices.bento.fill:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.fill.all .ch > .opt.opt .lt { font-size: var(--fs--1) !important; line-height: 16px !important; height: 16px !important; top: 12px !important; font-weight: 600; }
-html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt .lt, html.ui-v7 .choices.bento.all:not(.fill) .ch > .opt.opt .lt { font-size: var(--fs-0); line-height: 20px; height: 20px; top: 16px; font-weight: 600; }
+html.ui-v7 .choices.bento:not(.fill) .ch > .opt.opt .lt, html.ui-v7 .choices.bento.all:not(.fill) .ch > .opt.opt .lt { font-size: var(--ans-letter-fs); line-height: 20px; height: 20px; top: 16px; font-weight: var(--ans-letter-fw); text-transform: var(--ans-letter-tt); }
 
 /* ---- (D) FLOW (question #737, BANK_CEP; bento.js flowLayout): the answers flow DOWN and the page scrolls. 1 column, or 2 / 3 EQUAL columns when every option measured one line at 16px (--bc, bento.js flowCols);
    every tile has its natural height (a row = its tallest tile), the text is the question body's size (16/22), CENTRED on the whole tile box (Tony Nov 24: flex centre + text-align:center + the SAME padding left and right in every state; the letter / badge / Check / verdict are absolute and out of flow, so no state moves the words), never clipped. Beats sections B / C (.bento.flow, not .fill, no data-k look). ---- */
@@ -136,7 +136,7 @@ html.ui-v7 .choices.bento.flow .ch > .opt.opt {
 }
 html.ui-v7 .choices.bento.flow .opt .txt, html.ui-v7 .choices.bento.flow .opt[data-k] .txt { display: block; min-width: 0; max-width: 100%; text-align: center; font-size: var(--fs-0); line-height: var(--lh-0); font-weight: var(--w); letter-spacing: 0; }
 html.ui-v7 .choices.bento.flow .opt[data-x] .txt { align-self: stretch; text-align: start; }
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .lt { left: 16px !important; top: 14px !important; height: 22px !important; font-size: var(--fs--1) !important; line-height: 22px !important; }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .lt { left: var(--mc-pl) !important; top: 14px !important; height: 22px !important; font-size: var(--ans-letter-fs) !important; line-height: 22px !important; }
 html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .badge { right: 16px; left: auto; top: 16px; width: 18px; height: 18px; }
 /* Check / Next / verdict mark: centred at the tile's right edge, the words keep clear of them (padding), the tile never changes height */
 html.ui-v7 .choices.bento.flow .ch > .send { right: 6px; top: 50%; margin: -22px 0 0; }
@@ -146,3 +146,43 @@ html.ui-v7 .choices.bento.flow .ch > .nx .nf > span { display: none; }
 html.ui-v7 .choices.bento.flow .ch .vg, html.ui-v7 .choices.bento.flow .ch.cue .vg { right: 16px; top: 50%; margin-top: -9px; }
 /* no per-state padding on purpose: Check / cue / verdict states reuse the tile's one padding, so the words never move (these re-state it above the section B/C :has() rules that would add top padding) */
 html.ui-v7 .choices.bento.flow .ch:has(> .send:not([hidden])) > .opt.opt, html.ui-v7 .choices.bento.flow .ch.cue > .opt.opt, html.ui-v7 .choices.bento.flow .ch:has(> .vg) > .opt.opt, html.ui-v7 .choices.bento.flow .ch:has(> .nx) > .opt.opt { padding: 14px 52px; }
+
+/* ---- (E) §swiss-ratio + §swiss-key (Tony Nov 26; DESIGN-LANGUAGE "Type does the hierarchy", grid 4px atom, "Card padding", "bento: letter left, value --t-val"): the single-choice FLOW tile on the Swiss grid.
+   Scale = the app's Major Third steps: the VALUE sits at step 1 (20/28), one step above the ask and the body (step 0, 16/24), one step below the title (25/32), so the answers are as weighty as
+   the question card. The LETTER is the ONE shared answer letter (app.css --ans-letter-*: step 0, 16/24, 600, uppercase, --ink-qnum), the same as the pick-all tile letter and the typed multi-part
+   letter (.mparts .mk); it is a real grid column (24px, in the flow), so the value starts on the same left edge in every tile (left aligned, same baseline as the letter), never floating mid-tile.
+   Tile = 64px high (4px atom), padding 18 / 16 / 18 and the 52px key reserve on the right (= bento.js FLOW_PAD 104 split 52 + 52). ---- */
+/* OPTICAL ALIGNMENT (make-interfaces-feel-better rule 2 / Swiss grid): the letter's left edge sits on the card text's left edge (--qc-pad: 20, desk 32, Multitask / Swap 16), so title, stem, ask and answers share ONE edge */
+html.ui-v7 .choices.bento.flow { --mc-pl: 20px; }
+@media (min-width: 900px) { html.ui-v7 .choices.bento.flow { --mc-pl: 32px; } }
+html.ui-v7.mt .choices.bento.flow, html.ui-v7.swap .choices.bento.flow { --mc-pl: 16px; }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt {
+  display: flex; align-items: baseline; justify-content: flex-start; gap: var(--s3); min-height: 64px; padding: 18px 52px 18px var(--mc-pl);
+  text-align: left; border-radius: var(--r-tile);
+}
+html.ui-v7 .choices.bento.flow:not(.all) .opt .txt, html.ui-v7 .choices.bento.flow:not(.all) .opt[data-k] .txt { flex: 1 1 auto; text-align: left; text-wrap: pretty; font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-em); }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge.badge {
+  position: static; flex: 0 0 24px; width: 24px; height: auto !important; margin: 0; text-align: left; text-transform: var(--ans-letter-tt); letter-spacing: 0; font-weight: var(--ans-letter-fw);
+  font-size: var(--ans-letter-fs) !important; line-height: var(--ans-letter-lh) !important;   /* the shared answer letter: 16/24 600 uppercase --ink-qnum, baseline-aligned with the 20/28 value */
+}
+/* pick-all keeps its own letter / check layout; its words take the same step so every choice reads at one size */
+html.ui-v7 .choices.bento.flow.all .opt .txt, html.ui-v7 .choices.bento.flow.all .opt[data-k] .txt { font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-em); }
+/* the tile keeps ONE padding in every state (the old per-state 14/52 re-statement of section D), so nothing moves when a key appears */
+html.ui-v7 .choices.bento.flow:not(.all) .ch:is(:has(> .send:not([hidden])), .cue, :has(> .vg), :has(> .nx)) > .opt.opt { padding: 18px 52px 18px var(--mc-pl); }
+/* SWISS-KEY: Check (.send) and Next (.nx) in a tile are the typed answer's key (verdict-v7.css §ib1-key / §ib5-key): --chip face, --ink arrow on the same 24px grid, stroke 2.25, no shadow, hover = --chip 82% + white,
+   :active = scale(.96); it is 44px (the tap size) inset 8 in a 64px tile, radius = the tile's radius - the inset (concentric: 20 - 8 = 12, fallback 16 - 8 = 8). No green face, no black ring: the verdict is the tile's fill. */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) {
+  position: absolute; right: 8px; top: 50%; bottom: auto; margin: -22px 0 0; width: 44px; min-width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0;
+  border-radius: calc(var(--r-tile) - 8px); background: var(--chip); color: var(--ink); box-shadow: none; transition: transform var(--d-fast) ease-out;
+}
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) { corner-shape: superellipse(1.52); } }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .send .ico, html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf .ico { display: none; }   /* the sprite i-go / the filled i-tri: the 24-grid arrow replaces them */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) .ib1-go { display: block; width: 24px; height: 24px; }
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx::before { display: none; }   /* sugar's --field ring plate (app.css): gone */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf { display: grid !important; place-items: center; width: 100%; height: 100%; padding: 0 !important; border: 0 !important; border-radius: inherit !important; background: none !important; color: inherit !important; transform: none; }   /* !important: app.css's verdict-green .nf rule is (0,7,0) */
+html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf > span { display: none; }
+@media (hover: hover) {
+  html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); border: 0; }
+}
+html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):not(:disabled):active { transform: scale(.96); background: color-mix(in srgb, var(--chip) 90%, #000); }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) { transition: none; } html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):active { transform: none; } }
