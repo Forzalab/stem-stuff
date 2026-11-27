@@ -60,7 +60,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/shell/welcome/welcome-first.js` | Sends new visitors to the welcome page once (cram window). | first-visit redirect |
 | `client/shell/login/login.js` | "My Cluck" save and login dialog. | accounts UI |
 | `client/shell/login/login.css` | Styles of the login dialog. | login look |
-| `client/shell/toast/toast.js` | The one toast component (window.stemToast): stage toasts, notes, and the one-time KEY-MOVED hint (`hint()`, beside #mcGo, never queued). | toasts, notes, the moved-key hint |
+| `client/shell/toast/toast.js` | The one toast component (window.stemToast): stage toasts, notes. | toasts, notes |
 | `client/shell/toast/toast.css` | Styles of the toast. | toast look |
 | `client/shell/popover.js` | The one rich-context popup. | popovers |
 | `client/cluck/brainrot.js` | Brainrot corner (sugar mode only); none under 900px wide, no handle (ICK5-NOROT). | brainrot corner |

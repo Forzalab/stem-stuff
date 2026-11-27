@@ -1090,13 +1090,17 @@ function repairPick(mine, d) {
 
 /* == §mc-arrow == */
 /* KEY-MOVED hint (Tony, Nov 27; PR #769 moved the MC answer key from the tile to .chk #mcGo): once per browser, on an MC item under ui-v7,
-   a toast-style bubble beside the new key (toast.js stemToast.hint). The flag is set when it first shows, so a reload never repeats it. */
-const KEY_MOVED = "stem-key-moved-1";
+   the plain row toast (stemToast.show, the same queue + placement as the twist toast). The flag is set when it first shows, so a reload never repeats it. */
+const KEY_MOVED = "stem-key-moved-1", KEY_MOVED_TEXT = "Looking for the key?", KEY_MOVED_SUB = "It's at the bottom right now.";
+let keyMovedQ = 0;   // until-stamp of a queued, not-yet-shown hint: a re-render never queues it twice (a dropped one frees itself)
 function keyMovedHint() {
-  if (!root.classList.contains("ui-v7") || !window.stemToast?.hint) return;
+  const T = window.stemToast;
+  if (!root.classList.contains("ui-v7") || !T?.show || S.wl || Date.now() < keyMovedQ) return;
   try { if (localStorage.getItem(KEY_MOVED)) return; } catch (e) { return; }
-  const mark = () => { try { localStorage.setItem(KEY_MOVED, "1"); } catch (e) { /* private window: shows again next visit */ } };
-  window.stemToast.hint({ at: $("#mcGo"), text: ["Looking for the ", "key", "?\nIt's here now."], ms: 6000, onshow: mark });
+  const code = S && S.code; keyMovedQ = Date.now() + 15000;
+  T.show({ row: true, text: KEY_MOVED_TEXT, sub: KEY_MOVED_SUB, bar: false, ms: 6000, until: Date.now() + 15000, clear: "#q, .nx",
+    at: () => S && S.code === code ? $("#q") : null,
+    onshow: () => { keyMovedQ = 0; try { localStorage.setItem(KEY_MOVED, "1"); } catch (e) { /* private window: shows again next visit */ } } });
 }
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
 const LETTERS = "ABCDEFG";
