@@ -1250,6 +1250,61 @@ class PartHandlers(Handlers):
     test_wish_then_chat_turns = test_solved_wish_then_chat = test_off_without_claude_key_or_deepseek_arm = None
 
 
+class RedoRounds(Handlers):
+    """F1: a page in a redo round sends `round`; /explain and /chat read that round's tries, solved state, closed flag and turn count"""
+    test_wish_then_chat_turns = test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None
+    test_pre_try_reply_is_a_nudge = test_pre_try_after_an_earlier_solve_is_still_a_nudge = None
+    test_pre_try_third_turn_is_still_a_nudge = test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
+    test_solved_wish_then_chat = test_locked_wish_tells_cluck_not_to_invite_a_retry = test_locked_turn_survives_a_reload = None
+    test_off_without_claude_key_or_deepseek_arm = None
+    WALK = "Quack! Power is work over time.\n$$P = 52.0 / 4.0 = 13.0$$\nSo the answer is **b**, 13.0 W.\n"
+
+    def record(self, sid, **st):
+        with serve._tries_lock:
+            serve._load_tries(); serve._entry((sid, "H_1")).update(st)
+
+    def test_round_first_miss_keeps_its_try_when_the_base_is_locked(self):   # F1a
+        self.reply = self.WALK
+        self.record("d" * 32, wrong=["a", "c"])                 # base: both tries spent
+        self.record("d" * 32 + ":r1", wrong=["a"])              # round 1: one miss, one try left
+        out = self.go(serve.explain, answer="a", round=1)
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("REVEAL: yes", ctx); self.assertNotIn("13.0", out)   # one try left: the answer never goes out
+        st, _, raw = serve.explain("sid=" + "d" * 32, json.dumps({"code": "H_1", "answer": "a", "round": "1"}).encode()); self.assertEqual((st, json.loads(b"".join(raw))), (400, {"verdict": "invalid", "triesLeft": 2}))   # /check's error
+
+    def test_review_round_grades_its_own_wrong_pick(self):      # F1b
+        self.reply = self.WALK; serve._chats.clear()            # this test owns the shared follow-up cap
+        self.record("d" * 32, done=True)                        # base: solved earlier
+        self.record("d" * 32 + ":r2", wrong=["a"])              # round 2: this wrong pick
+        out = self.go(serve.chat, answer="a", round=2, history=[{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "why?"}])
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("RESULT: correct", ctx); self.assertIn("RESULT: wrong", ctx); self.assertNotIn("13.0", out)
+
+    def test_a_round_starts_the_turn_count_at_one(self):       # F1c
+        for _ in range(2):
+            serve.cluck_begin(dict(P1, code="H_1"), "d" * 32, "a")
+        self.go(serve.explain, answer="a", round=3)
+        self.assertNotIn("REVEAL: yes", json.dumps(self.bodies[-1]["messages"]))
+        self.assertEqual(serve._cluck_turns[("d" * 32 + ":r3", "H_1")][0][0], 1)   # the round owns the turn rows
+
+    def test_without_a_round_the_item_behaves_as_before(self):
+        self.reply = self.WALK
+        self.record("d" * 32, wrong=["a", "c"])
+        out = self.go(serve.explain, answer="a")                 # no `round`: the base namespace, as today
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertIn("REVEAL: yes", ctx); self.assertIn("OUT of tries", ctx)
+        self.assertIn("13.0", out)                               # a locked item still reveals on the old page
+
+    def test_an_old_page_never_reads_a_locked_base_over_an_open_round(self):
+        self.reply = self.WALK
+        self.record("d" * 32, wrong=["a", "c"])
+        self.record("d" * 32 + ":r4")                            # a round with every try left and not done
+        out = self.go(serve.explain, answer="a")                 # an old page sends no `round`
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("REVEAL: yes", ctx); self.assertNotIn("OUT of tries", ctx); self.assertNotIn("13.0", out)
+        self.assertEqual(serve._cluck_turns[("d" * 32, "H_1")][-1][1], 0)   # the row replays as open too
+
+
 class LetterContract(unittest.TestCase):
     """Tony's contract (Oct 28): right = cheer, ONE plain reason, stop, no question; wrong = "Not quite." + the slip + the fix. Every example
     line the letter gives reads at Flesch-Kincaid grade 3 or under (serve.fk_grade)."""

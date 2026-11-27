@@ -366,19 +366,25 @@ class Grade(unittest.TestCase):
 
     def test_redo_round_multi(self):
         self.g("CSCI26_M5V", "rd3", part=0, answer="17")
+        self.g("CSCI26_M5V", "rd3", part=0, answer="1")                         # out of tries: a redo round opens only on a shut part (round_open)
         self.assertEqual(self.g("CSCI26_M5V", "rd3", part=0, answer="17", round=5)["triesLeft"], 1)   # not a repeat in the round
         self.assertEqual(self.g("CSCI26_M5V", "rd3", part=0, answer="14", round=5)["verdict"], "correct")
-        self.assertEqual(serve.state(BANK["CSCI26_M5V"], "rd3")["parts"][0], {"wrong": 1, "done": False,
+        self.assertEqual(serve.state(BANK["CSCI26_M5V"], "rd3")["parts"][0], {"wrong": 2, "done": False,
                                                                              "gen": serve._tries[("rd3", "CSCI26_M5V", 0)]["gen"]})
 
     def test_redo_round_purges_older_rounds_only(self):
-        self.g("CALC1_T6B", "rd4", answer="4")
+        for sid in ("rd4", "rd4x"):                                             # shut the base: a round opens only on a unit out of tries (round_open)
+            self.g("CALC1_T6B", sid, answer="4")
+            self.g("CALC1_T6B", sid, answer="5")
+        self.g("CALC1_X2P", "rd4", choice="a")
+        self.g("CALC1_X2P", "rd4", choice="c")
         self.g("CALC1_T6B", "rd4", answer="4", round=1)
+        self.g("CALC1_T6B", "rd4", answer="5", round=1)
         self.g("CALC1_X2P", "rd4", choice="a", round=1)
         self.g("CALC1_T6B", "rd4x", answer="4", round=1)                       # another browser's round stays
         self.g("CALC1_T6B", "rd4", answer="4", round=2)
         keys = {k for k in serve._tries if k[0].startswith("rd4")}
-        self.assertEqual(keys, {("rd4", "CALC1_T6B"), ("rd4:r2", "CALC1_T6B"), ("rd4x:r1", "CALC1_T6B")})
+        self.assertEqual(keys, {("rd4", "CALC1_T6B"), ("rd4", "CALC1_X2P"), ("rd4:r2", "CALC1_T6B"), ("rd4x", "CALC1_T6B"), ("rd4x:r1", "CALC1_T6B")})
 
     def test_multi_hint_is_the_parts_own(self):
         self.assertEqual(self.g("CSCI26_M5V", "m4", part=0, answer="14.5")["hint"], BANK["CSCI26_M5V"]["nudge"])
@@ -1154,12 +1160,14 @@ class Persist(unittest.TestCase):
 
     def test_redo_round_survives_restart(self):
         p = BANK["CALC1_T6B"]
+        serve.grade(p, "r5", {"answer": "4"})
+        serve.grade(p, "r5", {"answer": "6"})                                    # out of tries: a redo round opens only on a shut unit (round_open)
         self.assertEqual(serve.grade(p, "r5", {"answer": "5", "round": 3})["verdict"], "wrong")
         with open(serve.TRIES) as f:
             self.assertIn("r5:r3 CALC1_T6B", json.load(f)["tries"])
         self.restart()
         self.assertTrue(serve.grade(p, "r5", {"answer": "5", "round": 3}).get("repeat"))
-        self.assertEqual(serve.state(p, "r5")["wrong"], 0)
+        self.assertEqual(serve.state(p, "r5")["wrong"], 2)
 
     def test_multi_part_round_trip(self):
         p = next(q for q in BANK.values() if q["type"] == "multi")        # per-part entries: "sid CODE i"
