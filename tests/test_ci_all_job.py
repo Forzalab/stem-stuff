@@ -28,7 +28,7 @@ def all_job():
 def verdict(**env):
     """Run the verdict script with the given job results; returns (exit code, output)."""
     base = {"INPUT_PIPE": "", "PIPE": "full", "DECIDE": "success", "PLAN": "success", "UNIT": "success",
-            "BLOCK": "success", "DOCS_ONLY": "false", "SKIP_BLOCK": "false"}
+            "BLOCK": "success", "LIVE_OK": "success", "EVENT": "pull_request", "DOCS_ONLY": "false", "SKIP_BLOCK": "false"}
     base.update(env)
     full_env = {k: v for k, v in os.environ.items() if k not in base}
     full_env.update(base)
@@ -43,11 +43,33 @@ class AllJobNeverSkipped(unittest.TestCase):
 
     def test_needs_every_job_it_judges(self):
         needs = re.search(r"^    needs:\s*\[(.*)\]", all_job(), re.M).group(1)
-        self.assertEqual({n.strip() for n in needs.split(",")}, {"decide", "plan", "unit", "block"})
+        self.assertEqual({n.strip() for n in needs.split(",")}, {"decide", "plan", "unit", "block", "live-ok"})
 
     def test_runs_the_verdict_script(self):
         self.assertIn("tools/operations/ci-all-verdict.sh", all_job())
         self.assertTrue(os.access(VERDICT, os.X_OK), "the workflow calls it directly, so it must be executable")
+
+
+class LiveOk(unittest.TestCase):
+    """VISUAL-PR GATE: the live-ok job script and its place in the verdict."""
+    SCRIPT = os.path.join(ROOT, "tools", "operations", "ci-live-ok.sh")
+
+    def labels(self, text):
+        env = dict(os.environ, LABELS=text)
+        return subprocess.run(["bash", self.SCRIPT], env=env, capture_output=True, text=True).returncode
+
+    def test_labels(self):
+        self.assertEqual(self.labels("nonvisual"), 0)
+        self.assertEqual(self.labels("visual\nlive-ok-tony"), 0)
+        self.assertEqual(self.labels("visual"), 1)
+        self.assertEqual(self.labels("bug,other"), 1)
+        self.assertEqual(self.labels(""), 1)
+        self.assertEqual(self.labels("visual,nonvisual,live-ok-tony"), 1)
+
+    def test_verdict(self):
+        self.assertEqual(verdict(LIVE_OK="failure")[0], 1)
+        self.assertEqual(verdict(LIVE_OK="skipped")[0], 1)
+        self.assertEqual(verdict(LIVE_OK="skipped", EVENT="push")[0], 0)
 
 
 class Verdict(unittest.TestCase):

@@ -2,6 +2,7 @@
 name: tests
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]   # live-ok: a label change must re-run the verdict (VISUAL-PR GATE)
   push:
     branches: [main]
   schedule:
@@ -276,10 +277,22 @@ jobs:
         shell: bash
         env: { PW_BROWSER: webkit, ENGINES: webkit, PW_FORCE_FALLBACK: "1" }
         run: SPECS="$WK_FALLBACK_SPECS" tests/run-all.sh 2>&1 | tee wk-fallback.log
+  live-ok:   # VISUAL-PR GATE (Tony Nov 27): a PR needs label nonvisual, or visual + the tony-cleared label; pull_request only (skipped elsewhere, `all` accepts that)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions: { pull-requests: read, contents: read }
+    steps:
+      - uses: actions/checkout@v7
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: LABELS="$(gh api "repos/$REPO/issues/$PR/labels" --jq '.[].name')" tools/operations/ci-live-ok.sh   # fresh read: a re-run must see current labels
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   # AC0.2: never skipped (`if: always()`, every pipe). Fast pipe = red "fast pipe only"; skips only for docs-only / zero-.pw (tools/operations/ci-all-verdict.sh)
   all:
-    needs: [decide, plan, unit, block]
+    needs: [decide, plan, unit, block, live-ok]
     if: always()
     runs-on: ubuntu-24.04
     outputs:
@@ -295,6 +308,7 @@ jobs:
       PLAN: ${{ needs.plan.result }}
       UNIT: ${{ needs.unit.result }}
       BLOCK: ${{ needs.block.result }}
+      LIVE_OK: ${{ needs.live-ok.result }}
       DOCS_ONLY: ${{ needs.plan.outputs.docs_only }}
       SKIP_BLOCK: ${{ needs.plan.outputs.skip_block }}
     steps:
