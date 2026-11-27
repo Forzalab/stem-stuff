@@ -68,9 +68,35 @@ class LiveOk(unittest.TestCase):
 
     def test_dependabot_is_exempt(self):
         self.assertEqual(self.labels("", AUTHOR="dependabot[bot]"), 0)
-        self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="o/r", REPO="o/r"), 0)
+        # GATE-3: the author check is the exemption; a dependabot/* branch name alone is not.
+        self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="o/r", REPO="o/r"), 1)
         self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="fork/r", REPO="o/r"), 1)
         self.assertEqual(self.labels("visual", AUTHOR="someone"), 1)
+
+    def test_visual_diff_blocks_a_nonvisual_label(self):
+        self.assertEqual(self.labels("nonvisual", FILES="client/answer/qcard/qcard.css"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.mjs"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.svg"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="server/data/problems.json"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="server/data/banks/x.json"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="README.md\ntools/operations/ci-live-ok.sh"), 0)
+        self.assertEqual(self.labels("visual\nlive-ok-tony", FILES="client/x.js"), 0)
+
+    def test_visual_diff_always_beats_nonvisual(self):
+        # No owner override: the automation that labels PRs authenticates as the repo owner,
+        # so an owner-sender check would always pass and be forgeable.
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", NONVISUAL_BY="Forzalab"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="README.md", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 0)
+
+    def test_workflow_runs_the_base_refs_copy(self):
+        with open(WF, encoding="utf-8") as f:
+            wf = f.read()
+        self.assertIn("github.event.pull_request.base.sha", wf)
+        self.assertIn('git show "$BASE_SHA:tools/operations/ci-live-ok.sh"', wf)
+        self.assertIn('pulls/$PR/files', wf)
+        self.assertNotIn("NONVISUAL_BY", wf)
+        self.assertNotIn("issues/$PR/events", wf)
 
     def test_verdict(self):
         self.assertEqual(verdict(LIVE_OK="failure")[0], 1)
