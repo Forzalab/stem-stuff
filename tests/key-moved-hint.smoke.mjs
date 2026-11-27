@@ -26,25 +26,31 @@ const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), S
 await serverUp(BASE);
 let fails = 0;
 async function step(name, fn) { try { await fn(); console.log("ok  ", name); } catch (e) { fails++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 700)); } }
-const browser = await launchBrowser(pw, { keyhint: true });
-async function open(ctx, ui = true, file = FILE, first = "PSY_K01") {
+const browser = await launchBrowser(pw, { keyhint: true, motion: true });
+async function open(ctx, ui = true, file = FILE, first = "PSY_K01", quick = false) {
   const page = await ctx.newPage(); await page.goto(`${BASE}/${ui ? "?ui=v7" : ""}`);
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles({ name: "keymoved.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(file)) });
   await page.waitForFunction(first => (document.querySelector("#pcode")?.textContent || "") === first && (document.querySelector("#q")?.textContent || "").length > 20
     && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), first, { timeout: 8000 });
-  await settled(page); return page;
+  if (!quick) await settled(page); return page;
 }
 const toastUp = page => page.evaluate(() => { const t = document.querySelector(".stoast"); return !!t && t.classList.contains("on") && getComputedStyle(t).visibility === "visible" ? t.querySelector(".stoast-t").textContent : null; });
 const MSG = /Looking for the key\?/, SUB = /It.s at the bottom right now\./;
 for (const [name, vp] of [["390", { width: 390, height: 844 }], ["360x640", { width: 360, height: 640 }]]) {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: true, isMobile: true, deviceScaleFactor: 2, serviceWorkers: "block" });
   await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
-  const page = await open(ctx); const errs = []; page.on("pageerror", e => errs.push(e.message));
-  await step(`${name}: first MC visit shows the plain toast, once, inside the gutters`, async () => {
-    await page.waitForFunction(() => document.querySelector(".stoast.on"), null, { timeout: 5000 });
-    await page.waitForTimeout(350);
-    assert.match(await toastUp(page), MSG); assert.match(await page.evaluate(() => document.querySelector(".stoast-s").textContent), SUB);
+  const page = await open(ctx, true, FILE, "PSY_K01", true); const errs = []; page.on("pageerror", e => errs.push(e.message));
+  await step(`${name}: first MC visit shows the plain toast once, the key rings 2 pulses then clears`, async () => {
+    await page.waitForFunction(() => document.getElementById("mcGo")?.classList.contains("key-hint"), null, { polling: "raf", timeout: 6000 });
+    await page.waitForTimeout(250);
+    assert.match(await toastUp(page), MSG);
+    const r = await page.evaluate(() => { const k = document.getElementById("mcGo"), c = getComputedStyle(k); return { on: k.classList.contains("key-hint"), n: c.animationIterationCount, name: c.animationName, os: c.outlineStyle, ow: c.outlineWidth }; });
+    assert.equal(r.on, true); assert.equal(r.n, "2"); assert.match(r.name, /key-hint-pulse/); assert.equal(r.os, "solid"); assert.notEqual(r.ow, "0px");
+    if (name === "390") await page.screenshot({ path: join(SHOTS, "keyplain-pulse-390.png") });
+    await page.waitForFunction(() => !document.getElementById("mcGo").classList.contains("key-hint"), null, { timeout: 3000 });
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById("mcGo")).outlineStyle !== "solid"), true, "ring gone after the pulses");
+ assert.match(await page.evaluate(() => document.querySelector(".stoast-s").textContent), SUB);
     const g = await page.evaluate(() => { const r = document.querySelector(".stoast").getBoundingClientRect(); return { l: r.left, r: r.right, vw: innerWidth, bubble: !!document.querySelector(".stoast-hint") }; });
     assert.ok(g.l >= 15 && g.r <= g.vw - 15, "inside the 16px gutters"); assert.equal(g.bubble, false, "no bubble element");
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-key-moved-1")), "1");
@@ -58,6 +64,20 @@ for (const [name, vp] of [["390", { width: 390, height: 844 }], ["360x640", { wi
   assert.deepEqual(errs, []);
   await ctx.close();
 }
+await step("reduced motion = static ring, no animation; a really focused key keeps its ring", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: "reduce", serviceWorkers: "block" });
+  await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
+  const page = await open(ctx, true, FILE, "PSY_K01", true);
+  await page.waitForFunction(() => document.getElementById("mcGo")?.classList.contains("key-hint"), null, { polling: "raf", timeout: 6000 });
+  const r = await page.evaluate(() => { const c = getComputedStyle(document.getElementById("mcGo")); return { name: c.animationName, os: c.outlineStyle }; });
+  assert.equal(r.name, "none"); assert.equal(r.os, "solid");
+  await page.tap("#q .opt >> nth=0"); await page.keyboard.press("Shift");
+  await page.evaluate(() => document.getElementById("mcGo").focus());
+  await page.waitForFunction(() => !document.getElementById("mcGo").classList.contains("key-hint"), null, { timeout: 3000 });
+  const f = await page.evaluate(() => { const k = document.getElementById("mcGo"), c = getComputedStyle(k); return { fv: k.matches(":focus-visible"), os: c.outlineStyle }; });
+  assert.equal(f.fv, true); assert.equal(f.os, "solid", "focus ring stays");
+  await ctx.close();
+});
 await step("typed item and flag off show none", async () => {
   const c1 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   const p1 = await open(c1, false); await p1.waitForTimeout(1500);

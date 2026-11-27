@@ -76,3 +76,9 @@ html.ui-v7 .stoast-v7 .stoast-bar { display: none; }
 html.ui-v7 .stoast-v7 .stoast-h { font-weight: 600; }
 html.ui-v7 .stoast-v7 .stoast-x { position: absolute; top: 8px; right: 0; width: 44px; height: 44px; display: grid; place-items: center; }
 html.ui-v7 .stoast-v7 .stoast-x svg { width: 16px; height: 16px; }   /* 16 px glyph = ~11 px ink */
+
+/* ---------- the key-moved hint's ring (app.js keyMovedHint): the app's one focus ring (--ring solid --focus, offset 2, verdict-v7.css §key)
+   drawn on #mcGo while the toast shows, with two soft pulses of the offset (2 -> 5 -> 2). Reduced motion: the same ring, static. No new colour. */
+html.ui-v7 #q .chk > #mcGo.key-hint { outline: var(--ring) solid var(--focus); outline-offset: 2px; animation: key-hint-pulse .9s ease-in-out 2; }
+@keyframes key-hint-pulse { 50% { outline-offset: 5px; } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 #q .chk > #mcGo.key-hint { animation: none; } }
