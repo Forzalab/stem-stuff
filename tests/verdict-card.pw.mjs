@@ -80,7 +80,13 @@ async function judge(w, flag, right, tries = 1) {
   await settled(page);   // the verdict card is at rest (animations + transitions ended) before the geometry reads
   if (flag === "v7") {   // SHIPPED KEY: wait for the 600ms hold + 200ms exit (timer throttling makes a fixed sleep flaky)
     await page.waitForFunction(() => { const n = document.querySelector("#q .nx"); return !n || (!n.classList.contains("k-ok") && !n.classList.contains("k-bad")); }, null, { timeout: 4000 }).catch(() => {});
-    await page.waitForTimeout(250);
+    /* the hold only starts the exit: wait on the exit's end state, the one path back to the arrow (computed d; the attribute on engines without CSS d) */
+    await page.waitForFunction(() => {
+      const n = document.querySelector("#q .nx"); if (!n) return true;
+      const p = n.querySelector("svg.ib1-go path"); if (!p) return true;
+      return /M\s*5\s+12/.test(String(getComputedStyle(p).d || p.getAttribute("d") || ""));
+    }, null, { timeout: 4000 }).catch(() => {});
+    await settled(page, "#q .nx");   // its 200 ms exit transitions (d, face, opacity) have ended
   }
   return page;
 }
