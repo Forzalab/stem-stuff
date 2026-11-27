@@ -170,7 +170,6 @@
     var o = q[0];
     if (o.until && Date.now() > o.until) { q.shift(); next(); return; }   // stale (the start line after the student moved on)
     if (yields() || !anchor(o)) { clearTimeout(wait); wait = setTimeout(next, 250); return; }
-    if (hCur) hintHide();                                                // the hint never stays under a toast
     cur = o; mount();
     el.classList.remove('out', 'on');
     el.style.width = '';
@@ -368,7 +367,6 @@
   function note(o) {
     if (!o || !o.text || !o.at) return false;
     nMount();
-    if (hCur) hintHide();
     clearTimeout(nT); nLeft = 0;
     nEl.classList.remove('on', 'up', 'row');
     nEl.textContent = '';
@@ -383,74 +381,12 @@
   }
   function noteFollow() { if (nCur && nEl && nEl.classList.contains('on') && !notePlace()) noteHide(); }   // scrolled out of its room: gone
 
-  /* ---------- the "moved" hint (Tony, Nov 27: PR #769 moved the MC key from the tile to #mcGo; html.ui-v7 only) ----------
-     hint({ at, text: [plain, bold, plain], ms, onshow, onend }): a one-time bubble BESIDE its anchor (left of it, caret on its right edge,
-     vertically centred), in the toast's own tokens (--float fill, --shadow-3, radius 16, --ink). It is never in the queue: it shows only
-     while no toast and no note is up and none is queued (it waits, polling like next()), and any stage toast or note that opens closes
-     it at once, so the two never overlap. It lies on no live control (hits()), steps aside for Cluck and the reward FX, and goes on a tap
-     anywhere (capture, never stopped: the tap still reaches the page, the key included), after `ms` (6 s) or when its anchor leaves.
-     Gives up quietly after 20 s of waiting. hint() -> false when the flag is off. */
-  var hEl = null, hCur = null, hT = 0, hPoll = 0, hAt = 0;
-  function hintPlace() {
-    var o = hCur; if (!o || !hEl) return false;
-    var a = anchor(o); if (!a) return false;
-    var b = a.getBoundingClientRect(), vv = g.visualViewport;
-    var gut = parseFloat(getComputedStyle(d.documentElement).getPropertyValue('--gut')) || 16;
-    var bar = d.querySelector('.top'), barB = bar && getComputedStyle(bar).position === 'sticky' ? bar.getBoundingClientRect().bottom : 0;
-    var foot = (vv ? vv.offsetTop + vv.height : innerHeight) - footRoom();
-    if (b.top < barB + 8 || b.bottom > foot) return false;                // the key itself must be fully in view
-    var room = Math.floor(b.left - 14 - gut);                               // 14 = caret + gap
-    if (room < 150) return false;
-    hEl.style.maxWidth = Math.min(300, room) + 'px';
-    var w = hEl.offsetWidth, h = hEl.offsetHeight;
-    var x = Math.round(b.left - 14 - w), y = Math.round(b.top + b.height / 2 - h / 2);
-    if (y < barB + 8 || y + h > foot || hits(x, y, w, h, function (e) { return a.contains(e) || e.contains(a); }, true).length) return false;
-    hEl.style.left = x + 'px'; hEl.style.top = y + 'px';
-    return true;
-  }
-  function hintHide() {
-    clearTimeout(hT); clearInterval(hPoll);
-    d.removeEventListener('pointerdown', hintTap, true);
-    var o = hCur; hCur = null;
-    if (hEl) hEl.classList.remove('on');
-    if (o && o.onend) try { o.onend(); } catch (e) { /* the caller's */ }
-  }
-  function hintTap() { if (Date.now() - hAt > 250) hintHide(); }
-  function hintBusy() { return !!cur || !!q.length || !!(nCur && nEl && nEl.classList.contains('on')) || busy() || yields(); }
-  function hintMount() {
-    if (hEl && hEl.isConnected) return hEl;
-    hEl = d.createElement('div'); hEl.className = 'stoast-hint'; hEl.setAttribute('role', 'status');
-    hEl.innerHTML = '<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-go"/></svg><p class="stoast-hint-t"></p>';
-    d.body.appendChild(hEl);
-    return hEl;
-  }
-  function hint(o) {
-    if (!o || !o.at || !o.text || !d.documentElement.classList.contains('ui-v7')) return false;
-    if (hCur) hintHide();                                                  // a re-render's new key replaces the old hint
-    hCur = o; hintMount();
-    var t = hEl.querySelector('.stoast-hint-t'); t.textContent = '';
-    o.text.forEach(function (s, k) { if (k % 2) { var b = d.createElement('b'); b.textContent = s; t.appendChild(b); } else t.appendChild(d.createTextNode(s)); });
-    var shown = false, t0 = Date.now();
-    hPoll = setInterval(function () {
-      if (hCur !== o) return;
-      if (!anchor(o) || (!shown && Date.now() - t0 > 20000)) { hintHide(); return; }
-      if (!shown) {
-        if (hintBusy() || !hintPlace()) return;
-        shown = true; hAt = Date.now(); void hEl.offsetWidth; hEl.classList.add('on');
-        d.addEventListener('pointerdown', hintTap, true);
-        hT = setTimeout(hintHide, o.ms || 6000);
-        if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
-      } else if (cur || nCur || yields() || !hintPlace()) hintHide();   // a toast or note opened, Cluck rose, or it lost its room: gone
-    }, 120);
-    return true;
-  }
-
   d.addEventListener('visibilitychange', function () { d.hidden ? (hold(), nHold()) : (go(), nGo()); });
   g.addEventListener('scroll', function () { place(); noteFollow(); }, { passive: true });
   g.addEventListener('resize', function () { place(); noteFollow(); });
 
   /* hide(): the one on screen goes now (the next queued one follows); clear(): it and the queue.
      note / noteAt / noteHide / notePlace: the notes (above); config({ foot }): the px the page's foot keeps (app.js: the dock) */
-  g.stemToast = { show: show, hide: function () { clearTimeout(timer); left = 0; if (el && cur) done(); }, clear: function () { q.length = 0; clearTimeout(timer); left = 0; if (el && cur) done(); }, place: place, desk: desk, hint: hint, hintHide: hintHide,
+  g.stemToast = { show: show, hide: function () { clearTimeout(timer); left = 0; if (el && cur) done(); }, clear: function () { q.length = 0; clearTimeout(timer); left = 0; if (el && cur) done(); }, place: place, desk: desk,
     note: note, noteAt: noteAt, noteHide: noteHide, notePlace: noteFollow, config: function (c) { if (c && typeof c.foot === 'function') footRoom = c.foot; } };
 })(window);
