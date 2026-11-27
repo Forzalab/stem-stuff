@@ -165,13 +165,14 @@ async function gate(page, label, size, tap, allowFn) {
   const focus0 = await page.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null;   // its focus ring leaves on a tap elsewhere: that box may change
     const r = (e.closest(".ff") || e).getBoundingClientRect(); return { x: r.x - 4, y: r.y - 4, w: r.width + 8, h: r.height + 8 }; });
   await page.evaluate(() => { window.__cls = []; });
-  const p0 = await PROBE(page);
+  const p0 = await PROBE(page); const CL = { x: 1150, y: 88, width: 630, height: 40 }; const c0 = /1920/.test(size.name) ? (await page.screenshot({ clip: CL })).toString("base64") : "";
   const t0 = Date.now(); await tap(); const frames = [], at = [];
   for (const ms of AT) { const w = ms - (Date.now() - t0);
     if (w > 0) await page.waitForTimeout(w);                                  // keep: app timer L6 needs a shot at +50/+150/+300/+600 ms after the tap
     at.push(Date.now() - t0); frames.push(await page.screenshot({ caret: "hide" })); }
   const q1 = await qCol(page), r1 = await rows(page);
   if (/1920/.test(size.name)) console.log("PROBE", label, JSON.stringify(p0), JSON.stringify(await PROBE(page)));
+  if (/1920/.test(size.name) && label === "4-answer") { const st = await page.evaluate(() => { const o = []; for (const e of document.querySelectorAll("#work *")) { const c = getComputedStyle(e); if (c.willChange !== "auto" || c.transform !== "none" || c.animationName !== "none") o.push(e.tagName + "." + e.className + ":" + c.willChange + "/" + c.transform + "/" + c.animationName); } return o.slice(0, 20); }); console.log("WSTYLE", JSON.stringify(st)); console.log("CROP0", c0); console.log("CROP1", (await page.screenshot({ clip: CL })).toString("base64")); }
   const allow = [...await allowFn({ r0, r1, q0, q1 }), ...(focus0 ? [focus0] : [])];
   const { res, worst, png } = await diff(before, frames, allow, size.zoom, !!tap.live);
   const tag = `${size.engine}-${size.name.replace(/[@.]/g, "_")}-${label.replace(/\W+/g, "_")}`;
