@@ -31,7 +31,7 @@ if has visual && has nonvisual; then
   echo "::error::live-ok: PR has both labels visual and nonvisual; keep one"; exit 1
 elif has visual; then
   if has live-ok-tony; then echo "live-ok: visual PR, label live-ok-tony present (Tony cleared the live shots)"; exit 0; fi
-  echo "::error::live-ok: PR is labelled visual and has no live-ok-tony label. Send Tony screenshots of the PR's Vercel preview deploy; when Tony types his approval phrase the orc adds live-ok-tony."
+  echo "::error::live-ok: PR is labelled visual and has no live-ok-tony label. Pre-merge evidence = screenshots from ship.yml mode=demo ref=<PR branch> (post the run URL and the head SHA); Tony's OK is bound to that SHA; prod is re-checked after merge. When Tony types his approval phrase the orc adds live-ok-tony."
   exit 1
 elif has nonvisual; then
   if [ "$visual_diff" = 1 ]; then
