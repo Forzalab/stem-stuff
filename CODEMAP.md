@@ -118,6 +118,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `tools/build_and_ship/bridge_gen.py` | Writes vercel.json bridge rules (stub rewrites + 307 redirects) from the rename map; BRIDGE, todo 167. | old URLs, vercel.json |
 | `client/shell/stale_reload.js` | BRIDGE stub (todo 167): a stale page's old .js URL reloads once after a service-worker update. | old URLs, stale pages |
 | `tools/operations/` | Workflow + incident scripts (CI train batch.sh/ci-*.mjs, spend, prune). | CI, ops |
+| `tools/operations/ci-live-ok.sh` | VISUAL-PR GATE verdict of the `live-ok` job (a need of `all`, ci-all-verdict.sh): labels nonvisual = pass, visual needs live-ok-tony, neither = fail. Smoke: `tests/test_ci_all_job.py` (LiveOk). | the visual-PR gate, PR labels in CI |
 | `tools/bank_tools/` | Bank checks + edits (slips.py, schema-check.mjs, tol.py, fig_png.mjs). | banks, problems |
 | `tools/client_generators/` | Write app files (gen_views.py, rw_icons.py, split-app.mjs). | generate, views |
 | `tools/benchmarks/` | Bench + replay scripts, jev-model.mjs. | bench, perf |
