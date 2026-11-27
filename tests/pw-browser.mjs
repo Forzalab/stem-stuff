@@ -15,7 +15,8 @@
 //                            jev: <number> = Jev on with seeded dice (window.__stemDice, mulberry32): the whole scenario replays.
 //   keyhint: every newContext/newPage defaults to the one-time "key moved" toast already seen (init script: localStorage stem-key-moved-1=1
 //                            when unset), so it never queues ahead of the toast a spec waits for. tests/key-moved-hint.smoke.mjs opts in with
-//                            launchBrowser(pw, { keyhint: true }).
+//                            launchBrowser(pw, { keyhint: true }), or per context (newContext({ keyhint: true })): a spec that needs a NEW device
+//                            (no stem-* key at first load, the onboarding rows of ux-flows) opts out the same way.
 //   PW_TRACE=0 (CI-ARCH E)   turns the event trace off. Default on: every context is recorded (tests/lib/trace.mjs) and a spec's
 //                            FAIL line gets the last page events under it. Read-only for the page.
 import { traceContext } from "./lib/trace.mjs";
@@ -53,7 +54,7 @@ export async function launchBrowser(pw, opts = {}, engine = BROWSER) {
   // route before the context is handed back: a spec's own youtube route is registered later, and Playwright runs the LAST
   // matching route first, so a spec stub still wins.
   // jev is ours, never handed to Playwright
-  b.newContext = async ({ jev: cj, ...o } = {}, ...a) => { const c = await nc(o, ...a), js = jevInit(cj, jev); if (js) await c.addInitScript(js); if (!keyhint) await c.addInitScript(KEYHINT_SEEN); if (!keepYt) await c.route(YT_ROUTE, ytStub); return traceContext(c); };
-  b.newPage = async ({ jev: cj, ...o } = {}, ...a) => { const p = await np(o, ...a), js = jevInit(cj, jev); if (js) await p.context().addInitScript(js); if (!keyhint) await p.context().addInitScript(KEYHINT_SEEN); if (!keepYt) await p.context().route(YT_ROUTE, ytStub); await traceContext(p.context()); return p; };
+  b.newContext = async ({ jev: cj, keyhint: ck, ...o } = {}, ...a) => { const c = await nc(o, ...a), js = jevInit(cj, jev); if (js) await c.addInitScript(js); if (!(ck ?? keyhint)) await c.addInitScript(KEYHINT_SEEN); if (!keepYt) await c.route(YT_ROUTE, ytStub); return traceContext(c); };
+  b.newPage = async ({ jev: cj, keyhint: ck, ...o } = {}, ...a) => { const p = await np(o, ...a), js = jevInit(cj, jev); if (js) await p.context().addInitScript(js); if (!(ck ?? keyhint)) await p.context().addInitScript(KEYHINT_SEEN); if (!keepYt) await p.context().route(YT_ROUTE, ytStub); await traceContext(p.context()); return p; };
   return b;
 }

@@ -1022,7 +1022,7 @@ const browser = await launchBrowser(pw, { args: ["--no-sandbox"] });   // JEV-DE
 try {
   for (const f of order) for (const w of WIDTHS) {
     const phone = w === 393;   // keyed on 393, not w < 600: the flow bodies branch on w === 393 / w === 1280, so a phone context at another width would disagree with them
-    const ctx = await browser.newContext({ jev: f.opts.ob ? f.n : false, viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone,
+    const ctx = await browser.newContext({ jev: f.opts.ob ? f.n : false, keyhint: !!f.opts.ob, viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone,
       serviceWorkers: f.opts.sw ? "allow" : "block", permissions: f.opts.perms || [], extraHTTPHeaders: f.opts.gpc ? { "Sec-GPC": "1", DNT: "1" } : undefined });
     await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
     if (!f.opts.ob) await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
