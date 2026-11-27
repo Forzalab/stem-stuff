@@ -1089,6 +1089,15 @@ function repairPick(mine, d) {
 }
 
 /* == §mc-arrow == */
+/* KEY-MOVED hint (Tony, Nov 27; PR #769 moved the MC answer key from the tile to .chk #mcGo): once per browser, on an MC item under ui-v7,
+   a toast-style bubble beside the new key (toast.js stemToast.hint). The flag is set when it first shows, so a reload never repeats it. */
+const KEY_MOVED = "stem-key-moved-1";
+function keyMovedHint() {
+  if (!root.classList.contains("ui-v7") || !window.stemToast?.hint) return;
+  try { if (localStorage.getItem(KEY_MOVED)) return; } catch (e) { return; }
+  const mark = () => { try { localStorage.setItem(KEY_MOVED, "1"); } catch (e) { /* private window: shows again next visit */ } };
+  window.stemToast.hint({ at: $("#mcGo"), text: ["Looking for the ", "key", "?\nIt's here now."], ms: 6000, onshow: mark });
+}
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
 const LETTERS = "ABCDEFG";
 function renderQuestion() {
@@ -1113,6 +1122,7 @@ function renderQuestion() {
     wireMC(q);
     if (all(p)) syncTicks();                                               // nothing ticked can already be checked (prove mode: not yet)
     fitChoices();
+    keyMovedHint();
   } else if (p.type === "multi") {
     /* one row per part: "a)", its sub-question (if it has one), its own box with its own arrow inside (the freeform pattern).
        Each part is graded alone, with its own tries and lockout (SCHEMA.md "Grading"). */

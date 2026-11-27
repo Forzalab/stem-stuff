@@ -76,3 +76,22 @@ html.ui-v7 .stoast-v7 .stoast-bar { display: none; }
 html.ui-v7 .stoast-v7 .stoast-h { font-weight: 600; }
 html.ui-v7 .stoast-v7 .stoast-x { position: absolute; top: 8px; right: 0; width: 44px; height: 44px; display: grid; place-items: center; }
 html.ui-v7 .stoast-v7 .stoast-x svg { width: 16px; height: 16px; }   /* 16 px glyph = ~11 px ink */
+
+/* ---------- the "moved" hint (toast.js hint(); Tony Nov 27, PR #769 moved the MC key to #mcGo; ui-v7 only, never in the queue) ----------
+   The row toast surface (--float, --shadow-3, radius 16, no edge, --ink) as a bubble beside the key: icon left (--muted, 20px, the key arrow),
+   words right (--fs-0 / 24, the bold word 600), a caret on the right edge pointing at the key. A tap anywhere closes it (toast.js). No free colours. */
+.stoast-hint { display: none; }
+html.ui-v7 .stoast-hint {
+  position: fixed; z-index: 50; left: 0; top: 0; visibility: hidden; display: flex; align-items: center; gap: var(--s2, 8px); box-sizing: border-box;
+  width: max-content; padding: 12px 16px 12px 12px; border-radius: 16px; background: var(--float); color: var(--ink); box-shadow: var(--shadow-3);
+  font: var(--w-body, 400) var(--fs-0, 1rem)/24px var(--font, system-ui, sans-serif); pointer-events: none;
+}
+html.ui-v7 .stoast-hint.on { visibility: visible; animation: stoast-hint-in .2s var(--ease-sheet, cubic-bezier(.32, .72, 0, 1)) backwards; }
+html.ui-v7 .stoast-hint::after {   /* the caret: a rotated square on the right edge, centred, pointing at the key */
+  content: ""; position: absolute; right: -6px; top: calc(50% - 7px); width: 14px; height: 14px; transform: rotate(45deg); background: inherit; border-radius: 0 3px 0 0;
+}
+html.ui-v7 .stoast-hint .ico { flex: none; width: 20px; height: 20px; color: var(--muted); }
+html.ui-v7 .stoast-hint-t { margin: 0; white-space: pre-line; }   /* the copy carries its own line break: "key?" / "It's here now." */
+html.ui-v7 .stoast-hint-t b { font-weight: 600; }
+@keyframes stoast-hint-in { from { opacity: 0; transform: translateX(-6px); } }
+@media (prefers-reduced-motion: reduce) { html.ui-v7 .stoast-hint.on { animation: stoast-fade .2s linear backwards; } }
