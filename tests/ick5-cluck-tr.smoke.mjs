@@ -54,7 +54,8 @@ const geo = page => page.evaluate(() => {
 });
 const look = page => page.evaluate(() => { const b = document.getElementById("cluckBtn"), cs = getComputedStyle(b), px = v => parseFloat(v) || 0;
   const p = document.createElement("i"); p.style.background = "var(--chip)"; document.body.append(p); const chip = getComputedStyle(p).backgroundColor; p.remove();
-  return { aria: b.getAttribute("aria-disabled"), bg: cs.backgroundColor, chip, duck: getComputedStyle(b.querySelector(".cb-duck")).color, shadow: cs.boxShadow, btw: px(cs.borderTopWidth),
+  p.style.boxShadow = "var(--shadow-2)"; document.body.append(p); const shadow2 = getComputedStyle(p).boxShadow; p.remove();
+  return { aria: b.getAttribute("aria-disabled"), bg: cs.backgroundColor, chip, shadow2, duck: getComputedStyle(b.querySelector(".cb-duck")).color, shadow: cs.boxShadow, btw: px(cs.borderTopWidth),
     rad: [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius].map(px) }; });
 const TANGERINE = "rgb(255, 166, 62)", INK = "rgb(2, 4, 13)", OFF_INK = "rgb(122, 138, 174)", near = (a, b, d) => Math.abs(a - b) <= d;
 async function card(page, vp) {
@@ -73,11 +74,11 @@ async function card(page, vp) {
     const g = await geo(page); assert.ok(g, "no #cluckBtn");
     assert.ok(near(g.r, g.cb.r, 1.5), `right ${g.r} vs content right ${g.cb.r}`); assert.ok(near(g.t, g.cb.t, 3), `top ${g.t} vs content top ${g.cb.t}`);
   });
-  await step(`${vp} AC4: tangerine ready / --chip slate + #7a8aae duck off (CLUCK-BTN-DISABLED), no shadow, no top border, four equal corners`, async () => {
-    const shape = (s, when) => { assert.equal(s.shadow, "none", `${when}: box-shadow ${s.shadow}`);
+  await step(`${vp} AC4: tangerine ready / --chip slate + #7a8aae duck off (CLUCK-BTN-DISABLED), ready raised with --shadow-2 (Tony Nov 27: AC4 superseded) / off flat, no top border, four equal corners`, async () => {
+    const shape = (s, when, raised) => { if (raised) assert.equal(s.shadow, s.shadow2, `${when}: box-shadow ${s.shadow} != --shadow-2 ${s.shadow2}`); else assert.equal(s.shadow, "none", `${when}: box-shadow ${s.shadow}`);
       assert.equal(s.btw, 0, `${when}: border-top-width ${s.btw}`); assert.ok(s.rad.every(x => x > 0 && near(x, s.rad[0], .01)), `${when}: radii ${s.rad.join(" ")}`); };
     await settled(page, "#cluckBtn"); const a = await look(page); assert.equal(a.aria, null, "Nov 22: ready before the first try (no first state)");
-    assert.equal(a.bg, TANGERINE, `ready: background ${a.bg}`); assert.equal(a.duck, INK, `ready duck ${a.duck}`); shape(a, "ready");
+    assert.equal(a.bg, TANGERINE, `ready: background ${a.bg}`); assert.equal(a.duck, INK, `ready duck ${a.duck}`); shape(a, "ready", true);
     /* synth off (data-st + aria-disabled): the disabled squircle is the --chip slate, duck #7a8aae, not tangerine (Tony Nov 23, option A) */
     const was = await page.evaluate(() => { const b = document.getElementById("cluckBtn"); return { st: b.dataset.st, ad: b.getAttribute("aria-disabled") }; });
     await page.evaluate(() => { const b = document.getElementById("cluckBtn"); b.dataset.st = "off"; b.setAttribute("aria-disabled", "true"); });

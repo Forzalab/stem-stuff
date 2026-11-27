@@ -1,7 +1,7 @@
 /* qcard.css: QCARD-SWISS v3 (qcard.js), html.ui-v7 ONLY. Flag off = nothing here applies.
    Owner pick V3 (Nov 15): ONE card background, top to bottom: ghost numeral (ECHO trail, 6 copies, step -12px x, fades out before the chip column), figure, topic headline,
    setup + question text (16px, 1.45 leading, flush-left, no fold and no inner scroll: the page scrolls it, the bold ask pins at the top), small meta row. Text, headline, meta share the left edge --qpad.
-   Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, no lift. Echo animates on prev/next (transform + opacity only).
+   Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, raised with --shadow-2 when ready (Tony Nov 27; ICK5 AC4 "no shadow" superseded). Echo animates on prev/next (transform + opacity only).
    §frost (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE card (inset 0, the card's radius): a static displacement lens + frost, nothing animates.
    TITLE-EXAMQ-DIM: the headline is lower case except a bank "Q1 · " exam prefix (qcard.js .qexam), which keeps its capital Q in the dim ink with no dot drawn. */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }

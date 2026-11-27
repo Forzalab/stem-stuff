@@ -93,7 +93,7 @@ try {
       assert.ok(Math.abs(g.br.w - 44) <= .5 && Math.abs(g.br.h - 44) <= .5, "AC2: box is not 44x44: " + JSON.stringify(g.br));
       assert.ok(Math.abs(g.br.r - g.cb.r) <= 1.5, "AC3: right edge " + g.br.r + " vs content right " + g.cb.r);
       assert.ok(Math.abs(g.br.t - g.cb.t) <= 3, "AC3: top " + g.br.t + " vs content top " + g.cb.t);
-      assert.equal(g.bg, "rgb(255, 166, 62)", "ICK5 AC4: tangerine = --help"); assert.equal(g.shadow, "none", "ICK5 AC4: no shadow");
+      assert.equal(g.bg, "rgb(255, 166, 62)", "ICK5 AC4: tangerine = --help"); /* Tony Nov 27: ICK5 AC4 superseded, ready squircle raised with --shadow-2 (locked / pressed = none; tests/cluck-raise.smoke.mjs) */ assert.ok(g.shadow !== "none" && g.shadow.includes("16px"), "ICK5 AC4 (Nov 27): ready = raised with --shadow-2: " + g.shadow);
       assert.equal(g.ladder, 0, "no other entry on the page: " + g.ladder); assert.ok(g.sw <= g.vw, "no sideways scroll");
       if (SHOTS) await page.screenshot({ path: join(SHOTS, `cluckbtn-${kind}-${w}.png`) });
       assert.deepEqual(page.errs, [], "page errors");
