@@ -122,36 +122,11 @@ try {
       assert.deepEqual(errs, []);
       if (SHOTS) await page.locator("#cluck .wtext").screenshot({ path: join(SHOTS, `views-oui-tug-${tag}.png`) });
     });
-    await step(`${tag}: a Flip view: cards turn from "you did" to "the fix" by themselves, a tap turns one back, reduced motion shows both faces`, async () => {
-      await settled(page, "#cluck .vw-flip");   // let the arrival flip (finite, delayed) end before reading transforms
-      const tf = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].map(e => getComputedStyle(e).transform));
-      assert.equal(await page.locator("#cluck .wtext .vw-flip .fl-card").count(), 2);
-      await page.waitForFunction(() => [...document.querySelectorAll("#cluck .vw-flip .fl-in")].every(e => /^matrix3d\(-1/.test(getComputedStyle(e).transform)), null, { timeout: 6000 });   // the beat (3 x --d-dim) + the turn
-      assert.ok((await tf()).every(t => /^matrix3d\(-1/.test(t)), "after the beat each card shows the fix (turned 180): " + (await tf()));
-      // Firefox Android showed both faces at once: exactly one .fl-face may be visible, at rest and after each tap
-      const up = () => page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-card")].map(c => [...c.querySelectorAll(".fl-face")].filter(f => { const cs = getComputedStyle(f); return cs.visibility !== "hidden" && +cs.opacity > 0; }).map(f => f.classList.contains("fl-a") ? "a" : "b").join("")));
-      assert.deepEqual(await up(), ["b", "b"], "at rest exactly the fix face is visible");
-      const c0 = page.locator("#cluck .wtext .vw-flip .fl-card").first();
-      await c0.click(); await page.waitForFunction(() => getComputedStyle(document.querySelector("#cluck .vw-flip .fl-in")).transform === "none", null, { timeout: 5000 });
-      await settled(page, "#cluck .vw-flip");   // that waitForFunction watches card 1 only; card 2's own fl-turn must end too
-      assert.equal((await tf())[0], "none", "a tap turns card 1 back to what you did");
-      assert.deepEqual(await up(), ["a", "b"], "after a tap: card 1 shows only what you did");
-      assert.ok(/^matrix3d\(-1/.test((await tf())[1]), "card 2 stays on the fix");
-      await c0.click(); await page.waitForFunction(() => /^matrix3d\(-1/.test(getComputedStyle(document.querySelector("#cluck .vw-flip .fl-in")).transform), null, { timeout: 5000 });
-      assert.ok(/^matrix3d\(-1/.test((await tf())[0]), "a second tap: the fix again");
-      const g = await page.evaluate(() => { const w = document.querySelector("#cluck .wtext"), c = [...w.querySelectorAll(".vw-flip .fl-card")].map(x => x.getBoundingClientRect().width), cw = w.querySelector(".vw-flip").getBoundingClientRect().width;
-        return { c, cw, role: w.querySelector(".fl-card").getAttribute("role") }; });
-      if (w < 500) assert.ok(g.c.every(x => Math.abs(x - g.cw) <= 2), `phone: cards stack at full width ${JSON.stringify(g)}`);
-      const col = await page.evaluate(() => { const ink = () => document.querySelector(".vw-flip") && (() => { const f = document.querySelector(".vw-flip"), pr = document.createElement("span"); pr.style.color = "var(--muted)"; f.parentElement.insertBefore(pr, f);
-        const out = { muted: getComputedStyle(pr).color, st: getComputedStyle(f.querySelector(".fl-st")).color, gl: getComputedStyle(f.querySelector(".fl-gl")).color, tx: getComputedStyle(f.querySelector(".fl-tx")).color, ink: getComputedStyle(f.parentElement).color }; pr.remove(); return out; })(); return ink(); });
-      assert.equal(col.st, col.muted, "the step label is the sheet's muted ink, not the card's hue: " + JSON.stringify(col));
-      assert.notEqual(col.gl, col.muted, "the glyph keeps the hue");
-      assert.notEqual(col.tx, col.gl, "the card text is not the hue");
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      const both = await page.evaluate(() => [...document.querySelectorAll("#cluck .vw-flip .fl-card")[0].querySelectorAll(".fl-face")].map(f => { const r = f.getBoundingClientRect(); return [getComputedStyle(f).backfaceVisibility, r.height > 0 && r.width > 0]; }));
-      assert.deepEqual(both, [["visible", true], ["visible", true]], "reduced motion: both faces drawn");
+    await step(`${tag}: a Flip statement from the model is dropped by the gate (Flip is gone): no card, no error, no raw program; the Tug before it still draws`, async () => {
+      assert.equal(await page.locator("#cluck .vw-flip, #cluck .fl-card").count(), 0, "the Flip cards are gone");
+      assert.equal(await page.locator("#cluck .wtext .vw-tb").count(), 1, "only the Tug's table (a cached Flip draws as a Table on the client: views.js FLIP_HEAD; shown by hand in the PR)");
+      assert.doesNotMatch(await wtext(page), /```|Flip\(|root =/, "no raw program");
       assert.deepEqual(errs, []);
-      if (SHOTS) await page.locator("#cluck .wtext").screenshot({ path: join(SHOTS, `views-oui-flip-${tag}.png`) });
     });
     await ctx.close();
   }

@@ -16,7 +16,7 @@ from cluck_reply_checks import oui
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # the repo root (this file lives in server/<package>/)
 # What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
 # through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
-CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Flip", "Doodle"}   # Doodle: a Steps anchor (stepper, Nov 8)
+CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step", "Tug", "Doodle"}   # Doodle: a Steps anchor (stepper, Nov 8)
 GEO_CAPS = {"pts": 16, "marks": 16, "labels": 16}   # 16 (stepper iteration 2): a cube = 7 corners + its force arrows
 GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1, "rect": 2, "poly": 3}   # poly: at least 3; rect / poly: the leading point names, then an optional label, then fill   # name -> point / number args before the text
 GEO_TEXT = {"dim", "angle", "arrow", "label", "rect", "poly"}
@@ -186,16 +186,14 @@ TUG_ROW = re.compile(r"^\s*[^|]{1,10}\|[^|]{0,24}\|\s*(?:up|down|same)(?:\s+[1-9
 
 
 def tug_flip(el):
-    """Tug / Flip rows (TUG-VIEW.md): a Tug row off the grammar -> tug:row, a Tug net -> stage:Tug.net (net is the end knot's answer: post only, and a Cluck
-    reply is never post), a Flip row without exactly 3 cells -> flip:row. A bad statement is dropped; the caps (6 / 4 rows) are _caps'."""
+    """Tug rows (TUG-VIEW.md): a Tug row off the grammar -> tug:row, a Tug net -> stage:Tug.net (net is the end knot's answer: post only, and a Cluck
+    reply is never post). A bad statement is dropped; the caps (6 rows) are _caps'. Flip is gone (Nov 26): not in CHAT, so the gate drops it."""
     p = el.get("props") or {}
     if el.get("typeName") == "Tug":
         if p.get("net"):
             return "stage:Tug.net"
         if not all(isinstance(r, str) and TUG_ROW.match(r) for r in p.get("rows") or []):
             return "tug:row"
-    if el.get("typeName") == "Flip" and not all(isinstance(r, list) and len(r) == 3 and all(isinstance(c, str) for c in r) for r in p.get("rows") or []):
-        return "flip:row"
     return None
 
 

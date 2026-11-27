@@ -100,15 +100,15 @@ class Shapes(unittest.TestCase):
 
 
 class TugFlip(unittest.TestCase):
-    """TUG-VIEW.md: Tug rows are `label | move | up|down|same [size] [| why]`, <= 6; net is post-only; Flip rows are exactly 3 cells, <= 4"""
+    """TUG-VIEW.md: Tug rows are `label | move | up|down|same [size] [| why]`, <= 6; net is post-only. Flip is gone (Nov 26): the gate no longer accepts it"""
     def one(self, stmt):
         return views_gate.gate("root = View([t])\n" + stmt, CTX)
 
-    def test_good_tug_and_flip_pass(self):
+    def test_good_tug_passes_and_a_flip_is_dropped(self):
         t = 't = Tug(["V | down to 1/3 | up 3 | Smaller box.", "T | down to 1/2 | down 2"], "P", "two pulls")'
         self.assertEqual(self.one(t), ("root = View([t])\n" + t, ["ok"]))
-        f = 't = Flip([["arm of W", "L", "half of L"], ["KE", "x", "y"]])'
-        self.assertEqual(self.one(f), ("root = View([t])\n" + f, ["ok"]))
+        prog, log = self.one('t = Flip([["arm of W", "L", "half of L"], ["KE", "x", "y"]])')
+        self.assertEqual(log[0], "t:chat:Flip", "Flip is not a chat component any more: the statement is dropped")
 
     BATTERY = ["Q₁ | warm the ice | up 1", "Q₂ | melt the ice | up 2", "Q₃ | warm the water | up 3", "Q₄ | boil it | up 9", "Q₅ | warm the steam | up 1"]
 
@@ -135,7 +135,6 @@ class TugFlip(unittest.TestCase):
     def test_bad_rows_and_net(self):
         self.assertEqual(self.one('t = Tug(["V | m | sideways"])')[1][0], "t:tug:row")
         self.assertEqual(self.one('t = Tug(["a very long label | m | up"])')[1][0], "t:tug:row")
-        self.assertEqual(self.one('t = Flip([["a", "b"]])')[1][0], "t:flip:row")
 
     def test_a_bad_row_is_trimmed_the_tug_stays_with_two_good_rows(self):
         # bench Nov 4 (SGU, T6Y): one row off the grammar used to drop the whole Tug
@@ -174,7 +173,6 @@ class TugFlip(unittest.TestCase):
 
     def test_a_key_literal_in_a_row_is_a_leak(self):
         self.assertIn("leak:", self.one('t = Tug(["c | 5 m | up"])')[1][0])
-        self.assertIn("leak:", self.one('t = Flip([["c", "x", "5 m"]])')[1][0])
 
 
 class HeatNumbers(unittest.TestCase):

@@ -8,7 +8,7 @@
 //   §statements      statement splitting: splitStatements, rootIds, capError
 //   §session         class Session + mountView, render, stream (paint per completed statement, error boundary, Reveal patch merge)
 //   §figure-marks    graph and geometry drawing: graphModel, drawGraph, geoModel, drawGeometry, sample, chips, table
-//   §l0              View, Head, Text, Legend, Table (and the Tug -> Table fallback), Flip, Graph, Geometry
+//   §l0              View, Head, Text, Legend, Table (and the Tug / Flip -> Table fallbacks), Graph, Geometry
 //   §l1              Callout, Answer and friends
 //   §steps           Steps helpers (litMarks, sayMap, texHue, texNode) + register("Steps")
 //   §hints           register("Hints")
@@ -37,7 +37,6 @@
 import { qmark } from "../../pure_logic_modules/texfix.mjs";
 import { createParser, mergeStatements } from "../../vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
-import { flipModel, drawFlip } from "../../pure_logic_modules/flip.mjs";
 import { place, resolveAngles, checkAngleLabels, autoHues, AUTO_HUES } from "../figures/figcheck.js";
 
 const SCHEMA = toSchema(LIB);
@@ -581,8 +580,9 @@ register("Tug", (p, c) => table(c.doc, TUG_HEAD, (p.rows || []).map(r => {
   const cells = String(r ?? "").split("|").map(x => x.trim());
   return [cells[0] || "", cells[1] || "", cells[2] || "", cells.slice(3).join(" | ")];
 })));
-/* Flip (flip.mjs): plain text in, every string escaped */
-register("Flip", (p, c) => drawFlip(c.doc, flipModel((p.rows || []).filter(r => r.length === 3), p.alt || "")));
+/* Flip is gone (Nov 26, Tony: "remove the cross tick flipcard in cluck"): an old cached reply that still holds a Flip draws as a plain Table (step | you did | the fix), never a failed statement */
+const FLIP_HEAD = ["step", "you did", "the fix"];
+register("Flip", (p, c) => table(c.doc, FLIP_HEAD, (p.rows || []).filter(r => Array.isArray(r) && r.length === 3)));
 register("Graph", (p, c) => c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure" }, drawGraph(c.doc, graphModel(p))));
 /* a finding (I-ANG-*) nothing fixed: the figure never draws (W340 §2; the U7 ladder): the statement fails, the chat shows its static image
    or alt text. Clean: data-fig-findings="" (codes only, shotqa / geomarks read it) */

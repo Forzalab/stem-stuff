@@ -388,7 +388,9 @@
      Both rotations share 32 perimeter-spaced keyframes (even px/s on every side) and one easing cubic-bezier(.3, .3k, .2, 1) with
      k = (aurora px/s * 440ms) / (px left to close): the head leaves at the aurora's pace. 440ms, no delay. The ring STAYS as the
      outline for right and wrong; the real border is never touched. The tick/cross waits for the close (the finished promise), then
-     fades .25s. Reduced motion: the same layers at their final rotations, no motion. The ring is the property of the verdict: it goes
+     draws on in .24s (strip.css vk-draw: pathLength 1). A live verdict whose grade beat the 150 ms aurora still sweeps, from the arc
+     start (a0 = 0), so a fast grade animates like a slow one; a RESTORED verdict (no check ran now) is the static closed ring.
+     Reduced motion: the same layers at their final rotations, no motion. The ring is the property of the verdict: it goes
      when the verdict does (typing after a miss / a rebuilt question). */
   function ib4Angle(f) {
     var sp = f.querySelector(":scope > .ib3-ring .ib3-spin"); if (!sp) return null;
@@ -400,6 +402,10 @@
     var c = f.classList;
     if (c.contains("ok")) return "ok";                                   // the verdict classes ARE the state; a stale .vk stays in the DOM after a retype
     return c.contains("bad") || c.contains("lock") || c.contains("shut") ? "bad" : "";
+  }
+  function ib4Live(f) {                                      // app.js setBusy marks the page (single) / the part's row (multi) only while a check is out: a restore has no mark
+    var H = D.documentElement;
+    return H.hasAttribute("data-check-live") || !!(f.parentElement && f.parentElement.hasAttribute("data-check-live"));
   }
   function ib4Drop(f, ring) {
     if (ring) ring.remove();
@@ -468,7 +474,7 @@
       if (!want || r.dataset.v !== want) ib4Drop(f, r);   // verdict changed under the same ring (ok vs bad/lock): rebuild below
     });
     fields.forEach(function (f) {
-      if (ib4Judge(f) && !f.querySelector(":scope > .ib4-ring")) ib4Sweep(f, 0, true);   // a restored verdict shows the closed ring
+      if (ib4Judge(f) && !f.querySelector(":scope > .ib4-ring")) ib4Sweep(f, 0, !ib4Live(f));   // live: sweep from the arc start even when the 150 ms aurora never ran; a restored verdict is the closed ring, still
     });
   }
   function ib3Watch() {
