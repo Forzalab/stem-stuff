@@ -104,9 +104,9 @@ html.ui-v7.start .code-box, html.ui-v7.start .code-box:hover, html.ui-v7.start .
 html.ui-v7.start .code-box:has(input:focus-visible):not([data-ptr]) { outline: none; }
 html.ui-v7.start .entry:has(#code:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
 @supports (corner-shape: superellipse(2)) { html.ui-v7.start .entry { corner-shape: superellipse(2); } }
-/* the proof text clears the key at the box's foot (8 inset + 44 key + 8 air = 60); the key itself is §key at the foot of this file */
-html.ui-v7.proof-split #q .ff.proof#ff > textarea { padding: 0 8px 60px 0; }
-html.ui-v7 #q .ff.proof#ff > textarea { padding-bottom: 60px; }
+/* the proof text clears the key at the box's foot (8 inset + 60 key + 8 air = 76); the key itself is §key at the foot of this file */
+html.ui-v7.proof-split #q .ff.proof#ff > textarea { padding: 0 8px 76px 0; }
+html.ui-v7 #q .ff.proof#ff > textarea { padding-bottom: 76px; }
 
 /* == §proof-v7 == ICK3 (Tony Nov 18 phone review): the proof question while TYPING (html.mt + .proof-split; app.js proofTyping) */
 /* C5: NO EDGE. The pad split's hairline (app.css "html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line) }") drew a 1px --line ring inside the
@@ -119,12 +119,12 @@ html.ui-v7.mt.proof-split #freezeIn { box-shadow: none; }
    (focus leaves the textarea for the button) never re-pads the box mid-tap (app.css:1843). */
 html.ui-v7.mt.proof-split #q .ff.proof { padding-top: 0; padding-bottom: 0; }   /* ICK4-FADE (Tony Nov 18 "closer to bottom"): the textarea runs to the box edge, so its fade sits on the edge (its own 72px foot still clears the keys) */
 /* C7: while typing, the ONE Ask Cluck button (cluckbtn.js moves #cluckBtn into the proof box; same element, same states, same window.stemCluckAsk
-   action) sits just left of the Check key: the in-box key size (§key --key-in 44, --key-r-in), bottom 8 / right 60 (= the key's 8px inset + 44 + 8px gap);
-   tangerine squircle from the §ick5-tr tokens (qcard.css), no lift. */
+   action) sits just left of the Check key: the in-box duck keeps the 44px card size (--key-duck; the key is §key --key-in 60, --key-r-in),
+   bottom 8 / right 76 (= the key's 8px inset + 60 + 8px gap); tangerine squircle from the §ick5-tr tokens (qcard.css), no lift. */
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox {
   position: absolute !important; top: auto !important; left: auto !important; right: calc(var(--key-in) + 2 * var(--key-inset)) !important; bottom: var(--key-inset) !important;
   float: none; display: grid; place-items: center;
-  width: var(--key-in); height: var(--key-in); min-width: var(--key-in); min-height: var(--key-in); margin: 0 !important; padding: 0 !important;
+  width: var(--key-duck); height: var(--key-duck); min-width: var(--key-duck); min-height: var(--key-duck); margin: 0 !important; padding: 0 !important;
   border: 0; border-radius: var(--key-r-in); background: var(--ick7-fill, var(--help, #ffa63e)); color: var(--ick7-ink, var(--page, #02040d)) !important;
   box-shadow: none !important; overflow: hidden; opacity: 1 !important; z-index: 3;
 }
@@ -150,16 +150,16 @@ html.ui-v7 #q .ff.proof > textarea.pf-b { --pf-b: 10px; }   /* Tony Nov 18: thin
 /* == §ick4-wrap == ICK4-WRAP (Tony Nov 18, 3a "word-wrap effect for the two button ... shape-outside"): the proof text flows AROUND the keys.
    app.js proofField(): under ui-v7 the field is .pwrap > #ans.ans[contenteditable] (a <textarea> cannot wrap around anything).
    - .ff.proof gives its padding to .pwrap (--pw-x / --pw-b), so the float's size is plain arithmetic from the keys' 8px inset:
-       width  = 8 inset + 44 key + 12 air (--key-gap) - --pw-x  (+ 52 with the in-box duck: 44 + 8 gap)
-       height = 8 inset + 44 key + 6 air - --pw-b
+       width  = 8 inset + 60 key + 12 air (--key-gap) - --pw-x  (+ 52 with the in-box duck: 44 + 8 gap)
+       height = 8 inset + 60 key + 6 air - --pw-b
    - .pwrap = the scroller in keyboard mode (PROOF-LOCK) + a WRAPPING flex line: the line is as tall as max(content, box), .ans stretches to it,
      so the float's height: 100% resolves and its shape sits at the CONTENT's foot (Afif's float-bottom trick); app.js fit() then sets the
      exact px (--wrap-f / -w / -n): 100% alone runs one line long when the notch itself makes a new line.
    - known limit: scrolled up in keyboard mode, a middle line can pass under the keys (they sit on the box, the notch sits at the content's end). */
-html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 64px; }
+html.ui-v7 #q .ff.proof:has(> .pwrap) { padding: 0 !important; --pw-x: 12px; --pw-b: 12px; --pw-t: 12px; --pw-keys: 80px; }
 html.ui-v7.proof-split #q .ff.proof:has(> .pwrap) { --pw-x: 16px; }                       /* PROOF-AXIS: the card's text axis */
 html.ui-v7.mt.proof-split #q .ff.proof:has(> .pwrap) { --pw-t: 0px; --pw-b: 8px; }      /* C8 + ICK4-FADE: text to the box edge while typing */
-html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 116px; }                           /* duck + Check = one block */
+html.ui-v7 #q .ff.proof:has(> .cb-inbox) { --pw-keys: 132px; }                           /* duck (44) + Check (60) = one block */
 html.ui-v7 #q .ff.proof > .pwrap {
   flex: 1 1 auto; min-width: 0; min-height: 10rem; display: flex; flex-wrap: wrap; align-content: stretch; box-sizing: border-box;
   padding: var(--pw-t) var(--pw-x) var(--pw-b); cursor: text;
@@ -178,7 +178,7 @@ html.ui-v7 #q .ff.proof > .pwrap > .ans {
 html.ui-v7 #q .ff.proof > .pwrap > .ans::before {
   content: ""; float: right; pointer-events: none;   /* --wrap-*: app.js ceField fit() measures the keys; the calc()s = the same numbers before it runs */
   width: var(--wrap-w, calc(var(--pw-keys) - var(--pw-x))); height: var(--wrap-f, 100%);
-  shape-outside: inset(calc(100% - var(--wrap-n, calc(58px - var(--pw-b)))) 0 0 0);
+  shape-outside: inset(calc(100% - var(--wrap-n, calc(74px - var(--pw-b)))) 0 0 0);
 }
 html.ui-v7 #q .ff.proof > .pwrap > .ans.empty::after { content: attr(data-ph); color: var(--line); pointer-events: none; }   /* the placeholder (PH-NAVY) */
 html.ui-v7 #q .ff.proof > .pwrap > .ans.empty:focus::after, html.ui-v7:is(.kb, .kbup, .mt) #q .ff.proof > .pwrap > .ans.empty::after { color: transparent; }
@@ -194,10 +194,10 @@ html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::
 /* == §key == SHIPPED KEY (Tony Nov 26, try-SHIPPED.html is the spec): ONE key for every answer's Check and its Next.
    Five families, one rule set: typed #ansGo, each multi part's .send, MC #mcGo (in the .chk row under the choices, never in a tile), pick-all #mcGo,
    proof #ansGo, and the .nx that replaces each of them.
-   LOOK   every family = the typed key: 60x60 OUT / 44x44 IN, radius calc(18px * --r-k) + corner-shape superellipse(1.52), flat --chip face, --ink glyph.
+   LOOK   every family = the typed key: 60x60 OUT and 60x60 IN, radius calc(18px * --r-k) + corner-shape superellipse(1.52), flat --chip face, --ink glyph.
    GLYPH  ONE <svg viewBox="0 0 24 24"><path> per key; the CSS owns `d` (--key-g-*) so arrow -> spin -> cross / tick interpolates on one command list.
           The d attribute in app.js is the no-CSS-d fallback (Safari): @supports not (d: path("M0 0")) cross-fades the glyph instead.
-   SIZE   OUT 60 = beside or under what it submits (typed, multi, MC, pick-all); IN 44 = inside its box (proof, inset 8).
+   SIZE   OUT 60 = beside or under what it submits (typed, multi, MC, pick-all); IN 60 = inside its box (proof, inset 8).
    PLACE  typed / multi: right of the field, 12px gap, centred. MC / pick-all: the .chk row under the choices, right edge. proof: in the box, bottom-right 8.
    STAGES empty = .35 + inert · idle = full · hover = face 82% + white · focus-visible = --ring --focus, offset 2 · active = scale(.96) 120ms ·
           BUSY / grading = arrow morphs to spin in 120ms, then the svg rotates 700ms linear infinite, face stays full (no ::after spinner, no .55 dim) ·
@@ -205,7 +205,7 @@ html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::
           (bad = --wrong-fill / --wrong, ok = --correct-fill / --correct) · HOLD 600ms · EXIT 200ms back to the arrow (wrong -> .35 until the
           answer changes; right -> normal --chip / --ink Next). No dash draw on the key (the chip / box marks keep #766's .vmark-live draw). */
 html.ui-v7 {
-  --key-out: 60px; --key-in: 44px; --key-inset: 8px; --key-gap: 12px;
+  --key-out: 60px; --key-in: 60px; --key-duck: 44px; --key-inset: 8px; --key-gap: 12px;
   --key-r-out: calc(18px * var(--r-k)); --key-r-in: calc(var(--r-tile) - var(--key-inset));
   --key-face: var(--chip); --key-ink: var(--ink);
   --key-off: .35;

@@ -216,10 +216,10 @@ try {
     await ctx.close();
   });
 
-  await step("proof: the key stays in the box (44px), spins, ticks, then returns to the arrow", async () => {
+  await step("proof: the 60px key stays in the box, spins, ticks, then returns to the arrow", async () => {
     const { ctx, page } = await open("PROBE_PF1", true, 700);
     const box = await page.evaluate(() => { const k = document.querySelector("#ff.proof #ansGo"), p = document.querySelector("#ff.proof").getBoundingClientRect(); return { w: k.getBoundingClientRect().width, inside: k.getBoundingClientRect().left >= p.left && k.getBoundingClientRect().right <= p.right }; });
-    assert.deepEqual(box, { w: 44, inside: true }, "proof key: " + JSON.stringify(box));
+    assert.deepEqual(box, { w: 60, inside: true }, "proof key: " + JSON.stringify(box));
     await page.fill("#q #ans", "A mental frame.");
     await page.click("#ansGo");
     await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 4000 });

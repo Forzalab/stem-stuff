@@ -61,8 +61,9 @@ async function dropAnswer(p) {
   await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 }).catch(() => {});
   const n = await p.evaluate(() => window.__drill.state.tries.length);
   await p.click('#q .opt[data-id="a"]');
-  await p.waitForSelector('#q .ch[data-id="a"] .send:not([hidden])', { timeout: 6000 });
-  await p.click('#q .ch[data-id="a"] .send');
+  const v7 = await p.evaluate(() => document.documentElement.classList.contains("ui-v7"));
+  if (v7) { await p.waitForSelector("#q .chk #mcGo", { timeout: 6000 }); await p.click("#q .chk #mcGo"); }
+  else { await p.waitForSelector('#q .ch[data-id="a"] .send:not([hidden])', { timeout: 6000 }); await p.click('#q .ch[data-id="a"] .send'); }
   await p.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 6000 });
 }
 const v7Toast = p => p.waitForFunction(() => {
