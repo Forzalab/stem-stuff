@@ -62,7 +62,8 @@ try {
     assert.equal(await page.$("#q .cc-welcome"), null, "no card");
     const t = await page.evaluate(() => { const e = document.querySelector(".stoast-c-calc"), b = e.querySelector(".stoast-a"), cs = getComputedStyle(e);
       return { text: e.querySelector(".stoast-t").textContent, border: cs.borderTopWidth, radius: cs.borderTopLeftRadius, h: b.getBoundingClientRect().height, x: e.querySelector(".stoast-x").getBoundingClientRect().width, role: e.querySelector(".stoast-b").getAttribute("role"), bw: getComputedStyle(b).borderTopWidth, label: b.textContent }; });
-    assert.equal(t.text, "Calculator moves: solve in one go, store a number."); assert.equal(t.border, "0px"); assert.equal(t.radius, "16px");
+    assert.equal(t.text, "Calc moves: solve once, store a number.");   // shorter copy so the 16px toast fits 360x640 (Tony Nov 25)
+    assert.equal(t.border, "0px"); assert.equal(t.radius, "16px");
     assert.ok(t.h >= 44 && t.x >= 44 && t.role === null && t.bw === "0px" && t.label === "Show keys", JSON.stringify(t));
     await page.waitForFunction(() => document.querySelector(".stoast-c-calc")?.dataset.done === "1", null, { timeout: 5000 });   // the toast has landed (its count/fit ran): a stable shot and a live button
     await page.screenshot({ path: join(SHOTS, "calc-toast-btn-390.png") });

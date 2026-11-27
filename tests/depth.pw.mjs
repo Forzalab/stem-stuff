@@ -67,13 +67,29 @@ const css = (p, sel) => p.evaluate(s => {
 /* WCAG relative luminance and contrast from computed rgb(a) strings */
 const lum = s => { const m = s.match(/[\d.]+/g).map(Number); const [r, g, b] = m.slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
 const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+/* computed colour -> [r,g,b,a] in 0-255 / 0-1; handles rgb(), rgba() and color(srgb r g b / a) */
+const col = s => {
+  if (/^color\(srgb/i.test(s)) { const m = s.match(/[\d.]+/g).map(Number); return [m[0] * 255, m[1] * 255, m[2] * 255, m[3] ?? 1]; }
+  if (/^oklab/i.test(s)) {                                      // color-mix(in oklab, ...) serializes as oklab(); convert to sRGB
+    const m = s.match(/-?\d*\.?\d+/g).map(Number), L = m[0], A = m[1], B = m[2], alpha = m[3] ?? 1;
+    const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+    const mm = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+    const ss = (L - 0.0894841775 * A - 1.2914855480 * B) ** 3;
+    const lin = [4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * ss, -1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * ss, -0.0041960863 * l - 0.7034186147 * mm + 1.7076147010 * ss];
+    return [...lin.map(v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(v, 0) ** (1 / 2.4) - 0.055)), alpha];
+  }
+  const m = s.match(/[\d.]+/g).map(Number); return [m[0], m[1], m[2], m[3] ?? 1];
+};
+const over = (fg, bg) => { const a = fg[3]; return [0, 1, 2].map(i => Math.round(fg[i] * a + bg[i] * (1 - a))); };
+const rgb = a => `rgb(${a[0]}, ${a[1]}, ${a[2]})`;
+const DISH = /rgba\(0, 0, 0, 0\.5\) 0px 2px 5px 0px inset/;   // SINK (Tony Nov 25): the resting typed box is an inset dark well (was the SOFT-LIFT §3 dish, 1px 1px 3px .3)
 /* the field's computed fill vs the nearest opaque ancestor surface (what the field sits on) */
 const gate = (p, sel) => p.evaluate(s => {
   const f = document.querySelector(s); if (!f) return null;
   const fill = getComputedStyle(f).backgroundColor; let a = f.parentElement;
   while (a) { const bg = getComputedStyle(a).backgroundColor; if (bg && !/rgba\(.*,\s*0\)$|transparent/.test(bg)) break; a = a.parentElement; }
   const chain = []; for (let e = f.parentElement, i = 0; e && i < 7; e = e.parentElement, i++) chain.push(e.tagName + "." + e.className + " " + getComputedStyle(e).backgroundColor);
-  return { fill, surround: a ? getComputedStyle(a).backgroundColor : "rgb(0, 0, 0)", via: a ? a.tagName + "." + a.className : "none", chain: chain.join(" | "), bw: getComputedStyle(f).borderTopWidth, shadow: getComputedStyle(f).boxShadow };
+  return { fill, surround: a ? getComputedStyle(a).backgroundColor : "rgb(0, 0, 0)", via: a ? a.tagName + "." + a.className : "none", chain: chain.join(" | "), bw: getComputedStyle(f).borderTopWidth, bc: getComputedStyle(f).borderTopColor, bs: getComputedStyle(f).borderTopStyle, ow: getComputedStyle(f).outlineWidth, os: getComputedStyle(f).outlineStyle, shadow: getComputedStyle(f).boxShadow };
 }, sel);
 
 /* computed order puts the inset last: "<colour> 0px 1px 0px 0px inset" */
@@ -102,11 +118,13 @@ await step("flag on: the option letter badge is a rounded square, not a circle (
   assert.ok(["8px", "0px"].includes(r), "badge is a rounded square or (MC-BENTO corner letter) no shape, never a circle: " + r);
   await c.close();
 });
-await step("flag on: the primary .btn-go is raised (lit top + small shadow)", async () => {
+await step("flag on: the single answer key is the flat chip key (SOFT-LIFT §5), no lit top", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP02");
   const b = await css(p, "#ansGo, #q .btn-go");
-  assert.ok(b, "the primary button is shown");
-  assert.match(b.shadow, LIT, "the lit top edge: " + b.shadow);
+  assert.ok(b, "the single answer key is shown");
+  assert.doesNotMatch(b.shadow, LIT, "SOFT-LIFT §5: the key is a flat chip, no lit top: " + b.shadow);
+  assert.equal(b.bg, "rgb(40, 51, 82)", "the key face is --chip navy-600 (SOFT-LIFT §5)");
+  assert.ok(b.bw === "0px" || b.bs === "none", "the key has no edge: " + b.bw + " " + b.bs);
   await c.close();
 });
 await step("flag on: the question card .p floats (ICK4-FLOAT: drop shadow, no lit top)", async () => {
@@ -116,18 +134,16 @@ await step("flag on: the question card .p floats (ICK4-FLOAT: drop shadow, no li
   assert.match(card.shadow, DROP, "ICK4-FLOAT: the card floats: " + card.shadow); assert.doesNotMatch(card.shadow, LIT, "no lit top: " + card.shadow);
   await c.close();
 });
-await step("flag on: the short-answer .ff is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {
+await step("flag on: the short-answer .ff is the inset dark well with NO resting edge (Tony Nov 26: no thin edge)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP02");
   const g = await gate(p, "#q .ff");
   assert.ok(g, "a short-answer field is shown");
-  assert.match(g.shadow, WELL, "the recessed well: " + g.shadow);
-  const r = ratio(g.fill, g.surround);
-  console.log(`     .ff field ${g.fill} vs ${g.surround} (${g.via}): ${r.toFixed(2)}:1, border ${g.bw}`);
-  // ICK PR-A (Tony Nov 17, ICK-R1 5a): the lit bottom lip (FIELD-LIP-3:1) is gone; the field's edge is the one --edge-hair 1px border (bw 1px passes the gate below)
-  const lip = (g.shadow.match(/(rgba?\([^)]*\)) 0px -1px 0px 0px inset/) || [])[1];
-  const lr = lip ? ratio(lip, g.surround) : 0;
-  console.log(`     .ff lip ${lip} vs ${g.surround}: ${lr.toFixed(2)}:1`);
-  assert.ok(r >= 3 || g.bw === "1px" || lr >= 3, "an edge reaches 3:1: the fill, a 1px border, or the bottom lip (" + lr.toFixed(2) + ":1)");
+  assert.match(g.shadow, DISH, "SINK: the inset dark well is still there: " + g.shadow);
+  console.log(`     .ff rest border ${g.bw} ${g.bs} | outline ${g.ow} ${g.os} | fill ${g.fill} vs ${g.surround} (${g.via}): ${ratio(g.fill, g.surround).toFixed(2)}:1`);
+  /* Tony Nov 26 (newer, wins over Nov 25): the resting typed box has NO thin edge; only the dark well + inner shadow carry it.
+     Focus / thinking / verdict rings stay (IB-2..IB-4). */
+  assert.ok(parseFloat(g.bw) === 0 || g.bs === "none", "no resting border (Tony Nov 26: no thin edge): " + g.bw + " " + g.bs);
+  assert.ok(parseFloat(g.ow) === 0 || g.os === "none", "no resting outline ring (Tony Nov 26: no thin edge): " + g.ow + " " + g.os);
   await c.close();
 });
 await step("flag on: the proof box .xb is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {

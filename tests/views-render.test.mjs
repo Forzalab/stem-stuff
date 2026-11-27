@@ -271,9 +271,9 @@ test("Geometry: every mark kind is an SVG element in one 1:1 figure", () => {
     assert.ok(x > x0 && x < x0 + w && y > y0 && y < y0 + hh, "the drawing is inside the viewBox");
 });
 
-test("Geometry: over a cap (17 marks, 7 labels) or a mark on an unknown point drops the statement", () => {
+test("Geometry: over a cap (17 marks, 17 labels) or a mark on an unknown point drops the statement", () => {
   const many = Array.from({ length: 17 }, () => '"seg(A,B)"').join(", ");
-  const labs = Array.from({ length: 7 }, (_, i) => `"label(A,L${i})"`).join(", ");
+  const labs = Array.from({ length: 17 }, (_, i) => `"label(A,L${i})"`).join(", ");
   for (const [src, code] of [[`root = View([g])\ng = Geometry("A 0,0; B 1,0", [${labs}])`, "too-long"],
     [`root = View([g])\ng = Geometry("A 0,0; B 1,0", [${many}])`, "too-long"],
     [`root = View([g])\ng = Geometry("A 0,0; B 1,0", ["seg(A,Z)"])`, "bad-value"]]) {

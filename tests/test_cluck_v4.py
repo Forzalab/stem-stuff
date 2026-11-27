@@ -583,12 +583,20 @@ class Handlers(unittest.TestCase):
         self.bodies.append(json.loads(req.data))
         return Resp(sse_claude([self.reply]))
 
+    def tried(self, *key, wrong=("a",), done=False):
+        """a recorded try on H_1 (what /check writes; key = (sid, code[, part])). Since F4 (Tony Nov 27: fail-closed) Cluck grades a pick only
+        when the server has this try; with none the ask answers as pre-try."""
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(key or ("d" * 32, "H_1")).update(wrong=list(wrong), done=done)
+
     def go(self, fn, **body):
         status, _, chunks = fn("sid=" + "d" * 32, json.dumps({"code": "H_1", "answer": "a", **body}).encode())
         self.assertEqual(status, 200)
         return b"".join(chunks).decode()
 
     def test_wish_then_chat_turns(self):
+        self.tried()                                                                        # F4: the pick "a" is a recorded wrong try
         self.assertEqual(self.go(serve.explain), "Quack! Divide by time.\n")           # the notes never reach the browser
         w = self.bodies[-1]["messages"][0]["content"][1]["text"]
         self.assertIn("<XYZ>\nconcept: power", w)
@@ -624,10 +632,51 @@ class Handlers(unittest.TestCase):
 
     def test_real_wrong_try_keeps_not_quite(self):
         serve._chats.clear()
+        self.tried()
         self.reply = "Not quite. You multiplied by time.\nDivide instead.\n"
         out = self.go(serve.chat, answer="a", history=[{"role": "assistant", "content": "Hi"}, {"role": "user", "content": "why?"}])
         self.assertIn("RESULT: wrong", json.dumps(self.bodies[-1]["messages"]))
         self.assertTrue(out.startswith("Not quite."))
+
+    PRE_WALK = ("The time between them is the period.\nThat means one full cycle.\nPick the formula tool:\n$$P = W / t$$\nPut in the numbers:\n"
+                "$$P = 52.0 / 4.0$$\nSo the answer is **13.0 W**, because 52.0 over 4.0 is 13.0.\n")
+    PRE_Q = [{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "How do I get power?"}]
+
+    def pre_try_nudge(self, fn=None, **body):
+        """Nov 26 prod (P4X_4EA, phone): a question asked BEFORE the first try (answer "") got the whole worked solution and the final answer. A
+        pre-try reply is a nudge: at most 3 lines, no display math, never the answer value; the model is told REVEAL no and is never told RESULT: correct"""
+        serve._chats.clear()                                                        # the per-item follow-up cap is shared by the cases
+        self.reply = self.PRE_WALK
+        out = self.go(fn or serve.chat, answer="", **({"history": self.PRE_Q} if fn is None else {}), **body)
+        self.assertNotIn("13.0", out)
+        self.assertNotIn("$$", out)
+        self.assertLessEqual(len([x for x in out.splitlines() if x.strip()]), 3, out)
+        self.assertIn("The time between them is the period.", out)                 # a nudge still comes out
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("RESULT: correct", ctx)
+        return ctx
+
+    def test_pre_try_reply_is_a_nudge(self):
+        self.assertIn("REVEAL: no", self.pre_try_nudge())
+
+    def test_pre_try_after_an_earlier_solve_is_still_a_nudge(self):     # the page is pre-try (a redo round; /chat sends no round), the base state says solved
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(("d" * 32, "H_1"))["done"] = True
+        ctx = self.pre_try_nudge()
+        self.assertIn("REVEAL: no", ctx)
+
+    def test_pre_try_third_turn_is_still_a_nudge(self):                # REVEAL yes from the 3rd Cluck turn never opens a pre-try reply
+        for _ in range(2):
+            serve.cluck_begin(dict(P1, code="H_1"), "d" * 32, "")
+        self.assertIn("REVEAL: no", self.pre_try_nudge())
+
+    def test_pre_try_wish_route_is_a_nudge(self):
+        self.pre_try_nudge(serve.explain)
+
+    def test_pre_try_old_chain_is_a_nudge(self):                       # v4 off (no letter prompt): the old chain had no leak guard at all
+        with mock.patch.object(serve, "PROMPT_V4", None):
+            self.pre_try_nudge()
 
     def test_solved_wish_then_chat(self):                              # C: a correct pick -> REVEAL yes + RESULT: correct, no nudge, replayed
         with serve._tries_lock:
@@ -649,6 +698,7 @@ class Handlers(unittest.TestCase):
         self.assertIn("REVEAL: yes\n\nUSER QUERY: i divided too", c2[-1]["content"][1]["text"])
 
     def test_locked_wish_tells_cluck_not_to_invite_a_retry(self):       # Tony Nov 3 (1280): out of tries, the reply said "Try again, I believe in you"
+        self.tried()
         self.go(serve.explain)                                                              # a wrong pick with tries left: the plain RESULT line
         a0 = self.bodies[-1]["messages"][0]["content"][0]["text"]
         self.assertTrue(a0.endswith("\n\nRESULT: wrong"), a0[-80:])
@@ -1182,9 +1232,20 @@ class PartHandlers(Handlers):
 
     test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None      # single-item cases live in Handlers
     test_locked_wish_tells_cluck_not_to_invite_a_retry = None                              # the single-item case lives in Handlers
+    test_pre_try_reply_is_a_nudge = test_pre_try_after_an_earlier_solve_is_still_a_nudge = test_pre_try_third_turn_is_still_a_nudge = None   # single-item cases
+    test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
 
     def test_right_part_pick_without_state(self):
+        # Oct 28 W110 pinned "no recorded try -> RESULT: correct". Tony Nov 27: F4 fail-closed: a right pick with no recorded try is the pre-try
+        # path (no RESULT, no reveal, no answer): the server only grades what /check recorded. The W110 case now needs the recorded solve.
+        self.reply = "Look at when the test first fails.\nTry it, then check.\n"
+        self.go(serve.explain, answer="6", part=2)
+        w0 = self.bodies[-1]["messages"][0]["content"]
+        self.assertNotIn("RESULT", w0[0]["text"])                           # F4: untried right pick = no verdict
+        self.assertIn("REVEAL: no", w0[1]["text"])
+        serve._cluck_turns.clear()
         self.reply = "Yes! **6** is right. The test fails once i is 6.\n"
+        self.tried("d" * 32, "H_1", 2, wrong=(), done=True)                 # /check recorded the solve of part d
         out = self.go(serve.explain, answer="6", part=2)
         self.assertEqual(out, self.reply)
         self.assertNotIn(serve.CLUCK_NUDGE, out)
@@ -1199,6 +1260,7 @@ class PartHandlers(Handlers):
 
     def test_wrong_part_pick(self):
         self.reply = "Not quite. The loop stops early.\n"
+        self.tried("d" * 32, "H_1", 1, wrong=("15",))
         self.go(serve.explain, answer="15", part=1)
         w = self.bodies[-1]["messages"][0]["content"]
         self.assertIn("PART (b)", w[0]["text"])
@@ -1206,6 +1268,95 @@ class PartHandlers(Handlers):
         self.assertIn("REVEAL: no", w[1]["text"])
 
     test_wish_then_chat_turns = test_solved_wish_then_chat = test_off_without_claude_key_or_deepseek_arm = None
+
+
+class FailClosed(Handlers):
+    """F4 (Tony Nov 27: fail-closed): /chat and /explain never grade or reveal a pick the server has no recorded try for"""
+    test_wish_then_chat_turns = test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None
+    test_pre_try_reply_is_a_nudge = test_pre_try_after_an_earlier_solve_is_still_a_nudge = None
+    test_pre_try_third_turn_is_still_a_nudge = test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
+    test_solved_wish_then_chat = test_locked_wish_tells_cluck_not_to_invite_a_retry = test_locked_turn_survives_a_reload = None
+    test_off_without_claude_key_or_deepseek_arm = None
+    WALK = "Quack! Power is work over time.\n$$P = 52.0 / 4.0 = 13.0$$\nSo the answer is **b**, 13.0 W.\n"
+    HIST = [{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "why?"}]
+
+    def test_untried_right_pick_on_chat_is_pre_try(self):
+        self.reply = self.WALK
+        outs = []
+        for pick in ("a", "b"):                                 # a wrong and a right pick, neither a recorded try
+            serve._chats.clear(); serve._cluck_turns.clear()
+            outs.append(self.go(serve.chat, answer=pick, history=self.HIST))
+            ctx = json.dumps(self.bodies[-1]["messages"])
+            self.assertNotIn("RESULT", ctx); self.assertIn("REVEAL: no", ctx); self.assertNotIn("13.0", outs[-1])
+        self.assertEqual(len(serve._tries), 0)                  # and chat records no try
+
+    def test_untried_right_pick_on_explain_is_pre_try(self):
+        self.reply = self.WALK
+        out = self.go(serve.explain, answer="b")
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("RESULT: correct", ctx); self.assertIn("REVEAL: no", ctx); self.assertNotIn("13.0", out)
+
+    def test_a_recorded_solve_still_reveals(self):
+        self.reply = self.WALK
+        self.tried(wrong=(), done=True)                         # /check recorded the right pick
+        out = self.go(serve.chat, answer="b", history=self.HIST)
+        self.assertIn("RESULT: correct", json.dumps(self.bodies[-1]["messages"]))
+        self.assertIn("13.0", out)
+
+
+class RedoRounds(Handlers):
+    """F1: a page in a redo round sends `round`; /explain and /chat read that round's tries, solved state, closed flag and turn count"""
+    test_wish_then_chat_turns = test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None
+    test_pre_try_reply_is_a_nudge = test_pre_try_after_an_earlier_solve_is_still_a_nudge = None
+    test_pre_try_third_turn_is_still_a_nudge = test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
+    test_solved_wish_then_chat = test_locked_wish_tells_cluck_not_to_invite_a_retry = test_locked_turn_survives_a_reload = None
+    test_off_without_claude_key_or_deepseek_arm = None
+    WALK = "Quack! Power is work over time.\n$$P = 52.0 / 4.0 = 13.0$$\nSo the answer is **b**, 13.0 W.\n"
+
+    def record(self, sid, **st):
+        with serve._tries_lock:
+            serve._load_tries(); serve._entry((sid, "H_1")).update(st)
+
+    def test_round_first_miss_keeps_its_try_when_the_base_is_locked(self):   # F1a
+        self.reply = self.WALK
+        self.record("d" * 32, wrong=["a", "c"])                 # base: both tries spent
+        self.record("d" * 32 + ":r1", wrong=["a"])              # round 1: one miss, one try left
+        out = self.go(serve.explain, answer="a", round=1)
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("REVEAL: yes", ctx); self.assertNotIn("13.0", out)   # one try left: the answer never goes out
+        st, _, raw = serve.explain("sid=" + "d" * 32, json.dumps({"code": "H_1", "answer": "a", "round": "1"}).encode()); self.assertEqual((st, json.loads(b"".join(raw))), (400, {"verdict": "invalid", "triesLeft": 2}))   # /check's error
+
+    def test_review_round_grades_its_own_wrong_pick(self):      # F1b
+        self.reply = self.WALK; serve._chats.clear()            # this test owns the shared follow-up cap
+        self.record("d" * 32, done=True)                        # base: solved earlier
+        self.record("d" * 32 + ":r2", wrong=["a"])              # round 2: this wrong pick
+        out = self.go(serve.chat, answer="a", round=2, history=[{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "why?"}])
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("RESULT: correct", ctx); self.assertIn("RESULT: wrong", ctx); self.assertNotIn("13.0", out)
+
+    def test_a_round_starts_the_turn_count_at_one(self):       # F1c
+        for _ in range(2):
+            serve.cluck_begin(dict(P1, code="H_1"), "d" * 32, "a")
+        self.go(serve.explain, answer="a", round=3)
+        self.assertNotIn("REVEAL: yes", json.dumps(self.bodies[-1]["messages"]))
+        self.assertEqual(serve._cluck_turns[("d" * 32 + ":r3", "H_1")][0][0], 1)   # the round owns the turn rows
+
+    def test_without_a_round_the_item_behaves_as_before(self):
+        self.reply = self.WALK
+        self.record("d" * 32, wrong=["a", "c"])
+        out = self.go(serve.explain, answer="a")                 # no `round`: the base namespace, as today
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertIn("REVEAL: yes", ctx); self.assertIn("OUT of tries", ctx)
+        self.assertIn("13.0", out)                               # a locked item still reveals on the old page
+
+    def test_an_old_page_never_reads_a_locked_base_over_an_open_round(self):
+        self.reply = self.WALK
+        self.record("d" * 32, wrong=["a", "c"])
+        self.record("d" * 32 + ":r4")                            # a round with every try left and not done
+        out = self.go(serve.explain, answer="a")                 # an old page sends no `round`
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("REVEAL: yes", ctx); self.assertNotIn("OUT of tries", ctx); self.assertNotIn("13.0", out)
+        self.assertEqual(serve._cluck_turns[("d" * 32, "H_1")][-1][1], 0)   # the row replays as open too
 
 
 class LetterContract(unittest.TestCase):
@@ -1266,7 +1417,7 @@ class Visuals(unittest.TestCase):
         from cluck_reply_checks import views_gate
         ex = serve.V4_VIEWS.split("Examples:\n")[1].split("\nNumbers in a view")[0]
         progs = ["root" + x for x in ex.split("root")[1:]]
-        self.assertEqual(len(progs), 5, "Tug, Tug battery, Flip, Table, Steps")
+        self.assertEqual(len(progs), 4, "Tug, Tug battery, Table, Steps")
         ctx = serve.livefig.context("CPA", "for (int i = 1; i < n; i++) s += i; the weight W acts at the middle, the arm L", "", [10.0])
         for prog in progs:
             out, log = views_gate.gate(prog.strip(), ctx)

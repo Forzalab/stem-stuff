@@ -14,10 +14,10 @@ class PromptViews(unittest.TestCase):
     def system_text(self):
         return serve.PROMPT_V4 + serve.V4_FIG_FIXED          # the cached system block of every item with a figure context (serve._v4_claude_system)
 
-    def test_system_block_has_tug_flip_and_the_pipe_ban(self):
+    def test_system_block_has_tug_no_flip_and_the_pipe_ban(self):
         t = self.system_text()
         self.assertIn("Tug(", t)
-        self.assertIn("Flip(", t)
+        self.assertNotIn("Flip", t, "the model is no longer asked for a Flip (Nov 26)")
         self.assertIn("Never a markdown pipe table", t)
 
     def test_tug_is_the_first_pick_row_and_the_table_example_is_not_first(self):

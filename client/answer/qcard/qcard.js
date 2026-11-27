@@ -93,7 +93,7 @@
     clearTimeout(animT); animT = setTimeout(function () { box.classList.remove("qanim"); }, 620);
   }
 
-  /* == §ghost-glass == the glass under the numeral (qcard.css §ghost-glass): one static SVG filter (lit rim, dark inner edge, grain), made once; one blurred scrim pill per text line */
+  /* == §ghost-glass == the glass under the numeral (qcard.css §ghost-glass): one static SVG filter (lit rim, dark inner edge, grain), made once (the old per-line scrim pills are gone, SWISS-GLYPH) */
   function glassDefs() {
     if (D.getElementById("qg-glass")) return;
     var NS = "http://www.w3.org/2000/svg", svg = D.createElementNS(NS, "svg"), f = D.createElementNS(NS, "filter");
@@ -106,25 +106,11 @@
       + '<feComposite in="gr" in2="SourceAlpha" operator="in" result="grIn"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="edgeDark"/><feMergeNode in="grIn"/><feMergeNode in="spIn"/></feMerge>';
     svg.appendChild(f); D.body.appendChild(svg);
   }
-  function scrims() {
+  function scrims() {   // name kept (later() calls it): only the SVG glass filter now; the per-line blurred scrim pills are gone (SWISS-GLYPH, Tony Nov 26)
     var p = D.getElementById("problem"), sl = p && p.querySelector(":scope > .qscrim");
-    if (!p || !on() || !p.classList.contains("qbr")) { if (sl) sl.remove(); return; }
+    if (sl) sl.remove();
+    if (!p || !on() || !p.classList.contains("qbr")) return;
     glassDefs();
-    if (!sl) { sl = D.createElement("div"); sl.className = "qscrim"; sl.setAttribute("aria-hidden", "true"); var gb = p.querySelector(":scope > .qghostbox"); p.insertBefore(sl, gb ? gb.nextSibling : p.firstChild); }
-    var cr = p.getBoundingClientRect(), pad = 9, html = "";
-    p.querySelectorAll(":scope > .blocks .qhead, :scope > .blocks .qsetup, :scope > .blocks .qlead").forEach(function (e) {
-      var rg = D.createRange(), rows = []; rg.selectNodeContents(e);
-      [].slice.call(rg.getClientRects()).forEach(function (q) {
-        if (q.width < 2) return;
-        var r = rows.filter(function (a) { return Math.abs(a.top - q.top) < 3; })[0];
-        if (r) { r.left = Math.min(r.left, q.left); r.right = Math.max(r.right, q.right); r.bottom = Math.max(r.bottom, q.bottom); } else rows.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
-      });
-      rows.forEach(function (b) {
-        var x = b.left - cr.left - pad, y = b.top - cr.top - pad * .7, w = b.right - b.left + 2 * pad, h = b.bottom - b.top + 1.4 * pad;
-        html += '<i style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px"></i>';
-      });
-    });
-    if (sl.innerHTML !== html) sl.innerHTML = html;
   }
 
   /* == §frost == GHOST-HYBRID-FROST (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE question card (inset 0, the card's radius, qcard.css §frost),
@@ -152,7 +138,7 @@
     if (/AppleWebKit\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua)) return "webkit";
     return "blink";
   })();
-  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 3, id: "qg-lens", sig: "" };   /* blur 3 (pick 3 tune, Tony Nov 23: the numeral must read through the glass, was 6) */
+  var LENS = { mag: 1.04, refr: 8, curv: 6, ior: 1.5, blur: 4, id: "qg-lens", sig: "" };   /* blur 4 (was 3, Tony Nov 25: a softer frost between card and body text; still <= 4px so the numeral reads through the glass, was 6 before Nov 23) */
   function lensProfile(curv, ior) {
     var N = 512, t = new Float32Array(N + 1), max = 0, i;
     for (i = 0; i <= N; i++) {

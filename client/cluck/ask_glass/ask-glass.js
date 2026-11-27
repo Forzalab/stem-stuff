@@ -6,11 +6,11 @@
      == §engine ==   liquidglass optics, copied verbatim (DEFAULTS, profileTable, renderLensMap, bendScale) + glassOn (returns { img, destroy })
      == §bar ==      the bar's params (PAR, LOCKP), the layers markup (html), the aria-hidden synced copy of the reply (clone + scroll sync + MutationObserver)
      == §lock ==     setLocked: the locked strip and its unlock sequence (shackle, text lift, rim light, 44 -> 56 spring)
-     == §think ==    while Cluck streams: 120 (72 on gecko) lens maps built in <= 8 ms chunks, the clock swaps pre-built filter clones (the compositor-only rim + glow live in ask-glass.css)
+     == §think ==    while Cluck streams: 120 lens maps built in <= 8 ms chunks, the clock swaps pre-built filter clones (the compositor-only rim + glow live in ask-glass.css)
      == §flip ==     iMessage send morph: the typed text box flies to the new student bubble (WAAPI, ~420 ms critically damped)
    Related: client/cluck/ask_glass/ask-glass.css (layers, strip, send button, thinking, fallbacks), client/cluck/cluck.js §ask-field (clAsk, clLockSync, clSend),
    client/shell/fx.js (html.fx-dim gate), client/answer/keyf_glass/keyf-glass.js (a different glass: a static scene on the Key formulas card; same MIT lens recipe, kept apart).
-   Fallbacks: html.fx-dim / prefers-reduced-transparency = a solid warm fill (class ag-solid); an SVG filter that fails, or a phone sheet drag = the R3 frost (class ag-frost, ask-glass.css).
+   Fallbacks: html.fx-dim / prefers-reduced-transparency = a solid warm fill (class ag-solid); an SVG filter that fails, a phone sheet drag, or Firefox (engine 'gecko': no lens, no copy of the reply, no rebuilds; Tony Nov 26 "disable glass for firefox, and just backdrop filter") = the R3 frost (class ag-frost, ask-glass.css).
    The optics below are liquidglass (gentpan/liquidglass @ d5db099, MIT). The notice is kept. Changes: wrapped in an IIFE, glassOn also returns the feImage (the thinking light swaps its map), renderLensMap gains a centre magnify term. */
 (function (g) {
 "use strict";
@@ -220,7 +220,6 @@ function write(px, o, r, g, b, a) {
 // it into pixels differently (measured):
 //   Blink:  x and y both use width
 //   WebKit: x uses width, y uses height
-//   Gecko:  x and y both use sqrt((w^2 + h^2) / 2)
 // Returns the `scale` that bends `px` pixels on both axes, plus per-axis factors (<= 1) that squeeze
 // the map's R/G channels where the engine would otherwise over-bend one axis.
 function bendScale(px, w, h) {
@@ -228,7 +227,6 @@ function bendScale(px, w, h) {
     const m = Math.min(w, h);
     return { scale: (2 * px) / m, kx: m / w, ky: m / h };
   }
-  if (engine === 'gecko') return { scale: (2 * px) / Math.sqrt((w * w + h * h) / 2), kx: 1, ky: 1 };
   return { scale: (2 * px) / w, kx: 1, ky: 1 };
 }
 
@@ -286,7 +284,8 @@ function glassOn(el, opts = {}) {
 const D = document, H = D.documentElement;
 const PAR = { invert: false, refraction: 46, magnify: 1.30, bezel: 0.56, curvature: 6, ior: 1, chroma: (2 * 4) / 46, blur: 6.5, specular: 0.55, specularWidth: 2.5, lightAngle: -25 };   // ASK-GLASS-TUNE: Tony's pick (C, zoom more, less frost): bend 46, 1.30x, 4 px chroma/side, 6.5 px frost
 const LOCKP = { refraction: 10, chroma: 0, specular: 0.25 };   // the locked strip: calm glass
-const RAD = 20, LOCK_RAD = 14;
+/* the lens map's corner radius = the bar's own CSS radius (phone 20 / locked 14; desktop side column 16, ask-glass.css), so the refraction edge follows the CSS whatever it is */
+const radOf = (f, locked) => parseFloat(g.getComputedStyle(f).borderTopLeftRadius) || (locked ? 14 : 20);
 const mq = (q) => { try { return g.matchMedia(q).matches; } catch (e) { return false; } };
 const reduced = () => mq('(prefers-reduced-motion: reduce)');
 const solid = () => H.classList.contains('fx-dim') || mq('(prefers-reduced-transparency: reduce)');   // fx.js low tier / no-blur gate, or the person asked for less transparency
@@ -314,7 +313,7 @@ function mount(form, sc, locked) {
 /* one scroll listener and one MutationObserver per scroller (the reply container .cl-bd); they talk to its current bar */
 function attach(sc) {
   if (sc._agOn) return; sc._agOn = true;
-  sc.addEventListener('scroll', () => {
+  if (engine !== 'gecko') sc.addEventListener('scroll', () => {   // gecko has no copy to follow the scroll
     const s = sc._ag; if (!s) return;
     if (s.clone) s.clone.style.transform = 'translate3d(0,' + (-sc.scrollTop) + 'px,0)';   // the copy follows the scroll: one transform write, no layout read of the copy
     if (s.thinkOn) { clearTimeout(s.mt); s.mt = 0; s.mv = false; return; }   // thinking owns .g-copy's filter: the scroll path never writes it (and a leftover 1-pass restore cannot land later)
@@ -324,7 +323,8 @@ function attach(sc) {
   }, { passive: true });
   new MutationObserver(() => { const s = sc._ag; if (s && s.form.isConnected) later(s); }).observe(sc, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'hidden'] });
 }
-const thinking = (s) => !s.locked && !!s.cl && (s.cl.classList.contains('wbusy') || !!s.cl.querySelector('.wtext.wrun'));
+const thinking = (s) => !!s.cl &&   // the locked strip thinks too (the free starter chip sends before the first try): the CSS ring + glow only, no lens light there (thinkSet)
+   (s.cl.classList.contains('wbusy') || !!s.cl.querySelector('.wtext.wrun'));
 /* rebuild the copy at most every ~120 ms while Cluck streams (40 ms otherwise); the filter stays on .g-copy, so a new copy needs no new lens */
 /* CLUCK-SHEET-LAG: a class / data-state change on .cl (a drag or settle) is not a content change: it only asks for a cheap check (stateOnly -> s.chk), and the copy is rebuilt
    only when the reply changed (s.dirty, set by the content observer) or the measured box moved (sigOf != s.sig). Before, every drag end cloned the whole reply for nothing. */
@@ -354,7 +354,7 @@ const sigOf = (s) => {
 };
 function rebuild(s) {
   const f = s.form, sc = s.sc;
-  if (!f.isConnected || !f.offsetWidth || !s.copy) return;
+  if (!f.isConnected || !f.offsetWidth || !s.copy || engine === 'gecko') return;   // gecko: no copy of the reply (frost only)
   const fr = f.getBoundingClientRect(), br = sc.getBoundingClientRect(), c = sc.cloneNode(true);
   c.classList.remove('below', 'above'); c.classList.add('ag-clone');
   c.removeAttribute('id'); c.setAttribute('aria-hidden', 'true'); c.setAttribute('inert', '');
@@ -407,6 +407,10 @@ function endFade(s) {
 }
 function glass(s) {
   const f = s.form;
+  if (engine === 'gecko') {   // no lens on Firefox: plain backdrop-filter frost (ag-frost), or the solid fill when the gate says so (solid wins: ag-frost never rides on ag-solid)
+    f.classList.toggle('ag-solid', solid()); f.classList.toggle('ag-frost', !solid());
+    s.W = f.offsetWidth; s.H = f.offsetHeight; s.bad = false; return;
+  }
   if (!solid() && (!s.copy || !s.copy.offsetWidth || !s.copy.offsetHeight)) return;   // the copy is not laid out (display:none during a sheet drag, a hidden sheet): keep what there is, the next size() comes back
   endFade(s);   // any other rebuild (resize, reply) is the instant path: settle a running fade first
   clearTimeout(s.mt); s.mt = 0; s.mv = false;
@@ -417,7 +421,7 @@ function glass(s) {
   f.classList.toggle('ag-solid', solid());
   if (solid() || !s.copy || !f.offsetWidth) { s.W = f.offsetWidth; s.H = f.offsetHeight; return; }
   try {
-    const o = Object.assign({}, PAR, { radius: s.locked ? LOCK_RAD : RAD }, s.locked ? LOCKP : {});
+    const o = Object.assign({}, PAR, { radius: radOf(f, s.locked) }, s.locked ? LOCKP : {});
     s.gl = glassOn(s.copy, o); s.img = s.gl.img; s.base = s.img.getAttribute('href'); s.opts = o; s.W = s.copy.offsetWidth; s.H = s.copy.offsetHeight;
     f.classList.remove('ag-frost');
   } catch (e) { s.gl = null; s.img = null; s.bad = true; s.W = f.offsetWidth; s.H = f.offsetHeight; f.classList.add('ag-frost'); }   // the lens failed: the R3 frost (ask-glass.css)
@@ -471,9 +475,10 @@ function setLocked(form, locked) {
   form.classList.add('opening');
   track(s);
   s.t1 = setTimeout(() => {
+    const r0 = radOf(form, true);
     form.classList.remove('locked'); form.classList.add('sweep');
-    const h1 = form.offsetHeight;
-    if (form.animate) s.anim = form.animate([{ height: h0 + 'px', borderRadius: LOCK_RAD + 'px' }, { height: h1 + 'px', borderRadius: RAD + 'px' }], { duration: 460, delay: 160, easing: 'cubic-bezier(.2,1.35,.32,1)', fill: 'backwards' });
+    const h1 = form.offsetHeight, r1 = radOf(form, false);
+    if (form.animate) s.anim = form.animate([{ height: h0 + 'px', borderRadius: r0 + 'px' }, { height: h1 + 'px', borderRadius: r1 + 'px' }], { duration: 460, delay: 160, easing: 'cubic-bezier(.2,1.35,.32,1)', fill: 'backwards' });
     if (s.anim) track(s, s.anim, true);   // the same follow, now ended by the animation's finish
   }, 170);
   s.t3 = setTimeout(() => { form.classList.remove('sweep', 'opening'); }, 1100);
@@ -485,16 +490,16 @@ function setLocked(form, locked) {
    compositor layers (ask-glass.css): no gradient angle is animated. */
 const setMap = (img, url) => { img.setAttribute('href', url); img.setAttributeNS(XLINK, 'xlink:href', url); };
 function thinkSet(s, on) {
-  on = !!on && !s.locked;
+  on = !!on;
   if (on) { clearTimeout(s.mt); s.mt = 0; s.mv = false; }   // thinking owns .g-copy: a scroll's 1-pass filter and its 150 ms restore never outlive the light
   if (on === s.thinkOn && on === s.form.classList.contains('think')) return;
   s.thinkOn = on; s.form.classList.toggle('think', on);
   cancelAnimationFrame(s.raf); cancelAnimationFrame(s.gen); clearInterval(s.clock); s.clock = 0;
-  if (!s.img) return;                                     // no lens (solid, frost, hidden): the CSS light is all there is
+  if (!s.img || s.locked) return;                         // no lens (solid, frost, hidden) or the locked strip: the CSS ring + glow is all there is
   const rb = s.img.parentNode, bid = rb.id, fb = (s.gl && s.gl.mid && document.getElementById(s.gl.mid)) || rb, drop = () => { (s.fids || []).forEach((id) => { const c = document.getElementById(id); if (c) c.remove(); }); s.fids = []; };
   drop();
   if (!on) { if (s.copy) s.copy.style.filter = `url(#${bid})`; return; }
-  const N = engine === 'gecko' ? 72 : 120, REV = 4300, scale = Math.min(g.devicePixelRatio || 1, 2), calm = reduced();
+  const N = 120, REV = 4300, scale = Math.min(g.devicePixelRatio || 1, 2), calm = reduced();
   const o = Object.assign({}, s.opts, { x: 0, y: 0, width: s.W, height: s.H, specular: 1, specularWidth: 5.5 });
   const maps = s.maps = [], img = s.img, total = calm ? 1 : N, el = s.copy;
   const build = () => {

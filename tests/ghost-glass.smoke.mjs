@@ -59,7 +59,7 @@ async function measure(vp) {
   assert.equal(info.layers, 1, "phone-safe: exactly ONE backdrop-filtered layer under #problem, got " + info.layers);
   assert.equal(info.anim, "none", "the frost never animates");
   assert.ok(info.filter.includes("qg-glass"), "numeral has the glass filter: " + info.filter);
-  assert.ok(info.scrim, "scrim pills exist");
+  assert.ok(!info.scrim, "SWISS-GLYPH: no scrim pills behind the words (the glyph itself is dimmer): " + JSON.stringify(info.scrim));
   assert.ok(info.frost, "the frost sheet exists");
   assert.ok(info.frostFilter.includes("qg-lens"), "the frost uses the static lens #qg-lens: " + info.frostFilter);
   assert.ok(info.lens && info.lensOn, "the static lens filter #qg-lens is built");
@@ -67,7 +67,8 @@ async function measure(vp) {
     `the sheet is the WHOLE card (inset 0): sheet ${info.box.w.toFixed(1)}x${info.box.h.toFixed(1)} at ${info.box.x.toFixed(1)},${info.box.y.toFixed(1)} vs card ${info.box.cardW.toFixed(1)}x${info.box.cardH.toFixed(1)}`);
   assert.equal(info.box.radius, info.box.cardRadius, "the sheet inherits the card's radius");
   assert.ok(info.blur > 0 && info.blur <= 4, "the lens frost is <= 4px on the numeral (" + info.blur.toFixed(2) + "px)");
-  assert.ok(info.paint >= 0.42, "the numeral body is raised enough to read (" + info.paint + " alpha)");
+  // Tony locked the numeral body at .30 (22f8349: ghost .30 / .20); it was .42 before. The text-on-numeral contrast >= 4.5 check below still guards readability.
+  assert.ok(info.paint >= 0.30, "the numeral body is raised enough to read (" + info.paint + " alpha)");
   assert.ok(info.rows.length, "some text line crosses the numeral");
   await page.addStyleTag({ content: "#problem .blocks, #problem .blocks * { color: transparent !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; } #problem > button { visibility: hidden !important; }" });
   await page.waitForTimeout(150);
@@ -108,6 +109,26 @@ await step("engine guard: Firefox UA gets the plain 3px frost, no lens (SVG back
   assert.ok(/Firefox\//.test(r.ua) && r.uad === undefined, "test setup: Firefox UA, no userAgentData");
   assert.ok(r.frost, "the frost sheet still renders"); assert.equal(r.attr, false, "data-qf-lens is absent"); assert.equal(r.lens, false, "no #qg-lens filter");
   assert.equal(r.bf, "blur(3px)", "plain 3px frost: " + r.bf); await ctx.close();
+});
+await step("option B: perf dims (forced slow probe, Firefox Android UA) keep the real frost; reduced transparency / Save-Data = filter-blur fallback", async () => {
+  const FF = "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0";
+  const read = page => page.evaluate(() => { const q = document.querySelector("#problem > .qfrost"), g = document.querySelector("#problem .qghostbox"), c = document.documentElement.classList;
+    return { dim: c.contains("fx-dim"), a11y: c.contains("fx-dim-a11y"), bf: q ? getComputedStyle(q).backdropFilter : null, gf: getComputedStyle(g).filter, why: window.stemFx.why }; });
+  { const { ctx, page } = await fresh(true, { width: 390, height: 844 });   // slow probe: dim for perf, frost stays
+    await page.evaluate(() => { document.documentElement.classList.add("fx-dim"); });
+    const r = await read(page); assert.ok(r.dim && !r.a11y && r.bf !== "none" && r.gf === "none", "perf dim keeps the frost: " + JSON.stringify(r)); await ctx.close(); }
+  { const { ctx, page } = await fresh(true, { width: 390, height: 844 }, "", FF);   // Firefox Android: never a11y, frost on
+    const r = await read(page); assert.ok(!r.a11y && r.bf !== "none", "FF Android keeps the frost: " + JSON.stringify(r)); await ctx.close(); }
+  for (const [name, init] of [["reduced transparency", `Object.defineProperty(window, "matchMedia", { value: q => ({ matches: /reduced-transparency/.test(q), addEventListener() {}, removeEventListener() {} }) });`],
+    ["Save-Data", `Object.defineProperty(Navigator.prototype, "connection", { get: () => ({ saveData: true }), configurable: true });`]]) {
+    const vp = { width: 390, height: 844 }, ctx = await browser.newContext({ viewport: vp, hasTouch: true, isMobile: true, serviceWorkers: "block", deviceScaleFactor: 1 });
+    await ctx.addInitScript(init); await ctx.addCookies([{ name: "stem-mode-v", value: "2", url: BASE }]);
+    const page = await ctx.newPage(); await page.goto(`${BASE}/?ui=v7`);
+    const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+    await fc.setFiles({ name: "gg.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
+    await page.waitForFunction(() => (document.querySelector("#pcode")?.textContent || "") === "PSY_G12", null, { timeout: 8000 }); await page.waitForTimeout(500);
+    const r = await read(page); assert.ok(r.a11y && r.dim && (r.bf === "none" || r.bf == null) && r.gf === "blur(3px)", name + " shows the fallback: " + JSON.stringify(r)); await ctx.close();
+  }
 });
 await step("flag off: no glass", async () => {
   const { ctx, page } = await fresh(false, { width: 390, height: 844 });

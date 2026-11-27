@@ -22,7 +22,7 @@ import { quack } from "../pure_logic_modules/quack.mjs";
 import { clampPos, dimAt, progress, radiusAt, snapTo } from "../pure_logic_modules/sheet.mjs";
 import { speakable } from "../pure_logic_modules/speak.mjs";
 import { pipeHold, pipeTable, renumberSteps } from "../pure_logic_modules/steps.mjs";
-import { flipHTML, flipModel, tableShape } from "../pure_logic_modules/flip.mjs";
+import { drawIn } from "./figures/drawin.js";
 import { $, S, bank, bridge, cueRight, esc, frReq, icon, incHTML, maxTries, mockHold, noteAt, painting, rboxSync, renderMath, reqInc, rpUnmount, say, toast, waitReduced, xInc } from "../answer/drill_core/app.js";
 Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
@@ -79,7 +79,11 @@ const shouldPrefetch = code => !painting && wishLog().length < WISH_AUTO && seen
    (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
    text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
 const CK = "stem-cluck", CK_MAX = 30, CK_TTL = 7 * 864e5;
-const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (t && Number.isInteger(t.part) ? t.part + ":" : "") + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
+const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return "v2|" + code + "|" + (window.stemRedo?.has(code) ? window.stemRedo.get().n : "-") + "|" + (S && S.code === code ? S.tries.length : 0) + "|" + (t && Number.isInteger(t.part) ? t.part + ":" : "") + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
+/* F3 (desync): key = "v2|" code | round ("-" outside a redo round, the value check() sends) | tries used so far | sorted picks | build. The round and the
+   tries decided the reply on the server (REVEAL, the pre-try rule), so they are part of the key. Old-shape keys (no "v2|") never match: they die by TTL / the cap.
+   A reply the server marked closed / REVEAL yes (response header X-Cluck-Reveal: 1) is never put in: ckOk(r) is true only for an explicit "0" (no header = unknown = not cached) */
+const ckOk = r => !!r && r.headers.get("X-Cluck-Reveal") === "0";
 const ckAll = () => { try { const o = JSON.parse(localStorage.getItem(CK)); return o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v && typeof v.text === "string" && Date.now() - v.t < CK_TTL) : []; } catch { return []; } };
 const ckGet = key => ckAll().find(([k]) => k === key)?.[1].text || "";
 function ckPut(key, text) {
@@ -131,10 +135,12 @@ function wishOnWrong() {
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 const askTry = () => (S.prob.type === "multi" && [...S.tries].reverse().find(x => x.v === "wrong")) || S.tries.at(-1) || {};   // the try Cluck is asked about (/explain and /chat agree)
+const wishRound = code => (window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {});   // app.js check()'s expression: a redo round's tries namespace
 /* telemetry (cluck_ask / cluck_reply): where the student is when Cluck is asked. code = the bank, item = the question; telemetry.js scrubs the text */
 const ckTel = () => ({ code: bank ? bank.code : null, item: S ? S.code : null, tries_left: S ? Math.max(0, maxTries(S.prob) - S.tries.length) : null, after_wrong: !!S && S.tries.some(x => x.v === "wrong") });
 async function wishStart(auto) {
   const w = wish, t = askTry(), key = ckKey(w.code, t);   // a multi: the part that was missed (the newest try may be a later right part: the drawer's Ask Cluck came after it)
+  w.fresh = true;                                         // FIG-DRAW-IN: this reply is being streamed now (a cache hit never sets it: static)
   w.key = key; w.tr = clTry(t);                                                           // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   w.stg?.stop(); w.stg = Stages.make({ host: () => wishStgHost(w) });         // stages.js: the reply's real steps, shown in the sheet only while it is open
@@ -142,12 +148,12 @@ async function wishStart(auto) {
   if (!auto) window.stemT?.("cluck_ask", { kind: "explain", ...ckTel(), item: w.code, text: "" });   // telemetry: an Explain press (the background ask is not the student's)
   if (auto) wishLogAdd();
   const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
-  let r = null, bytes = 0, err = null, ftok = null;
+  let r = null, bytes = 0, err = null, ftok = null, cacheable = false;
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
-    fr.h(r);
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail(), stages: true, ...wishRound(w.code) }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
+    fr.h(r); cacheable = ckOk(r);                                          // F3: the server's reveal mark
     if (!r.ok || !r.body) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
       w.failed = r.status === 503 && sc ? 1 : r.status || 1;                // a plain 404/503 = no Cluck here (hidden), 429 = the cap: no incident
@@ -177,7 +183,7 @@ async function wishStart(auto) {
   } catch (e) { fr.x(e); if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
   w.ctl.signal.aborted ? w.stg.stop() : w.stg.finish(!w.failed && !!w.text);   // the tick only for a whole reply
   w.done = true;
-  if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
+  if (!w.failed && w.text && !w.ctl.signal.aborted && cacheable) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
   window.stemT?.("cluck_reply", { kind: auto ? "wish" : "explain", ...ckTel(), item: w.code, ok: !w.failed && !!w.text && !w.ctl.signal.aborted, error: w.ctl.signal.aborted ? "aborted" : w.failed ? (err ? String(err.why || err.error || "stream") : "status " + w.failed) : "", chars: w.text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: !!auto, text: w.text });   // telemetry
   if (wish !== w) return;
@@ -341,6 +347,7 @@ function wishFigs(root) {
     ph.removeAttribute("data-f");
     if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
       const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { figGone.add(k); figDrop(ph); };   // nothing drawn, no image: nothing at all, not a box with the description (Nov 3 prod, PHYS_NYT)
+      const fresh = !!(wish && wish.fresh);                                // FIG-DRAW-IN: read before the async import; wish may be another reply by .then
       ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
       import("./openui_views/views.js").then(V => {
         let drawn = false;
@@ -348,6 +355,7 @@ function wishFigs(root) {
         const url = drawn || staticImg.has(src) ? viewImage(V, src) : null;   // pre-rendered once it drew (W113 static fallback)
         if (url && (!drawn || tooNarrow(ph))) showStatic(ph, url, alt);
         else if (!drawn) off();
+        else drawIn(ph, { fresh });                                          // FIG-DRAW-IN: a fresh reply's figure draws in; the static image and a cached reply never do
       }).catch(e => { console.error(e); if (staticImg.has(src)) showStatic(ph, staticImg.get(src), alt); else off(); });
       if (!done) figEl[k] = ph;
       continue;
@@ -356,6 +364,7 @@ function wishFigs(root) {
     if (!b || b.type !== "graph") { figGone.add(k); figDrop(ph); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
     try { Graph.render(ph, b); } catch (e) { console.error(e); figGone.add(k); figDrop(ph); continue; }
+    if (ph.querySelector("svg")) drawIn(ph, { fresh: !!(wish && wish.fresh) });   // FIG-DRAW-IN: only a reply streamed now draws its figure in
     if (!done) figEl[k] = ph;
   }
 }                                // "1. Find the momentum before — only one cart moves"
@@ -391,7 +400,6 @@ function wishHTML(t, ended) {
     if (tb) {
       flush(); i = tb.next - 1;
       const row = (r, tag) => `<tr>${r.map(c => `<${tag}>${wishLine(c)}</${tag}>`).join("")}</tr>`;
-      if (tableShape(tb.head, tb.rows) === "flip") { put(`<div class="wl wflip">${flipHTML(flipModel(tb.rows), wishLine)}</div>`); continue; }   // step | you did | the fix: flip cards (flip.mjs)
       put(`<div class="wl wtbl"><table><thead>${row(tb.head, "th")}</thead><tbody>${tb.rows.map(r => row(r, "td")).join("")}</tbody></table></div>`);
       continue;
     }
@@ -1112,7 +1120,7 @@ async function clCompare(w) {
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail() }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail(), ...wishRound(w.code) }) });
     fr.h(r);
     if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
     else {
@@ -1125,7 +1133,7 @@ async function clCompare(w) {
   window.stemT?.("cluck_reply", { kind: "other", ...ckTel(), item: w.code, ok: !!r && r.ok && !!ty.text.trim() && !inc, error: inc ? String(inc.why || inc.status || "fail") : r && r.status === 429 ? "429" : "", chars: ty.text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text: ty.text });   // telemetry
   if (wish !== w) return;
   const ok = !!r && r.ok && ty.text.trim() && !inc;
-  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(st || box); say(speakable(stripFigs(ty.text))); }
+  if (ok) { ty.done = true; await typed; if (wish !== w) return; if (ckOk(r)) ckPut(key, ty.text); top(st || box); say(speakable(stripFigs(ty.text))); }
   else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Oh duck, Cluck is tired! Come back later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
   w.busy = false; clAsk();
 }
@@ -1145,10 +1153,12 @@ async function clSend(msg, o = {}) {                                      // o.s
   let text = "", err = "", inc = null, r = null, bytes = 0, ftok = null;
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
   const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
+  const sp = { buf: "" }, stg = Stages.make({ host: () => { if (!box.isConnected) return null; let h = box.querySelector(":scope > .stg"); if (!h) { h = document.createElement("div"); h.className = "stg"; h.setAttribute("aria-live", "off"); re.before(h); } return h; } });   // the same thinking line as an /explain reply (stages.js), the free starter chip included
+  let sErr = null;
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}) }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), stages: true, history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}), ...wishRound(w.code) }) });
     fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });
@@ -1158,16 +1168,20 @@ async function clSend(msg, o = {}) {                                      // o.s
         const { value, done } = await rd.read(); if (done) break;
         if (ftok == null) ftok = Date.now() - t0;
         bytes += value.length; fr.f();
-        text += dec.decode(value, { stream: true });
+        const c = Stages.feed(sp, dec.decode(value, { stream: true }));
+        for (const e of c.events) e.error ? (sErr = e) : stg.event(e);     // {"error": "S-XXXXX"}: the server's in-band failure (status 200 already)
+        text += c.text;
         ty.text = text;
       }
       fr.e(bytes);
-      if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
+      if (sErr) fail({ why: sErr.why, server: sErr.error, status: sErr.why === "budget_cap" ? 503 : 502, phase: text ? "stream" : "headers", bytes });
+      else if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
     }
-  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) { stg.stop(); return; } fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
   window.stemT?.("cluck_reply", { kind: "ask", ...ckTel(), item: w.code, ok: !err, error: err, chars: text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text });   // telemetry
-  if (wish !== w) return;
-  if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
+  if (wish !== w) { stg.stop(); return; }
+  if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) { stg.stop(); return; } }
+  stg.finish(!err);                                                         // after the typing ends: the line stays until the reply is whole
   w.busy = false;
   if (err) {
     w.chat.pop(); if (o.starter) w.free = 0;                               // not answered: it does not count

@@ -400,7 +400,7 @@ try {
     await page.mouse.move(2, 2);
     // B3 (Tony, Oct 18): the finished reply is kept in this browser (stem-cluck): away and back, then a reload, show it whole with no new call
     const kept = JSON.parse(await page.evaluate(() => localStorage.getItem("stem-cluck")));
-    assert.ok(Object.keys(kept).some(k => /^CALC1_E01\|[^|]*\|dev$/.test(k)), "key = code | picks | build: " + Object.keys(kept));
+    assert.ok(Object.keys(kept).some(k => /^v2\|CALC1_E01\|(?:-|\d+)\|\d+\|[^|]*\|dev$/.test(k)), "key = v2 | code | round | tries | picks | build: " + Object.keys(kept));
     const whole = async why => {
       await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 4000 });
       assert.equal(asked, 1, why + ": no new /explain");

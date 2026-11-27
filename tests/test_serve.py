@@ -366,19 +366,25 @@ class Grade(unittest.TestCase):
 
     def test_redo_round_multi(self):
         self.g("CSCI26_M5V", "rd3", part=0, answer="17")
+        self.g("CSCI26_M5V", "rd3", part=0, answer="1")                         # out of tries: a redo round opens only on a shut part (round_open)
         self.assertEqual(self.g("CSCI26_M5V", "rd3", part=0, answer="17", round=5)["triesLeft"], 1)   # not a repeat in the round
         self.assertEqual(self.g("CSCI26_M5V", "rd3", part=0, answer="14", round=5)["verdict"], "correct")
-        self.assertEqual(serve.state(BANK["CSCI26_M5V"], "rd3")["parts"][0], {"wrong": 1, "done": False,
+        self.assertEqual(serve.state(BANK["CSCI26_M5V"], "rd3")["parts"][0], {"wrong": 2, "done": False,
                                                                              "gen": serve._tries[("rd3", "CSCI26_M5V", 0)]["gen"]})
 
     def test_redo_round_purges_older_rounds_only(self):
-        self.g("CALC1_T6B", "rd4", answer="4")
+        for sid in ("rd4", "rd4x"):                                             # shut the base: a round opens only on a unit out of tries (round_open)
+            self.g("CALC1_T6B", sid, answer="4")
+            self.g("CALC1_T6B", sid, answer="5")
+        self.g("CALC1_X2P", "rd4", choice="a")
+        self.g("CALC1_X2P", "rd4", choice="c")
         self.g("CALC1_T6B", "rd4", answer="4", round=1)
+        self.g("CALC1_T6B", "rd4", answer="5", round=1)
         self.g("CALC1_X2P", "rd4", choice="a", round=1)
         self.g("CALC1_T6B", "rd4x", answer="4", round=1)                       # another browser's round stays
         self.g("CALC1_T6B", "rd4", answer="4", round=2)
         keys = {k for k in serve._tries if k[0].startswith("rd4")}
-        self.assertEqual(keys, {("rd4", "CALC1_T6B"), ("rd4:r2", "CALC1_T6B"), ("rd4x:r1", "CALC1_T6B")})
+        self.assertEqual(keys, {("rd4", "CALC1_T6B"), ("rd4", "CALC1_X2P"), ("rd4:r2", "CALC1_T6B"), ("rd4x", "CALC1_T6B"), ("rd4x:r1", "CALC1_T6B")})
 
     def test_multi_hint_is_the_parts_own(self):
         self.assertEqual(self.g("CSCI26_M5V", "m4", part=0, answer="14.5")["hint"], BANK["CSCI26_M5V"]["nudge"])
@@ -1154,12 +1160,14 @@ class Persist(unittest.TestCase):
 
     def test_redo_round_survives_restart(self):
         p = BANK["CALC1_T6B"]
+        serve.grade(p, "r5", {"answer": "4"})
+        serve.grade(p, "r5", {"answer": "6"})                                    # out of tries: a redo round opens only on a shut unit (round_open)
         self.assertEqual(serve.grade(p, "r5", {"answer": "5", "round": 3})["verdict"], "wrong")
         with open(serve.TRIES) as f:
             self.assertIn("r5:r3 CALC1_T6B", json.load(f)["tries"])
         self.restart()
         self.assertTrue(serve.grade(p, "r5", {"answer": "5", "round": 3}).get("repeat"))
-        self.assertEqual(serve.state(p, "r5")["wrong"], 0)
+        self.assertEqual(serve.state(p, "r5")["wrong"], 2)
 
     def test_multi_part_round_trip(self):
         p = next(q for q in BANK.values() if q["type"] == "multi")        # per-part entries: "sid CODE i"
@@ -1692,7 +1700,15 @@ class Explain(unittest.TestCase):
     NOTE = {"on_topic": True, "field": "calculus", "concept": "work-energy", "asked": "a", "need": "the sign of the work", "assumed": "dropped the minus",
             "real": "the work is negative", "reproduces": True, "gap": "sign_direction", "evidence": "pick a", "confidence": "high"}
 
+    def tried(self, sid, wrong=("a",)):
+        """a recorded try (what /check writes): since F4 (Tony Nov 27) Cluck grades a pick only when the server has this try"""
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry((sid, "CALC1_XP1"))["wrong"] = list(wrong)
+        self.addCleanup(lambda: serve._tries.pop((sid, "CALC1_XP1"), None))
+
     def ask(self, cookie="sid=" + "a" * 32, **body):
+        self.tried(cookie[4:])
         status, head, chunks = serve.explain(cookie, json.dumps({"code": "CALC1_XP1", "answer": "a", **body}).encode())
         return status, b"".join(chunks).decode()
 
@@ -1782,6 +1798,7 @@ class Explain(unittest.TestCase):
     BOX = "POOF! Use: $W = \\Delta K$\nAnswer: b) 3"
 
     def chat(self, n=1, cookie="sid=" + "c" * 32, **over):
+        self.tried(cookie[4:])
         h = [{"role": "assistant", "content": self.BOX}]
         for i in range(n):
             h += [{"role": "user", "content": f"why step {i}?"}] + ([{"role": "assistant", "content": "Because."}] if i < n - 1 else [])
@@ -1903,7 +1920,7 @@ class Explain(unittest.TestCase):
         self.assertEqual(serve._chats[k], 1)
         serve._chats.clear()
         old = serve.state
-        serve.state = lambda p, sid, reveal=False: {"wrong": 1, "done": False, "gen": 1}   # a try is recorded
+        serve.state = lambda p, sid, reveal=False, store=None: {"wrong": 1, "done": False, "gen": 1}   # a try is recorded
         try:
             self.assertEqual(go("Why does the sign flip here?", starter=True), 200)
         finally:

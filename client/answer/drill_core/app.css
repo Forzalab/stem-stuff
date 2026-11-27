@@ -36,7 +36,10 @@
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
      Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
-  --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc;
+  --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc; --ink-qnum: #7a8aae;
+  /* ONE answer-letter definition (Tony Nov 26): MC tile letter, pick-all tile letter, typed multi-part letter (.mparts .mk) all read these:
+     step 0 (16/24), 600, uppercase, dimmed like the Q-number. The type steps are declared below; a forward var() reference is fine. */
+  --ans-letter-fs: var(--fs-0); --ans-letter-lh: var(--lh-0); --ans-letter-fw: 600; --ans-letter-tt: uppercase; --ans-letter-color: var(--ink-qnum);
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
   --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
@@ -69,9 +72,22 @@
   --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
   --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
   --body: var(--card); --ramp: var(--card); --knock: rgb(11 20 34 / 0.85);   /* figure fills and label knockouts sit on the question box */
-  /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
-     · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
-  --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
+  /* TYPESCALE (Major Third 1.25, typescale.com): size = 16 * 1.25^n, leading snaps to a 4px grid = ceil(size * 1.25 / 4) * 4, body leading 24.
+     ONE scale for the whole app, the same at every width (the old fine-pointer desktop bumps of --t-* are gone). Floor 12px for anything readable:
+     step -2 (10.24) is decorative only. The old --t-* names below point at these steps, so call sites keep working.
+     Map of every old size -> step: scratchpad/qtokens/MAP.md. */
+  --fs--2: 0.64rem;       --lh--2: 16px;   /* 10.24 decorative only */
+  --fs--1: 0.8rem;        --lh--1: 16px;   /* 12.8  meta, ticks, tags, captions */
+  --fs-0: 1rem;           --lh-0: 24px;    /* 16    body, labels, buttons, choices, typed text (body leading 24) */
+  --fs-1: 1.25rem;        --lh-1: 28px;    /* 20    titles, the ask line, q | a letters */
+  --fs-2: 1.5625rem;      --lh-2: 32px;    /* 25 */
+  --fs-3: 1.9531rem;      --lh-3: 40px;    /* 31.25 */
+  --fs-4: 2.4414rem;      --lh-4: 52px;    /* 39.06 the multi-part index letter */
+  --fs-5: 3.0519rem;      --lh-5: 64px;    /* 48.83 */
+  /* the ladder (phone, flag OFF = the old UI keeps it): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
+     · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2) · --t-2xl 40 the multi-part index letter (IB-1). Line height by role.
+     Under html.ui-v7 these names point at the scale above (block "TYPESCALE ui-v7" after the desktop media blocks) */
+  --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem; --t-2xl: 40px;   /* IB-1 SOFT LIFT: the multi-part index letter, its only user (mock PICK-soft-lift) */
   --t-reply: 1rem;   /* Cluck's reply text (.wtext), 16px on phone and desktop (Tony Nov 23, 4px-step value); not tied to --t-sm */
   --lh: 1.41; --lh-ui: 1.33; --lh-title: 1.25; --lh-xs: 1.38;
   /* KaTeX at x-height parity with the text face: Atkinson .496 / KaTeX_Main .431 = 1.15em (measured); SF ~.52 -> 1.2em (provisional:
@@ -146,6 +162,7 @@ body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
   background: var(--paper); color: var(--ink);
   font: var(--w-body) var(--t-md)/var(--lh) var(--font); font-synthesis: none;   /* no faux bold or oblique, ever */
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;   /* make-interfaces-feel-better: crisper dark-UI text on macOS, set once at the root; other platforms ignore it */
   -webkit-tap-highlight-color: transparent;
 }
 /* No overflow on any ancestor of .freeze: it would become the sticky scroller (Safari and everyone else). */
@@ -477,7 +494,7 @@ html.ui-v7 .p .md .tbl-tex .katex { font-size: 1em; }
    row keeps the hang indent (text-indent/padding of .l are untouched). Flag off: unchanged (no numbers on phones). */
 @media (max-width: 480px) {
   html.ui-v7 .cb { --g: 1.5ch; }
-  html.ui-v7 .cb code .l::before { content: counter(ln); position: static; display: inline-block; box-sizing: border-box; width: var(--g); margin: 0 var(--s2) 0 calc(-1 * (var(--g) + var(--s2))); font-size: 9px; line-height: 1; color: var(--dim, var(--muted)); vertical-align: baseline; }
+  html.ui-v7 .cb code .l::before { content: counter(ln); position: static; display: inline-block; box-sizing: border-box; width: var(--g); margin: 0 var(--s2) 0 calc(-1 * (var(--g) + var(--s2))); font-size: 9px; /* code line-number gutter stays 9px: decorative, off-scale on purpose (codeblock-ln smoke) */ line-height: 1; color: var(--dim, var(--muted)); vertical-align: baseline; }
 }
 .cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
 .cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
@@ -607,6 +624,7 @@ html.ui-v7 .choices:not(.all) .opt.wrong:not(.reveal):not([aria-checked="true"])
 @media (prefers-reduced-motion: reduce) { .opt.jolt, .opt.pop { animation: none; } }
 .opt.pend { border-color: var(--action); border-style: dashed; }
 .ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
+.ch .ib1-go, .nx .ib1-go { display: none; }   /* the typed key's inline arrow: shown only where bento.css §swiss-key / strip.css ask for it */
 /* pick all (docs/design/CHOOSE-ALL.md §4): a square check badge (empty until ticked), the letter beside it, no arrow in the row;
    one Check under the list. Never one row, no lock-in dimming (many rows can be ticked). */
 .choices.all .opt { padding-right: var(--s3); }
@@ -701,11 +719,10 @@ html:has(#cluck:not([hidden])) .q :is(.ch, .ff, .part)::after { opacity: 0; visi
 .q.closed .ff.ok { border-color: var(--correct); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 /* W104 Sleeping guard (app.js guard; mock-opus/104 v4 = layout + motion only, type and colour are the site's): a quiet row under a closed MC's choices.
-   Locked: a --muted padlock, words in --muted with the lead in --ink. Redeemed: the lead is the retry tag's
-   word in --correct at the same --w-em (no new size, no bold green). Feather burst: live redeem only, motion allowed only */
-.guard { position: relative; display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); border-top: var(--bw) solid var(--edge); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; pointer-events: none; }
+   Locked: a --muted padlock, words in --muted with the lead in --ink. The won row (hairline + "Avenged!" + feather burst) is removed. */
+.guard { position: relative; display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; pointer-events: none; }
 /* locked: the mock's frosted veil. The row rises over the lower choices; its ::before blurs what is behind it, faded in from the top by a mask. Next stays above it */
-.guard.lock { margin-top: calc(-1 * var(--s7)); padding: var(--s7) 0 0; border-top: 0; isolation: isolate; }
+.guard.lock { margin-top: calc(-1 * var(--s7)); padding: var(--s7) 0 0; isolation: isolate; }
 .guard.lock::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent, var(--page) 55%); -webkit-backdrop-filter: blur(var(--s2)); backdrop-filter: blur(var(--s2));
   -webkit-mask-image: linear-gradient(transparent, #000 45%); mask-image: linear-gradient(transparent, #000 45%); }
 @media (prefers-reduced-transparency: reduce) { .guard.lock::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--page) 88%, transparent); } }
@@ -713,17 +730,8 @@ html:has(#cluck:not([hidden])) .q :is(.ch, .ff, .part)::after { opacity: 0; visi
 .q.closed .nx { z-index: 1; }
 .guard p { margin: 0; }
 .guard b { color: var(--ink); font-weight: var(--w-em); }
-.guard .gd-win { color: var(--correct); }
-.gd-burst { position: relative; flex: none; width: var(--s6); height: var(--s6); }   /* anchor for the feather burst (no icon) */
 .gd-lock { flex: none; order: -1; width: var(--s5); height: var(--s5); color: var(--muted); }
 .gd-lock .ico { width: 100%; height: 100%; }
-.burst i { position: absolute; left: 50%; top: 50%; width: var(--s1); height: var(--s2); margin: calc(-0.5 * var(--s2)) 0 0 calc(-0.5 * var(--s1)); border-radius: 50% 50% 50% 0; background: var(--reward); opacity: 0; }
-.burst i:nth-child(1) { --a: 0deg; } .burst i:nth-child(2) { --a: 45deg; } .burst i:nth-child(3) { --a: 90deg; } .burst i:nth-child(4) { --a: 135deg; }
-.burst i:nth-child(5) { --a: 180deg; } .burst i:nth-child(6) { --a: 225deg; } .burst i:nth-child(7) { --a: 270deg; } .burst i:nth-child(8) { --a: 315deg; }
-@media (prefers-reduced-motion: no-preference) {
-  .guard.won.live .burst i { animation: gd-fl 700ms ease-out both; }
-}
-@keyframes gd-fl { from { opacity: 1; transform: rotate(var(--a)) translateY(0); } to { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--s5))); } }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
 .ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, docs/design/EASY.md) */
 /* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.
@@ -1020,7 +1028,7 @@ html.ui-v7 .rot.docked .vid.hero { border-radius: 16px; cursor: auto; }
 html.ui-v7 .rot.docked .vid iframe { --iw: max(136cqw, 136cqh * 16 / 9); width: var(--iw); height: calc(var(--iw) * 9 / 16); left: calc((100cqw - var(--iw)) / 2); top: calc((100cqh - var(--iw) * 9 / 16) / 2); }
 html.ui-v7 .rot.docked .vid.short iframe { --iw: max(136cqw, 136cqh * 9 / 16); width: var(--iw); height: calc(var(--iw) * 16 / 9); top: calc((100cqh - var(--iw) * 16 / 9) / 2); }
 html.ui-v7 .rot.docked .vid:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-html.ui-v7 .rot.docked .vid.hero .now { position: absolute; z-index: 1; right: var(--s3); top: var(--s3); display: flex; align-items: center; gap: var(--s1); height: 24px; padding: 0 var(--s2); border-radius: 8px; background: color-mix(in srgb, var(--scrim) 55%, transparent); color: var(--ink); font-size: 12px; font-weight: 600; line-height: 16px; pointer-events: none; }
+html.ui-v7 .rot.docked .vid.hero .now { position: absolute; z-index: 1; right: var(--s3); top: var(--s3); display: flex; align-items: center; gap: var(--s1); height: 24px; padding: 0 var(--s2); border-radius: 8px; background: color-mix(in srgb, var(--scrim) 55%, transparent); color: var(--ink); font-size: var(--fs--1); font-weight: 600; line-height: var(--lh--1); pointer-events: none; }
 html.ui-v7 .rot .now .eq { display: flex; align-items: flex-end; gap: var(--s1); height: 16px; margin-right: var(--s1); }
 html.ui-v7 .rot .now b { display: block; width: 4px; height: 8px; border-radius: 2px; background: var(--ink); }
 html.ui-v7 .rot .now b + b { height: 4px; }
@@ -1404,7 +1412,6 @@ html.side .cl-ft .ask { --ask-r: 10px; border-radius: 0; border-bottom-left-radi
 .wtext .wtbl th { padding: var(--s1) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--edge); color: var(--muted); font-weight: var(--w-em); text-align: left; }
 .wtext .wtbl td { padding: var(--s2) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--line); vertical-align: top; min-width: 4ch; }
 .wtext .wtbl tr:last-child td { border-bottom: 0; }
-.wtext .wflip { max-width: none; }   /* a Flip (flip.mjs, styled in views.css) takes the full width */
 .wtext b { font-weight: var(--w-em); color: var(--ai-text); }
 .wtext .wmath { margin: 20px 0; text-align: center; overflow-x: auto; overflow-y: hidden; }   /* NO NESTED BOX (Tony, Oct 13): no well, no padding; V3: 20 around an equation */
 .wtext .weq + .weq { margin-top: 12px; }                                   /* V3: 12 between stacked equations */
@@ -1726,6 +1733,12 @@ html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
 @media (min-width: 100rem) and (min-height: 56rem) and (pointer: fine) {
   :root { --t-md: 1.3125rem; --t-sm: 1.1875rem; --t-xs: 1rem; --t-lg: 1.375rem; --btn: 56px; --ico: 28px; }
 }
+/* == TYPESCALE ui-v7 == the old --t-* names on the scale (--fs-* in :root), the same at every width: it beats the three desktop :root bumps above (html.ui-v7 > :root).
+   xs 13 -> step -1 · sm 15, md 17 -> step 0 · lg 20 -> step 1 · xl 28 -> step 2 · 2xl 40 -> step 4. Flag off: the old tokens above stay. */
+html.ui-v7 { --t-xs: var(--fs--1); --t-sm: var(--fs-0); --t-md: var(--fs-0); --t-lg: var(--fs-1); --t-xl: var(--fs-2); --t-2xl: var(--fs-4); --t-reply: var(--fs-0); --lh: 1.5; --lh-xs: 1.25; }   /* --lh / --lh-xs stay unitless (calc(N * var(--lh) * 1em) reads them): 1.5 = the step-0 body leading 24 / 16, 1.25 = step -1's 16 / 12.8 */
+/* the hard-coded sizes of the GLOBAL rules above, on the scale for ui-v7 only: .cl-title 21 -> step 1 · .cl-starter max(14, xs) -> step -1 (the code block keeps `font: 1rem` = step 0 on desktop; the phone's 14px mono (CB-PHONE, Tony Nov 17: 12 too small, floor 14) is the one size kept off the scale, see MAP.md) */
+html.ui-v7 .cl-title { font-size: var(--fs-1); }
+html.ui-v7 .cl-starter { font-size: var(--fs--1); }
 
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
@@ -1904,7 +1917,7 @@ html.ui-v7 #rwHud .rw-lvl { display: none; }
 /* TOP-GAP (Tony, Nov 15): the HUD is empty until the first reward (coin + streak hidden, level retired), yet its 48px box + margin pushed the headings ~95px down. Collapsed until it has something to show. */
 html.ui-v7 #rwHud.rw-z-xp.rw-z-st { display: none; }
 /* D: the miss hint is the float family (the stage toast's fill, radius 16, shadow-3, no edge), not the old filled duck card */
-html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }
+html.ui-v7 #fb .cluck, html.ui-v7 .chk .cluck, html.ui-v7 .mparts .phint .cluck { background: var(--float); border-radius: 16px; box-shadow: var(--shadow-3); padding: var(--s3) var(--s4); }
 /* PROOF-V7 (Tony Nov 16 "no nested box + an experience like the short answer box"): under ui-v7 the proof pane (#work > #q, the Nov 4 bordered 8 px box) draws nothing;
    the proof field IS the short-answer field: same .ff well (fill, 16 radius, --well inset + lit foot), same Atkinson 17 px text (no mono), the Check button in the same
    top-right slot. The how line sits above it as plain hint text, like the pick-all hint. One box, no nesting. */
@@ -1912,8 +1925,8 @@ html.ui-v7.proof-split #work > #q { padding: 0; background: none; border: 0; bor
 html.ui-v7.proof-split #work > #q:focus-within { border: 0; box-shadow: none; }
 html.ui-v7.proof-split #q > .how { margin: 0; padding-inline: 0; color: var(--muted); }
 html.ui-v7.proof-split #q .ff.proof { padding: 12px 16px; border-radius: 16px; }   /* PROOF-AXIS (Tony Nov 17): 16px so the typed text starts on the card's text axis (card text x = 8 gutter + 16) */   /* fill + well + lit foot come from verdict-v7.css, the short-answer field rule */   /* ICK C4a: no right reserve, the Check key sits at the box foot (verdict-v7.css ICK 12) */
-html.ui-v7.proof-split #q .ff.proof textarea { font: 400 16px/22px var(--mono);   /* ICK5-MONO */ letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */   /* ICK4-INPUT-400: typed text = 400 */
-@media (min-width: 900px) { html.ui-v7.proof-split #q .ff.proof textarea { font-size: 17px; line-height: 24px; } }
+html.ui-v7.proof-split #q .ff.proof textarea { font: 400 var(--fs-0)/var(--lh-0) var(--mono);   /* ICK5-MONO */ letter-spacing: 0; min-height: 10rem; padding: 0 8px 0 0; }   /* PROOF-AXIS: the question's own face and size (qcard.css .qtext: 16/22, 17/24 wide) */   /* ICK4-INPUT-400: typed text = 400 */
+@media (min-width: 900px) { html.ui-v7.proof-split #q .ff.proof textarea { font-size: var(--fs-0); line-height: var(--lh-0); } }
 /* PROOF-LOCK (Tony Nov 17): keyboard up in the proof box = nothing but the textarea scrolls (the column and the page stay put); .shut/verdict ladders keep their scroll */
 html.ui-v7.proof-split.kbup #work:has(> #q:focus-within):not(:has(> #rpHost > *)) { overflow: hidden; overscroll-behavior: none; }
 html.ui-v7.proof-split.kbup #work > #q:focus-within { min-height: 0; }
@@ -1948,7 +1961,7 @@ html.ui-v7 .cb:not(.opt .cb) > .cb-hd { border-bottom: 1px solid var(--edge-hair
 .cb-copy .ico { width: 16px; height: 16px; }
 /* WRAP-TOGGLE (Tony Nov 17): the header's Wrap is a shadcn-style Toggle: Lucide wrap-text + label, ghost, 6px radius, 32px visual in a 44px touch target (::after), hover = muted fill, pressed = accent fill. v7 only. */
 .cb-wrap .ico { display: none; }
-html.ui-v7 .cb-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 32px; min-height: 0; padding: 0 10px; border-radius: 6px; font: var(--w-em) 13px/1 var(--mono); text-decoration: none; background: transparent; color: var(--muted); }
+html.ui-v7 .cb-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 32px; min-height: 0; padding: 0 10px; border-radius: 6px; font: var(--w-em) var(--fs--1)/1 var(--mono); text-decoration: none; background: transparent; color: var(--muted); }
 html.ui-v7 .cb-wrap .ico { display: block; width: 16px; height: 16px; flex: none; }
 html.ui-v7 .cb-wrap::after { content: ""; position: absolute; inset: -6px 0; }   /* 32 + 12 = 44px hit area */
 html.ui-v7 .cb-wrap:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
@@ -1967,7 +1980,7 @@ html.ui-v7 :is(input, textarea):focus::placeholder, html.ui-v7:is(.kb, .kbup, .m
 /* RE-ENTRY GUARD (shell.js): the answer controls rest for 1.5 s after the tab comes back */
 html.reentry :is(#q .send, #q .btn-go, #q .opt, #q .nx, #codeGo) { opacity: .55; transition: opacity .2s ease-out; }
 /* HOW-KB (Tony Nov 17): while the keyboard is up (html.kb) or a proof/notes pane owns the screen (html.mt), the hint line above the answer goes: the field gets the room */
-html.ui-v7:is(.kb, .kbup, .mt) #q > .how, html.ui-v7 #q:has(.ans:focus, textarea:focus, input:focus) > .how { display: none !important; }   /* overrides verdict-v7.css:59 ("the hint line stays"), Tony reversed it Nov 17 */
+html.ui-v7:is(.kb, .kbup, .mt) #q > .how:not(.phow), html.ui-v7 #q:has(.ans:focus, textarea:focus, input:focus) > .how:not(.phow) { display: none !important; }   /* overrides verdict-v7.css:59 ("the hint line stays"), Tony reversed it Nov 17 */
 
 /* SCROLL-HANDOFF 2a (Tony Nov 17): the card now hands scroll to the page; the page itself never pulls-to-refresh (a fling past the top would reload and lose state) */
 html.ui-v7 { overscroll-behavior-y: contain; }
