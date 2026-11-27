@@ -5460,10 +5460,12 @@ def chat(cookie_header, body):
         turn = (turn[0], False)                     # an old page over an open round: never reveal on the base record alone
         _turn_open(p, nsid, turn[0], pick, store=store)
     reveal_without_try(p, nsid, rnd, turn, store=store)
-    def chunks():
+    def chunks(on=stage_off):                                   # on: the stage lines (body "stages": true), the same thinking line as /explain
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
         out = set()
+        on("note", "start")
         n = note(p, pick, history[-1]["content"], key, tag, b.get("scratch"), out)
+        on("note", "end")
         if n and not n["on_topic"]:
             yield random.choice(CANNED)
             return
@@ -5475,8 +5477,12 @@ def chat(cookie_header, body):
             rows = cluck_noted(p, nsid, turn[0], xyz_block(n), store=store)
             v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=not pre and turn_closed((nsid, p["code"]), store=store), free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, nsid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
+        on("write", "start")
         st = _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
         yield from pre_try_lines(st, p) if v4 is None and pre else st
+        on("write", "end")
+    if b.get("stages") is True:
+        return 200, head, _staged_relay(p, chunks, "chat")
     return _relay(p, chunks, "chat", head)
 
 

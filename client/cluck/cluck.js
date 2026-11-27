@@ -1153,10 +1153,12 @@ async function clSend(msg, o = {}) {                                      // o.s
   let text = "", err = "", inc = null, r = null, bytes = 0, ftok = null;
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
   const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
+  const sp = { buf: "" }, stg = Stages.make({ host: () => { if (!box.isConnected) return null; let h = box.querySelector(":scope > .stg"); if (!h) { h = document.createElement("div"); h.className = "stg"; h.setAttribute("aria-live", "off"); re.before(h); } return h; } });   // the same thinking line as an /explain reply (stages.js), the free starter chip included
+  let sErr = null;
   try {
     window.stemBrainrot?.fold?.();                                        // Tony, Nov 3: Cluck starts to generate: the brainrot folds (desktop)
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}), ...wishRound(w.code) }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), stages: true, history: [{ role: "assistant", content: w.text }, ...w.chat], ...(o.starter ? { starter: true } : {}), ...wishRound(w.code) }) });
     fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });
@@ -1166,16 +1168,20 @@ async function clSend(msg, o = {}) {                                      // o.s
         const { value, done } = await rd.read(); if (done) break;
         if (ftok == null) ftok = Date.now() - t0;
         bytes += value.length; fr.f();
-        text += dec.decode(value, { stream: true });
+        const c = Stages.feed(sp, dec.decode(value, { stream: true }));
+        for (const e of c.events) e.error ? (sErr = e) : stg.event(e);     // {"error": "S-XXXXX"}: the server's in-band failure (status 200 already)
+        text += c.text;
         ty.text = text;
       }
       fr.e(bytes);
-      if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
+      if (sErr) fail({ why: sErr.why, server: sErr.error, status: sErr.why === "budget_cap" ? 503 : 502, phase: text ? "stream" : "headers", bytes });
+      else if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
     }
-  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) { stg.stop(); return; } fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
   window.stemT?.("cluck_reply", { kind: "ask", ...ckTel(), item: w.code, ok: !err, error: err, chars: text.length, first_token_ms: ftok, total_ms: Date.now() - t0, auto: false, text });   // telemetry
-  if (wish !== w) return;
-  if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
+  if (wish !== w) { stg.stop(); return; }
+  if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) { stg.stop(); return; } }
+  stg.finish(!err);                                                         // after the typing ends: the line stays until the reply is whole
   w.busy = false;
   if (err) {
     w.chat.pop(); if (o.starter) w.free = 0;                               // not answered: it does not count
