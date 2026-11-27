@@ -190,7 +190,7 @@ function keyVerdict(b, v, src) {
   if (!b || !root.classList.contains("ui-v7") || painting || !v) return;
   const fs = keySvg(src || b), s = keySvg(b);
   let a = 0, spinning = false;
-  if (fs) { const cs = getComputedStyle(fs); a = parseFloat(cs.rotate) || 0; spinning = cs.animationName !== "none"; }
+  if (fs) { const k = keyAngle(src || b); if (k != null) { a = k; spinning = true; } else if (src && typeof src._kA === "number") { a = src._kA; spinning = true; } }
   clearTimeout(b._kHold); clearTimeout(b._kDone); clearTimeout(b._kSpin);
   b.classList.remove("k-wait", "k-ok", "k-bad", "k-exit");
   const swap = () => { if (!KEY_CSS_D) { b.classList.add("k-swap"); clearTimeout(b._kSpin); b._kSpin = setTimeout(() => b.classList.remove("k-swap"), 220); } };
@@ -225,6 +225,18 @@ function keyBusy() {   // the no-CSS-d fallback: the arrow becomes the spinner w
     if (b.classList.contains("k-ok") || b.classList.contains("k-bad")) return;
     keyGlyph(b, busy ? "spin" : "arrow");
   });
+}
+/* the spin angle at a verdict: the running key-spin timeline (700ms, 120ms delay) even when the button is already hidden
+   (finish() captures it first), so the Next freezes where the Check was and eases to the next half-turn. null = not spinning. */
+function keyAngle(b) {
+  const s = keySvg(b); if (!s) return null;
+  const anim = s.getAnimations ? s.getAnimations().find(a => a.animationName === "key-spin") : null;
+  if (anim && anim.currentTime != null && Number.isFinite(Number(anim.currentTime))) {
+    const t = Number(anim.currentTime) - 120; return t > 0 ? (t % 700) / 700 * 360 : 0;
+  }
+  const cs = getComputedStyle(s);
+  if (cs.animationName === "none") return null;
+  return parseFloat(cs.rotate) || 0;
 }
 function vmark(box, id) {
   if (!box) return;
@@ -1085,9 +1097,10 @@ function renderQuestion() {
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true, true)}</span>
         </button>
+        ${!many && !root.classList.contains("ui-v7") ? `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}${IB1_GO}</button>` : ""}
         ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Enter your answers here...")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
           data-how="${esc(p.fix.how || "Enter your answers here...")}" placeholder="${esc(p.fix.how || "Enter your answers here...")}"></div>` : ""}
-      </div>`).join("")}</div><div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}${IB1_GO}</button></div>`;
+      </div>`).join("")}</div>${many || root.classList.contains("ui-v7") ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}${IB1_GO}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
     if (all(p)) syncTicks();                                               // nothing ticked can already be checked (prove mode: not yet)
@@ -1438,8 +1451,12 @@ function fitFix(f) {
 }
 function select(o) {
   S.selected = o ? o.dataset.id : null;
-  for (const x of opts()) x.setAttribute("aria-checked", x === o);
-  syncTicks();                                                 // MC key (the .chk row): live only once a choice is picked
+  for (const x of opts()) {
+    const on = x === o;
+    x.setAttribute("aria-checked", on);
+    if (!root.classList.contains("ui-v7")) { const s = x.parentElement.querySelector(".send"); if (s) s.hidden = !on; }   // flag off keeps the tile key
+  }
+  syncTicks();                                                 // ui-v7 MC key (the .chk row): live only once a choice is picked
   keyReset($("#mcGo"));
   placeToast();   // a row of choices reflows when the arrow shows: the toast follows its struck choice, never lands on a live one
 }
@@ -1660,7 +1677,7 @@ async function submitMC() {
   if (S !== mine) return;                                   // another problem opened meanwhile
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
-  const send = o.parentElement.querySelector(".send");
+  const send = o.parentElement.querySelector(".send") || $("#mcGo");
   if (r.verdict === "correct") { o.classList.add("right"); glyph(o, "i-ok"); finish(); }   // no pop: Next is the one motion after Check (T17b-1)
   else if (r.verdict === "wrong") {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); glyph(o, "i-x"); if (r.triesLeft > 0) nudge(o, "jolt");   // the closing pick: no shake
@@ -2267,7 +2284,7 @@ function finish() {
   $("#q").classList.add("closed");
   $("#q").classList.toggle("solved", isSolved(S));   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
-  document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
+  document.querySelectorAll("#q .send").forEach(b => { b._kA = keyAngle(b); b.hidden = true; });   // SHIPPED KEY: keep the spin angle for the Next that takes this slot
   cueNext();
   retryTag();
   guard();
@@ -2295,7 +2312,15 @@ function nextBtn() {                                                            
 }
 function cueCarrier() {
   const p = S.prob, t = S.tries.at(-1) || {};
-  if (p.type === "mc") return { box: $("#q .chk"), send: $("#mcGo") };           // SHIPPED KEY: the MC key lives in the .chk row (the pick-all slot), never in a tile
+  if (all(p)) return { box: $("#q .chk"), send: $("#mcGo") };
+  if (p.type === "mc") {
+    if (!root.classList.contains("ui-v7")) {                                       // flag off: the tile key is still the MC Check
+      const id = t.c ?? S.selected ?? $("#q .opt.right")?.dataset.id;
+      const box = (id != null && [...document.querySelectorAll("#q .ch")].find(c => c.dataset.id === String(id))) || $("#q .ch");
+      return { box, send: box && box.querySelector(".send") };
+    }
+    return { box: $("#q .chk"), send: $("#mcGo") };           // SHIPPED KEY: the MC key lives in the .chk row (the pick-all slot), never in a tile
+  }
   if (p.type === "multi") { const e = partEls(typeof t.part === "number" ? t.part : p.parts.length - 1); return { box: e.box, send: e.go }; }
   return { box: $("#ff"), send: $("#ansGo") };
 }
@@ -2345,7 +2370,15 @@ function cueNext() {
   const nx = nextBtn();
   send.after(nx);
   const last = S && S.tries.at(-1), v = last && (last.v === "correct" ? "ok" : last.v === "wrong" || last.v === "locked" ? "bad" : "");
-  if (v) { if (painting) { if (v === "bad") nx.classList.add("k-wait"); } else keyVerdict(nx, v, send); }   // SHIPPED KEY: verdict hold + exit on the Next; a reload shows the final state, no replay
+  if (v) {
+    if (painting) { if (v === "bad") nx.classList.add("k-wait"); }
+    else {
+      /* the Next takes the Check's slot mid-spin: paint it as the frozen spinner once, so its d / rotate transition starts from there (seamless) */
+      const ka = keyAngle(send), a = ka != null ? ka : (typeof send._kA === "number" ? send._kA : 0), s = keySvg(nx);
+      nx.classList.add("k-spin"); if (s) s.style.rotate = a + "deg"; void nx.offsetWidth;
+      keyVerdict(nx, v, send);
+    }
+  }   // SHIPPED KEY: verdict hold + exit on the Next; a reload shows the final state, no replay
   if (h0 && Math.abs(box.offsetHeight - h0) > 0.5) nx.style.top = h0 / 2 + "px";
   const g = box.closest(".choices.inline");                                     // pills: Next must fit its pill, else the rows stack
   if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");

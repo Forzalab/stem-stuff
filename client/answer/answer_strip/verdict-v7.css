@@ -254,6 +254,8 @@ html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx .nf > span
 /* states: empty / wait */
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .mparts .part > .ff > .send, .chk > #mcGo):disabled { opacity: var(--key-off); cursor: default; pointer-events: none; }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-wait { opacity: var(--key-off); cursor: default; animation: none; }   /* .g-next pins opacity 1 with fill both: the dim needs the landing animation off */
+/* a restored judged-wrong field shows the final state static: its key is the dimmed arrow until the answer changes (no replay) */
+html.ui-v7 #q :is(.ff#ff.bad:not(.cue, .rbox) > #ansGo:not(.k-bad, .k-ok), .mparts .part > .ff.bad:not(.shut) > .send:not(.k-bad, .k-ok)) { opacity: var(--key-off); }
 /* focus-visible: the app's one keyboard ring */
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx):focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 /* BUSY / grading: the arrow morphs to the spinner (120ms), then the svg turns 700ms linear infinite; face stays --chip full */
@@ -266,8 +268,8 @@ html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on
 html.ui-v7.grading #q :is(.ff#ff:not(.proof, .rbox) > #ansGo, .mparts .part.g-on > .ff > .send, .chk > #mcGo, .ff.proof#ff > #ansGo) > .ib1-go { visibility: visible; }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .chk > #mcGo).waiting::before { display: none; }
 /* VERDICT: the spin freezes on the next half-turn while the glyph becomes the cross / tick and the face shifts; 120ms */
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-bad { background: var(--wrong-fill); color: var(--wrong); }
-html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-ok { background: var(--correct-fill); color: var(--correct); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-bad { background: var(--wrong-fill); color: var(--wrong); transition-duration: var(--key-fast); }
+html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-ok { background: var(--correct-fill); color: var(--correct); transition-duration: var(--key-fast); }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-bad .ib1-go path { d: var(--key-g-cross); transition-duration: var(--key-fast); }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-ok .ib1-go path { d: var(--key-g-tick); transition-duration: var(--key-fast); }
 html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx).k-stop { transition-duration: var(--key-fast); }
