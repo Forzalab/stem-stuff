@@ -32,6 +32,7 @@
   const STUDY_MS = 10000;     // TUNABLE (DESIGN-v3 §3): the full solution's study pause before Next is live
   const TOL = 0.02;           // a `num` step's relative tolerance when it names none
   const L = () => root.__stemRepairLines || {};
+  const v7 = () => !!(root.document && root.document.documentElement.classList.contains("ui-v7"));
 
   const any = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;   // one of a rotation (Math.random: stubbed in tests)
   const ladderOf = item => (item && item.repair && item.repair.steps) || [];
@@ -258,8 +259,8 @@
       const head = h("div", "rp-head"), n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";
       head.append(n, h("span", "rp-label", st.label));
-      const typedDone = s.ok && (st.kind === "num" || st.kind === "expr");        // LADDER-UNIFY (Tony Nov 26): a typed answer is the same green verdict
-      if (!typedDone && s.ok) head.append(h("span", "sr-only", shown(s)));       // the value for a screen reader: the locked chips are aria-hidden
+      const typedDone = v7() && s.ok && (st.kind === "num" || st.kind === "expr");   // LADDER-UNIFY (Tony Nov 26, ui-v7 only): a typed answer is the same green verdict;
+      if (!typedDone && s.ok) head.append(h("span", "sr-only", shown(s)));       // flag off keeps the locked field in its row (welcome.css W129, PLAN L6: nothing changes size)
       head.append(h("span", "rp-ok", "✓"));                                      // always there (welcome.css hides it until done): its room never moves the label
       li.append(head);
       if (typedDone) {                                                           // chip as a picked one, on the line under number + label; the locked field goes

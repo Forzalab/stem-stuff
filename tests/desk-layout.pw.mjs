@@ -254,6 +254,9 @@ try {
           /* the last Check: the answer row, the done line and Next arrive at the card's foot (below the ladder: meant to change) */
           await gate(page, "4-answer", size, tapIn(".rp-check"), async c => { const wl = await rectOf(page, "#q section.wl"), a = c.r0.find(r => r.id === "answer");
             return [...changedRows(c), { x: wl.x, y: a.y, w: wl.w, h: wl.b - a.y + 80 }]; });
+          /* flag off: the answered typed row keeps its locked field in place (welcome.css W129 "the form stays put"). Dropping it frees the card's
+             foot, where the start-line toast has been waiting for room: it slides in over the next frames and L6 reads that as a repaint. */
+          assert.ok(await page.$('#q .rp-step[data-id="answer"] .rp-in'), `${tag}: the answered typed row dropped its locked field (flag off)`);
           assert.ok(await page.$("#q section.wl .nx"), "no Next after the welcome");
           assert.deepEqual(errs, []);
         });
