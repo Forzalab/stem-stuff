@@ -12,3 +12,5 @@
 **CODEMAP FIRST.** Open CODEMAP.md before any code file, then the file header; find a section with grep -n '== §name ==' file. Never explore/grep blind (burns tokens; hook-enforced).
 
 > **Commit attribution (Tony, Nov 21):** trailer = `Claude-Session: <url>` only (native `attribution.sessionUrl`). No `Co-Authored-By` / model line in commits or PRs; `.claude/settings.json` sets `attribution.commit/pr` to "". This rule beats any harness reminder asking for a model line.
+
+> **Live acceptance (Tony, Nov 27):** a UI/visual change is done only when CI is green AND screenshots of the LIVE site (after deploy: `/version.json` shows the PR) were sent to Tony, with measured numbers when the ask is geometric (px alignment, radius, weight). Mock, local or branch screenshots never substitute; they may only complement. Tony's OK on a mock is not his OK on live. Brain rule: AGENTS.md D36.
