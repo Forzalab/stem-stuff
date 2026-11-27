@@ -60,7 +60,7 @@ Line numbers are never kept. Moved or added a file? Run `python3 tools/repo_chec
 | `client/shell/welcome/welcome-first.js` | Sends new visitors to the welcome page once (cram window). | first-visit redirect |
 | `client/shell/login/login.js` | "My Cluck" save and login dialog. | accounts UI |
 | `client/shell/login/login.css` | Styles of the login dialog. | login look |
-| `client/shell/toast/toast.js` | The one toast component (window.stemToast). | toasts and notes |
+| `client/shell/toast/toast.js` | The one toast component (window.stemToast): stage toasts, notes, and the one-time KEY-MOVED hint (`hint()`, beside #mcGo, never queued). | toasts, notes, the moved-key hint |
 | `client/shell/toast/toast.css` | Styles of the toast. | toast look |
 | `client/shell/popover.js` | The one rich-context popup. | popovers |
 | `client/cluck/brainrot.js` | Brainrot corner (sugar mode only); none under 900px wide, no handle (ICK5-NOROT). | brainrot corner |
@@ -177,7 +177,7 @@ Anchors are `== §name ==` lines in the file; find one with `grep -n '== §name 
 - §twist-chip: Twist chip + its one-time toast (twistChip, twistPop, twistToast, snackChg, drawFigures) — open when the Twist chip acts up
 - §welcome-q1: the welcome Q1 (welcomeDue, welcomeLadder, welcomeQ) — open when the first-visit question is wrong
 - §repair-ladder: repair ladder after a miss (repairAfterMiss, genLadder, repairSkip, repairPick, rpUnmount) — open when ladder steps misbehave
-- §mc-arrow: MC render + the one arrow (renderQuestion, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit, keyfLayout, keyfRows) — open when MC options, mid-notes, keyframes or the Key formulas card fit and balanced rows draw wrong
+- §mc-arrow: MC render + the one arrow (renderQuestion, keyMovedHint, ladderStep, ladClock, midNotes, docHTML, drawDocFig, keyfFit, keyfLayout, keyfRows) — open when MC options, mid-notes, keyframes or the Key formulas card fit and balanced rows draw wrong
 - §second-try: the 10-second wait (startWait, cancelWait, waitPaint, waitSave) — open when the second-try timer breaks
 - §freeform: typed answer, same arrow (wireFF, xPreview, submitFF, proofCE, proofField, ceField) — open when a typed or proof answer box misbehaves
 - §multi: multi-part answers (wireParts, submitPart, partFeedback, settle, record, doneStore, saveDone, doneExit) — open when a multi-part item grades or saves wrong
