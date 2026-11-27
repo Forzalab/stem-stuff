@@ -5,6 +5,7 @@
 .rp { position: relative; box-sizing: border-box; max-width: 100%; margin-top: calc(var(--s3) + 14px); padding: var(--s3) var(--s4) var(--s4);   /* room for the intro tab's half above the card (s3 gap) */
   background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); font-size: var(--t-sm); line-height: var(--lh-ui); }
 .rp-line { margin: 0 0 var(--s3); color: var(--help-on); }
+.rp-tab.rp-tab-short { white-space: nowrap; }   /* the fallback ladder's tab (repair.js LADDER_TABS): one line at 360; the family / alt / welcome lines still wrap */
 .rp-steps { margin: 0; padding: 0; list-style: none; }
 .rp-step { padding: var(--s2) 0; border-top: var(--bw) solid var(--help-rule); }
 .rp-step:first-child { border-top: 0; }

@@ -24,17 +24,25 @@
    wrong → it fills itself in with its why shown and moves on. ✓ / ✗ are glyphs, never hue alone. All text lands as textContent;
    `$..$` math goes through Graph.tex (escapes the text around it).
    Lines (copy/repair-lines.js, contract v2): doneBy{L1,L2,L3,tail} else done; hintBy{far[],two,three[]} by the welcome wrong-tap count else
-   hint; auto / intro.<variant> "" or missing = no line (an auto-filled step's number badge gets data-auto instead).
+   hint; auto / intro.<variant> "" or missing = no line (an auto-filled step's number badge gets data-auto instead). The fallback tab
+   (no slip family) is the short pool LADDER_TABS in this file, picked by the item's code; intro.fallback is not read.
 */
 (function (root) {
   "use strict";
   const TRIES = 2;            // TUNABLE (v2 §B): wrong tries on one step before it fills itself in
   const STUDY_MS = 10000;     // TUNABLE (DESIGN-v3 §3): the full solution's study pause before Next is live
   const TOL = 0.02;           // a `num` step's relative tolerance when it names none
+  const LADDER_TABS = ["Let's waddle through it.", "One waddle at a time.", "Step by step. Quack.", "Waddle it out with me."];   // the fallback ladder's tab: short enough for one line at 360 px
   const L = () => root.__stemRepairLines || {};
   const v7 = () => !!(root.document && root.document.documentElement.classList.contains("ui-v7"));
 
   const any = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;   // one of a rotation (Math.random: stubbed in tests)
+  /* the fallback tab, picked by the item's code: the same item always says the same line (no Math.random, no flicker) */
+  function tabLine(code) {
+    let n = 0;
+    for (const ch of String(code || "")) n = (n * 31 + ch.codePointAt(0)) >>> 0;
+    return LADDER_TABS[n % LADDER_TABS.length];
+  }
   const ladderOf = item => (item && item.repair && item.repair.steps) || [];
   function blankOf(steps, error) {
     if (!error || error === "SLIP_TIE") return null;
@@ -335,8 +343,9 @@
     function introEl() {                                                         // Cluck's line; a leading *action* is italic, the rest text
       const I = L().intro || {}, many = String(o.error).split("+").length > 1;
       const key = o.gen ? "proof" : variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
-      const t = String(I[key] || "");
+      const t = key === "fallback" ? tabLine(item.code) : String(I[key] || "");   // the fallback tab is one short line at 360 (the lines' own intro.fallback wrapped); welcome and the rest are unchanged
       const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line rp-tab");   // the ONE intro tab (welcome.css .rp-tab): orange --help pill, dark ink, the duck, on both ladders
+      if (key === "fallback") p.classList.add("rp-tab-short");
       if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
       p.insertAdjacentHTML("afterbegin", '<svg class="icon wl-duck" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
       return p;
