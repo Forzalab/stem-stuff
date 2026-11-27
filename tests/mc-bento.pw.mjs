@@ -102,7 +102,7 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const key = await p.evaluate(() => { const k = document.querySelector("#q .chk #mcGo"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect();
     return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), inChk: !!k.closest(".chk"), tile: !!document.querySelector("#q .ch .send"), shadow: c.boxShadow }; });
   const lt = await p.evaluate(() => { const b = document.querySelector("#q .ch:has(.opt[data-id='b']) .badge"), c = getComputedStyle(b), r = getComputedStyle(document.documentElement); return { fs: c.fontSize, fw: c.fontWeight, tt: c.textTransform, root: r.getPropertyValue("--ans-letter-fs").trim() }; });
-  assert.ok(lt.fs === "16px" && lt.fw === "600" && lt.tt === "uppercase", "SHARED answer letter on the MC tile (16px, 600, uppercase; app.css --ans-letter-*): " + JSON.stringify(lt));
+  assert.ok(lt.fs === "20px" && lt.fw === "600" && lt.tt === "uppercase", "answer letter on the MC tile (20px = the value size, 600, uppercase; Tony Nov 27 letter/words alignment; pick-all + typed keep 16): " + JSON.stringify(lt));
   assert.equal(key.bg, rgb("#283352"), "SHIPPED KEY: the MC key wears the typed key's --chip face: " + JSON.stringify(key));
   assert.ok(key.w === 60 && key.h === 60 && key.arrow && key.sprite === "none" && key.shadow === "none", "SHIPPED KEY: the 60px .chk key, the 24-grid arrow, no shadow: " + JSON.stringify(key));
   assert.ok(key.inChk && !key.tile, "SHIPPED KEY: MC key moved OUT of the tile into .chk: " + JSON.stringify(key));
@@ -170,7 +170,7 @@ await step("shared answer letter: MC + pick-all 16/24 600 uppercase --ink-qnum; 
         root: { fs: root.getPropertyValue("--ans-letter-fs").trim(), lh: root.getPropertyValue("--ans-letter-lh").trim(), fw: root.getPropertyValue("--ans-letter-fw").trim(), tt: root.getPropertyValue("--ans-letter-tt").trim(), color: root.getPropertyValue("--ans-letter-color").trim() } };
     });
     assert.ok(m.root.fs === "1rem" && m.root.lh === "24px" && m.root.fw === "600" && m.root.tt === "uppercase" && m.root.color === "#7a8aae", "ONE answer-letter definition in app.css: " + JSON.stringify(m.root));
-    assert.equal(m.fs, "16px", `shared letter size @${W} ${code}: ${m.fs}`);
+    assert.equal(m.fs, m.all ? "16px" : "20px", `shared letter size (MC tile = value size 20, pick-all 16) @${W} ${code}: ${m.fs}`);
     assert.equal(m.fw, "600", `shared letter weight @${W} ${code}: ${m.fw}`);
     assert.equal(m.tt, "uppercase", `shared letter transform @${W} ${code}: ${m.tt}`);
     assert.equal(m.color, "rgb(122, 138, 174)", `shared letter colour @${W} ${code}: ${m.color} (--ink-qnum)`);
