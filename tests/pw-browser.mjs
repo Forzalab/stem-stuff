@@ -14,7 +14,7 @@
 //                            JEV-DET 2: jev also per context: browser.newContext({ jev, ... }) / newPage({ jev }) beats the browser value.
 //                            jev: <number> = Jev on with seeded dice (window.__stemDice, mulberry32): the whole scenario replays.
 //   keyhint: every newContext/newPage defaults to the one-time "key moved" toast already seen (init script: localStorage stem-key-moved-1=1
-//                            when unset), so it never queues ahead of the toast a spec waits for. tests/key-moved-hint.smoke.mjs opts in with
+//                            when unset and the device is not new), so it never queues ahead of the toast a spec waits for. tests/key-moved-hint.smoke.mjs opts in with
 //                            launchBrowser(pw, { keyhint: true }), or per context (newContext({ keyhint: true })): a spec that needs a NEW device
 //                            (no stem-* key at first load, the onboarding rows of ux-flows) opts out the same way.
 //   PW_TRACE=0 (CI-ARCH E)   turns the event trace off. Default on: every context is recorded (tests/lib/trace.mjs) and a spec's
@@ -30,7 +30,9 @@ const JEV_SEED = s => `(() => { let a = ${s >>> 0}; window.__stemDice = () => { 
   t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();`;   // mulberry32
 /* the jev init script for a context: off, seeded, or none (live dice) */
 const jevInit = (ctxJev, browserJev) => { const j = JEV || (ctxJev ?? browserJev); return !j ? JEV_OFF : typeof j === "number" ? JEV_SEED(j) : null; };
-const KEYHINT_SEEN = `(() => { try { if (localStorage.getItem("stem-key-moved-1") === null) localStorage.setItem("stem-key-moved-1", "1"); } catch {} })();`;
+/* only on a device that already has a stem-* key (the Jev-off init runs first): a NEW device (no stem-* key at first load: the onboarding rows,
+   their Jev is seeded so no stem-jev key) stays new, so the onboarding notes still show */
+const KEYHINT_SEEN = `(() => { try { if (localStorage.getItem("stem-key-moved-1") === null && Object.keys(localStorage).some(k => k.startsWith("stem-"))) localStorage.setItem("stem-key-moved-1", "1"); } catch {} })();`;
 const YT_ROUTE = /youtube|ytimg|googlevideo/;
 /* an aborted iframe lands on an opaque chrome-error page, where scripts reading localStorage throw "Access is denied" (mc-bento pageerror):
    a frame gets an empty page from the youtube origin instead; scripts/images/media are aborted */
