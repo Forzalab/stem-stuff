@@ -288,6 +288,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: LABELS="$(gh api "repos/$REPO/issues/$PR/labels" --jq '.[].name')" tools/operations/ci-live-ok.sh   # fresh read: a re-run must see current labels
   # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   # AC0.2: never skipped (`if: always()`, every pipe). Fast pipe = red "fast pipe only"; skips only for docs-only / zero-.pw (tools/operations/ci-all-verdict.sh)

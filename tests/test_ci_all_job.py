@@ -54,8 +54,8 @@ class LiveOk(unittest.TestCase):
     """VISUAL-PR GATE: the live-ok job script and its place in the verdict."""
     SCRIPT = os.path.join(ROOT, "tools", "operations", "ci-live-ok.sh")
 
-    def labels(self, text):
-        env = dict(os.environ, LABELS=text)
+    def labels(self, text, **extra):
+        env = dict(os.environ, LABELS=text, **extra)
         return subprocess.run(["bash", self.SCRIPT], env=env, capture_output=True, text=True).returncode
 
     def test_labels(self):
@@ -65,6 +65,12 @@ class LiveOk(unittest.TestCase):
         self.assertEqual(self.labels("bug,other"), 1)
         self.assertEqual(self.labels(""), 1)
         self.assertEqual(self.labels("visual,nonvisual,live-ok-tony"), 1)
+
+    def test_dependabot_is_exempt(self):
+        self.assertEqual(self.labels("", AUTHOR="dependabot[bot]"), 0)
+        self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="o/r", REPO="o/r"), 0)
+        self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="fork/r", REPO="o/r"), 1)
+        self.assertEqual(self.labels("visual", AUTHOR="someone"), 1)
 
     def test_verdict(self):
         self.assertEqual(verdict(LIVE_OK="failure")[0], 1)

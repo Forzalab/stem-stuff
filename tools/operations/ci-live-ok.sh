@@ -6,7 +6,12 @@
 #   visual without live-ok-tony    -> FAIL
 #   neither visual nor nonvisual   -> FAIL (the orc must classify the PR)
 #   visual AND nonvisual           -> FAIL (ambiguous)
+#   dependabot (Tony Nov 27): PR author dependabot[bot] (event payload, not a label), or a same-repo head branch dependabot/*, passes: exempt, non-visual.
+# Also input (env): AUTHOR = github.event.pull_request.user.login, HEAD_REF, HEAD_REPO, REPO (for the branch rule).
 set -uo pipefail
+if [ "${AUTHOR:-}" = "dependabot[bot]" ] || { [ -n "${REPO:-}" ] && [ "${HEAD_REPO:-}" = "${REPO:-}" ] && [[ "${HEAD_REF:-}" == dependabot/* ]]; }; then
+  echo "live-ok: dependabot PR, exempt"; exit 0
+fi
 L=$(printf '%s\n' "${LABELS:-}" | tr ',' '\n' | sed 's/^ *//;s/ *$//')
 has() { printf '%s\n' "$L" | grep -qx -- "$1"; }
 if has visual && has nonvisual; then
