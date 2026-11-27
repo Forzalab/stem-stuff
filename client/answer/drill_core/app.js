@@ -2130,6 +2130,14 @@ async function syncServer(mine) {
   if (shown) repaint(rec.x || rec.done !== "open" || tries.length ? rec : null);
   showRev();
 }
+/* Solved = the unit's done state (the server sync restores it), never the local try log alone (F2: a purged store left a solved item
+   reading locked). Single: the unit record says correct. Multi: S.solved. A correct try is the fallback only when no done state exists. */
+function isSolved(st) {
+  if (!st) return false;
+  if (st.prob.type === "multi") return !!st.solved;
+  const u = doneStore()?.doneGet?.(st.code)?.units?.[0];
+  return u && u.done ? u.done === "correct" : st.tries.some(x => x.v === "correct");
+}
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
 /* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
@@ -2138,7 +2146,7 @@ async function syncServer(mine) {
 const RTAG = { owe: ["Pity roll", "i-back"], won: ["Avenged!", "i-ok"], review: ["Review", "i-back"], kept: ["Reviewed", "i-ok"], out: ["Comes back later", "i-back"] };
 function retryTag() {
   const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
-  const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
+  const won = !!S && S.finished && isSolved(S);
   const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
   t.hidden = true;   // RTAG-TOAST (Tony, Nov 16): no chip on the card; the state lands as a toast, once per question + state (the hidden tag keeps its words for state reads)
   t.className = "qtag rtag" + (k ? " rt-" + k : "");
@@ -2158,7 +2166,7 @@ function guard() {
   $("#q .guard")?.remove();
   if (!S || S.prob.type !== "mc") return;
   const r = window.stemRedo.get(), redeem = !!r && r.codes.includes(S.code) && r.redeem !== false;
-  const won = S.tries.some(x => x.v === "correct");
+  const won = isSolved(S);
   if (won && !redeem) return;
   const burst = won && !painting && !matchMedia("(prefers-reduced-motion: reduce)").matches ? `<span class="burst" aria-hidden="true">${"<i></i>".repeat(8)}</span>` : "";
   $("#q").insertAdjacentHTML("beforeend", won
@@ -2174,7 +2182,7 @@ function pbFeed() {
     if (!bank || painting || !S) return;
     const k = pbKey(bank.code), st = pbLoad(localStorage.getItem(k));
     const multi = S.prob.type === "multi", n = multi ? S.parts.length : 1;
-    const f = multi ? S.parts.filter(x => x.ok).length / n : S.tries.some(x => x.v === "correct") ? 1 : 0;
+    const f = multi ? S.parts.filter(x => x.ok).length / n : isSolved(S) ? 1 : 0;
     const r = window.stemRedo?.get?.(), retry = !!r && r.codes.includes(S.code);
     if (pbFull(st)) pbNext(st);
     const at = bank.codes.indexOf(S.code), left = at < 0 ? undefined : bank.codes.slice(at + 1).filter(c => !st.notches.some(x => x.q === c)).length;
@@ -2187,7 +2195,7 @@ function finish() {
   S.finished = true; cancelWait();
   pbFeed();
   $("#q").classList.add("closed");
-  $("#q").classList.toggle("solved", S.tries.at(-1)?.v === "correct");   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
+  $("#q").classList.toggle("solved", isSolved(S));   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
   cueNext();

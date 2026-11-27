@@ -926,6 +926,12 @@ KV = (os.environ.get("KV_REST_API_URL"), os.environ.get("KV_REST_API_TOKEN"))
 KV_KEY = "stem:tries"
 
 
+def blob_key():
+    """the tries blob's key: KV_KEY in prod, PREVIEW_PREFIX + KV_KEY on a Vercel preview (the hash store's rule, KVF-3): an agent / bench run on a
+    preview must never read or write the students' blob, whatever STEM_TRIES_HASH says"""
+    return tries_prefix() + KV_KEY
+
+
 def _kv(*cmd):
     req = urllib.request.Request(KV[0], data=json.dumps(cmd).encode(), method="POST",
                                  headers={"Authorization": "Bearer " + KV[1], "Content-Type": "application/json"})
@@ -945,7 +951,7 @@ def _load_tries():
     try:
         if all(KV):
             try:
-                data = json.loads(_kv("GET", KV_KEY) or "{}")
+                data = json.loads(_kv("GET", blob_key()) or "{}")
             except (OSError, ValueError):
                 _gen["kv_bad"] = True         # unread is not empty: never save over it (_save_tries)
                 raise
@@ -977,7 +983,7 @@ def _save_tries():
             log("tries not saved: KV was unreadable on load")
             return
         try:
-            _kv("SET", KV_KEY, json.dumps(data))
+            _kv("SET", blob_key(), json.dumps(data), *(("EX", tries_lifetime()) if tries_prefix() else ()))   # a preview: its own key, a 1-day life
         except (OSError, ValueError) as e:
             log("tries not saved to KV:", e)
         return
@@ -998,11 +1004,21 @@ def _entry(key):
     return st
 
 
-def state(p, sid, reveal=False, snap=None, store=None):
+class StoreUnread(OSError):
+    """the tries record could not be read (KV error, broken blob): that is "unknown", never "nothing tried yet" """
+
+
+def unread_reply(p):
+    """grade()'s answer when the record is unreadable: no verdict, no try used (the route turns it into a 503; a proof's page already waits on busy)"""
+    return {"verdict": "busy", "why": "store", "triesLeft": max_tries(p), "gen": 0}
+
+
+def state(p, sid, reveal=False, snap=None, store=None, strict=False):
     """{wrong, done, gen} for one browser and problem ({parts: [...]} for a multi). No entry: nothing tried yet, gen = the
     one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again).
     snap = (tries, gen): a caller that already read the store once (bank_payload) shares it instead of re-reading per item.
-    store = a TriesStore the route already made (the flag on): one load for the whole request."""
+    store = a TriesStore the route already made (the flag on): one load for the whole request.
+    strict: raise StoreUnread when the record could not be read, instead of answering as if nothing was tried (the /state route)."""
     if store is None:
         store = _new_store()
     def one(key):
@@ -1019,11 +1035,15 @@ def state(p, sid, reveal=False, snap=None, store=None):
         return one((sid, p["code"]))
     if store is not None:
         store.load(sid)
+        if strict and store.unread:
+            raise StoreUnread("tries not read")
         tries, gen = store, store.gen
         return build()
     with _tries_lock:
         if snap is None:
             _load_tries()
+            if strict and _gen.get("kv_bad"):
+                raise StoreUnread("tries not read")
             tries, gen = _tries, _gen["n"]
         else:
             tries, gen = snap
@@ -1294,6 +1314,8 @@ def grade(p, sid, body, reveal=False, on=stage_off):
     rnd = body.get("round")                  # "Redo my misses": a round grades in its own namespace, history untouched
     if rnd is not None and (isinstance(rnd, bool) or not isinstance(rnd, int) or not 0 < rnd < 2 ** 31):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}
+    if rnd is not None and not round_open(p, sid, rnd, idx if multi else None):
+        rnd = None                           # the round number is the page's word: a unit with tries left grades in the real record
     if p["type"] == "proof":                 # W107: Cluck's grader is a network call, so it runs outside the tries lock
         return proof_grade(p, sid, body, rnd, reveal, on)
     store = _new_store()
@@ -1301,6 +1323,8 @@ def grade(p, sid, body, reveal=False, on=stage_off):
         sid = store.round(sid, rnd)
         key = (sid, p["code"], idx) if multi else (sid, p["code"])
         st = store.entry_new(key)
+        if store.unread:                     # unknown is not "nothing tried": no verdict, nothing written over the record
+            return unread_reply(p)
         out = _grade(p, st, body, multi, idx, reveal)
         out["gen"] = st["gen"]
         if out["verdict"] in ("correct", "wrong"):
@@ -1309,6 +1333,8 @@ def grade(p, sid, body, reveal=False, on=stage_off):
         return out
     with _tries_lock:
         _load_tries()
+        if _gen.get("kv_bad"):
+            return unread_reply(p)
         sid = _round_sid(sid, rnd)
         key = (sid, p["code"], idx) if multi else (sid, p["code"])
         out = _grade(p, _entry(key), body, multi, idx, reveal)
@@ -1316,6 +1342,25 @@ def grade(p, sid, body, reveal=False, on=stage_off):
         if out["verdict"] in ("correct", "wrong"):
             _save_tries()
         return out
+
+
+def round_open(p, sid, rnd, idx=None):
+    """a redo round ("Redo my misses", body `round`) may start on this unit when this browser already shut it (solved, or out of tries) and
+    any OTHER round it has on the unit is shut too, by the server's own record. The round number is a client number: without this check
+    every new number was a fresh set of tries on any item, at any time."""
+    store = _new_store()
+    if store is not None:
+        store.load(sid)
+        ents = store.entries()
+    else:
+        with _tries_lock:
+            _load_tries()
+            ents = [(k, dict(st)) for k, st in _tries.items()]
+    mine = {k[0]: st for k, st in ents if k[1] == p["code"] and (k[2] if len(k) == 3 else None) == idx and (k[0] == sid or k[0].startswith(sid + ":r"))}
+
+    def shut(st):
+        return bool(st) and (st["done"] or len(st["wrong"]) >= max_tries(p))
+    return shut(mine.get(sid)) and all(shut(st) for name, st in mine.items() if name not in (sid, f"{sid}:r{rnd}"))
 
 
 def _round_sid(sid, rnd):
@@ -1327,6 +1372,56 @@ def _round_sid(sid, rnd):
     for k in [k for k in _tries if k[0].startswith(old) and k[0] != sid]:   # one round per browser: KV stays small
         del _tries[k]
     return sid
+
+
+def _round_ns(sid, b, store=None):
+    """the body's round (validated as grade() does) and its namespace (the /check helper, computed once); rnd False = malformed, None = base"""
+    rnd = b.get("round")
+    if rnd is not None and (isinstance(rnd, bool) or not isinstance(rnd, int) or not 0 < rnd < 2 ** 31): return False, sid
+    if rnd is None:
+        return None, sid
+    if store is not None:
+        return rnd, store.round(sid, rnd)
+    with _tries_lock:
+        _load_tries()
+        return rnd, _round_sid(sid, rnd)
+
+
+def _open_round(p, sid, store=None):
+    """a redo round under this browser + item still has a try left and is not done: an old page must not read the base as closed over it."""
+    if store is not None:
+        store.load(sid); pairs = store.entries()
+    else:
+        with _tries_lock:
+            pairs = [((k[0],) + tuple(k[1:]), st) for k, st in _tries.items()]
+    return any(key[1] == p["code"] and key[0].startswith(sid + ":r") and key[0][len(sid) + 2:].isdigit()
+               and not st["done"] and len(st["wrong"]) < max_tries(p) for key, st in pairs)
+
+
+def reveal_without_try(p, sid, rnd, turn, store=None):
+    """tripwire (desync F1): REVEAL yes on a namespace with no recorded try and no solve. Log the cause; never change the reply."""
+    if not turn or not turn[1] or (rnd is None and not _open_round(p, sid, store=store)):
+        return
+    st = state(p, sid, store=store)
+    if item_solved(p, sid, store=store) or any(u["wrong"] for u in (st["parts"] if "parts" in st else [st])):
+        return
+    why = "closed" if tries_out(p, sid, store=store) else "turn3" if turn[0] >= (CRAM_REVEAL_TURN if cram_note(p["code"]) else 3) else "solved"
+    log(f"desync reveal-without-try sid={str(sid)[:8]} code={p['code']} round={rnd if rnd is not None else '-'} server={why}")
+
+
+def _turn_open(p, sid, n, pick, store=None):
+    """an old page over an open round: this turn's row replays as not solved / not locked"""
+    if store is not None:
+        rows = turns_read(sid, p["code"])
+        for r in rows:
+            if r[0] == n: r[1:] = [0, r[2] if len(r) > 2 else "", pick]
+        turns_write(sid, p["code"], rows)
+        return
+    with _tries_lock:
+        rows = _cluck_turns.get((sid, p["code"])) or []
+        for r in rows:
+            if r[0] == n: r[1:] = [0, r[2] if len(r) > 2 else "", pick]
+        _save_tries()
 
 
 def _grade(p, st, body, multi, idx, reveal=False):
@@ -1475,7 +1570,8 @@ def tries_key(sid):
 
 
 def turns_key(sid, code):
-    return f"{tries_prefix()}{TURNS_KEY}{_base_sid(sid)}:{code}"
+    """one turn key per namespace: a redo round (sid:r<N>) keeps its own turn rows, never the base's"""
+    return f"{tries_prefix()}{TURNS_KEY}{sid}:{code}"
 
 
 def _base_sid(sid):
@@ -1557,6 +1653,7 @@ class TriesStore:
         self.gen = 0                         # this browser's last gen
         self.dirty = {}                      # field -> value to HSET (all fields in ONE HSET)
         self.dels = []                       # fields to HDEL (an older redo round)
+        self.unread = False                  # the one load failed: `fields` is empty because we do not know, not because nothing was tried
 
     # ---- read ----
     def load(self, sid):
@@ -1569,6 +1666,7 @@ class TriesStore:
             raw = _kv("HGETALL", tries_key(self.sid)) or []
         except (OSError, ValueError) as e:
             log("tries not read from KV:", e)
+            self.unread = True
             self.gen = gen_floor()           # unread is not empty: still start at the clock, never below a reset
             return
         for name, val in zip(raw[0::2], raw[1::2]):
@@ -1650,6 +1748,10 @@ class TriesStore:
     def save(self):
         """every dirty field in ONE multi-field HSET, + EXPIRE, in ONE pipeline; a failed write is logged, as before"""
         if not self.dirty and not self.dels:
+            return
+        if self.unread:                      # never write over a record we could not read (the blob path's kv_bad rule)
+            log("tries not saved: the store was unreadable on load")
+            self.dirty, self.dels = {}, []
             return
         key = tries_key(self.sid)
         cmds = [["HDEL", key, *self.dels]] if self.dels else []
@@ -2425,6 +2527,7 @@ def _or_post(payload, key, timeout):
     return r
 AUTO_PER_HOUR, ANY_PER_HOUR = 5, 40          # Tony: 5 questions an hour fire on the first wrong answer; past that, the student asks
 _asked = {}                                  # sid -> [(time, auto)]
+_asked_all = {}                              # clock hour -> asks of every browser (the no-KV twin of the shared governor counter)
 _asked_lock = threading.Lock()
 # Prompts v4 (brain topics/cluck-chat-gate.md): intuition first (a topic sentence), then the student's assumption vs what is true
 # (the hidden NOTE below feeds it), then the numbers as proof. One FORMAT block, in priority order, shared by both prompts.
@@ -2464,12 +2567,40 @@ Order:
 """ + IDENTITY + "\n" + FORMAT + "\n" + NOTE_RULE + "\n" + VOICE
 
 
+def shared_count(key, ttl):
+    """INCR + EXPIRE on a KV counter in ONE round trip: the new count, or None without KV / on an error (the caller's in-process count then stands alone).
+    The system of record for a per-browser cap is the store every instance reads, never one instance's dict (Vercel: several instances, cold starts)."""
+    if not all(KV):
+        return None
+    try:
+        res = _kv_pipeline(["INCR", key], ["EXPIRE", key, ttl])
+        return int(res[0]["result"])
+    except (OSError, ValueError, TypeError, KeyError, IndexError):
+        return None
+
+
 def explain_allowed(sid, auto, now=None):
-    """the hourly caps: auto (first wrong answer) at most AUTO_PER_HOUR, anything at most ANY_PER_HOUR. Records the ask when allowed."""
+    """the hourly caps: auto (first wrong answer) at most AUTO_PER_HOUR, anything at most ANY_PER_HOUR. Records the ask when allowed.
+    Counted in this process (sliding hour) AND in KV (one counter per browser per clock hour, shared by every instance)."""
     now = now if now is not None else time.time()
     with _asked_lock:
         asked = [(t, a) for t, a in _asked.get(sid, []) if now - t < 3600]
         if len(asked) >= ANY_PER_HOUR or (auto and sum(a for _, a in asked) >= AUTO_PER_HOUR):
+            _asked[sid] = asked
+            return False
+        h = int(now // 3600)
+        cap = int(_fenv("STEM_ASK_GLOBAL_PER_HOUR", 0))       # the governor: every browser together; 0 = off (a number the owner picks)
+        if cap > 0:
+            g = shared_count(f"{tries_prefix()}stem:askall:{h}", 3700)
+            _asked_all[h] = _asked_all.get(h, 0) + 1
+            for old in [x for x in _asked_all if x != h]:
+                del _asked_all[old]
+            if (g if g is not None else _asked_all[h]) > cap:
+                _asked[sid] = asked
+                return False
+        n = shared_count(f"{tries_prefix()}stem:ask:{sid}:{h}", 3700)
+        na = shared_count(f"{tries_prefix()}stem:askauto:{sid}:{h}", 3700) if auto else None
+        if (n is not None and n > ANY_PER_HOUR) or (na is not None and na > AUTO_PER_HOUR):
             _asked[sid] = asked
             return False
         _asked[sid] = asked + [(now, bool(auto))]
@@ -2690,7 +2821,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None, sto
         pre = no_attempt(answer)                                  # before the first try: open, whatever the server's tries say (cluck_begin pre)
         v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved, locked=locked)}], reveal=turn[1], closed=not pre and turn_closed((sid, p["code"]), store=store),
                   free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, sid, store=store), answer)),
-                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
+                  code=p["code"], arm=cluck_arm(_base_sid(sid)), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     on("write", "start")
     st = _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                        fig_ctx(p, answer), edit=True, v4=v4, out=out, swap=True)
@@ -2767,6 +2898,7 @@ CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10
 CLAUDE_SPEND_KEY = "stem:claude_usd:"
 CLAUDE_SPEND_TTL = 40 * 86400
 _claude_spent = {}                           # cycle key -> $; no Upstash: this process only
+_spent_seen = {}                             # cycle key -> the last total read from Upstash (the cap's fallback when a read fails)
 
 
 def _fenv(name, default):
@@ -2796,9 +2928,10 @@ def claude_spent():
     k = claude_cycle()
     if all(KV):
         try:
-            return float(_kv("GET", k) or 0)
+            _spent_seen[k] = float(_kv("GET", k) or 0)
+            return _spent_seen[k]
         except (OSError, ValueError, TypeError):
-            pass
+            return max(_spent_seen.get(k, 0.0), _claude_spent.get(k, 0.0))   # an unread total is not $0: the last one this process saw, never less
     return _claude_spent.get(k, 0.0)
 
 
@@ -3210,7 +3343,7 @@ def cluck_begin(p, sid, pick, store=None):
     counted server-side (its own turn key with the hash store, the tries blob otherwise; a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
     used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved).
     pre = no_attempt(pick) (the page is before its first try): never closed, never solved, never REVEAL yes, whatever the server's tries say
-    (a redo round sends no round to /chat or /explain, so the base sid may hold an earlier solve) and however many turns came before."""
+    (a page that sends no `round` keeps the base namespace; /explain and /chat keep it open over an open round) and however many turns came before."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
     pre = no_attempt(pick)
@@ -4587,22 +4720,34 @@ def _relay(p, chunks, what, head):
 
 
 def explain(cookie_header, body):
-    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+    """POST /explain {code, answer, auto, round?}: (status, headers, iterator of bytes). Easy mode only; `round` = the redo round's tries namespace (the /check rule)."""
     sid, head = _stream_head(cookie_header)
     b = _body(body, 8192)
     p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
     if p is None:
         return 404, head, iter([b""])
+    store = _new_store()
+    rnd, nsid = _round_ns(sid, b, store)            # validated once: the request's own tries namespace
+    if rnd is False:
+        return 400, dict(head, **{"Content-Type": "application/json"}), iter([json.dumps({"verdict": "invalid", "triesLeft": max_tries(p)}).encode()])
     if not key:
         return 503, head, iter([b""])
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
     pick = wish_pick(p, b)
-    store = _new_store()
-    turn = cluck_begin(p, sid, pick, store=store)
+    turn = cluck_begin(p, nsid, pick, store=store)
+    if rnd is None and turn and turn[1] and _open_round(p, nsid, store=store):
+        turn = (turn[0], False)                      # an old page over an open round: never reveal on the base record alone
+        _turn_open(p, nsid, turn[0], pick, store=store)
+    reveal_without_try(p, nsid, rnd, turn, store=store)
+    # F3 (desync): X-Cluck-Reveal 0|1 = this reply was written open (0) or closed / REVEAL yes (1; also unknown, no turn). The client caches only a 0
+    # With v4 on, cluck_begin / _turn_open just wrote THIS request's newest turn row: when turn[1] is 0 that row is open (reveal 0, no lock),
+    # so turn_closed is false from the turn tuple alone, with no second turns_read. Without v4 no row is written: the stored rows decide, as before.
+    closed = turn_closed((nsid, p["code"]), store=store) if turn and not turn[1] and not v4_on() else False
+    head = dict(head, **{"X-Cluck-Reveal": "0" if turn and not turn[1] and (no_attempt(pick) or not closed) else "1"})
     if b.get("stages") is True:
-        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), sid, turn, on, store=store), "explain")
-    return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), sid, turn, store=store), "explain", head)
+        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, on, store=store), "explain")
+    return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), nsid, turn, store=store), "explain", head)
 
 
 # == §note-chat ==
@@ -5124,6 +5269,8 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
     if store is not None:
         k = (store.round(sid, rnd), p["code"])
         st = store.entry_new(k)
+        if store.unread:
+            return unread_reply(p)
         pre = _proof_pre(p, st, text, reveal)
         if pre:
             return dict(pre, gen=st["gen"])
@@ -5131,6 +5278,8 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
     else:
         with _tries_lock:
             _load_tries()
+            if _gen.get("kv_bad"):
+                return unread_reply(p)
             k = (_round_sid(sid, rnd), p["code"])
             st = _entry(k)
             pre = _proof_pre(p, st, text, reveal)
@@ -5158,6 +5307,8 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
         store = _new_store() or store                        # re-read: another tab may have spent a try while the grader ran
         k = (store.round(sid, rnd), p["code"])
         st = store.entry_new(k)
+        if store.unread:
+            return unread_reply(p)
         pre, res, put = _proof_record(p, st, text, reveal, g)
         if pre:
             return dict(pre, gen=st["gen"])
@@ -5166,6 +5317,8 @@ def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
     else:
         with _tries_lock:
             _load_tries()
+            if _gen.get("kv_bad"):
+                return unread_reply(p)
             st = _entry(k)
             pre, res, put = _proof_record(p, st, text, reveal, g)
             if pre:
@@ -5209,42 +5362,104 @@ def starter_free(p, sid, b, history):
     return all(not u["wrong"] and not u["done"] for u in (st["parts"] if "parts" in st else [st]))
 
 
+def chat_count(k):
+    """follow-ups answered on (sid, code): the larger of this process's count and the shared KV counter"""
+    n = _chats.get(k, 0)
+    if all(KV):
+        try:
+            n = max(n, int(_kv("GET", chat_key("chat", k)) or 0))
+        except (OSError, ValueError, TypeError):
+            pass
+    return n
+
+
+def chat_key(kind, k):
+    return f"{tries_prefix()}stem:{kind}:{k[0]}:{k[1]}"
+
+
+def chat_take(k):
+    """count one follow-up (the caller holds _asked_lock): the new count, shared across instances"""
+    n = _chats.get(k, 0) + 1
+    r = shared_count(chat_key("chat", k), TURNS_TTL_S)
+    _chats[k] = n = max(n, r or 0)
+    return n
+
+
+def chat_untake(k):
+    _chats[k] = max(0, _chats.get(k, 0) - 1)
+    if all(KV):
+        try:
+            _kv("DECR", chat_key("chat", k))
+        except (OSError, ValueError):
+            pass
+
+
+def starter_take(k):
+    """the one free starter ask of (sid, code): True only for the first taker in ANY instance (SET NX in KV); no KV: this process's set"""
+    if all(KV):
+        try:
+            if _kv("SET", chat_key("starter", k), "1", "NX", "EX", TURNS_TTL_S) is None:
+                _starters.add(k)
+                return False
+        except (OSError, ValueError):
+            pass
+    _starters.add(k)
+    return True
+
+
+def starter_give_back(k):
+    _starters.discard(k)
+    if all(KV):
+        try:
+            _kv("DEL", chat_key("starter", k))
+        except (OSError, ValueError):
+            pass
+
+
 def chat(cookie_header, body):
-    """POST /chat {code, answer, history, starter?}: (status, headers, iterator of bytes), like /explain. A 6th follow-up: 429 {"error": "limit"}.
-    `starter: true` + the item's `starter` text as the first question, before any try: that one ask is free (not counted in CHAT_TURNS)."""
+    """POST /chat {code, answer, history, starter?, round?}: (status, headers, iterator of bytes), like /explain. A 6th follow-up: 429 {"error": "limit"}.
+    `starter: true` + the item's `starter` text as the first question, before any try: that one ask is free. `round` = the redo round's tries namespace."""
     sid, head = _stream_head(cookie_header)
     b = _body(body, CHAT_MAX)
     p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
     if p is None:
         return 404, head, iter([b""])
+    store = _new_store()
+    rnd, nsid = _round_ns(sid, b, store)            # validated once: the request's own tries namespace
+    if rnd is False:
+        return 400, dict(head, **{"Content-Type": "application/json"}), iter([json.dumps({"verdict": "invalid", "triesLeft": max_tries(p)}).encode()])
     history = chat_history(b.get("history"))
     if history is None:
         return 400, head, iter([b""])
     if not key:
         return 503, head, iter([b""])
-    turn, k = len(history) // 2, (sid, p["code"])
+    turn, k = len(history) // 2, (sid, p["code"])     # the follow-up cap is per browser + item, never per round
     free = over = False
     with _asked_lock:                        # check and count in one step: two tabs at once can't both take the last turn
-        if k not in _starters and not _chats.get(k, 0) and starter_free(p, sid, b, history):
-            _starters.add(k)                 # the one free starter ask: first chat turn, once per browser and item
-            free = True
+        if k not in _starters and not chat_count(k) and starter_free(p, nsid, b, history) and starter_take(k):
+            free = True                      # the one free starter ask: first chat turn, once per browser and item (any instance)
         else:
-            over = turn > CHAT_TURNS or _chats.get(k, 0) >= CHAT_TURNS
+            over = turn > CHAT_TURNS or chat_count(k) >= CHAT_TURNS
             if not over:
-                _chats[k] = _chats.get(k, 0) + 1
+                over = chat_take(k) > CHAT_TURNS     # INCR: two instances at once can't both take the last turn
+                if over:
+                    chat_untake(k)
     if over:
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "limit"}'])
     if not explain_allowed(sid, False):      # the hourly cap /explain has, shared
         with _asked_lock:
             if free:
-                _starters.discard(k)         # a refused ask gives the free starter back
+                starter_give_back(k)         # a refused ask gives the free starter back
             else:
-                _chats[k] -= 1
+                chat_untake(k)
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
     pick = wish_pick(p, b)
-    store = _new_store()
     pre = no_attempt(pick)                          # before the first try (the starter chip, or any ask with no pick): a nudge, never the answer, on every path
-    turn = cluck_begin(p, sid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd; never when pre)
+    turn = cluck_begin(p, nsid, pick, store=store)  # T62: this browser's turn on the item (REVEAL: yes from the 3rd; never when pre)
+    if rnd is None and turn and turn[1] and _open_round(p, nsid, store=store):
+        turn = (turn[0], False)                     # an old page over an open round: never reveal on the base record alone
+        _turn_open(p, nsid, turn[0], pick, store=store)
+    reveal_without_try(p, nsid, rnd, turn, store=store)
     def chunks():
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
         out = set()
@@ -5257,8 +5472,8 @@ def chat(cookie_header, body):
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
         v4 = None
         if v4_on():
-            rows = cluck_noted(p, sid, turn[0], xyz_block(n), store=store)
-            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=not pre and turn_closed((sid, p["code"]), store=store), free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, sid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
+            rows = cluck_noted(p, nsid, turn[0], xyz_block(n), store=store)
+            v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], closed=not pre and turn_closed((nsid, p["code"]), store=store), free=pre, facts=leak_facts(p, () if pre else pick_done(p, units_done(p, nsid, store=store), pick)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
         st = _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
         yield from pre_try_lines(st, p) if v4 is None and pre else st
@@ -5442,7 +5657,8 @@ def _dispatch(method, path, cookie_header, body, ua):
             return _json(*diagnose(view(p, mode), sid, b), cookie)
         if path == "/diagnose/explain":
             return _json(*(expr_explain_store(p, b) if expr_unit(p, p) or p["type"] == "multi" else (404, {"error": "off"})), cookie)
-        return _json(200, grade(view(p, mode), sid, b, reveal=mode == "sugar"), cookie)
+        out = grade(view(p, mode), sid, b, reveal=mode == "sugar")
+        return _json(503 if out.get("why") == "store" and p["type"] != "proof" else 200, out, cookie)   # the page treats a 5xx as "no answer yet", never a verdict
     if path == "/health":
         return health()
     m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path) or REPAIR_PATH.match(path)
@@ -5459,7 +5675,10 @@ def _dispatch(method, path, cookie_header, body, ua):
     if p is None:
         return _json(404, {"error": "not found"}, cookie)
     if m.re is STATE_PATH:
-        return _json(200, state(view(p, mode), sid, reveal=mode == "sugar"), cookie)
+        try:
+            return _json(200, state(view(p, mode), sid, reveal=mode == "sugar", strict=True), cookie)
+        except StoreUnread:                          # an unread record answered "untried, newer gen" = the page drops its locked state
+            return _json(503, {"error": "store"}, cookie)
     if hidden(p, mode):
         return _json(404, {"error": "not in sugar mode"}, cookie)
     if m.re is REPAIR_PATH:
