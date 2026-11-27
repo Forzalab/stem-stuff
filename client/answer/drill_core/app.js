@@ -934,14 +934,22 @@ function welcomeQ(q) {
    Every graded wrong try on an item with `repair` draws its ladder (repair.js, variant "repair") under the verdict: GET /repair/<code>
    is sent only after the /check that recorded the miss (403 before it), 404 = no ladder = nothing changes. Not on the welcome item or in
    the mock. The same slip family on the next miss keeps the element (a step is never reset); another family redraws. The answer box,
-   the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. */
+   the tries and Cluck (the tray, Ask Cluck) are untouched: this is no Cluck entry. The ladder replaces the #fb miss hint card
+   (feedback drops it when ladderDue); a miss with no ladder keeps the hint card. */
 function rpUnmount() {                                                          // the brown repair box goes: Cluck's close, a right main answer
   if (S?.rp) { S.rp.m?.destroy(); S.rp = null; }
   $("#rpHost")?.remove(); $("#rpGone")?.remove();
 }
+/* will this miss mount a ladder? The one rule repairAfterMiss acts on; feedback reads it too, to drop the #fb miss hint card
+   (the ladder replaces it). A miss with no ladder keeps the hint card as before. */
+function ladderDue(r) {
+  if (!S || S.wl || mockHold() || !window.Repair) return false;
+  if (r?.repair && r.repair.gen === true && S.prob.type === "proof") return Array.isArray(r.repair.steps) && r.repair.steps.length > 0;   // the generated proof ladder ships its steps in the reply (genLadder)
+  return !!S.prob.has_repair && S.prob.type !== "proof";                       // has_repair (public()): no ladder = no request
+}
 function repairAfterMiss(r) {
-  if (r.repair && r.repair.gen === true && S?.prob.type === "proof") return genLadder(r.repair);   // the server's generated proof ladder (PR3): steps in the reply, no GET
-  if (!S || S.wl || !S.prob.has_repair || S.prob.type === "proof" || mockHold() || !window.Repair) return;       // has_repair (public()): no ladder = no request
+  if (!ladderDue(r)) return;
+  if (r.repair && r.repair.gen === true && S.prob.type === "proof") return genLadder(r.repair);   // the server's generated proof ladder (PR3): steps in the reply, no GET
   const mine = S, code = S.code, fam = r.error || "";
   if (mine.rp && mine.rp.fam === fam) return;                                    // same family: the ladder stays as the student left it
   const host = (() => { let h = $("#rpHost"); if (!h) { h = document.createElement("div"); h.id = "rpHost"; $("#fb").after(h); } return h; })();
@@ -2387,29 +2395,31 @@ function feedback(r, typed) {
   /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords.
      The mock night (W103b) is the exception: one try, no hint, no Cluck, so the lock alone read as a dead end (Tony, Nov 3 18:14, img3): one line says why and where next */
   else if (mockHold() && r.verdict === "wrong") h = `<p class="verdict wait mock-next">${icon("i-back")}<span>Mock round: one try each. Tap Next. Misses come back at the end.</span></p>`;
+  const hint = hintOf(r);
+  const showHint = !!hint && !(r.verdict === "wrong" && ladderDue(r));           // a repair ladder replaces the miss hint card under the box (#fb)
   let quackHtml = "";
-  if (hintOf(r)) {
-    const hintWithQuack = quackHint(hintOf(r), S.code + ":" + S.tries.length);
+  if (showHint) {
+    const hintWithQuack = quackHint(hint, S.code + ":" + S.tries.length);
     quackHtml = `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
   }
   /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
      Phones: the Scratchpad button sits on that row, so under the question. */
   const chk = $("#q .chk"); chk?.querySelector(".cluck")?.remove();
-  let inRow = !!(chk && hintOf(r) && r.verdict === "wrong" && r.triesLeft > 0 && !root.classList.contains("pad-off"));
+  let inRow = !!(chk && showHint && r.verdict === "wrong" && r.triesLeft > 0 && !root.classList.contains("pad-off"));
   fb.innerHTML = h;
   if (inRow) {
     chk.insertAdjacentHTML("afterbegin", quackHtml);
     const m = chk.querySelector(".cluck .md"), lh = parseFloat(getComputedStyle(m).lineHeight) || 24;
     if (m.offsetHeight > 2 * lh + 2 || m.scrollWidth > m.clientWidth) { chk.querySelector(".cluck").remove(); inRow = false; }
   }
-  if (!inRow) fb.insertAdjacentHTML("beforeend", quackHtml);
+  if (!inRow && showHint) fb.insertAdjacentHTML("beforeend", quackHtml);
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; bridge.layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
   const rev = reveal(r);
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   bridge.layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); hintFold(inRow ? chk.querySelector(".cluck") : fb.querySelector(".cluck")); }   // no ladder: each wrong try shows the next formula row, then the arrows
+  if (r.verdict === "wrong") { if (S && !S.prob.ladder) ladderStep(); bridge.wishOnWrong(); repairAfterMiss(r); if (showHint) hintFold(inRow ? chk.querySelector(".cluck") : fb.querySelector(".cluck")); }   // no ladder: each wrong try shows the next formula row, then the arrows
   window.stemBrainrot?.sync();
 }
 
