@@ -238,7 +238,7 @@ html.ui-v7 #problem.qc7.qbr > button.cluckbtn {
   float: right !important; position: relative; top: auto; right: auto; left: auto; bottom: auto; display: grid; place-items: center;
   width: var(--ick5-size); height: var(--ick5-size); min-width: var(--ick5-size); min-height: var(--ick5-size); margin: 0 0 8px 12px !important; padding: 0 !important;
   border: 0; border-radius: var(--r-tile) !important; background: var(--ick7-fill) !important; color: var(--ick7-ink) !important;
-  box-shadow: var(--shadow-raise) !important; opacity: 1 !important; text-decoration: none;   /* CLUCK-RAISE (Tony Nov 27): a slight resting lift, the shared --shadow-raise (the --shadow-1 family); it sits inside the card's --qpad, so overflow: hidden does not clip it */
+  box-shadow: var(--shadow-2) !important; opacity: 1 !important; text-decoration: none;   /* CLUCK-RAISE (Tony Nov 27): a clear but soft resting lift, the shared --shadow-2 (--shadow-raise vanished on the navy card); it sits inside the card's --qpad (reach ~10px sides, ~18px down), so overflow: hidden does not clip it */
 }
 html.ui-v7 #problem.qc7 > button.cluckbtn[aria-disabled="true"], html.ui-v7 #problem.qc7 > button.cluckbtn:active { box-shadow: none !important; }   /* locked slate sits flat (cluckbtn.css: disabled = no raise); press lowers it to the card */
 @supports (corner-shape: superellipse(2)) { html.ui-v7 #problem.qc7 > button.cluckbtn, html.ui-v7 #problem.qc7.qbr > button.cluckbtn { corner-shape: superellipse(2); } }

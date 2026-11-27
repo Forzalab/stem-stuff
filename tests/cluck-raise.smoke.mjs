@@ -48,8 +48,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       return { shadow: getComputedStyle(b).boxShadow, disabled: b.getAttribute("aria-disabled"), r: [r.left, r.top, r.right, r.bottom], c: [cr.left, cr.top, cr.right, cr.bottom] };
     });
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/cluck-raise-${vp.width}${process.env.SHOT_TAG || ""}.png`, clip: { x: 0, y: 0, width: vp.width, height: 400 } });
-    // 2px blur + 1px y offset: the shadow reaches 3px past the button box; it must stay inside the card (which clips with overflow hidden)
-    assert.ok(i.r[0] - 3 >= i.c[0] && i.r[1] - 3 >= i.c[1] && i.r[2] + 3 <= i.c[2] && i.r[3] + 3 <= i.c[3], "button + shadow inside the card " + JSON.stringify(i));
+    // --shadow-2 reaches ~10px at the sides, 2px above, ~18px below the button box; it must stay inside the card (which clips with overflow hidden)
+    assert.ok(i.r[0] - 10 >= i.c[0] && i.r[1] - 2 >= i.c[1] && i.r[2] + 10 <= i.c[2] && i.r[3] + 18 <= i.c[3], "button + shadow inside the card " + JSON.stringify(i));
     const sh = await page.evaluate(() => { const b = document.querySelector("#problem.qc7 > button.cluckbtn"); const was = b.getAttribute("aria-disabled");
       b.setAttribute("aria-disabled", "false"); const up = getComputedStyle(b).boxShadow; b.setAttribute("aria-disabled", "true"); const off = getComputedStyle(b).boxShadow;
       if (was === null) b.removeAttribute("aria-disabled"); else b.setAttribute("aria-disabled", was); return { up, off }; });
