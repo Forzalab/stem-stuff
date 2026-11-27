@@ -7,14 +7,17 @@
    Cluck's intro line as a --help tab on its top-left edge (.rp-line below), the room above and inside for the tab's half-height */
 section.wl { position: relative; box-sizing: border-box; max-width: 100%; margin-top: calc(var(--s3) + 14px); padding: var(--s4); padding-top: calc(var(--s4) + 10px);
   background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); }
-/* the tab: --help-ink on --help 7.67:1, 600, --t-sm, the duck (welcome.js, 20px) in front */
-section.wl .rp-line { position: absolute; top: 0; left: var(--s4); transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px;
+/* the tab: --help-ink on --help 7.67:1, 600, --t-sm, the duck (repair.js / welcome.js, 20px) in front.
+   ONE component for both ladders: repair.js gives every intro line .rp-tab, and the left is the step-content column
+   (card padding + the .rp-body indent = the input box's left edge) on every viewport. Its card (section.wl or .rp) is the
+   containing block, so top: 0 / translateY(-50%) straddles the card's top edge the same way everywhere. */
+.rp-tab { position: absolute; top: 0; left: var(--rp-tab-x, calc(var(--s4) + 1.25rem + var(--s2))); transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px;
   margin: 0; padding: 4px 12px 4px 8px; border-radius: 8px; background: var(--help); color: var(--help-ink); font-weight: 600; font-size: var(--t-sm);
   will-change: transform; }   /* its own compositor layer for good: text AA stays grayscale. Without it CI's software raster re-drew the tab's glyphs with LCD fringes on the first repaint after a scroll+tap (desk-layout 3-why, 98px in 13x8) */
 .wl-duck { width: 20px; height: 20px; color: var(--help-ink); flex: none; }
 .wl-stem { margin: 0 0 var(--s3); font-size: var(--t-md); line-height: var(--lh); overflow-wrap: anywhere; }
 .wl-stem .katex { font-size: var(--kx); }
-section.wl .rp { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; }
+section.wl .rp { position: static; margin: 0; padding: 0; background: none; border: 0; border-radius: 0; }   /* static: the tab's containing block is the sheet, not the inner ladder */
 section.wl .rp-step { border-top-color: var(--help-rule); }
 /* the form stays put (W129, PLAN L6 "no jank"): repair.js keeps every step's input in its row from the start; nothing in a row changes its
    size with the state. Every label at one weight (a bold active label re-wraps a narrow column), the ▸ hangs left of the number, the ✓

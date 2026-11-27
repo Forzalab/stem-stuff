@@ -32,6 +32,7 @@
   const STUDY_MS = 10000;     // TUNABLE (DESIGN-v3 §3): the full solution's study pause before Next is live
   const TOL = 0.02;           // a `num` step's relative tolerance when it names none
   const L = () => root.__stemRepairLines || {};
+  const v7 = () => !!(root.document && root.document.documentElement.classList.contains("ui-v7"));
 
   const any = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;   // one of a rotation (Math.random: stubbed in tests)
   const ladderOf = item => (item && item.repair && item.repair.steps) || [];
@@ -205,13 +206,17 @@
     function valueUi(s) {
       const st = s.st, box = h("div", "rp-val-ui");
       if (st.kind === "num" || st.kind === "expr") {                             // expr (generated proof steps): the same box, a text keyboard
-        const f = h("form", "rp-num"), inp = h("input", "rp-in"), go = h("button", "rp-check", L().check || "Check");
+        const f = h("form", "rp-num"), fld = h("span", "rp-field"), inp = h("input", "rp-in"), go = h("button", "rp-check");
+        go.append(h("span", "rp-check-t", L().check || "Check"));
+        go.insertAdjacentHTML("beforeend", '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>');   // ui-v7: the typed answer key's arrow (app.js IB1_GO); flag off: the word
         inp.type = "text"; inp.inputMode = st.kind === "expr" ? "text" : "decimal"; inp.autocomplete = "off";
         if (st.kind === "expr") inp.placeholder = "e.g. 2" + (st.var || "k") + "+4"; inp.setAttribute("aria-label", st.label);
         go.type = "submit";
-        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) tryValue(s, inp.value); });   // Enter submits natively: no key handler
-        f.append(inp, go); box.append(f);
-        if (st.unit) f.append(h("span", "rp-unit", st.unit));
+        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) { go.setAttribute("aria-busy", "true"); tryValue(s, inp.value); } });   // Enter submits natively: no key handler
+        const idle = () => { go.disabled = !inp.value.trim(); };                 // KEY-ALL: an empty box leaves the key dimmed + inert, full once there is text
+        inp.addEventListener("input", idle); idle();
+        fld.append(inp); if (st.unit) fld.append(h("span", "rp-unit", st.unit));   // the unit sits inside the box, like the typed answer's .unit
+        f.append(fld, go); box.append(f);
         return box;
       }
       if (st.kind === "fill") box.append(h("div", "rp-tex", fillTex(st, null).replace("$", "$\\displaystyle ")));
@@ -254,13 +259,19 @@
       const head = h("div", "rp-head"), n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";
       head.append(n, h("span", "rp-label", st.label));
-      if (s.ok) head.append(h("span", "sr-only", shown(s)));                     // the value for a screen reader: the locked chips are aria-hidden
+      const typedDone = v7() && s.ok && (st.kind === "num" || st.kind === "expr");   // LADDER-UNIFY (Tony Nov 26, ui-v7 only): a typed answer is the same green verdict;
+      if (!typedDone && s.ok) head.append(h("span", "sr-only", shown(s)));       // flag off keeps the locked field in its row (welcome.css W129, PLAN L6: nothing changes size)
       head.append(h("span", "rp-ok", "✓"));                                      // always there (welcome.css hides it until done): its room never moves the label
       li.append(head);
-      const body = h("div", "rp-body"), val = valueUi(s);
-      const pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
-      if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
-      body.append(val);
+      if (typedDone) {                                                           // chip as a picked one, on the line under number + label; the locked field goes
+        const v = h("span", "rp-val", shown(s)); v.insertAdjacentHTML("beforeend", mark("i-ok")); li.append(v);
+      }
+      const body = h("div", "rp-body");
+      if (!typedDone) {                                                          // the chip is the single verdict mark: no locked field below it
+        const val = valueUi(s), pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
+        if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
+        body.append(val);
+      }
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
       if (s.miss && s.state !== "future") {
         body.append(hintEl(s.miss, s.missGone));
@@ -283,9 +294,13 @@
       const n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
       head.append(n, h("span", "rp-label", st.label));
-      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) head.append(h("span", "rp-val", shown(s)));
-      if (s.state === "done" && !s.skipped) head.append(h("span", "rp-ok", "✓"));
       li.append(head);
+      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) {
+        const v = h("span", "rp-val", shown(s));                                  // ui-v7: the right value is the welcome ladder's green verdict chip (glyph = the chip's tick; the row-end .rp-ok is hidden)
+        v.insertAdjacentHTML("beforeend", mark("i-ok"));
+        li.append(v);                                                             // under the number + label line, at the body indent: the welcome row rhythm
+        if (s.state === "done") li.append(h("span", "rp-ok", "✓"));              // flag off: the tick follows the value (hidden under ui-v7: the chip carries it)
+      }
       if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
       if (s.state === "active") {
         const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not
@@ -302,14 +317,15 @@
       const I = L().intro || {}, many = String(o.error).split("+").length > 1;
       const key = o.gen ? "proof" : variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
       const t = String(I[key] || "");
-      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line");
+      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line rp-tab");   // the ONE intro tab (welcome.css .rp-tab): orange --help pill, dark ink, the duck, on both ladders
       if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
+      p.insertAdjacentHTML("afterbegin", '<svg class="icon wl-duck" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
       return p;
     }
     function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
       const box = h("div", "rp-solved"), a = h("p", "rp-a");
       if (item.stem) box.append(h("p", "rp-stem", item.stem));
-      if (solved.wrong != null) a.append(h("del", "rp-wrong", solved.wrong), " ");
+      if (solved.wrong != null) { const d = h("del", "rp-wrong", solved.wrong); d.insertAdjacentHTML("beforeend", mark("i-x")); a.append(d, " "); }   // ui-v7: the red verdict chip
       a.append(h("span", "rp-ans", solved.answer));
       box.append(a);
       return box;

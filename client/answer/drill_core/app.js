@@ -924,6 +924,7 @@ function welcomeQ(q) {
   const w = Welcome.mount(q, { ...S.prob, repair: S.wl }, { sheet: S.wl.sheet, grade, on: (name, d) => {
     if (name !== "welcome_done" || S !== mine) return;
     forceWelcome = false;
+    window.stemToast?.clear();                                                    // the reward start line queued before Q1 is stale once Q1 is done; it would land on the freed foot after the answer row's key goes, one 8px slide outside the card (desk-layout 4_answer)
     try { localStorage.setItem(wlKey(), "1"); } catch { /* blocked: it shows again next visit */ }
     S.finished = true;
     window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
