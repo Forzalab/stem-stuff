@@ -80,11 +80,14 @@ class LiveOk(unittest.TestCase):
         self.assertEqual(self.labels("nonvisual", FILES="server/data/problems.json"), 1)
         self.assertEqual(self.labels("nonvisual", FILES="server/data/banks/x.json"), 1)
         self.assertEqual(self.labels("nonvisual", FILES="README.md\ntools/operations/ci-live-ok.sh"), 0)
+        self.assertEqual(self.labels("visual\nlive-ok-tony", FILES="client/x.js"), 0)
 
-    def test_nonvisual_override_needs_the_repo_owner(self):
-        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 0)
-        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", OWNER="Forzalab", NONVISUAL_BY="someone"), 1)
-        self.assertEqual(self.labels("nonvisual", FILES="README.md", OWNER="Forzalab", NONVISUAL_BY="someone"), 0)
+    def test_visual_diff_always_beats_nonvisual(self):
+        # No owner override: the automation that labels PRs authenticates as the repo owner,
+        # so an owner-sender check would always pass and be forgeable.
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", NONVISUAL_BY="Forzalab"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="README.md", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 0)
 
     def test_workflow_runs_the_base_refs_copy(self):
         with open(WF, encoding="utf-8") as f:
@@ -92,6 +95,8 @@ class LiveOk(unittest.TestCase):
         self.assertIn("github.event.pull_request.base.sha", wf)
         self.assertIn('git show "$BASE_SHA:tools/operations/ci-live-ok.sh"', wf)
         self.assertIn('pulls/$PR/files', wf)
+        self.assertNotIn("NONVISUAL_BY", wf)
+        self.assertNotIn("issues/$PR/events", wf)
 
     def test_verdict(self):
         self.assertEqual(verdict(LIVE_OK="failure")[0], 1)
