@@ -1,7 +1,7 @@
 /* qcard.css: QCARD-SWISS v3 (qcard.js), html.ui-v7 ONLY. Flag off = nothing here applies.
    Owner pick V3 (Nov 15): ONE card background, top to bottom: ghost numeral (ECHO trail, 6 copies, step -12px x, fades out before the chip column), figure, topic headline,
    setup + question text (16px, 1.45 leading, flush-left, no fold and no inner scroll: the page scrolls it, the bold ask pins at the top), small meta row. Text, headline, meta share the left edge --qpad.
-   Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, no lift. Echo animates on prev/next (transform + opacity only).
+   Ask Cluck (qcard.css §ick5-tr) is the tangerine squircle floated at the card's top right: the title and the text wrap around it, raised with --shadow-2 when ready (Tony Nov 27; ICK5 AC4 "no shadow" superseded). Echo animates on prev/next (transform + opacity only).
    §frost (Tony Nov 23, pick 3): ONE liquid-glass sheet over the WHOLE card (inset 0, the card's radius): a static displacement lens + frost, nothing animates.
    TITLE-EXAMQ-DIM: the headline is lower case except a bank "Q1 · " exam prefix (qcard.js .qexam), which keeps its capital Q in the dim ink with no dot drawn. */
 @font-face { font-family: "G Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block; src: url(../../vendor/fonts/archivo-digits.woff2) format("woff2"); }
@@ -238,8 +238,9 @@ html.ui-v7 #problem.qc7.qbr > button.cluckbtn {
   float: right !important; position: relative; top: auto; right: auto; left: auto; bottom: auto; display: grid; place-items: center;
   width: var(--ick5-size); height: var(--ick5-size); min-width: var(--ick5-size); min-height: var(--ick5-size); margin: 0 0 8px 12px !important; padding: 0 !important;
   border: 0; border-radius: var(--r-tile) !important; background: var(--ick7-fill) !important; color: var(--ick7-ink) !important;
-  box-shadow: none !important; opacity: 1 !important; text-decoration: none;
+  box-shadow: var(--shadow-2) !important; opacity: 1 !important; text-decoration: none;   /* CLUCK-RAISE (Tony Nov 27): a clear but soft resting lift, the shared --shadow-2 (--shadow-raise vanished on the navy card); it sits inside the card's --qpad (reach ~10px sides, ~18px down), so overflow: hidden does not clip it */
 }
+html.ui-v7 #problem.qc7 > button.cluckbtn[aria-disabled="true"], html.ui-v7 #problem.qc7 > button.cluckbtn:active { box-shadow: none !important; }   /* locked slate sits flat (cluckbtn.css: disabled = no raise); press lowers it to the card */
 @supports (corner-shape: superellipse(2)) { html.ui-v7 #problem.qc7 > button.cluckbtn, html.ui-v7 #problem.qc7.qbr > button.cluckbtn { corner-shape: superellipse(2); } }
 /* ICK5: no fill sweep, no sheen layer: the icon and the fill are the whole look */
 html.ui-v7 #problem.qc7 > button.cluckbtn::before, html.ui-v7 #problem.qc7 > button.cluckbtn::after { display: none; }
