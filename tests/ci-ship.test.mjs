@@ -157,7 +157,7 @@ test("AC5.7 ship.yml: group ship, no `queue: max`, rollback is a mode of ship.ym
   assert.doesNotMatch(ship, /queue:\s*max/);
   assert.match(ship, /options: \[demo, live, rollback\]/);
   assert.match(ship, /inputs\.mode == 'rollback'/);
-  assert.doesNotMatch(ship, /secrets\.(?!VERCEL_TOKEN|BRAIN_TOKEN)\w+/, "no new secret");
+  assert.doesNotMatch(ship, /secrets\.(?!VERCEL_TOKEN|BRAIN_TOKEN|VERCEL_AUTOMATION_BYPASS_SECRET)\w+/, "no new secret (the demo preview-shots step's Vercel protection bypass is the one addition)");
   const tests = readFileSync(new URL("../.github/workflows/tests.yml", import.meta.url), "utf8");
   for (const job of ["flake-ticket", "postdeploy", "lkg"]) assert.match(tests.slice(tests.indexOf(`\n  ${job}:`)), new RegExp(`${job}:[\\s\\S]*?vars\\.SHIP_MODE == 'pr-green'`), job);
   assert.equal(tests.split(/permissions:.*issues: write/).length, 2, "issues: write in exactly one job");

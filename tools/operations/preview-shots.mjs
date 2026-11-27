@@ -3,8 +3,10 @@
 // The preview sits behind Vercel Authentication: every request carries the "Protection Bypass for Automation" secret
 // (env VERCEL_AUTOMATION_BYPASS_SECRET) as header x-vercel-protection-bypass (+ x-vercel-set-bypass-cookie for the browser).
 // 1. GET <url>/version.json; with --expect-sha it must start with / be a prefix of that sha, else exit 1 (the deploy is not the ref).
-// 2. Shots into <outdir>: 390 (dsf 2), 1440, 1920x1080 of home + an MC item (#CSCI26_N4C); desktop also the welcome ladder after 4 taps.
+// 2. Shots into <outdir>: 390 (dsf 2), 1440, 1920x1080 of home + an MC item (#CSCI26_N4C); desktop also the welcome ladder, answered
+//    through its 4 answers (pick, fill, why, typed answer).
 // 3. <outdir>/numbers.json: MC letter/first-line alignment (tests/lib/mc-ink.mjs measureTiles) per viewport, best effort.
+// Any failed shot exits 1: a missing screenshot is missing evidence, not a partial pass.
 // Pure parts (demoUrl, shaOk) are exported; smoke: tests/preview-shots.test.mjs. The secret is never printed.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -61,37 +63,38 @@ async function main() {
         for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-ui", "v7"); } catch { /* */ } });
       const p = await ctx.newPage();
       const shot = async (what, fn) => {
-        try { await fn(); await p.screenshot({ path: join(out, `${V.name}-${what}.png`) }); console.log("shot", V.name, what); }
-        catch (e) { fails.push(`${V.name}-${what}: ${e.message.split("\n")[0]}`); console.error("shot FAILED", V.name, what, e.message.split("\n")[0]); }
+        try { await fn(); await p.screenshot({ path: join(out, `${V.name}-${what}.png`) }); console.log("shot", V.name, what); return true; }
+        catch (e) { fails.push(`${V.name}-${what}: ${e.message.split("\n")[0]}`); console.error("shot FAILED", V.name, what, e.message.split("\n")[0]); return false; }
       };
       await shot("home", async () => {
         await p.goto(base + "/", { waitUntil: "load" });
         await p.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 20000 }); await p.waitForTimeout(800);
       });
-      await shot("mc-" + MC, async () => {
-        await p.goto(base + "/#BANK_MCAL", { waitUntil: "load" });
-        await p.waitForFunction(() => /^CALC1_/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 20000 });
-        await p.evaluate(h => { location.hash = h; }, MC);
-        await p.waitForFunction(h => document.querySelector("#pcode")?.textContent === h, MC, { timeout: 10000 });
-        await p.waitForSelector("#q .choices .opt", { timeout: 10000 });
+      const mcOk = await shot("mc-" + MC, async () => {
+        await p.goto(base + "/#" + MC, { waitUntil: "load" });   // a bare #CODE opens the item (app.js fromHash); no bank route first
+        await p.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 20000 });
+        await p.waitForFunction(h => document.querySelector("#pcode")?.textContent === h, MC, { timeout: 20000 });
+        await p.waitForSelector("#q .choices .opt", { timeout: 20000 });
         await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(800);
       });
-      if (measureTiles) { try { numbers[V.name] = await measureTiles(p); } catch (e) { numbers[V.name] = { error: e.message.split("\n")[0] }; } }
-      if (V.desktop) await shot("welcome-4taps", async () => {
+      if (measureTiles && mcOk) { try { numbers[V.name] = await measureTiles(p); } catch (e) { numbers[V.name] = { error: e.message.split("\n")[0] }; } }
+      if (V.desktop) await shot("welcome-ladder", async () => {
         await p.goto(base + "/client/labs/welcome-lab.html", { waitUntil: "load" });
         await p.evaluate(() => window.lab && window.lab());
-        for (let i = 0; i < 4; i++) {   // unfailable ladder: a tap on the active step's first chip, wrong or right, moves it on
-          await p.click('.rp-step[data-state="active"] .rp-val-opts .rp-chip', { timeout: 4000 }); await p.waitForTimeout(250);
-        }
+        await p.waitForSelector('.rp-step[data-id="formula"][data-state="active"]', { timeout: 10000 });
+        await p.click('.rp-step[data-id="formula"] .rp-val-opts .rp-chip[data-v="a"]');                                   // the right formula
+        await p.click('.rp-step[data-id="plug"][data-state="active"] .rp-val-opts .rp-chip[data-v="×"]');                  // the right operator; the why keeps the step open
+        await p.click('.rp-step[data-id="plug"] .rp-why .rp-chip[data-why="0"]');                                         // its why
+        await p.fill('.rp-step[data-id="answer"][data-state="active"] .rp-in', "6");                                      // the typed answer
+        await p.click('.rp-step[data-id="answer"] .rp-check');
+        await p.waitForFunction(() => [...document.querySelectorAll(".rp-step")].every(s => s.dataset.state === "done"), null, { timeout: 10000 });
         await p.waitForTimeout(400);
       });
       await ctx.close();
     }
   } finally { await browser.close(); }
   writeFileSync(join(out, "numbers.json"), JSON.stringify({ sha: v.sha, numbers, fails }, null, 1));
-  if (fails.length) console.error(`preview-shots: ${fails.length} shot(s) failed (see above); the rest are in ${out}`);
-  const n = VIEWS.length * 2 + VIEWS.filter(x => x.desktop).length;
-  if (fails.length >= n) process.exit(1);
+  if (fails.length) { console.error(`preview-shots: ${fails.length} shot(s) failed (see above); the rest are in ${out}`); process.exit(1); }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch(e => { console.error("preview-shots:", e.message); process.exit(1); });
