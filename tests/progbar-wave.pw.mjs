@@ -35,7 +35,8 @@ async function step(name, fn) {
 const go = async (page, code) => { await page.evaluate(c => { location.hash = c; }, code); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 }); };
 async function pick(page, id) {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
-  await page.click(`#q .opt[data-id="${id}"]`); await page.click(`#q .ch[data-id="${id}"] .send`);
+  const v7 = await page.evaluate(() => document.documentElement.classList.contains("ui-v7"));
+  await page.click(`#q .opt[data-id="${id}"]`); await page.click(v7 ? "#q .chk #mcGo" : `#q .ch[data-id="${id}"] .send`);
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 6000 });
 }
 async function typePart(page, i, v) {

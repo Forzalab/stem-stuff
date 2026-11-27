@@ -82,7 +82,7 @@ page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
 await page.goto(BASE + "/#BANK_THINK");
 await page.waitForFunction(() => !document.getElementById("splash") && !!window.stemBank && !!window.__drill, null, { timeout: 15000 });
 const n0 = await page.evaluate(() => window.__drill.state.tries.length);
-await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
+await page.click('.opt[data-id="b"]'); await page.click('#q .chk > #mcGo');   // SHIPPED KEY (Tony Nov 26): the v7 MC Check lives in the .chk row, not the tile .send
 await page.waitForFunction(n => window.__drill.state.tries.length > n, n0, { timeout: 8000 });
 await page.evaluate(() => window.stemIdleTap());
 await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 5000 });

@@ -80,7 +80,7 @@ try {
       assert.ok(before.gDoc.bottom > before.vh - 16, `the 7-tile bank must run to the bottom of the old answer area (g ${before.gDoc.bottom} vs vh ${before.vh})`);
 
       await p.click("#q .opt[data-id='a']");
-      await p.click("#q .ch:has(.opt[data-id='a']) .send");
+      await p.click("#q .chk #mcGo");                     // Tony Nov 26: the MC key lives in the .chk row under the choices, not in the tile
       await p.waitForSelector("#fb .cluck", { timeout: 8000 });
       await p.waitForFunction(() => {                                    // reducedMotion=reduce: the scroll is instant; wait on it, not a sleep
         const h = document.querySelector("#fb .cluck"); if (!h) return false;

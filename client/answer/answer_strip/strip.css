@@ -85,7 +85,7 @@
    (the state rules here keep their transitions so the lift eases in and out). The mock wins over the text.
    The Check key of the single box is restyled in verdict-v7.css (it is the existing #ansGo, moved outside the box; no second element). ===== */
 
-.ff .ib1-go { display: none; }   /* flag off: the sprite i-go only; ui-v7 shows the inline 24-grid arrow */
+.ib1-go { display: none; }   /* flag off: the sprite i-go only; ui-v7 shows the inline 24-grid arrow */
 
 /* ground = a token scoped to these fields only. --field (18 uses in 7 files) is NOT touched. --hi / --lo are the dish + lift inks, scoped here (SOFT-LIFT §3 §4). */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox),
@@ -93,8 +93,8 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) {
   --ans-field: color-mix(in oklab, var(--cb-well, #060b1b) 60%, var(--page));   /* SINK (Tony Nov 25): the resting box is an inset dark well, darker than the card (the older #060b1b well, a touch deeper) */
   --hi: rgb(255 255 255 / .042);
   --lo: rgb(0 0 0 / .3);
-  --ib-edge: color-mix(in srgb, var(--line) 40%, transparent);   /* SINK: the soft resting edge (was the solid --line, 3.25:1) */
-  --ib-well: inset 0 2px 5px rgb(0 0 0 / .5), inset 0 -1px 0 var(--hi);   /* the faint inner shadow; focus keeps it under the lift */
+  --ib-edge: color-mix(in srgb, var(--line) 40%, transparent);   /* SINK: kept as the focus / hover strength reference; the RESTING edge is gone (Tony Nov 26 shipped key review) */
+  --ib-well: inset 0 2px 5px rgb(0 0 0 / .5);   /* SHIPPED-KEY: only the dark top inset; the 1px lit bottom lip is gone (design review) */
   box-sizing: border-box; height: 60px; padding: 0 17.5px; gap: 8px; align-items: baseline;
 }
 /* the REST skin only. Judged (.ok/.bad), cue (out of tries) and the reveal pill (.rbox) keep the live verdict skin from verdict-v7.css:
@@ -102,24 +102,22 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) {
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) {
   background: var(--ans-field);
-  border: 1.5px solid var(--ib-edge);   /* SINK (Tony Nov 25): a soft, low-contrast edge; the dark well carries the field */
+  border: 0;                                                       /* SHIPPED-KEY design review: the resting box has no thin edge; the well carries it */
   border-radius: calc(18px * var(--r-k));
   box-shadow: var(--ib-well);
-  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1);   /* IB-2: the lift eases home on blur (.18s, feel-better pass); hover keeps its instant edge */
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1);   /* IB-2: the lift eases home on blur (.18s, feel-better pass) */
 }
 @supports (corner-shape: superellipse(2)) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
   html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) { corner-shape: superellipse(1.52); }
 }
-/* IB-5: the multi part's Check moved OUTSIDE the field (verdict-v7.css §ib5-key), so the value gets the mock's 17.5px inset at
+/* IB-5: the multi part's Check moved OUTSIDE the field (verdict-v7.css §key), so the value gets the mock's 17.5px inset at
    rest and no in-box key room; a judged part keeps 48 for the in-box .vk (the live tick / cross slot). */
 html.ui-v7 #q .mparts .part > .ff:is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
 html.ui-v7 #q > .ff#ff:not(.proof):is(.ok, .bad, .cue):not(.rbox) { padding-right: 48px; }
 /* the whole 60px box is a text target (the input is 54 inside 17.5px side pad): I-beam over the rim; app.js focuses the input on a press there */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox), html.ui-v7 #q .mparts .part > .ff:not(.rbox) { cursor: text; }
-/* hover = the resting edge only; judged / cue / rbox keep their own look */
-html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover,
-html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within):not(:has(input:disabled)):hover { border-color: color-mix(in srgb, var(--muted) 75%, transparent); }
+/* hover: the resting well only, no edge (SHIPPED-KEY design review: the thin resting edge is gone); judged / cue / rbox keep their own look */
 /* disabled (a shut part / a closed question): the live .ff.shut / .q.closed opacity carries the dim; only the cursor is ours */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox):has(input:disabled),
 html.ui-v7 #q .mparts .part > .ff:has(input:disabled) { cursor: not-allowed; }
@@ -138,17 +136,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.rbox) > :is(.lead, .unit) { font: 400 var
 
 /* the single box leaves room for its key outside: 60 key + 12 gap = 72; the box fills the column on every width, no desktop cap (Tony Nov 25: the empty gap right of the box was wrong, "expand to the col width") */
 html.ui-v7 #q > .ff#ff:not(.proof, .rbox) { width: calc(100% - 72px); }
-/* Next takes the key's outside 60px slot on the single box (the live flow already puts rbox Next outside; this keeps the non-rbox cue there too) */
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx {
-  position: absolute; left: calc(100% + 13.5px); right: auto; top: -1.5px;
-  width: 60px; min-width: 60px; height: 60px; margin: 0; padding: 0; border-radius: calc(18px * var(--r-k));
-}
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { width: 100%; height: 100%; padding: 0 2px; gap: 2px; border-radius: calc(18px * var(--r-k)); }
-html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf .ico { width: 18px; height: 18px; }
-@supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx,
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .nx .nf { corner-shape: superellipse(1.52); }
-}
+/* Next takes the key's outside slot on the single box: verdict-v7.css §key (one rule set for every Check and Next) */
 
 /* multi-part row: B HANGING INDEX LETTER (Tony Nov 25: "B", uppercase). Two axes: 36 (card text edge) = the letter, the box edge and the grey hint; 54 = the prompt and the value
    (the 18px hang column is the box's 17.5 value inset). The letter hangs left of the prompt, on its first baseline; the box and hint start at the part's left edge.
@@ -200,12 +188,13 @@ html.ui-v7 #q:has(> .phow, > .mparts .phow) > .how:not(.phow) { display: none !i
    Escapes IB-1's verdict clash: the rules apply ONLY on :focus-within and only to the two typed fields. ===== */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within {
+  --ib-ring: color-mix(in srgb, var(--action) 75%, transparent);   /* SHIPPED-KEY: focus is the mock's 2px ring + the lift, never a 1.5px edge */
   background: var(--ans-field);
-  border: 1.5px solid color-mix(in srgb, var(--action) 75%, transparent);
+  border: 0;
   border-radius: calc(18px * var(--r-k));
   transform: scale(1.014);
-  box-shadow: inset 0 1px 0 var(--hi), inset 0 3px 6px -2px rgb(0 0 0 / .45), 0 0 0 .5px var(--hi), 0 2px 4px var(--lo), 0 12px 26px -8px var(--lo);   /* SINK: the lift keeps the inset well fill + a faint inner shadow */
-  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1), border-color .15s cubic-bezier(.22,.61,.36,1);   /* feel-better: a lift is a response, not a scene (was .42s / 320ms) */
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / .5), 0 0 0 2px var(--ib-ring), 0 2px 4px var(--lo), 0 12px 26px -8px var(--lo);   /* SINK: the lift keeps the inset well + the focus ring */
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1);   /* feel-better: a lift is a response, not a scene */
 }
 @supports (corner-shape: superellipse(2)) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
@@ -214,22 +203,27 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
 /* the key press: the stronger/weaker edge paints at once, then the focus colour eases back (the transition home is on the focus rule above) */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="add"],
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="add"] {
-  border-color: color-mix(in srgb, var(--action) 90%, transparent);
-  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1), border-color 0s;
+  --ib-ring: color-mix(in srgb, var(--action) 90%, transparent);
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow 0s;   /* the nudge paints at once */
 }
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="del"],
 html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="del"] {
-  border-color: color-mix(in srgb, var(--action) 60%, transparent);
-  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s cubic-bezier(.22,.61,.36,1), border-color 0s;
+  --ib-ring: color-mix(in srgb, var(--action) 60%, transparent);
+  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow 0s;
 }
 /* reduced motion: no scale, no lift, no transition; the edge colour still changes (SOFT-LIFT §4, Tony) */
 @media (prefers-reduced-motion: reduce) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
-  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
-  html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
-  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within {
+  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) {
     transform: none;
     box-shadow: var(--ib-well);
+    transition: none;
+  }
+  html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
+  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within {
+    --ib-ring: color-mix(in srgb, var(--action) 75%, transparent);
+    transform: none;
+    box-shadow: var(--ib-well), 0 0 0 2px var(--ib-ring);   /* reduced motion: the ring is the focus cue (no lift) */
     transition: none;
   }
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2],
@@ -262,7 +256,7 @@ html.ui-v7.grading #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbo
 html.ui-v7.grading #q .mparts .part.g-on > .ff:not(.ok):not(.bad):not(.cue):not(.rbox) {
   transform: scale(.986);
   box-shadow: inset 2px 3px 7px var(--lo), inset -1px -1px 3px var(--hi);
-  border-color: var(--ib-edge);   /* the box sank: the edge is the RESTING soft edge, not IB-2's focus --action */
+  border: 0;                                                         /* the box sank: no edge at all (SHIPPED-KEY design review) */
   outline: none;                                                     /* and no keyboard focus-visible ring: SPEC §6, the mock shows the aurora only */
   transition: transform .42s cubic-bezier(.22,.61,.36,1), box-shadow .42s cubic-bezier(.22,.61,.36,1);
 }

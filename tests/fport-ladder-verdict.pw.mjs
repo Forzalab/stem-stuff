@@ -149,6 +149,7 @@ try {
         const idle = await read();
         assert.deepEqual([idle.kw, idle.kh, idle.gap, idle.fh, idle.arrow, idle.name, idle.dis, idle.op, idle.unitIn], [60, 60, 13.5, 60, true, "Check", true, "0.35", true], "idle key: " + JSON.stringify(idle));
         await inp.fill("3.7");
+        await page.waitForFunction(() => +getComputedStyle(document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-check')).opacity >= .999, null, { timeout: 3000 });
         const ready = await read();
         assert.deepEqual([ready.dis, ready.op], [false, "1"], "ready key: " + JSON.stringify(ready));
       } finally { await page.context().close(); }
@@ -172,12 +173,13 @@ try {
         await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip');
         const inp = await page.waitForSelector("#q section.wl .rp-in", { state: "visible", timeout: 6000 });
         /* LADDER-FIELD: the field is the typed answer box (1.5px soft edge); the input inside is bare, and focus moves the FIELD's edge to the action blue (no ring on the input) */
-        const edge = () => page.evaluate(() => { const e = document.querySelector("#q section.wl .rp-in"), cs = getComputedStyle(e), fc = getComputedStyle(e.closest(".rp-field")); return { bw: cs.borderTopWidth, ow: cs.outlineStyle, fbw: fc.borderTopWidth, fcol: fc.borderTopColor }; });
+        const edge = () => page.evaluate(() => { const e = document.querySelector("#q section.wl .rp-in"), cs = getComputedStyle(e), fc = getComputedStyle(e.closest(".rp-field")); return { bw: cs.borderTopWidth, ow: cs.outlineStyle, fbw: fc.borderTopWidth, fsh: fc.boxShadow }; });
         await inp.evaluate(e => e.blur()); const rest = await edge();
         await inp.focus();
         const f = await edge();
-        assert.deepEqual([f.bw, f.ow, parseFloat(f.fbw) >= 1], ["0px", "none", true], "focused input: bare, the field keeps its edge (1.5px, device-snapped): " + JSON.stringify(f));
-        assert.notEqual(f.fcol, rest.fcol, "focus did not move the field's edge: " + JSON.stringify([rest, f]));
+        assert.deepEqual([f.bw, f.ow, f.fbw], ["0px", "none", "0px"], "focused input: bare, and the field has no border (SHIPPED KEY): " + JSON.stringify(f));
+        assert.match(f.fsh, /0px 0px 0px 2px/, "focus: the field's 2px ring: " + f.fsh);
+        assert.doesNotMatch(rest.fsh, /0px 0px 0px 2px/, "rest: no ring: " + rest.fsh);
         assert.deepEqual(page.errs, [], "page errors");
       } finally { await page.context().close(); }
     });
@@ -246,6 +248,7 @@ try {
       await page.click('#q section.wl .rp-step[data-state="active"] .rp-chip >> nth=0');            // the right pick: the Final answer field
       await page.waitForSelector('#q section.wl .rp-step[data-state="active"] .rp-in', { state: "visible", timeout: 6000 });
       await settled(page, "#q section.wl");
+      await page.evaluate(() => document.activeElement?.blur());   // compare the REST field styles (the focus ring is a state, not the skin)
       const m = await page.evaluate(() => {
         const lf = document.querySelector('#q section.wl .rp-step[data-state="active"] .rp-field'), lu = lf.querySelector(".rp-unit"), li = lf.querySelector(".rp-in");
         if (document.querySelectorAll("#ff").length) throw new Error("the welcome item already has #ff");
@@ -288,15 +291,15 @@ try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       const rest = await page.evaluate(() => { const ff = document.querySelector("#ff"), i = ff.querySelector("input"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(i).color }; });
       await skipRetryWait(page); const f = page.locator("#ff :is(input, textarea)").first(); await f.fill("1.38"); await f.press("Enter");
-      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 8000 }); await settled(page, "#q .ff.rbox.ok");
-      const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
+      await page.waitForSelector("#q .ff.ok .vk", { timeout: 8000 }); await settled(page, "#q .ff.ok");   // KEY-ONE: ui-v7 builds no reveal pill (.rbox); the closed box is the plain judged-right box
+      const m = await page.evaluate(() => { const ff = document.querySelector("#q .ff.ok"), v = ff.querySelector(".vk"), cs = getComputedStyle(v), fs = getComputedStyle(ff);
         return { row: fs.backgroundColor, rbw: ["Top", "Right", "Bottom", "Left"].map(x => fs["border" + x + "Width"]).join(" "), ln: (() => { const l = document.querySelector("#q .ansl"), d = document.querySelector("#q .vdrawer"); if (!l || !d) return { missing: !l ? "line" : "drawer" }; const a = l.getBoundingClientRect(), b = d.getBoundingClientRect(); return { hit: !(!d || d.getClientRects().length === 0) || (a.width > 2 && a.height > 2) }; })(), slot: cs.backgroundColor, h: v.getBoundingClientRect().height, text: getComputedStyle(ff.querySelector("input")).color }; });
-      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is a plain glyph, no tile (VERDICT-MARK-INERT)"); assert.equal(m.row, "rgb(12, 44, 34)", "row = #0c2c22");
+      assert.equal(m.slot, "rgba(0, 0, 0, 0)", "tick is a plain glyph, no tile (VERDICT-MARK-INERT)"); assert.equal(m.row, rest.bg, "KEY-ONE: the closed right box keeps the resting ground (was the reveal pill's #0c2c22 row)"); assert.equal(await page.evaluate(() => document.querySelector("#q #ff").classList.contains("rbox")), false, "no reveal pill under ui-v7");
       assert.equal(m.rbw, ZERO, "the right row has no border: " + m.rbw);
       assert.ok(m.ln && !m.ln.hit, "the verdict line must stay visually hidden and no tray shown (VERDICT-CARD): " + JSON.stringify(m.ln));
-      // the reveal pill keeps the MC bento right tile (--mc-right #0c2c22 + --correct-on text); the PLAIN judged-right box is now the resting ground/ink (SPEC §7 BACKGROUND, Tony Nov 25 07:38)
-      assert.equal(m.text, "rgb(185, 239, 216)", "right text = --correct-on: " + m.text);
-      const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.rbox.ok"); ff.classList.remove("rbox"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
+      // KEY-ONE: there is no reveal pill under ui-v7 any more; the judged-right box is the resting ground/ink (SPEC §7 BACKGROUND, Tony Nov 25 07:38)
+      assert.equal(m.text, rest.color, "right text = the resting ink: " + m.text);
+      const plain = await page.evaluate(() => { const ff = document.querySelector("#q .ff.ok"); const cs = getComputedStyle(ff), i = getComputedStyle(ff.querySelector("input"));
         return { bg: cs.backgroundColor, bw: cs.borderTopWidth, r: cs.borderTopLeftRadius, color: i.color }; });
       const tile = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "20px" : "16px");   // ICK4-SQUIRCLE-C: --r-tile x 1.25 under corner-shape
       assert.deepEqual(plain, { bg: rest.bg, bw: "0px", r: tile, color: rest.color }, "the plain judged-right box keeps the resting ground + ink (SPEC §7 BACKGROUND): " + JSON.stringify(plain));
@@ -311,25 +314,24 @@ try {
       const read = () => page.evaluate(() => { const ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(ff);
         return { bw: ["Top", "Right", "Bottom", "Left"].map(x => cs["border" + x + "Width"]).join(" "), shadow: cs.boxShadow, bg: cs.backgroundColor, tr: cs.transform, edge: cs.borderTopColor }; });
       const idle = await read();
-      assert.ok(idle.bw === HAIR || idle.bw === "1.5px 1.5px 1.5px 1.5px", "idle: the Soft-lift outlined field " + JSON.stringify(idle));
+      assert.equal(idle.bw, ZERO, "idle: the SHIPPED KEY field has no edge " + JSON.stringify(idle));
       assert.match(idle.shadow, /rgba\(0, 0, 0, 0\.5\) 0px 2px 5px 0px inset/, "idle: the SINK inset dark well (Tony Nov 25, was the SOFT-LIFT §3 dish): " + idle.shadow);
       assert.doesNotMatch(idle.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "idle: the old well is gone: " + idle.shadow);
       await page.locator("#ff :is(input, textarea)").first().focus();
       await page.waitForFunction(() => document.activeElement === document.querySelector("#ff :is(input, textarea)"));
       await settled(page, "#q #ff.ff");
       const focus = await read();
-      assert.equal(focus.bw, HAIR, "focus: the one hairline edge " + JSON.stringify(focus));
+      assert.equal(focus.bw, ZERO, "focus: still no border " + JSON.stringify(focus));
       assert.equal(focus.tr, "matrix(1.014, 0, 0, 1.014, 0, 0)", "focus: scale(1.014) in place (IB-2): " + focus.tr);
-      assert.match(focus.shadow, /0px 1px 0px 0px inset/, "focus: the lit top edge: " + focus.shadow);
+      assert.match(focus.shadow, /0px 0px 0px 2px/, "focus: the 2px --action ring: " + focus.shadow);
       assert.match(focus.shadow, /0px 12px 26px -8px/, "focus: the shadow straight underneath: " + focus.shadow);
       assert.doesNotMatch(focus.shadow, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: the old well is gone: " + focus.shadow);
-      assert.ok(!/0px 0px 0px 2px/.test(focus.shadow), "focus (mouse): no glow ring: " + focus.shadow);
-      assert.notEqual(focus.edge, idle.edge, "focus turns the edge --action: " + idle.edge + " -> " + focus.edge);
+      assert.doesNotMatch(focus.shadow, /0px 1px 0px 0px inset/, "focus: no lit top edge: " + focus.shadow);
       await page.locator("#ff :is(input, textarea)").first().fill("1.5");
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
       await settled(page, "#q #ff.ff");
       const typed = await read();
-      assert.equal(typed.bw, HAIR, "typed: the one hairline edge " + JSON.stringify(typed));
+      assert.equal(typed.bw, ZERO, "typed: still no border " + JSON.stringify(typed));
       assert.equal(typed.tr, "matrix(1.014, 0, 0, 1.014, 0, 0)", "typed keeps the lift: " + typed.tr);
       assert.match(typed.shadow, /0px 12px 26px -8px/, "typed: the shadow underneath: " + typed.shadow);
       assert.deepEqual(page.errs, [], "page errors");
@@ -408,7 +410,7 @@ try {
       assert.equal(wrong.input, "none", "wrong: the judged input shows no outline (a keyboard submit): " + JSON.stringify(wrong));
       await page.waitForFunction(() => !window.__drill.state.wait, null, { timeout: 12000 });
       await tabTo(); await page.keyboard.type("1.38"); await page.keyboard.press("Enter");
-      await page.waitForSelector("#q .ff.rbox.ok .vk", { timeout: 9000 }); await settled(page, "#q #ff.ff");
+      await page.waitForSelector("#q .ff.ok .vk", { timeout: 9000 }); await settled(page, "#q #ff.ff");   // KEY-ONE: no .rbox under ui-v7
       const right = await dy();
       assert.ok(Math.abs(right.dy) <= 1, "correct: the tick centred on the pill within 1px: " + JSON.stringify(right));
       assert.equal(right.input, "none", "correct: no input outline: " + JSON.stringify(right));

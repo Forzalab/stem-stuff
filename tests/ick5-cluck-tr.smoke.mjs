@@ -1,5 +1,5 @@
 // ICK5-CLUCK-TR smoke (Tony Nov 18): Ask Cluck = tangerine squircle at #problem's top right, floated (text wraps), both widths;
-// in phone proof typing it FLIPs into the in-box 56px slot and back. Own serve.py, uploaded bank, ui-v7.
+// in phone proof typing it FLIPs into the in-box 44px slot (--key-in) and back. Own serve.py, uploaded bank, ui-v7.
 //   node tests/ick5-cluck-tr.smoke.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -136,7 +136,7 @@ catch { browser = await launchBrowser(pw, { args: ["--no-sandbox"], motion: true
 try {
   const ph = await fresh(true, { width: 390, height: 844 });
   await card(ph.page, "390");
-  await step("390 AC7: proof typing -> inside #q .ff.proof, cb-inbox 56x56, one animation in 50 ms, none at 600 ms", async () => {
+  await step("390 AC7: proof typing -> inside #q .ff.proof, cb-inbox 44x44, one animation in 50 ms, none at 600 ms", async () => {
     await go(ph.page, "PSY_T52"); const g0 = await geo(ph.page); assert.equal(g0 && g0.parent, "problem", "the button does not start on the card");
     await sample(ph.page); await ph.page.locator("#q .ff.proof .ans").focus(); await inbox(ph.page);
     let g = await geo(ph.page); assert.equal(g.inProof, true, "not inside #q .ff.proof"); assert.equal(g.inbox, true, "no cb-inbox class");
@@ -144,7 +144,7 @@ try {
     assert.ok(Math.max(...win(s, first.t).map(x => x.n)) >= 1, `no animation within 50 ms of the move (${JSON.stringify(win(s, first.t).slice(0, 5))})`);
     await ph.page.waitForTimeout(650);   // keep: the AC's 600 ms window
     assert.equal(await anims(ph.page), 0, "still animating 600 ms after the move"); g = await geo(ph.page);
-    assert.ok(near(g.w, 56, .5) && near(g.h, 56, .5), `in-box box ${g.w}x${g.h}`);
+    assert.ok(near(g.w, 44, .5) && near(g.h, 44, .5), `in-box box ${g.w}x${g.h}`);   // KEY-ONE: the in-box duck is the in-box key size (--key-in 44, was the 56px ick12 slot)
   });
   await step("390 AC7 reduce: the same move plays no animation", async () => {
     await ph.page.emulateMedia({ reducedMotion: "reduce" }); await ph.page.waitForFunction(() => matchMedia("(prefers-reduced-motion: reduce)").matches, null, { timeout: 3000 });

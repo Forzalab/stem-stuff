@@ -139,10 +139,6 @@ html.ui-v7 .choices.bento.flow .opt[data-x] .txt { align-self: stretch; text-ali
 html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge, html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .lt { left: var(--mc-pl) !important; top: 14px !important; height: 22px !important; font-size: var(--ans-letter-fs) !important; line-height: 22px !important; }
 html.ui-v7 .choices.bento.flow.all .ch > .opt.opt .badge { right: 16px; left: auto; top: 16px; width: 18px; height: 18px; }
 /* Check / Next / verdict mark: centred at the tile's right edge, the words keep clear of them (padding), the tile never changes height */
-html.ui-v7 .choices.bento.flow .ch > .send { right: 6px; top: 50%; margin: -22px 0 0; }
-html.ui-v7 .choices.bento.flow .ch > .nx { right: 6px; top: 50%; bottom: auto; margin: -22px 0 0; width: 44px; }
-html.ui-v7 .choices.bento.flow .ch > .nx .nf { padding: 0; }
-html.ui-v7 .choices.bento.flow .ch > .nx .nf > span { display: none; }
 html.ui-v7 .choices.bento.flow .ch .vg, html.ui-v7 .choices.bento.flow .ch.cue .vg { right: 16px; top: 50%; margin-top: -9px; }
 /* no per-state padding on purpose: Check / cue / verdict states reuse the tile's one padding, so the words never move (these re-state it above the section B/C :has() rules that would add top padding) */
 html.ui-v7 .choices.bento.flow .ch:has(> .send:not([hidden])) > .opt.opt, html.ui-v7 .choices.bento.flow .ch.cue > .opt.opt, html.ui-v7 .choices.bento.flow .ch:has(> .vg) > .opt.opt, html.ui-v7 .choices.bento.flow .ch:has(> .nx) > .opt.opt { padding: 14px 52px; }
@@ -169,20 +165,5 @@ html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge.badge {
 html.ui-v7 .choices.bento.flow.all .opt .txt, html.ui-v7 .choices.bento.flow.all .opt[data-k] .txt { font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-em); }
 /* the tile keeps ONE padding in every state (the old per-state 14/52 re-statement of section D), so nothing moves when a key appears */
 html.ui-v7 .choices.bento.flow:not(.all) .ch:is(:has(> .send:not([hidden])), .cue, :has(> .vg), :has(> .nx)) > .opt.opt { padding: 18px 52px 18px var(--mc-pl); }
-/* SWISS-KEY: Check (.send) and Next (.nx) in a tile are the typed answer's key (verdict-v7.css §ib1-key / §ib5-key): --chip face, --ink arrow on the same 24px grid, stroke 2.25, no shadow, hover = --chip 82% + white,
-   :active = scale(.96); it is 44px (the tap size) inset 8 in a 64px tile, radius = the tile's radius - the inset (concentric: 20 - 8 = 12, fallback 16 - 8 = 8). No green face, no black ring: the verdict is the tile's fill. */
-html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) {
-  position: absolute; right: 8px; top: 50%; bottom: auto; margin: -22px 0 0; width: 44px; min-width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0;
-  border-radius: calc(var(--r-tile) - 8px); background: var(--chip); color: var(--ink); box-shadow: none; transition: transform var(--d-fast) ease-out;
-}
-@supports (corner-shape: superellipse(2)) { html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) { corner-shape: superellipse(1.52); } }
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .send .ico, html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf .ico { display: none; }   /* the sprite i-go / the filled i-tri: the 24-grid arrow replaces them */
-html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) .ib1-go { display: block; width: 24px; height: 24px; }
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx::before { display: none; }   /* sugar's --field ring plate (app.css): gone */
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf { display: grid !important; place-items: center; width: 100%; height: 100%; padding: 0 !important; border: 0 !important; border-radius: inherit !important; background: none !important; color: inherit !important; transform: none; }   /* !important: app.css's verdict-green .nf rule is (0,7,0) */
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .nx .nf > span { display: none; }
-@media (hover: hover) {
-  html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):not(:disabled, [aria-disabled="true"]):hover { background: color-mix(in srgb, var(--chip) 82%, #fff); color: var(--ink); border: 0; }
-}
-html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):not(:disabled):active { transform: scale(.96); background: color-mix(in srgb, var(--chip) 90%, #000); }
-@media (prefers-reduced-motion: reduce) { html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx) { transition: none; } html.ui-v7 .choices.bento.flow:not(.all) .ch > :is(.send, .nx):active { transform: none; } }
+/* SWISS-KEY: the MC key moved OUT of the tile (Tony Nov 26 shipped key) into the .chk row under the choices, where the
+   pick-all Check already lived; the tile keeps only its letter / value. The one key look is verdict-v7.css §key. */

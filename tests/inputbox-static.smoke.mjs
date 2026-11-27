@@ -443,20 +443,22 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     try {
       await page.press("#q .mparts .part[data-i='0'] input.ans", "Enter");   // Enter still submits THIS part
       await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
-      await page.waitForFunction(() => +getComputedStyle(document.querySelector("#q .mparts .part[data-i='0'] .send")).opacity < 1, null, { timeout: 2000 });   // opacity eases .15s (#759)
+      await page.waitForFunction(() => getComputedStyle(document.querySelector("#q .mparts .part[data-i='0'] .send svg.ib1-go")).animationName !== "none", null, { timeout: 3000 });
       grading = await page.evaluate(() => {
         const p = document.querySelector("#q .mparts .part[data-i='0']"), key = p.querySelector(".send"), ff = p.querySelector(".ff");
         const k = key.getBoundingClientRect(), f = ff.getBoundingClientRect(), cs = getComputedStyle(key);
-        return { op: +cs.opacity, after: getComputedStyle(key, "::after").content, show: cs.visibility,
+        return { op: +cs.opacity, anim: getComputedStyle(key.querySelector("svg.ib1-go")).animationName, after: getComputedStyle(key, "::after").content, show: cs.visibility,
           kl: k.left, fr: f.right, hidden: key.hidden };
       });
       assert.equal(grading.hidden, false, "the key stays up while its part is graded");
-      assert.ok(grading.op < 1, `grading only dims the key: opacity ${grading.op}`);
-      assert.equal(grading.after, "none", "no spinner on the typed key");
-      assert.equal(grading.show, "visible", "the arrow stays visible while grading");
+      assert.equal(grading.op, 1, `BUSY: the key face stays full: ${grading.op}`);
+      assert.equal(grading.anim, "key-spin", "BUSY: the part key spins its one glyph");
+      assert.equal(grading.after, "none", "no ::after spinner on the key");
+      assert.equal(grading.show, "visible", "the glyph stays visible while grading");
       assert.ok(grading.kl >= grading.fr + 8, `the key stays outside while grading: ${grading.kl} vs ${grading.fr}`);
       hold.release();
       await page.waitForSelector("#q .mparts .part[data-i='0'] .ff.bad", { timeout: 5000 });
+      await page.waitForTimeout(850);   // SHIPPED KEY: 600ms hold + 200ms exit
       wrong = await page.evaluate(() => {
         const p = document.querySelector("#q .mparts .part[data-i='0']"), key = p.querySelector(".send"), ff = p.querySelector(".ff");
         const k = key.getBoundingClientRect(), f = ff.getBoundingClientRect();
@@ -492,13 +494,14 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     /* aim at the FIELD, not .part: since IB-5 the part centre sits ~1px under the field's top edge (the key column moved it),
        so the old proxy can hover the prompt/gap instead of the box. */
     await page.locator("#q .mparts .part > .ff").first().hover().catch(() => {});
-    const hoverCol = await page.evaluate(() => { const s = getComputedStyle(document.querySelector("#q .mparts .part > .ff")); return s.outlineStyle !== "none" ? s.outlineColor : s.borderTopColor; });
+    const hoverSh = await page.evaluate(() => getComputedStyle(document.querySelector("#q .mparts .part > .ff")).boxShadow);
     assert.equal(m.kind, "multi");
     assert.ok(near(m.h, 60), `field height ${m.h} (want 60)`);
-    assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
-    assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
-    assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
-    assert.ok(mEdge.eq, `multi rest edge is the soft --line at alpha .4: ${mEdge.bc} vs ${mEdge.line} (alpha ${mEdge.alpha})`);
+    assert.equal(m.edgeStyle, "none", `SHIPPED KEY: the resting box has no edge (${m.edgeStyle} ${m.edgeW})`);
+    assert.equal(m.edgeW, "0px", `rest edge width ${m.edgeW}`);
+    assert.equal(m.skin.bw, "0px", `rest border width ${m.skin.bw}`);
+    assert.match(m.skin.sh, /0px 2px 5px 0px inset/, "rest keeps the dark inset well: " + m.skin.sh);
+    assert.doesNotMatch(m.skin.sh, /-1px 0px 0px inset|0px -1px 0px inset/, "the 1px lit bottom lip is gone: " + m.skin.sh);
     assert.match(m.transition, /0\.18s/, `IB-2 transition at rest ${m.transition} (#759 feel-better, Tony: focus lift .42s -> .18s)`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
@@ -523,21 +526,18 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const row = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part"), pr = p.querySelector(".pr"); return { part: p.getBoundingClientRect().width, pr: pr.getBoundingClientRect().width }; });
       /* 22px hang column (18 + --s1, #759 B letter); the key column is part of the prompt span */ assert.ok(near(row.pr, row.part - 22, 1), `phone prompt spans the key column: ${row.pr} vs part ${row.part}`);
     }
-    assert.notEqual(hoverCol, m.edgeCol, "hover changes the edge (idle -> hover)");
+    assert.equal(hoverSh, m.skin.sh, "hover adds no edge (SHIPPED KEY): " + hoverSh);
     await page.locator("#q .mparts .part:first-child input.ans").focus();
     await page.waitForTimeout(520);
     const focus = await liftOf(page, "#q .mparts .part:first-child .ff");
     const liftR = await page.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? "22.5px" : "18px");
     assert.equal(focus.tr, SCALE, `focus lifts in place (IB-2): ${focus.tr}`);
     assert.equal(focus.r, liftR, `focus keeps the Soft-lift squircle (${focus.r}, want ${liftR})`);
-    assert.equal(focus.bw, "1px", `focus keeps the 1.5px edge: ${JSON.stringify(focus)}`);
-    assert.match(focus.sh, /0px 1px 0px 0px inset/, "focus: the lit top edge: " + focus.sh);
-    assert.match(focus.sh, /0px 0px 0px 0\.5px/, "focus: the .5px halo edge: " + focus.sh);
+    assert.equal(focus.bw, "0px", `focus keeps the borderless well: ${JSON.stringify(focus)}`);
+    assert.match(focus.sh, /0px 0px 0px 2px/, "focus: the 2px --action ring: " + focus.sh);
+    assert.match(focus.sh, /0px 2px 5px 0px inset/, "focus: the well stays under the ring: " + focus.sh);
     assert.match(focus.sh, /0px 12px 26px -8px/, "focus: the shadow straight underneath: " + focus.sh);
-    assert.doesNotMatch(focus.sh, /rgba\(0, 0, 0, 0\.45\) 0px 2px 3px 0px inset/, "focus: the old well is gone: " + focus.sh);
-    assert.notEqual(focus.bc, m.edgeCol, "focus turns the edge --action");
-    const multiEdge = await edgeRatio(page, "#q .mparts .part:first-child .ff");
-    assert.ok(multiEdge.ratio >= 3, `focus edge reaches 3:1: ${multiEdge.ratio && multiEdge.ratio.toFixed(2)} (${multiEdge.edge} over ${multiEdge.fill} vs ${multiEdge.surround})`);
+    assert.doesNotMatch(focus.sh, /0px 1px 0px 0px inset/, "focus: no lit top edge: " + focus.sh);
     await page.evaluate(() => document.activeElement?.blur());
     await page.locator("#q .mparts .part:first-child input.ans").focus();
     await page.locator("#q .mparts .part:first-child input.ans").fill("17");
@@ -561,10 +561,11 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     const sEdge = await edgeLine(page, "#q > .ff#ff");
     assert.equal(m.kind, "single");
     assert.ok(near(m.h, 60), `field height ${m.h} (want 60)`);
-    assert.equal(m.edgeStyle, "solid", `edge style ${m.edgeStyle}`);
-    assert.match(m.authored, /1\.5px/, `authored edge ${m.authored}`);
-    assert.ok(m.edgeW === "1.5px" || m.edgeW === "1px", `computed edge width ${m.edgeW} (Chromium rounds 1.5px to 1)`);
-    assert.ok(sEdge.eq, `single rest edge is the soft --line at alpha .4: ${sEdge.bc} vs ${sEdge.line} (alpha ${sEdge.alpha})`);
+    assert.equal(m.edgeStyle, "none", `SHIPPED KEY: the resting box has no edge (${m.edgeStyle} ${m.edgeW})`);
+    assert.equal(m.edgeW, "0px", `rest edge width ${m.edgeW}`);
+    assert.equal(m.skin.bw, "0px", `rest border width ${m.skin.bw}`);
+    assert.match(m.skin.sh, /0px 2px 5px 0px inset/, "rest keeps the dark inset well: " + m.skin.sh);
+    assert.doesNotMatch(m.skin.sh, /-1px 0px 0px inset|0px -1px 0px inset/, "the 1px lit bottom lip is gone: " + m.skin.sh);
     assert.match(m.transition, /0\.18s/, `IB-2 transition at rest ${m.transition} (#759 feel-better, Tony: focus lift .42s -> .18s)`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
@@ -619,6 +620,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
           blur: getComputedStyle(inp).filter, blurUnit: unit ? getComputedStyle(unit).filter : "blur(0.8px)",
           keyOp: +getComputedStyle(key).opacity, after: ka.content, afterAnim: ka.animationName,
           arrow: getComputedStyle(key.querySelector(".ib1-go")).display,
+          keyAnim: getComputedStyle(key.querySelector("svg.ib1-go")).animationName,
+          keyD: getComputedStyle(key.querySelector("svg.ib1-go path")).d,
           fv: ff.matches(":has(input:focus-visible)"), ol: getComputedStyle(ff).outlineStyle,
           ow: getComputedStyle(ff).outlineWidth, bc: getComputedStyle(ff).borderTopColor,
         };
@@ -644,16 +647,19 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
         assert.ok(bg.includes(t.af.replace(/\s+/g, "")) && bg.includes(t.ac.replace(/\s+/g, "")) && bg.includes(t.ao.replace(/\s+/g, "")),
           `spin ${i}: the aurora is the action family (fill -> action -> on): ${bg.slice(0, 220)}`);
       }
-      const th = await edgeLine(page, "#q > .ff#ff");
-      assert.ok(th.eq, `thinking edge is the soft --line at alpha .4: ${th.bc} vs ${th.line} (alpha ${th.alpha})`);
+      const th = await page.evaluate(() => { const c = getComputedStyle(document.querySelector("#q > .ff#ff")); return { bw: c.borderTopWidth, sh: c.boxShadow }; });
+      assert.equal(th.bw, "0px", `thinking: the resting box has no edge: ${th.bw}`);
+      assert.doesNotMatch(th.sh, /inset 0px -1px/, `thinking: no lit bottom lip: ${th.sh}`);
       assert.equal(t.glowFilter, "blur(7px)", `glow filter ${t.glowFilter}`);
       assert.equal(t.glowOp, 0.45, `glow opacity ${t.glowOp}`);
       assert.equal(t.blur, "blur(0.8px)", `value blur ${t.blur}`);
       assert.equal(t.blurUnit, "blur(0.8px)", `unit blur ${t.blurUnit}`);
       assert.equal(t.after, "none", "typed Check has no ::after spinner");
-      assert.equal(t.afterAnim, "none", `typed Check has no ring animation: ${t.afterAnim}`);
-      assert.ok(t.keyOp < 1, `typed Check only dims: opacity ${t.keyOp}`);
-      assert.equal(t.arrow, "block", "typed Check keeps its arrow");
+      assert.equal(t.afterAnim, "none", `typed Check has no ::after animation: ${t.afterAnim}`);
+      assert.equal(t.keyOp, 1, `BUSY: the key face stays full: ${t.keyOp}`);
+      assert.equal(t.arrow, "block", "the one glyph is shown");
+      assert.equal(t.keyAnim, "key-spin", `BUSY: the key's svg spins: ${t.keyAnim}`);
+      assert.match(String(t.keyD), /M\s*12\s+4\.5/, `BUSY: the glyph is the spinner: ${t.keyD}`);
       await shot(page, `single-${w}-thinking-app.png`, "#q");
     } finally {
       hold.release();
@@ -676,36 +682,43 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(f.tr, SCALE, `focus lifts in place: ${f.tr}`);
     assert.notEqual(f.tr, rest.tr, "rest is not lifted");
     assert.equal(f.r, liftR, `focus radius ${f.r} (want ${liftR})`);
-    assert.match(f.sh, /0px 1px 0px 0px inset/, "the lit top edge: " + f.sh);
-    assert.match(f.sh, /0px 0px 0px 0\.5px/, "the .5px halo edge: " + f.sh);
+    assert.match(f.sh, /0px 0px 0px 2px/, "the 2px --action focus ring: " + f.sh);
+    assert.match(f.sh, /0px 2px 5px 0px inset/, "the well stays under the ring: " + f.sh);
     assert.match(f.sh, /0px 2px 4px/, "the near shadow: " + f.sh);
     assert.match(f.sh, /0px 12px 26px -8px/, "the far shadow straight underneath: " + f.sh);
     assert.match(f.dur, /0\.18s/, `transform + shadow share .18s (#759: .42s -> .18s) (${f.dur})`);
     assert.match(f.ease, /cubic-bezier\(0\.22, 0\.61, 0\.36, 1\)/, `the one curve (${f.ease})`);
-    assert.notEqual(f.bc, rest.bc, `focus turns the edge --action: ${rest.bc} -> ${f.bc}`);
-    const er = await edgeRatio(page, sel);
-    assert.ok(er.ratio >= 3, `focus edge reaches 3:1: ${er.ratio && er.ratio.toFixed(2)} (${er.edge} over ${er.fill} vs ${er.surround})`);
-    return `tr ${f.tr}, edge ${f.bc}, ${er.ratio.toFixed(2)}:1`;
+    assert.equal(f.bw, "0px", `focus stays borderless: ${f.bw}`);
+    return `tr ${f.tr}, ring in ${f.sh.slice(0, 80)}`;
   });
   await step(`${w}: IB-2 key press: add 90%, delete 60%, back to 75% in ~320ms`, async () => {
     await go(page, "PSY_S1A");
-    const sel = "#q > .ff#ff", col = async () => (await liftOf(page, sel)).bc;
+    const sel = "#q > .ff#ff", col = async () => (await liftOf(page, sel)).sh;
     await page.locator("#ans").focus();
     await page.waitForTimeout(520);
     const focus = await col();
-    await page.keyboard.type("1");
-    const add = await col();
-    assert.notEqual(add, focus, `a new character strengthens the edge: ${focus} -> ${add}`);
+    /* the hook is set and read inside ONE task (strip.js removes it two frames later), so the nudge is deterministic */
+    const press = type => page.evaluate(([s, type]) => {
+      const i = document.querySelector("#ans");
+      i.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: type }));
+      const cs = getComputedStyle(document.querySelector(s));
+      return { attr: document.querySelector(s).getAttribute("data-ib2"), ring: cs.getPropertyValue("--ib-ring").trim(), sh: cs.boxShadow };
+    }, [sel, type]);
+    const add = await press("insertText");
+    assert.equal(add.attr, "add", "a new character sets the stronger hook");
+    assert.match(add.ring, /90%/, `the add ring is 90%: ${add.ring}`);
+    assert.match(add.sh, /0px 0px 0px 2px/, "the add ring paints: " + add.sh);
     await page.waitForTimeout(430);
     const back = await col();
-    assert.equal(back, focus, `the edge returns to the focus colour (${back})`);
-    await page.keyboard.press("Backspace");
-    const del = await col();
-    assert.notEqual(del, add, `a delete is weaker than an add: ${add} vs ${del}`);
+    assert.equal(back, focus, `the ring returns to the focus strength (${back})`);
+    const del = await press("deleteContentBackward");
+    assert.equal(del.attr, "del", "a delete sets the weaker hook");
+    assert.match(del.ring, /60%/, `the delete ring is 60%: ${del.ring}`);
+    assert.notEqual(del.sh, add.sh, `a delete is weaker than an add: ${add.sh} vs ${del.sh}`);
     await page.waitForTimeout(430);
     const back2 = await col();
-    assert.equal(back2, focus, `the delete edge returns too (${back2})`);
-    return `add ${add} del ${del} focus ${focus}`;
+    assert.equal(back2, focus, `the delete ring returns too (${back2})`);
+    return `add ${add.ring} del ${del.ring}`;
   });
   await step(`${w}: IB-2 judged field does not lift on focus`, async () => {
     await go(page, "PSY_S4A");
@@ -732,16 +745,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.equal(wait.nx, false, "Next appeared inside the waiting field");
     return `bad ${bad.bg} ${bad.bw}`;
   });
-  await step(`${w}: reveal pill keeps its live padding and height`, async () => {
+  await step(`${w}: a closed sugar box is no reveal pill: same 60px box, Next in the key slot`, async () => {   // KEY-ONE: was "reveal pill keeps its live padding and height"; under ui-v7 app.js rboxSync no longer adds .rbox, so the joined row + Next pill is gone
     await go(page, "PSY_S1A");
     await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
-    await page.waitForSelector("#q #ff.rbox", { timeout: 6000 });
-    await settled(page, "#q #ff");
-    const box = await skinOf(page, "#q #ff.rbox");
-    assert.ok(parseFloat(box.pr) >= 48, `rbox padding-right ${box.pr} (want >= 48)`);
-    assert.ok(Math.abs(box.h - 60) > 1, `rbox height ${box.h} got the IB-1 60px box`);
-    if (w >= 900) assert.ok(box.w > 400.5, `rbox width ${box.w} got the 400px idle cap`);
-    return `pad ${box.pr} h ${box.h} w ${box.w}`;
+    await page.waitForSelector("#q #ff > .nx", { timeout: 6000 });
+    await settled(page, "#q #ff > .nx");
+    const g = await page.evaluate(() => { const ff = document.querySelector("#q #ff"), f = ff.getBoundingClientRect(), n = ff.querySelector(":scope > .nx").getBoundingClientRect(); return { rbox: ff.classList.contains("rbox"), h: f.height, fRight: f.right, nLeft: n.left, nW: n.width, nH: n.height }; });
+    assert.equal(g.rbox, false, "ui-v7 still builds the reveal pill (.rbox)");
+    assert.ok(near(g.h, 60), `the closed box left the 60px typed box: ${g.h}`);
+    assert.ok(near(g.nW, 60) && near(g.nH, 60) && g.nLeft >= g.fRight + 10, `Next is not the 60px key outside the box: ${JSON.stringify(g)}`);
+    return `box h ${g.h}, Next ${g.nW}x${g.nH} at +${(g.nLeft - g.fRight).toFixed(1)}`;
   });
   await step(`${w}: single Next takes the outer key slot`, async () => {
     await go(page, "PSY_S3A");
@@ -833,10 +846,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(!u.text.includes("[object Object]"), "object unit leaked into the card");
     return "no unit";
   });
-  await step(`${w}: MC key (#mcGo) unchanged`, async () => {
+  await step(`${w}: MC key (#mcGo) is the 60px OUT key in .chk`, async () => {   // KEY-ONE: 56 near-white -> the one 60px --chip key (verdict-v7.css §key)
     await go(page, "PSY_C1A");
     const m = await page.evaluate(MET);
-    assert.ok(m.mc && near(m.mc.w, 56) && near(m.mc.h, 56), `#mcGo ${JSON.stringify(m.mc)}`);
+    assert.ok(m.mc && near(m.mc.w, 60) && near(m.mc.h, 60), `#mcGo ${JSON.stringify(m.mc)}`);
     assert.equal(m.mc.inChk, true, "#mcGo still lives in .chk");
     return `${m.mc.w}x${m.mc.h} in .chk`;
   });
@@ -848,15 +861,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.waitForFunction(() => !document.querySelector("#mcGo").disabled);
       await page.click("#mcGo");
       await page.waitForFunction(() => document.documentElement.classList.contains("grading"), null, { timeout: 5000 });
+      await page.waitForFunction(() => getComputedStyle(document.querySelector("#mcGo svg.ib1-go")).animationName !== "none", null, { timeout: 3000 });
       const k = await page.evaluate(() => {
-        const b = document.querySelector("#mcGo"), a = getComputedStyle(b, "::after");
-        return { content: a.content, anim: a.animationName, op: +getComputedStyle(b).opacity, rings: document.querySelectorAll(".ib3-ring, .ib3-glow").length };
+        const b = document.querySelector("#mcGo"), s = b.querySelector("svg.ib1-go"), a = getComputedStyle(b, "::after");
+        return { content: a.content, anim: s && getComputedStyle(s).animationName, op: +getComputedStyle(b).opacity, rings: document.querySelectorAll(".ib3-ring, .ib3-glow").length };
       });
-      assert.notEqual(k.content, "none", "MC still draws the ::after ring: " + JSON.stringify(k));
-      assert.match(k.anim, /^grade-(spin|pulse)$/, `MC still spins its ring: ${k.anim}`);
-      assert.ok(k.op < 1, `MC Check still dims: ${k.op}`);
+      assert.equal(k.content, "none", "no ::after spinner on a key: " + JSON.stringify(k));
+      assert.equal(k.anim, "key-spin", `MC Check spins its one glyph: ${k.anim}`);
+      assert.equal(k.op, 1, `MC Check stays full while grading: ${k.op}`);
       assert.equal(k.rings, 0, "no typed thinking ring on the MC key");
-      return `MC ring ${k.anim}`;
+      return `MC key ${k.anim}`;
     } finally {
       hold.release();
       await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
@@ -866,7 +880,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
   await step(`${w}: IB-4 single wrong: ring starts as the aurora arc, key stays dimmed, hint card, border untouched`, async () => {
     await go(page, "PSY_V1A");
     await page.mouse.move(0, 0);
-    const fullLuma = await maxLuma(page, "#ansGo");   // the key's RENDERED arrow at rest
+    await page.fill("#ans", "3.2"); await page.mouse.move(0, 0);
+    await page.waitForFunction(() => +getComputedStyle(document.querySelector("#ansGo")).opacity >= .999, null, { timeout: 2000 });
+    const fullLuma = await maxLuma(page, "#ansGo");   // the key's RENDERED arrow, ready (KEY-ONE: an empty single key rests dim .35 like a multi part's, so "full" needs a value)
+    await page.fill("#ans", "");
     const rest = await page.evaluate(() => { const ff = document.querySelector("#q > .ff#ff"), inp = ff.querySelector("input.ans"); return { bg: getComputedStyle(ff).backgroundColor, color: getComputedStyle(inp).color }; });
     const hold = await holdGrade(page, ["PSY_V1A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Square the time." });
     try {
@@ -925,7 +942,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const h5 = await headAt(page, 5), spd = (h5.s - heads[0].s) / 5 * 1000, aur = heads[0].P / heads[0].lap * 1000;   // px/s at t=0 (5ms sample; t is ms)
       assert.ok(spd > aur * .75 && spd < aur * 1.25, `head leaves at the aurora pace: ${spd.toFixed(0)} vs ${aur.toFixed(0)} px/s`);
       assert.equal(r0.keyHidden, false, "wrong keeps the Check key visible");
-      assert.ok(r0.keyOp < 1, `wrong dims the Check key: opacity ${r0.keyOp}`);
+      { const sel = "#ansGo", op = await page.waitForFunction(q => { const o = +getComputedStyle(document.querySelector(q)).opacity; return o < 1 ? o : false; }, sel, { timeout: 2000 }).then(h => h.jsonValue()).catch(() => 1);   // KEY-ONE: the dim is read once it shows, not on the ring's first frame (grading drops a tick before .bad lands; under load that frame read 1)
+        assert.ok(op < 1, `wrong dims the Check key: ${op}`); }
       assert.ok(r0.hint && r0.hint.bg !== "rgba(0, 0, 0, 0)" && parseFloat(r0.hint.r) >= 16, "the single hint is the navy card: " + JSON.stringify(r0.hint));
       assert.equal(r0.hint.inPhint, false, "the single hint is #fb's, not a multi .phint");
       assert.ok(r0.edge.bw === "0px" || r0.edge.bs === "none", `the real border is not recoloured: ${JSON.stringify(r0.edge)}`);
@@ -962,9 +980,17 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.waitForSelector("#q .ib4-ring", { timeout: 5000 });
       await page.waitForSelector("#q .ff.ok .nx", { timeout: 5000 });
       await settled(page, "#q .ff.ok .nx");   // g-next-in lands Next in the slot before the geometry read
-      const nx = await page.evaluate(() => { const n = document.querySelector("#q .ff.ok .nx"); return { cls: n.className, ico: !!n.querySelector(".vm-ico"), v: n.dataset.v || null }; });
-      assert.doesNotMatch(nx.cls, /vmorph/, "a typed key skips §verdict-morph: " + JSON.stringify(nx));
-      assert.equal(nx.ico, false, "no morph tick/cross is drawn on a typed Next");
+      await page.waitForSelector("#q .ff.ok .nx.k-ok", { timeout: 4000 });
+      const nx = await page.evaluate(() => { const n = document.querySelector("#q .ff.ok .nx"), p = n.querySelector("svg.ib1-go path"); return { cls: n.className, ico: !!n.querySelector(".vm-ico"), d: getComputedStyle(p).d, bg: getComputedStyle(n).backgroundColor }; });
+      assert.match(nx.cls, /k-ok/, "SHIPPED KEY: the typed Next takes the tick stage: " + JSON.stringify(nx));
+      assert.match(String(nx.d), /M\s*5\.5/, "the tick glyph: " + nx.d);
+      assert.equal(nx.ico, false, "no old .vm-ico");
+      await page.waitForTimeout(950);
+      const fin = await page.evaluate(() => { const n = document.querySelector("#q .ff.ok .nx"), p = n.querySelector("svg.ib1-go path"); return { cls: n.className, d: getComputedStyle(p).d, bg: getComputedStyle(n).backgroundColor, op: +getComputedStyle(n).opacity }; });
+      assert.doesNotMatch(fin.cls, /k-(ok|bad)/, "the stage leaves: " + fin.cls);
+      assert.match(String(fin.d), /M\s*5\s+12/, "the arrow returns: " + fin.d);
+      assert.equal(fin.bg, "rgb(40, 51, 82)", "the Next ends --chip: " + fin.bg);
+      assert.equal(fin.op, 1, "the right Next stays full");
       const key = await page.evaluate(() => { const g = document.querySelector("#ansGo"), r = g.getBoundingClientRect(); return { hidden: g.hidden, w: r.width, op: +getComputedStyle(g).opacity }; });
       assert.ok(key.hidden || key.w === 0, "right hands the slot to Next: " + JSON.stringify(key));
       const glyph = await page.evaluate(() => { const f = document.querySelector("#q .ff.ok"), n = f.querySelector(".nx"), r = f.getBoundingClientRect(), nr = n.getBoundingClientRect(), cs = getComputedStyle(f), ns = getComputedStyle(n);
@@ -1028,7 +1054,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.ok(r0.hint && r0.hint.inPhint && r0.hint.bg !== "rgba(0, 0, 0, 0)" && parseFloat(r0.hint.r) >= 16,
         "the multi hint wears the same navy card: " + JSON.stringify(r0.hint));
       assert.equal(r0.keyHidden, false, "the part's Check stays visible on a miss");
-      assert.ok(r0.keyOp < 1, `the part's Check dims: ${r0.keyOp}`);
+      { const sel = "#q .mparts .part:first-child .send", op = await page.waitForFunction(q => { const o = +getComputedStyle(document.querySelector(q)).opacity; return o < 1 ? o : false; }, sel, { timeout: 2000 }).then(h => h.jsonValue()).catch(() => 1);   // KEY-ONE: the dim is read once it shows, not on the ring's first frame (grading drops a tick before .bad lands; under load that frame read 1)
+        assert.ok(op < 1, `the part's Check dims: ${op}`); }
       await ringAt(page, 200);
       await shot(page, `multi-${w}-mid-ib4-app.png`, "#freezeIn");
       await ringAt(page, 440);
@@ -1127,17 +1154,19 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.waitForSelector("#q .ib4-ring[data-v='ok']", { timeout: 3000 });
     return "bad ring replaced by ok";
   });
-  if (w === 390) await step("390: IB-4 MC keeps the full verdict morph (typed answers only skip it)", async () => {
+  if (w === 390) await step("390: IB-4 MC key: the shipped tick stage on the .chk Next", async () => {
     await go(page, "PSY_V4A");
     await page.click('#q .opt[data-id="a"]');
     await page.waitForFunction(() => !document.querySelector("#mcGo").disabled);
     await page.click("#mcGo");
-    await page.waitForSelector("#q .nx.vmorph", { timeout: 6000 });
-    const m = await page.evaluate(() => { const n = document.querySelector("#q .nx.vmorph"); return { v: n.dataset.v, ico: !!n.querySelector(".vm-ico"), anim: getComputedStyle(n).animationName }; });
-    assert.equal(m.v, "ok", "MC's Next morphs as the verdict: " + JSON.stringify(m));
-    assert.equal(m.ico, true, "MC keeps the drawn tick");
-    assert.match(m.anim, /vm-flood/, `MC keeps the flood: ${m.anim}`);
-    return `MC morph ${m.v}`;
+    await page.waitForSelector("#q .nx.k-ok", { timeout: 6000 });
+    await page.waitForFunction(() => { const p = document.querySelector("#q .nx.k-ok svg.ib1-go path"); const d = p && (getComputedStyle(p).d || p.getAttribute("d")); return /M\s*5\.5/.test(String(d)); }, null, { timeout: 2000 });
+    await page.waitForTimeout(150);   // the 120ms face + glyph shift lands
+    const m = await page.evaluate(() => { const n = document.querySelector("#q .nx"); return { ico: !!n.querySelector(".vm-ico"), d: getComputedStyle(n.querySelector("svg.ib1-go path")).d, bg: getComputedStyle(n).backgroundColor }; });
+    assert.equal(m.ico, false, "the old .vm-ico is gone");
+    assert.match(String(m.d), /M\s*5\.5/, "the tick glyph belongs to the key: " + m.d);
+    assert.equal(m.bg, "rgb(16, 38, 31)", "the correct-fill face: " + m.bg);
+    return `MC key tick ${m.bg}`;
   });
   await step(`${w}: IB-7 miss hint sits snug under the typed box (mock gap ${MOCK_GAP} +-4)`, async () => {
     const seen = [];
@@ -1232,11 +1261,12 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     const f = await liftOf(page, sel);
     assert.equal(f.tr, "none", `no scale under reduced motion: ${f.tr}`);
     assert.equal(f.dur, "0s", `no transition under reduced motion: ${f.dur}`);
-    assert.notEqual(f.bc, rest.bc, "the edge colour still changes (colours only)");
+    assert.match(f.sh, /0px 0px 0px 2px/, "reduced motion: the focus ring still shows (the lift never scales): " + f.sh);
+    assert.notEqual(f.sh, rest.sh, "reduced motion: the focus cue is a colour / ring change");
     await page.keyboard.type("7");
     const typed = await liftOf(page, sel);
     assert.equal(typed.tr, "none", `typing does not scale under reduced motion: ${typed.tr}`);
-    return `edge ${f.bc}, transition ${f.dur}`;
+    return `ring, transition ${f.dur}`;
   });
   await step("reduced motion: judged field still does not lift", async () => {
     await go(page, "PSY_S2A");

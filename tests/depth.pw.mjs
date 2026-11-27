@@ -89,7 +89,7 @@ const gate = (p, sel) => p.evaluate(s => {
   const fill = getComputedStyle(f).backgroundColor; let a = f.parentElement;
   while (a) { const bg = getComputedStyle(a).backgroundColor; if (bg && !/rgba\(.*,\s*0\)$|transparent/.test(bg)) break; a = a.parentElement; }
   const chain = []; for (let e = f.parentElement, i = 0; e && i < 7; e = e.parentElement, i++) chain.push(e.tagName + "." + e.className + " " + getComputedStyle(e).backgroundColor);
-  return { fill, surround: a ? getComputedStyle(a).backgroundColor : "rgb(0, 0, 0)", via: a ? a.tagName + "." + a.className : "none", chain: chain.join(" | "), bw: getComputedStyle(f).borderTopWidth, bc: getComputedStyle(f).borderTopColor, bs: getComputedStyle(f).borderTopStyle, shadow: getComputedStyle(f).boxShadow };
+  return { fill, surround: a ? getComputedStyle(a).backgroundColor : "rgb(0, 0, 0)", via: a ? a.tagName + "." + a.className : "none", chain: chain.join(" | "), bw: getComputedStyle(f).borderTopWidth, bc: getComputedStyle(f).borderTopColor, bs: getComputedStyle(f).borderTopStyle, ow: getComputedStyle(f).outlineWidth, os: getComputedStyle(f).outlineStyle, shadow: getComputedStyle(f).boxShadow };
 }, sel);
 
 /* computed order puts the inset last: "<colour> 0px 1px 0px 0px inset" */
@@ -134,18 +134,16 @@ await step("flag on: the question card .p floats (ICK4-FLOAT: drop shadow, no li
   assert.match(card.shadow, DROP, "ICK4-FLOAT: the card floats: " + card.shadow); assert.doesNotMatch(card.shadow, LIT, "no lit top: " + card.shadow);
   await c.close();
 });
-await step("flag on: the short-answer .ff is the inset dark well; its resting edge is the soft --line at 40% (Tony Nov 25)", async () => {
+await step("flag on: the short-answer .ff is the inset dark well with NO resting edge (Tony Nov 26: no thin edge)", async () => {
   const [c, p] = await open("on", "BANK_DP1", 390, 844, 1, "CALC1_DP02");
   const g = await gate(p, "#q .ff");
   assert.ok(g, "a short-answer field is shown");
-  assert.match(g.shadow, DISH, "SOFT-LIFT §3: the inset dish, not the old well: " + g.shadow);
-  const edge = over(col(g.bc), col(g.fill));                    // border colour over the field ground (background-clip: border-box)
-  const er = ratio(rgb(edge), g.surround);                      // the edge pixel vs the card
-  const fr = ratio(g.fill, g.surround);
-  console.log(`     .ff edge ${rgb(edge)} vs ${g.surround} (${g.via}): ${er.toFixed(2)}:1 (fill ${fr.toFixed(2)}:1, border ${g.bw} ${g.bc})`);
-  /* SINK (Tony Nov 25): Tony asked for a soft, low-contrast edge on the sunken box, so the old 3:1 edge gate (WCAG 1.4.11) is replaced by: the edge is still
-     there (border 1px+, --line at alpha .4, brighter than the well) and the number is reported above. */
-  assert.ok(parseFloat(g.bw) >= 1 && er > 1.1, "the soft edge is present and brighter than the card: " + er.toFixed(2) + ":1 (" + rgb(edge) + " vs " + g.surround + ")");
+  assert.match(g.shadow, DISH, "SINK: the inset dark well is still there: " + g.shadow);
+  console.log(`     .ff rest border ${g.bw} ${g.bs} | outline ${g.ow} ${g.os} | fill ${g.fill} vs ${g.surround} (${g.via}): ${ratio(g.fill, g.surround).toFixed(2)}:1`);
+  /* Tony Nov 26 (newer, wins over Nov 25): the resting typed box has NO thin edge; only the dark well + inner shadow carry it.
+     Focus / thinking / verdict rings stay (IB-2..IB-4). */
+  assert.ok(parseFloat(g.bw) === 0 || g.bs === "none", "no resting border (Tony Nov 26: no thin edge): " + g.bw + " " + g.bs);
+  assert.ok(parseFloat(g.ow) === 0 || g.os === "none", "no resting outline ring (Tony Nov 26: no thin edge): " + g.ow + " " + g.os);
   await c.close();
 });
 await step("flag on: the proof box .xb is a recessed well, its edge gated on 3:1 (WCAG 1.4.11)", async () => {

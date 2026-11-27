@@ -99,14 +99,16 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const [c, p] = await open("on", "CALC1_MB01");
   await p.click("#q .opt[data-id='a']");
   await p.waitForFunction(() => document.querySelector("#q .opt[data-id='a']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
-  const key = await p.evaluate(() => { const k = document.querySelector("#q .ch:has(.opt[data-id='a']) .send"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect(), o = k.parentElement.querySelector(".opt").getBoundingClientRect();
-    return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), tile: parseFloat(getComputedStyle(k.parentElement.querySelector(".opt")).borderTopLeftRadius), inset: o.right - r.right, shadow: c.boxShadow }; });
+  const key = await p.evaluate(() => { const k = document.querySelector("#q .chk #mcGo"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect();
+    return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), inChk: !!k.closest(".chk"), tile: !!document.querySelector("#q .ch .send"), shadow: c.boxShadow }; });
   const lt = await p.evaluate(() => { const b = document.querySelector("#q .ch:has(.opt[data-id='b']) .badge"), c = getComputedStyle(b), r = getComputedStyle(document.documentElement); return { fs: c.fontSize, fw: c.fontWeight, tt: c.textTransform, root: r.getPropertyValue("--ans-letter-fs").trim() }; });
   assert.ok(lt.fs === "16px" && lt.fw === "600" && lt.tt === "uppercase", "SHARED answer letter on the MC tile (16px, 600, uppercase; app.css --ans-letter-*): " + JSON.stringify(lt));
-  assert.equal(key.bg, rgb("#283352"), "SWISS-KEY: the tile's Check wears the typed key's --chip face: " + JSON.stringify(key));
-  assert.ok(key.w === 44 && key.h === 44 && key.arrow && key.sprite === "none" && key.shadow === "none", "SWISS-KEY: 44px, the 24-grid arrow, no shadow: " + JSON.stringify(key));
-  assert.ok(Math.abs(key.rad - (key.tile - key.inset)) <= 1, "SWISS-KEY: concentric radius (tile - inset): " + JSON.stringify(key));
-  await p.click("#q .ch:has(.opt[data-id='a']) .send");
+  assert.equal(key.bg, rgb("#283352"), "SHIPPED KEY: the MC key wears the typed key's --chip face: " + JSON.stringify(key));
+  assert.ok(key.w === 60 && key.h === 60 && key.arrow && key.sprite === "none" && key.shadow === "none", "SHIPPED KEY: the 60px .chk key, the 24-grid arrow, no shadow: " + JSON.stringify(key));
+  assert.ok(key.inChk && !key.tile, "SHIPPED KEY: MC key moved OUT of the tile into .chk: " + JSON.stringify(key));
+  const kr = await p.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? 22.5 : 18);
+  assert.ok(Math.abs(key.rad - kr) <= 1, "SHIPPED KEY: the 18 x --r-k squircle radius (" + kr + "): " + JSON.stringify(key));
+  await p.click("#mcGo");
   await bgIs(p, "#q .opt[data-id='a']", rgb("#3e141e"));
   const w = await look(p, "#q .opt[data-id='a']");
   assert.equal(w.bw, "0px 0px 0px 0px"); assert.equal(w.bg, rgb("#3e141e"), "wrong = red-900");
@@ -116,7 +118,8 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   assert.ok((x + 0.05) / (y + 0.05) >= 4.5, "wrong text contrast " + (x + 0.05) / (y + 0.05));
   await p.click("#q .opt[data-id='b']");
   await p.waitForFunction(() => document.querySelector("#q .opt[data-id='b']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
-  await p.click("#q .ch:has(.opt[data-id='b']) .send");
+  await p.waitForFunction(() => !document.querySelector("#mcGo").disabled);
+  await p.click("#mcGo");
   await bgIs(p, "#q .opt[data-id='b']", rgb("#0c2c22"));
   const r = await look(p, "#q .opt[data-id='b']");
   assert.equal(r.bw, "0px 0px 0px 0px"); assert.equal(r.bg, rgb("#0c2c22"), "right = green-900");
@@ -187,9 +190,11 @@ await step("flow: short answers share columns (2+), sentences stack to 1; a pick
   const [c, p] = await open("on", "CALC1_MB02", 360, 740);
   assert.equal((await flowMeasure(p)).cols, 1);
   await p.click("#q .opt[data-id='c']");
-  await p.waitForSelector("#q .ch:has(.opt[data-id='c']) .send", { state: "visible", timeout: 5000 });
+  await p.waitForFunction(() => { const k = document.querySelector("#q .chk #mcGo"); return k && !k.hidden && !k.disabled; }, null, { timeout: 5000 });
   assert.equal(await p.getAttribute("#q .opt[data-id='c']", "aria-checked"), "true");
-  assert.equal((await flowMeasure(p)).clip, 0, "no clipping with the arrow shown");
+  const below = await p.evaluate(() => { const g = document.querySelector("#q .choices").getBoundingClientRect(), k = document.querySelector("#q .chk #mcGo").getBoundingClientRect(); return k.top >= g.bottom - 1; });
+  assert.ok(below, "SHIPPED KEY: the MC key sits in the .chk row under the choices, not in the tile");
+  assert.equal((await flowMeasure(p)).clip, 0, "no clipping with the key shown");
   await c.close();
 });
 await step("answers with \\text{N·m} render with no red KaTeX error text", async () => {
