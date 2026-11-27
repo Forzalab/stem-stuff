@@ -168,6 +168,10 @@ function vmark(box, id) {
   if (!id) { if (m) m.remove(); return; }
   if (!m) { m = document.createElement("span"); m.className = "vk"; m.setAttribute("aria-hidden", "true"); box.append(m); }
   m.dataset.v = id; m.innerHTML = root.classList.contains("ui-v7") && IB1_V[id] ? IB1_V[id] : icon(id);
+  /* VK-DRAW (Tony Nov 26): a LIVE mark draws on with #764's keyframes (verdict-v7.css .vmark-live); a restored one stays still.
+     The typed single + multi rows are covered by strip.js's IB-4 ring (strip.css); the proof box and the sugar reveal pill are not. */
+  const solo = box.classList.contains("proof") || (box.id === "ff" && !box.closest(".part") && rboxOn() && !!S && S.finished);
+  m.classList.toggle("vmark-live", !painting && solo && (id === "i-ok" || id === "i-x"));
 }
 /* the words the screen reader hears (the page shows only the icon) */
 const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries, fight it later."
@@ -1479,12 +1483,18 @@ function strike(o) {                                        // a wrong choice: u
   mark(o, fixOf(o) ? "x" : "");
   glyph(o, "i-x");
 }
-/* the verdict glyph (V1 thin light): pick-all's square badge is the glyph slot; a single-pick row keeps its letter and shows the glyph at its right end */
+/* the verdict glyph (V1 thin light): pick-all's square badge is the glyph slot; a single-pick row keeps its letter and shows the glyph at its right end.
+   ui-v7 uses the typed mark's inline 24-grid paths (IB1_V, pathLength 1) so the live draw can run; a restored try carries no .vmark-live. */
 function glyph(o, id) {
-  if (o.closest(".choices.all")) { o.querySelector(".badge").innerHTML = icon(id); return; }
+  const live = !painting && root.classList.contains("ui-v7");
+  const html = root.classList.contains("ui-v7") && IB1_V[id] ? IB1_V[id] : icon(id);
+  if (o.closest(".choices.all")) {
+    const b = o.querySelector(".badge"); b.innerHTML = html;
+    b.classList.toggle("vmark-live", live); b.dataset.v = id; return;
+  }
   let g = o.querySelector(".vg");
   if (!g) { g = document.createElement("span"); g.className = "vg"; g.setAttribute("aria-hidden", "true"); o.append(g); }
-  g.innerHTML = icon(id);
+  g.innerHTML = html; g.classList.toggle("vmark-live", live); g.dataset.v = id;
 }
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
 /* one-shot feedback on a choice (Tony, Oct 6 TK1): a wrong pick shakes once, a right one pulses. CSS only animates it (app.css
@@ -1605,7 +1615,7 @@ async function submitMC() {
    the ticked rows are right (the unticked ones stay plain). Without it Next (.ch.cue:has(.opt.right)) and the boxes stay neutral. Struck wrong rows keep their x. */
 function rightRest(ticked) {
   if (ticked.some(Boolean)) return;
-  for (const o of opts()) if (!ticked.includes(o) && !o.classList.contains("wrong")) { o.classList.remove("kept"); o.classList.add("right"); }
+  for (const o of opts()) if (!ticked.includes(o) && !o.classList.contains("wrong")) { o.classList.remove("kept"); o.classList.add("right"); glyph(o, "i-ok"); }
 }
 async function submitAll() {
   const on = ticked(), go = $("#mcGo"); if (!go || go.disabled || S.finished || busy || waiting()) return;

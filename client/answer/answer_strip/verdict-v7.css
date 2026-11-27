@@ -331,3 +331,18 @@ html.ui-v7 #q :where(.ff#ff:not(.proof, .rbox), .mparts .part > .ff:not(.rbox)):
 /* the verdict icon, IB-1's one 24px grid: 24x24 at 17.5 from the field's right ink edge (the value's left ink inset) */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.rbox) > .vk,
 html.ui-v7 #q .mparts .part > .ff:not(.rbox) > .vk { right: 17.5px; }
+
+/* == §vmark == ONE VERDICT-MARK DRAW (Tony Nov 26): every LIVE ✓ / ✕ draws on like #764's typed mark (stroke-dashoffset,
+   pathLength="1"; tick .24s; the cross 2 strokes x .14s in sequence, the second delayed .14s; an independent `scale` .9 -> 1,
+   ease-out). The keyframes are #764's set, defined once in strip.css (vk-in / vk-draw) - no family defines its own copy.
+   `.vmark-live` is the one class: app.js vmark (proof + reveal pill), app.js glyph (MC + pick-all) and repair.js (ladder
+   chips + step ✓) add it only while the verdict lands live. A RESTORED / reloaded verdict carries no class and stays still;
+   prefers-reduced-motion shows the finished mark with no draw or scale. */
+html.ui-v7 .vmark-live { animation: vk-in .24s cubic-bezier(.22,.61,.36,1) both; }
+html.ui-v7 .vmark-live svg path, html.ui-v7 svg.vmark-live path { stroke-dasharray: 1; stroke-dashoffset: 0; animation: vk-draw .24s ease-out both; }
+html.ui-v7 .vmark-live[data-v="i-x"] svg path, html.ui-v7 svg.vmark-live[data-v="i-x"] path { animation-duration: .14s; }
+html.ui-v7 .vmark-live[data-v="i-x"] svg path + path, html.ui-v7 svg.vmark-live[data-v="i-x"] path + path { animation-delay: .14s; }
+@media (prefers-reduced-motion: reduce) {
+  html.ui-v7 .vmark-live { animation: none; }
+  html.ui-v7 .vmark-live svg path, html.ui-v7 svg.vmark-live path { animation: none; stroke-dashoffset: 0; }
+}
