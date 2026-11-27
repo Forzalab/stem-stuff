@@ -858,7 +858,7 @@ function layoutMT() {
   } else root.style.setProperty("--kb-top", "0px");
   const fill = () => {
     if (!S || !S.box || (!bridge.mtOpen && !sideMQ.matches)) return;
-    if (sideMQ.matches) { padFoot(); pageTop(); root.style.setProperty("--cl-top", Math.max(0, Math.round(sentinel.getBoundingClientRect().top + scrollY)) + "px"); }   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
+    if (sideMQ.matches) { padFoot(); pageTop(); root.style.setProperty("--cl-top", Math.max(0, Math.floor(sentinel.getBoundingClientRect().top + scrollY)) + "px"); }   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
     if (bridge.mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
     else if (sideMQ.matches) mtCap = Math.max(96, Math.floor(innerHeight - dockRoom() - (ta.getBoundingClientRect().top - work.getBoundingClientRect().top + workRest()) - padFoot()));   // side: where the box sits with the page at its top, not where the sticky column happens to be now (a tap on a scrolled page re-sized it: W129 L6); down to 96px, so the column fits a short window (1366x768 at 150%, L3)
     else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
@@ -884,7 +884,9 @@ function padFoot() {
    column that shrinks still re-centres nothing (W129 L4). 0 when the page starts at the top (taller than the window, the start page, the bar docked at the bottom) */
 function pageTop() {
   const bar = $("body > .top"), on = !root.classList.contains("start") && !root.classList.contains("dock-bottom") && bar && bar.getClientRects().length;
-  const t = on ? Math.max(0, Math.round(bar.getBoundingClientRect().top + scrollY)) : 0;
+  /* floor, not round (desk-layout@1 1920x1080): a half-pixel spare (bar top .5) rounded UP here and in --cl-top left the notes floor 1px short, so the
+     page stayed 1px under the window, the body kept centring it by .5px, and the first tap that grew the card past the window moved every row .5px */
+  const t = on ? Math.max(0, Math.floor(bar.getBoundingClientRect().top + scrollY)) : 0;
   root.style.setProperty("--pg-top", t + "px");
   return t;
 }
