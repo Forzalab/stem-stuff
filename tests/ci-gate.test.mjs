@@ -413,7 +413,7 @@ test("AC9.4 flake-hunt: the fork guard is written in the job `if` itself, and th
 test("AC9.2/9.5 flake-hunt is NOT a required job: never in all.needs, no green stamp, no flaky-block artifact", () => {
   const all = jobBlock("all");
   const needs = /^ {4}needs:\s*\[(.*)\]$/m.exec(all)[1].split(",").map((s) => s.trim()).sort();
-  assert.deepEqual(needs, ["block", "decide", "plan", "unit"], "the required check needs exactly the four gating jobs");
+  assert.deepEqual(needs, ["block", "decide", "live-ok", "plan", "unit"], "the required check needs exactly the gating jobs: the four plus live-ok (Tony Nov 27: visual-PR gate; a PR needs label nonvisual, or visual + the Tony-cleared label)");
   assert.doesNotMatch(all, /flake-hunt/, "the `all` verdict must not read the box job (a cancelled box can never refuse a ship)");
   const j = jobBlock("flake-hunt", BOX);
   assert.match(j, /^ {10}name: flake-hunt\b/m, "the artifact is named flake-hunt");
