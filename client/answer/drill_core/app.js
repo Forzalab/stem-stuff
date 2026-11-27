@@ -155,8 +155,8 @@ addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt())
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 /* IB-1 (Tony Nov 24): under ui-v7 the typed tick/cross sit on the mock's ONE 24px grid, stroke 2.25 (the sprite's is 2); flag off keeps the sprite. */
 const IB1_V = {
-  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l12 12M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M7 6l12 12" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/><path pathLength="1" d="M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 /* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
 // feel-better: a press on the rim of a typed box (the input is 54 tall inside a 60px field, 17.5px side pad) still focuses its input
@@ -704,13 +704,17 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
 let busy = false;    // a grading request is out (MC and typed answers)
 /* the wait is shown (Tony, Nov 17: "no animation denoting it is waiting"): html.grading while a request is out, 150 ms late so an
    on-device grade (instant) never flashes it. app.css "grading wait" dims the Check button and spins a ring in it. One place: setBusy. */
-let busyT = 0, busyRow = null;
+let busyT = 0, busyRow = null, liveEl = null, liveT = 0;
 function setBusy(v, row) {   // row: a multi-part item's own part (only its Check spins, not every part's)
   busy = v; clearTimeout(busyT); busyT = 0;
   const H = document.documentElement;
   if (busyRow) busyRow.classList.remove("g-on");
   busyRow = v && row ? row : null;
   if (busyRow) busyRow.classList.add("g-on");
+  /* IB-4: a live check marks its field's row (multi) or the page (single / mc) so strip.js tells a live verdict from a restore.
+     The mark is removed one task later, after strip.js's MutationObserver microtask has seen the verdict; it is never a visible state. */
+  if (v) { const el = row || H; if (liveEl && liveEl !== el) liveEl.removeAttribute("data-check-live"); clearTimeout(liveT); liveEl = el; el.setAttribute("data-check-live", ""); }
+  else if (liveEl) { const el = liveEl; liveEl = null; liveT = setTimeout(() => el.removeAttribute("data-check-live"), 0); }
   if (v) busyT = setTimeout(() => H.classList.add("grading"), 150); else H.classList.remove("grading");
 }
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
@@ -2126,6 +2130,14 @@ async function syncServer(mine) {
   if (shown) repaint(rec.x || rec.done !== "open" || tries.length ? rec : null);
   showRev();
 }
+/* Solved = the unit's done state (the server sync restores it), never the local try log alone (F2: a purged store left a solved item
+   reading locked). Single: the unit record says correct. Multi: S.solved. A correct try is the fallback only when no done state exists. */
+function isSolved(st) {
+  if (!st) return false;
+  if (st.prob.type === "multi") return !!st.solved;
+  const u = doneStore()?.doneGet?.(st.code)?.units?.[0];
+  return u && u.done ? u.done === "correct" : st.tries.some(x => x.v === "correct");
+}
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
 /* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
@@ -2134,7 +2146,7 @@ async function syncServer(mine) {
 const RTAG = { owe: ["Pity roll", "i-back"], won: ["Avenged!", "i-ok"], review: ["Review", "i-back"], kept: ["Reviewed", "i-ok"], out: ["Comes back later", "i-back"] };
 function retryTag() {
   const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
-  const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
+  const won = !!S && S.finished && isSolved(S);
   const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
   t.hidden = true;   // RTAG-TOAST (Tony, Nov 16): no chip on the card; the state lands as a toast, once per question + state (the hidden tag keeps its words for state reads)
   t.className = "qtag rtag" + (k ? " rt-" + k : "");
@@ -2152,7 +2164,7 @@ let rtagLast = null;
 function guard() {
   $("#q .guard")?.remove();
   if (!S || S.prob.type !== "mc") return;
-  if (S.tries.some(x => x.v === "correct")) return;
+  if (isSolved(S)) return;
   $("#q").insertAdjacentHTML("beforeend", `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
 /* PROGBAR-P4 (PORT-ARCH D2): a closed question = one notch submit, fed from finish() (settle() reaches it for a multi). State only, no DOM:
@@ -2164,7 +2176,7 @@ function pbFeed() {
     if (!bank || painting || !S) return;
     const k = pbKey(bank.code), st = pbLoad(localStorage.getItem(k));
     const multi = S.prob.type === "multi", n = multi ? S.parts.length : 1;
-    const f = multi ? S.parts.filter(x => x.ok).length / n : S.tries.some(x => x.v === "correct") ? 1 : 0;
+    const f = multi ? S.parts.filter(x => x.ok).length / n : isSolved(S) ? 1 : 0;
     const r = window.stemRedo?.get?.(), retry = !!r && r.codes.includes(S.code);
     if (pbFull(st)) pbNext(st);
     const at = bank.codes.indexOf(S.code), left = at < 0 ? undefined : bank.codes.slice(at + 1).filter(c => !st.notches.some(x => x.q === c)).length;
@@ -2177,7 +2189,7 @@ function finish() {
   S.finished = true; cancelWait();
   pbFeed();
   $("#q").classList.add("closed");
-  $("#q").classList.toggle("solved", S.tries.at(-1)?.v === "correct");   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
+  $("#q").classList.toggle("solved", isSolved(S));   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
   cueNext();

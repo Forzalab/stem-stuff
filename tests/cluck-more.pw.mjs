@@ -177,7 +177,7 @@ for (const [tag, vp] of VPS) {
     assert.deepEqual(page.errs, [], "no page errors");
     await page.context().close();
   });
-  for (const [kind, reply, sel] of [["a cause -> up/down pipe table renders as a styled .wtbl table (the Tug is gone)", TABLE, "tbl"], ["a step | you did | the fix pipe table renders as Flip cards", TABLE4, "flip"], ["any other strict pipe table renders as a styled .wtbl table", TABLE2, "tbl"]]) await step(`${tag}: ${kind} (no raw bars, KaTeX in the cells, no sideways scroll)`, async () => {
+  for (const [kind, reply, sel] of [["a cause -> up/down pipe table renders as a styled .wtbl table (the Tug is gone)", TABLE, "tbl"], ["a step | you did | the fix pipe table renders as a styled .wtbl table (the Flip cards are gone)", TABLE4, "tbl"], ["any other strict pipe table renders as a styled .wtbl table", TABLE2, "tbl"]]) await step(`${tag}: ${kind} (no raw bars, KaTeX in the cells, no sideways scroll)`, async () => {
     parts = reply;
     const page = await cluck(vp);
     const r = await page.evaluate(() => {
@@ -185,20 +185,10 @@ for (const [tag, vp] of VPS) {
       for (let t; (t = walk.nextNode());) if (t.textContent.includes("|") && !t.parentElement.closest(".katex")) bars.push(t.textContent);
       return { tables: w.querySelectorAll(".wtbl table").length, all: w.querySelectorAll("table").length, ths: w.querySelectorAll(".wtbl thead th").length,
         rows: w.querySelectorAll(".wtbl tbody tr").length, katex: w.querySelectorAll(".wtbl td .katex").length, bars, sw: w.scrollWidth, cw: w.clientWidth,
-        flips: w.querySelectorAll(".vw-flip .fl-card").length, flipK: w.querySelectorAll(".vw-flip .fl-tx .katex").length, after: /Put both into one ratio|So:/.test(w.textContent) };
+        after: /Put both into one ratio|So:/.test(w.textContent) };
     });
-    if (sel === "flip") {
-      const col = await page.evaluate(() => { const ink = () => document.querySelector(".vw-flip") && (() => { const f = document.querySelector(".vw-flip"), pr = document.createElement("span"); pr.style.color = "var(--muted)"; f.parentElement.insertBefore(pr, f);
-        const out = { muted: getComputedStyle(pr).color, st: getComputedStyle(f.querySelector(".fl-st")).color, gl: getComputedStyle(f.querySelector(".fl-gl")).color, tx: getComputedStyle(f.querySelector(".fl-tx")).color, ink: getComputedStyle(f.parentElement).color }; pr.remove(); return out; })(); return ink(); });
-      assert.equal(col.st, col.muted, "the step label is the sheet's muted ink, not the card's hue: " + JSON.stringify(col));
-      assert.notEqual(col.gl, col.muted, "the glyph keeps the hue");
-      assert.notEqual(col.tx, col.gl, "the card text is not the hue");
-      assert.deepEqual([r.tables, r.flips], [0, 2], "two flip cards, no table: " + JSON.stringify(r));
-      assert.ok(r.flipK >= 4, "both faces of both cards go through KaTeX: " + r.flipK);
-    } else {
-      assert.deepEqual([r.tables, r.all, r.ths, r.rows], [1, 1, 3, 2], "one styled table, 3 headers, 2 body rows: " + JSON.stringify(r));
-      assert.ok(r.katex >= 2, "the cells go through KaTeX: " + r.katex);
-    }
+    assert.deepEqual([r.tables, r.all, r.ths, r.rows], [1, 1, 3, 2], "one styled table, 3 headers, 2 body rows: " + JSON.stringify(r));
+    assert.ok(r.katex >= 2, "the cells go through KaTeX: " + r.katex);
     assert.deepEqual(r.bars, [], "no raw pipe text");
     assert.ok(r.after, "the line after the table still shows");
     assert.ok(r.sw <= r.cw + 1, `the reply does not scroll sideways (${r.sw} > ${r.cw})`);

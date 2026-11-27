@@ -38,4 +38,3 @@ Recipe: where the picked idea breaks, first; then the fix. Length S. Stages: wro
 ### L1: learning components: subject-blind, know data shapes only
 - `Doodle(kind: "duck" | "heart" | "star" | "spark", text?: string≤80)`: A small drawing when nothing else fits (visual first)
 - `Callout(tag: string≤24, text: string≤400)`: A section with a rule and a short tag ("Where it breaks"), never a box
-- `Flip(rows: string≤40[]≤3[]≤4, alt?: string≤120)`: Cards that flip from "you did" to "the fix": rows of [step, you did, the fix]; tap a card to flip it back
