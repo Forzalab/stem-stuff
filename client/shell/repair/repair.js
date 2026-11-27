@@ -32,6 +32,7 @@
   const STUDY_MS = 10000;     // TUNABLE (DESIGN-v3 §3): the full solution's study pause before Next is live
   const TOL = 0.02;           // a `num` step's relative tolerance when it names none
   const L = () => root.__stemRepairLines || {};
+  const v7 = () => !!(root.document && root.document.documentElement.classList.contains("ui-v7"));
 
   const any = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;   // one of a rotation (Math.random: stubbed in tests)
   const ladderOf = item => (item && item.repair && item.repair.steps) || [];
@@ -82,6 +83,8 @@
     }));
     let whyOk = true, autos = 0, finished = full, timer = 0, gone = false, solved = null;   // solved = { wrong, answer } once the server sends it
     let missed = false, taps = 0;                                               // any wrong try (done level); welcome wrong taps on this item (hint tier)
+    const liveSeen = new Set();                                                 // VK-DRAW: a mark animates on the draw that earns it, not on every later redraw
+    const firstLive = key => { if (liveSeen.has(key)) return false; liveSeen.add(key); return true; };
     const optsOf = st => st.opts || (st.kind === "pick" && item.choices) || [];
     const emit = (name, data) => { if (o.on) o.on(name, data); };
     function hint() {                                                            // welcome: tap 1 far, 2 two, 3+ three; old shape: the one hint
@@ -184,7 +187,24 @@
       if (st.kind === "fill") return fillTex(st, ok);
       return String(ok) + (st.unit ? " " + st.unit : "");
     }
-    function mark(id) { return `<svg class="rp-vg" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`; }   // the main tiles' glyphs (i-ok / i-x), drawn inline
+    const V7 = () => !!root.document && root.document.documentElement.classList.contains("ui-v7");
+    const VG = {                                                                 // the main tiles' glyphs, inline with pathLength 1 under ui-v7 so a live mark can draw on (#764's vk-draw)
+      "i-ok": '<path pathLength="1" d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      "i-x": '<path pathLength="1" d="M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path pathLength="1" d="M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    };
+    /* LADDER-STATES: the inline glyphs (i-ok / i-x). ui-v7: the same paths as the main tiles, so the shared .vmark-live draw applies;
+       flag off / the lab keeps index.html's sprite (<use>) exactly as before. */
+    function mark(id, live) {
+      const cls = "rp-vg" + (live ? " vmark-live" : "");
+      return V7() && VG[id]
+        ? `<svg class="${cls}" viewBox="0 0 24 24" data-v="${id}" aria-hidden="true" focusable="false">${VG[id]}</svg>`
+        : `<svg class="${cls}" data-v="${id}" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`;
+    }
+    function okMark(live) {                                                      // the step head's ✓ (same draw under ui-v7; welcome.css hides it until done)
+      return V7()
+        ? `<svg class="rp-ok${live ? " vmark-live" : ""}" viewBox="0 0 24 24" data-v="i-ok" aria-hidden="true" focusable="false">${VG["i-ok"]}</svg>`
+        : '<span class="rp-ok">✓</span>';
+    }
     function hintEl(text, gone) {                                                // LADDER-STATES: one .hintcard (app.css --hint-fill / --hint-edge), duck in front
       const m = h("p", "rp-miss hintcard");
       m.insertAdjacentHTML("afterbegin", '<svg class="hintcard-ico" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
@@ -196,7 +216,7 @@
       const b = h("button", "rp-chip", text);
       b.type = "button"; Object.assign(b.dataset, data);
       if (tried.has(key)) {                                                     // LADDER-STATES (Tony Nov 18): a tried-wrong chip says so in every variant (ui-v7: the wrong fill + a cross)
-        b.classList.add("rp-tried"); b.insertAdjacentHTML("beforeend", mark("i-x"));
+        b.classList.add("rp-tried"); b.insertAdjacentHTML("beforeend", mark("i-x", firstLive(`x:${s.st.id}:${key}`)));
         if (!welcome) { b.disabled = true; b.append(h("span", "rp-x", "✗")); }   // welcome stays tappable (unfailable); the glyph text only where it locks
       }
       b.addEventListener("click", () => onTap(s, data.why != null ? Number(data.why) : data.v));
@@ -205,13 +225,17 @@
     function valueUi(s) {
       const st = s.st, box = h("div", "rp-val-ui");
       if (st.kind === "num" || st.kind === "expr") {                             // expr (generated proof steps): the same box, a text keyboard
-        const f = h("form", "rp-num"), inp = h("input", "rp-in"), go = h("button", "rp-check", L().check || "Check");
+        const f = h("form", "rp-num"), fld = h("span", "rp-field"), inp = h("input", "rp-in"), go = h("button", "rp-check");
+        go.append(h("span", "rp-check-t", L().check || "Check"));
+        go.insertAdjacentHTML("beforeend", '<svg class="ib1-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>');   // ui-v7: the typed answer key's arrow (app.js IB1_GO); flag off: the word
         inp.type = "text"; inp.inputMode = st.kind === "expr" ? "text" : "decimal"; inp.autocomplete = "off";
         if (st.kind === "expr") inp.placeholder = "e.g. 2" + (st.var || "k") + "+4"; inp.setAttribute("aria-label", st.label);
         go.type = "submit";
-        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) tryValue(s, inp.value); });   // Enter submits natively: no key handler
-        f.append(inp, go); box.append(f);
-        if (st.unit) f.append(h("span", "rp-unit", st.unit));
+        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) { go.setAttribute("aria-busy", "true"); tryValue(s, inp.value); } });   // Enter submits natively: no key handler
+        const idle = () => { go.disabled = !inp.value.trim(); };                 // KEY-ALL: an empty box leaves the key dimmed + inert, full once there is text
+        inp.addEventListener("input", idle); idle();
+        fld.append(inp); if (st.unit) fld.append(h("span", "rp-unit", st.unit));   // the unit sits inside the box, like the typed answer's .unit
+        f.append(fld, go); box.append(f);
         return box;
       }
       if (st.kind === "fill") box.append(h("div", "rp-tex", fillTex(st, null).replace("$", "$\\displaystyle ")));
@@ -236,14 +260,14 @@
     }
     /* welcome (W129): a box that is not answerable now is still drawn, in place: its controls disabled (never `inert`: toast.js would take the
        inert rows for empty page and slide its card onto the ladder), hidden from a screen reader; `picked` marks the answer */
-    function lock(box, how, picked) {
+    function lock(box, how, picked, stepId) {
       box.classList.add(how);
       box.setAttribute("aria-hidden", "true");
       box.querySelectorAll("button, input").forEach(c => { c.disabled = true; c.tabIndex = -1; });
       if (picked != null) box.querySelectorAll(".rp-chip").forEach(c => {
         const on = (c.dataset.why != null ? c.dataset.why : c.dataset.v) === String(picked);
         c.classList.toggle("rp-picked", on);
-        if (on && how === "rp-locked" && !c.querySelector(".rp-vg")) c.insertAdjacentHTML("beforeend", mark("i-ok"));   // LADDER-STATES: the right pick gets the tick
+        if (on && how === "rp-locked" && !c.querySelector(".rp-vg")) c.insertAdjacentHTML("beforeend", mark("i-ok", firstLive(`v:${box.classList.contains("rp-why") ? "w" : "v"}:${stepId}:${picked}`)));   // LADDER-STATES: the right pick gets the tick
       });
       const inp = box.querySelector(".rp-in"); if (inp && picked != null) inp.value = String(picked);
     }
@@ -254,21 +278,27 @@
       const head = h("div", "rp-head"), n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";
       head.append(n, h("span", "rp-label", st.label));
-      if (s.ok) head.append(h("span", "sr-only", shown(s)));                     // the value for a screen reader: the locked chips are aria-hidden
-      head.append(h("span", "rp-ok", "✓"));                                      // always there (welcome.css hides it until done): its room never moves the label
+      const typedDone = v7() && s.ok && (st.kind === "num" || st.kind === "expr");   // LADDER-UNIFY (Tony Nov 26, ui-v7 only): a typed answer is the same green verdict;
+      if (!typedDone && s.ok) head.append(h("span", "sr-only", shown(s)));       // flag off keeps the locked field in its row (welcome.css W129, PLAN L6: nothing changes size)
+      head.insertAdjacentHTML("beforeend", okMark(s.state === "done" && !s.skipped && firstLive(`h:${st.id}`)));   // always there (welcome.css hides it until done): its room never moves the label
       li.append(head);
-      const body = h("div", "rp-body"), val = valueUi(s);
-      const pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
-      if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
-      body.append(val);
+      if (typedDone) {                                                           // chip as a picked one, on the line under number + label; the locked field goes
+        const v = h("span", "rp-val", shown(s)); v.insertAdjacentHTML("beforeend", mark("i-ok", firstLive(`c:${st.id}`))); li.append(v);   // VK-DRAW: the chip's tick draws once, on the verdict
+      }
+      const body = h("div", "rp-body");
+      if (!typedDone) {                                                          // the chip is the single verdict mark: no locked field below it
+        const val = valueUi(s), pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
+        if (s.state === "future") lock(val, "rp-ghost", null, st.id); else if (!live || s.ok) lock(val, "rp-locked", pick, st.id);
+        body.append(val);
+      }
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
       if (s.miss && s.state !== "future") {
         body.append(hintEl(s.miss, s.missGone));
       }
       if (s.ask) {
         const early = s.state === "future" || (live && !s.ok), w = whyUi(s, early);
-        if (early) lock(w, "rp-ghost", null);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
-        else if (s.why != null) lock(w, "rp-locked", s.why);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
+        if (early) lock(w, "rp-ghost", null, st.id);   // its room stays (W129 L6: the pick moves nothing), drawn as a preview like every future input: dashed chips with
+        else if (s.why != null) lock(w, "rp-locked", s.why, st.id);   // their words unseen under a neutral "Why is that?" (LADDER-UI, Tony Nov 3: the unseen room was a ~200px empty band)
         body.append(w);
       }
       li.append(body);
@@ -283,9 +313,13 @@
       const n = h("span", "rp-n", String(s.i + 1));
       if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
       head.append(n, h("span", "rp-label", st.label));
-      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) head.append(h("span", "rp-val", shown(s)));
-      if (s.state === "done" && !s.skipped) head.append(h("span", "rp-ok", "✓"));
       li.append(head);
+      if (!s.skipped && (s.state === "done" || (s.state === "active" && s.ok))) {
+        const v = h("span", "rp-val", shown(s));                                  // ui-v7: the right value is the welcome ladder's green verdict chip (glyph = the chip's tick; the row-end .rp-ok is hidden)
+        v.insertAdjacentHTML("beforeend", mark("i-ok", !s.worked && firstLive(`c:${st.id}`)));   // VK-DRAW: the chip's tick draws once, on the verdict (a worked step's is still)
+        li.append(v);                                                             // under the number + label line, at the body indent: the welcome row rhythm
+        if (s.state === "done") li.insertAdjacentHTML("beforeend", okMark(!s.worked && firstLive(`h:${st.id}`)));   // flag off: the tick follows the value (hidden under ui-v7: the chip carries it)
+      }
       if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
       if (s.state === "active") {
         const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not
@@ -302,14 +336,15 @@
       const I = L().intro || {}, many = String(o.error).split("+").length > 1;
       const key = o.gen ? "proof" : variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
       const t = String(I[key] || "");
-      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line");
+      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line rp-tab");   // the ONE intro tab (welcome.css .rp-tab): orange --help pill, dark ink, the duck, on both ladders
       if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
+      p.insertAdjacentHTML("afterbegin", '<svg class="icon wl-duck" aria-hidden="true" focusable="false"><use href="#i-duck"></use></svg>');
       return p;
     }
     function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
       const box = h("div", "rp-solved"), a = h("p", "rp-a");
       if (item.stem) box.append(h("p", "rp-stem", item.stem));
-      if (solved.wrong != null) a.append(h("del", "rp-wrong", solved.wrong), " ");
+      if (solved.wrong != null) { const d = h("del", "rp-wrong", solved.wrong); d.insertAdjacentHTML("beforeend", mark("i-x")); a.append(d, " "); }   // ui-v7: the red verdict chip
       a.append(h("span", "rp-ans", solved.answer));
       box.append(a);
       return box;

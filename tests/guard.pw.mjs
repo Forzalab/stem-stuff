@@ -1,7 +1,7 @@
 // W104 Sleeping guard: an MC item that is out of tries (locked) or redeemed. Needs a running server and Playwright:
 //   node tests/guard.pw.mjs <port> [shotDir]      (starts its own serve.py on that port; real grading, its own banks folder)
 // Locked: a guard row (lock + words + napping Cluck) and no click gets through.
-// Redeemed live: Cluck wakes, the feather burst plays once (never under prefers-reduced-motion); a revisit is frozen, no burst.
+// Redeemed (won): no guard row at all (Tony Nov 26 removed the "Avenged!" row); a revisit is frozen.
 import { launchBrowser } from "./pw-browser.mjs";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -51,9 +51,9 @@ async function run(w, h) {
   await step(`${w} locked: guard shows lock + words (no duck), choices take no click`, async () => {
     await open(page); await pick(page, 1); await pick(page, 1);
     await page.waitForSelector("#q.closed .guard.lock", { timeout: 4000 });
-    const g = await page.$eval("#q .guard", e => ({ txt: e.textContent, lock: !!e.querySelector(".gd-lock svg"), duck: !!e.querySelector(".gd-duck, .gd-z, use[href*=duck]"), burst: !!e.querySelector(".burst") }));
+    const g = await page.$eval("#q .guard", e => ({ txt: e.textContent, lock: !!e.querySelector(".gd-lock svg"), duck: !!e.querySelector(".gd-duck, .gd-z, use[href*=duck]")}));
     assert.ok(g.lock, "lock icon"); assert.ok(!g.duck && !/zz/i.test(g.txt), "no duck icon / zzZ in the locked guard (Tony Nov 2)");
-    assert.match(g.txt, /guarding/); assert.ok(!g.burst, "no burst when locked");
+    assert.match(g.txt, /guarding/);
     const snap = () => page.evaluate(() => JSON.stringify({ t: window.__drill.state.tries.length, c: [...document.querySelectorAll("#q .opt")].map(x => x.getAttribute("aria-checked")) }));
     const s0 = await snap();
     for (const el of await page.$$("#q .opt")) await el.click({ force: true });
@@ -62,20 +62,15 @@ async function run(w, h) {
     assert.ok((await page.$$eval("#q .opt", a => a.map(x => x.disabled && x.getAttribute("aria-disabled") === "true"))).every(Boolean), "every choice disabled");
     await shot("locked");
   });
-  await step(`${w} redeemed live: burst plays, word in the site's font`, async () => {
+  await step(`${w} redeemed live: no guard row (the "Avenged!" row + hairline is gone)`, async () => {
     page = await fresh(); await open(page, true); await pick(page, 0);
-    await page.waitForSelector("#q.closed .guard.won", { timeout: 4000 });
-    assert.equal(await page.$$eval("#q .guard .burst i", a => a.length), 8, "8 feathers");
-    assert.equal(await page.$$eval("#q .guard .gd-duck, #q .guard use[href*=duck]", a => a.length), 0, "no duck icon on redeem");
-    const same = await page.$eval("#q .guard .gd-win", e => getComputedStyle(e).fontFamily === getComputedStyle(document.querySelector("#rtag")).fontFamily);
-    assert.ok(same, "site font family");
+    await page.waitForSelector("#q.closed", { timeout: 4000 });
+    assert.equal(await page.$$eval("#q .guard", a => a.length), 0, "no guard row on a won item");
     await shot("live");
   });
-  await step(`${w} redeemed revisit: frozen, no burst, uneditable`, async () => {
-    await page.reload(); await page.waitForSelector("#q.closed .guard.won", { timeout: 8000 });
-    assert.equal(await page.$$eval("#q .guard .burst", a => a.length), 0, "no burst on a revisit");
-    assert.equal(await page.$$eval("#q .guard .gd-duck, #q .guard use[href*=duck]", a => a.length), 0, "no duck icon on a revisit");
-    assert.match(await page.$eval("#q .guard", e => e.textContent), /locked in/i);
+  await step(`${w} redeemed revisit: no row, frozen, uneditable`, async () => {
+    await page.reload(); await page.waitForSelector("#q.closed", { timeout: 8000 });
+    assert.equal(await page.$$eval("#q .guard", a => a.length), 0, "no guard row on a revisit");
     const ctl = await page.$$eval("#q .opt", a => a.map(x => x.disabled || x.getAttribute("aria-disabled") === "true"));
     assert.ok(ctl.every(Boolean), "every choice disabled");
     const s0 = await page.evaluate(() => window.__drill.state.tries.length);
@@ -85,14 +80,6 @@ async function run(w, h) {
     await shot("revisit");
   });
   await b.close();
-  const b2 = await launchBrowser(pw, { motion: true, args: ["--no-sandbox"] });
-  const p2 = await (await b2.newContext({ viewport: { width: w, height: h }, reducedMotion: "reduce" })).newPage();
-  await step(`${w} reduced motion: redeem live has no burst`, async () => {
-    await open(p2, true); await pick(p2, 0);
-    await p2.waitForSelector("#q.closed .guard.won", { timeout: 4000 });
-    assert.equal(await p2.$$eval("#q .guard .burst", a => a.length), 0, "no burst under reduced motion");
-  });
-  await b2.close();
 }
 await run(390, 844);
 await run(1280, 800);

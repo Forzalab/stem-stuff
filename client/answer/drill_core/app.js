@@ -155,8 +155,8 @@ addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt())
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 /* IB-1 (Tony Nov 24): under ui-v7 the typed tick/cross sit on the mock's ONE 24px grid, stroke 2.25 (the sprite's is 2); flag off keeps the sprite. */
 const IB1_V = {
-  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l12 12M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-ok": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "i-x": '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M7 6l12 12" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/><path pathLength="1" d="M19 6L7 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 /* the single box's Check arrow: 24px grid, 14x12 ink, stroke 2.25 (mock); hidden off the flag, where the sprite i-go stays */
 // feel-better: a press on the rim of a typed box (the input is 54 tall inside a 60px field, 17.5px side pad) still focuses its input
@@ -168,6 +168,10 @@ function vmark(box, id) {
   if (!id) { if (m) m.remove(); return; }
   if (!m) { m = document.createElement("span"); m.className = "vk"; m.setAttribute("aria-hidden", "true"); box.append(m); }
   m.dataset.v = id; m.innerHTML = root.classList.contains("ui-v7") && IB1_V[id] ? IB1_V[id] : icon(id);
+  /* VK-DRAW (Tony Nov 26): a LIVE mark draws on with #764's keyframes (verdict-v7.css .vmark-live); a restored one stays still.
+     The typed single + multi rows are covered by strip.js's IB-4 ring (strip.css); the proof box and the sugar reveal pill are not. */
+  const solo = box.classList.contains("proof") || (box.id === "ff" && !box.closest(".part") && rboxOn() && !!S && S.finished);
+  m.classList.toggle("vmark-live", !painting && solo && (id === "i-ok" || id === "i-x"));
 }
 /* the words the screen reader hears (the page shows only the icon) */
 const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries, fight it later."
@@ -704,13 +708,17 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
 let busy = false;    // a grading request is out (MC and typed answers)
 /* the wait is shown (Tony, Nov 17: "no animation denoting it is waiting"): html.grading while a request is out, 150 ms late so an
    on-device grade (instant) never flashes it. app.css "grading wait" dims the Check button and spins a ring in it. One place: setBusy. */
-let busyT = 0, busyRow = null;
+let busyT = 0, busyRow = null, liveEl = null, liveT = 0;
 function setBusy(v, row) {   // row: a multi-part item's own part (only its Check spins, not every part's)
   busy = v; clearTimeout(busyT); busyT = 0;
   const H = document.documentElement;
   if (busyRow) busyRow.classList.remove("g-on");
   busyRow = v && row ? row : null;
   if (busyRow) busyRow.classList.add("g-on");
+  /* IB-4: a live check marks its field's row (multi) or the page (single / mc) so strip.js tells a live verdict from a restore.
+     The mark is removed one task later, after strip.js's MutationObserver microtask has seen the verdict; it is never a visible state. */
+  if (v) { const el = row || H; if (liveEl && liveEl !== el) liveEl.removeAttribute("data-check-live"); clearTimeout(liveT); liveEl = el; el.setAttribute("data-check-live", ""); }
+  else if (liveEl) { const el = liveEl; liveEl = null; liveT = setTimeout(() => el.removeAttribute("data-check-live"), 0); }
   if (v) busyT = setTimeout(() => H.classList.add("grading"), 150); else H.classList.remove("grading");
 }
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
@@ -920,6 +928,7 @@ function welcomeQ(q) {
   const w = Welcome.mount(q, { ...S.prob, repair: S.wl }, { sheet: S.wl.sheet, grade, on: (name, d) => {
     if (name !== "welcome_done" || S !== mine) return;
     forceWelcome = false;
+    window.stemToast?.clear();                                                    // the reward start line queued before Q1 is stale once Q1 is done; it would land on the freed foot after the answer row's key goes, one 8px slide outside the card (desk-layout 4_answer)
     try { localStorage.setItem(wlKey(), "1"); } catch { /* blocked: it shows again next visit */ }
     S.finished = true;
     window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
@@ -1474,12 +1483,18 @@ function strike(o) {                                        // a wrong choice: u
   mark(o, fixOf(o) ? "x" : "");
   glyph(o, "i-x");
 }
-/* the verdict glyph (V1 thin light): pick-all's square badge is the glyph slot; a single-pick row keeps its letter and shows the glyph at its right end */
+/* the verdict glyph (V1 thin light): pick-all's square badge is the glyph slot; a single-pick row keeps its letter and shows the glyph at its right end.
+   ui-v7 uses the typed mark's inline 24-grid paths (IB1_V, pathLength 1) so the live draw can run; a restored try carries no .vmark-live. */
 function glyph(o, id) {
-  if (o.closest(".choices.all")) { o.querySelector(".badge").innerHTML = icon(id); return; }
+  const live = !painting && root.classList.contains("ui-v7");
+  const html = root.classList.contains("ui-v7") && IB1_V[id] ? IB1_V[id] : icon(id);
+  if (o.closest(".choices.all")) {
+    const b = o.querySelector(".badge"); b.innerHTML = html;
+    b.classList.toggle("vmark-live", live); b.dataset.v = id; return;
+  }
   let g = o.querySelector(".vg");
   if (!g) { g = document.createElement("span"); g.className = "vg"; g.setAttribute("aria-hidden", "true"); o.append(g); }
-  g.innerHTML = icon(id);
+  g.innerHTML = html; g.classList.toggle("vmark-live", live); g.dataset.v = id;
 }
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
 /* one-shot feedback on a choice (Tony, Oct 6 TK1): a wrong pick shakes once, a right one pulses. CSS only animates it (app.css
@@ -1600,7 +1615,7 @@ async function submitMC() {
    the ticked rows are right (the unticked ones stay plain). Without it Next (.ch.cue:has(.opt.right)) and the boxes stay neutral. Struck wrong rows keep their x. */
 function rightRest(ticked) {
   if (ticked.some(Boolean)) return;
-  for (const o of opts()) if (!ticked.includes(o) && !o.classList.contains("wrong")) { o.classList.remove("kept"); o.classList.add("right"); }
+  for (const o of opts()) if (!ticked.includes(o) && !o.classList.contains("wrong")) { o.classList.remove("kept"); o.classList.add("right"); glyph(o, "i-ok"); }
 }
 async function submitAll() {
   const on = ticked(), go = $("#mcGo"); if (!go || go.disabled || S.finished || busy || waiting()) return;
@@ -2126,6 +2141,14 @@ async function syncServer(mine) {
   if (shown) repaint(rec.x || rec.done !== "open" || tries.length ? rec : null);
   showRev();
 }
+/* Solved = the unit's done state (the server sync restores it), never the local try log alone (F2: a purged store left a solved item
+   reading locked). Single: the unit record says correct. Multi: S.solved. A correct try is the fallback only when no done state exists. */
+function isSolved(st) {
+  if (!st) return false;
+  if (st.prob.type === "multi") return !!st.solved;
+  const u = doneStore()?.doneGet?.(st.code)?.units?.[0];
+  return u && u.done ? u.done === "correct" : st.tries.some(x => x.v === "correct");
+}
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
 /* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
@@ -2134,7 +2157,7 @@ async function syncServer(mine) {
 const RTAG = { owe: ["Pity roll", "i-back"], won: ["Avenged!", "i-ok"], review: ["Review", "i-back"], kept: ["Reviewed", "i-ok"], out: ["Comes back later", "i-back"] };
 function retryTag() {
   const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
-  const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
+  const won = !!S && S.finished && isSolved(S);
   const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
   t.hidden = true;   // RTAG-TOAST (Tony, Nov 16): no chip on the card; the state lands as a toast, once per question + state (the hidden tag keeps its words for state reads)
   t.className = "qtag rtag" + (k ? " rt-" + k : "");
@@ -2147,19 +2170,13 @@ function retryTag() {
   window.stemToast?.show({ text: sub && !v7 ? RTAG[k][0] + "\n" + sub : RTAG[k][0], sub: (v7 && sub) || undefined, row: true, dock: true, onshow: rd ? rd.take : undefined, duck: k === "won" || k === "kept" ? "landmark" : "twist", at: () => $("#q"), until: Date.now() + 15000 });
 }
 let rtagLast = null;
-/* W104 Sleeping guard (MC only): a closed item says so in a row under the choices, three cues so colour never carries it: the lock, the words,
-   Cluck napping on it. A Redeem closed right wakes him instead: the feather burst plays on the live moment only (a revisit is still, and
-   reduced motion never gets one). Kind copy; no clock (nothing on the page knows when it comes back). */
+/* W104 Sleeping guard (MC only): a closed, not-yet-won item says so in a row under the choices (the lock, the words), so colour never carries it.
+   A won item shows no row (the "Avenged!" row with its hairline is gone, Tony Nov 26; the retry toast still says it). No clock: nothing on the page knows when it comes back. */
 function guard() {
   $("#q .guard")?.remove();
   if (!S || S.prob.type !== "mc") return;
-  const r = window.stemRedo.get(), redeem = !!r && r.codes.includes(S.code) && r.redeem !== false;
-  const won = S.tries.some(x => x.v === "correct");
-  if (won && !redeem) return;
-  const burst = won && !painting && !matchMedia("(prefers-reduced-motion: reduce)").matches ? `<span class="burst" aria-hidden="true">${"<i></i>".repeat(8)}</span>` : "";
-  $("#q").insertAdjacentHTML("beforeend", won
-    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
-    : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
+  if (isSolved(S)) return;
+  $("#q").insertAdjacentHTML("beforeend", `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
 /* PROGBAR-P4 (PORT-ARCH D2): a closed question = one notch submit, fed from finish() (settle() reaches it for a multi). State only, no DOM:
    saved under pbKey(bank) via pbLoad's tolerant read; blocked/throwing storage is a silent no-op. A restore (painting) is not a submit.
@@ -2170,7 +2187,7 @@ function pbFeed() {
     if (!bank || painting || !S) return;
     const k = pbKey(bank.code), st = pbLoad(localStorage.getItem(k));
     const multi = S.prob.type === "multi", n = multi ? S.parts.length : 1;
-    const f = multi ? S.parts.filter(x => x.ok).length / n : S.tries.some(x => x.v === "correct") ? 1 : 0;
+    const f = multi ? S.parts.filter(x => x.ok).length / n : isSolved(S) ? 1 : 0;
     const r = window.stemRedo?.get?.(), retry = !!r && r.codes.includes(S.code);
     if (pbFull(st)) pbNext(st);
     const at = bank.codes.indexOf(S.code), left = at < 0 ? undefined : bank.codes.slice(at + 1).filter(c => !st.notches.some(x => x.q === c)).length;
@@ -2183,7 +2200,7 @@ function finish() {
   S.finished = true; cancelWait();
   pbFeed();
   $("#q").classList.add("closed");
-  $("#q").classList.toggle("solved", S.tries.at(-1)?.v === "correct");   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
+  $("#q").classList.toggle("solved", isSolved(S));   // right: the Key formulas box goes (Tony Nov 13: "no one would need it anymore")
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
   cueNext();

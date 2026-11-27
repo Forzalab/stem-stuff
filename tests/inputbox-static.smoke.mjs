@@ -1,6 +1,6 @@
 // INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking + IB-4 verdict, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), fills the column on desktop (no 400px cap, Tony Nov 25).
-//   multi-part rows: 36px letter column + 12 gutter, 40px bare letter, 17/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
+//   multi-part rows: 22px hang column (18 + --s1), the ONE shared answer letter (16/24, 600, uppercase, --ink-qnum), 16/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
 //   judged fields never lift; reduced motion = colours only.
 //   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
@@ -8,8 +8,9 @@
 //   --action ring, no sink/blur.
 //   IB-4: the verdict ring starts as the frozen aurora arc (~173deg, NOT a full ring), closes in 440ms with transform-only conic arcs, the
 //   real border is never recoloured, the final frame is pixel-identical to the static done render, the typed key skips §verdict-morph and
-//   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close; MC keeps its full morph;
-//   reduced motion = a closed static ring.
+//   stays dimmed after a miss, the hint is the navy card for single + multi, the tick/cross waits for the close then draws on (stroke
+//   dash ~240ms; the cross's two strokes .14s each) with a .9 -> 1 scale; a live verdict that beats the 150ms aurora still sweeps, a
+//   restore stays static; MC keeps its full morph; reduced motion = a closed static ring.
 //   IB-5: each multi part's key sits OUTSIDE its field (60x60, 12px gap, same #ansGo squircle), visible but dimmed + inert on an empty box in its
 //   reserved slot (KEY-ALL, Nov 25; the field width never jumps), dims while grading (no spinner), dimmed on wrong and full on the next keystroke, gone when
 //   the part is right.   flag off: the live in-box arrow, nothing moves.
@@ -75,6 +76,8 @@ const FILE = { v: 1, problems: [
     { label: "a", prompt: "How many are in $A\\cup B$?", type: "num", answer: "14" },
     { label: "b", prompt: "How many are in exactly one set?", type: "num", answer: "11" },
   ] },
+  /* the fast-verdict step: an on-device grade (0 ms), then the same item after a reload */
+  { code: "PSY_Q1A", type: "num", how: "Number only.", body: T("Find the magnitude of the cart's acceleration."), answer: "3.2", unit: "m/s^2" },
   { code: "PSY_C1A", type: "mc", pick: "all", how: "Tick all that apply.", body: T("Tick the even numbers."),
     choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }], correct: ["a"],
     wrong: [{ match: "b", error: "pick", hint: "3 is odd." }] },
@@ -162,6 +165,7 @@ const MET = () => {
     unit: !!(box && box.querySelector(".unit")), unitSize: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontSize,
     unitFamily: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontFamily,
     mk: mk ? mk.innerText : null, mkSize: mk && getComputedStyle(mk).fontSize, mkFamily: mk && getComputedStyle(mk).fontFamily,
+    mkWeight: mk && getComputedStyle(mk).fontWeight, mkTt: mk && getComputedStyle(mk).textTransform, mkColor: mk && getComputedStyle(mk).color,
     prSize: pr && getComputedStyle(pr).fontSize, prLh: pr && getComputedStyle(pr).lineHeight, prMb: pr && getComputedStyle(pr).marginBottom,
     mkBase: mkB && mkB.line, prBase: prB && prB.line, mkGlyph: mkB && mkB.glyph, prGlyph: prB && prB.glyph, valueBase, maxW: cs && cs.maxWidth,
     skin: cs && { bg: cs.backgroundColor, bw: cs.borderTopWidth, bs: cs.borderTopStyle, bc: cs.borderTopColor, sh: cs.boxShadow, r: cs.borderRadius, pr: cs.paddingRight, h: b && b.height, w: b && b.width },
@@ -500,10 +504,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.equal(m.mk, "A", `letter is bare + upper-cased by CSS (#759, Tony Nov 25): ${JSON.stringify(m.mk)}`);
-    assert.equal(m.mkSize, "20px", `letter size ${m.mkSize}`);   // --fs-1 (Tony Nov 26: letter 39 -> 20, one step down the 1.25 scale after the bento pass)
+    assert.equal(m.mkSize, "16px", `letter size ${m.mkSize}`);   // the ONE shared answer letter (app.css --ans-letter-*: --fs-0 16px, 600, uppercase, --ink-qnum; MC / pick-all / typed multi, Tony Nov 26)
+    assert.equal(m.mkWeight, "600", `letter weight ${m.mkWeight} (shared answer letter)`);
+    assert.equal(m.mkTt, "uppercase", `letter transform ${m.mkTt} (shared answer letter)`);
+    assert.equal(m.mkColor, "rgb(122, 138, 174)", `letter colour ${m.mkColor} (--ink-qnum, shared answer letter)`);
     assert.match(m.mkFamily, /Atkinson/i, "letter face is the typed-answer face --font-input (Atkinson; Tony: fonts unchanged): " + m.mkFamily);
     assert.ok(near(m.mkBase, m.prBase, 1), `letter/prompt line baselines ${m.mkBase} vs ${m.prBase}`);
     assert.ok(near(m.mkGlyph, m.prGlyph, 1), `letter/prompt GLYPH baselines ${m.mkGlyph} vs ${m.prGlyph}`);
+    const hang = await page.evaluate(() => { const p = document.querySelector("#q .mparts .part"), mk = p.querySelector(".mk"), pr = p.querySelector(".pr"); return { part: p.getBoundingClientRect().left, mk: mk.getBoundingClientRect().left, pr: pr.getBoundingClientRect().left }; });
+    assert.ok(near(hang.mk, hang.part, .5), `the typed letter hangs on the part edge: ${hang.mk} vs ${hang.part}`);
+    assert.ok(near(hang.pr - hang.mk, 22, 1), `typed hang column ${(hang.pr - hang.mk).toFixed(1)} (want 22 = 18 + --s1)`);
     // Tony Nov 25: the prompt is above the box at every width, so there is no shared value/prompt baseline any more
     assert.equal(m.prSize, "16px", `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
@@ -1085,6 +1095,35 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       await page.waitForFunction(() => !document.documentElement.classList.contains("grading"), null, { timeout: 8000 }).catch(() => {});
       await hold.done();
     }
+  });
+  if (w === 390) await step("390: IB-4 fast verdict (0 ms): the tick draws live, a reload restores it still", async () => {
+    await go(page, "PSY_Q1A");
+    const iconAnim = () => {
+      const ff = document.querySelector("#q > .ff#ff"), vk = ff && ff.querySelector(":scope > .vk"), p = vk && vk.querySelector("svg.ico path");
+      return { attr: ff && ff.getAttribute("data-ib4"), vk: vk ? getComputedStyle(vk).animationName : null,
+        path: p ? getComputedStyle(p).animationName : null, op: vk ? +getComputedStyle(vk).opacity : null };
+    };
+    /* an uploaded item grades on device: the verdict lands in the same task as the tap, so html.grading (150 ms) never turns on */
+    await page.fill("#ans", "3.2"); await page.press("#ans", "Enter");
+    await page.waitForSelector("#q > .ff#ff > .vk", { timeout: 5000 });
+    const fast = await page.evaluate(() => document.documentElement.classList.contains("grading"));
+    assert.equal(fast, false, "the 150 ms aurora rule is kept: no thinking ring on a 0 ms grade");
+    await page.waitForFunction(() => document.querySelector("#q > .ff#ff")?.classList.contains("ib4-done"), null, { timeout: 5000 });
+    await page.waitForFunction(() => { const v = document.querySelector("#q > .ff#ff > .vk"); return v && +getComputedStyle(v).opacity >= .99; }, null, { timeout: 3000 });
+    const live = await page.evaluate(iconAnim);
+    assert.equal(live.attr, "sweep", "a 0 ms verdict runs the IB-4 sequence, not the still restore: " + JSON.stringify(live));
+    assert.notEqual(live.vk, "none", "the tick scales in on a live 0 ms verdict: " + JSON.stringify(live));
+    assert.notEqual(live.path, "none", "the tick path draws on a live 0 ms verdict: " + JSON.stringify(live));
+    /* a reload on the answered question is the restore path: the closed ring, the icon shown, no draw and no scale */
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PSY_Q1A" && !!document.querySelector("#q > .ff#ff > .vk"), null, { timeout: 10000 });
+    await settled(page);
+    const still = await page.evaluate(iconAnim);
+    assert.equal(still.attr, "still", "a restored verdict is static: " + JSON.stringify(still));
+    assert.equal(still.vk, "none", "no scale animation on restore: " + JSON.stringify(still));
+    assert.equal(still.path, "none", "no draw on restore: " + JSON.stringify(still));
+    assert.ok(still.op >= .99, "the restored icon is shown: " + JSON.stringify(still));
+    return `live ${live.vk} / ${live.path} -> still ${still.vk}`;
   });
   if (w === 390) await step("390: IB-4 verdict change: the ring follows the new verdict (bad -> ok)", async () => {
     await go(page, "PSY_V1A");
