@@ -583,12 +583,20 @@ class Handlers(unittest.TestCase):
         self.bodies.append(json.loads(req.data))
         return Resp(sse_claude([self.reply]))
 
+    def tried(self, *key, wrong=("a",), done=False):
+        """a recorded try on H_1 (what /check writes; key = (sid, code[, part])). Since F4 (Tony Nov 27: fail-closed) Cluck grades a pick only
+        when the server has this try; with none the ask answers as pre-try."""
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(key or ("d" * 32, "H_1")).update(wrong=list(wrong), done=done)
+
     def go(self, fn, **body):
         status, _, chunks = fn("sid=" + "d" * 32, json.dumps({"code": "H_1", "answer": "a", **body}).encode())
         self.assertEqual(status, 200)
         return b"".join(chunks).decode()
 
     def test_wish_then_chat_turns(self):
+        self.tried()                                                                        # F4: the pick "a" is a recorded wrong try
         self.assertEqual(self.go(serve.explain), "Quack! Divide by time.\n")           # the notes never reach the browser
         w = self.bodies[-1]["messages"][0]["content"][1]["text"]
         self.assertIn("<XYZ>\nconcept: power", w)
@@ -624,6 +632,7 @@ class Handlers(unittest.TestCase):
 
     def test_real_wrong_try_keeps_not_quite(self):
         serve._chats.clear()
+        self.tried()
         self.reply = "Not quite. You multiplied by time.\nDivide instead.\n"
         out = self.go(serve.chat, answer="a", history=[{"role": "assistant", "content": "Hi"}, {"role": "user", "content": "why?"}])
         self.assertIn("RESULT: wrong", json.dumps(self.bodies[-1]["messages"]))
@@ -689,6 +698,7 @@ class Handlers(unittest.TestCase):
         self.assertIn("REVEAL: yes\n\nUSER QUERY: i divided too", c2[-1]["content"][1]["text"])
 
     def test_locked_wish_tells_cluck_not_to_invite_a_retry(self):       # Tony Nov 3 (1280): out of tries, the reply said "Try again, I believe in you"
+        self.tried()
         self.go(serve.explain)                                                              # a wrong pick with tries left: the plain RESULT line
         a0 = self.bodies[-1]["messages"][0]["content"][0]["text"]
         self.assertTrue(a0.endswith("\n\nRESULT: wrong"), a0[-80:])
@@ -1226,7 +1236,16 @@ class PartHandlers(Handlers):
     test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
 
     def test_right_part_pick_without_state(self):
+        # Oct 28 W110 pinned "no recorded try -> RESULT: correct". Tony Nov 27: F4 fail-closed: a right pick with no recorded try is the pre-try
+        # path (no RESULT, no reveal, no answer): the server only grades what /check recorded. The W110 case now needs the recorded solve.
+        self.reply = "Look at when the test first fails.\nTry it, then check.\n"
+        self.go(serve.explain, answer="6", part=2)
+        w0 = self.bodies[-1]["messages"][0]["content"]
+        self.assertNotIn("RESULT", w0[0]["text"])                           # F4: untried right pick = no verdict
+        self.assertIn("REVEAL: no", w0[1]["text"])
+        serve._cluck_turns.clear()
         self.reply = "Yes! **6** is right. The test fails once i is 6.\n"
+        self.tried("d" * 32, "H_1", 2, wrong=(), done=True)                 # /check recorded the solve of part d
         out = self.go(serve.explain, answer="6", part=2)
         self.assertEqual(out, self.reply)
         self.assertNotIn(serve.CLUCK_NUDGE, out)
@@ -1241,6 +1260,7 @@ class PartHandlers(Handlers):
 
     def test_wrong_part_pick(self):
         self.reply = "Not quite. The loop stops early.\n"
+        self.tried("d" * 32, "H_1", 1, wrong=("15",))
         self.go(serve.explain, answer="15", part=1)
         w = self.bodies[-1]["messages"][0]["content"]
         self.assertIn("PART (b)", w[0]["text"])
@@ -1248,6 +1268,40 @@ class PartHandlers(Handlers):
         self.assertIn("REVEAL: no", w[1]["text"])
 
     test_wish_then_chat_turns = test_solved_wish_then_chat = test_off_without_claude_key_or_deepseek_arm = None
+
+
+class FailClosed(Handlers):
+    """F4 (Tony Nov 27: fail-closed): /chat and /explain never grade or reveal a pick the server has no recorded try for"""
+    test_wish_then_chat_turns = test_free_question_is_not_a_wrong_try = test_real_wrong_try_keeps_not_quite = None
+    test_pre_try_reply_is_a_nudge = test_pre_try_after_an_earlier_solve_is_still_a_nudge = None
+    test_pre_try_third_turn_is_still_a_nudge = test_pre_try_wish_route_is_a_nudge = test_pre_try_old_chain_is_a_nudge = None
+    test_solved_wish_then_chat = test_locked_wish_tells_cluck_not_to_invite_a_retry = test_locked_turn_survives_a_reload = None
+    test_off_without_claude_key_or_deepseek_arm = None
+    WALK = "Quack! Power is work over time.\n$$P = 52.0 / 4.0 = 13.0$$\nSo the answer is **b**, 13.0 W.\n"
+    HIST = [{"role": "assistant", "content": "Ask me anything."}, {"role": "user", "content": "why?"}]
+
+    def test_untried_right_pick_on_chat_is_pre_try(self):
+        self.reply = self.WALK
+        outs = []
+        for pick in ("a", "b"):                                 # a wrong and a right pick, neither a recorded try
+            serve._chats.clear(); serve._cluck_turns.clear()
+            outs.append(self.go(serve.chat, answer=pick, history=self.HIST))
+            ctx = json.dumps(self.bodies[-1]["messages"])
+            self.assertNotIn("RESULT", ctx); self.assertIn("REVEAL: no", ctx); self.assertNotIn("13.0", outs[-1])
+        self.assertEqual(len(serve._tries), 0)                  # and chat records no try
+
+    def test_untried_right_pick_on_explain_is_pre_try(self):
+        self.reply = self.WALK
+        out = self.go(serve.explain, answer="b")
+        ctx = json.dumps(self.bodies[-1]["messages"])
+        self.assertNotIn("RESULT: correct", ctx); self.assertIn("REVEAL: no", ctx); self.assertNotIn("13.0", out)
+
+    def test_a_recorded_solve_still_reveals(self):
+        self.reply = self.WALK
+        self.tried(wrong=(), done=True)                         # /check recorded the right pick
+        out = self.go(serve.chat, answer="b", history=self.HIST)
+        self.assertIn("RESULT: correct", json.dumps(self.bodies[-1]["messages"]))
+        self.assertIn("13.0", out)
 
 
 class RedoRounds(Handlers):

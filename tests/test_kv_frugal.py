@@ -369,8 +369,9 @@ class KvFrugal(unittest.TestCase):
             text = b"".join(chunks).decode()
         self.assertEqual((st, json.loads(raw)["verdict"], turn), (200, "wrong", 200))
         self.assertTrue(text.strip())
+        # F4 (Tony Nov 27, fail-closed): /explain reads the unit's recorded try once (fail_closed_pick) before the turn: one more GET than before
         today = [(["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]),
-                 (["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]),
+                 (["GET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]), (["GET"], [serve.KV_KEY]), (["SET"], [serve.KV_KEY]),
                  (["GET"], [serve.KV_KEY])]
         self.assertEqual([(r["cmds"], r["keys"]) for r in w["rows"] if serve.KV_KEY in r["keys"]], today, "the blob path's traffic changed")
         self.assertEqual([k for k in w["keys"] if serve.TURNS_KEY in k], [], "the blob path touched a turn key")

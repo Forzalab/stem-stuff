@@ -1700,7 +1700,15 @@ class Explain(unittest.TestCase):
     NOTE = {"on_topic": True, "field": "calculus", "concept": "work-energy", "asked": "a", "need": "the sign of the work", "assumed": "dropped the minus",
             "real": "the work is negative", "reproduces": True, "gap": "sign_direction", "evidence": "pick a", "confidence": "high"}
 
+    def tried(self, sid, wrong=("a",)):
+        """a recorded try (what /check writes): since F4 (Tony Nov 27) Cluck grades a pick only when the server has this try"""
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry((sid, "CALC1_XP1"))["wrong"] = list(wrong)
+        self.addCleanup(lambda: serve._tries.pop((sid, "CALC1_XP1"), None))
+
     def ask(self, cookie="sid=" + "a" * 32, **body):
+        self.tried(cookie[4:])
         status, head, chunks = serve.explain(cookie, json.dumps({"code": "CALC1_XP1", "answer": "a", **body}).encode())
         return status, b"".join(chunks).decode()
 
@@ -1790,6 +1798,7 @@ class Explain(unittest.TestCase):
     BOX = "POOF! Use: $W = \\Delta K$\nAnswer: b) 3"
 
     def chat(self, n=1, cookie="sid=" + "c" * 32, **over):
+        self.tried(cookie[4:])
         h = [{"role": "assistant", "content": self.BOX}]
         for i in range(n):
             h += [{"role": "user", "content": f"why step {i}?"}] + ([{"role": "assistant", "content": "Because."}] if i < n - 1 else [])
@@ -1911,7 +1920,7 @@ class Explain(unittest.TestCase):
         self.assertEqual(serve._chats[k], 1)
         serve._chats.clear()
         old = serve.state
-        serve.state = lambda p, sid, reveal=False: {"wrong": 1, "done": False, "gen": 1}   # a try is recorded
+        serve.state = lambda p, sid, reveal=False, store=None: {"wrong": 1, "done": False, "gen": 1}   # a try is recorded
         try:
             self.assertEqual(go("Why does the sign flip here?", starter=True), 200)
         finally:
