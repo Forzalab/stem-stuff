@@ -73,6 +73,9 @@ html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt[aria-checked="true"] .badge.b
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.right:not(.reveal) .badge.badge { color: var(--correct-on); }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.wrong:not(.reveal) .badge.badge { color: var(--wrong-on); }
 html.ui-v7 .q:not(.closed) .choices.bento:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) .badge.badge { color: var(--mc-dim); }
+/* MCX-3: the dim --ink-letter (#64729a) is for the neutral --sheet tile only (3.8:1, a 20px bold label). On a state fill the letter takes that state's ink so it keeps >= 4.5:1:
+   picked --action-on, right --correct-on, wrong --wrong-on (rules above / below) and the revealed missed-right tile (--chip #283352) --muted #a9b8cc (6.2:1; --ink-letter was 2.6) */
+html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.reveal .badge.badge, html.ui-v7 .choices.bento.all .ch > .opt.opt.reveal .lt { color: var(--muted); }
 /* Check (the arrow) and Next sit in the tile's top-right / bottom-right corner; the value steps out of their way, no tile changes size */
 html.ui-v7 .choices.bento .ch > .send { right: 4px; top: 4px; margin: 0; width: 44px; height: 44px; }
 html.ui-v7 .choices.bento .ch > .nx { right: 6px; top: auto; bottom: 6px; margin: 0; width: 88px; height: 44px; }
