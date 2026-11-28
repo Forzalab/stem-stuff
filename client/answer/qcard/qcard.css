@@ -241,7 +241,7 @@ html.ui-v7 #problem.qc7.qbr > button.cluckbtn {
   box-shadow: var(--shadow-2) !important; opacity: 1 !important; text-decoration: none;   /* CLUCK-RAISE (Tony Nov 27): a clear but soft resting lift, the shared --shadow-2 (--shadow-raise vanished on the navy card); it sits inside the card's --qpad (reach ~10px sides, ~18px down), so overflow: hidden does not clip it */
 }
 html.ui-v7 #problem.qc7 > button.cluckbtn[aria-disabled="true"], html.ui-v7 #problem.qc7 > button.cluckbtn:active { box-shadow: none !important; }   /* locked slate sits flat (cluckbtn.css: disabled = no raise); press lowers it to the card */
-@supports (corner-shape: superellipse(2)) { html.ui-v7 #problem.qc7 > button.cluckbtn, html.ui-v7 #problem.qc7.qbr > button.cluckbtn { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 #problem.qc7 > button.cluckbtn, html.ui-v7 #problem.qc7.qbr > button.cluckbtn { corner-shape: superellipse(var(--corner-k)); } }
 /* ICK5: no fill sweep, no sheen layer: the icon and the fill are the whole look */
 html.ui-v7 #problem.qc7 > button.cluckbtn::before, html.ui-v7 #problem.qc7 > button.cluckbtn::after { display: none; }
 /* ICK5: the duck line icon alone (--page ink). The .qbr + [aria-disabled] selector out-specifies KICKER-C's !important muted duck; it is the same declaration. */
@@ -284,7 +284,7 @@ html.ui-v7 #q .opt { border-radius: var(--r-tile); }   /* phone AND desktop: one
 /* rest state only: selected / pending / reveal / judged / kept / pressed keep their own shadow (pressed = none) */
 html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right):not(.wrong):not(.kept):not(:active) { box-shadow: var(--lift-drop); }
 @supports (corner-shape: superellipse(2)) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(var(--corner-k)); }
 }
 
 /* == §fig-top == FIG-TOP (Tony Nov 23, prototype qfig-margin, the -40% pick): a card whose FIRST block is a figure. The float Ask Cluck button (§ick5-tr: 44px + 8px margin, under the

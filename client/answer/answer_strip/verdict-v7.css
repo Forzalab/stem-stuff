@@ -78,7 +78,7 @@ html.ui-v7 #q .ff.rbox .vk { position: absolute; order: 0; margin: 0; right: 14p
 /* round 5 (Tony, Nov 15: "make the check button apple squircle too"): the Check arrow (.send / .btn-go in the field, blue when typed) and the field well share the progbar's
    squircle (client/answer/progbar/progbar.css: corner-shape superellipse(2) under @supports) and the --r-tile radius, so the two shapes agree. ui-v7 only; the fallback is the
    plain round --r-tile corner (k = 1). */
-@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .ff, #q .ff .send, .code-box, .code-box .btn-go) { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .ff, #q .ff .send, .code-box, .code-box .btn-go) { corner-shape: superellipse(var(--corner-k)); } }
 html.ui-v7 #q .ff, html.ui-v7 .code-box { border-radius: var(--r-tile); }   /* ICK4-SQUIRCLE-C: every answer field = the tile token */
 html.ui-v7 #q .ff.proof { border-radius: var(--r-tile); }   /* ICK4-SQUIRCLE-C: the proof box takes the one tile radius (20 under corner-shape) */
 html.ui-v7.proof-split #q .ff.proof { border-radius: var(--r-tile); }   /* same radius in the proof split: beats app.css's 16px proof-axis rule at equal specificity, later file */
@@ -94,7 +94,7 @@ html.ui-v7 :is(#q .ff .send, #q .ff .btn-go, .code-box .btn-go, html.start .code
 html.ui-v7 :is(#q .ff .send, #q .ff .btn-go, .code-box .btn-go):active { background: color-mix(in srgb, var(--chip, #283352) 90%, #000); }
 /* SQUIRCLE-ALL (Tony, Nov 16): the codeblock (proof box) and every input box share the squircle; the codeblock takes the 16px tile radius */
 html.ui-v7 #q .cb:not(.opt .cb) { border-radius: 16px; }
-@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .cb, input:not([type=checkbox], [type=radio], [type=range]), textarea, select) { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#q .cb, input:not([type=checkbox], [type=radio], [type=range]), textarea, select) { corner-shape: superellipse(var(--corner-k)); } }
 /* OMNIBAR (Tony, Nov 16): on the start page the whole entry row (upload + code + paste) is one sunken well, no border; the inner code box is flat */
 html.ui-v7.start .entry, html.ui-v7.start .entry:hover, html.ui-v7.start .entry:focus-within {
   border: var(--edge-hair); background: #060b1b; border-radius: 16px;   /* ICK PR-A (A1): the hairline edge, no lit lip */
@@ -103,7 +103,7 @@ html.ui-v7.start .entry, html.ui-v7.start .entry:hover, html.ui-v7.start .entry:
 html.ui-v7.start .code-box, html.ui-v7.start .code-box:hover, html.ui-v7.start .code-box:focus-within { background: none; box-shadow: none; border: 0; }
 html.ui-v7.start .code-box:has(input:focus-visible):not([data-ptr]) { outline: none; }
 html.ui-v7.start .entry:has(#code:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
-@supports (corner-shape: superellipse(2)) { html.ui-v7.start .entry { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7.start .entry { corner-shape: superellipse(var(--corner-k)); } }
 /* the proof text clears the key at the box's foot (8 inset + 60 key + 8 air = 76); the key itself is §key at the foot of this file */
 html.ui-v7.proof-split #q .ff.proof#ff > textarea { padding: 0 8px 76px 0; }
 html.ui-v7 #q .ff.proof#ff > textarea { padding-bottom: 76px; }
@@ -135,7 +135,7 @@ html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-duck { width: 24px; heigh
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox .cb-t { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: scale(.95); }
 html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:focus-visible { outline: var(--ring, 2px) solid var(--focus, #8cc2ff); outline-offset: 2px; }
-@supports (corner-shape: superellipse(2)) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox { corner-shape: superellipse(var(--corner-k)); } }
 @media (prefers-reduced-motion: reduce) { html.ui-v7 #q .ff.proof > button.cluckbtn.cb-inbox:active { transform: none; } }
 
 /* ICK4-FADE (Tony Nov 18): the proof text fades into the gutter at an edge that has more text past it (app.js wireProof sets pf-t / pf-b on scroll) */
@@ -222,7 +222,7 @@ html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .
   transition: background-color var(--key-ex) var(--key-exit), color var(--key-ex) var(--key-exit), opacity var(--key-ex) var(--key-exit), transform var(--key-fast) ease-out;
 }
 @supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) { corner-shape: superellipse(1.52); }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) { corner-shape: superellipse(var(--corner-k-s)); }
 }
 /* size + radius: OUT */
 html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx), .chk > :is(#mcGo, .nx)) {
