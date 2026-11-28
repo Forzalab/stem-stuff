@@ -116,6 +116,10 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const lum = s => { const m = s.match(/[\d.]+/g).map(Number).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; };
   const [x, y] = [lum(w.color), lum(w.bg)].sort((a, b) => b - a);
   assert.ok((x + 0.05) / (y + 0.05) >= 4.5, "wrong text contrast " + (x + 0.05) / (y + 0.05));
+  const lcr = (a, b) => { const [m, n] = [lum(a), lum(b)].sort((u, v) => v - u); return (m + 0.05) / (n + 0.05); };
+  const wl = await p.evaluate(() => getComputedStyle(document.querySelector("#q .opt[data-id='a'] .badge")).color);
+  console.log("      wrong letter " + wl + " on " + w.bg + " = " + lcr(wl, w.bg).toFixed(2) + ":1");
+  assert.ok(lcr(wl, w.bg) >= 4.5, "MCX-3: the letter on the red-900 fill keeps >= 4.5:1, not the dim --ink-letter: " + wl + " on " + w.bg);
   await p.click("#q .opt[data-id='b']");
   await p.waitForFunction(() => document.querySelector("#q .opt[data-id='b']")?.getAttribute("aria-checked") === "true", null, { timeout: 5000 });
   await p.waitForFunction(() => !document.querySelector("#mcGo").disabled);
@@ -123,6 +127,9 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   await bgIs(p, "#q .opt[data-id='b']", rgb("#0c2c22"));
   const r = await look(p, "#q .opt[data-id='b']");
   assert.equal(r.bw, "0px 0px 0px 0px"); assert.equal(r.bg, rgb("#0c2c22"), "right = green-900");
+  const rl = await p.evaluate(() => getComputedStyle(document.querySelector("#q .opt[data-id='b'] .badge")).color);
+  console.log("      right letter " + rl + " on " + r.bg + " = " + lcr(rl, r.bg).toFixed(2) + ":1");
+  assert.ok(lcr(rl, r.bg) >= 4.5, "MCX-3: the letter on the green-900 fill keeps >= 4.5:1: " + rl + " on " + r.bg);
   await shot(p, "on-390-right");
   await c.close();
 });
