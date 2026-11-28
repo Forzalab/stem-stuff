@@ -13,7 +13,7 @@ html.ui-v7 .pb-list, html.ui-v7 .pb-nav, html.ui-v7 .pb {
   border-radius: var(--pb-r); background: var(--sheet); box-shadow: none; overflow: hidden;   /* resting tile: colour only (navy-800 on the page), no lit top */
 }
 html.ui-v7 .pb[hidden] { display: none; }
-@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#codeChip, .pb-list, .pb-nav, .pb, .pb-n) { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 :is(#codeChip, .pb-list, .pb-nav, .pb, .pb-n) { corner-shape: superellipse(var(--corner-k)); } }
 html.ui-v7 .pb-list { flex: 0 1 auto; max-width: var(--pb-list-max); }
 html.ui-v7 .pb-list .btn, html.ui-v7 .pb-nav .btn {
   width: auto; height: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink);

@@ -109,7 +109,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:f
 }
 @supports (corner-shape: superellipse(2)) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within),
-  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) { corner-shape: superellipse(1.52); }
+  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):not(:focus-within) { corner-shape: superellipse(var(--corner-k-s)); }
 }
 /* IB-5: the multi part's Check moved OUTSIDE the field (verdict-v7.css §key), so the value gets the mock's 17.5px inset at
    rest and no in-box key room; a judged part keeps 48 for the in-box .vk (the live tick / cross slot). */
@@ -198,7 +198,7 @@ html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-
 }
 @supports (corner-shape: superellipse(2)) {
   html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within,
-  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within { corner-shape: superellipse(1.52); }
+  html.ui-v7 #q .mparts .part > .ff:not(.ok):not(.bad):not(.cue):not(.rbox):focus-within { corner-shape: superellipse(var(--corner-k-s)); }
 }
 /* the key press: the stronger/weaker edge paints at once, then the focus colour eases back (the transition home is on the focus rule above) */
 html.ui-v7 #q > .ff#ff:not(.proof):not(.ok):not(.bad):not(.cue):not(.rbox):focus-within[data-ib2="add"],

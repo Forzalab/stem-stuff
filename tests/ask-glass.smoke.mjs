@@ -65,7 +65,7 @@ const btn = page => page.evaluate(() => { const b = document.getElementById("clu
 // Cluck's box before a try: on desktop it is open from the first paint, on a phone the button opens the sheet
 async function showBox(page, w) { if (w < 500) await page.click("#cluckBtn"); await page.waitForSelector(FORM, { state: "visible", timeout: 8000 }); await settled(page, "#cluck"); }
 const form = page => page.evaluate(sel => { const f = document.querySelector(sel); if (!f) return null; const r = f.getBoundingClientRect(), cs = getComputedStyle(f), t = f.querySelector("textarea"), s = f.querySelector(".send");
-  return { h: r.height, w: r.width, rad: parseFloat(cs.borderTopLeftRadius), locked: f.classList.contains("locked"), busy: f.classList.contains("opening") || f.classList.contains("sweep"), disabled: t.disabled, on: s.classList.contains("on"),
+  return { h: r.height, w: r.width, rad: parseFloat(cs.borderTopLeftRadius), col: parseFloat(getComputedStyle(document.getElementById("cluck")).borderTopLeftRadius), locked: f.classList.contains("locked"), busy: f.classList.contains("opening") || f.classList.contains("sweep"), disabled: t.disabled, on: s.classList.contains("on"),
     txt: f.querySelector(".g-lock .txt")?.textContent || "", clone: !!f.querySelector(".g-copy .ag-clone"), solid: f.classList.contains("ag-solid"), frost: f.classList.contains("ag-frost"), filt: f.querySelector(".g-copy").style.filter }; }, FORM);
 const wrongTry = async (page, w) => {
   await page.click("#ans"); await page.keyboard.type("7"); await page.keyboard.press("Enter");
@@ -90,7 +90,7 @@ for (const w of [390, 1280]) {
       const b = await btn(page); assert.equal(b.why, "", "a note: " + b.why); assert.equal(b.label, "Ask Cluck");
       await page.click("#cluckBtn"); await page.waitForSelector(FORM, { state: "visible", timeout: 8000 }); await settled(page, "#cluck");
       const f = await form(page); assert.ok(f.locked, "the bar is not locked"); assert.equal(f.txt, "Available after your first try.");
-      assert.ok(Math.abs(f.h - 44) <= 1.5, "strip height " + f.h); assert.ok(Math.abs(f.rad - (w >= 720 ? 16 : 14)) <= .5, "strip radius " + f.rad)   // desktop side column: 16 (concentric with the 28 column + 12 inset); assert.equal(f.disabled, true, "the field is not disabled");
+      assert.ok(Math.abs(f.h - 44) <= 1.5, "strip height " + f.h); assert.ok(Math.abs(f.rad - (w >= 720 ? Math.max(12, f.col - 12) : 14)) <= .5, "strip radius " + f.rad + " column " + f.col)   // desktop side column: concentric = the column radius (--r-card, 25) - the 12 inset, floor 12 (ask-glass.css --ask-r); assert.equal(f.disabled, true, "the field is not disabled");
       assert.equal(await page.evaluate(sel => { const t = document.querySelector(sel); t.focus(); return document.activeElement === t; }, TA), false, "the locked field took focus");
       assert.equal(page.explains, 0, "an /explain call before a try");
       if (w >= 720) assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("cl-starter")), true, "the press did not focus the chip");
@@ -128,7 +128,7 @@ for (const w of [390, 1280]) {
     try {
       await wrongTry(page, w);
       const f = await form(page); assert.equal(f.locked, false); assert.equal(f.disabled, false, "the field is still disabled");
-      assert.ok(Math.abs(f.h - 56) <= 1.5, "bar height " + f.h); assert.ok(Math.abs(f.rad - (w >= 720 ? 16 : 20)) <= .5, "bar radius " + f.rad);
+      assert.ok(Math.abs(f.h - 56) <= 1.5, "bar height " + f.h); assert.ok(Math.abs(f.rad - (w >= 720 ? Math.max(12, f.col - 12) : 20)) <= .5, "bar radius " + f.rad + " column " + f.col);
       if (w >= 720) assert.ok(f.w <= 560.5, "the desktop bar is " + f.w + "px wide (cap 560)");
       assert.ok(f.clone || f.solid || f.frost, "the glass copy is missing and no fallback class is set: " + JSON.stringify(f));
       if (!f.solid && !f.frost) assert.match(f.filt, /url\(/, "the lens filter is not applied");

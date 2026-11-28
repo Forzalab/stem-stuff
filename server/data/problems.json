@@ -117,6 +117,7 @@
       "code": "CALC1_X2P",
       "title": "Solve for x",
       "type": "mc",
+      "choice_style": "math",
       "body": [
         {
           "type": "text",
@@ -374,6 +375,7 @@
       "code": "CSCI26_TF3",
       "title": "Even or odd",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -484,6 +486,7 @@
       "code": "CSCI26_TFM",
       "title": "Modus ponens, backwards",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -586,6 +589,7 @@
       "code": "CSCI26_CE05",
       "title": "Fuzzy AND, NOT, OR",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -615,6 +619,7 @@
       "code": "CSCI26_CE07",
       "title": "Fuzzy NOT of an AND",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -644,6 +649,7 @@
       "code": "CSCI26_CE25",
       "title": "Same-value test",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -704,6 +710,7 @@
       "code": "CSCI26_R4T",
       "title": "Name the form: NAND",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -742,6 +749,7 @@
       "code": "CSCI26_R6E",
       "title": "Name the form: even squares",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -780,6 +788,7 @@
       "code": "CSCI26_R8N",
       "title": "Name the form: two nots",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -853,6 +862,7 @@
       "code": "CSCI26_Q4V",
       "title": "Quantifier order",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -882,6 +892,7 @@
       "code": "CSCI26_V7C",
       "title": "Empty set claim",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -911,6 +922,7 @@
       "code": "CSCI26_D4B",
       "title": "Box and diamond",
       "type": "mc",
+      "choice_style": "math",
       "body": [
         {
           "type": "text",
@@ -958,6 +970,7 @@
       "code": "CSCI26_D7N",
       "title": "Negate a box",
       "type": "mc",
+      "choice_style": "math",
       "body": [
         {
           "type": "text",
@@ -1005,6 +1018,7 @@
       "code": "CSCI26_S3A",
       "title": "Syllogism: some through B",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -1047,6 +1061,7 @@
       "code": "CSCI26_S5B",
       "title": "Syllogism: no and all",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -1089,6 +1104,7 @@
       "code": "CSCI26_S6C",
       "title": "Syllogism: some not",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -1131,6 +1147,7 @@
       "code": "CSCI26_S8F",
       "title": "Syllogism: no B are C",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -1173,6 +1190,7 @@
       "code": "CSCI26_S9D",
       "title": "Syllogism: some means some not?",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -1428,6 +1446,7 @@
       "code": "CSCI26_K4P",
       "title": "Read one K-map cell",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -1494,6 +1513,7 @@
       "code": "CSCI26_C2A",
       "title": "Circuit to C++: NOT and OR",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -1582,6 +1602,7 @@
       "code": "CSCI26_C3B",
       "title": "Circuit to C++: B and not B",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -1678,6 +1699,7 @@
       "code": "CSCI26_C4D",
       "title": "Circuit to C++: XOR into AND",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -1768,6 +1790,7 @@
       "code": "CSCI26_C5E",
       "title": "Circuit to C++: NAND into OR",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -1858,6 +1881,7 @@
       "code": "CSCI26_C6F",
       "title": "Circuit to C++: one input, two wires",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -1963,6 +1987,7 @@
       "code": "CSCI26_C7H",
       "title": "Circuit to C++: NOR into XOR",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2485,6 +2510,7 @@
       "code": "CSCI26_F5A",
       "title": "Flip B: OR then AND",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2557,6 +2583,7 @@
       "code": "CSCI26_F6B",
       "title": "Flip B: a blocked gate and a second wire",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2625,6 +2652,7 @@
       "code": "CSCI26_F7C",
       "title": "Flip B: B or not B",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2700,6 +2728,7 @@
       "code": "CSCI26_E2Q",
       "title": "Same output? NAND vs NOTs into OR",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2793,6 +2822,7 @@
       "code": "CSCI26_E3R",
       "title": "Same output? NOR vs NOTs into OR",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2886,6 +2916,7 @@
       "code": "CSCI26_E4S",
       "title": "Same output? XOR vs OR and NAND",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "graph",
@@ -2981,6 +3012,7 @@
       "code": "CSCI26_N2A",
       "title": "Bigger lock, smaller dials",
       "type": "mc",
+      "choice_style": "math",
       "body": [
         {
           "type": "text",
@@ -3037,6 +3069,7 @@
       "code": "CSCI26_N3B",
       "title": "Sixth dial, faster machine",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3093,6 +3126,7 @@
       "code": "CSCI26_N4C",
       "title": "Two more dials or bigger dials",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3149,6 +3183,7 @@
       "code": "CSCI26_N5D",
       "title": "Hotel door codes",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3205,6 +3240,7 @@
       "code": "CSCI26_N6E",
       "title": "Four-dial lock, roughly",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3261,6 +3297,7 @@
       "code": "CSCI26_N7F",
       "title": "Two-dial lock, roughly",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3317,6 +3354,7 @@
       "code": "CSCI26_N8G",
       "title": "Letters or digits, roughly",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3373,6 +3411,7 @@
       "code": "CSCI26_N9H",
       "title": "Two stadium screens",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3429,6 +3468,7 @@
       "code": "CSCI26_U2J",
       "title": "Wide, tall and many frames",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3485,6 +3525,7 @@
       "code": "CSCI26_U3K",
       "title": "Town plus a suburb",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3541,6 +3582,7 @@
       "code": "CSCI26_U4L",
       "title": "Switches or one dial",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -3579,6 +3621,7 @@
       "code": "CSCI26_U5M",
       "title": "A trillion boxes",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",
@@ -4388,6 +4431,7 @@
       "code": "CSCI26_L3G",
       "title": "Circuit to C++ if",
       "type": "mc",
+      "choice_style": "text",
       "body": [
         {
           "type": "text",

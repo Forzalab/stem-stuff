@@ -506,3 +506,8 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 | 15 | `design/DESIGN-LANGUAGE.md`, `design/specimen.html` | A site `--blue` #3a67d8 the app does not have. | Remove; specimen buttons use `.btn` / `--c1`. |
 | 16 | `app.css` desktop tokens vs `app.js` `sideMQ` | Desktop type scale switches at `700.02px` + `pointer: fine`; side by side at 720px. | One breakpoint constant. |
 | 17 | §2.9 vs `app.css` | §2.9 grid, line-heights and radii are v7 targets; the live app still uses §2.3 to §2.5 (radii 10/12/8/6, `--gut` 20, fractional line-heights). | The ui-v7 token PR adopts §2.9, then folds §2.3 to §2.5 into it and deletes this row. |
+
+## 10. Deliberate exceptions
+
+- **Reward sticker radius (TOAST-R4, Tony Nov 27).** The reward / XP / conquered toast (`rewards.css` `.fx-toast`, shown by `FX.toast`) keeps its sticker look on purpose: 2px `--help-deep` border, tilted `::before`, hard `0 4px 0` shadow, radius 20px. The 20px is the named token `--r-sticker` (app.css, next to the radius tokens); `--rw-r-m` maps to it. It is not `--r-card` (that one scales with `--r-k`); do not reuse it for ordinary cards. Ducks inside toasts (`.fx-toast-legend` icon, `.stoast-duck`) carry a 0.5px outline (`--duck-line`).
+- Note: the "design-language §14" named in the task does not exist (DESIGN-LANGUAGE.md is the figure language, 9 sections); this is the UI style doc.

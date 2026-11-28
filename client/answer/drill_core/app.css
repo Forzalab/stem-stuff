@@ -38,8 +38,10 @@
      Tony's round 7 PICKER 1, 2, 4, 8). Deep navy (Tony, Nov 2: "a dark navy instead" of Ink): page + surface + 1 control fill, 1 line. Every colour is a role */
   --page: #02060c; --card: #0b1422; --float: #1b2b40; --line: #5e7899; --ink: #f3f7fc; --muted: #a9b8cc; --ink-qnum: #7a8aae;
   /* ONE answer-letter definition (Tony Nov 26): MC tile letter, pick-all tile letter, typed multi-part letter (.mparts .mk) all read these:
-     step 0 (16/24), 600, uppercase, dimmed like the Q-number. The type steps are declared below; a forward var() reference is fine. */
-  --ans-letter-fs: var(--fs-0); --ans-letter-lh: var(--lh-0); --ans-letter-fw: 600; --ans-letter-tt: uppercase; --ans-letter-color: var(--ink-qnum);
+     MCX-2 (Tony Nov 28 03:04): the SAME size as the answer text (step 1, 20/28, the choice text token), 600, uppercase, and DIMMER than the Q-number
+     (--ink-letter #64729a, 3.8:1 on the tile / card: a 20px bold label, large-text AA 3:1; the letter is also in each option's aria-label). The type steps are declared below; a forward var() reference is fine. */
+  --ink-letter: #64729a;
+  --ans-letter-fs: var(--fs-1); --ans-letter-lh: var(--lh-1); --ans-letter-fw: 600; --ans-letter-tt: uppercase; --ans-letter-color: var(--ink-letter);
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
   --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
@@ -76,14 +78,14 @@
      ONE scale for the whole app, the same at every width (the old fine-pointer desktop bumps of --t-* are gone). Floor 12px for anything readable:
      step -2 (10.24) is decorative only. The old --t-* names below point at these steps, so call sites keep working.
      Map of every old size -> step: scratchpad/qtokens/MAP.md. */
-  --fs--2: 0.64rem;       --lh--2: 16px;   /* 10.24 decorative only */
-  --fs--1: 0.8rem;        --lh--1: 16px;   /* 12.8  meta, ticks, tags, captions */
-  --fs-0: 1rem;           --lh-0: 24px;    /* 16    body, labels, buttons, choices, typed text (body leading 24) */
-  --fs-1: 1.25rem;        --lh-1: 28px;    /* 20    titles, the ask line, q | a letters */
-  --fs-2: 1.5625rem;      --lh-2: 32px;    /* 25 */
-  --fs-3: 1.9531rem;      --lh-3: 40px;    /* 31.25 */
-  --fs-4: 2.4414rem;      --lh-4: 52px;    /* 39.06 the multi-part index letter */
-  --fs-5: 3.0519rem;      --lh-5: 64px;    /* 48.83 */
+  --fs--2: 0.64rem;       --lh--2: 1rem;   /* 10.24 decorative only */
+  --fs--1: 0.8rem;        --lh--1: 1rem;   /* 12.8  meta, ticks, tags, captions */
+  --fs-0: 1rem;           --lh-0: 1.5rem;    /* 16    body, labels, buttons, choices, typed text (body leading 24) */
+  --fs-1: 1.25rem;        --lh-1: 1.75rem;    /* 20    titles, the ask line, q | a letters */
+  --fs-2: 1.5625rem;      --lh-2: 2rem;    /* 25 */
+  --fs-3: 1.9531rem;      --lh-3: 2.5rem;    /* 31.25 */
+  --fs-4: 2.4414rem;      --lh-4: 3.25rem;    /* 39.06 the multi-part index letter */
+  --fs-5: 3.0519rem;      --lh-5: 4rem;    /* 48.83 */
   /* the ladder (phone, flag OFF = the old UI keeps it): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2) · --t-2xl 40 the multi-part index letter (IB-1). Line height by role.
      Under html.ui-v7 these names point at the scale above (block "TYPESCALE ui-v7" after the desktop media blocks) */
@@ -112,6 +114,9 @@
 html.ui-v7 {
   --w-body: 400;   /* ICK5 (Tony Nov 18 "unbold/decrease weight the text body"): 400 = the typed text (ICK4); was 500 (ICK3 C9), 450 before. Code / mono stay 400 */
   /* ICK4-SQUIRCLE-C (Tony Nov 18, option C): ONE radius token set for the v7 cards. --r-k = 1 is the plain round fallback (Firefox); 1.25 under corner-shape */
+  /* CORNER-K (Tony Nov 28): ONE site-wide squircle exponent. 1 = plain round, larger = squarer. --corner-k-s (keys, fields, formula card) keeps the old 1.52/2 ratio, floor 1. */
+  --corner-k: 1.5; --corner-k-s: max(1, calc(var(--corner-k) * 0.76));
+  --r-opt: var(--r-card);   /* option tile radius = card radius (family A, Tony Nov 28) */
   --r-k: 1; --r-card: calc(20px * var(--r-k)); --r-tile: calc(16px * var(--r-k)); --r-chip: calc(6px * var(--r-k));
   --lift: inset 0 1px 0 hsl(225 60% 90% / .08), 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* the top bar's raise (progbar.css BAR-DEPTH) as a token */
   --lift-drop: 0 1px 2px hsl(230 80% 2% / .6), 0 6px 16px -4px hsl(230 80% 2% / .55);   /* ICK4-FLOAT: the cards float with the bar's drop only, no lit top (Tony Nov 14: a lit top on a resting tile reads as a border) */
@@ -128,6 +133,8 @@ html.ui-v7 {
   --lit-action: inset 0 1px 0 #74b8ff;   /* hand-picked lighter blue, same hue as --action */
   --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
   --action-edge: rgb(90 169 255 / .3);   /* KEYF-V7 (Tony Nov 18): the action blue as a quiet 1px frame (mock hintbox/v71 --action-edge); reuse for any blue-tinted frame */
+  --r-sticker: 20px;   /* TOAST-R4 (Tony Nov 27): the reward-sticker radius, a NAMED exception to --r-card (docs/design/STYLE.md §10); rewards.css --rw-r-m maps to it */
+  --duck-line: .5px;   /* TOAST-R4: the outline of the duck art inside toasts (rewards.css, toast.css) */
   --r-surface: 16px;   /* the mock surface radius (v71), kept as the token name for new ui-v7 surfaces; rules write 16px (style.test radius list) */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */
@@ -145,6 +152,8 @@ html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }   /* DEPTH 1: the question
 }
 .katex { font-size: var(--kx); }   /* after vendor/katex (index.html): replaces its 1.21em */
 *, *::before, *::after { box-sizing: border-box; }
+/* ZOOM-C (Tony Nov 27): fluid desktop scale, 100% at 1080px wide rising linearly to 110% at 1920px, capped above; below 1080 untouched. --fs-* / --s* / --lh-* are rem, so everything on them scales. */
+@media (min-width: 1080px) { html { font-size: clamp(100%, calc(100% + (100vw - 1080px) / 525), 110%); } }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--freeze-h, 0px) + var(--s4)); }
 /* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
    nothing, like the docked videos' row. Safari has no scrollbar-color: the -webkit- bar there, same look */
@@ -1019,7 +1028,7 @@ html.ui-v7.side #work.cl-on .rot.docked .vid { height: auto; }
 html.ui-v7 .rot.docked .shelf { container-type: inline-size; }
 html.ui-v7 .rot.docked .shelf .fade { display: none; }
 html.ui-v7 .rot.docked .duo { --R: max(32px, round(down, (100cqw - var(--s5)) / 4 * .8 * var(--rot-dock-k, 1), 4px));
-  container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: var(--s2);
+  container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: round(var(--s2), 4px);   /* ZOOM-C: the gap stays on the 4px grid (--s2 is rem, 8.19px under zoom: the tile tops drifted off 4) */
   width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; scroll-snap-type: none; }
 html.ui-v7 .rot.docked.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; display: block; }   /* folded: still playing, out of sight (as flag off) */
 html.ui-v7 .rot.docked .vid { grid-area: var(--a); container-type: size; width: auto; height: auto; aspect-ratio: auto; border: 0; border-radius: 12px; background: var(--sheet); cursor: pointer; scroll-snap-align: none; }
@@ -1111,7 +1120,7 @@ body:has(#q.solved) #fcard { display: none; }   /* a right answer hides the reca
    (ol z-index 1); worst text over it: --muted 6.4:1, --ink 12.1:1, the "?" 6.4:1.
    A formula wider than its row: JS (app.js keyfFit) shrinks it to 70%, then it scrolls here with an edge fade; the "?" is outside the scroller */
 html.ui-v7 .fcard { margin-top: var(--s5); padding: var(--s3) var(--s4); border: 0; border-radius: calc(var(--r-tile)); background: var(--float); box-shadow: var(--shadow-soft); overflow: hidden; }
-@supports (corner-shape: superellipse(2)) { html.ui-v7 .fcard { corner-shape: superellipse(1.52); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .fcard { corner-shape: superellipse(var(--corner-k-s)); } }
 html.ui-v7 .fc-notch { display: none; }
 html.ui-v7 .fcard::after { content: ""; position: absolute; right: 0; bottom: 0; z-index: 0; height: min(150%, 180px); width: auto; aspect-ratio: 78.81 / 100;
   transform: translate(33.333%, 33.333%);                          /* the glyph's right 1/3 and bottom 1/3 sit outside the card, behind its corner */
@@ -1679,6 +1688,7 @@ html.side .sash:hover::before, html.side.mt-drag .sash::before { background: var
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; box-sizing: border-box; background: none; }   /* the 48px touch area only: no rail (Tony, Oct 18) */
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }
+html.side .freeze, html.side #work { will-change: transform; }   /* both sticky columns are their own layer for good, so their text is rastered the same before and after the page can scroll. Chromium gives a sticky box its own layer only once the page can scroll, and text on that layer loses LCD AA, so the tap that grew a window-high page past the window (1920x1080 welcome 4_answer) re-rastered both columns' text greyscale: desk-layout@3 L6 jank, CI only (LCD text on there). Tried and rejected: an opaque ground under the labels (LCD still lost), a layer per label (the ladder text still flipped), a layer on #stage (the sticky children still flip), will-change: opacity here (the ladder card re-rastered on the first tap at 2560), Next's room reserved (a taller page janked other taps). transform: no fixed child lives in either column (the sheet's .cl-dim, toasts, popovers are in body). Same family as .rp-tab (welcome.css) and .rot.docked .fade (W135c) */
 @media (min-width: 720px) { html.sugar #xb { visibility: hidden; } }   /* desktop sugar has no notes box, from the first paint (Tony Nov 2: static on html.sugar, not padRule layer toggling, so it neither leaks before a layer nor flips back). Same 720 as app.js sideMQ; diet and phones keep it. visibility, not display:none: the box height is the column floor the page is centred on (pageTop, W129 L4) */
 html:not(.side).no-pad .pad-peek { display: none; }   /* app.js padRule: phone sugar has no pad, so no peek of it above the keyboard */
 .q-label { display: none; }
@@ -1969,7 +1979,7 @@ html.ui-v7 .cb-wrap:focus-visible { outline: var(--ring) solid var(--focus); out
 /* CB-FLOAT (Tony Nov 17, ref: a floating editor-window snippet; Refactoring UI shadows: two layers = a tight, darker one for the edge + a large soft one for
    the lift; on a near-black page they must be deep to read). Apple squircle on every v7 code block (was #q only). A choice row's block stays flat. */
 html.ui-v7 .cb:not(.opt .cb) { border-radius: 16px; overflow: hidden; border: var(--edge-hair); box-shadow: var(--shadow-1), var(--shadow-4); }   /* ICK PR-A (A1): one hairline round the block, the header split by the same line (below) */   /* STYLE §2.7 tokens: tight edge + large soft lift */
-@supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .cb:not(.opt .cb) { corner-shape: superellipse(var(--corner-k)); } }
 /* PH-NAVY (Tony Nov 17 "placeholder dimmer"; Refactoring UI p.36-38: dim by moving toward the background's own hue, never grey/opacity on colour):
    v7 placeholders take --line (#556791, the navy family of the #060b1b well) instead of --hint (#a9b8cc) */
 html.ui-v7 :is(input, textarea)::placeholder { color: var(--line); opacity: 1; }

@@ -673,12 +673,12 @@ try {
     await zp.waitForSelector("#rot.docked", { timeout: 6000 });
     const m = await zp.evaluate(() => {
       const v = [...document.querySelectorAll("#rot .vid")].map(x => x.getBoundingClientRect()), ta = document.querySelector("#cluck").getBoundingClientRect();   // BIG PLAN V1: the notes column is Cluck's box on desktop sugar (no #scratch)
-      return { gap: Math.round(v[1].left - v[0].right), side: Math.abs(v[0].top - v[1].top) < 1, notes: Math.round(ta.height),
+      return { zf: parseFloat(getComputedStyle(document.documentElement).fontSize) / 16, gap: Math.round(v[1].left - v[0].right), side: Math.abs(v[0].top - v[1].top) < 1, notes: Math.round(ta.height),
         handle: parseFloat(getComputedStyle(document.querySelector("#sash"), "::before").top), hscroll: document.documentElement.scrollWidth > innerWidth,
         above: Math.round(document.querySelector(".top").getBoundingClientRect().top), below: Math.round(innerHeight - document.querySelector("main").getBoundingClientRect().bottom) };
     });
     await z.close();
-    assert.equal(m.gap, 24, "variant B: 24px between the videos");
+    assert.ok(Math.abs(m.gap - 24 * m.zf) <= .5, "variant B: 24px between the videos (x root font-size / 16, ZOOM-C): " + m.gap);
     assert.ok(m.side, "videos side by side");
     assert.ok(m.notes <= 3600 - 100, `Cluck box fits the window (${m.notes}px; BIG PLAN V1: it fills the column, the old 800px notes cap is for the diet pad)`);
     assert.ok(Math.abs(m.handle - Math.round(3600 / 2 - 24)) <= 1, `divider handle mid-window, no 16rem cap (${m.handle}px)`);

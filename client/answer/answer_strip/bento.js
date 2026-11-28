@@ -60,8 +60,8 @@
   function clear(g) {
     g.classList.remove("bento", "flow");
     g.style.removeProperty("--bc");
-    [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); unfit(o); } });
-    g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento"); g.removeAttribute("data-fb");
+    [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); o.removeAttribute("data-wide"); unfit(o); } });
+    g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento"); g.removeAttribute("data-fb"); g.removeAttribute("data-cols");
     if (g.dataset.fill) {
       if (mo) mo.disconnect();
       g.classList.remove("fill"); g.removeAttribute("data-fill"); g.style.gridTemplateRows = "";
@@ -74,7 +74,10 @@
   var MZ_MIN = 0.7;
   function unfit(o) { o.style.removeProperty("--mz"); o.removeAttribute("data-x"); var t = o.querySelector(".txt"); if (t) t.scrollLeft = 0; }
   function mathW(o) { var w = 0; [].forEach.call(o.querySelectorAll(".txt .katex"), function (k) { w = Math.max(w, k.getBoundingClientRect().width); }); return w; }
-  function roomOf(o) { var cs = getComputedStyle(o); return o.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); }   // the tile's inner width: .txt itself grows with a formula that cannot wrap
+  function roomOf(o) {
+    var g = o.parentNode && o.parentNode.parentNode, t = o.querySelector(".txt");
+    if (g && g.dataset && g.dataset.cs !== "math" && !g.classList.contains("all") && t) return t.clientWidth;   // MCX-2 text look: the words' own grid column (the letter has its column)
+    var cs = getComputedStyle(o); return o.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); }   // the math tile's inner width: .txt itself grows with a formula that cannot wrap
   function mathOver(o) { return mathW(o) > roomOf(o) + 1; }
   function mathFit(o, floor) {
     var t = o.querySelector(".txt"), w = mathW(o), room = roomOf(o), lo = floor || MZ_MIN;
@@ -169,6 +172,7 @@
      A formula wider than its tile still shrinks, then side-scrolls (mathFit). */
   var FLOW_PAD = 104, FLOW_MINW = 96;   // words' side room: left 16 + letter 24 + gap 12 = 52, right = Check / Next key 44 + 8 inset (so a pick never re-wraps); a tile is never narrower than 96px
   function flowPad(ch) {   // the left inset is --mc-pl (bento.css, on the card's text edge: 20 / 32 / 16) + letter 24 + gap 12 + the 52 key reserve; FLOW_PAD is the fallback
+    if (!ch.parentNode.classList.contains("all")) return 40;   // MCX-1 math tile: 20 + 20 side padding, the mini letter sits in the top-left corner (no column), the words are centred
     var pl = parseFloat(getComputedStyle(ch.parentNode).getPropertyValue("--mc-pl"));
     return pl > 0 ? pl + 24 + 12 + 52 : FLOW_PAD;
   }
@@ -202,19 +206,47 @@
     }
     return best.sizes;
   }
+  /* MCX-2 TEXT look: the column count of the equal-tile bento grid. 2 columns by default (TXT_MAXC; window.stemMcCols forces 1..3: the design-lab / mock hook), 1 when, in a 2-column tile, ANY choice would wrap to more than
+     TXT_LINES (2) lines or the tile would be narrower than 10rem. The probe is a hidden block of the tile's real words width (tile - 1rem - 2.75rem padding - the 1.625rem letter column) in the choices' own font. */
+  var TXT_MAXC = 2, TXT_LINES = 2;
+  function textCols(chs, R) {
+    var forced = Math.max(0, Math.min(3, window.stemMcCols | 0)), t0 = chs[0].querySelector(".opt .txt"), cs = getComputedStyle(t0), rem = parseFloat(getComputedStyle(H).fontSize) || 16;
+    if (forced) return Math.min(forced, chs.length);
+    var lh = parseFloat(cs.lineHeight) || 28, pr = D.createElement("div"), es, c, tile, w, ok;
+    pr.className = "mc-probe"; pr.setAttribute("aria-hidden", "true");
+    es = chs.map(function (ch) {
+      var t = ch.querySelector(".opt .txt"), e = D.createElement("div");
+      e.style.cssText = "display:block;box-sizing:border-box;overflow-wrap:break-word;font-size:" + cs.fontSize + ";line-height:" + cs.lineHeight + ";letter-spacing:0;font-family:" + cs.fontFamily + ";font-weight:" + cs.fontWeight;
+      e.innerHTML = t ? t.innerHTML : ""; pr.appendChild(e); return e;
+    });
+    D.body.appendChild(pr);
+    for (c = Math.min(TXT_MAXC, chs.length); c > 1; c--) {
+      tile = (R - (c - 1) * GAP) / c; w = tile - rem * (1 + 2.75 + 1.125 + .5);
+      if (tile < rem * 10) continue;
+      es.forEach(function (e) { e.style.width = w + "px"; });
+      ok = es.every(function (e) { return Math.round(e.getBoundingClientRect().height / lh) <= TXT_LINES; });
+      if (ok) break;
+    }
+    pr.remove();
+    return c > 1 ? c : 1;
+  }
   function flowLayout(g, chs, R) {
     if (mo) mo.disconnect();
     clear(g);
-    var C = flowCols(chs, R);
+    var txt = !g.classList.contains("all") && g.dataset.cs !== "math";   // MCX-1: choice_style text (the default) = the equal-tile text grid (textCols), no letter-clear (the letter has its own grid column)
+    var tc = txt ? textCols(chs, R) : 0, C = txt ? 1 : flowCols(chs, R);
     cur = { g: g, chs: chs, R: R, flow: true };
-    var sizes = flowRows(chs.length, C), spans = [];
+    var sizes = txt ? null : flowRows(chs.length, C), spans = [];
     if (sizes) sizes.forEach(function (k) { for (var j = 0; j < k; j++) spans.push(6 / k); });
-    g.classList.add("bento", "flow"); g.dataset.bento = "flow"; g.style.setProperty("--bc", sizes ? 6 : 1);
+    g.classList.add("bento", "flow"); g.dataset.bento = "flow"; g.style.setProperty("--bc", txt ? 2 * tc : sizes ? 6 : 1);
     if (sizes) g.dataset.rows = sizes.join("+"); else delete g.dataset.rows;
-    chs.forEach(function (c, i) { c.style.gridRow = ""; c.style.gridColumn = sizes ? "span " + spans[i] : ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); unfit(o); } });
+    if (txt) g.dataset.cols = tc; else delete g.dataset.cols;
+    chs.forEach(function (c, i) { c.style.gridRow = ""; c.style.gridColumn = txt ? gridStart(i, chs.length, tc) : sizes ? "span " + spans[i] : ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); o.removeAttribute("data-wide"); unfit(o); if (!txt && (!sizes || spans[i] === 6)) o.setAttribute("data-wide", "1"); } });   // MCX-1 math: a tile that spans the whole row centres its [letter + words] group (bento.css), never the letter alone on the left edge
     chs.forEach(function (c) { var o = c.querySelector(".opt"); if (o) mathFit(o, MZ_MIN); });
-    clearLetter(g);
+    if (!txt) clearLetter(g);
   }
+  /* tile i of n in c columns on the 2c-track grid: a short last row of k tiles starts at track c - k, so it is CENTRED (1 orphan in 2 columns = the middle, 2 in 3 columns = the middle two) */
+  function gridStart(i, n, c) { var row = Math.floor(i / c), k = Math.min(c, n - row * c); return (c - k) + 2 * (i - row * c) + 1 + " / span 2"; }
   function apply() {
     queued = false;
     var g = D.querySelector("#q .choices");

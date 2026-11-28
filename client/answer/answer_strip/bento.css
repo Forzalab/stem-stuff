@@ -73,6 +73,9 @@ html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt[aria-checked="true"] .badge.b
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.right:not(.reveal) .badge.badge { color: var(--correct-on); }
 html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.wrong:not(.reveal) .badge.badge { color: var(--wrong-on); }
 html.ui-v7 .q:not(.closed) .choices.bento:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) .badge.badge { color: var(--mc-dim); }
+/* MCX-3: the dim --ink-letter (#64729a) is for the neutral --sheet tile only (3.8:1, a 20px bold label). On a state fill the letter takes that state's ink so it keeps >= 4.5:1:
+   picked --action-on, right --correct-on, wrong --wrong-on (rules above / below) and the revealed missed-right tile (--chip #283352) --muted #a9b8cc (6.2:1; --ink-letter was 2.6) */
+html.ui-v7 .choices.bento:not(.all) .ch > .opt.opt.reveal .badge.badge, html.ui-v7 .choices.bento.all .ch > .opt.opt.reveal .lt { color: var(--muted); }
 /* Check (the arrow) and Next sit in the tile's top-right / bottom-right corner; the value steps out of their way, no tile changes size */
 html.ui-v7 .choices.bento .ch > .send { right: 4px; top: 4px; margin: 0; width: 44px; height: 44px; }
 html.ui-v7 .choices.bento .ch > .nx { right: 6px; top: auto; bottom: 6px; margin: 0; width: 88px; height: 44px; }
@@ -148,22 +151,56 @@ html.ui-v7 .choices.bento.flow .ch:has(> .send:not([hidden])) > .opt.opt, html.u
    the question card. The LETTER is the ONE shared answer letter (app.css --ans-letter-*: step 0, 16/24, 600, uppercase, --ink-qnum), the same as the pick-all tile letter and the typed multi-part
    letter (.mparts .mk); it is a real grid column (24px, in the flow), so the value starts on the same left edge in every tile (left aligned, same baseline as the letter), never floating mid-tile.
    Tile = 64px high (4px atom), padding 18 / 16 / 18 and the 52px key reserve on the right (= bento.js FLOW_PAD 104 split 52 + 52). ---- */
-/* OPTICAL ALIGNMENT (make-interfaces-feel-better rule 2 / Swiss grid): the letter's left edge sits on the card text's left edge (--qc-pad: 20, desk 32, Multitask / Swap 16), so title, stem, ask and answers share ONE edge */
-html.ui-v7 .choices.bento.flow { --mc-pl: 20px; }
+/* ---- (F) MCX-1 / MCX-2 (Tony Nov 27 + Nov 28 03:04, question-level bank field `choice_style`: "text" default | "math"; app.js writes it as .choices[data-cs]; bento.js flowLayout reads it). Single-choice only; pick-all keeps section D / its own letter + check.
+   TEXT (the default) = a BENTO GRID of EQUAL tiles (MCX-2): bento.js textCols picks 2 columns, or 1 when a choice would wrap to 3+ lines in a 2-column tile (or the tile would be < 10rem), so a phone gets a stack and a desktop gets a grid.
+   The grid has 2 x columns tracks and every tile spans 2, so a short last row is CENTRED (its tiles start at track c - k: one orphan in 2 columns sits in the middle, two in 3 columns sit in the middle two); rows are equal height (1fr), tiles equal width.
+   Inside a tile: [letter | words] on two grid columns, words LEFT-aligned and vertically centred, the letter on the first line's baseline at the SAME size as the words (--ans-letter-* = the choice text step, dimmer ink). No right-side key reserve (the
+   MCX-0a cap: #762 d97614c reserved 52px for an in-tile Check key that moved out in SWISS-KEY; flowPad added it again; text-wrap: pretty cut lines early): the right padding is only the verdict glyph's column (.vg 18px + 1rem inset + .5rem), the same in every state.
+   MATH: the bento (bento.js flowCols: 1-3 equal columns, mixed rows), content CENTRED on the whole tile, the MINI letter top-left in the corner (the pre-Swiss tile, 8a77d28 #742 / MCX-0c). Equal side padding = true centre;
+   bento.js clearLetter lowers the words only where they would touch the letter. All sizes here are rem (ZOOM-C scales the root). ---- */
+html.ui-v7 .choices.bento.flow { --mc-pl: 20px; --mc-lw: 1.125rem; --mc-lg: .5rem; }   /* the card's text edge (pick-all); the letter column's width and its gap to the words */
 @media (min-width: 900px) { html.ui-v7 .choices.bento.flow { --mc-pl: 32px; } }
 html.ui-v7.mt .choices.bento.flow, html.ui-v7.swap .choices.bento.flow { --mc-pl: 16px; }
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt {
-  display: flex; align-items: baseline; justify-content: flex-start; gap: var(--s3); min-height: 64px; padding: 18px 52px 18px var(--mc-pl);
-  text-align: left; border-radius: var(--r-tile);
+/* the grid: 2 x columns equal tracks (--bc = 2c, set by bento.js), every tile spans 2 (bento.js writes the start of a short last row), equal row heights */
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) { grid-template-columns: repeat(var(--bc, 2), minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; }
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .ch { grid-column: span 2; }
+/* the tile's padding is stated once per look and beats every per-state re-statement above (section B / C / D :has() rules) */
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .ch:is(:has(> .send:not([hidden])), .cue, :has(> .vg), :has(> .nx)) > .opt.opt,
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .ch > .opt.opt {
+  display: grid; grid-template-columns: var(--mc-lw) minmax(0, 1fr); column-gap: var(--mc-lg); align-content: center; align-items: baseline; justify-items: stretch;
+  min-height: 4rem; padding: .875rem 2.75rem .875rem 1rem; text-align: left; border-radius: var(--r-tile);
 }
-html.ui-v7 .choices.bento.flow:not(.all) .opt .txt, html.ui-v7 .choices.bento.flow:not(.all) .opt[data-k] .txt { flex: 1 1 auto; text-align: left; text-wrap: pretty; font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-body); }   /* answers wear the BODY weight like the question text (Tony Nov 27: no bold; hierarchy = size + colour) */
-html.ui-v7 .choices.bento.flow:not(.all) .ch > .opt.opt.opt .badge.badge.badge {
-  position: static; flex: 0 0 24px; width: 24px; height: auto !important; margin: 0; text-align: left; text-transform: var(--ans-letter-tt); letter-spacing: 0; font-weight: var(--ans-letter-fw);
-  font-size: var(--fs-1) !important; line-height: var(--lh-1) !important;   /* FLOW tile letter: same size + line box as the 20/28 value (Tony Nov 27: a 16px letter beside 20px words read as misaligned), so baseline AND cap height match on the first line; weight 600 uppercase --ink-qnum stay the shared letter look */
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .opt .txt, html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .opt[data-k] .txt {
+  display: block; grid-column: 2; max-width: none; text-align: left; text-wrap: wrap; font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-body);   /* answers wear the BODY weight (Tony Nov 27: no bold; hierarchy = size + colour) */
 }
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .ch > .opt.opt.opt .badge.badge.badge {
+  position: static; grid-column: 1; width: auto; height: auto !important; margin: 0; text-align: left; letter-spacing: 0;
+  font-size: var(--ans-letter-fs) !important; line-height: var(--ans-letter-lh) !important; font-weight: var(--ans-letter-fw); text-transform: var(--ans-letter-tt);   /* the shared answer letter: the words' size, dimmer ink */
+}
+html.ui-v7 .choices.bento.flow:not(.all):not([data-cs="math"]) .ch .vg { right: 1rem; top: 50%; margin-top: -9px; }
+
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .ch:is(:has(> .send:not([hidden])), .cue, :has(> .vg), :has(> .nx)) > .opt.opt,
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .ch > .opt.opt {
+  display: flex; align-items: center; justify-content: center; min-height: 72px; padding: calc(20px + var(--lg, 0px)) 20px 20px; text-align: center; border-radius: var(--r-tile);
+}
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .opt .txt, html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .opt[data-k] .txt {
+  display: block; min-width: 0; max-width: 100%; text-align: center; font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-body);
+}
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .opt[data-x] .txt { align-self: stretch; text-align: start; }
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .ch > .opt.opt.opt .badge.badge.badge {
+  position: absolute; left: .875rem !important; top: .5rem !important; width: auto; height: auto !important; margin: 0; text-align: left; letter-spacing: 0;
+  font-size: var(--ans-letter-fs) !important; line-height: var(--ans-letter-lh) !important; font-weight: var(--ans-letter-fw); text-transform: var(--ans-letter-tt);   /* the corner letter: the shared answer letter (the words' size, dimmer ink) */
+}
+/* a full-row math tile (a lone last tile, or every tile when the options do not fit side by side; bento.js data-wide): the letter would hug the left edge of a wide centred row, so it joins the row:
+   the [letter + words] group is centred together (the 24px side padding keeps the verdict glyph's mirror corner clear) */
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .ch > .opt.opt[data-wide] {
+  display: grid; grid-template-columns: max-content minmax(0, max-content); justify-content: center; align-content: center; align-items: baseline; column-gap: var(--mc-lg); padding: 20px 24px;   /* a wrapped answer keeps the letter on its first line */
+}
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .ch > .opt.opt[data-wide] .badge.badge.badge { position: static; margin: 0; line-height: var(--lh-1) !important; }
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) .ch .vg { right: 14px; top: 12px; margin-top: 0; }   /* the letter's mirror: top-right */
 /* pick-all keeps its own letter / check layout; its words take the same step so every choice reads at one size */
 html.ui-v7 .choices.bento.flow.all .opt .txt, html.ui-v7 .choices.bento.flow.all .opt[data-k] .txt { font-size: var(--fs-1); line-height: var(--lh-1); font-weight: var(--w-body); }
-/* the tile keeps ONE padding in every state (the old per-state 14/52 re-statement of section D), so nothing moves when a key appears */
-html.ui-v7 .choices.bento.flow:not(.all) .ch:is(:has(> .send:not([hidden])), .cue, :has(> .vg), :has(> .nx)) > .opt.opt { padding: 18px 52px 18px var(--mc-pl); }
 /* SWISS-KEY: the MC key moved OUT of the tile (Tony Nov 26 shipped key) into the .chk row under the choices, where the
    pick-all Check already lived; the tile keeps only its letter / value. The one key look is verdict-v7.css §key. */
+/* MCX-2: the corner letter is the words' size now (20/28 at top .5rem): its empty descent under the ink is ~7.5px (was 3.5 for the old 20px-line letter); --let-d = that + 3.5px of slack (the DOM words top is ~4px above their ink), which bento.js clearLetter reads */
+html.ui-v7 .choices.bento.flow[data-cs="math"]:not(.all) { --let-d: 11px; }

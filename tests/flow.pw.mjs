@@ -283,7 +283,8 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await step("1440 side by side by default: problem + answer left, pad right, 32px gap (Tony, Oct 5)", async () => {
     const g = await geo();
     assert.ok(g.side, "html.side");
-    assert.ok(g.wL >= g.fR + 31.5 && g.wL <= g.fR + 32.5, `gap ${g.wL - g.fR}`);
+    const z = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize) / 16);   // ZOOM-C: --s6 is rem, so the gap is 32 * root / 16
+    assert.ok(Math.abs(g.wL - g.fR - 32 * z) <= .5, `gap ${g.wL - g.fR} (want ${32 * z})`);
     assert.ok(Math.abs(g.fW - (g.inner - 32) * 3 / 5) < 2, `left is three fifths, 3 : 2 (${g.fW} of ${g.inner})`);   // Tony, Nov 22 21:08: was 2:1
     assert.ok(await page.locator("#mtExp").isHidden(), "no expand on desktop");
     assert.equal(await page.getAttribute("#sash", "role"), "separator");

@@ -313,7 +313,7 @@ try {
             cap: v.every(r => r.height <= innerHeight * 0.4 + 1), side: d.scrollWidth > d.clientWidth + 1 && getComputedStyle(d).overflowX === "auto",
             duo: Math.round(d.getBoundingClientRect().height), rot: Math.round(document.querySelector("#rot").getBoundingClientRect().height), work: [Math.round(w.top), Math.round(w.height)],
             notes: Math.round(document.querySelector("#scratch").getBoundingClientRect().height),
-            pad: [Math.round(v[0].left - d.getBoundingClientRect().left - d.clientLeft), parseFloat(getComputedStyle(d).paddingLeft)] };
+            pad: [v[0].left - d.getBoundingClientRect().left - d.clientLeft, parseFloat(getComputedStyle(d).paddingLeft)] };
         });
         const six = await m(), before = asked.slice();
         assert.equal(six.srcs.length, 5, `5 players docked: ${six.srcs.length}`);
@@ -328,7 +328,7 @@ try {
         await settled(page, "#rot .duo");
         assert.equal(new Set(asked).size, 5, `scrolled to the end, all 5 load: ${asked}`);
         await page.$eval("#rot .duo", d => d.scrollTo({ left: 0, behavior: "instant" })); await settled(page, "#rot .duo");
-        { const p = (await m()).pad; assert.equal(p[0], p[1], `scrolled back, the first video sits in the box's padding (a snap ate it): ${p}`); }
+        { const p = (await m()).pad; assert.ok(Math.abs(p[0] - p[1]) < 0.5, `scrolled back, the first video sits in the box's padding (a snap ate it): ${p}`); }
         if (process.env.SHOT_DIR) await page.screenshot({ path: join(process.env.SHOT_DIR, "brainrot-6-1440.png") });
         /* the same page with 3: drop 4-6 and measure again (the box's height is one row, so nothing moves) */
         await page.$$eval("#rot .vid", vs => vs.slice(3).forEach(v => v.remove())); await settled(page, "#work");

@@ -4,6 +4,7 @@
   {
    "code": "CALC1_AL1",
    "type": "mc",
+   "choice_style": "math",
    "shuffle": false,
    "body": [
     {
@@ -47,6 +48,7 @@
   {
    "code": "CALC1_AL2",
    "type": "mc",
+   "choice_style": "math",
    "shuffle": false,
    "body": [
     {
@@ -157,6 +159,7 @@
   {
    "code": "CALC1_AL4",
    "type": "mc",
+   "choice_style": "math",
    "shuffle": false,
    "body": [
     {

@@ -12,7 +12,7 @@ html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pa
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
 
 /* GHOST: in the flow at the top of the card (nothing is laid over it), full card width, clipped by its own box; the horizontal mask fades the trail before the chip column */
-html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height: calc(var(--qnum) * .74 + var(--qpad)); margin: calc(-1 * var(--qpad)) calc(-1 * var(--qc-pad)) 0; border-radius: inherit; pointer-events: none;
+html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height: calc(var(--qnum) * .74 + var(--qpad)); margin: calc(-1 * var(--qpad)) calc(-1 * var(--qc-pad)) 0; border-radius: inherit; corner-shape: inherit; pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, #000 52%, transparent 76%); mask-image: linear-gradient(90deg, #000 52%, transparent 76%); }
 html.ui-v7 .qghost { position: absolute; left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); font: 900 var(--qnum)/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.05em; white-space: nowrap; color: #5b6a9a; user-select: none; }
 html.ui-v7 .qghost i { font-style: normal; position: absolute; left: 0; top: 0; z-index: calc(10 - var(--k)); transform: translate(calc(var(--k) * -12px), 0); opacity: var(--o); }
@@ -107,7 +107,7 @@ html.ui-v7 #problem.qc7.qbr .qghostbox { overflow: clip; }
 html.ui-v7 #problem.qc7 .blocks > :last-child, html.ui-v7 #problem.qc7 .blocks > :last-child > :last-child { margin-bottom: 0; }   /* Q-FOOT: the card's own padding is the bottom air (top = bottom); no extra block margin */
 /* EXPLAIN-TAG (Tony Nov 16): the Cluck column gets the same label as "Question", level with it; off where brainrot's own "Explain" row (.rot-hd) already heads the column, and off outside v7 side-by-side */
 .x-label { display: none; }
-html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex; margin-bottom: var(--s2); }
+html.ui-v7.side #work:has(> .cl:not([hidden])):not(:has(> .rot:not([hidden]) .rot-hd)) > .x-label { display: flex; margin-bottom: var(--s2); }
 /* STACK-NORMAL (Tony Nov 16): a title on its own row (option A: desktop, cramped, > 3 lines) is a normal title, not a hero: 20/26, flush with the text's left edge */
 html.ui-v7 #problem.qc7.qbr.qstack > .blocks > .ptitle:first-child { font-size: var(--fs-1); line-height: var(--lh-1); letter-spacing: -.01em; padding-left: 0; margin-left: 0; text-indent: 0; }
 html.ui-v7 #problem.qc7.qbr:not(.qstack) > .blocks > :is(.ptitle, .qhead):first-child { margin-bottom: 24px; }   /* BREATHE: the shared title/button row ends on the button's bottom; 24 px air before the text */
@@ -143,7 +143,7 @@ html.ui-v7 #problem.qc7.qbr > .qkicker { order: 0; flex: 1 1 0; min-width: 0; al
 .qkicker { display: none; }   /* ICK E3 (Tony Nov 17): the kicker is gone; the old `display: block` under qbr is retired */
 /* EXPLAIN-TAG fix (CI polish '(d) pad page gap 33px'): html.mt .xb-label { display: contents } (app.css) un-hid the label in the pad split; hidden everywhere unless the v7 side case */
 #work > .x-label { display: none !important; }
-html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(.rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }
+html.ui-v7.side:not(.mt) #work:has(> .cl:not([hidden])):not(:has(> .rot:not([hidden]) .rot-hd)) > .x-label { display: flex !important; margin-bottom: var(--s2); }
 /* KICKER-SIZE (Tony Nov 16): the code kicker matches the Ask Cluck label size (--t-sm, 600); caps tracking eased to .06em at this size */
 html.ui-v7 #problem.qc7.qbr > .qkicker { font-size: var(--t-sm, .9375rem); line-height: 20px; letter-spacing: .06em; }
 /* CLUCK-LINK (Tony Nov 16: "remove the button frame, make that link-like, try some color scheme from our swatch, baseline align with the CEH text"):
@@ -241,7 +241,7 @@ html.ui-v7 #problem.qc7.qbr > button.cluckbtn {
   box-shadow: var(--shadow-2) !important; opacity: 1 !important; text-decoration: none;   /* CLUCK-RAISE (Tony Nov 27): a clear but soft resting lift, the shared --shadow-2 (--shadow-raise vanished on the navy card); it sits inside the card's --qpad (reach ~10px sides, ~18px down), so overflow: hidden does not clip it */
 }
 html.ui-v7 #problem.qc7 > button.cluckbtn[aria-disabled="true"], html.ui-v7 #problem.qc7 > button.cluckbtn:active { box-shadow: none !important; }   /* locked slate sits flat (cluckbtn.css: disabled = no raise); press lowers it to the card */
-@supports (corner-shape: superellipse(2)) { html.ui-v7 #problem.qc7 > button.cluckbtn, html.ui-v7 #problem.qc7.qbr > button.cluckbtn { corner-shape: superellipse(2); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 #problem.qc7 > button.cluckbtn, html.ui-v7 #problem.qc7.qbr > button.cluckbtn { corner-shape: superellipse(var(--corner-k)); } }
 /* ICK5: no fill sweep, no sheen layer: the icon and the fill are the whole look */
 html.ui-v7 #problem.qc7 > button.cluckbtn::before, html.ui-v7 #problem.qc7 > button.cluckbtn::after { display: none; }
 /* ICK5: the duck line icon alone (--page ink). The .qbr + [aria-disabled] selector out-specifies KICKER-C's !important muted duck; it is the same declaration. */
@@ -280,11 +280,11 @@ html.ui-v7:not(.mt):not(.swap) #problem.qc7 { border-radius: var(--r-card); box-
    (the card is positioned, so it paints over the panel); the multi's panel has its own rounded top (strip.css). */
 html.ui-v7:not(.mt):not(.swap) #problem.qc7 { margin-bottom: var(--s5); box-shadow: var(--lift-drop), 0 18px 24px -8px rgb(0 0 0 / .4); }
 html.ui-v7:not(.mt):not(.swap) .boxed #problem.qc7 { box-shadow: var(--lift-drop); }   /* BENTO (Tony Nov 26): a multi has no panel under the card, so no cast shadow into the gap; the 24px gap stays as the card's margin */
-html.ui-v7 #q .opt { border-radius: var(--r-tile); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
+html.ui-v7 #q .opt { border-radius: var(--r-opt); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
 /* rest state only: selected / pending / reveal / judged / kept / pressed keep their own shadow (pressed = none) */
 html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right):not(.wrong):not(.kept):not(:active) { box-shadow: var(--lift-drop); }
 @supports (corner-shape: superellipse(2)) {
-  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(2); }
+  html.ui-v7:not(.mt):not(.swap) #problem.qc7, html.ui-v7 #q .opt { corner-shape: superellipse(var(--corner-k)); }
 }
 
 /* == §fig-top == FIG-TOP (Tony Nov 23, prototype qfig-margin, the -40% pick): a card whose FIRST block is a figure. The float Ask Cluck button (§ick5-tr: 44px + 8px margin, under the
@@ -312,7 +312,7 @@ html.ui-v7 #problem.qc7.qbr .qghostbox { opacity: .6; }
    card background + ghost numeral (below) and the text (blocks z 1, above). No inner rect: the sheet IS the card. qcard.js builds the static SVG displacement lens
    (#qg-lens, ask-glass lens-map maths: magnify 1.04, small rim bend, 3px frost inside the filter); a plain 3px blur is the no-SVG-filter fallback. Nothing animates;
    ONE filtered layer only (phone-safe). */
-html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit;
+html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; corner-shape: inherit;
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 html.ui-v7[data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens); }
 /* no sheet when transparency is reduced (solid card; the §ghost-glass rule above already flattens the numeral and drops the scrim) + the weak-device fallback */
