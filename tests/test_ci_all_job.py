@@ -28,7 +28,7 @@ def all_job():
 def verdict(**env):
     """Run the verdict script with the given job results; returns (exit code, output)."""
     base = {"INPUT_PIPE": "", "PIPE": "full", "DECIDE": "success", "PLAN": "success", "UNIT": "success",
-            "BLOCK": "success", "DOCS_ONLY": "false", "SKIP_BLOCK": "false"}
+            "BLOCK": "success", "LIVE_OK": "success", "EVENT": "pull_request", "DOCS_ONLY": "false", "SKIP_BLOCK": "false"}
     base.update(env)
     full_env = {k: v for k, v in os.environ.items() if k not in base}
     full_env.update(base)
@@ -43,11 +43,65 @@ class AllJobNeverSkipped(unittest.TestCase):
 
     def test_needs_every_job_it_judges(self):
         needs = re.search(r"^    needs:\s*\[(.*)\]", all_job(), re.M).group(1)
-        self.assertEqual({n.strip() for n in needs.split(",")}, {"decide", "plan", "unit", "block"})
+        self.assertEqual({n.strip() for n in needs.split(",")}, {"decide", "plan", "unit", "block", "live-ok"})
 
     def test_runs_the_verdict_script(self):
         self.assertIn("tools/operations/ci-all-verdict.sh", all_job())
         self.assertTrue(os.access(VERDICT, os.X_OK), "the workflow calls it directly, so it must be executable")
+
+
+class LiveOk(unittest.TestCase):
+    """VISUAL-PR GATE: the live-ok job script and its place in the verdict."""
+    SCRIPT = os.path.join(ROOT, "tools", "operations", "ci-live-ok.sh")
+
+    def labels(self, text, **extra):
+        env = dict(os.environ, LABELS=text, **extra)
+        return subprocess.run(["bash", self.SCRIPT], env=env, capture_output=True, text=True).returncode
+
+    def test_labels(self):
+        self.assertEqual(self.labels("nonvisual"), 0)
+        self.assertEqual(self.labels("visual\nlive-ok-tony"), 0)
+        self.assertEqual(self.labels("visual"), 1)
+        self.assertEqual(self.labels("bug,other"), 1)
+        self.assertEqual(self.labels(""), 1)
+        self.assertEqual(self.labels("visual,nonvisual,live-ok-tony"), 1)
+
+    def test_dependabot_is_exempt(self):
+        self.assertEqual(self.labels("", AUTHOR="dependabot[bot]"), 0)
+        # GATE-3: the author check is the exemption; a dependabot/* branch name alone is not.
+        self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="o/r", REPO="o/r"), 1)
+        self.assertEqual(self.labels("", AUTHOR="someone", HEAD_REF="dependabot/npm/x", HEAD_REPO="fork/r", REPO="o/r"), 1)
+        self.assertEqual(self.labels("visual", AUTHOR="someone"), 1)
+
+    def test_visual_diff_blocks_a_nonvisual_label(self):
+        self.assertEqual(self.labels("nonvisual", FILES="client/answer/qcard/qcard.css"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.mjs"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.svg"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="server/data/problems.json"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="server/data/banks/x.json"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="README.md\ntools/operations/ci-live-ok.sh"), 0)
+        self.assertEqual(self.labels("visual\nlive-ok-tony", FILES="client/x.js"), 0)
+
+    def test_visual_diff_always_beats_nonvisual(self):
+        # No owner override: the automation that labels PRs authenticates as the repo owner,
+        # so an owner-sender check would always pass and be forgeable.
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="client/x.js", NONVISUAL_BY="Forzalab"), 1)
+        self.assertEqual(self.labels("nonvisual", FILES="README.md", OWNER="Forzalab", NONVISUAL_BY="Forzalab"), 0)
+
+    def test_workflow_runs_the_base_refs_copy(self):
+        with open(WF, encoding="utf-8") as f:
+            wf = f.read()
+        self.assertIn("github.event.pull_request.base.sha", wf)
+        self.assertIn('git show "$BASE_SHA:tools/operations/ci-live-ok.sh"', wf)
+        self.assertIn('pulls/$PR/files', wf)
+        self.assertNotIn("NONVISUAL_BY", wf)
+        self.assertNotIn("issues/$PR/events", wf)
+
+    def test_verdict(self):
+        self.assertEqual(verdict(LIVE_OK="failure")[0], 1)
+        self.assertEqual(verdict(LIVE_OK="skipped")[0], 1)
+        self.assertEqual(verdict(LIVE_OK="skipped", EVENT="push")[0], 0)
 
 
 class Verdict(unittest.TestCase):

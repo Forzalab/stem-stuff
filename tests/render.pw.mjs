@@ -585,12 +585,19 @@ async function run(browserType, label, opts = {}) {
         if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: `${SHOTS}/pad-long-390.png` }); }
         // a smaller visible area (keyboard, address bar) re-caps the box
         await page.setViewportSize({ width: 390, height: 520 });
+        // wait on the asserted state: the JS re-cap chain (resize, onView, rAF layoutFreeze, layoutMT, fill, rAF) outlives `settled`
+        await page.waitForFunction(() => {
+          const t = document.querySelector("#scratch"), vv = window.visualViewport, dk = document.querySelector("#dock"),
+            dockUp = document.documentElement.classList.contains("dock-bottom") && !document.documentElement.classList.contains("dock-away");
+          return t.getBoundingClientRect().bottom <= vv.offsetTop + vv.height - (dockUp ? dk.offsetHeight : 0) + 0.5;
+        }, null, { timeout: 5000 });
         await settled(page, "#scratch");
         g = await geo();
         assert.ok(g.bottom <= g.limit + 0.5, `after resize: textarea bottom ${g.bottom} > visible bottom ${g.limit}`);
         assert.ok(g.h >= 4 * 1.6 * 18, `below 4 rows: ${g.h}`);
         if (SHOTS) await page.screenshot({ path: `${SHOTS}/pad-short-390x520.png` });
         await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => { const r = document.querySelector("#copy").getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 && r.bottom <= t.bottom && r.right <= t.right; }, null, { timeout: 5000 });
         await settled(page, "#scratch");
         // Copy is visible in the box's bottom-right corner (the only button there: Cut all is gone, clutter C10)
         const vis = await page.evaluate(() => { const r = document.querySelector("#copy").getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 && r.bottom <= t.bottom && r.right <= t.right; });

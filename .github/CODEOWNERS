@@ -1,0 +1,4 @@
+# GATE-3 (Tony Nov 27): the visual-PR gate's own files need the repo owner's review.
+# A PR cannot edit its CI gate or the live-ok check script without that review.
+/.github/ @Forzalab
+/tools/operations/ci-* @Forzalab

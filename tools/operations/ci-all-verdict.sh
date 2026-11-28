@@ -7,7 +7,8 @@
 #   block skipped  -> only on a docs-only diff, or a zero-.pw affected PR (plan.skip_block = true)
 #   both skipped   -> also when plan.stamped = true: a main push whose tree already has a FULL green stamp from a same-repo PR run (SHIP_MODE pr-green, P4)
 # The fast pipe (dispatch pipe=fast, or a PR push while its full run is in flight) never gives a full verdict: exit 1.
-# Inputs (env): INPUT_PIPE, PIPE, DECIDE, PLAN, UNIT, BLOCK = the job results and pipe values; DOCS_ONLY, SKIP_BLOCK = plan outputs.
+# live-ok (VISUAL-PR GATE, tools/operations/ci-live-ok.sh) must be success on a pull_request; skipped elsewhere.
+# Inputs (env): LIVE_OK, EVENT, INPUT_PIPE, PIPE, DECIDE, PLAN, UNIT, BLOCK = the job results and pipe values; DOCS_ONLY, SKIP_BLOCK = plan outputs.
 set -uo pipefail
 
 if [ "${INPUT_PIPE:-}" = fast ] || [ "${PIPE:-}" = fast ]; then
@@ -35,6 +36,13 @@ case "${BLOCK:-}" in
   success) ;;
   skipped) [ "${DOCS_ONLY:-}" = true ] || [ "${SKIP_BLOCK:-}" = true ] || [ "${STAMPED:-}" = true ] || fail "block skipped without a docs-only diff or a zero-.pw selection" ;;
   *) fail "block: ${BLOCK:-missing}" ;;
+esac
+
+# VISUAL-PR GATE: live-ok must pass on a pull_request; it only runs there, so skipped is fine on push/schedule/dispatch.
+case "${LIVE_OK:-}" in
+  success) ;;
+  skipped) [ "${EVENT:-}" != pull_request ] || fail "live-ok skipped on a pull_request" ;;
+  *) fail "live-ok: ${LIVE_OK:-missing} (a PR needs label nonvisual, or visual + the Tony-cleared label)" ;;
 esac
 
 if [ "$bad" -eq 0 ]; then echo "all: green (decide, plan, unit, block all accounted for)"; fi
