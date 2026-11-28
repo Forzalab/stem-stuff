@@ -1023,7 +1023,7 @@ html.ui-v7.side #work.cl-on .rot.docked .vid { height: auto; }
 html.ui-v7 .rot.docked .shelf { container-type: inline-size; }
 html.ui-v7 .rot.docked .shelf .fade { display: none; }
 html.ui-v7 .rot.docked .duo { --R: max(32px, round(down, (100cqw - var(--s5)) / 4 * .8 * var(--rot-dock-k, 1), 4px));
-  container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: var(--s2);
+  container-type: normal; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 4), var(--R)); gap: round(var(--s2), 4px);   /* ZOOM-C: the gap stays on the 4px grid (--s2 is rem, 8.19px under zoom: the tile tops drifted off 4) */
   width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; scroll-snap-type: none; }
 html.ui-v7 .rot.docked.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; display: block; }   /* folded: still playing, out of sight (as flag off) */
 html.ui-v7 .rot.docked .vid { grid-area: var(--a); container-type: size; width: auto; height: auto; aspect-ratio: auto; border: 0; border-radius: 12px; background: var(--sheet); cursor: pointer; scroll-snap-align: none; }

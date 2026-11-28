@@ -220,7 +220,8 @@
   function fit() {
     if (!el || !el.classList.contains('stoast-v7')) { if (el) el.classList.remove('stoast-1l'); return; }
     var t = el.querySelector('.stoast-t'), s = el.querySelector('.stoast-s');
-    el.classList.toggle('stoast-1l', t.offsetHeight + (s.hidden ? 0 : s.offsetHeight) <= 28);
+    var z = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16;   // ZOOM-C: the line heights are rem, so the one-line height scales
+    el.classList.toggle('stoast-1l', t.offsetHeight + (s.hidden ? 0 : s.offsetHeight) <= Math.ceil(28 * z));
   }
   /* the short toast's parts (W133): no bar, and at most one action button under the words */
   function actionPut(o) {
