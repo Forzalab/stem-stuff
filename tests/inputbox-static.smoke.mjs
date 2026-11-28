@@ -419,7 +419,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const p = document.querySelector("#q .mparts .part[data-i='0']"), ff = p.querySelector(".ff"), key = p.querySelector(".send");
       const f = ff.getBoundingClientRect(), k = key.getBoundingClientRect(), cs = getComputedStyle(key);
       return { fw: f.width, fl: f.left, fr: f.right, ft: f.top, kw: k.width, kh: k.height, kl: k.left, kt: k.top,
-        bg: cs.backgroundColor, r: cs.borderTopLeftRadius, bHidden: document.querySelector("#go1").disabled && !document.querySelector("#go1").hidden, kop: +getComputedStyle(document.querySelector("#go0")).opacity,
+        bg: cs.backgroundColor, r: cs.borderTopLeftRadius, card: getComputedStyle(document.querySelector("#problem")).borderTopLeftRadius, bHidden: document.querySelector("#go1").disabled && !document.querySelector("#go1").hidden, kop: +getComputedStyle(document.querySelector("#go0")).opacity,
         overflow: document.documentElement.scrollWidth - innerWidth };
     });
     assert.equal(typed.bHidden, true, "the other part's key stays visible but inert");
@@ -436,7 +436,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       assert.ok(typed.ft >= row.prBottom, `prompt ON TOP of its box at every width (Tony Nov 25): box top ${typed.ft} vs prompt bottom ${row.prBottom}`);
     }
     assert.ok(typed.overflow <= 0, `sideways overflow ${typed.overflow}px at ${w}`);
-    assert.match(typed.r, /^(18|22\.5)px$/, `key squircle radius ${typed.r}`);
+    assert.equal(typed.r, typed.card, `key squircle radius ${typed.r}: the outside key is the card radius (--key-r-out = --r-card, family A, Tony Nov 28)`);
     await page.locator("#q .mparts .part[data-i='0'] input.ans").click();   // a real pointer: no keyboard focus ring in the shot (the mouse look)
     await shot(page, `ib5-${w}-typed-app.png`, "#q");
     const hold = await holdGrade(page, ["PSY_K1A"], { verdict: "wrong", triesLeft: 1, hint: "QUACK. Count both circles once." });
