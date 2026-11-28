@@ -106,8 +106,8 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   assert.equal(key.bg, rgb("#283352"), "SHIPPED KEY: the MC key wears the typed key's --chip face: " + JSON.stringify(key));
   assert.ok(key.w === 60 && key.h === 60 && key.arrow && key.sprite === "none" && key.shadow === "none", "SHIPPED KEY: the 60px .chk key, the 24-grid arrow, no shadow: " + JSON.stringify(key));
   assert.ok(key.inChk && !key.tile, "SHIPPED KEY: MC key moved OUT of the tile into .chk: " + JSON.stringify(key));
-  const kr = await p.evaluate(() => CSS.supports("corner-shape", "superellipse(2)") ? 22.5 : 18);
-  assert.ok(Math.abs(key.rad - kr) <= 1, "SHIPPED KEY: the 18 x --r-k squircle radius (" + kr + "): " + JSON.stringify(key));
+  const kr = await p.evaluate(() => { const k = document.querySelector("#q .chk #mcGo"), pr = document.createElement("i"); pr.style.cssText = "position:absolute;visibility:hidden;border-radius:var(--key-r-out)"; k.parentElement.appendChild(pr); const v = parseFloat(getComputedStyle(pr).borderTopLeftRadius); pr.remove(); return v; });   // CORNER-K family A: the token
+  assert.ok(Math.abs(key.rad - kr) <= 1, "SHIPPED KEY: the --key-r-out radius (family A = --r-card) (" + kr + "): " + JSON.stringify(key));
   await p.click("#mcGo");
   await bgIs(p, "#q .opt[data-id='a']", rgb("#3e141e"));
   const w = await look(p, "#q .opt[data-id='a']");
