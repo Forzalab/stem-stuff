@@ -8,7 +8,8 @@
   position: fixed; z-index: 50; left: 0; top: 0; visibility: hidden; box-sizing: border-box; max-width: calc(100vw - 32px);
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 4px 12px 16px;
   background: var(--paper); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3);
-  color: var(--ink); font: var(--w-body, 400) var(--t-md, 1.0625rem)/var(--lh-0, 24px) var(--font, system-ui, sans-serif);
+  /* ZOOM-C: even whole-px leading so the words centre on whole px beside the 44px close (a fractional rem line height left them on .5) */
+  color: var(--ink); font: var(--w-body, 400) var(--t-md, 1.0625rem)/round(var(--lh-0, 24px), 2px) var(--font, system-ui, sans-serif);
 }
 .stoast.on { visibility: visible; animation: stoast-in .2s ease-out backwards; }
 .stoast.out { animation: stoast-out .15s ease-in forwards; }
