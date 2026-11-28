@@ -1794,10 +1794,10 @@ function wireFF() {
 function pvFit(pv) {
   let w = pv.querySelector(":scope > .pvi");
   if (!w) { w = document.createElement("div"); w.className = "pvi"; w.append(...pv.childNodes); pv.append(w); }
-  w.style.transform = "";
+  w.style.transform = ""; w.classList.remove("scaled");
   const line = parseFloat(getComputedStyle(pv).minHeight) || 0, cap = 3 * line, nat = w.getBoundingClientRect().height;
   let need = nat;
-  if (cap && nat > cap) { w.style.transform = `scale(${cap / nat})`; need = cap; }
+  if (cap && nat > cap) { w.style.transform = `scale(${cap / nat})`; w.classList.add("scaled"); need = cap; }   // .scaled = the class twin of the transform: app.css keys :has() on it, not on style*=""
   const room = pv._room || line;                             // unlocked, the box is the reserved line (its height: auto already grew with the new math)
   if (need <= room + 0.5) return;
   if (!pv._room) { pv.style.height = room + "px"; void pv.offsetHeight; }   // lock it at the line first, so the first step animates too

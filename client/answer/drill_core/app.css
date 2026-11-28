@@ -1135,7 +1135,7 @@ html.ui-v7 .fcard .fm.kf-sx { --kf-l: 0px; --kf-r: 0px; mask-image: linear-gradi
 .mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 /* the revealed answer's line sits in the preview's one-line room (overflow: hidden, W91); the copy's 44px tap area would be clipped to it, so the room shows
    its overflow while it holds the answer at full size (a scaled answer keeps the clip). The question is closed then: the box above is disabled */
-.preview:has(.ansl .mcopy):not(:has(> .pvi[style*="scale"])) { overflow: visible; }
+.preview:has(.ansl .mcopy):not(:has(> .pvi.scaled)) { overflow: visible; }
 .fd-sym { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
 .fd-sym li { display: grid; grid-template-columns: minmax(2.5rem, max-content) minmax(0, 1fr) auto; align-items: baseline; gap: var(--s2); }
 .fd-s { overflow-x: auto; overflow-y: hidden; color: var(--ink); }
@@ -1269,7 +1269,8 @@ html:not(.side) .cl-bd { overscroll-behavior: contain; }
 html:not(.side) .cl-ft { padding: var(--s2) calc(12px * (1 - var(--pp, 0))) calc(12px * (1 - var(--pp, 0)) + env(safe-area-inset-bottom)) ; }
 html:not(.side) .cl-ft .ask { --ask-r: calc(14px * (1 - var(--pp, 0))); border-radius: calc(var(--ask-r)); }
 html.side .cl-grab { display: none; }
-html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+/* scoped to the sheet: the grab holds the pointer capture (cluck.js), so the cursor and the no-select only matter inside #cluck; a doc-wide `*` restyled every node at drag start / end (Firefox jank) */
+html.cl-drag #cluck, html.cl-drag #cluck * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
 /* header H3a (Tony, Oct 13): 48px duck avatar, a solid green dot cut out of it by a 4px gap ring, the PEACH name at 21px, TUTOR, the X in a 10px squircle */
 .cl-bar { flex: none; display: flex; align-items: center; gap: var(--s3); width: auto; min-height: 68px; padding: var(--s2) var(--s2) var(--s2) var(--cl-in); }
 .cl-avw { position: relative; flex: none; width: 48px; height: 48px; }
