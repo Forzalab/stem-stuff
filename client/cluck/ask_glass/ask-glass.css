@@ -93,6 +93,7 @@ html.ui-v7 .ask.ag.think > .g-haze {
 /* ---- desktop side column: the page card radius (--r-card; Tony Nov 28: the Cluck panel is no rounder than the question card). The bar keeps 16 (send 10).
    Phones are untouched: these rules need html.side, the sheet keeps its --rr / --pp radius and the bar 20 / 14. ask-glass.js reads the bar's computed radius for the lens map, so the refraction edge follows. ---- */
 html.ui-v7.side .cl { border-radius: var(--r-card); }
+@supports (corner-shape: superellipse(2)) { html.ui-v7.side .cl { corner-shape: superellipse(2); } }   /* the question card's squircle (qcard.css §ick4-squircle): same radius AND shape, or the panel still reads rounder */
 html.ui-v7.side .cl-ft .ask.ag, html.ui-v7.side .cl-ft .ask.ag.locked { --ask-r: 16px; border-radius: 16px; }
 html.ui-v7.side .cl-ft .ask.ag > .send { border-radius: 10px; }
 
