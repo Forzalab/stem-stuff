@@ -45,7 +45,7 @@ async function open(code, w, h) {
 async function ink(p, l) {
   await p.evaluate(l => document.querySelector(`#q .opt[data-l="${l}"]`).scrollIntoView({ block: "center" }), l);
   const re = await p.evaluate(l => { const o = document.querySelector(`#q .opt[data-l="${l}"]`), r = o.getBoundingClientRect(), L = (o.querySelector(".lt") || o.querySelector(".badge")).getBoundingClientRect();
-    return { x: r.x, y: r.y, w: r.width, h: r.height, lx: L.left - r.x, lw: L.width, lt: L.top - r.y, lb: L.bottom - r.y }; }, l);
+    return { x: r.x, y: r.y, w: r.width, h: r.height, lx: L.left - r.x, lw: L.width, lt: L.top - r.y, lb: L.bottom - r.y, inline: o.closest(".choices").dataset.cs !== "math" || o.hasAttribute("data-wide") }; }, l);   // MCX-1: inline = the letter sits IN the words' row (text look, or a full-row math tile), not in a corner
   const b64 = (await p.screenshot({ clip: { x: re.x, y: re.y, width: re.w, height: re.h } })).toString("base64");
   const px = await p.evaluate(async b64 => { const im = new Image(); im.src = "data:image/png;base64," + b64; await im.decode(); const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
     const x = c.getContext("2d"); x.drawImage(im, 0, 0); return { w: c.width, h: c.height, d: Array.from(x.getImageData(0, 0, c.width, c.height).data) }; }, b64);
@@ -55,7 +55,7 @@ async function ink(p, l) {
   const L = { x0: 1e9, x1: -1, y0: 1e9, y1: -1 }, T = { x0: 1e9, x1: -1, y0: 1e9, y1: -1 };
   for (let y = 2; y < px.h - 2; y++) for (let x = 12; x < px.w - 12; x++) { if (!on(x, y)) continue; const B = inL(x, y) ? L : T; B.x0 = Math.min(B.x0, x); B.x1 = Math.max(B.x1, x + 1); B.y0 = Math.min(B.y0, y); B.y1 = Math.max(B.y1, y + 1); }
   const c = o => ({ x0: o.x0 / 2, x1: o.x1 / 2, y0: o.y0 / 2, y1: o.y1 / 2 });
-  return { L: c(L), T: c(T), h: re.h, w: re.w };
+  return { L: c(L), T: c(T), h: re.h, w: re.w, inline: re.inline };
 }
 for (const [w, h] of [[390, 844], [1280, 800]])
   for (const [code, what] of [["CALC1_AL1", "math, 4 options"], ["CALC1_AL2", "math, 7 options"], ["CALC1_AL3", "plain text, 7 options (one wraps)"], ["CALC1_AL4", "mixed text + math, 7 options"], ["CALC1_AL5", "long text, 7 options (3-line tiles)"]])
@@ -64,9 +64,9 @@ for (const [w, h] of [[390, 844], [1280, 800]])
       for (const l of ls) rows.push({ l, ...await ink(p, l) });
       const dist = (T, L) => Math.max(0, T.x0 - L.x1, L.x0 - T.x1, T.y0 - L.y1, L.y0 - T.y1);
       const res = rows.map(r => { const cen = (r.T.y0 + r.T.y1) / 2 - r.h / 2, gap = dist(r.T, r.L), centredGap = dist({ ...r.T, y0: r.T.y0 - cen, y1: r.T.y1 - cen }, r.L);
-        return { l: r.l, cen: +cen.toFixed(1), gap: +gap.toFixed(1), centredGap: +centredGap.toFixed(1), inside: r.T.y0 >= 0 && r.T.y1 <= r.h && r.T.x0 >= 0 && r.T.x1 <= r.w, guarded: Math.abs(cen) > 3 }; });
+        return { l: r.l, inline: r.inline, cen: +cen.toFixed(1), gap: +gap.toFixed(1), centredGap: +centredGap.toFixed(1), inside: r.T.y0 >= 0 && r.T.y1 <= r.h && r.T.x0 >= 0 && r.T.x1 <= r.w, guarded: Math.abs(cen) > 3 }; });
       // bad: words outside the tile, or < 6px from the letter, or off the middle by > 3px although centring them would have cleared the letter (a guard that did not need to bite)
-      const bad = res.filter(r => !r.inside || r.gap < 6 || (r.guarded && r.centredGap >= 7));
+      const bad = res.filter(r => !r.inside || (r.inline ? Math.abs(r.cen) > 3 : (r.gap < 6 || (r.guarded && r.centredGap >= 7))));   // inline letter: nothing to clear, only the vertical middle
       console.log("      guard bites in: " + (res.filter(r => r.guarded).map(r => r.l + "(" + r.cen + "px, gap " + r.gap + ")").join(" ") || "none") + "  | worst centre " + Math.max(...res.filter(r => !r.guarded).map(r => Math.abs(r.cen))).toFixed(1));
       if (process.env.SHOTS) { mkdirSync(process.env.SHOTS, { recursive: true }); await p.evaluate(() => scrollTo(0, 0)); await p.screenshot({ path: join(process.env.SHOTS, `${code}-${w}.png`), fullPage: true }); }
       await p.context().close();

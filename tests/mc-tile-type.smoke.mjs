@@ -1,4 +1,4 @@
-// MC tile type smoke (Tony Nov 27, phone shot): every single-choice tile answer wears the BODY weight (regular; #762 carried the old short-text bold into the flow tile) and the letter A/B/C sits on the same BASELINE as the first line of its answer (1-line and wrapped; 360 / 390 / 1280).  node tests/mc-tile-type.smoke.mjs [port]   (SHOTS=<dir> saves a shot per case)
+// MC tile type smoke (Tony Nov 27, phone shot): every single-choice tile answer wears the BODY weight (regular; #762 carried the old short-text bold into the flow tile) and the letter A/B/C sits on the same BASELINE as the first line of its answer (1-line and wrapped; 360 / 390 / 1280). MCX-1: two looks by the bank's question-level `choice_style` (SCHEMA.md): TEXT (default) = one full-width tile per row, letter INLINE at the shared 16px (TONY-LETTER), its ink centre on the first line's; MATH = the bento, content CENTRED, the MINI 16px letter top-left.  node tests/mc-tile-type.smoke.mjs [port]   (SHOTS=<dir> saves a shot per case)
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -44,14 +44,18 @@ for (const [w, h] of [[360, 780], [390, 844], [1280, 800]])
     await step(`${w}x${h} ${what}: weight == body, letter ink centre == first-line ink centre (<= 1px)`, async () => {
       const p = await open(code, w, h);
       const res = await p.evaluate(() => {
+        // MCX-1 geometry: the style, the letter's offset in its tile, and how far the words' middle is from the tile's middle (x)
+        const corner = o => { const R = o.getBoundingClientRect(), B = o.querySelector(".badge").getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(o.querySelector(".txt"));
+          const rs = [...rg.getClientRects()].filter(x => x.width > 0), wide = o.hasAttribute("data-wide"), x0 = Math.min(...rs.map(x => x.left), ...(wide ? [B.left] : [])), x1 = Math.max(...rs.map(x => x.right));   // a full-row math tile centres its [letter + words] group
+          return { cs: o.closest(".choices").dataset.cs, wide, lx: +(B.left - R.left).toFixed(1), ly: +(B.top - R.top).toFixed(1), cdx: +(((x0 + x1) / 2) - (R.left + R.width / 2)).toFixed(1), rgap: +(R.right - o.querySelector(".txt").getBoundingClientRect().right).toFixed(1) }; };
         // a zero-size inline-block at the start of an element: its bottom edge is that line's baseline
         const base = el => { const s = document.createElement("span"); s.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline"; el.insertBefore(s, el.firstChild); const y = s.getBoundingClientRect().bottom; s.remove(); return y; };
         const bodyW = getComputedStyle(document.body).fontWeight;
         return { bodyW, rows: [...document.querySelectorAll("#q .opt")].map(o => { const t = o.querySelector(".txt"), b = o.querySelector(".badge"), lh = parseFloat(getComputedStyle(t).lineHeight), tb = t.querySelector("p") || t;
-          return { l: o.dataset.l, fw: getComputedStyle(t).fontWeight, fs: getComputedStyle(t).fontSize, lfs: getComputedStyle(b).fontSize, ff: getComputedStyle(b).fontFamily === getComputedStyle(t).fontFamily, lines: Math.round(t.getBoundingClientRect().height / lh), dy: +(base(b) - base(tb)).toFixed(2) }; }) };
+          return { l: o.dataset.l, fw: getComputedStyle(t).fontWeight, fs: getComputedStyle(t).fontSize, lfs: getComputedStyle(b).fontSize, ff: getComputedStyle(b).fontFamily === getComputedStyle(t).fontFamily, lines: Math.round(t.getBoundingClientRect().height / lh), dy: +(base(b) - base(tb)).toFixed(2), ...corner(o) }; }) };
       });
       // INK centres on pixels (Tony Nov 27: judge by eye + centred axis): the letter's ink vs the first line's ink (rows down to its baseline, so descenders do not drag the centre)
-      for (const r of res.rows) {
+      for (const r of res.rows.filter(r => r.cs !== "math")) {
         await p.evaluate(l => document.querySelector(`#q .opt[data-l="${l}"]`).scrollIntoView({ block: "center" }), r.l);
         const g = await p.evaluate(l => { const o = document.querySelector(`#q .opt[data-l="${l}"]`), t = o.querySelector(".txt"), b = o.querySelector(".badge"), tb = t.querySelector("p") || t;
           const s = document.createElement("span"); s.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline"; tb.insertBefore(s, tb.firstChild); const bl = s.getBoundingClientRect().bottom; s.remove();
@@ -69,8 +73,11 @@ for (const [w, h] of [[360, 780], [390, 844], [1280, 800]])
       if (process.env.SHOTS) { mkdirSync(process.env.SHOTS, { recursive: true }); await p.evaluate(() => document.querySelector("#q .choices").scrollIntoView({ block: "center" })); await p.screenshot({ path: join(process.env.SHOTS, `${code}-${w}.png`) }); }
       await p.context().close();
       assert.ok(res.rows.every(r => r.fw === res.bodyW), "tile weight != body weight " + res.bodyW + ": " + JSON.stringify(res.rows.map(r => [r.l, r.fw])));
-      assert.ok(res.rows.every(r => r.lfs === r.fs && r.ff), "letter must share the answer text size + family (same x-height / cap height): " + JSON.stringify(res.rows.map(r => [r.l, r.lfs, r.fs, r.ff])));
-      assert.ok(res.rows.every(r => r.inkDy !== null && Math.abs(r.inkDy) <= 1 && Math.abs(r.dy) <= 1), "letter ink centre off the first-line ink centre by > 1px (or baseline > 1px): " + JSON.stringify(res.rows.filter(r => r.inkDy === null || Math.abs(r.inkDy) > 1 || Math.abs(r.dy) > 1)));
+      assert.ok(res.rows.every(r => r.lfs === "16px" && r.ff), "the letter is the ONE shared answer letter, 16px (TONY-LETTER), in the words' family: " + JSON.stringify(res.rows.map(r => [r.l, r.lfs, r.fs, r.ff])));
+      const txt = res.rows.filter(r => r.cs !== "math"), mth = res.rows.filter(r => r.cs === "math");
+      assert.ok(txt.every(r => r.inkDy !== null && Math.abs(r.inkDy) <= 1 && Math.abs(r.dy) <= 1), "TEXT: letter ink centre off the first-line ink centre by > 1px (or baseline > 1px): " + JSON.stringify(txt.filter(r => r.inkDy === null || Math.abs(r.inkDy) > 1 || Math.abs(r.dy) > 1)));
+      assert.ok(txt.every(r => r.lx <= 36 && r.rgap <= 48), "TEXT: letter at the tile's left edge, the words' box runs to within 48px of the right edge (only the verdict glyph column; no 52px key reserve / empty-gap cap): " + JSON.stringify(txt.map(r => [r.l, r.lx, r.rgap])));
+      assert.ok(mth.every(r => (r.wide || (r.lx <= 20 && r.ly <= 16)) && (r.lines > 1 || Math.abs(r.cdx) <= 1.5)), "MATH: mini letter top-left (a full-row tile: the letter joins the row), content (or the [letter + words] group) centred on the tile (<= 1.5px): " + JSON.stringify(mth.map(r => [r.l, r.wide, r.lx, r.ly, r.cdx])));
     });
 // REAL items, every content kind (Tony Nov 27): text wrapped to 2+ lines, code (`.ch code`, #767), KaTeX numbers / symbols / fraction, mixed text + KaTeX. Pixel ink scan (tests/lib/mc-ink.mjs):
 // words + code: letter ink centre == first-line cap-line ink centre (<= 1px); math: == the whole first-line ink centre (fraction, parens), exponents ignored. Weight == body everywhere.
@@ -78,11 +85,13 @@ const ITEMS = [["text, wrapped", "CSCI26_N4C"], ["code", "CSCI26_C2A"], ["code, 
 for (const [w, h] of [[390, 844], [1440, 900]])
   for (const [what, code] of ITEMS)
     await step(`${w}px real item ${code} (${what}): letter ink centre on the first line's ink centre (<= 1px), body weight`, async () => {
-      const p = await open(code, w, h), rows = await measureTiles(p), bodyW = await p.evaluate(() => getComputedStyle(document.body).fontWeight);
+      const p = await open(code, w, h), rows = await measureTiles(p), bodyW = await p.evaluate(() => getComputedStyle(document.body).fontWeight), cs = await p.evaluate(() => document.querySelector("#q .choices").dataset.cs);
       console.log("      " + rows.map(r => `${r.l}:${r.kind}/${r.lines}L cap${r.capDy} full${r.fullDy}`).join(" "));
       await p.context().close();
       assert.ok(rows.length >= 2, "no single-choice tiles measured");
       assert.ok(rows.every(r => r.fw === bodyW), "tile weight != body " + bodyW + ": " + JSON.stringify(rows.map(r => [r.l, r.fw])));
+      if (cs === "math") { assert.ok(rows.every(r => r.lfs === "16px"), "MATH tiles: the mini letter is 16px: " + JSON.stringify(rows.map(r => [r.l, r.lfs]))); return; }   // MATH: the letter is in the corner, no first-line axis (the centred content is pinned in the synthetic step above)
+      assert.ok(rows.every(r => r.lfs === "16px"), "TEXT tiles: the inline letter is 16px: " + JSON.stringify(rows.map(r => [r.l, r.lfs])));
       const bad = rows.filter(r => !(r.capDy !== null && Math.abs(r.capDy) <= 1) && !(r.kind === "math" && r.fullDy !== null && Math.abs(r.fullDy) <= 1));
       assert.equal(bad.length, 0, "letter ink centre off the first-line ink centre by > 1px: " + JSON.stringify(bad));
     });

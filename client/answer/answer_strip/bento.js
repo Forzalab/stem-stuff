@@ -60,7 +60,7 @@
   function clear(g) {
     g.classList.remove("bento", "flow");
     g.style.removeProperty("--bc");
-    [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); unfit(o); } });
+    [].forEach.call(g.children, function (c) { c.style.gridColumn = c.style.gridRow = ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-k"); o.removeAttribute("data-brk"); o.removeAttribute("data-wide"); unfit(o); } });
     g.style.removeProperty("--bu"); g.style.removeProperty("--bar-pad"); g.removeAttribute("data-bento"); g.removeAttribute("data-fb");
     if (g.dataset.fill) {
       if (mo) mo.disconnect();
@@ -169,6 +169,7 @@
      A formula wider than its tile still shrinks, then side-scrolls (mathFit). */
   var FLOW_PAD = 104, FLOW_MINW = 96;   // words' side room: left 16 + letter 24 + gap 12 = 52, right = Check / Next key 44 + 8 inset (so a pick never re-wraps); a tile is never narrower than 96px
   function flowPad(ch) {   // the left inset is --mc-pl (bento.css, on the card's text edge: 20 / 32 / 16) + letter 24 + gap 12 + the 52 key reserve; FLOW_PAD is the fallback
+    if (!ch.parentNode.classList.contains("all")) return 40;   // MCX-1 math tile: 20 + 20 side padding, the mini letter sits in the top-left corner (no column), the words are centred
     var pl = parseFloat(getComputedStyle(ch.parentNode).getPropertyValue("--mc-pl"));
     return pl > 0 ? pl + 24 + 12 + 52 : FLOW_PAD;
   }
@@ -205,15 +206,16 @@
   function flowLayout(g, chs, R) {
     if (mo) mo.disconnect();
     clear(g);
-    var C = flowCols(chs, R);
+    var txt = !g.classList.contains("all") && g.dataset.cs !== "math";   // MCX-1: choice_style text (the default) = ONE full-width column, no search, no letter-clear (the letter is inline)
+    var C = txt ? 1 : flowCols(chs, R);
     cur = { g: g, chs: chs, R: R, flow: true };
     var sizes = flowRows(chs.length, C), spans = [];
     if (sizes) sizes.forEach(function (k) { for (var j = 0; j < k; j++) spans.push(6 / k); });
     g.classList.add("bento", "flow"); g.dataset.bento = "flow"; g.style.setProperty("--bc", sizes ? 6 : 1);
     if (sizes) g.dataset.rows = sizes.join("+"); else delete g.dataset.rows;
-    chs.forEach(function (c, i) { c.style.gridRow = ""; c.style.gridColumn = sizes ? "span " + spans[i] : ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); unfit(o); } });
+    chs.forEach(function (c, i) { c.style.gridRow = ""; c.style.gridColumn = sizes ? "span " + spans[i] : ""; var o = c.querySelector(".opt"); if (o) { o.removeAttribute("data-brk"); o.removeAttribute("data-wide"); unfit(o); if (!txt && (!sizes || spans[i] === 6)) o.setAttribute("data-wide", "1"); } });   // MCX-1 math: a tile that spans the whole row centres its [letter + words] group (bento.css), never the letter alone on the left edge
     chs.forEach(function (c) { var o = c.querySelector(".opt"); if (o) mathFit(o, MZ_MIN); });
-    clearLetter(g);
+    if (!txt) clearLetter(g);
   }
   function apply() {
     queued = false;

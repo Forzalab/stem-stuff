@@ -77,6 +77,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 7 are shown (A–G, keys 1–7). `lock` pins a choice to its slot ("none of these", DNE). | yes |
 | `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
+| `choice_style` | `mc`, optional | `"text"` (default) or `"math"`: how the single-choice tiles look (MCX-1). `text` = a normal full-width stack: one tile per row, words left-aligned and wrapping to the full tile width, the muted letter inline before them. `math` = the bento: tiles side by side where every option fits, content centred, a mini letter top-left. Pick `math` when most choices are KaTeX formulas (`tools/bank_tools/mc_style.py` classifies: more than half of the choices hold `$`), else leave it out or `text`. Pick-all keeps its own layout. Public (the browser needs it), carries no key. | yes |
 | `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"?, "unit"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). 2–4 boxes. A part may instead be `"type": "mc"` with the mc fields (`choices`, `correct`, `wrong`, `shuffle`, `pick`, `miss`, `fix`; `how` on pick all only), the same rules as a top-level `mc`; a multi with an mc part may have up to 26 parts, since each part is loaded as its own mc question (code + A, B, C..., `unfold`). | label + prompt + type only |
 | `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it), each box with its own submit arrow. Put the shared givens in `body` and each question in its part's `prompt`. A part without a `prompt` is just its "a)" and its box. Keep `how` for typing instructions, not questions. | yes |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
@@ -790,6 +791,11 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "default": true,
           "description": "mc: shuffle choices per browser (locked ones keep their slot). false = authored order."
         },
+        "choice_style": {
+          "enum": ["text", "math"],
+          "default": "text",
+          "description": "mc, optional (MCX-1): how the single-choice tiles look. text (default) = a normal full-width stack, left-aligned, the muted letter inline before the words. math = the bento: tiles side by side where they fit, content centred, a mini letter top-left. Pick-all keeps its own layout."
+        },
         "parts": {
           "type": "array",
           "minItems": 2,
@@ -933,7 +939,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         },
         {
           "if": {"not": {"properties": {"type": {"const": "mc"}}}},
-          "then": {"properties": {"pick": false}}
+          "then": {"properties": {"pick": false, "choice_style": false}}
         },
         {
           "if": {"not": {"properties": {"type": {"const": "num"}}}},
