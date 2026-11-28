@@ -161,6 +161,7 @@ const MET = () => {
     edgeW: !cs ? null : useOutline ? cs.outlineWidth : cs.borderTopWidth, edgeStyle: !cs ? null : useOutline ? cs.outlineStyle : cs.borderTopStyle,
     edgeCol: !cs ? null : useOutline ? cs.outlineColor : cs.borderTopColor,
     transition: cs && cs.transitionDuration, animation: cs && cs.animationName,
+    z: parseFloat(getComputedStyle(document.documentElement).fontSize) / 16,   // ZOOM-C: rem sizes scale by root / 16 (1 under 1080 wide)
     font: inp && getComputedStyle(inp).fontFamily, fsize: inp && getComputedStyle(inp).fontSize, fweight: inp && getComputedStyle(inp).fontWeight,
     unit: !!(box && box.querySelector(".unit")), unitSize: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontSize,
     unitFamily: box && box.querySelector(".unit") && getComputedStyle(box.querySelector(".unit")).fontFamily,
@@ -507,7 +508,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.equal(m.mk, "A", `letter is bare + upper-cased by CSS (#759, Tony Nov 25): ${JSON.stringify(m.mk)}`);
-    assert.equal(m.mkSize, "16px", `letter size ${m.mkSize}`);   // the ONE shared answer letter (app.css --ans-letter-*: --fs-0 16px, 600, uppercase, --ink-qnum; MC / pick-all / typed multi, Tony Nov 26)
+    assert.ok(Math.abs(parseFloat(m.mkSize) - 16 * m.z) <= .5, `letter size ${m.mkSize}`);   // the ONE shared answer letter (app.css --ans-letter-*: --fs-0 16px, 600, uppercase, --ink-qnum; MC / pick-all / typed multi, Tony Nov 26)
     assert.equal(m.mkWeight, "600", `letter weight ${m.mkWeight} (shared answer letter)`);
     assert.equal(m.mkTt, "uppercase", `letter transform ${m.mkTt} (shared answer letter)`);
     assert.equal(m.mkColor, "rgb(122, 138, 174)", `letter colour ${m.mkColor} (--ink-qnum, shared answer letter)`);
@@ -518,8 +519,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.ok(near(hang.mk, hang.part, .5), `the typed letter hangs on the part edge: ${hang.mk} vs ${hang.part}`);
     assert.ok(near(hang.pr - hang.mk, 22, 1), `typed hang column ${(hang.pr - hang.mk).toFixed(1)} (want 22 = 18 + --s1)`);
     // Tony Nov 25: the prompt is above the box at every width, so there is no shared value/prompt baseline any more
-    assert.equal(m.prSize, "16px", `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
-    assert.equal(m.prLh, "24px", `prompt leading ${m.prLh}`);
+    assert.ok(Math.abs(parseFloat(m.prSize) - 16 * m.z) <= .5, `prompt size ${m.prSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
+    assert.ok(Math.abs(parseFloat(m.prLh) - 24 * m.z) <= .5, `prompt leading ${m.prLh}`);
     assert.ok(parseFloat(m.skin.pr) <= 20, `multi field right padding ${m.skin.pr} (IB-5: the key moved outside, no in-box room)`);
     assert.ok(m.overflow <= 0, `sideways overflow ${m.overflow}px at ${w}`);
     if (w < 900) {   // IB-5: the phone prompt keeps the mock's full text width (it spans the key column)
@@ -569,10 +570,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.transition, /0\.18s/, `IB-2 transition at rest ${m.transition} (#759 feel-better, Tony: focus lift .42s -> .18s)`);
     assert.equal(m.animation, "none", `no animation at rest (${m.animation})`);
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
-    assert.equal(m.fsize, "25px", `value size ${m.fsize}`);   // typescale Major Third, Tony Nov 25 (was 28px)
+    assert.ok(Math.abs(parseFloat(m.fsize) - 25 * m.z) <= .5, `value size ${m.fsize}`);   // typescale Major Third, Tony Nov 25 (was 28px)
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.ok(m.unit, "the unit is in the box");
-    assert.equal(m.unitSize, "16px", `unit size ${m.unitSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
+    assert.ok(Math.abs(parseFloat(m.unitSize) - 16 * m.z) <= .5, `unit size ${m.unitSize}`);   // typescale Major Third, Tony Nov 25 (was 17px)
     assert.match(m.unitFamily, /Atkinson/i, "unit face is Atkinson: " + m.unitFamily);
     assert.ok(m.key, "the Check key is on the page");
     assert.ok(near(m.key.w, 60, 1.2) && near(m.key.h, 60, 1.2), `key ${m.key.w}x${m.key.h} (want 60x60; x1.014 while the field is focused)`);
