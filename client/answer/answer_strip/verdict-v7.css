@@ -248,7 +248,7 @@ html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .
 }
 html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx::before { display: none; }
 html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx .nf {
-  display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: none; color: inherit; box-shadow: none; transform: none;
+  display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; corner-shape: inherit; background: none; color: inherit; box-shadow: none; transform: none;
 }
 html.ui-v7 #q :is(.ff#ff:not(.rbox), .mparts .part > .ff, .chk) > .nx .nf > span { display: none; }
 /* states: empty / wait */

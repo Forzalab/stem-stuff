@@ -20,11 +20,11 @@ html.ui-v7 .cl-ft .ask.ag {
 }
 html.ui-v7 .cl-ft .ask.ag::before, html.ui-v7 .cl-ft .ask.ag::after { content: none; animation: none; }   /* the old rotating rim (app.css wbusy / wrun) is replaced by .g-think */
 html.ui-v7 .cl-ft .ask.ag.locked { align-items: center; height: 44px; min-height: 44px; padding: 0; border-radius: 14px; }
-html.ui-v7 .ask.ag > .g-copy { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; background: var(--sheet, #17130f); will-change: transform; pointer-events: none; }
+html.ui-v7 .ask.ag > .g-copy { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; corner-shape: inherit; background: var(--sheet, #17130f); will-change: transform; pointer-events: none; }
 html.ui-v7 .ask.ag .ag-clone { position: absolute; margin: 0; height: auto; min-height: 0; flex: none; overflow: visible; -webkit-mask-image: none; mask-image: none; transition: none; will-change: transform; pointer-events: none; user-select: none; -webkit-user-select: none; }
-html.ui-v7 .ask.ag > .g-tint { position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: rgb(34 27 21 / .46); transition: background .4s; pointer-events: none; }
+html.ui-v7 .ask.ag > .g-tint { position: absolute; inset: 0; z-index: 1; border-radius: inherit; corner-shape: inherit; background: rgb(34 27 21 / .46); transition: background .4s; pointer-events: none; }
 html.ui-v7 .ask.ag.locked > .g-tint { background: rgb(30 24 19 / .66); }
-html.ui-v7 .ask.ag > .g-rim { position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 240 225 / .10), inset 0 1px 0 rgb(255 245 235 / .10); pointer-events: none; }
+html.ui-v7 .ask.ag > .g-rim { position: absolute; inset: 0; z-index: 2; border-radius: inherit; corner-shape: inherit; box-shadow: inset 0 0 0 1px rgb(255 240 225 / .10), inset 0 1px 0 rgb(255 245 235 / .10); pointer-events: none; }
 html.ui-v7 .ask.ag:focus-within > .g-rim { box-shadow: inset 0 0 0 1px rgb(255 240 225 / .26), inset 0 1px 0 rgb(255 245 235 / .14); }
 html.ui-v7 .cl-ft .ask.ag:focus-within { box-shadow: 0 10px 28px rgb(0 0 0 / .45); }
 html.ui-v7 .cl-ft .ask.ag:not(.locked):focus-within { outline: 2px solid var(--help); outline-offset: 2px; }
@@ -62,7 +62,7 @@ html.ui-v7 .g-lock .txt { display: inline-block; transition: transform .32s cubi
 html.ui-v7 .ask.ag.opening .g-lock .txt { transform: translateY(-14px); opacity: 0; filter: blur(4px); }
 /* the unlock light: a tangerine arc runs once round the rim (a rotating square under the static ring mask, 0.9s) */
 html.ui-v7 .ask.ag > .g-sweep, html.ui-v7 .ask.ag > .g-think {
-  position: absolute; inset: -1px; z-index: 4; border-radius: inherit; padding: 1.5px; overflow: hidden; pointer-events: none; opacity: 0;
+  position: absolute; inset: -1px; z-index: 4; border-radius: inherit; corner-shape: inherit; padding: 1.5px; overflow: hidden; pointer-events: none; opacity: 0;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
 html.ui-v7 .ask.ag > .g-sweep .spin { background: conic-gradient(from 0deg, transparent 0 70%, rgb(255 166 62 / 0) 72%, #ffa63e 86%, #fff3e0 90%, transparent 94%); }
@@ -78,7 +78,7 @@ html.ui-v7 .ask.ag > .g-think .spin { background: conic-gradient(#ff7a1a, #ffa63
 html.ui-v7 .ask.ag.think > .g-think .spin { animation-play-state: running; }
 @keyframes ag-spin { to { rotate: 360deg; } }
 html.ui-v7 .ask.ag > .g-haze {
-  position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: 1; transition: opacity .6s;
+  position: absolute; inset: 0; z-index: 2; border-radius: inherit; corner-shape: inherit; pointer-events: none; opacity: 1; transition: opacity .6s;
   background: rgb(255 245 232 / .035);   /* ASK-GLASS-TUNE: 3.5% WHITE resting film only; .think swaps it out for the orange glow */
   box-shadow: none;                      /* at rest there is no glow: the box-shadow belongs to .think only */
 }
@@ -94,8 +94,9 @@ html.ui-v7 .ask.ag.think > .g-haze {
    Phones are untouched: these rules need html.side, the sheet keeps its --rr / --pp radius and the bar 20 / 14. ask-glass.js reads the bar's computed radius for the lens map, so the refraction edge follows. ---- */
 html.ui-v7.side .cl { border-radius: var(--r-card); }
 @supports (corner-shape: superellipse(2)) { html.ui-v7.side .cl { corner-shape: superellipse(var(--corner-k)); } }   /* the question card's squircle (qcard.css §ick4-squircle): same radius AND shape, or the panel still reads rounder */
-html.ui-v7.side .cl-ft .ask.ag, html.ui-v7.side .cl-ft .ask.ag.locked { --ask-r: 16px; border-radius: 16px; }
-html.ui-v7.side .cl-ft .ask.ag > .send { border-radius: 10px; }
+html.ui-v7.side .cl-ft .ask.ag, html.ui-v7.side .cl-ft .ask.ag.locked { --ask-r: max(12px, calc(var(--r-card) - 12px)); border-radius: var(--ask-r); }   /* CONCENTRIC: panel radius - the 12px inset (25 -> 13) */
+html.ui-v7.side .cl-ft .ask.ag > .send { border-radius: max(8px, calc(var(--ask-r) - 6px)); }   /* CONCENTRIC: bar radius - the 6px pad (13 -> 8, floor 8) */
+@supports (corner-shape: superellipse(2)) { html.ui-v7.side .cl-ft .ask.ag, html.ui-v7.side .cl-ft .ask.ag > .send { corner-shape: superellipse(var(--corner-k)); } }
 
 /* ---- fallbacks ---- */
 html.ui-v7 .ask.ag:is(.ag-solid, .ag-frost) > .g-copy { display: none; }

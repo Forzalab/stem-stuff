@@ -12,7 +12,7 @@ html.ui-v7.mt #problem.qc7, html.ui-v7.swap #problem.qc7 { --qpad: 11px; --qc-pa
 html.ui-v7 #problem.qc7 > .blocks, html.ui-v7 #problem.qc7 > #rtag:not([hidden]) { position: relative; z-index: 1; }
 
 /* GHOST: in the flow at the top of the card (nothing is laid over it), full card width, clipped by its own box; the horizontal mask fades the trail before the chip column */
-html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height: calc(var(--qnum) * .74 + var(--qpad)); margin: calc(-1 * var(--qpad)) calc(-1 * var(--qc-pad)) 0; border-radius: inherit; pointer-events: none;
+html.ui-v7 .qghostbox { position: relative; z-index: 0; overflow: hidden; height: calc(var(--qnum) * .74 + var(--qpad)); margin: calc(-1 * var(--qpad)) calc(-1 * var(--qc-pad)) 0; border-radius: inherit; corner-shape: inherit; pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, #000 52%, transparent 76%); mask-image: linear-gradient(90deg, #000 52%, transparent 76%); }
 html.ui-v7 .qghost { position: absolute; left: calc(var(--qc-pad) - var(--lsb, 0px)); top: calc(var(--qpad) - var(--qnum) * .15); font: 900 var(--qnum)/1 "G Archivo", var(--font); font-stretch: 112%; letter-spacing: -.05em; white-space: nowrap; color: #5b6a9a; user-select: none; }
 html.ui-v7 .qghost i { font-style: normal; position: absolute; left: 0; top: 0; z-index: calc(10 - var(--k)); transform: translate(calc(var(--k) * -12px), 0); opacity: var(--o); }
@@ -280,7 +280,7 @@ html.ui-v7:not(.mt):not(.swap) #problem.qc7 { border-radius: var(--r-card); box-
    (the card is positioned, so it paints over the panel); the multi's panel has its own rounded top (strip.css). */
 html.ui-v7:not(.mt):not(.swap) #problem.qc7 { margin-bottom: var(--s5); box-shadow: var(--lift-drop), 0 18px 24px -8px rgb(0 0 0 / .4); }
 html.ui-v7:not(.mt):not(.swap) .boxed #problem.qc7 { box-shadow: var(--lift-drop); }   /* BENTO (Tony Nov 26): a multi has no panel under the card, so no cast shadow into the gap; the 24px gap stays as the card's margin */
-html.ui-v7 #q .opt { border-radius: var(--r-tile); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
+html.ui-v7 #q .opt { border-radius: var(--r-opt); }   /* phone AND desktop: one tile radius, beats bento's 16 / fill's 10 */
 /* rest state only: selected / pending / reveal / judged / kept / pressed keep their own shadow (pressed = none) */
 html.ui-v7 #q .opt:not([aria-checked="true"]):not(.pend):not(.reveal):not(.right):not(.wrong):not(.kept):not(:active) { box-shadow: var(--lift-drop); }
 @supports (corner-shape: superellipse(2)) {
@@ -312,7 +312,7 @@ html.ui-v7 #problem.qc7.qbr .qghostbox { opacity: .6; }
    card background + ghost numeral (below) and the text (blocks z 1, above). No inner rect: the sheet IS the card. qcard.js builds the static SVG displacement lens
    (#qg-lens, ask-glass lens-map maths: magnify 1.04, small rim bend, 3px frost inside the filter); a plain 3px blur is the no-SVG-filter fallback. Nothing animates;
    ONE filtered layer only (phone-safe). */
-html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit;
+html.ui-v7 #problem.qc7 > .qfrost { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; corner-shape: inherit;
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 html.ui-v7[data-qf-lens="1"] #problem.qc7 > .qfrost { -webkit-backdrop-filter: url(#qg-lens); backdrop-filter: url(#qg-lens); }
 /* no sheet when transparency is reduced (solid card; the §ghost-glass rule above already flattens the numeral and drops the scrim) + the weak-device fallback */
