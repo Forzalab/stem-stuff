@@ -20,15 +20,15 @@ const PORT = +(process.argv[2] || 8896), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "mcbento-")), BANKS = join(TMP, "banks");
 const ch = (...m) => m.map((md, i) => ({ id: "abcde"[i], md }));
 const sac = n => ({ title: `Practice Exam 2, Question ${n}`, key: "Use: a\nAnswer: a", slip: { b: "b slip" } });
-const mc = (code, choices, correct = "b") => ({ code, type: "mc", shuffle: false, body: [{ type: "text", md: "Solve for $x$: $x+2=11$" }], choices,
+const mc = (code, choices, correct = "b", choice_style) => ({ code, type: "mc", shuffle: false, ...(choice_style ? { choice_style } : {}), body: [{ type: "text", md: "Solve for $x$: $x+2=11$" }], choices,
   correct, wrong: [{ choice: "a", hint: "QUACK. Not a." }, { choice: "c", hint: "QUACK. Not c." }], saccharine: sac(1) });
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_MB1.json"), JSON.stringify({ v: 1, problems: [
-  mc("CALC1_MB01", ch("$13$", "$9$", "$\\dfrac{11}{2}$", "$-9$", "$22$")),                                                   // the bank-sets CALC1_X2P shape: a fraction opens a mosaic
+  mc("CALC1_MB01", ch("$13$", "$9$", "$\\dfrac{11}{2}$", "$-9$", "$22$"), "b", "math"),                                                   // the bank-sets CALC1_X2P shape: a fraction opens a mosaic
   { ...mc("CALC1_MB03", ch("$13$", "A fairly long answer that wraps over a couple of lines", "$\\dfrac{11}{2}$", "$-9$", "$22$"), ["a", "c"]), pick: "all", miss: "QUACK. miss",
     wrong: ["b", "d", "e"].map(c => ({ choice: c, error: "misread", hint: "QUACK. Not " + c })) },   // pick-all: bento too
   mc("CALC1_MB02", ch("It grows without bound as x increases to infinity, then levels off", "It stays constant on the whole interval", "It decreases and then levels off after a long time", "It oscillates forever around zero", "None of these statements is true")),   // sentences: list fallback
-  mc("CALC1_MB04", ch("$1.11\\ \\text{N·m}$", "$-4.47\\ \\text{N·m}$", "$8.07\\ \\text{N·m}$", "$4.47\\ \\text{N·m}$", "$-5.37\\ \\text{N·m}$")),   // real torque answers: \text{N·m} used to print a red \cdotp
+  mc("CALC1_MB04", ch("$1.11\\ \\text{N·m}$", "$-4.47\\ \\text{N·m}$", "$8.07\\ \\text{N·m}$", "$4.47\\ \\text{N·m}$", "$-5.37\\ \\text{N·m}$"), "b", "math"),   // real torque answers: \text{N·m} used to print a red \cdotp
 ] }));
 const srv = spawn("python3", [join(ROOT, "server", "http_server", "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TODAY: "2026-10-23", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 await serverUp(BASE);
@@ -102,7 +102,7 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const key = await p.evaluate(() => { const k = document.querySelector("#q .chk #mcGo"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect();
     return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), inChk: !!k.closest(".chk"), tile: !!document.querySelector("#q .ch .send"), shadow: c.boxShadow }; });
   const lt = await p.evaluate(() => { const b = document.querySelector("#q .ch:has(.opt[data-id='b']) .badge"), c = getComputedStyle(b), r = getComputedStyle(document.documentElement); return { fs: c.fontSize, fw: c.fontWeight, tt: c.textTransform, root: r.getPropertyValue("--ans-letter-fs").trim() }; });
-  assert.ok(lt.fs === "20px" && lt.fw === "600" && lt.tt === "uppercase", "answer letter on the MC tile (20px = the value size, 600, uppercase; Tony Nov 27 letter/words alignment; pick-all + typed keep 16): " + JSON.stringify(lt));
+  assert.ok(lt.fs === "16px" && lt.fw === "600" && lt.tt === "uppercase", "answer letter on the MC tile: the shared 16px, 600, uppercase (TONY-LETTER: MC, pick-all and typed multi read one letter): " + JSON.stringify(lt));
   assert.equal(key.bg, rgb("#283352"), "SHIPPED KEY: the MC key wears the typed key's --chip face: " + JSON.stringify(key));
   assert.ok(key.w === 60 && key.h === 60 && key.arrow && key.sprite === "none" && key.shadow === "none", "SHIPPED KEY: the 60px .chk key, the 24-grid arrow, no shadow: " + JSON.stringify(key));
   assert.ok(key.inChk && !key.tile, "SHIPPED KEY: MC key moved OUT of the tile into .chk: " + JSON.stringify(key));
@@ -154,13 +154,13 @@ for (const [W, H] of [[390, 844], [360, 740], [768, 844], [1366, 800]]) for (con
     assert.ok(m.rowsOk, "every row: equal widths, edge to edge, no hole: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
     assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.deepEqual(m.fs, ["20px"], "SWISS-RATIO: choice text = type step 1 (20px), one step above the body (" + m.bodyFs + "): " + JSON.stringify(m));
     assert.equal(m.clip, 0, "nothing clipped: " + JSON.stringify(m)); assert.ok(m.sw, "no h-scroll"); assert.equal(m.small, 0, "tap >= 44");
-    if (code === "CALC1_MB02" || code === "CALC1_MB03") assert.equal(m.cols, W >= 1366 ? m.cols : 1, "long sentences stack (1 column) when they do not fit one line");
+    if (code === "CALC1_MB02") assert.equal(m.cols, 1, "MCX-1 TEXT (the default): ONE full-width column at every width");
     await shot(p, `flow-${W}-${code}`);
     await c.close();
   });
 }
-await step("shared answer letter: MC + pick-all 16/24 600 uppercase --ink-qnum; MC 24px column at the card text edge (36 @390, 52 @1280)", async () => {
-  for (const [W, H] of [[390, 844], [1280, 800]]) for (const code of ["CALC1_MB01", "CALC1_MB03"]) {
+await step("shared answer letter: MC (text look) + pick-all 16/24 600 uppercase --ink-qnum; the MC letter on the card text edge (36 @390, 52 @1280)", async () => {
+  for (const [W, H] of [[390, 844], [1280, 800]]) for (const code of ["CALC1_MB02", "CALC1_MB03"]) {
     const [c, p] = await open("on", code, W, H);
     const m = await p.evaluate(() => {
       const card = document.querySelector("#problem"), cs = getComputedStyle(card), cr = card.getBoundingClientRect();
@@ -170,19 +170,19 @@ await step("shared answer letter: MC + pick-all 16/24 600 uppercase --ink-qnum; 
         root: { fs: root.getPropertyValue("--ans-letter-fs").trim(), lh: root.getPropertyValue("--ans-letter-lh").trim(), fw: root.getPropertyValue("--ans-letter-fw").trim(), tt: root.getPropertyValue("--ans-letter-tt").trim(), color: root.getPropertyValue("--ans-letter-color").trim() } };
     });
     assert.ok(m.root.fs === "1rem" && m.root.lh === "24px" && m.root.fw === "600" && m.root.tt === "uppercase" && m.root.color === "#7a8aae", "ONE answer-letter definition in app.css: " + JSON.stringify(m.root));
-    assert.equal(m.fs, m.all ? "16px" : "20px", `shared letter size (MC tile = value size 20, pick-all 16) @${W} ${code}: ${m.fs}`);
+    assert.equal(m.fs, "16px", `shared letter size (TONY-LETTER: MC and pick-all 16) @${W} ${code}: ${m.fs}`);
     assert.equal(m.fw, "600", `shared letter weight @${W} ${code}: ${m.fw}`);
     assert.equal(m.tt, "uppercase", `shared letter transform @${W} ${code}: ${m.tt}`);
     assert.equal(m.color, "rgb(122, 138, 174)", `shared letter colour @${W} ${code}: ${m.color} (--ink-qnum)`);
     assert.ok(Math.abs(m.x - m.edge) <= .5, `letter sits on the card text edge @${W} ${code}: ${m.x} vs ${m.edge}`);
     assert.ok(Math.abs(m.x - (W === 390 ? 36 : 52)) <= .5, `letter ink x @${W} ${code}: ${m.x} (want ${W === 390 ? 36 : 52})`);
-    if (!m.all) assert.equal(m.w, 24, `MC 24px letter column @${W}: ${m.w}`);
+    if (!m.all) assert.equal(m.w, 16, `MC inline letter slot (16 + 8 gap) @${W}: ${m.w}`);
     else assert.equal(m.mcpl, W === 390 ? 20 : 32, `pick-all --mc-pl @${W}: ${m.mcpl}`);
     await c.close();
   }
 });
-await step("flow: 5 short choices -> 3+2 at 1366 (wide) and 2+2+1 at 390, never a hole; 2..7 fill every row", async () => {
-  const exp = { 1366: { CALC1_MB01: [3, 2] }, 390: { CALC1_MB01: [2, 2, 1] } };
+await step("flow: 5 short math choices -> 3+2 at 1366 (wide) and at 390 (MCX-1: no letter column), never a hole; 2..7 fill every row", async () => {
+  const exp = { 1366: { CALC1_MB01: [3, 2] }, 390: { CALC1_MB01: [3, 2] } };   // MCX-1 math look: 20 + 20 side padding (no letter column, no key reserve), so 3 columns fit at 390
   for (const W of [390, 1366]) { const [c, p] = await open("on", "CALC1_MB01", W, 844), m = await flowMeasure(p); assert.deepEqual(m.sizes, exp[W].CALC1_MB01, W + " " + JSON.stringify(m)); assert.ok(m.rowsOk, "no hole"); await c.close(); }
 });
 await step("flow: short answers share columns (2+), sentences stack to 1; a picked tile keeps its text clear of the Check arrow", async () => {
