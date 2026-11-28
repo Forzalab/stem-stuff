@@ -417,17 +417,21 @@ try {
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
-  for (const w of W) await step(`${w}: flag on (round 5): the Check button is an apple squircle (--r-tile); the focused field is the Soft-lift 18px squircle (corner-shape superellipse: ICK4-SQUIRCLE-C, IB-2)`, async () => {
+  for (const w of W) await step(`${w}: flag on (round 5): the Check key = --key-r-out (family A = --r-card) on the --corner-k squircle; the focused field is the Soft-lift 18px squircle on --corner-k-s (CORNER-K, IB-2)`, async () => {
     const page = await open(w, "v7", "#PHYS_FP2");
     try {
       await page.waitForSelector("#ff input, #ff textarea", { timeout: 10000 });
       await page.locator("#ff :is(input, textarea)").first().fill("1.5");
       await page.waitForFunction(() => document.querySelector("#ff :is(input, textarea)").value === "1.5");
       const m = await page.evaluate(() => { const b = document.querySelector("#q #ff.ff .send"), ff = document.querySelector("#q #ff.ff"), cs = getComputedStyle(b), fs = getComputedStyle(ff);
-        return { supports: CSS.supports("corner-shape", "superellipse(1.52)"), btn: cs.cornerShape, btnR: cs.borderTopLeftRadius, well: fs.cornerShape, wellR: fs.borderTopLeftRadius }; });
-      if (m.supports) { assert.match(m.btn, /superellipse|squircle/, "button corner-shape: " + JSON.stringify(m)); assert.match(m.well, /superellipse|squircle/, "well corner-shape: " + JSON.stringify(m)); }
-      assert.equal(m.btnR, m.supports ? "22.5px" : "18px", "SOFT-LIFT §5 key = 18 x --r-k: " + JSON.stringify(m));
-      assert.equal(m.wellR, m.supports ? "22.5px" : "18px", "focused field = the Soft-lift 18px squircle, not the tile (IB-2): " + JSON.stringify(m));
+        // resolve the TOKENS (CORNER-K): a probe inside #q reads --key-r-out / --corner-k / --corner-k-s the same way the key does
+        const pr = document.createElement("i"); pr.style.cssText = "position:absolute;visibility:hidden;border-radius:var(--key-r-out);corner-shape:superellipse(var(--corner-k))"; b.parentElement.appendChild(pr);
+        const pk = getComputedStyle(pr), exp = { keyR: pk.borderTopLeftRadius, keyShape: pk.cornerShape }; pr.style.cssText = "position:absolute;visibility:hidden;border-radius:calc(18px * var(--r-k));corner-shape:superellipse(var(--corner-k-s))";
+        exp.wellR = pk.borderTopLeftRadius; exp.wellShape = pk.cornerShape; pr.remove();
+        return { supports: CSS.supports("corner-shape", "superellipse(1.52)"), btn: cs.cornerShape, btnR: cs.borderTopLeftRadius, well: fs.cornerShape, wellR: fs.borderTopLeftRadius, exp }; });
+      if (m.supports) { assert.equal(m.btn, m.exp.keyShape, "key corner-shape = superellipse(--corner-k): " + JSON.stringify(m)); assert.equal(m.well, m.exp.wellShape, "well corner-shape = superellipse(--corner-k-s): " + JSON.stringify(m)); }
+      assert.equal(m.btnR, m.exp.keyR, "key radius = --key-r-out (family A: --r-card): " + JSON.stringify(m));
+      assert.equal(m.wellR, m.exp.wellR, "focused field = the Soft-lift 18 x --r-k squircle, not the tile (IB-2): " + JSON.stringify(m));
       assert.deepEqual(page.errs, [], "page errors");
     } finally { await page.context().close(); }
   });
