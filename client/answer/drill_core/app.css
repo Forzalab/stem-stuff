@@ -76,14 +76,14 @@
      ONE scale for the whole app, the same at every width (the old fine-pointer desktop bumps of --t-* are gone). Floor 12px for anything readable:
      step -2 (10.24) is decorative only. The old --t-* names below point at these steps, so call sites keep working.
      Map of every old size -> step: scratchpad/qtokens/MAP.md. */
-  --fs--2: 0.64rem;       --lh--2: 16px;   /* 10.24 decorative only */
-  --fs--1: 0.8rem;        --lh--1: 16px;   /* 12.8  meta, ticks, tags, captions */
-  --fs-0: 1rem;           --lh-0: 24px;    /* 16    body, labels, buttons, choices, typed text (body leading 24) */
-  --fs-1: 1.25rem;        --lh-1: 28px;    /* 20    titles, the ask line, q | a letters */
-  --fs-2: 1.5625rem;      --lh-2: 32px;    /* 25 */
-  --fs-3: 1.9531rem;      --lh-3: 40px;    /* 31.25 */
-  --fs-4: 2.4414rem;      --lh-4: 52px;    /* 39.06 the multi-part index letter */
-  --fs-5: 3.0519rem;      --lh-5: 64px;    /* 48.83 */
+  --fs--2: 0.64rem;       --lh--2: 1rem;   /* 10.24 decorative only */
+  --fs--1: 0.8rem;        --lh--1: 1rem;   /* 12.8  meta, ticks, tags, captions */
+  --fs-0: 1rem;           --lh-0: 1.5rem;    /* 16    body, labels, buttons, choices, typed text (body leading 24) */
+  --fs-1: 1.25rem;        --lh-1: 1.75rem;    /* 20    titles, the ask line, q | a letters */
+  --fs-2: 1.5625rem;      --lh-2: 2rem;    /* 25 */
+  --fs-3: 1.9531rem;      --lh-3: 2.5rem;    /* 31.25 */
+  --fs-4: 2.4414rem;      --lh-4: 3.25rem;    /* 39.06 the multi-part index letter */
+  --fs-5: 3.0519rem;      --lh-5: 4rem;    /* 48.83 */
   /* the ladder (phone, flag OFF = the old UI keeps it): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2) · --t-2xl 40 the multi-part index letter (IB-1). Line height by role.
      Under html.ui-v7 these names point at the scale above (block "TYPESCALE ui-v7" after the desktop media blocks) */
@@ -145,6 +145,8 @@ html.ui-v7 .boxed .q { box-shadow: var(--shadow-1); }   /* DEPTH 1: the question
 }
 .katex { font-size: var(--kx); }   /* after vendor/katex (index.html): replaces its 1.21em */
 *, *::before, *::after { box-sizing: border-box; }
+/* ZOOM-C (Tony Nov 27): fluid desktop scale, 100% at 1080px wide rising linearly to 110% at 1920px, capped above; below 1080 untouched. --fs-* / --s* / --lh-* are rem, so everything on them scales. */
+@media (min-width: 1080px) { html { font-size: clamp(100%, calc(100% + (100vw - 1080px) / 525), 110%); } }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--freeze-h, 0px) + var(--s4)); }
 /* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
    nothing, like the docked videos' row. Safari has no scrollbar-color: the -webkit- bar there, same look */
