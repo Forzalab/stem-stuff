@@ -206,7 +206,7 @@ html.ui-v7 #q .ff :is(input, textarea), html.ui-v7 #q .ff :is(input, textarea)::
           answer changes; right -> normal --chip / --ink Next). No dash draw on the key (the chip / box marks keep #766's .vmark-live draw). */
 html.ui-v7 {
   --key-out: 60px; --key-in: 60px; --key-duck: 44px; --key-inset: 8px; --key-gap: 12px;
-  --key-r-out: calc(18px * var(--r-k)); --key-r-in: calc(var(--r-tile) - var(--key-inset));
+  --key-r-out: var(--r-card); --key-r-in: calc(var(--r-tile) - var(--key-inset));
   --key-face: var(--chip); --key-ink: var(--ink);
   --key-off: .35;
   --key-fast: 120ms; --key-ex: 200ms; --key-exit: cubic-bezier(0.2, 0, 0, 1);
@@ -222,7 +222,7 @@ html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .
   transition: background-color var(--key-ex) var(--key-exit), color var(--key-ex) var(--key-exit), opacity var(--key-ex) var(--key-exit), transform var(--key-fast) ease-out;
 }
 @supports (corner-shape: superellipse(2)) {
-  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) { corner-shape: superellipse(var(--corner-k-s)); }
+  html.ui-v7 #q :is(.ff#ff:not(.rbox) > #ansGo, .ff#ff:not(.rbox) > .nx, .mparts .part > .ff > .send, .mparts .part > .ff > .nx, .chk > #mcGo, .chk > .nx) { corner-shape: superellipse(var(--corner-k)); }
 }
 /* size + radius: OUT */
 html.ui-v7 #q :is(.ff#ff:not(.proof, .rbox) > :is(#ansGo, .nx), .mparts .part > .ff > :is(.send, .nx), .chk > :is(#mcGo, .nx)) {
