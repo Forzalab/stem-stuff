@@ -80,7 +80,7 @@ html.ui-v7 .rp .rp-check { --key-g-arrow: path("M5 12 L8.5 12 L12 12 L15.5 12 L1
   display: grid; place-items: center; flex: none; width: 60px; height: 60px; min-width: 60px; min-height: 60px; margin: 0; padding: 0; border: 0;
   border-radius: calc(18px * var(--r-k)); background: var(--chip); color: var(--ink); box-shadow: none;
   transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1), color 200ms cubic-bezier(0.2, 0, 0, 1), opacity 200ms cubic-bezier(0.2, 0, 0, 1), transform 120ms ease-out; }
-@supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-check { corner-shape: superellipse(1.52); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-check { corner-shape: superellipse(var(--corner-k-s)); } }
 html.ui-v7 .rp .rp-check .ib1-go { display: block; width: 24px; height: 24px; overflow: visible; }
 html.ui-v7 .rp .rp-check .ib1-go path { fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; d: var(--key-g-arrow); transition: d 200ms cubic-bezier(0.2, 0, 0, 1); }
 html.ui-v7 .rp .rp-check .rp-check-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -122,7 +122,7 @@ html.ui-v7 .rp .rp-field { --ans-field: color-mix(in oklab, var(--cb-well, #060b
   --ib-well: inset 0 2px 5px rgb(0 0 0 / .5);
   display: flex; align-items: baseline; gap: 8px; box-sizing: border-box; flex: 0 1 16rem; min-width: 0; height: 60px; padding: 0 17.5px; background: var(--ans-field);
   border: 0; border-radius: calc(18px * var(--r-k)); box-shadow: var(--ib-well); }   /* SHIPPED-KEY design review: no thin resting edge, no lit bottom lip */
-@supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-field { corner-shape: superellipse(1.52); } }
+@supports (corner-shape: superellipse(2)) { html.ui-v7 .rp .rp-field { corner-shape: superellipse(var(--corner-k-s)); } }
 html.ui-v7 .rp .rp-field:focus-within { border: 0; box-shadow: var(--ib-well), 0 0 0 2px color-mix(in srgb, var(--action) 75%, transparent); }
 html.ui-v7 .rp .rp-field > .rp-in.rp-in { flex: 1 1 auto; min-width: 0; width: auto; height: 54px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: 0;
   font-family: var(--font-input); font-size: var(--fs-2); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
