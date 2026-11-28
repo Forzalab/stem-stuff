@@ -1,6 +1,6 @@
 // INPUTBOX-STATIC smoke (IB-1 "Soft lift" + IB-2 focus/typing + IB-3 thinking + IB-4 verdict, Tony Nov 24): the look and motion of the two typed-answer inputs under html.ui-v7 only.
 //   single answer box: 60px, 1.5px outline, Atkinson 600 value, Check key outside on the right (60x60), fills the column on desktop (no 400px cap, Tony Nov 25).
-//   multi-part rows: 22px hang column (18 + --s1), the ONE shared answer letter (16/24, 600, uppercase, --ink-qnum), 16/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
+//   multi-part rows: 22px hang column (18 + --s1), the ONE shared answer letter (20/28 MCX-2, 600, uppercase, --ink-letter), 16/24 prompt and hint, 60px field (1fr, fills the row), 16px gap (Nov 25, was 24), no hairline, the grey hint under each box (.phow).
 //   IB-2: focus = scale(1.014) in place + shadow underneath + --action 75% edge (.42s); key press nudges the edge 90%/60% and back in ~320ms;
 //   judged fields never lift; reduced motion = colours only.
 //   IB-3: while a typed answer is checked the ring animates ONLY transform (perimeter-spaced rotate keyframes: equal px/step on 286x60 and
@@ -508,10 +508,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     assert.match(m.font, /Atkinson/i, "value face is Atkinson: " + m.font);
     assert.equal(m.fweight, "600", `value weight ${m.fweight}`);
     assert.equal(m.mk, "A", `letter is bare + upper-cased by CSS (#759, Tony Nov 25): ${JSON.stringify(m.mk)}`);
-    assert.ok(Math.abs(parseFloat(m.mkSize) - 16 * m.z) <= .5, `letter size ${m.mkSize}`);   // the ONE shared answer letter (app.css --ans-letter-*: --fs-0 16px, 600, uppercase, --ink-qnum; MC / pick-all / typed multi, Tony Nov 26)
+    assert.ok(Math.abs(parseFloat(m.mkSize) - 20 * m.z) <= .5, `letter size ${m.mkSize}`);   // the ONE shared answer letter (app.css --ans-letter-*: --fs-1 20px (MCX-2: the choice text size), 600, uppercase, --ink-letter; MC / pick-all / typed multi, Tony Nov 26)
     assert.equal(m.mkWeight, "600", `letter weight ${m.mkWeight} (shared answer letter)`);
     assert.equal(m.mkTt, "uppercase", `letter transform ${m.mkTt} (shared answer letter)`);
-    assert.equal(m.mkColor, "rgb(122, 138, 174)", `letter colour ${m.mkColor} (--ink-qnum, shared answer letter)`);
+    assert.equal(m.mkColor, "rgb(100, 114, 154)", `letter colour ${m.mkColor} (--ink-letter, shared answer letter)`);
     assert.match(m.mkFamily, /Atkinson/i, "letter face is the typed-answer face --font-input (Atkinson; Tony: fonts unchanged): " + m.mkFamily);
     assert.ok(near(m.mkBase, m.prBase, 1), `letter/prompt line baselines ${m.mkBase} vs ${m.prBase}`);
     assert.ok(near(m.mkGlyph, m.prGlyph, 1), `letter/prompt GLYPH baselines ${m.mkGlyph} vs ${m.prGlyph}`);

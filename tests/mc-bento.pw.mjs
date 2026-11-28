@@ -102,7 +102,7 @@ await step("flag on: wrong = red-900 fill, right = green-900 fill, no border (te
   const key = await p.evaluate(() => { const k = document.querySelector("#q .chk #mcGo"), c = getComputedStyle(k), g = k.querySelector(".ib1-go"), r = k.getBoundingClientRect();
     return { bg: c.backgroundColor, w: r.width, h: r.height, arrow: !!g && getComputedStyle(g).display !== "none" && g.getBoundingClientRect().width === 24, sprite: getComputedStyle(k.querySelector(".ico")).display, rad: parseFloat(c.borderTopLeftRadius), inChk: !!k.closest(".chk"), tile: !!document.querySelector("#q .ch .send"), shadow: c.boxShadow }; });
   const lt = await p.evaluate(() => { const b = document.querySelector("#q .ch:has(.opt[data-id='b']) .badge"), c = getComputedStyle(b), r = getComputedStyle(document.documentElement); return { z: parseFloat(getComputedStyle(document.documentElement).fontSize) / 16, fs: c.fontSize, fw: c.fontWeight, tt: c.textTransform, root: r.getPropertyValue("--ans-letter-fs").trim() }; });
-  assert.ok(Math.abs(parseFloat(lt.fs) - 16 * lt.z) <= .5 && lt.fw === "600" && lt.tt === "uppercase", "answer letter on the MC tile: the shared 16px, 600, uppercase (TONY-LETTER: MC, pick-all and typed multi read one letter): " + JSON.stringify(lt));
+  assert.ok(Math.abs(parseFloat(lt.fs) - 20 * lt.z) <= .5 && lt.fw === "600" && lt.tt === "uppercase", "answer letter on the MC tile: the shared 20px (the choice text step, MCX-2), 600, uppercase: " + JSON.stringify(lt));
   assert.equal(key.bg, rgb("#283352"), "SHIPPED KEY: the MC key wears the typed key's --chip face: " + JSON.stringify(key));
   assert.ok(key.w === 60 && key.h === 60 && key.arrow && key.sprite === "none" && key.shadow === "none", "SHIPPED KEY: the 60px .chk key, the 24-grid arrow, no shadow: " + JSON.stringify(key));
   assert.ok(key.inChk && !key.tile, "SHIPPED KEY: MC key moved OUT of the tile into .chk: " + JSON.stringify(key));
@@ -141,42 +141,44 @@ await step("flag off: no mosaic, today's 1px --line edge, no change", async () =
 const flowMeasure = p => p.evaluate(() => {
   const g = document.querySelector("#q .choices"), os = [...g.querySelectorAll(".opt")], rs = os.map(o => o.getBoundingClientRect()), body = document.querySelector("#problem .blocks");
   const gr = g.getBoundingClientRect(), tops = {}; rs.forEach(r => (tops[Math.round(r.top)] ||= []).push(r));
-  const rowList = Object.values(tops), rowsOk = rowList.every(a => new Set(a.map(r => Math.round(r.width))).size === 1 && Math.abs(a[0].left - gr.left) < 1.5 && Math.abs(a[a.length - 1].right - gr.right) < 1.5);   // every row: equal widths, edge to edge = no hole
+  const rowList = Object.values(tops), text = g.dataset.cs !== "math" && !g.classList.contains("all"), c0 = Math.max(...rowList.map(a => a.length)), mid = (gr.left + gr.right) / 2;
+  const edge = a => Math.abs(a[0].left - gr.left) < 1.5 && Math.abs(a[a.length - 1].right - gr.right) < 1.5;
+  // math / pick-all: every row has equal widths and runs edge to edge (no hole). MCX-2 text look: ALL tiles one width and one height; a full row runs edge to edge, a short last row is CENTRED (|its middle - the grid's middle| < 1.5)
+  const rowsOk = text ? new Set(rs.map(r => Math.round(r.width))).size === 1 && new Set(rs.map(r => Math.round(r.height))).size === 1 && rowList.every(a => a.length === c0 ? edge(a) : Math.abs((a[0].left + a[a.length - 1].right) / 2 - mid) < 1.5)
+    : rowList.every(a => new Set(a.map(r => Math.round(r.width))).size === 1 && edge(a));
   return { z: parseFloat(getComputedStyle(document.documentElement).fontSize) / 16, rowsOk, sizes: rowList.map(a => a.length), cols: Math.max(...rowList.map(a => a.length)), mode: g.dataset.bento, fill: g.dataset.fill || "", ws: [...new Set(rs.map(r => Math.round(r.width)))], xs: [...new Set(rs.map(r => Math.round(r.left)))].length,
     fs: [...new Set(os.map(o => getComputedStyle(o.querySelector(".txt")).fontSize))], bodyFs: body ? getComputedStyle(body).fontSize : "16px", sw: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     clip: os.filter(o => { const t = o.querySelector(".txt"), tr = t.getBoundingClientRect(), b = o.getBoundingClientRect(); return tr.bottom > b.bottom - 2 || tr.top < b.top || o.scrollHeight > o.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1; }).length,
     inorder: rs.every((r, i) => !i || r.top > rs[i - 1].top - 2), small: rs.filter(r => r.width < 44 || r.height < 44).length };
 });
 for (const [W, H] of [[390, 844], [360, 740], [768, 844], [1366, 800]]) for (const code of ["CALC1_MB01", "CALC1_MB02", "CALC1_MB03", "CALC1_MB04"]) {
-  await step(`flow @${W} ${code}: equal widths, one column count, 20px text (SWISS-RATIO), no clipping, no h-scroll`, async () => {
+  await step(`flow @${W} ${code}: equal widths, one column count, 20px text (SWISS-RATIO), no clipping, no h-scroll (text look: equal tiles, a short last row centred)`, async () => {
     const [c, p] = await open("on", code, W, H), m = await flowMeasure(p);
     assert.equal(m.mode, "flow"); assert.equal(m.fill, "");
     assert.ok(m.rowsOk, "every row: equal widths, edge to edge, no hole: " + JSON.stringify(m)); assert.ok(m.cols >= 1 && m.cols <= 3);
     assert.ok(m.sizes.every((k, i) => i === 0 || k <= m.sizes[i - 1]), "larger rows first: " + JSON.stringify(m)); assert.ok(m.fs.length === 1 && Math.abs(parseFloat(m.fs[0]) - 20 * m.z) <= .5, "SWISS-RATIO: choice text = type step 1 (20px), one step above the body (" + m.bodyFs + "): " + JSON.stringify(m));
     assert.equal(m.clip, 0, "nothing clipped: " + JSON.stringify(m)); assert.ok(m.sw, "no h-scroll"); assert.equal(m.small, 0, "tap >= 44");
-    if (code === "CALC1_MB02") assert.equal(m.cols, 1, "MCX-1 TEXT (the default): ONE full-width column at every width");
+    if (code === "CALC1_MB02") assert.equal(m.cols, W <= 768 ? 1 : m.cols, "MCX-2 TEXT: 1 column where a choice would wrap to 3+ lines in a 2-column tile (phone / tablet), a 2-column grid when they fit (desktop)");
     await shot(p, `flow-${W}-${code}`);
     await c.close();
   });
 }
-await step("shared answer letter: MC (text look) + pick-all 16/24 600 uppercase --ink-qnum; the MC letter on the card text edge (36 @390, 52 @1280)", async () => {
+await step("shared answer letter (MCX-2): MC (text look) + pick-all = the choice text size (--fs-1, 20/28), 600, uppercase, dimmer --ink-letter #64729a; the MC letter 1rem inside its tile", async () => {
   for (const [W, H] of [[390, 844], [1280, 800]]) for (const code of ["CALC1_MB02", "CALC1_MB03"]) {
     const [c, p] = await open("on", code, W, H);
     const m = await p.evaluate(() => {
       const card = document.querySelector("#problem"), cs = getComputedStyle(card), cr = card.getBoundingClientRect();
       const g = document.querySelector("#q .choices"), all = g.classList.contains("all"), o = g.querySelector(".opt"), l = o.querySelector(all ? ".lt" : ".badge");
       const ls = getComputedStyle(l), lr = l.getBoundingClientRect(), root = getComputedStyle(document.documentElement);
-      return { z: parseFloat(getComputedStyle(document.documentElement).fontSize) / 16, all, x: lr.x, w: lr.width, fs: ls.fontSize, fw: ls.fontWeight, tt: ls.textTransform, color: ls.color, edge: cr.x + parseFloat(cs.paddingLeft), mcpl: parseFloat(getComputedStyle(g).getPropertyValue("--mc-pl")),
+      return { z: parseFloat(getComputedStyle(document.documentElement).fontSize) / 16, all, gx: g.getBoundingClientRect().x, x: lr.x, w: lr.width, fs: ls.fontSize, fw: ls.fontWeight, tt: ls.textTransform, color: ls.color, edge: cr.x + parseFloat(cs.paddingLeft), mcpl: parseFloat(getComputedStyle(g).getPropertyValue("--mc-pl")),
         root: { fs: root.getPropertyValue("--ans-letter-fs").trim(), lh: root.getPropertyValue("--ans-letter-lh").trim(), fw: root.getPropertyValue("--ans-letter-fw").trim(), tt: root.getPropertyValue("--ans-letter-tt").trim(), color: root.getPropertyValue("--ans-letter-color").trim() } };
     });
-    assert.ok(m.root.fs === "1rem" && /^(24px|1\.5rem)$/.test(m.root.lh) && m.root.fw === "600" && m.root.tt === "uppercase" && m.root.color === "#7a8aae", "ONE answer-letter definition in app.css: " + JSON.stringify(m.root));
-    assert.ok(Math.abs(parseFloat(m.fs) - 16 * m.z) <= .5, `shared letter size (TONY-LETTER: MC and pick-all 16) @${W} ${code}: ${m.fs}`);
+    assert.ok(m.root.fs === "1.25rem" && /^(28px|1\.75rem)$/.test(m.root.lh) && m.root.fw === "600" && m.root.tt === "uppercase" && m.root.color === "#64729a", "ONE answer-letter definition in app.css: " + JSON.stringify(m.root));
+    assert.ok(Math.abs(parseFloat(m.fs) - 20 * m.z) <= .5, `shared letter size (MCX-2: the choice text step, MC and pick-all 20) @${W} ${code}: ${m.fs}`);
     assert.equal(m.fw, "600", `shared letter weight @${W} ${code}: ${m.fw}`);
     assert.equal(m.tt, "uppercase", `shared letter transform @${W} ${code}: ${m.tt}`);
-    assert.equal(m.color, "rgb(122, 138, 174)", `shared letter colour @${W} ${code}: ${m.color} (--ink-qnum)`);
-    assert.ok(Math.abs(m.x - m.edge) <= .5, `letter sits on the card text edge @${W} ${code}: ${m.x} vs ${m.edge}`);
-    assert.ok(Math.abs(m.x - (W === 390 ? 36 : 52)) <= .5, `letter ink x @${W} ${code}: ${m.x} (want ${W === 390 ? 36 : 52})`);
-    if (!m.all) assert.equal(m.w, 16, `MC inline letter slot (16 + 8 gap) @${W}: ${m.w}`);
+    assert.equal(m.color, "rgb(100, 114, 154)", `shared letter colour @${W} ${code}: ${m.color} (--ink-letter, dimmer than --ink-qnum)`);
+    if (!m.all) assert.ok(Math.abs(m.x - (m.gx + 16 * m.z)) <= 1, `MC letter sits 1rem inside its tile @${W} ${code}: ${m.x} vs grid ${m.gx} + ${16 * m.z}`);
     else assert.equal(m.mcpl, W === 390 ? 20 : 32, `pick-all --mc-pl @${W}: ${m.mcpl}`);
     await c.close();
   }
