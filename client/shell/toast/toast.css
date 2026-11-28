@@ -66,6 +66,7 @@ html.ui-v7 .stoast.stoast-v7 { --td: 64px; grid-template-columns: var(--td) minm
 html.ui-v7 .stoast.stoast-v7.stoast-1l { --td: 44px; column-gap: 12px; padding: 14px 40px 14px 14px; }
 html.ui-v7 .stoast-v7 .stoast-duck { display: block; width: var(--td); height: var(--td); }
 html.ui-v7 .stoast-v7 .stoast-duck img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+html.ui-v7 .stoast-v7 .stoast-duck img { filter: drop-shadow(.5px 0 0 var(--help-deep, #8a4a00)) drop-shadow(-.5px 0 0 var(--help-deep, #8a4a00)) drop-shadow(0 .5px 0 var(--help-deep, #8a4a00)) drop-shadow(0 -.5px 0 var(--help-deep, #8a4a00)); }   /* TOAST-R4: duck outline 0.5px (--duck-line) */
 html.ui-v7 .stoast.stoast-v7.stoast-1l .stoast-duck img { transform: scale(1.3); }   /* the webp has transparent padding: the visible duck fills ~90% of the 44 box */
 html.ui-v7 .stoast-v7 .stoast-b { display: block; min-width: 0; }
 html.ui-v7 .stoast-v7 .stoast-t { margin: 0; font: 600 var(--fs-1)/var(--lh-1) var(--font, system-ui, sans-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

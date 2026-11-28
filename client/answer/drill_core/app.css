@@ -128,6 +128,8 @@ html.ui-v7 {
   --lit-action: inset 0 1px 0 #74b8ff;   /* hand-picked lighter blue, same hue as --action */
   --shadow-raise: 0 1px 2px hsl(230 80% 2% / .6);   /* REVIEW2 --shadow-1 */
   --action-edge: rgb(90 169 255 / .3);   /* KEYF-V7 (Tony Nov 18): the action blue as a quiet 1px frame (mock hintbox/v71 --action-edge); reuse for any blue-tinted frame */
+  --r-sticker: 20px;   /* TOAST-R4 (Tony Nov 27): the reward-sticker radius, a NAMED exception to --r-card (docs/design/STYLE.md §10); rewards.css --rw-r-m maps to it */
+  --duck-line: .5px;   /* TOAST-R4: the outline of the duck art inside toasts (rewards.css, toast.css) */
   --r-surface: 16px;   /* the mock surface radius (v71), kept as the token name for new ui-v7 surfaces; rules write 16px (style.test radius list) */
   --press: inset 0 1px 2px rgb(0 0 0 / 0.4);
   --well: inset 0 2px 3px rgb(0 0 0 / 0.5);   /* colour-only well + a dark top inset; no lit bottom lip (it read as a border) */

@@ -10,7 +10,7 @@
 .rw-skin {   /* colours: app.css :root's warm family (PALETTE-v3 §3, §5); every --rw-* colour retired */
   --rw-sh4: 0 12px 24px -6px rgb(0 0 0 / .6), 0 2px 4px rgb(0 0 0 / .4);
   --rw-sh5: 0 20px 40px -8px rgb(0 0 0 / .7), 0 4px 8px rgb(0 0 0 / .4);
-  --rw-r-s: 12px; --rw-r-m: 20px; --rw-r-l: 28px; --rw-pill: 999px;
+  --rw-r-s: 12px; --rw-r-m: var(--r-sticker, 20px); --rw-r-l: 28px; --rw-pill: 999px;
   --rw-font: var(--font, "Schibsted Grotesk", system-ui, sans-serif);
   --rw-pixel: "Press Start 2P", "Atkinson Hyperlegible Mono", monospace;
 }
@@ -172,6 +172,7 @@ html.start .rw-hud { display: none; }
 }
 .fx-ov img, .fx-layer img { -webkit-user-drag: none; }
 .fx-gold { filter: var(--duckgold) drop-shadow(0 3px 0 rgb(90 40 0 / .55)); }
+.fx-toast-legend .fx-toast-i { filter: var(--duckgold) drop-shadow(.5px 0 0 var(--help-deep)) drop-shadow(-.5px 0 0 var(--help-deep)) drop-shadow(0 .5px 0 var(--help-deep)) drop-shadow(0 -.5px 0 var(--help-deep)); }   /* TOAST-R4: duck outline 0.5px (= --duck-line), 4 hairline offsets */
 .fx-ring { position: absolute; border: 3px solid var(--reward); box-shadow: 0 2px 0 var(--help-deep); }
 .fx-flash { display: none; }
 .fx-sp { position: absolute; width: 8px; height: 8px; margin: -4px; background: var(--c); border-radius: 50%; }
